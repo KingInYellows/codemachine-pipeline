@@ -1,0 +1,95 @@
+{
+  "schema_version": "1.0.0",
+  "project": {
+    "id": "my-awesome-project",
+    "repo_url": "https://github.com/org/my-awesome-project.git",
+    "default_branch": "main",
+    "context_paths": [
+      "src/",
+      "docs/",
+      "README.md",
+      "package.json"
+    ],
+    "project_leads": [
+      "tech-lead",
+      "product-owner"
+    ]
+  },
+  "github": {
+    "enabled": true,
+    "token_env_var": "GITHUB_TOKEN",
+    "api_base_url": "https://api.github.com",
+    "required_scopes": [
+      "repo",
+      "workflow"
+    ],
+    "default_reviewers": [
+      "senior-dev",
+      "architect"
+    ],
+    "branch_protection": {
+      "respect_required_reviews": true,
+      "respect_status_checks": true
+    }
+  },
+  "linear": {
+    "enabled": true,
+    "api_key_env_var": "LINEAR_API_KEY",
+    "team_id": "TEAM-123",
+    "project_id": "PROJECT-456",
+    "auto_link_issues": true
+  },
+  "runtime": {
+    "agent_endpoint": "https://ai-agent-service.example.com/v1",
+    "agent_endpoint_env_var": "AGENT_ENDPOINT",
+    "max_concurrent_tasks": 3,
+    "timeout_minutes": 30,
+    "context_token_budget": 32000,
+    "logs_format": "ndjson",
+    "run_directory": ".ai-feature-pipeline/runs"
+  },
+  "safety": {
+    "redact_secrets": true,
+    "require_approval_for_prd": true,
+    "require_approval_for_plan": true,
+    "require_approval_for_pr": true,
+    "prevent_force_push": true,
+    "allowed_file_patterns": [
+      "**/*.ts",
+      "**/*.js",
+      "**/*.tsx",
+      "**/*.jsx",
+      "**/*.md",
+      "**/*.json",
+      "**/*.yaml",
+      "**/*.yml"
+    ],
+    "blocked_file_patterns": [
+      ".env",
+      ".env.*",
+      "**/*.key",
+      "**/*.pem",
+      "**/*.p12",
+      "**/credentials.*",
+      "**/secrets.*"
+    ]
+  },
+  "feature_flags": {
+    "enable_auto_merge": false,
+    "enable_deployment_triggers": false,
+    "enable_linear_sync": true,
+    "enable_context_summarization": true,
+    "enable_resumability": true,
+    "enable_developer_preview": false
+  },
+  "constraints": {
+    "max_file_size_kb": 1000,
+    "max_context_files": 100,
+    "rate_limits": {
+      "github_requests_per_hour": 5000,
+      "linear_requests_per_minute": 60,
+      "agent_requests_per_hour": 100
+    }
+  },
+  "governance_notes": "This is a sample configuration. Configure integrations and adjust settings according to your project requirements. Ensure all team members have appropriate access tokens and understand the approval workflows."
+}

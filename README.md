@@ -54,28 +54,38 @@ cd your-project
 ai-feature init
 ```
 
-This creates a `.ai-feature-pipeline/` directory with configuration files.
+This creates a `.ai-feature-pipeline/` directory with schema-validated configuration files.
 
-### 2. Configure integrations (optional)
+### 2. Configure integrations
 
-Edit `.ai-feature-pipeline/config.json` to enable GitHub or Linear integrations:
+Set environment variables for API credentials:
+
+```bash
+export GITHUB_TOKEN=ghp_your_token_here
+export LINEAR_API_KEY=lin_api_your_key_here
+export AGENT_ENDPOINT=https://your-agent-service.com/v1
+```
+
+Edit `.ai-feature-pipeline/config.json` to enable integrations:
 
 ```json
 {
-  "integrations": {
-    "github": {
-      "enabled": true,
-      "token": "ghp_your_token_here"
-    },
-    "linear": {
-      "enabled": true,
-      "apiKey": "lin_api_your_key_here"
-    }
+  "github": {
+    "enabled": true
+  },
+  "linear": {
+    "enabled": true
   }
 }
 ```
 
-### 3. Start a feature
+### 3. Validate configuration
+
+```bash
+ai-feature init --validate-only
+```
+
+### 4. Start a feature
 
 ```bash
 # From a prompt
@@ -92,16 +102,28 @@ ai-feature start --spec ./specs/new-feature.md
 
 ### `ai-feature init`
 
-Initialize the pipeline in the current git repository.
+Initialize the pipeline in the current git repository with schema-validated configuration.
 
 **Options:**
 - `-f, --force`: Force re-initialization even if config already exists
+- `--validate-only`: Validate existing config without creating new files
 
-**Example:**
+**Examples:**
 ```bash
+# Initialize new configuration
 ai-feature init
+
+# Force re-initialization
 ai-feature init --force
+
+# Validate existing configuration
+ai-feature init --validate-only
 ```
+
+**Exit Codes:**
+- `0`: Success
+- `1`: General error (not a git repository, etc.)
+- `10`: Configuration validation error
 
 ### `ai-feature start` (Planned)
 
@@ -179,7 +201,17 @@ ai-feature-pipeline/
 ├── src/
 │   ├── commands/          # CLI command implementations
 │   │   └── init.ts        # Initialize command
+│   ├── core/
+│   │   └── config/        # Configuration management
+│   │       └── repo_config.ts  # Schema validation & loaders
 │   └── index.ts           # Entry point
+├── config/
+│   └── schemas/           # JSON Schema definitions
+│       └── repo_config.schema.json
+├── examples/
+│   └── sample_repo_config/
+│       ├── config.json    # Sample configuration
+│       └── README.md      # Configuration guide
 ├── test/
 │   └── commands/          # Command tests
 │       └── init.test.ts
@@ -218,29 +250,95 @@ Each phase is idempotent and resumable. Artifacts are stored in `.ai-feature-pip
 
 ## Configuration
 
-Configuration is stored in `.ai-feature-pipeline/config.json`:
+Configuration is stored in `.ai-feature-pipeline/config.json` and validated against a JSON Schema.
+
+### Schema Sections
+
+The configuration includes the following sections:
+
+- **schema_version**: Version for configuration migrations (e.g., "1.0.0")
+- **project**: Project metadata (id, repo_url, default_branch, context_paths, project_leads)
+- **github**: GitHub integration settings (enabled, token_env_var, api_base_url, required_scopes, default_reviewers)
+- **linear**: Linear integration settings (enabled, api_key_env_var, team_id, project_id)
+- **runtime**: Execution settings (agent_endpoint, max_concurrent_tasks, timeout_minutes, context_token_budget, logs_format)
+- **safety**: Security controls (redact_secrets, approval gates, file patterns)
+- **feature_flags**: Experimental features (auto_merge, deployment_triggers, etc.)
+- **constraints**: Resource limits (max_file_size_kb, max_context_files, rate_limits)
+- **governance_notes**: Free-form compliance notes
+
+### Example Configuration
 
 ```json
 {
-  "version": "1.0.0",
-  "repository": {
-    "root": "/path/to/repo",
-    "type": "git"
+  "schema_version": "1.0.0",
+  "project": {
+    "id": "my-project",
+    "repo_url": "https://github.com/org/repo.git",
+    "default_branch": "main",
+    "context_paths": ["src/", "docs/", "README.md"]
   },
-  "integrations": {
-    "github": {
-      "enabled": false
-    },
-    "linear": {
-      "enabled": false
-    }
+  "github": {
+    "enabled": true,
+    "token_env_var": "GITHUB_TOKEN",
+    "required_scopes": ["repo", "workflow"]
   },
-  "settings": {
-    "runDirectory": ".ai-feature-pipeline/runs",
-    "logsFormat": "ndjson"
+  "linear": {
+    "enabled": false
+  },
+  "runtime": {
+    "max_concurrent_tasks": 3,
+    "timeout_minutes": 30,
+    "context_token_budget": 32000,
+    "logs_format": "ndjson"
+  },
+  "safety": {
+    "redact_secrets": true,
+    "require_approval_for_prd": true,
+    "require_approval_for_plan": true,
+    "require_approval_for_pr": true
+  },
+  "feature_flags": {
+    "enable_resumability": true,
+    "enable_context_summarization": true
   }
 }
 ```
+
+### Environment Variables
+
+Credentials and sensitive values should be provided via environment variables:
+
+```bash
+# Required for GitHub integration
+export GITHUB_TOKEN=ghp_xxxxx
+
+# Required for Linear integration
+export LINEAR_API_KEY=lin_api_xxxxx
+
+# Required for AI agent service
+export AGENT_ENDPOINT=https://agent.example.com/v1
+```
+
+The CLI validates that these are set when integrations are enabled.
+
+### Configuration Override Pattern
+
+Environment variables can override config values using the pattern:
+```
+AI_FEATURE_<SECTION>_<FIELD>
+```
+
+Examples:
+```bash
+export AI_FEATURE_GITHUB_TOKEN=ghp_override
+export AI_FEATURE_RUNTIME_AGENT_ENDPOINT=https://override.com
+```
+
+### Schema Reference
+
+Full schema: `config/schemas/repo_config.schema.json`
+Sample configuration: `examples/sample_repo_config/config.json`
+Configuration guide: `examples/sample_repo_config/README.md`
 
 ## License
 

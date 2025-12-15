@@ -2,35 +2,44 @@
   {
     "task_id": "I2.T1",
     "iteration_id": "I2",
-    "iteration_goal": "Build context aggregation, research orchestration, PRD/spec drafting engines, OpenAPI spec, and sequence diagrams that operationalize the architectural blueprint.",
-    "description": "Implement context aggregator service to scan configured paths, summarize large files, hash binaries, and record token budgets/hashes into `context-manifest.json` while respecting must_not_touch constraints.",
+    "iteration_goal": "Build repository context discovery, summarization, and caching pipelines; implement ResearchTask orchestration; deliver PRD/spec authoring engines with approval gates; and formalize traceability/agent manifest flows so planning outputs remain deterministic and actionable.",
+    "description": "Implement the Context Aggregator that crawls configured globs, README, docs, and git history, collecting file metadata, contents, and scoring heuristics while respecting token budgets defined in ADR-4.\n            Support incremental hashing to skip unchanged files, integrate with run directory storage, and expose CLI options for manual inclusion/exclusion.",
     "agent_type_hint": "BackendAgent",
-    "inputs": "Section 2 communication patterns, Section 4 directives.",
-    "target_files": [],
+    "inputs": "Section 2 (Key Components), Section 2.1 (Context artifact), FR-7/FR-8, ADR-4.",
+    "target_files": [
+      "src/workflows/contextAggregator.ts",
+      "src/workflows/contextRanking.ts",
+      "tests/unit/contextAggregator.spec.ts",
+      "docs/requirements/context_manifest.md"
+    ],
     "input_files": [],
-    "deliverables": "Service module, CLI wiring, tests verifying summarization + hashing, doc updates.",
-    "acceptance_criteria": "Aggregator stores manifest with path, sha256, summary, token_cost, retrieval timestamps; respects constraints + TTL; tests pass.",
+    "deliverables": "Aggregator service with configuration-driven globs, scoring/ranking functions, CLI hooks for `start`, and documentation describing context manifest fields.",
+    "acceptance_criteria": "Unit tests cover deduplication, hashing, ranking; CLI summarises contexts under `context/` folder; doc lists default globs, token thresholds, and fallback ordering.",
     "dependencies": [
-      "I1.T6",
+      "I1.T3",
       "I1.T7"
     ],
-    "parallelizable": false,
+    "parallelizable": true,
     "done": false
   },
   {
     "task_id": "I2.T2",
     "iteration_id": "I2",
-    "iteration_goal": "Build context aggregation, research orchestration, PRD/spec drafting engines, OpenAPI spec, and sequence diagrams that operationalize the architectural blueprint.",
-    "description": "Draft OpenAPI v3.1 spec for optional REST mirror (init/status/resume/export/actions) including headers Accept + X-GitHub-Api-Version, rate-limit metadata, error taxonomy, and JSON schemas referencing Section 2 data models.",
-    "agent_type_hint": "DocumentationAgent",
-    "inputs": "Section 2 API style, data model ERD, Task I1.T2.",
-    "target_files": [],
+    "iteration_goal": "Build repository context discovery, summarization, and caching pipelines; implement ResearchTask orchestration; deliver PRD/spec authoring engines with approval gates; and formalize traceability/agent manifest flows so planning outputs remain deterministic and actionable.",
+    "description": "Add summarization pipeline that chunks large files, feeds them to configured agent/provider, stores compressed summaries, and records costs/tokens to telemetry, while enforcing redaction rules from Section 4.\n            Provide CLI commands/options to re-summarize specific files and to view summary preview in `status` command.",
+    "agent_type_hint": "BackendAgent",
+    "inputs": "Section 2 (Technology Stack), Section 4 (Directives), FR-8, NFR-3.",
+    "target_files": [
+      "src/workflows/contextSummarizer.ts",
+      "src/telemetry/costTracker.ts",
+      "docs/requirements/context_summarization.md",
+      "tests/unit/contextSummarizer.spec.ts"
+    ],
     "input_files": [],
-    "deliverables": "Validated OpenAPI file, contract guide summarizing endpoints/headers.",
-    "acceptance_criteria": "Passes spectral lint; documents Accept + API version headers; includes artifacts/resume/export endpoints; referenced in README.",
+    "deliverables": "Summarization service with streaming support, telemetry integration, doc describing budgets/redaction, and automated tests verifying chunk heuristics.",
+    "acceptance_criteria": "Telemetry file records tokens/cost per summary; summaries stored with SHAs and chunk IDs; CLI `status --json` includes summarized context entries and warnings when budgets exceeded.",
     "dependencies": [
-      "I1.T2",
-      "I1.T4"
+      "I2.T1"
     ],
     "parallelizable": true,
     "done": false
@@ -38,14 +47,19 @@
   {
     "task_id": "I2.T3",
     "iteration_id": "I2",
-    "iteration_goal": "Build context aggregation, research orchestration, PRD/spec drafting engines, OpenAPI spec, and sequence diagrams that operationalize the architectural blueprint.",
-    "description": "Build ResearchTask coordinator managing unknown detection, ResearchTask queue writing, cache_key tracking, and freshness enforcement; integrate with context aggregator outputs.",
+    "iteration_goal": "Build repository context discovery, summarization, and caching pipelines; implement ResearchTask orchestration; deliver PRD/spec authoring engines with approval gates; and formalize traceability/agent manifest flows so planning outputs remain deterministic and actionable.",
+    "description": "Build the ResearchTask coordinator that identifies unknowns from prompts/specs, queues tasks with objectives/sources/cache keys, and records outputs; document the process via the Context & Research Sequence Diagram promised in Section 2.1.\n            Integrate caching/refresh policies (freshness required), CLI commands to list tasks, and storage under run directory.",
     "agent_type_hint": "BackendAgent",
-    "inputs": "Requirements FR-6, ResearchTask schema.",
-    "target_files": [],
+    "inputs": "Section 2.1 (Sequence Diagram), FR-6, FR-7, ADR-4.",
+    "target_files": [
+      "src/workflows/researchCoordinator.ts",
+      "docs/diagrams/context_research_sequence.mmd",
+      "docs/requirements/research_playbook.md",
+      "tests/unit/researchCoordinator.spec.ts"
+    ],
     "input_files": [],
-    "deliverables": "Coordinator, tests, runbook describing manual/agent assignment, caching.",
-    "acceptance_criteria": "CLI can list/add/complete ResearchTasks; freshness enforcement triggers refetch when TTL exceeded; doc explains statuses + cache usage.",
+    "deliverables": "ResearchTask service with caching, Mermaid sequence diagram, documentation covering CLI usage and fallback flows when Linear offline.",
+    "acceptance_criteria": "Diagram renders; CLI can create/list ResearchTasks; tasks include `cache_key`, `freshness_required`, and `sources`; doc references mitigation for rate limits/offline scenarios.",
     "dependencies": [
       "I2.T1"
     ],
@@ -55,69 +69,90 @@
   {
     "task_id": "I2.T4",
     "iteration_id": "I2",
-    "iteration_goal": "Build context aggregation, research orchestration, PRD/spec drafting engines, OpenAPI spec, and sequence diagrams that operationalize the architectural blueprint.",
-    "description": "Author PlantUML sequence diagram for prompt-to-deploy flow covering CLI orchestrator, context aggregator, research coordinator, PRD/spec gates, execution queue, adapters, deployment triggers, and resume loops.",
-    "agent_type_hint": "DiagrammingAgent",
-    "inputs": "Section 2 communication patterns, state machine, OpenAPI spec.",
-    "target_files": [],
-    "input_files": [],
-    "deliverables": "Sequence diagram with textual explanation linking to requirements.",
-    "acceptance_criteria": "Diagram renders, includes rate-limit/resume notes, cross-linked to docs + README.",
-    "dependencies": [
-      "I2.T2",
-      "I2.T3"
-    ],
-    "parallelizable": true,
-    "done": false
-  },
-  {
-    "task_id": "I2.T5",
-    "iteration_id": "I2",
-    "iteration_goal": "Build context aggregation, research orchestration, PRD/spec drafting engines, OpenAPI spec, and sequence diagrams that operationalize the architectural blueprint.",
-    "description": "Produce context budgeting + summarization guidelines (Markdown) with numeric token caps, chunking strategy, binary hashing, and redaction policies for sensitive files.",
+    "iteration_goal": "Build repository context discovery, summarization, and caching pipelines; implement ResearchTask orchestration; deliver PRD/spec authoring engines with approval gates; and formalize traceability/agent manifest flows so planning outputs remain deterministic and actionable.",
+    "description": "Create PRD template (Markdown) and PRD authoring engine that uses context + research to draft PRDs, supports iterative editing, records approvals, and maps goals to trace IDs.\n            Document the flow via PRD Template & Approval Playbook artifact and integrate gating prompts executed in CLI.",
     "agent_type_hint": "DocumentationAgent",
-    "inputs": "Requirements FR-8, Section 7 NFRs.",
-    "target_files": [],
-    "input_files": [],
-    "deliverables": "Guide + schema ensuring automation respects budgets.",
-    "acceptance_criteria": "Guide lists budgets for <2k files and <20k files, includes chunking instructions, redaction rules, and cross-links to aggregator; schema validated.",
-    "dependencies": [
-      "I2.T1"
+    "inputs": "Section 2.1 (PRD template), FR-4/FR-9, ADR-5.",
+    "target_files": [
+      "src/workflows/prdAuthoringEngine.ts",
+      "docs/templates/prd_template.md",
+      "docs/ops/prd_playbook.md",
+      "plan/readiness_checklist.md"
     ],
-    "parallelizable": true,
-    "done": false
-  },
-  {
-    "task_id": "I2.T6",
-    "iteration_id": "I2",
-    "iteration_goal": "Build context aggregation, research orchestration, PRD/spec drafting engines, OpenAPI spec, and sequence diagrams that operationalize the architectural blueprint.",
-    "description": "Implement PRD authoring engine hooking to agent adapter (stub) with template sections (problem, goals, acceptance criteria, risks) and gating prompts storing outputs to `prd.md` with hash + approval request.",
-    "agent_type_hint": "BackendAgent",
-    "inputs": "Section 2 components, Requirements FR-4/FR-9/FR-11.",
-    "target_files": [],
     "input_files": [],
-    "deliverables": "Service, tests, documentation, CLI wiring for `ai-feature start` to produce PRD.",
-    "acceptance_criteria": "PRD includes traceability mapping; CLI prompts for approval; tests verify idempotent skip when file unchanged.",
+    "deliverables": "PRD authoring module, template, approvals playbook, and CLI wiring for editing/approval flows.",
+    "acceptance_criteria": "PRD template includes problem/goal/non-goal/acceptance/risk sections; CLI `start` generates `prd.md` referencing context; approvals recorded with hash; doc instructs editors how to request revisions.",
     "dependencies": [
       "I2.T1",
+      "I2.T2",
       "I2.T3"
     ],
     "parallelizable": false,
     "done": false
   },
   {
+    "task_id": "I2.T5",
+    "iteration_id": "I2",
+    "iteration_goal": "Build repository context discovery, summarization, and caching pipelines; implement ResearchTask orchestration; deliver PRD/spec authoring engines with approval gates; and formalize traceability/agent manifest flows so planning outputs remain deterministic and actionable.",
+    "description": "Implement Specification Composer that converts approved PRD + research data into structured `spec.md` covering constraints, rollout, test plan, and risks; create blueprint doc/diagram referenced in Section 2.1.\n            Support CLI editing loops, highlight unknowns requiring more research, and store change logs for review.",
+    "agent_type_hint": "BackendAgent",
+    "inputs": "Section 2 (Key Components), Section 2.1 (Specification blueprint), FR-10, ADR-5.",
+    "target_files": [
+      "src/workflows/specComposer.ts",
+      "docs/requirements/spec_blueprint.md",
+      "docs/diagrams/spec_flow.mmd",
+      "tests/unit/specComposer.spec.ts"
+    ],
+    "input_files": [],
+    "deliverables": "Spec composer, blueprint doc, diagram, and tests verifying constraint/test-plan coverage.",
+    "acceptance_criteria": "`spec.md` includes constraint/test/rollout sections, change log, and referenced file globs; CLI enforces approval; doc ties blueprint to ExecutionTask mapping.",
+    "dependencies": [
+      "I2.T4"
+    ],
+    "parallelizable": false,
+    "done": false
+  },
+  {
+    "task_id": "I2.T6",
+    "iteration_id": "I2",
+    "iteration_goal": "Build repository context discovery, summarization, and caching pipelines; implement ResearchTask orchestration; deliver PRD/spec authoring engines with approval gates; and formalize traceability/agent manifest flows so planning outputs remain deterministic and actionable.",
+    "description": "Design approval UX for PRD/spec stages, including CLI prompts, `--json` outputs for automation, human-in-the-loop documentation, and `approvals.json` updates with signatures.\n            Provide offline editing guidance and escalate missing approvals via Notification stubs for later iterations.",
+    "agent_type_hint": "FrontendAgent",
+    "inputs": "Section 1 (Key Assumptions), Section 4 (Directives), ADR-5.",
+    "target_files": [
+      "src/cli/commands/approve.ts",
+      "src/workflows/approvalRegistry.ts",
+      "docs/ops/approval_playbook.md",
+      "tests/integration/approvalFlows.spec.ts"
+    ],
+    "input_files": [],
+    "deliverables": "CLI approval command, registry service, doc describing gates/timeouts, and integration test verifying gating for `start`/`resume`.",
+    "acceptance_criteria": "Approvals capture signer/time/hash; CLI `status` highlights pending gates; doc explains interactive + automation-friendly flows; tests simulate timeouts and resumption.",
+    "dependencies": [
+      "I2.T4",
+      "I2.T5"
+    ],
+    "parallelizable": true,
+    "done": false
+  },
+  {
     "task_id": "I2.T7",
     "iteration_id": "I2",
-    "iteration_goal": "Build context aggregation, research orchestration, PRD/spec drafting engines, OpenAPI spec, and sequence diagrams that operationalize the architectural blueprint.",
-    "description": "Implement spec composer service referencing PRD + research outputs, producing spec/test/rollout sections, constraints, unknowns, and hooking to approval gate before planner executes.",
-    "agent_type_hint": "BackendAgent",
-    "inputs": "PRD template, Requirements FR-6/FR-10/FR-11.",
-    "target_files": [],
+    "iteration_goal": "Build repository context discovery, summarization, and caching pipelines; implement ResearchTask orchestration; deliver PRD/spec authoring engines with approval gates; and formalize traceability/agent manifest flows so planning outputs remain deterministic and actionable.",
+    "description": "Implement traceability map generator that links PRD goals → spec requirements → planned ExecutionTasks using models defined in I1, storing results in `trace.json` and surfacing summary in CLI.\n            Provide Markdown guidance referencing FR-9/FR-10 so later teams can reason about completeness.",
+    "agent_type_hint": "StructuralDataAgent",
+    "inputs": "Section 2 (Data Model Overview), Section 2.1 (Trace artifacts), FR-9/FR-10, ADR-7.",
+    "target_files": [
+      "src/workflows/traceabilityMapper.ts",
+      "docs/requirements/traceability_playbook.md",
+      "tests/unit/traceabilityMapper.spec.ts"
+    ],
     "input_files": [],
-    "deliverables": "Composer code/tests, template updates, doc.",
-    "acceptance_criteria": "Spec includes constraints/test/rollout/risk sections; CLI enforces approval; idempotent skip logic implemented; doc references gating.",
+    "deliverables": "Mapper module, doc describing mapping conventions, and unit tests ensuring determinism.",
+    "acceptance_criteria": "`trace.json` generated after PRD/spec approval; CLI `status --json` includes trace summary; doc outlines update process when spec changes; tests verify duplicates prevented.",
     "dependencies": [
-      "I2.T6"
+      "I2.T4",
+      "I2.T5"
     ],
     "parallelizable": false,
     "done": false
@@ -125,77 +160,24 @@
   {
     "task_id": "I2.T8",
     "iteration_id": "I2",
-    "iteration_goal": "Build context aggregation, research orchestration, PRD/spec drafting engines, OpenAPI spec, and sequence diagrams that operationalize the architectural blueprint.",
-    "description": "Build approval registry module + CLI prompts storing approvals.json with signer ID, artifact hash, timestamp, and method (human/agent) to support gating and audit.",
+    "iteration_goal": "Build repository context discovery, summarization, and caching pipelines; implement ResearchTask orchestration; deliver PRD/spec authoring engines with approval gates; and formalize traceability/agent manifest flows so planning outputs remain deterministic and actionable.",
+    "description": "Introduce Agent Manifest loader (JSON Schema) covering provider metadata, rate limits, tool support, and cost hints; integrate with PRD/spec generators to pick appropriate providers and log spend per call.\n            Update CLI docs on how to register manifests and verify compatibility.",
     "agent_type_hint": "BackendAgent",
-    "inputs": "Section 4 directives, Requirements FR-11.",
-    "target_files": [],
+    "inputs": "Section 2.1 (Agent adapter contract), ADR-1, ADR-4, ADR-7.",
+    "target_files": [
+      "src/adapters/agents/manifestLoader.ts",
+      "docs/requirements/agent_manifest_schema.json",
+      "docs/ops/agent_manifest_guide.md",
+      "tests/unit/agentManifest.spec.ts"
+    ],
     "input_files": [],
-    "deliverables": "Registry code, CLI prompts, doc referencing gating and CLI flags.",
-    "acceptance_criteria": "Approvals stored with hash + stage; CLI exposes `ai-feature approve --stage`; doc includes exit codes + automation guidance.",
+    "deliverables": "Manifest loader, JSON Schema, guide describing provider onboarding, and tests validating schema compliance/cost logging.",
+    "acceptance_criteria": "CLI rejects manifests missing rate-limit metadata; cost telemetry integrates with summarizer/PRD/spec calls; doc outlines manifest distribution workflow and fallback scenarios.",
     "dependencies": [
-      "I1.T8",
-      "I2.T6"
+      "I1.T6",
+      "I2.T2"
     ],
     "parallelizable": true,
-    "done": false
-  },
-  {
-    "task_id": "I2.T9",
-    "iteration_id": "I2",
-    "iteration_goal": "Build context aggregation, research orchestration, PRD/spec drafting engines, OpenAPI spec, and sequence diagrams that operationalize the architectural blueprint.",
-    "description": "Integrate start flows (`--prompt`, `--linear`, `--spec`) through context aggregator, research coordinator, PRD/spec engines, and approvals with telemetry instrumentation.",
-    "agent_type_hint": "BackendAgent",
-    "inputs": "Tasks I2.T1–I2.T8, Requirements FR-4/FR-5/FR-6.",
-    "target_files": [],
-    "input_files": [],
-    "deliverables": "Fully wired start command variants, CLI help text, smoke tests verifying artifact creation, doc updates.",
-    "acceptance_criteria": "Running start command writes context-manifest, research tasks, PRD/spec awaiting approvals; telemetry captures last_step/last_error; tests pass in CI.",
-    "dependencies": [
-      "I2.T1",
-      "I2.T3",
-      "I2.T6",
-      "I2.T7",
-      "I2.T8"
-    ],
-    "parallelizable": false,
-    "done": false
-  },
-  {
-    "task_id": "I2.T10",
-    "iteration_id": "I2",
-    "iteration_goal": "Build context aggregation, research orchestration, PRD/spec drafting engines, OpenAPI spec, and sequence diagrams that operationalize the architectural blueprint.",
-    "description": "Implement Linear issue snapshot + rate-limit aware fetch helper storing payloads, retries, and caching, degrading gracefully to prompt-only mode when API unavailable.",
-    "agent_type_hint": "BackendAgent",
-    "inputs": "Requirements FR-5, IR-8/IR-9, Section 2 components.",
-    "target_files": [],
-    "input_files": [],
-    "deliverables": "Adapter stub hitting mock APIs, caching snapshots in run directory, doc describing rate-limit behavior.",
-    "acceptance_criteria": "Snapshot writes include retrieved_at + content_hash; adapter enforces 1,500 req/hr limit; fallback prompt path documented.",
-    "dependencies": [
-      "I1.T7",
-      "I2.T1"
-    ],
-    "parallelizable": true,
-    "done": false
-  },
-  {
-    "task_id": "I2.T11",
-    "iteration_id": "I2",
-    "iteration_goal": "Build context aggregation, research orchestration, PRD/spec drafting engines, OpenAPI spec, and sequence diagrams that operationalize the architectural blueprint.",
-    "description": "Extend `ai-feature status` command to display overview (context counts, PRD/spec status, approvals needed, research backlog) using new services with anchors for automation.",
-    "agent_type_hint": "BackendAgent",
-    "inputs": "Start command output, approval registry, ResearchTask coordinator.",
-    "target_files": [],
-    "input_files": [],
-    "deliverables": "CLI summary view, JSON output schema, docs describing sections + exit codes.",
-    "acceptance_criteria": "Status surfaces context counts, pending approvals, research stats; `--json` returns structured DTO; tests cover human-action scenario.",
-    "dependencies": [
-      "I2.T1",
-      "I2.T3",
-      "I2.T8"
-    ],
-    "parallelizable": false,
     "done": false
   }
 ]
