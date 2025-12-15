@@ -3,4 +3,53 @@
 .codemachine/prompts
 .codemachine/agents
 .codemachine/template.json
-node_modules
+
+# Dependencies
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+package-lock.json
+yarn.lock
+
+# Build output
+dist/
+*.tsbuildinfo
+
+# Testing
+coverage/
+.test-temp/
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+logs/
+*.log
+
+# Runtime data
+pids/
+*.pid
+*.seed
+*.pid.lock
+
+# oclif
+oclif.manifest.json
+.oclif/
+
+# AI Feature Pipeline runtime
+.ai-feature-pipeline/runs/
+.ai-feature-pipeline/logs/

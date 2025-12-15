@@ -12,7 +12,7 @@
     "acceptance_criteria": "`npm run lint` + `npm test` pass; Docker image builds; CI workflow references Node v24; README stub notes commands.",
     "dependencies": [],
     "parallelizable": true,
-    "done": false
+    "done": true
   },
   {
     "task_id": "I1.T2",
