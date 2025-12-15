@@ -1,0 +1,97 @@
+%% Run Directory Schema Diagram
+%% Visualizes the structure of .ai-feature-pipeline/runs/<feature_id>/
+%% Implements ADR-2 (State Persistence) directory layout requirements
+
+graph TB
+    subgraph RunDirectory["📁 .ai-feature-pipeline/runs/&lt;feature_id&gt;/"]
+        direction TB
+
+        %% Core files
+        Manifest["📄 manifest.json<br/><small>Run state & metadata</small>"]
+        HashManifest["📄 hash_manifest.json<br/><small>File integrity tracking</small>"]
+        Lock["🔒 run.lock<br/><small>Concurrent access mutex</small>"]
+
+        %% Subdirectories
+        subgraph Artifacts["📁 artifacts/"]
+            PRD["📄 prd.md<br/><small>Product Requirements</small>"]
+            Spec["📄 spec.md<br/><small>Technical Specification</small>"]
+            Plan["📄 plan.json<br/><small>Execution Plan DAG</small>"]
+        end
+
+        subgraph Queue["📁 queue/"]
+            QueuePending["📄 pending/*.json<br/><small>Queued tasks</small>"]
+            QueueRunning["📄 running/*.json<br/><small>Active tasks</small>"]
+            QueueCompleted["📄 completed/*.json<br/><small>Done tasks</small>"]
+            QueueFailed["📄 failed/*.json<br/><small>Failed tasks</small>"]
+        end
+
+        subgraph Logs["📁 logs/"]
+            StdOut["📄 stdout.log<br/><small>Command outputs</small>"]
+            StdErr["📄 stderr.log<br/><small>Error outputs</small>"]
+            Events["📄 events.ndjson<br/><small>Structured events</small>"]
+        end
+
+        subgraph Telemetry["📁 telemetry/"]
+            Metrics["📄 metrics.json<br/><small>Performance metrics</small>"]
+            Traces["📄 traces.json<br/><small>Distributed traces</small>"]
+            Costs["📄 costs.json<br/><small>Agent cost tracking</small>"]
+            RateLimits["📄 rate_limits.json<br/><small>API rate limit state</small>"]
+        end
+
+        subgraph Approvals["📁 approvals/"]
+            ApprovalsFile["📄 approvals.json<br/><small>Approval records</small>"]
+            Signatures["📄 signatures/*.json<br/><small>Approval artifacts</small>"]
+        end
+
+        subgraph SQLite["📁 sqlite/"]
+            SqliteDb["📄 run_queue.db<br/><small>Queue index</small>"]
+            SqliteWal["📄 run_queue.db-wal<br/><small>WAL</small>"]
+            SqliteShm["📄 run_queue.db-shm<br/><small>SHM</small>"]
+        end
+
+        subgraph Context["📁 context/"]
+            ContextSummary["📄 summary.json<br/><small>Aggregated context</small>"]
+            ContextHashes["📄 file_hashes.json<br/><small>Source file hashes</small>"]
+        end
+    end
+
+    %% Relationships
+    Manifest -->|references| HashManifest
+    Manifest -->|references| Artifacts
+    Manifest -->|references| Queue
+    Manifest -->|references| Telemetry
+    Manifest -->|tracks| Approvals
+    Manifest -->|references| SQLite
+
+    Lock -.->|guards| Manifest
+    Lock -.->|guards| HashManifest
+
+    %% State machine transitions
+    subgraph StateMachine["State Machine Transitions"]
+        direction LR
+        Pending[pending]
+        InProgress[in_progress]
+        Paused[paused]
+        Completed[completed]
+        Failed[failed]
+
+        Pending -->|start| InProgress
+        InProgress -->|pause| Paused
+        InProgress -->|complete| Completed
+        InProgress -->|error| Failed
+        Paused -->|resume| InProgress
+        Failed -->|retry| InProgress
+    end
+
+    Manifest -->|tracks status| StateMachine
+
+    %% Annotations
+    classDef fileNode fill:#e1f5ff,stroke:#01579b,stroke-width:2px
+    classDef dirNode fill:#f3e5f5,stroke:#4a148c,stroke-width:2px
+    classDef lockNode fill:#fff9c4,stroke:#f57f17,stroke-width:2px
+    classDef stateNode fill:#e8f5e9,stroke:#1b5e20,stroke-width:2px
+
+    class Manifest,HashManifest,PRD,Spec,Plan,QueuePending,QueueRunning,QueueCompleted,QueueFailed,StdOut,StdErr,Events,Metrics,Traces,Costs,RateLimits,ApprovalsFile,Signatures,ContextSummary,ContextHashes,SqliteDb,SqliteWal,SqliteShm fileNode
+    class Artifacts,Queue,Logs,Telemetry,Approvals,Context,SQLite dirNode
+    class Lock lockNode
+    class Pending,InProgress,Paused,Completed,Failed stateNode
