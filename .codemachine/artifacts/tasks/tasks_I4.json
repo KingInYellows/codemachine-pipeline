@@ -1,0 +1,201 @@
+[
+  {
+    "task_id": "I4.T1",
+    "iteration_id": "I4",
+    "iteration_goal": "Finish CLI workflows across plan/resume/pr/deploy subcommands, enforce approval prompts, introduce notification hooks, polish UI/UX tokens, and ensure human operators receive actionable summaries.",
+    "description": "Build CLI rendering/tokens module implementing spacing, color palette, density toggles, badge styles, progress lanes, and JSON fallback as defined in UI architecture.",
+    "agent_type_hint": "FrontendAgent",
+    "inputs": "UI/UX Architecture Section, Section 4 directives.",
+    "target_files": [],
+    "input_files": [],
+    "deliverables": "Token definitions, reusable components, doc describing usage + accessibility guidelines.",
+    "acceptance_criteria": "Renderers support colorless mode, density toggles, anchors for automation; doc references design tokens.",
+    "dependencies": [
+      "I1.T1",
+      "I1.T7"
+    ],
+    "parallelizable": true,
+    "done": false
+  },
+  {
+    "task_id": "I4.T2",
+    "iteration_id": "I4",
+    "iteration_goal": "Finish CLI workflows across plan/resume/pr/deploy subcommands, enforce approval prompts, introduce notification hooks, polish UI/UX tokens, and ensure human operators receive actionable summaries.",
+    "description": "Enhance `ai-feature status` command with improved layout (progress lanes, context tables, approval reminders, rate-limit ledger) plus `--json` schema documentation.",
+    "agent_type_hint": "FrontendAgent",
+    "inputs": "Renderer module, approval registry, context aggregator.",
+    "target_files": [],
+    "input_files": [],
+    "deliverables": "Styled status output, snapshot tests, doc referencing fields + exit codes.",
+    "acceptance_criteria": "Status shows sections per design, `--json` matches schema, tests protect formatting.",
+    "dependencies": [
+      "I4.T1",
+      "I2.T11"
+    ],
+    "parallelizable": false,
+    "done": false
+  },
+  {
+    "task_id": "I4.T3",
+    "iteration_id": "I4",
+    "iteration_goal": "Finish CLI workflows across plan/resume/pr/deploy subcommands, enforce approval prompts, introduce notification hooks, polish UI/UX tokens, and ensure human operators receive actionable summaries.",
+    "description": "Implement `ai-feature resume` UX combining last_step/last_error, pending tasks, cooldowns, and manual action prompts with automation-friendly JSON output + docs.",
+    "agent_type_hint": "FrontendAgent",
+    "inputs": "Resume coordinator, renderer module.",
+    "target_files": [],
+    "input_files": [],
+    "deliverables": "CLI command hooking to coordinator, docs describing exit codes + instructions.",
+    "acceptance_criteria": "Resume prints blocking items, respects `--yes`, logs actions, JSON output includes tasks/cooldowns.",
+    "dependencies": [
+      "I3.T9",
+      "I4.T1"
+    ],
+    "parallelizable": false,
+    "done": false
+  },
+  {
+    "task_id": "I4.T4",
+    "iteration_id": "I4",
+    "iteration_goal": "Finish CLI workflows across plan/resume/pr/deploy subcommands, enforce approval prompts, introduce notification hooks, polish UI/UX tokens, and ensure human operators receive actionable summaries.",
+    "description": "Implement PR workflow commands: `ai-feature pr create`, `ai-feature pr reviewers`, `ai-feature pr status`, `ai-feature pr disable-auto-merge`, leveraging GitHub adapter and approval gating.",
+    "agent_type_hint": "BackendAgent",
+    "inputs": "GitHub adapter, approval registry, execution engine outputs.",
+    "target_files": [],
+    "input_files": [],
+    "deliverables": "CLI commands, doc covering gating + exit codes, smoke tests using fixtures.",
+    "acceptance_criteria": "Commands refuse to run without approvals/validations, display reviewer/required-check info, JSON output enumerates PR metadata.",
+    "dependencies": [
+      "I3.T2",
+      "I3.T7",
+      "I2.T8"
+    ],
+    "parallelizable": false,
+    "done": false
+  },
+  {
+    "task_id": "I4.T5",
+    "iteration_id": "I4",
+    "iteration_goal": "Finish CLI workflows across plan/resume/pr/deploy subcommands, enforce approval prompts, introduce notification hooks, polish UI/UX tokens, and ensure human operators receive actionable summaries.",
+    "description": "Deliver deployment CLI (`ai-feature deploy`) orchestrating branch protection checks, merge attempts, auto-merge toggles, workflow dispatch, and blocked reason reporting.",
+    "agent_type_hint": "BackendAgent",
+    "inputs": "GitHub adapter, deployment module plan, validation registry.",
+    "target_files": [],
+    "input_files": [],
+    "deliverables": "CLI command, doc enumerating required statuses + exit codes, tests verifying blocked/merge success flows.",
+    "acceptance_criteria": "Command detects missing checks, waits/backoffs, records deployment.json, outputs actionable statuses.",
+    "dependencies": [
+      "I3.T2",
+      "I3.T7"
+    ],
+    "parallelizable": false,
+    "done": false
+  },
+  {
+    "task_id": "I4.T6",
+    "iteration_id": "I4",
+    "iteration_goal": "Finish CLI workflows across plan/resume/pr/deploy subcommands, enforce approval prompts, introduce notification hooks, polish UI/UX tokens, and ensure human operators receive actionable summaries.",
+    "description": "Introduce notification adapter stubs (Slack/email/webhook) with throttled queue, templates referencing severity levels, redaction, and feature flags.",
+    "agent_type_hint": "BackendAgent",
+    "inputs": "Section 4 directives, observability spec.",
+    "target_files": [],
+    "input_files": [],
+    "deliverables": "Adapter skeleton, queue config, doc describing enabling/disabling per repo.",
+    "acceptance_criteria": "Notifications disabled by default, throttle thresholds configurable, templates include anchors + severity labels; tests verify queue/resend logic.",
+    "dependencies": [
+      "I1.T7",
+      "I3.T6"
+    ],
+    "parallelizable": true,
+    "done": false
+  },
+  {
+    "task_id": "I4.T7",
+    "iteration_id": "I4",
+    "iteration_goal": "Finish CLI workflows across plan/resume/pr/deploy subcommands, enforce approval prompts, introduce notification hooks, polish UI/UX tokens, and ensure human operators receive actionable summaries.",
+    "description": "Implement `ai-feature observe` command (cron-friendly) scanning run directories + GitHub merges to produce health report with KPIs, anomalies, and suggestions.",
+    "agent_type_hint": "BackendAgent",
+    "inputs": "Observability hub, GitHub adapter, run-directory metadata.",
+    "target_files": [],
+    "input_files": [],
+    "deliverables": "CLI command writing `.ai-feature-pipeline/reports/<timestamp>.md`, doc describing scheduling + file lock usage.",
+    "acceptance_criteria": "Observe command reads run dirs, compiles KPI summary, respects concurrency lock, exit codes indicate success/anomaly.",
+    "dependencies": [
+      "I1.T6",
+      "I3.T6"
+    ],
+    "parallelizable": true,
+    "done": false
+  },
+  {
+    "task_id": "I4.T8",
+    "iteration_id": "I4",
+    "iteration_goal": "Finish CLI workflows across plan/resume/pr/deploy subcommands, enforce approval prompts, introduce notification hooks, polish UI/UX tokens, and ensure human operators receive actionable summaries.",
+    "description": "Enhance `ai-feature export` CLI to package selected artifacts, run redaction scan, allow md/json output, and document manifest schema.",
+    "agent_type_hint": "BackendAgent",
+    "inputs": "Artifact bundle service, observability guidelines, Section 4 directives.",
+    "target_files": [],
+    "input_files": [],
+    "deliverables": "Enhanced command + doc, sample manifest, tests verifying redaction + inclusion toggles.",
+    "acceptance_criteria": "Export bundles include manifest/diffs/logs/telemetry, redaction filter passes tests, CLI prints shareable path.",
+    "dependencies": [
+      "I3.T7",
+      "I3.T9"
+    ],
+    "parallelizable": false,
+    "done": false
+  },
+  {
+    "task_id": "I4.T9",
+    "iteration_id": "I4",
+    "iteration_goal": "Finish CLI workflows across plan/resume/pr/deploy subcommands, enforce approval prompts, introduce notification hooks, polish UI/UX tokens, and ensure human operators receive actionable summaries.",
+    "description": "Publish comprehensive CLI help system + docs (README updates, command reference, FAQs) referencing anchors and cross-linking to plan sections.",
+    "agent_type_hint": "DocumentationAgent",
+    "inputs": "All CLI commands, UI architecture.",
+    "target_files": [],
+    "input_files": [],
+    "deliverables": "Up-to-date docs with tables for commands, flags, exit codes, reliability tips.",
+    "acceptance_criteria": "Each command documented with synopsis + exit codes; README includes quickstart; docs reference iterations + requirements.",
+    "dependencies": [
+      "I4.T2",
+      "I4.T8"
+    ],
+    "parallelizable": false,
+    "done": false
+  },
+  {
+    "task_id": "I4.T10",
+    "iteration_id": "I4",
+    "iteration_goal": "Finish CLI workflows across plan/resume/pr/deploy subcommands, enforce approval prompts, introduce notification hooks, polish UI/UX tokens, and ensure human operators receive actionable summaries.",
+    "description": "Implement interactive approval prompts (with `$EDITOR` fallback) capturing artifact hash, reason, signer, plus automation-friendly `--approved-by` flag for signed bundles.",
+    "agent_type_hint": "FrontendAgent",
+    "inputs": "Approval registry, UI renderer, Section 4 directives.",
+    "target_files": [],
+    "input_files": [],
+    "deliverables": "Prompt component, tests for $EDITOR fallback, doc updates covering automation usage.",
+    "acceptance_criteria": "Prompt shows artifact summary + diff hints, fallback instructions documented, CLI stores signatures + method, tests cover non-TTY behavior.",
+    "dependencies": [
+      "I2.T8",
+      "I4.T1"
+    ],
+    "parallelizable": true,
+    "done": false
+  },
+  {
+    "task_id": "I4.T11",
+    "iteration_id": "I4",
+    "iteration_goal": "Finish CLI workflows across plan/resume/pr/deploy subcommands, enforce approval prompts, introduce notification hooks, polish UI/UX tokens, and ensure human operators receive actionable summaries.",
+    "description": "Add `ai-feature cleanup` CLI for retention enforcement: detect old run directories, verify exports, archive to tar when requested, and log actions for audit.",
+    "agent_type_hint": "BackendAgent",
+    "inputs": "Run-directory design, export command, observability docs.",
+    "target_files": [],
+    "input_files": [],
+    "deliverables": "CLI command, doc describing retention settings, tests verifying dry-run + actual cleanup.",
+    "acceptance_criteria": "Command lists candidates, respects `--dry-run`, archives when `--archive` set, records actions to logs.",
+    "dependencies": [
+      "I1.T6",
+      "I4.T8"
+    ],
+    "parallelizable": true,
+    "done": false
+  }
+]

@@ -1,0 +1,201 @@
+[
+  {
+    "task_id": "I2.T1",
+    "iteration_id": "I2",
+    "iteration_goal": "Build context aggregation, research orchestration, PRD/spec drafting engines, OpenAPI spec, and sequence diagrams that operationalize the architectural blueprint.",
+    "description": "Implement context aggregator service to scan configured paths, summarize large files, hash binaries, and record token budgets/hashes into `context-manifest.json` while respecting must_not_touch constraints.",
+    "agent_type_hint": "BackendAgent",
+    "inputs": "Section 2 communication patterns, Section 4 directives.",
+    "target_files": [],
+    "input_files": [],
+    "deliverables": "Service module, CLI wiring, tests verifying summarization + hashing, doc updates.",
+    "acceptance_criteria": "Aggregator stores manifest with path, sha256, summary, token_cost, retrieval timestamps; respects constraints + TTL; tests pass.",
+    "dependencies": [
+      "I1.T6",
+      "I1.T7"
+    ],
+    "parallelizable": false,
+    "done": false
+  },
+  {
+    "task_id": "I2.T2",
+    "iteration_id": "I2",
+    "iteration_goal": "Build context aggregation, research orchestration, PRD/spec drafting engines, OpenAPI spec, and sequence diagrams that operationalize the architectural blueprint.",
+    "description": "Draft OpenAPI v3.1 spec for optional REST mirror (init/status/resume/export/actions) including headers Accept + X-GitHub-Api-Version, rate-limit metadata, error taxonomy, and JSON schemas referencing Section 2 data models.",
+    "agent_type_hint": "DocumentationAgent",
+    "inputs": "Section 2 API style, data model ERD, Task I1.T2.",
+    "target_files": [],
+    "input_files": [],
+    "deliverables": "Validated OpenAPI file, contract guide summarizing endpoints/headers.",
+    "acceptance_criteria": "Passes spectral lint; documents Accept + API version headers; includes artifacts/resume/export endpoints; referenced in README.",
+    "dependencies": [
+      "I1.T2",
+      "I1.T4"
+    ],
+    "parallelizable": true,
+    "done": false
+  },
+  {
+    "task_id": "I2.T3",
+    "iteration_id": "I2",
+    "iteration_goal": "Build context aggregation, research orchestration, PRD/spec drafting engines, OpenAPI spec, and sequence diagrams that operationalize the architectural blueprint.",
+    "description": "Build ResearchTask coordinator managing unknown detection, ResearchTask queue writing, cache_key tracking, and freshness enforcement; integrate with context aggregator outputs.",
+    "agent_type_hint": "BackendAgent",
+    "inputs": "Requirements FR-6, ResearchTask schema.",
+    "target_files": [],
+    "input_files": [],
+    "deliverables": "Coordinator, tests, runbook describing manual/agent assignment, caching.",
+    "acceptance_criteria": "CLI can list/add/complete ResearchTasks; freshness enforcement triggers refetch when TTL exceeded; doc explains statuses + cache usage.",
+    "dependencies": [
+      "I2.T1"
+    ],
+    "parallelizable": false,
+    "done": false
+  },
+  {
+    "task_id": "I2.T4",
+    "iteration_id": "I2",
+    "iteration_goal": "Build context aggregation, research orchestration, PRD/spec drafting engines, OpenAPI spec, and sequence diagrams that operationalize the architectural blueprint.",
+    "description": "Author PlantUML sequence diagram for prompt-to-deploy flow covering CLI orchestrator, context aggregator, research coordinator, PRD/spec gates, execution queue, adapters, deployment triggers, and resume loops.",
+    "agent_type_hint": "DiagrammingAgent",
+    "inputs": "Section 2 communication patterns, state machine, OpenAPI spec.",
+    "target_files": [],
+    "input_files": [],
+    "deliverables": "Sequence diagram with textual explanation linking to requirements.",
+    "acceptance_criteria": "Diagram renders, includes rate-limit/resume notes, cross-linked to docs + README.",
+    "dependencies": [
+      "I2.T2",
+      "I2.T3"
+    ],
+    "parallelizable": true,
+    "done": false
+  },
+  {
+    "task_id": "I2.T5",
+    "iteration_id": "I2",
+    "iteration_goal": "Build context aggregation, research orchestration, PRD/spec drafting engines, OpenAPI spec, and sequence diagrams that operationalize the architectural blueprint.",
+    "description": "Produce context budgeting + summarization guidelines (Markdown) with numeric token caps, chunking strategy, binary hashing, and redaction policies for sensitive files.",
+    "agent_type_hint": "DocumentationAgent",
+    "inputs": "Requirements FR-8, Section 7 NFRs.",
+    "target_files": [],
+    "input_files": [],
+    "deliverables": "Guide + schema ensuring automation respects budgets.",
+    "acceptance_criteria": "Guide lists budgets for <2k files and <20k files, includes chunking instructions, redaction rules, and cross-links to aggregator; schema validated.",
+    "dependencies": [
+      "I2.T1"
+    ],
+    "parallelizable": true,
+    "done": false
+  },
+  {
+    "task_id": "I2.T6",
+    "iteration_id": "I2",
+    "iteration_goal": "Build context aggregation, research orchestration, PRD/spec drafting engines, OpenAPI spec, and sequence diagrams that operationalize the architectural blueprint.",
+    "description": "Implement PRD authoring engine hooking to agent adapter (stub) with template sections (problem, goals, acceptance criteria, risks) and gating prompts storing outputs to `prd.md` with hash + approval request.",
+    "agent_type_hint": "BackendAgent",
+    "inputs": "Section 2 components, Requirements FR-4/FR-9/FR-11.",
+    "target_files": [],
+    "input_files": [],
+    "deliverables": "Service, tests, documentation, CLI wiring for `ai-feature start` to produce PRD.",
+    "acceptance_criteria": "PRD includes traceability mapping; CLI prompts for approval; tests verify idempotent skip when file unchanged.",
+    "dependencies": [
+      "I2.T1",
+      "I2.T3"
+    ],
+    "parallelizable": false,
+    "done": false
+  },
+  {
+    "task_id": "I2.T7",
+    "iteration_id": "I2",
+    "iteration_goal": "Build context aggregation, research orchestration, PRD/spec drafting engines, OpenAPI spec, and sequence diagrams that operationalize the architectural blueprint.",
+    "description": "Implement spec composer service referencing PRD + research outputs, producing spec/test/rollout sections, constraints, unknowns, and hooking to approval gate before planner executes.",
+    "agent_type_hint": "BackendAgent",
+    "inputs": "PRD template, Requirements FR-6/FR-10/FR-11.",
+    "target_files": [],
+    "input_files": [],
+    "deliverables": "Composer code/tests, template updates, doc.",
+    "acceptance_criteria": "Spec includes constraints/test/rollout/risk sections; CLI enforces approval; idempotent skip logic implemented; doc references gating.",
+    "dependencies": [
+      "I2.T6"
+    ],
+    "parallelizable": false,
+    "done": false
+  },
+  {
+    "task_id": "I2.T8",
+    "iteration_id": "I2",
+    "iteration_goal": "Build context aggregation, research orchestration, PRD/spec drafting engines, OpenAPI spec, and sequence diagrams that operationalize the architectural blueprint.",
+    "description": "Build approval registry module + CLI prompts storing approvals.json with signer ID, artifact hash, timestamp, and method (human/agent) to support gating and audit.",
+    "agent_type_hint": "BackendAgent",
+    "inputs": "Section 4 directives, Requirements FR-11.",
+    "target_files": [],
+    "input_files": [],
+    "deliverables": "Registry code, CLI prompts, doc referencing gating and CLI flags.",
+    "acceptance_criteria": "Approvals stored with hash + stage; CLI exposes `ai-feature approve --stage`; doc includes exit codes + automation guidance.",
+    "dependencies": [
+      "I1.T8",
+      "I2.T6"
+    ],
+    "parallelizable": true,
+    "done": false
+  },
+  {
+    "task_id": "I2.T9",
+    "iteration_id": "I2",
+    "iteration_goal": "Build context aggregation, research orchestration, PRD/spec drafting engines, OpenAPI spec, and sequence diagrams that operationalize the architectural blueprint.",
+    "description": "Integrate start flows (`--prompt`, `--linear`, `--spec`) through context aggregator, research coordinator, PRD/spec engines, and approvals with telemetry instrumentation.",
+    "agent_type_hint": "BackendAgent",
+    "inputs": "Tasks I2.T1–I2.T8, Requirements FR-4/FR-5/FR-6.",
+    "target_files": [],
+    "input_files": [],
+    "deliverables": "Fully wired start command variants, CLI help text, smoke tests verifying artifact creation, doc updates.",
+    "acceptance_criteria": "Running start command writes context-manifest, research tasks, PRD/spec awaiting approvals; telemetry captures last_step/last_error; tests pass in CI.",
+    "dependencies": [
+      "I2.T1",
+      "I2.T3",
+      "I2.T6",
+      "I2.T7",
+      "I2.T8"
+    ],
+    "parallelizable": false,
+    "done": false
+  },
+  {
+    "task_id": "I2.T10",
+    "iteration_id": "I2",
+    "iteration_goal": "Build context aggregation, research orchestration, PRD/spec drafting engines, OpenAPI spec, and sequence diagrams that operationalize the architectural blueprint.",
+    "description": "Implement Linear issue snapshot + rate-limit aware fetch helper storing payloads, retries, and caching, degrading gracefully to prompt-only mode when API unavailable.",
+    "agent_type_hint": "BackendAgent",
+    "inputs": "Requirements FR-5, IR-8/IR-9, Section 2 components.",
+    "target_files": [],
+    "input_files": [],
+    "deliverables": "Adapter stub hitting mock APIs, caching snapshots in run directory, doc describing rate-limit behavior.",
+    "acceptance_criteria": "Snapshot writes include retrieved_at + content_hash; adapter enforces 1,500 req/hr limit; fallback prompt path documented.",
+    "dependencies": [
+      "I1.T7",
+      "I2.T1"
+    ],
+    "parallelizable": true,
+    "done": false
+  },
+  {
+    "task_id": "I2.T11",
+    "iteration_id": "I2",
+    "iteration_goal": "Build context aggregation, research orchestration, PRD/spec drafting engines, OpenAPI spec, and sequence diagrams that operationalize the architectural blueprint.",
+    "description": "Extend `ai-feature status` command to display overview (context counts, PRD/spec status, approvals needed, research backlog) using new services with anchors for automation.",
+    "agent_type_hint": "BackendAgent",
+    "inputs": "Start command output, approval registry, ResearchTask coordinator.",
+    "target_files": [],
+    "input_files": [],
+    "deliverables": "CLI summary view, JSON output schema, docs describing sections + exit codes.",
+    "acceptance_criteria": "Status surfaces context counts, pending approvals, research stats; `--json` returns structured DTO; tests cover human-action scenario.",
+    "dependencies": [
+      "I2.T1",
+      "I2.T3",
+      "I2.T8"
+    ],
+    "parallelizable": false,
+    "done": false
+  }
+]

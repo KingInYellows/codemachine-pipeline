@@ -1,0 +1,181 @@
+[
+  {
+    "task_id": "I5.T1",
+    "iteration_id": "I5",
+    "iteration_goal": "Finalize deployment workflows, rate-limit resilience, compliance-ready exports, telemetry dashboards, and operational runbooks ensuring homelab-friendly automation.",
+    "description": "Implement deployment trigger module (service) orchestrating GitHub branch protection queries, status check polling, merge attempts, workflow dispatch, and auto-merge toggles with logging.",
+    "agent_type_hint": "BackendAgent",
+    "inputs": "GitHub adapter, requirements FR-15/FR-16, IR-5.",
+    "target_files": [],
+    "input_files": [],
+    "deliverables": "Deployment module, tests simulating blocked/passed states, documentation describing behavior.",
+    "acceptance_criteria": "Module inspects required checks vs latest SHA, respects retry-after, optionally registers auto-merge; tests cover blocked statuses + merges.",
+    "dependencies": [
+      "I3.T2",
+      "I3.T7"
+    ],
+    "parallelizable": false,
+    "done": false
+  },
+  {
+    "task_id": "I5.T2",
+    "iteration_id": "I5",
+    "iteration_goal": "Finalize deployment workflows, rate-limit resilience, compliance-ready exports, telemetry dashboards, and operational runbooks ensuring homelab-friendly automation.",
+    "description": "Create rate-limit + deployment playbooks (Markdown) detailing GitHub/Linear headers, retry strategies, manual override process, and compliance tie-ins.",
+    "agent_type_hint": "DocumentationAgent",
+    "inputs": "Requirements IR-6/IR-9, Section 4 directives.",
+    "target_files": [],
+    "input_files": [],
+    "deliverables": "Updated playbooks referencing ledger fields, human action steps, GitHub documentation links.",
+    "acceptance_criteria": "Playbooks cite Accept header, API version, `retry-after`, `x-ratelimit-reset`; include tables for GitHub vs Linear; cross-linked to CLI docs.",
+    "dependencies": [
+      "I3.T1",
+      "I5.T1"
+    ],
+    "parallelizable": true,
+    "done": false
+  },
+  {
+    "task_id": "I5.T3",
+    "iteration_id": "I5",
+    "iteration_goal": "Finalize deployment workflows, rate-limit resilience, compliance-ready exports, telemetry dashboards, and operational runbooks ensuring homelab-friendly automation.",
+    "description": "Harden export bundle builder to include trace.json, approvals, API transcripts, diff stats, telemetry, plus optional JSON signature for compliance.",
+    "agent_type_hint": "BackendAgent",
+    "inputs": "Export CLI, artifact bundle service.",
+    "target_files": [],
+    "input_files": [],
+    "deliverables": "Enhanced builder, tests ensuring manifest completeness, compliance doc.",
+    "acceptance_criteria": "Bundle includes manifest/docs/logs/traces/rate-limits/diffs/approvals; optional signature stored; tests verify hash coverage.",
+    "dependencies": [
+      "I4.T8"
+    ],
+    "parallelizable": false,
+    "done": false
+  },
+  {
+    "task_id": "I5.T4",
+    "iteration_id": "I5",
+    "iteration_goal": "Finalize deployment workflows, rate-limit resilience, compliance-ready exports, telemetry dashboards, and operational runbooks ensuring homelab-friendly automation.",
+    "description": "Build KPI/metrics exporter summarizing queue depth, retry counts, validation pass rates, cost telemetry, writing to `.ai-feature-pipeline/reports/kpi.json` for dashboards.",
+    "agent_type_hint": "BackendAgent",
+    "inputs": "Observability hub, context aggregator metrics, execution queue.",
+    "target_files": [],
+    "input_files": [],
+    "deliverables": "Exporter module, tests, doc describing KPIs + scheduling via observe command.",
+    "acceptance_criteria": "Exporter produces JSON with counts/durations/costs; observe command includes path; doc outlines KPIs + thresholds.",
+    "dependencies": [
+      "I1.T7",
+      "I4.T7"
+    ],
+    "parallelizable": true,
+    "done": false
+  },
+  {
+    "task_id": "I5.T5",
+    "iteration_id": "I5",
+    "iteration_goal": "Finalize deployment workflows, rate-limit resilience, compliance-ready exports, telemetry dashboards, and operational runbooks ensuring homelab-friendly automation.",
+    "description": "Implement compliance checklist + SOC-style evidence mapping referencing artifacts, approvals, tokens, and ADRs for Section 5 + 9 controls.",
+    "agent_type_hint": "DocumentationAgent",
+    "inputs": "Requirements Section 5/9, export bundle guide.",
+    "target_files": [],
+    "input_files": [],
+    "deliverables": "Checklist linking requirements to artifacts + commands; governance note template.",
+    "acceptance_criteria": "Checklist lists FR/IR/NFR references, evidence (file paths/commands), owners; doc added to README.",
+    "dependencies": [
+      "I3.T11",
+      "I5.T3"
+    ],
+    "parallelizable": true,
+    "done": false
+  },
+  {
+    "task_id": "I5.T6",
+    "iteration_id": "I5",
+    "iteration_goal": "Finalize deployment workflows, rate-limit resilience, compliance-ready exports, telemetry dashboards, and operational runbooks ensuring homelab-friendly automation.",
+    "description": "Add rate-limit alerting hooks (CLI warnings + optional notification) triggered when ledger remaining < threshold or repeated secondary limits occur.",
+    "agent_type_hint": "BackendAgent",
+    "inputs": "HTTP client ledger, notification adapter.",
+    "target_files": [],
+    "input_files": [],
+    "deliverables": "Monitor hooking to logs + notifications, tests, doc update.",
+    "acceptance_criteria": "Monitor triggers once thresholds crossed, logs action, optionally notifies; tests simulate exhaustion.",
+    "dependencies": [
+      "I3.T1",
+      "I4.T6"
+    ],
+    "parallelizable": true,
+    "done": false
+  },
+  {
+    "task_id": "I5.T7",
+    "iteration_id": "I5",
+    "iteration_goal": "Finalize deployment workflows, rate-limit resilience, compliance-ready exports, telemetry dashboards, and operational runbooks ensuring homelab-friendly automation.",
+    "description": "Extend deployment logging + notification pipeline to capture status-check details, reviewer states, workflow URLs, storing them inside `deployment.json` and optional notification messages.",
+    "agent_type_hint": "BackendAgent",
+    "inputs": "Deployment module, notification adapter, docs.",
+    "target_files": [],
+    "input_files": [],
+    "deliverables": "Logging enhancements, doc updates, tests verifying data recorded + notifications throttled.",
+    "acceptance_criteria": "Deployment record stores status checks + reviewer list + workflow URL; notifications throttle and include severity.",
+    "dependencies": [
+      "I5.T1",
+      "I4.T6"
+    ],
+    "parallelizable": false,
+    "done": false
+  },
+  {
+    "task_id": "I5.T8",
+    "iteration_id": "I5",
+    "iteration_goal": "Finalize deployment workflows, rate-limit resilience, compliance-ready exports, telemetry dashboards, and operational runbooks ensuring homelab-friendly automation.",
+    "description": "Build `ai-feature diagnostics` command capturing logs, metrics, traces, config info, and bundling for support along with instructions for redaction.",
+    "agent_type_hint": "BackendAgent",
+    "inputs": "Run directories, export builder, observability hub.",
+    "target_files": [],
+    "input_files": [],
+    "deliverables": "Diagnostics ZIP generator, CLI help, doc describing when/how to share.",
+    "acceptance_criteria": "Command collects sanitized data, prompts for confirmation, writes manifest; tests verify excludes secrets.",
+    "dependencies": [
+      "I4.T8",
+      "I5.T3"
+    ],
+    "parallelizable": true,
+    "done": false
+  },
+  {
+    "task_id": "I5.T9",
+    "iteration_id": "I5",
+    "iteration_goal": "Finalize deployment workflows, rate-limit resilience, compliance-ready exports, telemetry dashboards, and operational runbooks ensuring homelab-friendly automation.",
+    "description": "Automate cleanup + archival integration tests ensuring `cleanup` command respects retention, verifies exports, and writes audit logs before deletion.",
+    "agent_type_hint": "BackendAgent",
+    "inputs": "Cleanup command, export builder.",
+    "target_files": [],
+    "input_files": [],
+    "deliverables": "Integration tests, doc updates describing retention + archive process.",
+    "acceptance_criteria": "Tests simulate runs with/without bundles, ensure cleanup refuses incomplete exports; doc lists recommended retention.",
+    "dependencies": [
+      "I4.T11",
+      "I5.T3"
+    ],
+    "parallelizable": true,
+    "done": false
+  },
+  {
+    "task_id": "I5.T10",
+    "iteration_id": "I5",
+    "iteration_goal": "Finalize deployment workflows, rate-limit resilience, compliance-ready exports, telemetry dashboards, and operational runbooks ensuring homelab-friendly automation.",
+    "description": "Execute pilot dry-run covering start→deploy on sample repo, capture metrics, tune docs, file backlog issues, and produce release notes for CLI beta.",
+    "agent_type_hint": "SetupAgent",
+    "inputs": "Entire pipeline, documentation.",
+    "target_files": [],
+    "input_files": [],
+    "deliverables": "Report summarizing metrics, release notes, backlog issue list.",
+    "acceptance_criteria": "Dry-run populates run directory, merges sample PR via mocks, release notes highlight features + known gaps, backlog issues filed.",
+    "dependencies": [
+      "I5.T1",
+      "I5.T9"
+    ],
+    "parallelizable": false,
+    "done": false
+  }
+]
