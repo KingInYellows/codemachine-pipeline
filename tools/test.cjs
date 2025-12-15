@@ -1,74 +1,163 @@
 #!/usr/bin/env node
 
 /**
- * tools/test.cjs
+ * test.cjs - Project testing script
  *
- * Cross-platform test execution script.
- * Ensures dependencies are installed, then runs the project test suite using Jest.
+ * This script ensures the environment is set up correctly and runs the project tests.
+ *
+ * Features:
+ * - Runs install.cjs to ensure dependencies are up to date
+ * - Executes the project's test suite
+ * - Cross-platform compatible (Windows, macOS, Linux)
  */
 
-const { execSync } = require('child_process');
+const { spawnSync } = require('child_process');
 const path = require('path');
 const fs = require('fs');
 
+// ANSI color codes for output
+const colors = {
+  reset: '\x1b[0m',
+  green: '\x1b[32m',
+  blue: '\x1b[34m',
+  red: '\x1b[31m',
+};
+
+function log(message, color = colors.reset) {
+  console.log(`${color}${message}${colors.reset}`);
+}
+
+function logError(message) {
+  console.error(`${colors.red}ERROR: ${message}${colors.reset}`);
+}
+
+function logSuccess(message) {
+  log(`✓ ${message}`, colors.green);
+}
+
+function logInfo(message) {
+  log(`ℹ ${message}`, colors.blue);
+}
+
 /**
- * Executes install script to ensure dependencies are ready
+ * Get the project root directory
  */
-function ensureDependencies() {
-  console.log('Ensuring dependencies are installed...');
+function getProjectRoot() {
+  return path.resolve(__dirname, '..');
+}
+
+/**
+ * Run the install script to ensure dependencies are ready
+ */
+function ensureEnvironment() {
+  logInfo('Ensuring environment is set up correctly...');
+
+  const installScript = path.join(__dirname, 'install.cjs');
+
   try {
-    execSync('node tools/install.cjs', {
-      cwd: path.join(__dirname, '..'),
+    const result = spawnSync('node', [installScript], {
       stdio: 'inherit',
-      encoding: 'utf8'
+      shell: false,
+      env: { ...process.env }
     });
+
+    if (result.error) {
+      throw result.error;
+    }
+
+    if (result.status !== 0) {
+      throw new Error(`install.cjs exited with code ${result.status}`);
+    }
+
+    return true;
   } catch (error) {
-    console.error('Error: Failed to install dependencies');
-    process.exit(1);
+    logError(`Failed to run install script: ${error.message}`);
+    return false;
   }
 }
 
 /**
- * Checks if Jest is available
+ * Get the test command from package.json
  */
-function isJestAvailable() {
-  const projectRoot = path.join(__dirname, '..');
-  const jestPath = path.join(projectRoot, 'node_modules', '.bin', 'jest');
-  const jestCmdPath = path.join(projectRoot, 'node_modules', '.bin', 'jest.cmd');
+function getTestCommand() {
+  const projectRoot = getProjectRoot();
+  const packageJsonPath = path.join(projectRoot, 'package.json');
 
-  // Check for both Unix and Windows executables
-  return fs.existsSync(jestPath) || fs.existsSync(jestCmdPath);
+  if (!fs.existsSync(packageJsonPath)) {
+    throw new Error('package.json not found');
+  }
+
+  const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
+
+  // Check for test script in package.json
+  if (packageJson.scripts && packageJson.scripts.test) {
+    return { type: 'npm-script', command: 'test' };
+  }
+
+  // Check if jest is installed and has a config
+  const jestConfigExists =
+    fs.existsSync(path.join(projectRoot, 'jest.config.js')) ||
+    fs.existsSync(path.join(projectRoot, 'jest.config.ts')) ||
+    fs.existsSync(path.join(projectRoot, 'jest.config.json')) ||
+    (packageJson.jest !== undefined);
+
+  if (jestConfigExists) {
+    return { type: 'jest' };
+  }
+
+  throw new Error('No test configuration found (no test script in package.json or Jest config)');
 }
 
 /**
- * Runs the test suite
+ * Run the project tests
  */
 function runTests() {
-  const projectRoot = path.join(__dirname, '..');
-
-  console.log('Running tests...');
-  console.log('---');
-
   try {
-    // Get any additional arguments passed to the script
-    const args = process.argv.slice(2);
+    const testConfig = getTestCommand();
+    const projectRoot = getProjectRoot();
 
-    // Run npm test with any additional arguments
-    const command = args.length > 0 ? `npm test -- ${args.join(' ')}` : 'npm test';
+    let command, args;
 
-    execSync(command, {
+    if (testConfig.type === 'npm-script') {
+      logInfo('Running npm test script');
+      command = 'npm';
+      args = ['test'];
+    } else if (testConfig.type === 'jest') {
+      logInfo('Running Jest tests directly');
+      const jestBin = process.platform === 'win32' ? 'jest.cmd' : 'jest';
+      command = path.join(projectRoot, 'node_modules', '.bin', jestBin);
+      args = [];
+    }
+
+    // Pass through any additional arguments
+    const additionalArgs = process.argv.slice(2);
+    if (additionalArgs.length > 0) {
+      if (testConfig.type === 'npm-script') {
+        args.push('--');
+      }
+      args.push(...additionalArgs);
+    }
+
+    const result = spawnSync(command, args, {
       cwd: projectRoot,
       stdio: 'inherit',
-      encoding: 'utf8'
+      shell: process.platform === 'win32',
+      env: {
+        ...process.env,
+        // Ensure tests run in test mode
+        NODE_ENV: 'test'
+      }
     });
 
-    console.log('---');
-    console.log('Tests completed successfully.');
-    process.exit(0);
+    if (result.error) {
+      throw result.error;
+    }
+
+    return result.status || 0;
+
   } catch (error) {
-    console.error('---');
-    console.error('Error: Tests failed');
-    process.exit(1);
+    logError(`Failed to run tests: ${error.message}`);
+    return 1;
   }
 }
 
@@ -76,19 +165,41 @@ function runTests() {
  * Main execution logic
  */
 function main() {
-  // Step 1: Ensure dependencies are installed
-  ensureDependencies();
+  try {
+    logInfo('Starting test execution...');
 
-  // Step 2: Verify Jest is available
-  if (!isJestAvailable()) {
-    console.error('Error: Jest not found after dependency installation');
-    console.error('Please check package.json and node_modules');
+    // Ensure environment and dependencies are ready
+    if (!ensureEnvironment()) {
+      process.exit(1);
+    }
+
+    // Run the tests
+    const exitCode = runTests();
+
+    if (exitCode === 0) {
+      logSuccess('All tests passed');
+    } else {
+      logError(`Tests failed with exit code ${exitCode}`);
+    }
+
+    process.exit(exitCode);
+
+  } catch (error) {
+    logError(`Unexpected error: ${error.message}`);
+    if (error.stack) {
+      console.error(error.stack);
+    }
     process.exit(1);
   }
-
-  // Step 3: Run tests
-  runTests();
 }
 
-// Execute main function
-main();
+// Run main function
+if (require.main === module) {
+  main();
+}
+
+module.exports = {
+  runTests,
+  getTestCommand,
+  ensureEnvironment
+};

@@ -1,154 +1,199 @@
 #!/usr/bin/env node
 
 /**
- * tools/lint.cjs
+ * lint.cjs - Code linting script with JSON output
  *
- * Cross-platform linting script with JSON output.
- * Ensures dependencies and linting tools are installed, then runs ESLint.
- * Outputs results exclusively in JSON format to stdout.
+ * This script lints the project source code and outputs results in JSON format.
+ *
+ * Features:
+ * - Ensures dependencies (including linting tools) are installed
+ * - Runs ESLint on TypeScript source files
+ * - Outputs results exclusively in JSON format to stdout
+ * - Cross-platform compatible (Windows, macOS, Linux)
+ * - Exits with 0 if no errors, non-zero if errors found
  */
 
-const { execSync } = require('child_process');
+const { spawnSync } = require('child_process');
 const path = require('path');
 const fs = require('fs');
 
 /**
- * Executes install script silently to ensure dependencies are ready
+ * Get the project root directory
  */
-function ensureDependencies() {
+function getProjectRoot() {
+  return path.resolve(__dirname, '..');
+}
+
+/**
+ * Ensure environment is set up (run install.cjs silently)
+ */
+function ensureEnvironment() {
+  const installScript = path.join(__dirname, 'install.cjs');
+
   try {
-    execSync('node tools/install.cjs', {
-      cwd: path.join(__dirname, '..'),
-      stdio: 'ignore',
-      encoding: 'utf8'
+    const result = spawnSync('node', [installScript], {
+      stdio: 'ignore', // Suppress all output from install
+      shell: false,
+      env: { ...process.env }
     });
+
+    if (result.error || result.status !== 0) {
+      console.error('Failed to set up environment');
+      return false;
+    }
+
+    return true;
   } catch (error) {
-    console.error('Failed to install dependencies');
-    process.exit(1);
+    console.error('Failed to run install script');
+    return false;
   }
 }
 
 /**
- * Checks if ESLint is available
+ * Check if ESLint is available
  */
-function isEslintAvailable() {
-  const projectRoot = path.join(__dirname, '..');
-  const eslintPath = path.join(projectRoot, 'node_modules', '.bin', 'eslint');
-  const eslintCmdPath = path.join(projectRoot, 'node_modules', '.bin', 'eslint.cmd');
+function hasESLint() {
+  const projectRoot = getProjectRoot();
+  const eslintBinPath = path.join(projectRoot, 'node_modules', '.bin', 'eslint');
+  const eslintBinPathCmd = process.platform === 'win32' ? `${eslintBinPath}.cmd` : eslintBinPath;
 
-  // Check for both Unix and Windows executables
-  return fs.existsSync(eslintPath) || fs.existsSync(eslintCmdPath);
+  return fs.existsSync(eslintBinPathCmd) || fs.existsSync(eslintBinPath);
 }
 
 /**
- * Gets the ESLint executable command
+ * Get ESLint executable path
  */
-function getEslintCommand() {
-  const projectRoot = path.join(__dirname, '..');
-
-  // Use npx to run eslint, which handles cross-platform execution
-  return 'npx eslint';
+function getESLintPath() {
+  const projectRoot = getProjectRoot();
+  const binName = process.platform === 'win32' ? 'eslint.cmd' : 'eslint';
+  return path.join(projectRoot, 'node_modules', '.bin', binName);
 }
 
 /**
- * Transforms ESLint results to the required format
+ * Parse ESLint JSON output and transform to required format
  */
-function transformEslintResults(eslintOutput) {
-  const results = [];
+function transformESLintOutput(eslintResults) {
+  const errors = [];
 
   try {
-    const eslintResults = JSON.parse(eslintOutput);
+    const results = JSON.parse(eslintResults);
 
-    for (const file of eslintResults) {
-      const filePath = file.filePath;
-
-      for (const message of file.messages) {
-        // Only include errors and warnings (severity 2 = error, 1 = warning)
-        // Filter to only critical issues as specified
-        if (message.severity === 2) {
-          results.push({
-            type: message.ruleId || 'error',
-            path: filePath,
-            obj: message.ruleId || '',
-            message: message.message,
-            line: message.line || 0,
-            column: message.column || 0
-          });
+    for (const file of results) {
+      if (file.messages && file.messages.length > 0) {
+        for (const msg of file.messages) {
+          // Only include errors and warnings (severity 1 = warning, 2 = error)
+          if (msg.severity >= 1) {
+            errors.push({
+              type: msg.severity === 2 ? 'error' : 'warning',
+              path: file.filePath,
+              obj: msg.ruleId || 'unknown',
+              message: msg.message,
+              line: msg.line ? String(msg.line) : '0',
+              column: msg.column ? String(msg.column) : '0'
+            });
+          }
         }
       }
     }
-  } catch (error) {
-    console.error('Failed to parse ESLint output:', error.message);
-    process.exit(1);
+  } catch (parseError) {
+    console.error('Failed to parse ESLint output');
+    return null;
   }
 
-  return results;
+  return errors;
 }
 
 /**
- * Runs ESLint and returns results
+ * Run ESLint and return results
  */
 function runLint() {
-  const projectRoot = path.join(__dirname, '..');
-  const eslintCommand = getEslintCommand();
+  const projectRoot = getProjectRoot();
 
-  // ESLint command with JSON format output
-  // Using --ext .ts to lint TypeScript files
-  // Using --format json for structured output
-  const command = `${eslintCommand} . --ext .ts --format json`;
+  if (!hasESLint()) {
+    console.error('ESLint not found. Run install first.');
+    return null;
+  }
 
+  const eslintPath = getESLintPath();
+
+  // Run ESLint with JSON format output
+  // Target TypeScript files in src directory (based on package.json lint script)
+  const args = [
+    '.',
+    '--ext', '.ts',
+    '--format', 'json',
+    '--no-color'
+  ];
+
+  const result = spawnSync(eslintPath, args, {
+    cwd: projectRoot,
+    encoding: 'utf8',
+    shell: process.platform === 'win32',
+    env: { ...process.env }
+  });
+
+  // ESLint exits with 0 if no errors, 1 if errors found, 2 if fatal error
+  if (result.error) {
+    console.error('Failed to execute ESLint');
+    return null;
+  }
+
+  // result.status === 2 means ESLint encountered a fatal error
+  if (result.status === 2) {
+    console.error('ESLint encountered a fatal error');
+    return null;
+  }
+
+  // Parse and transform the output
+  const transformed = transformESLintOutput(result.stdout);
+
+  if (transformed === null) {
+    return null;
+  }
+
+  return {
+    errors: transformed,
+    hasErrors: result.status !== 0
+  };
+}
+
+/**
+ * Main linting logic
+ */
+function main() {
   try {
-    const output = execSync(command, {
-      cwd: projectRoot,
-      encoding: 'utf8',
-      // Don't inherit stdio - we need to capture output
-      stdio: ['pipe', 'pipe', 'pipe']
-    });
-
-    return transformEslintResults(output);
-  } catch (error) {
-    // ESLint exits with non-zero when it finds issues
-    if (error.stdout) {
-      return transformEslintResults(error.stdout);
-    }
-
-    // If there's a real error (not just lint failures)
-    if (error.stderr && !error.stdout) {
-      console.error('ESLint execution failed:', error.stderr);
+    // Ensure environment is set up (silently)
+    if (!ensureEnvironment()) {
       process.exit(1);
     }
 
-    // Parse whatever output we got
-    return transformEslintResults(error.stdout || '[]');
+    // Run linting
+    const lintResults = runLint();
+
+    if (lintResults === null) {
+      process.exit(1);
+    }
+
+    // Output JSON to stdout
+    console.log(JSON.stringify(lintResults.errors, null, 2));
+
+    // Exit with appropriate code
+    // 0 if no errors, 1 if errors found
+    process.exit(lintResults.hasErrors ? 1 : 0);
+
+  } catch (error) {
+    console.error('Unexpected error during linting');
+    process.exit(1);
   }
 }
 
-/**
- * Main execution logic
- */
-function main() {
-  // Step 1: Ensure dependencies are installed (silent)
-  ensureDependencies();
-
-  // Step 2: Verify ESLint is available
-  if (!isEslintAvailable()) {
-    console.error('ESLint not found. Installing dependencies...');
-    ensureDependencies();
-  }
-
-  // Step 3: Run linting
-  const results = runLint();
-
-  // Step 4: Output results as JSON to stdout
-  console.log(JSON.stringify(results, null, 2));
-
-  // Step 5: Exit with appropriate code
-  if (results.length > 0) {
-    process.exit(1); // Non-zero exit if errors found
-  } else {
-    process.exit(0); // Success if no errors
-  }
+// Run main function
+if (require.main === module) {
+  main();
 }
 
-// Execute main function
-main();
+module.exports = {
+  runLint,
+  transformESLintOutput,
+  hasESLint
+};
