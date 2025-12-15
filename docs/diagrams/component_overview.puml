@@ -1,0 +1,446 @@
+@startuml AI Feature Pipeline - Component Overview
+' Component Overview Diagram
+' Visualizes the layered architecture of the AI Feature Pipeline
+' Implements blueprint Section 4.0 (Key Components & Services)
+' References: ADR-1 (Agent Execution), ADR-2 (State Persistence),
+'             ADR-3 (Adapter Boundary), ADR-4 (Context Gathering)
+
+!define BOUNDARY_COLOR #E3F2FD
+!define CLI_COLOR #FFF9C4
+!define ORCHESTRATION_COLOR #F3E5F5
+!define ADAPTER_COLOR #E8F5E9
+!define PERSISTENCE_COLOR #FFE0B2
+!define OBSERVABILITY_COLOR #FFEBEE
+!define EXTERNAL_COLOR #ECEFF1
+
+skinparam component {
+  BackgroundColor White
+  BorderColor Black
+  ArrowColor Black
+  FontSize 12
+}
+
+skinparam package {
+  BorderColor Black
+  FontSize 13
+  FontStyle bold
+}
+
+' ===============================================
+' CLI PRESENTATION LAYER
+' ===============================================
+package "📱 CLI Presentation Layer" as CLI <<CLI>> #CLI_COLOR {
+  component "CLI Orchestrator\n(oclif)" as CLIOrch [
+    **CLI Orchestrator**
+    ----
+    • Command parser
+    • Lifecycle controller
+    • Approval gatekeeper
+    • $EDITOR integration
+    ----
+    Commands: init, start, status,
+    resume, pr, deploy, export,
+    cleanup, observe
+  ]
+
+  component "RepoConfig\nManager" as RepoConfig [
+    **RepoConfig Manager**
+    ----
+    • Config discovery
+    • Schema validation
+    • Integration settings
+    • Sanity checks
+  ]
+}
+
+' ===============================================
+' ORCHESTRATION CORE
+' ===============================================
+package "🎯 Orchestration Core" as Orchestration <<Orchestration>> #ORCHESTRATION_COLOR {
+  component "Context\nAggregator" as Context [
+    **Context Aggregator**
+    ----
+    • README/docs collector
+    • Git history analysis
+    • Token budgeting
+    • Hash manifest
+    ----
+    [[ADR-4]]
+  ]
+
+  component "Research\nCoordinator" as Research [
+    **Research Coordinator**
+    ----
+    • Task generation
+    • Agent/human assignment
+    • Result caching
+    • Freshness tracking
+  ]
+
+  component "PRD Authoring\nEngine" as PRD [
+    **PRD Authoring Engine**
+    ----
+    • Draft generation
+    • Review loop
+    • Template fallback
+    • Goal-to-spec mapping
+  ]
+
+  component "Specification\nComposer" as Spec [
+    **Specification Composer**
+    ----
+    • PRD → Spec conversion
+    • Constraints definition
+    • Test plan generation
+    • Risk assessment
+  ]
+
+  component "Task\nPlanner" as TaskPlanner [
+    **Task Planner**
+    ----
+    • Dependency graph
+    • Parallel grouping
+    • Capability tagging
+    • plan.json output
+  ]
+
+  component "Execution\nEngine" as Execution [
+    **Execution Engine**
+    ----
+    • Patch application
+    • Validation runner
+    • Command logger
+    • Artifact recorder
+    ----
+    [[ADR-1]]
+  ]
+
+  component "Resume\nCoordinator" as Resume [
+    **Resume Coordinator**
+    ----
+    • State recovery
+    • Integrity validation
+    • Resumption point
+    • Diagnostic summary
+  ]
+
+  component "Validation\nRegistry" as Validation [
+    **Validation Registry**
+    ----
+    • Command catalog
+    • Policy enforcement
+    • Dry-run support
+    • Environment setup
+  ]
+}
+
+' ===============================================
+' ADAPTER BOUNDARY LAYER
+' ===============================================
+package "🔌 Adapter Boundary Layer" as Adapters <<Adapters>> #ADAPTER_COLOR {
+  component "GitHub\nAdapter" as GitHub [
+    **GitHub Adapter**
+    ----
+    • Repo info/branch ops
+    • PR creation/merge
+    • Status checks
+    • Auto-merge config
+    ----
+    [[ADR-3]]
+  ]
+
+  component "Linear\nAdapter" as Linear [
+    **Linear Adapter**
+    ----
+    • Issue metadata
+    • Cache fallback
+    • Status updates
+    • Dev Preview agents
+    ----
+    [[ADR-3]]
+  ]
+
+  component "Agent\nAdapter" as Agent [
+    **Agent Adapter Layer**
+    ----
+    • OpenAI-compatible
+    • Local model support
+    • Capability negotiation
+    • Cost estimation
+    ----
+    [[ADR-1]] [[ADR-3]]
+  ]
+
+  component "Git\nAdapter" as Git [
+    **Git Adapter**
+    ----
+    • Local git operations
+    • Patch dry-run
+    • Branch management
+    • Diff generation
+  ]
+
+  component "Deployment\nAdapter" as Deploy [
+    **Deployment Adapter**
+    ----
+    • Auto-merge control
+    • Workflow dispatch
+    • Status verification
+    • Deployment records
+  ]
+
+  component "Notification\nAdapter" as Notify [
+    **Notification Adapter**
+    ----
+    • Slack/Discord
+    • Email alerts
+    • Webhook dispatch
+    • Custom integrations
+  ]
+
+  component "Shared HTTP\nClient" as HTTP [
+    **HTTP Client**
+    ----
+    • Rate limit handling
+    • Exponential backoff
+    • Header management
+    • Request/response log
+    ----
+    Providers: GitHub, Linear,
+    Graphite, CodeMachine
+  ]
+}
+
+' ===============================================
+' PERSISTENCE & STORAGE LAYER
+' ===============================================
+package "💾 Persistence & Storage Layer" as Persistence <<Persistence>> #PERSISTENCE_COLOR {
+  component "Run Directory\nManager" as RunDir [
+    **Run Directory Manager**
+    ----
+    • Feature ID generation
+    • Directory scaffolding
+    • File locking
+    • Path normalization
+    ----
+    [[ADR-2]]
+  ]
+
+  component "Artifact Bundle\nService" as Bundle [
+    **Artifact Bundle Service**
+    ----
+    • Export packaging
+    • Audit trail
+    • Completeness checks
+    • Format support
+  ]
+
+  component "File System\nOperations" as FS [
+    **File System**
+    ----
+    .ai-feature-pipeline/
+    ├── runs/<feature_id>/
+    ├── config.json
+    ├── logs/
+    └── artifacts/
+  ]
+}
+
+' ===============================================
+' OBSERVABILITY & SECURITY
+' ===============================================
+package "🔍 Observability & Security" as Observability <<Observability>> #OBSERVABILITY_COLOR {
+  component "Observability\nHub" as ObsHub [
+    **Observability Hub**
+    ----
+    • Log aggregation
+    • Metrics collection
+    • Trace correlation
+    • Redaction filters
+  ]
+
+  component "Security &\nCredential Vault" as Security [
+    **Security & Credential Vault**
+    ----
+    • Token validation
+    • Scope verification
+    • Secret masking
+    • Rotation tracking
+  ]
+
+  component "Telemetry\nWriters" as Telemetry [
+    **Telemetry Writers**
+    ----
+    • logs.ndjson
+    • metrics.json
+    • traces.json
+    • costs.json
+    • rate_limits.json
+  ]
+}
+
+' ===============================================
+' EXTERNAL SYSTEMS
+' ===============================================
+package "🌐 External Systems" as External <<External>> #EXTERNAL_COLOR {
+  component "GitHub API" as GitHubAPI [
+    **GitHub API**
+    ----
+    api.github.com
+  ]
+
+  component "Linear API" as LinearAPI [
+    **Linear API**
+    ----
+    api.linear.app
+  ]
+
+  component "Agent\nProviders" as AgentProviders [
+    **Agent Providers**
+    ----
+    • OpenAI
+    • Anthropic
+    • Local models
+    • Custom endpoints
+  ]
+
+  component "Git\nRepository" as GitRepo [
+    **Local Git**
+    ----
+    .git/
+  ]
+}
+
+' ===============================================
+' RELATIONSHIPS - CLI to Orchestration
+' ===============================================
+CLIOrch --> Context : "gathers context"
+CLIOrch --> Research : "coordinates research"
+CLIOrch --> PRD : "drafts PRD"
+CLIOrch --> Spec : "composes spec"
+CLIOrch --> TaskPlanner : "plans tasks"
+CLIOrch --> Execution : "executes plan"
+CLIOrch --> Resume : "resumes runs"
+CLIOrch --> Validation : "validates changes"
+
+RepoConfig --> CLIOrch : "provides config"
+RepoConfig ..> FS : "reads/writes config.json"
+
+' ===============================================
+' RELATIONSHIPS - Orchestration to Adapters
+' ===============================================
+Context --> Git : "reads git history"
+Context --> RunDir : "caches context"
+
+Research --> Agent : "assigns tasks"
+PRD --> Agent : "generates drafts"
+Spec --> Agent : "converts PRD"
+
+Execution --> Git : "applies patches"
+Execution --> Validation : "runs commands"
+
+TaskPlanner --> GitHub : "checks repo state"
+TaskPlanner --> Linear : "fetches tickets"
+
+Resume --> RunDir : "loads state"
+
+' ===============================================
+' RELATIONSHIPS - Adapters to HTTP/External
+' ===============================================
+GitHub --> HTTP : "uses"
+Linear --> HTTP : "uses"
+Agent --> HTTP : "uses"
+Deploy --> GitHub : "orchestrates"
+Notify ..> HTTP : "dispatches"
+
+HTTP --> GitHubAPI : "REST/GraphQL"
+HTTP --> LinearAPI : "GraphQL"
+Agent --> AgentProviders : "OpenAI-compatible"
+Git --> GitRepo : "local operations"
+
+' ===============================================
+' RELATIONSHIPS - Persistence
+' ===============================================
+RunDir --> FS : "manages directories"
+Bundle --> FS : "exports bundles"
+
+CLIOrch --> RunDir : "creates/reads runs"
+Execution --> RunDir : "writes artifacts"
+Resume --> RunDir : "loads manifests"
+
+' ===============================================
+' RELATIONSHIPS - Observability
+' ===============================================
+ObsHub --> Telemetry : "writes"
+Telemetry --> FS : "persists to run dir"
+Security --> ObsHub : "redacts secrets"
+
+CLIOrch ..> ObsHub : "emits events"
+Context ..> ObsHub : "logs context ops"
+Execution ..> ObsHub : "traces execution"
+HTTP ..> ObsHub : "logs requests"
+HTTP --> Telemetry : "writes rate_limits.json"
+
+' ===============================================
+' EXTENSION POINTS (Dashed Borders)
+' ===============================================
+note right of Agent
+  **Extension Point**
+  ----
+  Custom agent providers
+  can be plugged in via
+  capability manifests
+end note
+
+note bottom of Notify
+  **Extension Point**
+  ----
+  Custom notification
+  channels via webhook
+  or adapter plugins
+end note
+
+note bottom of Deploy
+  **Extension Point**
+  ----
+  Custom deployment
+  triggers (Graphite,
+  custom CD systems)
+end note
+
+note bottom of FS
+  **Future: Remote Sync**
+  ----
+  S3/GCS replication
+  (not yet implemented)
+end note
+
+' ===============================================
+' LEGEND
+' ===============================================
+legend right
+  **Component Responsibilities**
+  ----
+  Components follow strict
+  separation of concerns:
+
+  • CLI: User interaction
+  • Orchestration: Business logic
+  • Adapters: External integration
+  • Persistence: State management
+  • Observability: Telemetry
+
+  **Architecture Decision Records**
+  ----
+  [[ADR-1]]: Agent Execution
+  [[ADR-2]]: State Persistence
+  [[ADR-3]]: Adapter Boundary
+  [[ADR-4]]: Context Gathering
+
+  **Related Diagrams**
+  ----
+  • run_directory_schema.mmd
+  • Sequence diagrams (planned I2+)
+end legend
+
+@enduml
