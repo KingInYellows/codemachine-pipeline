@@ -1,0 +1,91 @@
+{
+  "$schema": "https://json-schema.org/draft-07/schema#",
+  "$comment": "Run manifest template - describes the structure of .ai-feature-pipeline/runs/<feature_id>/manifest.json",
+  "schema_version": "1.0.0",
+  "feature_id": "01JFEXAMPLE123456789ABCDEF",
+  "title": "Example feature implementation",
+  "source": "linear:PROJ-123 or manual:prompt or github:issue-456",
+  "repo": {
+    "url": "https://github.com/org/repo.git",
+    "default_branch": "main"
+  },
+  "status": "pending",
+  "execution": {
+    "last_step": "prd_generation",
+    "last_error": {
+      "step": "code_generation",
+      "message": "Agent timeout during implementation",
+      "timestamp": "2025-12-15T10:30:00.000Z",
+      "recoverable": true
+    },
+    "current_step": "spec_validation",
+    "total_steps": 12,
+    "completed_steps": 3
+  },
+  "timestamps": {
+    "created_at": "2025-12-15T10:00:00.000Z",
+    "updated_at": "2025-12-15T10:30:00.000Z",
+    "started_at": "2025-12-15T10:05:00.000Z",
+    "completed_at": null
+  },
+  "approvals": {
+    "approvals_file": "approvals/approvals.json",
+    "pending": [
+      "prd",
+      "plan"
+    ],
+    "completed": [
+      "spec"
+    ]
+  },
+  "queue": {
+    "queue_dir": "queue",
+    "pending_count": 5,
+    "completed_count": 3,
+    "failed_count": 1,
+    "sqlite_index": {
+      "database": "sqlite/run_queue.db",
+      "wal": "sqlite/run_queue.db-wal",
+      "shm": "sqlite/run_queue.db-shm"
+    }
+  },
+  "artifacts": {
+    "prd": "artifacts/prd.md",
+    "spec": "artifacts/spec.md",
+    "plan": "artifacts/plan.json",
+    "hash_manifest": "hash_manifest.json"
+  },
+  "telemetry": {
+    "logs_dir": "logs",
+    "metrics_file": "telemetry/metrics.json",
+    "traces_file": "telemetry/traces.json",
+    "costs_file": "telemetry/costs.json"
+  },
+  "rate_limits": {
+    "rate_limits_file": "telemetry/rate_limits.json"
+  },
+  "metadata": {
+    "cleanup_hook": {
+      "eligibility": {
+        "min_age_days": 30,
+        "required_status": [
+          "completed",
+          "failed"
+        ]
+      },
+      "actions": {
+        "remove_logs": true,
+        "remove_telemetry": false,
+        "archive_artifacts": true,
+        "remove_directory": false
+      }
+    },
+    "tags": [
+      "backend",
+      "api"
+    ],
+    "priority": "high",
+    "sqlite_seeded": true,
+    "notes": "Custom metadata can be added here for tracking, categorization, or integration with external systems"
+  }
+}
