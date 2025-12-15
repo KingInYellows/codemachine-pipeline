@@ -34,16 +34,50 @@ npm link
 
 ### Docker
 
+Build and run the CLI in a containerized environment for reproducible execution:
+
 ```bash
-docker build -t ai-feature-pipeline .
+# Build the Docker image (from project root)
+docker build -f docker/Dockerfile -t ai-feature-pipeline .
+
+# Run with help
 docker run --rm ai-feature-pipeline --help
+
+# Run commands with mounted repository context
+docker run --rm -v $(pwd):/workspace -w /workspace ai-feature-pipeline init
+
+# Set environment variables for integrations
+docker run --rm \
+  -e GITHUB_TOKEN=ghp_xxx \
+  -e LINEAR_API_KEY=lin_xxx \
+  -e AGENT_ENDPOINT=https://agent.example.com \
+  -v $(pwd):/workspace -w /workspace \
+  ai-feature-pipeline start --prompt "Add feature"
 ```
 
-## Requirements
+The Dockerfile uses a multi-stage build with Node v24 Alpine for deterministic, reproducible builds.
 
-- Node.js >= 24.0.0
-- Git repository
-- (Optional) GitHub/Linear API credentials for integrations
+## Prerequisites
+
+- **Node.js**: v24.0.0 or higher (required for deterministic builds)
+- **Git**: Version control with initialized repository
+- **npm**: Comes with Node.js, used for package management
+- **(Optional)** GitHub Personal Access Token for GitHub integration
+- **(Optional)** Linear API Key for Linear integration
+- **(Optional)** Agent service endpoint for AI execution
+
+### Verifying Prerequisites
+
+```bash
+# Check Node.js version (must be >= 24.0.0)
+node --version
+
+# Check Git is installed
+git --version
+
+# Verify you're in a Git repository
+git status
+```
 
 ## Quick Start
 
@@ -125,13 +159,74 @@ ai-feature init --validate-only
 - `1`: General error (not a git repository, etc.)
 - `10`: Configuration validation error
 
-### `ai-feature start` (Planned)
+### `ai-feature start`
 
-Start a new feature development pipeline.
+Start a new feature development pipeline from a prompt, Linear issue, or specification file.
 
-### `ai-feature status` (Planned)
+**Options:**
+- `-p, --prompt <text>`: Feature description prompt
+- `-l, --linear <id>`: Linear issue ID to import as specification
+- `-s, --spec <path>`: Path to existing specification file
+- `--json`: Output results in JSON format
+- `--dry-run`: Simulate execution without making changes
 
-Show the current state of a feature.
+**Examples:**
+```bash
+# Start from a text prompt
+ai-feature start --prompt "Add user authentication with OAuth"
+
+# Import from Linear issue
+ai-feature start --linear ISSUE-123
+
+# Use existing specification file
+ai-feature start --spec ./specs/new-feature.md
+
+# JSON output for automation
+ai-feature start --prompt "Add feature" --json
+```
+
+**Exit Codes:**
+- `0`: Success
+- `1`: General error
+- `10`: Validation error
+- `20`: External API error
+- `30`: Human action required
+
+**Note:** This command is currently a stub and will be fully implemented in iteration I2.
+
+---
+
+### `ai-feature status`
+
+Show the current state of a feature development pipeline.
+
+**Options:**
+- `-f, --feature <id>`: Feature ID to query (defaults to current/latest)
+- `--json`: Output results in JSON format
+- `-v, --verbose`: Show detailed execution logs and task breakdown
+- `--show-costs`: Include token usage and cost estimates
+
+**Examples:**
+```bash
+# Show status of current feature
+ai-feature status
+
+# Check specific feature by ID
+ai-feature status --feature feature-auth-123
+
+# JSON output for automation
+ai-feature status --json
+
+# Verbose output with detailed logs
+ai-feature status --verbose --show-costs
+```
+
+**Exit Codes:**
+- `0`: Success
+- `1`: General error
+- `10`: Validation error (feature not found)
+
+**Note:** This command is currently a stub and will be fully implemented in iteration I2.
 
 ### `ai-feature resume` (Planned)
 
@@ -192,19 +287,97 @@ Use the `./bin/dev.js` script to run commands during development:
 ```bash
 ./bin/dev.js init
 ./bin/dev.js --help
+./bin/dev.js start --prompt "test feature"
 ```
+
+### Smoke Tests
+
+Run smoke tests to verify CLI functionality:
+
+```bash
+# Run all smoke tests
+npm run smoke
+
+# Individual smoke tests
+npm run smoke:version    # Test --version output
+npm run smoke:help       # Test --help output
+npm run smoke:init       # Test init command help
+```
+
+### Git Hooks (Optional)
+
+To maintain code quality, you can set up Git hooks for automatic linting and testing:
+
+**Using Husky (Recommended):**
+
+```bash
+# Install Husky
+npm install --save-dev husky
+
+# Initialize Git hooks
+npx husky init
+
+# Add pre-commit hook for linting
+echo "npm run lint" > .husky/pre-commit
+
+# Add pre-push hook for tests
+echo "npm run test -- --runInBand" > .husky/pre-push
+```
+
+**Manual Git Hook Setup:**
+
+Create `.git/hooks/pre-commit` with:
+
+```bash
+#!/bin/sh
+npm run lint
+```
+
+Create `.git/hooks/pre-push` with:
+
+```bash
+#!/bin/sh
+npm run test -- --runInBand
+```
+
+Make them executable:
+
+```bash
+chmod +x .git/hooks/pre-commit .git/hooks/pre-push
+```
+
+### JSON Output for Automation
+
+All commands support `--json` flag for machine-readable output, making them suitable for CI/CD integration:
+
+```bash
+# Initialize with JSON output
+ai-feature init --validate-only --json
+
+# Start feature with JSON response
+ai-feature start --prompt "Add feature" --json
+
+# Query status programmatically
+ai-feature status --json | jq '.current_state'
+```
+
+JSON output follows a consistent schema with `status`, `message`, and command-specific fields for reliable parsing in automated workflows.
 
 ## Project Structure
 
 ```
 ai-feature-pipeline/
 ├── src/
-│   ├── commands/          # CLI command implementations
-│   │   └── init.ts        # Initialize command
+│   ├── cli/               # CLI presentation layer
+│   │   ├── commands/      # oclif command implementations
+│   │   │   ├── init.ts
+│   │   │   ├── start.ts
+│   │   │   └── status.ts
+│   │   └── index.ts       # CLI bootstrap + version banner
 │   ├── core/
 │   │   └── config/        # Configuration management
 │   │       └── repo_config.ts  # Schema validation & loaders
-│   └── index.ts           # Entry point
+│   └── index.ts           # Re-exports CLI run() for bin/dev + bin/run
 ├── config/
 │   └── schemas/           # JSON Schema definitions
 │       └── repo_config.schema.json

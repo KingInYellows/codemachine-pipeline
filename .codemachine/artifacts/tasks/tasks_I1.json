@@ -20,7 +20,7 @@
     "acceptance_criteria": "`npm run lint` and `npm run test -- --runInBand` pass on Node v24; running `bin/run --version` prints the semantic version; git diff limited to declared files with no leftover scaffolding; README lists prerequisites and installation hints plus `--json` usage.",
     "dependencies": [],
     "parallelizable": false,
-    "done": false
+    "done": true
   },
   {
     "task_id": "I1.T2",

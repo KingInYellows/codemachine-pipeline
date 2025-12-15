@@ -145,10 +145,10 @@ export function loadRepoConfig(configPath: string): ValidationResult {
     }
 
     // Validate with zod
-    const result = RepoConfigSchema.safeParse(rawConfig);
+    const parseResult = RepoConfigSchema.safeParse(rawConfig);
 
-    if (!result.success) {
-      const errors = result.error.errors.map(err => ({
+    if (!parseResult.success) {
+      const errors = parseResult.error.errors.map(err => ({
         path: err.path.join('.'),
         message: err.message,
       }));
@@ -161,7 +161,7 @@ export function loadRepoConfig(configPath: string): ValidationResult {
 
     // Check environment variables for credentials
     const warnings: string[] = [];
-    const config = result.data;
+    const config = parseResult.data;
 
     if (config.github.enabled) {
       const githubToken = process.env[config.github.token_env_var];
@@ -193,11 +193,16 @@ export function loadRepoConfig(configPath: string): ValidationResult {
       }
     }
 
-    return {
+    const result: ValidationResult = {
       success: true,
       config,
-      warnings: warnings.length > 0 ? warnings : undefined,
     };
+
+    if (warnings.length > 0) {
+      result.warnings = warnings;
+    }
+
+    return result;
   } catch (error) {
     return {
       success: false,

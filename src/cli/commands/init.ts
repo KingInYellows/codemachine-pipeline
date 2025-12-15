@@ -7,7 +7,7 @@ import {
   loadRepoConfig,
   formatValidationErrors,
   type RepoConfig,
-} from '../core/config/repo_config.js';
+} from '../../core/config/repo_config';
 
 /**
  * Init command - Initialize ai-feature-pipeline in the current repository
