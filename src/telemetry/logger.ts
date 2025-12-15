@@ -118,6 +118,13 @@ const SECRET_PATTERNS: Array<{ name: string; pattern: RegExp; replacement: strin
 /**
  * Redaction engine for removing secrets from strings
  */
+export interface RedactionReport {
+  /** Redacted text */
+  text: string;
+  /** Flags representing patterns matched during redaction */
+  flags: string[];
+}
+
 export class RedactionEngine {
   private readonly patterns: Array<{ name: string; pattern: RegExp; replacement: string }>;
   private readonly enabled: boolean;
@@ -131,17 +138,30 @@ export class RedactionEngine {
    * Redact secrets from a string
    */
   redact(input: string): string {
+    return this.redactWithReport(input).text;
+  }
+
+  /**
+   * Redact secrets from a string and capture flags for matched patterns
+   */
+  redactWithReport(input: string): RedactionReport {
     if (!this.enabled) {
-      return input;
+      return { text: input, flags: [] };
     }
 
     let output = input;
+    const flags = new Set<string>();
 
-    for (const { pattern, replacement } of this.patterns) {
+    for (const { pattern, replacement, name } of this.patterns) {
+      pattern.lastIndex = 0;
+      if (pattern.test(output)) {
+        flags.add(name);
+      }
+      pattern.lastIndex = 0;
       output = output.replace(pattern, replacement);
     }
 
-    return output;
+    return { text: output, flags: Array.from(flags) };
   }
 
   /**

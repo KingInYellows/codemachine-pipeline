@@ -295,10 +295,17 @@ This document provides a comprehensive field-by-field reference for all data mod
 | `files[path].size` | number | Yes | File size | Bytes (non-negative integer) | ADR-2 |
 | `files[path].file_type` | string | No | File type or extension | E.g., ".ts", ".md" | File classification |
 | `files[path].token_count` | number | No | Token count for file | Non-negative integer | Token budgeting |
+| `summaries[].chunk_id` | string | Yes | Chunk identifier (16 hex chars) | Hash-derived | Context summarization |
+| `summaries[].file_path` | string | Yes | Source file path | Repository-relative | Context summarization |
+| `summaries[].file_sha` | string | Yes | Source file SHA-256 | 64-character hex string | ADR-2 |
+| `summaries[].chunk_index` | number | Yes | Chunk index (0-based) | Non-negative integer | Chunking heuristics |
+| `summaries[].chunk_total` | number | Yes | Total chunks for file | Positive integer | Chunking heuristics |
 | `summaries[].summary` | string | Yes | Summary text | Free text | Context summarization |
 | `summaries[].token_count` | number | Yes | Summary token count | Non-negative integer | Token budgeting |
 | `summaries[].generated_at` | string | Yes | Summary generation timestamp | ISO 8601 datetime | ADR-2 |
 | `summaries[].generated_by` | string | No | Generator model/tool | Free text | Provenance |
+| `summaries[].method` | string | Yes | Summarization method identifier | `"single_chunk"`, `"multi_chunk"`, etc. | Context summarization |
+| `summaries[].redaction_flags` | string[] | No | Redaction markers applied to output | Pattern identifiers | Section 4 directives |
 | `total_token_count` | number | Yes | Total token count | Non-negative integer (default: 0) | Token budgeting |
 | `provenance.source` | string | Yes | Source URL or identifier | Free text | FR-1 |
 | `provenance.captured_at` | string | Yes | Capture timestamp | ISO 8601 datetime | ADR-2 |

@@ -3,22 +3,23 @@ import * as path from 'node:path';
 import * as fs from 'node:fs/promises';
 import {
   getRunDirectoryPath,
-  listRunDirectories,
   readManifest,
-  runDirectoryExists,
-  updateManifest,
   type RunManifest,
 } from '../../persistence/runDirectoryManager';
-import { loadRepoConfig } from '../../core/config/RepoConfig';
 import { createCliLogger, LogLevel } from '../../telemetry/logger';
 import { createRunMetricsCollector, StandardMetrics } from '../../telemetry/metrics';
 import { createRunTraceManager, SpanStatusCode, withSpan } from '../../telemetry/traces';
 import type { StructuredLogger } from '../../telemetry/logger';
 import type { MetricsCollector } from '../../telemetry/metrics';
 import type { TraceManager, ActiveSpan } from '../../telemetry/traces';
+import {
+  ensureTelemetryReferences,
+  resolveRunDirectorySettings,
+  selectFeatureId,
+  type RunDirectorySettings,
+} from '../utils/runDirectory';
+import { parseContextDocument } from '../../core/models/ContextDocument';
 
-const CONFIG_RELATIVE_PATH = path.join('.ai-feature-pipeline', 'config.json');
-const DEFAULT_RUNS_DIR = path.join('.ai-feature-pipeline', 'runs');
 const MANIFEST_FILE = 'manifest.json';
 const MANIFEST_SCHEMA_DOC = 'docs/requirements/run_directory_schema.md';
 const MANIFEST_TEMPLATE = '.ai-feature-pipeline/templates/run_manifest.json';
@@ -29,13 +30,6 @@ type StatusFlags = {
   verbose: boolean;
   'show-costs': boolean;
 };
-
-interface RunDirectorySettings {
-  baseDir: string;
-  configPath: string;
-  warnings: string[];
-  errors: string[];
-}
 
 interface ManifestLoadResult {
   manifest?: RunManifest;
@@ -62,6 +56,33 @@ interface StatusPayload {
   config_warnings: string[];
   notes: string[];
   manifest_error?: string;
+  context?: StatusContextPayload;
+}
+
+interface StatusContextPayload {
+  files?: number;
+  total_tokens?: number;
+  summaries?: number;
+  summaries_preview?: Array<{
+    file_path: string;
+    chunk_id: string;
+    generated_at: string;
+    summary: string;
+  }>;
+  summarization?: {
+    updated_at?: string;
+    chunks_generated?: number;
+    chunks_cached?: number;
+    tokens_used?: {
+      prompt?: number;
+      completion?: number;
+      total?: number;
+    };
+    cost_usd?: number;
+  };
+  warnings?: string[];
+  budget_warnings?: string[];
+  error?: string;
 }
 
 /**
@@ -120,8 +141,8 @@ export default class Status extends Command {
     const startTime = Date.now();
 
     try {
-      const settings = this.resolveRunDirectorySettings();
-      const featureId = await this.selectFeatureId(settings.baseDir, typedFlags.feature);
+      const settings = resolveRunDirectorySettings();
+      const featureId = await selectFeatureId(settings.baseDir, typedFlags.feature);
 
       // Initialize telemetry if feature exists
       if (featureId) {
@@ -155,7 +176,11 @@ export default class Status extends Command {
         ? await this.loadManifestWithTracing(traceManager, commandSpan, settings.baseDir, featureId)
         : undefined;
 
-      const payload = this.buildStatusPayload(featureId, settings, manifestInfo);
+      const contextInfo = featureId
+        ? await this.loadContextStatus(settings.baseDir, featureId)
+        : undefined;
+
+      const payload = this.buildStatusPayload(featureId, settings, manifestInfo, contextInfo);
 
       if (typedFlags.json) {
         // Disable stderr mirroring in JSON mode (already set in createCliLogger)
@@ -243,64 +268,6 @@ export default class Status extends Command {
     }
   }
 
-  private resolveRunDirectorySettings(): RunDirectorySettings {
-    const configPath = path.resolve(process.cwd(), CONFIG_RELATIVE_PATH);
-    const validation = loadRepoConfig(configPath);
-
-    if (!validation.success || !validation.config) {
-      return {
-        baseDir: path.resolve(process.cwd(), DEFAULT_RUNS_DIR),
-        configPath,
-        warnings: validation.warnings ?? [],
-        errors: (validation.errors ?? []).map(err => `${err.path}: ${err.message}`),
-      };
-    }
-
-    const configuredRunDir = validation.config.runtime.run_directory || DEFAULT_RUNS_DIR;
-    const baseDir = path.isAbsolute(configuredRunDir)
-      ? configuredRunDir
-      : path.resolve(process.cwd(), configuredRunDir);
-
-    return {
-      baseDir,
-      configPath,
-      warnings: validation.warnings ?? [],
-      errors: [],
-    };
-  }
-
-  private async selectFeatureId(baseDir: string, explicit?: string): Promise<string | undefined> {
-    if (explicit) {
-      const exists = await runDirectoryExists(baseDir, explicit);
-      return exists ? explicit : undefined;
-    }
-
-    return this.findMostRecentRun(baseDir);
-  }
-
-  private async findMostRecentRun(baseDir: string): Promise<string | undefined> {
-    const candidates = await listRunDirectories(baseDir);
-    let mostRecent: { id: string; mtime: number } | undefined;
-
-    for (const candidate of candidates) {
-      const manifestPath = path.join(
-        getRunDirectoryPath(baseDir, candidate),
-        MANIFEST_FILE
-      );
-
-      try {
-        const stats = await fs.stat(manifestPath);
-        if (!mostRecent || stats.mtimeMs > mostRecent.mtime) {
-          mostRecent = { id: candidate, mtime: stats.mtimeMs };
-        }
-      } catch {
-        // Ignore runs missing a manifest
-      }
-    }
-
-    return mostRecent?.id;
-  }
-
   private deriveManifestPath(baseDir: string, featureId?: string): string {
     if (featureId) {
       return path.join(getRunDirectoryPath(baseDir, featureId), MANIFEST_FILE);
@@ -330,7 +297,8 @@ export default class Status extends Command {
   private buildStatusPayload(
     featureId: string | undefined,
     settings: RunDirectorySettings,
-    manifestInfo?: ManifestLoadResult
+    manifestInfo?: ManifestLoadResult,
+    contextInfo?: StatusContextPayload
   ): StatusPayload {
     const manifest = manifestInfo?.manifest;
     const manifestPath = manifestInfo?.manifestPath ?? this.deriveManifestPath(settings.baseDir, featureId);
@@ -354,6 +322,7 @@ export default class Status extends Command {
         `Manifest layout documented at ${MANIFEST_SCHEMA_DOC}`,
         `Template manifest available at ${MANIFEST_TEMPLATE}`,
       ],
+      ...(contextInfo && { context: contextInfo }),
     };
 
     if (manifest?.title) {
@@ -374,6 +343,137 @@ export default class Status extends Command {
     }
 
     return payload;
+  }
+
+  private async loadContextStatus(
+    baseDir: string,
+    featureId: string
+  ): Promise<StatusContextPayload | undefined> {
+    const runDir = getRunDirectoryPath(baseDir, featureId);
+    const contextDir = path.join(runDir, 'context');
+    const summaryPath = path.join(contextDir, 'summary.json');
+
+    let content: string;
+    try {
+      content = await fs.readFile(summaryPath, 'utf-8');
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+        return undefined;
+      }
+      return {
+        error: error instanceof Error ? error.message : 'Failed to read context summary',
+      };
+    }
+
+    let docPayload: StatusContextPayload = {};
+    try {
+      const parsed = parseContextDocument(JSON.parse(content));
+      if (!parsed.success) {
+        return {
+          error: parsed.errors.map(err => `${err.path}: ${err.message}`).join('; '),
+        };
+      }
+
+      const contextDoc = parsed.data;
+      docPayload = {
+        files: Object.keys(contextDoc.files).length,
+        total_tokens: contextDoc.total_token_count,
+        summaries: contextDoc.summaries.length,
+        summaries_preview: contextDoc.summaries.slice(0, 5).map(entry => ({
+          file_path: entry.file_path,
+          chunk_id: entry.chunk_id,
+          generated_at: entry.generated_at,
+          summary: truncateSummary(entry.summary),
+        })),
+      };
+    } catch (error) {
+      return {
+        error: error instanceof Error ? error.message : 'Failed to parse context summary',
+      };
+    }
+
+    await this.attachSummarizationMetadata(docPayload, contextDir);
+    await this.attachCostTelemetry(docPayload, runDir);
+
+    return docPayload;
+  }
+
+  private async attachSummarizationMetadata(
+    payload: StatusContextPayload,
+    contextDir: string
+  ): Promise<void> {
+    const metadataPath = path.join(contextDir, 'summarization.json');
+
+    try {
+      const metadataRaw = await fs.readFile(metadataPath, 'utf-8');
+      const metadata = JSON.parse(metadataRaw) as {
+        updated_at?: string;
+        chunks_generated?: number;
+        chunks_cached?: number;
+        tokens_used?: { prompt?: number; completion?: number; total?: number };
+        warnings?: string[];
+      };
+
+      payload.summarization = {
+        ...(payload.summarization ?? {}),
+        ...(metadata.updated_at && { updated_at: metadata.updated_at }),
+        ...(typeof metadata.chunks_generated === 'number' && { chunks_generated: metadata.chunks_generated }),
+        ...(typeof metadata.chunks_cached === 'number' && { chunks_cached: metadata.chunks_cached }),
+        ...(metadata.tokens_used && { tokens_used: metadata.tokens_used }),
+      };
+
+      if (metadata.warnings && metadata.warnings.length > 0) {
+        payload.warnings = [...(payload.warnings ?? []), ...metadata.warnings];
+      }
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+        return;
+      }
+      payload.warnings = [...(payload.warnings ?? []), 'Failed to read summarization metadata'];
+    }
+  }
+
+  private async attachCostTelemetry(
+    payload: StatusContextPayload,
+    runDir: string
+  ): Promise<void> {
+    const costsPath = path.join(runDir, 'telemetry', 'costs.json');
+
+    try {
+      const content = await fs.readFile(costsPath, 'utf-8');
+      const costs = JSON.parse(content) as {
+        totals?: { promptTokens?: number; completionTokens?: number; totalTokens?: number; totalCostUsd?: number };
+        warnings?: string[];
+      };
+
+      if (costs.totals) {
+        const tokensUsed: { prompt?: number; completion?: number; total?: number } = {};
+        if (typeof costs.totals.promptTokens === 'number') {
+          tokensUsed.prompt = costs.totals.promptTokens;
+        }
+        if (typeof costs.totals.completionTokens === 'number') {
+          tokensUsed.completion = costs.totals.completionTokens;
+        }
+        if (typeof costs.totals.totalTokens === 'number') {
+          tokensUsed.total = costs.totals.totalTokens;
+        }
+
+        payload.summarization = {
+          ...(payload.summarization ?? {}),
+          ...(Object.keys(tokensUsed).length > 0 && { tokens_used: tokensUsed }),
+          ...(typeof costs.totals.totalCostUsd === 'number' && { cost_usd: costs.totals.totalCostUsd }),
+        };
+      }
+
+      if (costs.warnings && costs.warnings.length > 0) {
+        payload.budget_warnings = costs.warnings;
+      }
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+        return;
+      }
+      payload.warnings = [...(payload.warnings ?? []), 'Failed to read cost telemetry'];
+    }
   }
 
   private async loadManifestWithTracing(
@@ -441,6 +541,28 @@ export default class Status extends Command {
       );
     }
 
+    if (payload.context) {
+      if (payload.context.error) {
+        this.warn(`Context summaries unavailable: ${payload.context.error}`);
+      } else {
+        this.log(
+          `Context: files=${payload.context.files ?? 0} summaries=${payload.context.summaries ?? 0} total_tokens=${payload.context.total_tokens ?? 0}`
+        );
+        if (payload.context.budget_warnings && payload.context.budget_warnings.length > 0) {
+          this.warn(`Context budget warnings: ${payload.context.budget_warnings.join(' | ')}`);
+        }
+        if (payload.context.warnings && payload.context.warnings.length > 0) {
+          this.warn(`Context summarization warnings: ${payload.context.warnings.join(' | ')}`);
+        }
+        if (flags.verbose && payload.context.summaries_preview && payload.context.summaries_preview.length > 0) {
+          this.log('Context summary preview:');
+          for (const preview of payload.context.summaries_preview) {
+            this.log(`  - ${preview.file_path} (${preview.chunk_id}): ${preview.summary}`);
+          }
+        }
+      }
+    }
+
     if (payload.manifest_error) {
       this.warn(`Manifest read warning: ${payload.manifest_error}`);
     }
@@ -482,32 +604,9 @@ export default class Status extends Command {
   }
 }
 
-async function ensureTelemetryReferences(runDir: string): Promise<void> {
-  const metricsPath = 'metrics/prometheus.txt';
-  const tracesPath = 'telemetry/traces.json';
-
-  await updateManifest(runDir, manifest => {
-    const telemetry = {
-      ...(manifest.telemetry ?? {}),
-    };
-
-    let changed = false;
-
-    if (!telemetry.logs_dir) {
-      telemetry.logs_dir = 'logs';
-      changed = true;
-    }
-
-    if (telemetry.metrics_file !== metricsPath) {
-      telemetry.metrics_file = metricsPath;
-      changed = true;
-    }
-
-    if (telemetry.traces_file !== tracesPath) {
-      telemetry.traces_file = tracesPath;
-      changed = true;
-    }
-
-    return changed ? { telemetry } : null;
-  });
+function truncateSummary(summary: string, maxLength = 240): string {
+  if (summary.length <= maxLength) {
+    return summary;
+  }
+  return `${summary.slice(0, maxLength - 1)}…`;
 }

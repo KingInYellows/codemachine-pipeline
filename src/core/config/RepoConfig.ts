@@ -122,6 +122,7 @@ const RuntimeSchema = z.object({
   max_concurrent_tasks: z.number().int().min(1).max(10).default(3),
   timeout_minutes: z.number().int().min(5).max(120).default(30),
   context_token_budget: z.number().int().min(1000).max(100000).default(32000),
+  context_cost_budget_usd: z.number().nonnegative().default(5).describe('Maximum USD spend for context summarization'),
   logs_format: z.enum(['ndjson', 'json', 'text']).default('ndjson'),
   run_directory: z.string().default('.ai-feature-pipeline/runs'),
 });
@@ -476,6 +477,7 @@ export function createDefaultConfig(
       max_concurrent_tasks: 3,
       timeout_minutes: 30,
       context_token_budget: 32000,
+      context_cost_budget_usd: 5,
       logs_format: 'ndjson',
       run_directory: '.ai-feature-pipeline/runs',
     },
