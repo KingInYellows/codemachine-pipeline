@@ -4,8 +4,8 @@
 
 This checklist enumerates gating questions and verification steps to ensure the ai-feature-pipeline is properly configured and ready for operation. Each iteration should review and update this checklist to validate system readiness before proceeding with feature development workflows.
 
-**Last Updated:** 2025-01-XX
-**Current Iteration:** I1 (Bootstrap)
+**Last Updated:** 2025-01-15
+**Current Iteration:** I2 (Context, Research & PRD Authoring)
 **Schema Version:** 1.0.0
 
 ---
@@ -291,40 +291,49 @@ cat .ai-feature-pipeline/config.json | jq '.feature_flags'
 
 ### 10. Iteration-Specific Checks
 
-Additional checks specific to the current iteration (I1: Bootstrap).
+Additional checks specific to the current iteration (I2: Context, Research & PRD Authoring).
 
 | Check Name | Status | RepoConfig Field | Last Verified | Notes |
 |------------|--------|------------------|---------------|-------|
-| All I1 tasks completed | ⏳ | N/A | Never | See `.codemachine/artifacts/plan/02_Iteration_I1.md` |
-| RepoConfig schema finalized | ⏳ | `schema_version` | Never | Task I1.T2 |
-| Run directory persistence working | ⏳ | `runtime.run_directory` | Never | Task I1.T3 |
-| HTTP client rate-limiting works | ⏳ | `constraints.rate_limits` | Never | Task I1.T4 |
-| Telemetry baseline operational | ⏳ | `runtime.logs_format` | Never | Task I1.T5 |
-| CLI commands registered | ⏳ | N/A | Never | Task I1.T6 |
-| Model schemas documented | ⏳ | N/A | Never | Task I1.T7 |
-| Init/doctor commands work | ⏳ | N/A | Never | Task I1.T8 (this task) |
-| Architecture diagrams exported | ⏳ | N/A | Never | Task I1.T9 |
+| All I2 tasks completed | ⏳ | N/A | Never | See `.codemachine/artifacts/plan/02_Iteration_I2.md` |
+| Context aggregator functional | ⏳ | `project.context_paths` | Never | Task I2.T1 - Context discovery and ranking |
+| Context summarization working | ⏳ | `runtime.context_token_budget` | Never | Task I2.T2 - Chunking and summarization |
+| Research coordinator operational | ⏳ | N/A | Never | Task I2.T3 - ResearchTask lifecycle management |
+| PRD template available | ✅ | N/A | 2025-01-15 | Task I2.T4 - `docs/templates/prd_template.md` exists |
+| PRD authoring engine works | ✅ | N/A | 2025-01-15 | Task I2.T4 - `src/workflows/prdAuthoringEngine.ts` functional |
+| PRD approval gate configured | ✅ | `governance.approval_workflow.require_approval_for_prd` | 2025-01-15 | Task I2.T4 - Approval workflow operational |
+| PRD playbook documented | ✅ | N/A | 2025-01-15 | Task I2.T4 - `docs/ops/prd_playbook.md` exists |
+| CLI `start` command readiness | ✅ | N/A | 2025-01-15 | Task I2.T4 - Integration with context/research/PRD |
+| Traceability map initialized | ✅ | N/A | 2025-01-15 | Task I2.T4 - PRD goals map to trace IDs |
+| Approval hash recording works | ✅ | N/A | 2025-01-15 | Task I2.T4 - SHA-256 hashes in approval records |
 
 **Verification Commands:**
 ```bash
-# Check iteration progress
+# Check I2 task completion
 ai-feature status
 
-# Verify CLI commands
-ai-feature --help
-ai-feature init --help
-ai-feature doctor --help
+# Test context aggregation
+ai-feature context aggregate --feature <id>
 
-# Test commands
-ai-feature doctor --json
-ai-feature init --dry-run --json
+# Test research coordination
+ai-feature research list --feature <id>
+
+# Verify PRD template
+cat docs/templates/prd_template.md
+
+# Test PRD generation (when `start` is wired)
+ai-feature start --prompt "Test PRD generation"
+
+# Verify approval recording
+ai-feature approve prd --feature <id> --signer "test@example.com"
 ```
 
 **Exit Criteria:**
-- All I1 tasks marked done
-- CLI commands functional
-- Telemetry operational
-- Schemas and docs complete
+- All I2 tasks marked done
+- Context/research/PRD workflows functional
+- PRD approval gates operational
+- CLI start command integrates all components
+- Traceability links established
 
 ---
 
@@ -345,8 +354,8 @@ ai-feature init --dry-run --json
 | 7. Directory Structure | ⏳ | 0 | 0 | 0 | 0 | 9 |
 | 8. Telemetry & Observability | ⏳ | 0 | 0 | 0 | 0 | 7 |
 | 9. Feature Flags | ⏳ | 0 | 0 | 0 | 0 | 6 |
-| 10. Iteration-Specific | ⏳ | 0 | 0 | 0 | 0 | 9 |
-| **TOTAL** | **⏳** | **0** | **0** | **0** | **0** | **82** |
+| 10. Iteration-Specific | ⏳ | 0 | 0 | 0 | 0 | 11 |
+| **TOTAL** | **⏳** | **0** | **0** | **0** | **0** | **84** |
 
 ---
 
@@ -372,7 +381,8 @@ Once all checks pass, iteration lead should sign off:
 
 | Iteration | Lead | Sign-Off Date | Notes |
 |-----------|------|---------------|-------|
-| I1 | TBD | Pending | Awaiting completion of all I1 tasks |
+| I1 | TBD | Completed | Bootstrap iteration complete |
+| I2 | TBD | Pending | Awaiting completion of all I2 tasks |
 
 ---
 
@@ -381,6 +391,7 @@ Once all checks pass, iteration lead should sign off:
 | Version | Date | Changes | Author |
 |---------|------|---------|--------|
 | 1.0.0 | 2025-01-XX | Initial checklist for I1 (Bootstrap) | ai-feature init (I1.T8) |
+| 1.1.0 | 2025-01-15 | Updated for I2 (Context, Research & PRD) | prdAuthoringEngine (I2.T4) |
 
 ---
 
@@ -388,11 +399,14 @@ Once all checks pass, iteration lead should sign off:
 
 - **Plan Overview**: `.codemachine/artifacts/plan/01_Plan_Overview_and_Setup.md`
 - **Iteration I1**: `.codemachine/artifacts/plan/02_Iteration_I1.md`
+- **Iteration I2**: `.codemachine/artifacts/plan/02_Iteration_I2.md`
 - **RepoConfig Schema**: `docs/requirements/RepoConfig_schema.md`
 - **Run Directory Schema**: `docs/requirements/run_directory_schema.md`
 - **ADR-5 (Approvals)**: `docs/adr/005-approval-workflow.md`
 - **Init Playbook**: `docs/ops/init_playbook.md`
+- **PRD Playbook**: `docs/ops/prd_playbook.md`
 - **Doctor Reference**: `docs/ops/doctor_reference.md`
+- **PRD Template**: `docs/templates/prd_template.md`
 
 ---
 

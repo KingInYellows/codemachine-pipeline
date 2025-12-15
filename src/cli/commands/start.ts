@@ -1,16 +1,82 @@
 import { Command, Flags } from '@oclif/core';
+import * as path from 'node:path';
+import * as fs from 'node:fs/promises';
+import { execSync } from 'node:child_process';
+import { randomUUID } from 'node:crypto';
+import type { StructuredLogger } from '../../telemetry/logger';
+import { createCliLogger, LogLevel } from '../../telemetry/logger';
+import type { MetricsCollector } from '../../telemetry/metrics';
+import { createRunMetricsCollector, StandardMetrics } from '../../telemetry/metrics';
+import { createRunTraceManager, SpanStatusCode } from '../../telemetry/traces';
+import {
+  createRunDirectory,
+  setCurrentStep,
+  setLastStep,
+  setLastError,
+  markApprovalRequired,
+  updateManifest,
+} from '../../persistence/runDirectoryManager';
+import { resolveRunDirectorySettings, ensureTelemetryReferences } from '../utils/runDirectory';
+import type { RepoConfig } from '../../core/config/RepoConfig';
+import { createFeature } from '../../core/models/Feature';
+import { aggregateContext, type AggregatorConfig } from '../../workflows/contextAggregator';
+import { createResearchCoordinator, type UnknownDetectionOptions } from '../../workflows/researchCoordinator';
+import type { ResearchTask } from '../../core/models/ResearchTask';
+import { draftPRD } from '../../workflows/prdAuthoringEngine';
 
-/**
- * Start command - Begin a new feature development pipeline
- * Implements FR-2: Feature initialization and orchestration
- *
- * Exit codes:
- * - 0: Success
- * - 1: General error
- * - 10: Validation error
- * - 20: External API error
- * - 30: Human action required
- */
+const EXECUTION_STEPS = {
+  Context: 'context_aggregation',
+  Research: 'research_detection',
+  PRD: 'prd_authoring',
+} as const;
+
+type StartFlags = {
+  prompt?: string;
+  linear?: string;
+  spec?: string;
+  json: boolean;
+  'dry-run': boolean;
+};
+
+type ResearchDetectionOptions = {
+  repoRoot: string;
+  runDir: string;
+  featureId: string;
+  promptText?: string;
+  specText?: string;
+  logger: StructuredLogger;
+  metrics: MetricsCollector;
+  contextDocument: Parameters<typeof draftPRD>[0]['contextDocument'];
+};
+
+interface StartResultPayload {
+  feature_id: string;
+  run_dir: string;
+  source: string;
+  status: 'awaiting_prd_approval' | 'completed';
+  context: {
+    files: number;
+    total_tokens: number;
+    warnings: string[];
+  };
+  research: {
+    tasks_detected: number;
+    pending: number;
+  };
+  prd: {
+    path: string;
+    hash: string;
+    diagnostics: {
+      incompleteSections: string[];
+      warnings: string[];
+    };
+  };
+  approvals: {
+    required: boolean;
+    pending: string[];
+  };
+}
+
 export default class Start extends Command {
   static description = 'Start a new feature development pipeline';
 
@@ -50,61 +116,477 @@ export default class Start extends Command {
 
   async run(): Promise<void> {
     const { flags } = await this.parse(Start);
+    const typedFlags = flags as StartFlags;
 
-    try {
-      // Validate that at least one input source is provided
-      if (!flags.prompt && !flags.linear && !flags.spec) {
-        this.error(
-          'Must provide one of: --prompt, --linear, or --spec',
-          { exit: 10 }
-        );
-      }
+    if (!typedFlags.prompt && !typedFlags.linear && !typedFlags.spec) {
+      this.error('Must provide one of: --prompt, --linear, or --spec', { exit: 10 });
+    }
 
-      // Stub implementation - to be completed in future iterations
-      const output = {
-        status: 'stub',
-        message: 'Start command is not yet implemented',
-        input: {
-          prompt: flags.prompt,
-          linear: flags.linear,
-          spec: flags.spec,
-        },
-        flags: {
-          json: flags.json,
-          dryRun: flags['dry-run'],
-        },
-        next_steps: [
-          'Validate repository configuration exists',
-          'Generate PRD from prompt/issue/spec',
-          'Create feature run directory',
-          'Initialize state machine',
-        ],
-      };
+    if (typedFlags.json) {
+      process.env.JSON_OUTPUT = '1';
+    }
 
-      if (flags.json) {
-        this.log(JSON.stringify(output, null, 2));
-      } else {
-        this.log('\n⚠️  Start command stub (not yet implemented)\n');
-        this.log(`Input: ${flags.prompt || flags.linear || flags.spec}`);
-        this.log(`Mode: ${flags['dry-run'] ? 'dry-run' : 'live'}`);
-        this.log('\nPlanned execution flow:');
-        for (const step of output.next_steps) {
-          this.log(`  • ${step}`);
-        }
-        this.log('\nThis command will be implemented in iteration I2.');
-        this.log('');
-      }
-    } catch (error) {
-      // Re-throw oclif errors to preserve exit codes
-      if (error && typeof error === 'object' && 'oclif' in error) {
-        throw error;
-      }
+    if (typedFlags['dry-run']) {
+      this.outputDryRunPlan(typedFlags);
+      return;
+    }
 
-      if (error instanceof Error) {
-        this.error(`Start command failed: ${error.message}`, { exit: 1 });
-      } else {
-        this.error('Start command failed with an unknown error', { exit: 1 });
+    const startTime = Date.now();
+    let currentStepLabel: string | undefined;
+    const settings = resolveRunDirectorySettings();
+
+    if (settings.errors.length > 0 || !settings.config) {
+      const message = settings.errors.length > 0
+        ? settings.errors.join('\n')
+        : 'Repository not initialized. Run "ai-feature init" first.';
+      this.error(message, { exit: 10 });
+    }
+
+    if (!typedFlags.json && settings.warnings.length > 0) {
+      for (const warn of settings.warnings) {
+        this.warn(warn);
       }
     }
+
+    const repoConfig = settings.config;
+    const repoRoot = this.findGitRoot();
+    await fs.mkdir(settings.baseDir, { recursive: true });
+
+    const featureId = this.generateFeatureId();
+    const featureTitle = this.resolveFeatureTitle(typedFlags);
+    const featureSource = this.resolveSourceDescriptor(typedFlags);
+    const resolvedSpecPath = typedFlags.spec ? path.resolve(typedFlags.spec) : undefined;
+    const runDir = await createRunDirectory(settings.baseDir, featureId, {
+      title: featureTitle,
+      source: featureSource,
+      repoUrl: repoConfig.project.repo_url,
+      defaultBranch: repoConfig.project.default_branch,
+      metadata: {
+        input: {
+          prompt: typedFlags.prompt,
+          linear: typedFlags.linear,
+          specPath: resolvedSpecPath,
+        },
+      },
+    });
+
+    await ensureTelemetryReferences(runDir);
+
+    const logger = createCliLogger('start', featureId, runDir, {
+      minLevel: typedFlags.json ? LogLevel.WARN : LogLevel.INFO,
+      mirrorToStderr: !typedFlags.json,
+    });
+    const metrics = createRunMetricsCollector(runDir, featureId);
+    const traceManager = createRunTraceManager(runDir, featureId);
+    const commandSpan = traceManager.startSpan('cli.start');
+    commandSpan.setAttribute('feature_id', featureId);
+    commandSpan.setAttribute('input_source', featureSource);
+
+    try {
+      await updateManifest(runDir, manifest => ({
+        status: 'in_progress',
+        execution: {
+          ...manifest.execution,
+          completed_steps: 0,
+          total_steps: 3,
+        },
+      }));
+
+      currentStepLabel = 'initializing';
+
+      const specText = resolvedSpecPath
+        ? await fs.readFile(resolvedSpecPath, 'utf-8')
+        : undefined;
+
+      currentStepLabel = EXECUTION_STEPS.Context;
+      const contextResult = await this.runContextAggregation({
+        repoRoot,
+        runDir,
+        featureId,
+        repoConfig,
+        logger,
+      });
+
+      currentStepLabel = EXECUTION_STEPS.Research;
+      const researchOptions: ResearchDetectionOptions = {
+        repoRoot,
+        runDir,
+        featureId,
+        logger,
+        metrics,
+        contextDocument: contextResult.contextDocument,
+      };
+
+      if (typedFlags.prompt) {
+        researchOptions.promptText = typedFlags.prompt;
+      }
+
+      if (specText) {
+        researchOptions.specText = specText;
+      }
+
+      const researchTasks = await this.runResearchDetection(researchOptions);
+
+      currentStepLabel = EXECUTION_STEPS.PRD;
+      const prdResult = await this.runPrdAuthoring({
+        repoRoot,
+        runDir,
+        repoConfig,
+        featureId,
+        featureTitle,
+        featureSource,
+        contextDocument: contextResult.contextDocument,
+        researchTasks,
+        logger,
+        metrics,
+      });
+
+      const approvalRequired = this.prdApprovalRequired(repoConfig);
+
+      await updateManifest(runDir, manifest => ({
+        artifacts: {
+          ...manifest.artifacts,
+          prd: 'artifacts/prd.md',
+        },
+        status: approvalRequired ? 'paused' : 'in_progress',
+      }));
+
+      const payload: StartResultPayload = {
+        feature_id: featureId,
+        run_dir: runDir,
+        source: featureSource,
+        status: approvalRequired ? 'awaiting_prd_approval' : 'completed',
+        context: {
+          files: Object.keys(contextResult.contextDocument.files).length,
+          total_tokens: contextResult.contextDocument.total_token_count ?? 0,
+          warnings: contextResult.diagnostics.warnings,
+        },
+        research: {
+          tasks_detected: researchTasks.length,
+          pending: researchTasks.filter(task => task.status !== 'completed').length,
+        },
+        prd: {
+          path: path.relative(process.cwd(), prdResult.prdPath),
+          hash: prdResult.prdHash,
+          diagnostics: {
+            incompleteSections: prdResult.diagnostics.incompleteSections,
+            warnings: prdResult.diagnostics.warnings,
+          },
+        },
+        approvals: {
+          required: approvalRequired,
+          pending: approvalRequired ? ['prd'] : [],
+        },
+      };
+
+      if (approvalRequired) {
+        await markApprovalRequired(runDir, 'prd');
+      }
+
+      this.emitStartSummary(payload, typedFlags.json);
+
+      const exitCode = payload.approvals.required ? 30 : 0;
+      const duration = Date.now() - startTime;
+      metrics.observe(StandardMetrics.COMMAND_EXECUTION_DURATION_MS, duration, { command: 'start' });
+      metrics.increment(StandardMetrics.COMMAND_INVOCATIONS_TOTAL, {
+        command: 'start',
+        exit_code: exitCode.toString(),
+      });
+      await metrics.flush();
+      commandSpan.end({ code: SpanStatusCode.OK });
+
+      if (exitCode !== 0) {
+        this.exit(exitCode);
+      }
+    } catch (error) {
+      metrics.increment(StandardMetrics.COMMAND_INVOCATIONS_TOTAL, {
+        command: 'start',
+        exit_code: '1',
+      });
+      await metrics.flush();
+      commandSpan.end({ code: SpanStatusCode.ERROR, message: this.formatUnknownError(error) });
+
+      await setLastError(runDir, currentStepLabel ?? 'start', this.formatUnknownError(error), true);
+
+      this.error(`Start command failed: ${this.formatUnknownError(error)}`, { exit: 1 });
+    }
   }
+
+  private async runContextAggregation(options: {
+    repoRoot: string;
+    runDir: string;
+    featureId: string;
+    repoConfig: RepoConfig;
+    logger: StructuredLogger;
+  }) {
+    const { repoRoot, runDir, featureId, repoConfig, logger } = options;
+    await setCurrentStep(runDir, EXECUTION_STEPS.Context);
+
+    const aggregatorConfig: AggregatorConfig = {
+      repoRoot,
+      runDir,
+      featureId,
+      contextPaths: repoConfig.project.context_paths,
+      tokenBudget: repoConfig.runtime.context_token_budget,
+    };
+
+    if (typeof repoConfig.constraints?.max_context_files === 'number') {
+      aggregatorConfig.maxFiles = repoConfig.constraints.max_context_files;
+    }
+
+    const result = await aggregateContext(aggregatorConfig);
+    await setLastStep(runDir, EXECUTION_STEPS.Context);
+
+    logger.info('Context aggregation finished', {
+      files: Object.keys(result.contextDocument.files).length,
+      warnings: result.diagnostics.warnings.length,
+    });
+
+    await updateExecutionProgress(runDir, 1);
+    return result;
+  }
+
+  private async runResearchDetection(options: ResearchDetectionOptions): Promise<ResearchTask[]> {
+    const {
+      repoRoot,
+      runDir,
+      featureId,
+      promptText,
+      specText,
+      logger,
+      metrics,
+      contextDocument,
+    } = options;
+
+    await setCurrentStep(runDir, EXECUTION_STEPS.Research);
+
+    const coordinator = createResearchCoordinator(
+      {
+        repoRoot,
+        runDir,
+        featureId,
+      },
+      logger,
+      metrics
+    );
+
+    const detectionOptions: UnknownDetectionOptions = {};
+    if (promptText) {
+      detectionOptions.promptText = promptText;
+    }
+    if (specText) {
+      detectionOptions.specText = specText;
+    }
+
+    const tasks = await coordinator.detectUnknownsFromContext(contextDocument, detectionOptions);
+
+    await setLastStep(runDir, EXECUTION_STEPS.Research);
+    await updateExecutionProgress(runDir, 2);
+
+    logger.info('Research detection complete', {
+      detected: tasks.length,
+    });
+
+    return tasks;
+  }
+
+  private async runPrdAuthoring(options: {
+    repoRoot: string;
+    runDir: string;
+    repoConfig: RepoConfig;
+    featureId: string;
+    featureTitle: string;
+    featureSource: string;
+    contextDocument: Parameters<typeof draftPRD>[0]['contextDocument'];
+    researchTasks: ResearchTask[];
+    logger: StructuredLogger;
+    metrics: MetricsCollector;
+  }) {
+    const {
+      repoRoot,
+      runDir,
+      repoConfig,
+      featureId,
+      featureTitle,
+      featureSource,
+      contextDocument,
+      researchTasks,
+      logger,
+      metrics,
+    } = options;
+
+    await setCurrentStep(runDir, EXECUTION_STEPS.PRD);
+
+    const feature = createFeature(featureId, repoConfig.project.repo_url, {
+      title: featureTitle,
+      source: featureSource,
+      defaultBranch: repoConfig.project.default_branch,
+      metadata: {
+        approvals_required: repoConfig.governance?.approval_workflow.require_approval_for_prd ?? true,
+      },
+    });
+
+    const result = await draftPRD(
+      {
+        repoRoot,
+        runDir,
+        feature,
+        contextDocument,
+        researchTasks,
+        repoConfig,
+      },
+      logger,
+      metrics
+    );
+
+    await setLastStep(runDir, EXECUTION_STEPS.PRD);
+    await updateExecutionProgress(runDir, 3);
+
+    logger.info('PRD draft complete', {
+      prdPath: result.prdPath,
+      incompleteSections: result.diagnostics.incompleteSections.length,
+    });
+
+    return result;
+  }
+
+  private resolveFeatureTitle(flags: StartFlags): string {
+    if (flags.prompt) {
+      return flags.prompt.slice(0, 80);
+    }
+
+    if (flags.linear) {
+      return `Feature from Linear issue ${flags.linear}`;
+    }
+
+    if (flags.spec) {
+      return `Feature from spec ${path.basename(flags.spec)}`;
+    }
+
+    return 'New Feature';
+  }
+
+  private resolveSourceDescriptor(flags: StartFlags): string {
+    if (flags.prompt) {
+      return 'prompt';
+    }
+    if (flags.linear) {
+      return `linear:${flags.linear}`;
+    }
+    if (flags.spec) {
+      return `spec:${flags.spec}`;
+    }
+    return 'unknown';
+  }
+
+  private generateFeatureId(): string {
+    return `FEAT-${randomUUID().split('-')[0]}`;
+  }
+
+  private emitStartSummary(payload: StartResultPayload, jsonMode: boolean): void {
+    if (jsonMode) {
+      this.log(JSON.stringify(payload, null, 2));
+      return;
+    }
+
+    this.log('');
+    this.log(`🚀 Feature run created: ${payload.feature_id}`);
+    this.log(`Run directory: ${path.relative(process.cwd(), payload.run_dir)}`);
+    this.log(`Context files analyzed: ${payload.context.files}`);
+    this.log(`Research tasks detected: ${payload.research.tasks_detected}`);
+    this.log(`PRD written to: ${payload.prd.path}`);
+    this.log(`PRD hash: ${payload.prd.hash}`);
+
+    if (payload.context.warnings.length > 0) {
+      this.log('\nContext warnings:');
+      payload.context.warnings.forEach(w => this.log(`  • ${w}`));
+    }
+
+    if (payload.prd.diagnostics.warnings.length > 0) {
+      this.log('\nPRD warnings:');
+      payload.prd.diagnostics.warnings.forEach(w => this.log(`  • ${w}`));
+    }
+
+    if (payload.approvals.required) {
+      this.log('\n✅ PRD draft created. Approval required before continuing.');
+      this.log(`Review the document at ${payload.prd.path}, then run:`);
+      this.log(`  ai-feature approve prd --feature ${payload.feature_id} --signer "<email>"`);
+      this.log('Need edits? Request revisions via: ai-feature prd edit --request "<details>"');
+      this.log('');
+    } else {
+      this.log('\nPRD approved automatically based on configuration.');
+    }
+  }
+
+  private outputDryRunPlan(flags: StartFlags): void {
+    const plan = {
+      status: 'dry_run',
+      message: 'Dry-run mode previews the planned steps without creating artifacts.',
+      planned_steps: [
+        'Load repo configuration and verify git repository',
+        'Create feature run directory and manifest',
+        'Aggregate context files under configured globs',
+        'Detect unknowns to queue research tasks',
+        'Render PRD draft using docs/templates/prd_template.md',
+        'Record PRD hash for approval workflow',
+      ],
+      input: {
+        prompt: flags.prompt,
+        linear: flags.linear,
+        spec: flags.spec,
+      },
+    };
+
+    if (flags.json) {
+      this.log(JSON.stringify(plan, null, 2));
+    } else {
+      this.log('\nℹ️  Dry-run preview (no files written):\n');
+      plan.planned_steps.forEach(step => this.log(`  • ${step}`));
+      this.log('');
+    }
+  }
+
+  private formatUnknownError(error: unknown): string {
+    if (error instanceof Error) {
+      return error.message;
+    }
+    if (typeof error === 'string') {
+      return error;
+    }
+    try {
+      return JSON.stringify(error);
+    } catch {
+      return 'Unknown error';
+    }
+  }
+
+  private findGitRoot(): string {
+    try {
+      return execSync('git rev-parse --show-toplevel', {
+        encoding: 'utf-8',
+        stdio: ['pipe', 'pipe', 'pipe'],
+      }).trim();
+    } catch (error) {
+      throw new Error(
+        `Failed to determine git repository root. Ensure you are running inside a git repo. (${this.formatUnknownError(error)})`
+      );
+    }
+  }
+
+  private prdApprovalRequired(config: RepoConfig): boolean {
+    if (config.governance?.approval_workflow) {
+      return config.governance.approval_workflow.require_approval_for_prd;
+    }
+    return config.safety.require_approval_for_prd;
+  }
+
+}
+
+async function updateExecutionProgress(runDir: string, completedSteps: number): Promise<void> {
+  await updateManifest(runDir, manifest => ({
+    execution: {
+      ...manifest.execution,
+      completed_steps: Math.max(manifest.execution.completed_steps, completedSteps),
+    },
+  }));
 }
