@@ -1127,9 +1127,14 @@ export class ResearchCoordinator {
       tasks.push(task);
     }
 
-    // Sort by created_at descending
+    // Sort by created_at descending with deterministic tie-breaker
     tasks.sort((a, b) => {
-      return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+      const createdDiff = new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+      if (createdDiff !== 0) {
+        return createdDiff;
+      }
+
+      return b.task_id.localeCompare(a.task_id);
     });
 
     // Apply limit
