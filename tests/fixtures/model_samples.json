@@ -1,0 +1,495 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "description": "Test fixtures for all data models in the AI Feature Pipeline",
+  "version": "1.0.0",
+  "fixtures": {
+    "feature_pending": {
+      "schema_version": "1.0.0",
+      "feature_id": "01JDQX7Y8Z9A1B2C3D4E5F6G7H",
+      "title": "Add dark mode toggle to settings",
+      "source": "linear:PROJ-123",
+      "repo": {
+        "url": "https://github.com/example/repo.git",
+        "default_branch": "main"
+      },
+      "status": "pending",
+      "execution": {
+        "completed_steps": 0
+      },
+      "timestamps": {
+        "created_at": "2025-12-15T10:00:00.000Z",
+        "updated_at": "2025-12-15T10:00:00.000Z"
+      },
+      "approvals": {
+        "pending": [],
+        "completed": []
+      },
+      "artifacts": {},
+      "telemetry": {
+        "logs_dir": "logs"
+      }
+    },
+    "feature_in_progress": {
+      "schema_version": "1.0.0",
+      "feature_id": "01JDQX7Y8Z9A1B2C3D4E5F6G7I",
+      "title": "Implement user authentication",
+      "source": "manual:prompt",
+      "repo": {
+        "url": "https://github.com/example/repo.git",
+        "default_branch": "main"
+      },
+      "status": "in_progress",
+      "execution": {
+        "last_step": "research_complete",
+        "current_step": "code_generation",
+        "total_steps": 10,
+        "completed_steps": 3
+      },
+      "timestamps": {
+        "created_at": "2025-12-15T09:00:00.000Z",
+        "updated_at": "2025-12-15T10:30:00.000Z",
+        "started_at": "2025-12-15T09:15:00.000Z"
+      },
+      "approvals": {
+        "approvals_file": "approvals/approvals.json",
+        "pending": ["code", "pr"],
+        "completed": ["prd", "spec", "plan"]
+      },
+      "artifacts": {
+        "prd": "artifacts/prd.md",
+        "spec": "artifacts/spec.md",
+        "plan": "artifacts/plan.json",
+        "hash_manifest": "hash_manifest.json"
+      },
+      "telemetry": {
+        "logs_dir": "logs",
+        "metrics_file": "telemetry/metrics.json",
+        "traces_file": "telemetry/traces.json",
+        "costs_file": "telemetry/costs.json",
+        "trace_id": "550e8400-e29b-41d4-a716-446655440000"
+      },
+      "rate_limits": {
+        "rate_limits_file": "telemetry/rate_limits.json"
+      },
+      "metadata": {
+        "sqlite_seeded": true
+      }
+    },
+    "run_artifact": {
+      "schema_version": "1.0.0",
+      "feature_id": "01JDQX7Y8Z9A1B2C3D4E5F6G7H",
+      "created_at": "2025-12-15T10:00:00.000Z",
+      "updated_at": "2025-12-15T10:30:00.000Z",
+      "artifacts": {
+        "prd": {
+          "artifact_type": "prd",
+          "path": "artifacts/prd.md",
+          "hash": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+          "size": 12345,
+          "timestamp": "2025-12-15T10:15:00.000Z"
+        },
+        "spec": {
+          "artifact_type": "spec",
+          "path": "artifacts/spec.md",
+          "hash": "fedcba9876543210fedcba9876543210fedcba9876543210fedcba9876543210",
+          "size": 23456,
+          "timestamp": "2025-12-15T10:20:00.000Z"
+        },
+        "plan": {
+          "artifact_type": "plan",
+          "path": "artifacts/plan.json",
+          "hash": "c3d4e5f678901234567890123456789012345678901234567890123456789012",
+          "size": 5678,
+          "timestamp": "2025-12-15T10:25:00.000Z"
+        }
+      }
+    },
+    "plan_artifact": {
+      "schema_version": "1.0.0",
+      "feature_id": "01JDQX7Y8Z9A1B2C3D4E5F6G7H",
+      "created_at": "2025-12-15T10:00:00.000Z",
+      "updated_at": "2025-12-15T10:00:00.000Z",
+      "tasks": [
+        {
+          "task_id": "task-001",
+          "title": "Research existing authentication patterns",
+          "task_type": "research",
+          "dependencies": []
+        },
+        {
+          "task_id": "task-002",
+          "title": "Generate authentication service code",
+          "task_type": "code_generation",
+          "dependencies": [
+            {
+              "task_id": "task-001",
+              "type": "required"
+            }
+          ],
+          "estimated_duration_minutes": 30
+        },
+        {
+          "task_id": "task-003",
+          "title": "Write unit tests for authentication",
+          "task_type": "testing",
+          "dependencies": [
+            {
+              "task_id": "task-002",
+              "type": "required"
+            }
+          ],
+          "estimated_duration_minutes": 20
+        }
+      ],
+      "dag_metadata": {
+        "total_tasks": 3,
+        "parallel_paths": 1,
+        "estimated_total_duration_minutes": 50,
+        "generated_at": "2025-12-15T10:00:00.000Z",
+        "generated_by": "planning-agent-v1"
+      },
+      "checksum": "2222222222222222222222222222222222222222222222222222222222222222"
+    },
+    "research_task_completed": {
+      "schema_version": "1.0.0",
+      "task_id": "research-001",
+      "feature_id": "01JDQX7Y8Z9A1B2C3D4E5F6G7H",
+      "title": "Research authentication best practices",
+      "objectives": [
+        "Identify industry-standard authentication patterns",
+        "Compare JWT vs session-based approaches",
+        "Document security best practices"
+      ],
+      "sources": [
+        {
+          "type": "documentation",
+          "identifier": "https://owasp.org/www-project-authentication-cheat-sheet/",
+          "description": "OWASP Authentication Cheat Sheet"
+        },
+        {
+          "type": "codebase",
+          "identifier": "src/auth/",
+          "description": "Existing authentication code"
+        }
+      ],
+      "cache_key": "e5f678901234567890123456789012345678901234567890123456789012345678",
+      "freshness_requirements": {
+        "max_age_hours": 24,
+        "force_fresh": false
+      },
+      "status": "completed",
+      "results": {
+        "summary": "JWT-based authentication is recommended with refresh token rotation",
+        "details": "Detailed research findings...",
+        "confidence_score": 0.9,
+        "timestamp": "2025-12-15T10:30:00.000Z",
+        "sources_consulted": [
+          {
+            "type": "documentation",
+            "identifier": "https://owasp.org/www-project-authentication-cheat-sheet/"
+          }
+        ]
+      },
+      "created_at": "2025-12-15T10:00:00.000Z",
+      "updated_at": "2025-12-15T10:30:00.000Z",
+      "started_at": "2025-12-15T10:05:00.000Z",
+      "completed_at": "2025-12-15T10:30:00.000Z"
+    },
+    "specification_approved": {
+      "schema_version": "1.0.0",
+      "spec_id": "spec-001",
+      "feature_id": "01JDQX7Y8Z9A1B2C3D4E5F6G7H",
+      "title": "User Authentication Technical Specification",
+      "content": "# Technical Specification\n\n## Overview\n...",
+      "status": "approved",
+      "reviewers": [
+        {
+          "reviewer_id": "alice@example.com",
+          "name": "Alice Smith",
+          "assigned_at": "2025-12-15T10:00:00.000Z",
+          "reviewed_at": "2025-12-15T11:00:00.000Z",
+          "verdict": "approved",
+          "comments": "Looks good, LGTM"
+        }
+      ],
+      "change_log": [
+        {
+          "timestamp": "2025-12-15T10:00:00.000Z",
+          "author": "system",
+          "description": "Initial specification created",
+          "version": "1.0"
+        }
+      ],
+      "risks": [
+        {
+          "description": "Token storage vulnerability in localStorage",
+          "severity": "high",
+          "mitigation": "Use httpOnly cookies for refresh tokens",
+          "owner": "security-team"
+        }
+      ],
+      "test_plan": [
+        {
+          "test_id": "test-001",
+          "description": "Verify JWT token generation",
+          "test_type": "unit",
+          "acceptance_criteria": [
+            "Token includes user ID claim",
+            "Token expires after configured duration",
+            "Token signature is valid"
+          ]
+        }
+      ],
+      "rollout_plan": {
+        "strategy": "gradual",
+        "phases": [
+          {
+            "phase_id": "phase-1",
+            "description": "Internal testing",
+            "percentage": 5,
+            "duration": "1 week"
+          },
+          {
+            "phase_id": "phase-2",
+            "description": "Beta users",
+            "percentage": 20,
+            "duration": "2 weeks"
+          }
+        ],
+        "rollback_plan": "Revert to session-based auth if critical issues arise"
+      },
+      "created_at": "2025-12-15T10:00:00.000Z",
+      "updated_at": "2025-12-15T11:00:00.000Z",
+      "approved_at": "2025-12-15T11:00:00.000Z"
+    },
+    "execution_task_running": {
+      "schema_version": "1.0.0",
+      "task_id": "exec-001",
+      "feature_id": "01JDQX7Y8Z9A1B2C3D4E5F6G7H",
+      "title": "Generate authentication service code",
+      "task_type": "code_generation",
+      "status": "running",
+      "config": {
+        "target_files": ["src/services/auth.ts"],
+        "framework": "express",
+        "language": "typescript"
+      },
+      "assigned_agent": "code-generation-agent-v2",
+      "dependency_ids": ["research-001"],
+      "retry_count": 0,
+      "max_retries": 3,
+      "logs_path": "logs/exec-001.log",
+      "cost": {
+        "total_usd": 0.15,
+        "breakdown": {
+          "openai": 0.15
+        },
+        "api_calls": 3,
+        "tokens_consumed": 5000
+      },
+      "rate_limit_budget": {
+        "provider": "openai",
+        "remaining_requests": 450,
+        "total_requests": 500,
+        "reset_at": "2025-12-15T12:00:00.000Z"
+      },
+      "trace_id": "660e8400-e29b-41d4-a716-446655440001",
+      "created_at": "2025-12-15T10:30:00.000Z",
+      "updated_at": "2025-12-15T10:45:00.000Z",
+      "started_at": "2025-12-15T10:35:00.000Z"
+    },
+    "execution_task_failed": {
+      "schema_version": "1.0.0",
+      "task_id": "exec-002",
+      "feature_id": "01JDQX7Y8Z9A1B2C3D4E5F6G7H",
+      "title": "Create pull request",
+      "task_type": "pr_creation",
+      "status": "failed",
+      "assigned_agent": "github-integration-v1",
+      "dependency_ids": ["exec-001"],
+      "retry_count": 2,
+      "max_retries": 3,
+      "last_error": {
+        "message": "GitHub API rate limit exceeded",
+        "code": "rate_limit_exceeded",
+        "details": "Retry after 60 seconds",
+        "timestamp": "2025-12-15T11:15:00.000Z",
+        "recoverable": true
+      },
+      "logs_path": "logs/exec-002.log",
+      "trace_id": "770e8400-e29b-41d4-a716-446655440002",
+      "created_at": "2025-12-15T11:00:00.000Z",
+      "updated_at": "2025-12-15T11:15:00.000Z",
+      "started_at": "2025-12-15T11:10:00.000Z"
+    },
+    "context_document": {
+      "schema_version": "1.0.0",
+      "feature_id": "01JDQX7Y8Z9A1B2C3D4E5F6G7H",
+      "created_at": "2025-12-15T10:00:00.000Z",
+      "updated_at": "2025-12-15T10:05:00.000Z",
+      "files": {
+        "src/services/auth.ts": {
+          "path": "src/services/auth.ts",
+          "hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "size": 3456,
+          "file_type": ".ts",
+          "token_count": 850
+        },
+        "README.md": {
+          "path": "README.md",
+          "hash": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+          "size": 5678,
+          "file_type": ".md",
+          "token_count": 1200
+        }
+      },
+      "summaries": [
+        {
+          "summary": "Codebase includes Express-based backend with TypeScript",
+          "token_count": 50,
+          "generated_at": "2025-12-15T10:05:00.000Z",
+          "generated_by": "gpt-4o"
+        }
+      ],
+      "total_token_count": 2100,
+      "provenance": {
+        "source": "https://github.com/example/repo.git",
+        "captured_at": "2025-12-15T10:00:00.000Z",
+        "commit_sha": "7890123456789012345678901234567890123456",
+        "branch": "main"
+      }
+    },
+    "rate_limit_envelope": {
+      "schema_version": "1.0.0",
+      "provider": "openai",
+      "remaining_requests": 450,
+      "total_requests": 500,
+      "remaining_tokens": 90000,
+      "total_tokens": 100000,
+      "reset_at": "2025-12-15T12:00:00.000Z",
+      "updated_at": "2025-12-15T10:45:00.000Z"
+    },
+    "approval_record": {
+      "schema_version": "1.0.0",
+      "approval_id": "approval-001",
+      "feature_id": "01JDQX7Y8Z9A1B2C3D4E5F6G7H",
+      "gate_type": "spec",
+      "verdict": "approved",
+      "signer": "alice@example.com",
+      "signer_name": "Alice Smith",
+      "approved_at": "2025-12-15T11:00:00.000Z",
+      "artifact_hash": "fedcba9876543210fedcba9876543210fedcba9876543210fedcba9876543210",
+      "artifact_path": "artifacts/spec.md",
+      "rationale": "Specification meets security requirements and includes comprehensive test plan"
+    },
+    "deployment_record": {
+      "schema_version": "1.0.0",
+      "deployment_id": "deploy-001",
+      "feature_id": "01JDQX7Y8Z9A1B2C3D4E5F6G7H",
+      "status": "in_progress",
+      "pr_number": 456,
+      "pr_url": "https://github.com/example/repo/pull/456",
+      "source_branch": "feature/auth",
+      "target_branch": "main",
+      "status_checks": [
+        {
+          "name": "ci/build",
+          "state": "success",
+          "description": "Build passed",
+          "target_url": "https://ci.example.com/build/123"
+        },
+        {
+          "name": "ci/test",
+          "state": "pending",
+          "description": "Tests running"
+        }
+      ],
+      "required_reviews": [
+        {
+          "reviewer": "alice@example.com",
+          "state": "approved",
+          "submitted_at": "2025-12-15T12:00:00.000Z"
+        },
+        {
+          "reviewer": "bob@example.com",
+          "state": "pending"
+        }
+      ],
+      "auto_merge_enabled": false,
+      "deployment_job_url": "https://github.com/example/repo/actions/runs/12345",
+      "created_at": "2025-12-15T11:30:00.000Z",
+      "updated_at": "2025-12-15T12:00:00.000Z",
+      "started_at": "2025-12-15T11:35:00.000Z"
+    },
+    "integration_credential": {
+      "schema_version": "1.0.0",
+      "credential_id": "cred-001",
+      "provider": "github",
+      "auth_method": "token",
+      "scopes": ["repo", "workflow"],
+      "expiry": "2026-12-15T00:00:00.000Z",
+      "redaction_token": "ghp_****",
+      "created_at": "2025-12-15T09:00:00.000Z",
+      "updated_at": "2025-12-15T09:00:00.000Z"
+    },
+    "agent_provider_capability": {
+      "schema_version": "1.0.0",
+      "provider": "openai",
+      "model_name": "gpt-4o",
+      "max_tokens": 128000,
+      "supports_tools": true,
+      "supports_streaming": true,
+      "rate_limit_guidance": {
+        "requests_per_minute": 500,
+        "tokens_per_minute": 100000
+      },
+      "cost_estimate": {
+        "input_cost_per_1k_tokens": 0.005,
+        "output_cost_per_1k_tokens": 0.015
+      }
+    },
+    "notification_event": {
+      "schema_version": "1.0.0",
+      "event_id": "notif-001",
+      "feature_id": "01JDQX7Y8Z9A1B2C3D4E5F6G7H",
+      "channel": "slack",
+      "audience": ["#engineering"],
+      "message": "Feature 'User Authentication' deployment started",
+      "delivery_status": "delivered",
+      "sent_at": "2025-12-15T11:30:00.000Z",
+      "delivered_at": "2025-12-15T11:30:05.000Z",
+      "created_at": "2025-12-15T11:30:00.000Z"
+    },
+    "artifact_bundle": {
+      "schema_version": "1.0.0",
+      "bundle_id": "bundle-001",
+      "feature_id": "01JDQX7Y8Z9A1B2C3D4E5F6G7H",
+      "included_files": [
+        {
+          "path": "artifacts/prd.md",
+          "hash": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+          "size": 12345
+        },
+        {
+          "path": "artifacts/spec.md",
+          "hash": "fedcba9876543210fedcba9876543210fedcba9876543210fedcba9876543210",
+          "size": 23456
+        }
+      ],
+      "delivery_target": "s3://artifacts-bucket/features/",
+      "cli_version": "1.0.0",
+      "created_at": "2025-12-15T12:00:00.000Z"
+    },
+    "trace_link": {
+      "schema_version": "1.0.0",
+      "link_id": "trace-001",
+      "feature_id": "01JDQX7Y8Z9A1B2C3D4E5F6G7H",
+      "source_type": "prd_goal",
+      "source_id": "goal-001",
+      "target_type": "spec_requirement",
+      "target_id": "req-001",
+      "relationship": "implements",
+      "created_at": "2025-12-15T10:00:00.000Z"
+    }
+  }
+}

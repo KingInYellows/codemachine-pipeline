@@ -1,0 +1,312 @@
+---
+title: AI Feature Pipeline Data Model ERD
+---
+
+erDiagram
+    %% ========================================================================
+    %% Core Entities
+    %% ========================================================================
+
+    RepoConfig ||--o{ Feature : "configures"
+    Feature ||--|| RunArtifact : "produces"
+    Feature ||--|| PlanArtifact : "executes"
+    Feature ||--o{ ResearchTask : "spawns"
+    Feature ||--o{ Specification : "defines"
+    Feature ||--o{ ExecutionTask : "contains"
+    Feature ||--o{ ApprovalRecord : "requires"
+    Feature ||--o{ DeploymentRecord : "deploys"
+    Feature ||--|| ContextDocument : "uses"
+    Feature ||--o{ TraceLink : "traces"
+
+    %% ========================================================================
+    %% Execution and Task Dependencies
+    %% ========================================================================
+
+    PlanArtifact ||--o{ ExecutionTask : "schedules"
+    ExecutionTask }o--o{ ExecutionTask : "depends_on"
+    Specification ||--o{ TestPlanItem : "includes"
+    Specification ||--o{ RiskAssessment : "identifies"
+    Specification ||--o{ ReviewerInfo : "reviewed_by"
+
+    %% ========================================================================
+    %% Telemetry and Rate Limiting
+    %% ========================================================================
+
+    Feature ||--o{ RateLimitEnvelope : "tracks_limits"
+    ExecutionTask ||--o| RateLimitBudget : "consumes"
+    ExecutionTask ||--o| CostTracking : "incurs"
+
+    %% ========================================================================
+    %% Integration and Notifications
+    %% ========================================================================
+
+    RepoConfig ||--o{ IntegrationCredential : "authenticates"
+    RepoConfig ||--o{ AgentProviderCapability : "provisions"
+    Feature ||--o{ NotificationEvent : "triggers"
+    Feature ||--o{ ArtifactBundle : "exports"
+
+    %% ========================================================================
+    %% Entity Definitions
+    %% ========================================================================
+
+    RepoConfig {
+        string schema_version
+        string project_id
+        string repo_url
+        string default_branch
+        object github
+        object linear
+        object runtime
+        object safety
+        object feature_flags
+        object governance
+        array config_history
+    }
+
+    Feature {
+        string schema_version
+        string feature_id PK
+        string title
+        string source
+        object repo
+        enum status
+        object execution
+        object timestamps
+        object approvals
+        object artifacts
+        object telemetry
+        object rate_limits
+        object metadata
+    }
+
+    RunArtifact {
+        string schema_version
+        string feature_id FK
+        datetime created_at
+        datetime updated_at
+        map artifacts
+        object metadata
+    }
+
+    PlanArtifact {
+        string schema_version
+        string feature_id FK
+        datetime created_at
+        datetime updated_at
+        array tasks
+        object dag_metadata
+        string checksum
+        object metadata
+    }
+
+    ResearchTask {
+        string schema_version
+        string task_id PK
+        string feature_id FK
+        string title
+        array objectives
+        array sources
+        string cache_key
+        object freshness_requirements
+        enum status
+        object results
+        datetime created_at
+        datetime updated_at
+    }
+
+    Specification {
+        string schema_version
+        string spec_id PK
+        string feature_id FK
+        string title
+        string content
+        enum status
+        array reviewers
+        array change_log
+        array risks
+        array test_plan
+        object rollout_plan
+        datetime created_at
+        datetime updated_at
+        datetime approved_at
+    }
+
+    ExecutionTask {
+        string schema_version
+        string task_id PK
+        string feature_id FK
+        string title
+        enum task_type
+        enum status
+        object config
+        string assigned_agent
+        array dependency_ids
+        int retry_count
+        int max_retries
+        object last_error
+        string logs_path
+        object cost
+        object rate_limit_budget
+        string trace_id
+        datetime created_at
+        datetime updated_at
+        datetime started_at
+        datetime completed_at
+    }
+
+    ContextDocument {
+        string schema_version
+        string feature_id FK
+        datetime created_at
+        datetime updated_at
+        map files
+        array summaries
+        int total_token_count
+        object provenance
+        object metadata
+    }
+
+    RateLimitEnvelope {
+        string schema_version
+        string provider
+        int remaining_requests
+        int total_requests
+        int remaining_tokens
+        int total_tokens
+        datetime reset_at
+        int retry_after_seconds
+        string last_error
+        datetime last_error_at
+        datetime updated_at
+    }
+
+    ApprovalRecord {
+        string schema_version
+        string approval_id PK
+        string feature_id FK
+        enum gate_type
+        enum verdict
+        string signer
+        string signer_name
+        datetime approved_at
+        string artifact_hash
+        string artifact_path
+        string rationale
+    }
+
+    DeploymentRecord {
+        string schema_version
+        string deployment_id PK
+        string feature_id FK
+        enum status
+        int pr_number
+        string pr_url
+        string merge_sha
+        string source_branch
+        string target_branch
+        array status_checks
+        array required_reviews
+        boolean auto_merge_enabled
+        string deployment_job_url
+        datetime created_at
+        datetime updated_at
+        datetime started_at
+        datetime completed_at
+    }
+
+    IntegrationCredential {
+        string schema_version
+        string credential_id PK
+        enum provider
+        enum auth_method
+        array scopes
+        datetime expiry
+        string redaction_token
+        datetime created_at
+        datetime updated_at
+    }
+
+    AgentProviderCapability {
+        string schema_version
+        string provider
+        string model_name
+        int max_tokens
+        boolean supports_tools
+        boolean supports_streaming
+        object rate_limit_guidance
+        object cost_estimate
+    }
+
+    NotificationEvent {
+        string schema_version
+        string event_id PK
+        string feature_id FK
+        enum channel
+        array audience
+        string message
+        enum delivery_status
+        datetime sent_at
+        datetime delivered_at
+        string error_message
+        datetime created_at
+    }
+
+    ArtifactBundle {
+        string schema_version
+        string bundle_id PK
+        string feature_id FK
+        array included_files
+        string delivery_target
+        string cli_version
+        datetime created_at
+    }
+
+    TraceLink {
+        string schema_version
+        string link_id PK
+        string feature_id FK
+        enum source_type
+        string source_id
+        enum target_type
+        string target_id
+        enum relationship
+        datetime created_at
+    }
+
+    ReviewerInfo {
+        string reviewer_id
+        string name
+        datetime assigned_at
+        datetime reviewed_at
+        enum verdict
+        string comments
+    }
+
+    RiskAssessment {
+        string description
+        enum severity
+        string mitigation
+        string owner
+    }
+
+    TestPlanItem {
+        string test_id
+        string description
+        enum test_type
+        array acceptance_criteria
+    }
+
+    RateLimitBudget {
+        string provider
+        int remaining_requests
+        int total_requests
+        datetime reset_at
+        int retry_after_seconds
+    }
+
+    CostTracking {
+        float total_usd
+        map breakdown
+        int api_calls
+        int tokens_consumed
+    }
