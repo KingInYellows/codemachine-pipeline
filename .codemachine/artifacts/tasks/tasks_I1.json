@@ -1,0 +1,155 @@
+[
+  {
+    "task_id": "I1.T1",
+    "iteration_id": "I1",
+    "iteration_goal": "Establish project scaffolding, configuration schema, deterministic run-directory patterns, and canonical architectural artifacts needed for downstream autonomous work.",
+    "description": "Scaffold oclif CLI, baseline tsconfig/eslint/prettier, Dockerfile (Node v24), and CI smoke test skeleton to guarantee deterministic builds for follow-on iterations.",
+    "agent_type_hint": "SetupAgent",
+    "inputs": "Architectural overview (Section 2), directory structure (Section 3).",
+    "target_files": [],
+    "input_files": [],
+    "deliverables": "Compiling CLI skeleton with placeholder `init` command, lint/test scripts, Docker build instructions.",
+    "acceptance_criteria": "`npm run lint` + `npm test` pass; Docker image builds; CI workflow references Node v24; README stub notes commands.",
+    "dependencies": [],
+    "parallelizable": true,
+    "done": false
+  },
+  {
+    "task_id": "I1.T2",
+    "iteration_id": "I1",
+    "iteration_goal": "Establish project scaffolding, configuration schema, deterministic run-directory patterns, and canonical architectural artifacts needed for downstream autonomous work.",
+    "description": "Define RepoConfig schema (JSON Schema + zod types) and implement `ai-feature init` flow that detects git root, scaffolds `.ai-feature-pipeline/config.json`, and validates credentials stubs.",
+    "agent_type_hint": "SetupAgent",
+    "inputs": "Requirements FR-1/FR-17, Directory structure.",
+    "target_files": [],
+    "input_files": [],
+    "deliverables": "Schema-backed config loader, CLI prompt, sample config with feature flags, doc updates.",
+    "acceptance_criteria": "Running `ai-feature init` in sample repo creates config with schema_version, github/linear/runtime/safety blocks; invalid config surfaces actionable message and exit code 10.",
+    "dependencies": [
+      "I1.T1"
+    ],
+    "parallelizable": false,
+    "done": false
+  },
+  {
+    "task_id": "I1.T3",
+    "iteration_id": "I1",
+    "iteration_goal": "Establish project scaffolding, configuration schema, deterministic run-directory patterns, and canonical architectural artifacts needed for downstream autonomous work.",
+    "description": "Produce PlantUML component diagram aligning with Section 2 components, annotating adapters, orchestration layers, persistence services, and observability.",
+    "agent_type_hint": "DiagrammingAgent",
+    "inputs": "Section 2 Core Architecture, directory tree.",
+    "target_files": [],
+    "input_files": [],
+    "deliverables": "Renderable UML diagram plus doc blurb referencing usage and iteration placement.",
+    "acceptance_criteria": "Diagram compiles (PlantUML), matches listed modules, includes anchors for adapters/resume/observability, and doc cross-link added.",
+    "dependencies": [
+      "I1.T1"
+    ],
+    "parallelizable": true,
+    "done": false
+  },
+  {
+    "task_id": "I1.T4",
+    "iteration_id": "I1",
+    "iteration_goal": "Establish project scaffolding, configuration schema, deterministic run-directory patterns, and canonical architectural artifacts needed for downstream autonomous work.",
+    "description": "Model ERD using Mermaid covering Feature/RepoConfig/RunArtifact/PlanArtifact/ResearchTask/Specification/ExecutionTask/ContextDocument/RateLimitEnvelope/ApprovalRecord.",
+    "agent_type_hint": "DatabaseAgent",
+    "inputs": "Data model overview (Section 2), requirements Section 3.",
+    "target_files": [],
+    "input_files": [],
+    "deliverables": "Mermaid ERD plus textual dictionary summarizing each entity and reference.",
+    "acceptance_criteria": "Diagram renders, includes cardinalities, field lists, and cross-links; dictionary stored under `docs/guides/data_dictionary.md` summarizing attributes/IDs.",
+    "dependencies": [
+      "I1.T2"
+    ],
+    "parallelizable": true,
+    "done": false
+  },
+  {
+    "task_id": "I1.T5",
+    "iteration_id": "I1",
+    "iteration_goal": "Establish project scaffolding, configuration schema, deterministic run-directory patterns, and canonical architectural artifacts needed for downstream autonomous work.",
+    "description": "Document feature lifecycle + approvals as Mermaid state machine plus Markdown narrative referencing FR-3, FR-11, FR-15.",
+    "agent_type_hint": "DiagrammingAgent",
+    "inputs": "Requirements FR-3/FR-11/FR-15, Section 2 communication patterns.",
+    "target_files": [],
+    "input_files": [],
+    "deliverables": "State machine diagram + explanation of gating + resume hooks.",
+    "acceptance_criteria": "Diagram passes Mermaid lint, includes states/gates/approvals/resume events; guide maps states to CLI commands.",
+    "dependencies": [
+      "I1.T3",
+      "I1.T4"
+    ],
+    "parallelizable": true,
+    "done": false
+  },
+  {
+    "task_id": "I1.T6",
+    "iteration_id": "I1",
+    "iteration_goal": "Establish project scaffolding, configuration schema, deterministic run-directory patterns, and canonical architectural artifacts needed for downstream autonomous work.",
+    "description": "Design deterministic run-directory layout + hash-manifest format, implement scaffolding helpers, and produce templates for feature.json, plan.json, queue JSONL, logs, metrics.",
+    "agent_type_hint": "BackendAgent",
+    "inputs": "Section 3 directory structure, Section 4 directives.",
+    "target_files": [],
+    "input_files": [],
+    "deliverables": "Code for directory creation, manifest writing, file-lock guidelines, and run-dir guide.",
+    "acceptance_criteria": "Unit tests cover create/load/lock operations; guide lists required files + sample ULID naming; CLI `ai-feature init` scaffolds `.ai-feature-pipeline` root.",
+    "dependencies": [
+      "I1.T2"
+    ],
+    "parallelizable": false,
+    "done": false
+  },
+  {
+    "task_id": "I1.T7",
+    "iteration_id": "I1",
+    "iteration_goal": "Establish project scaffolding, configuration schema, deterministic run-directory patterns, and canonical architectural artifacts needed for downstream autonomous work.",
+    "description": "Draft observability/logging specification describing logs.ndjson schema, metrics textfile structure, traces.json exporter, and governance of rate-limit ledger.",
+    "agent_type_hint": "DocumentationAgent",
+    "inputs": "Section 2 components, Section 4 directives, Requirements Section 7.",
+    "target_files": [],
+    "input_files": [],
+    "deliverables": "Document referencing schema + sample log entries; JSON Schemas for telemetry.",
+    "acceptance_criteria": "Schema validated via npm script; guide includes severity mapping, rotation policy, and instructions for export bundling.",
+    "dependencies": [
+      "I1.T6"
+    ],
+    "parallelizable": true,
+    "done": false
+  },
+  {
+    "task_id": "I1.T8",
+    "iteration_id": "I1",
+    "iteration_goal": "Establish project scaffolding, configuration schema, deterministic run-directory patterns, and canonical architectural artifacts needed for downstream autonomous work.",
+    "description": "Capture governance + security ADR outlining approval gates, feature flags, token scopes, and change-control expectations aligned with Section 4 directives.",
+    "agent_type_hint": "DocumentationAgent",
+    "inputs": "Section 4 Directives, Requirements Section 8 & 9.",
+    "target_files": [],
+    "input_files": [],
+    "deliverables": "ADR referencing decision drivers, consequences, and compliance hooks plus security posture overview.",
+    "acceptance_criteria": "ADR template filled, cross-linked in README; security guide lists PAT scopes, GitHub App roadmap, and log redaction guarantees.",
+    "dependencies": [
+      "I1.T2",
+      "I1.T7"
+    ],
+    "parallelizable": true,
+    "done": false
+  },
+  {
+    "task_id": "I1.T9",
+    "iteration_id": "I1",
+    "iteration_goal": "Establish project scaffolding, configuration schema, deterministic run-directory patterns, and canonical architectural artifacts needed for downstream autonomous work.",
+    "description": "Execute sample dogfood run using placeholder feature to validate init + run-directory scaffolding and document cleanup script for stale runs.",
+    "agent_type_hint": "SetupAgent",
+    "inputs": "Outputs from Tasks I1.T2/I1.T6, Observability spec.",
+    "target_files": [],
+    "input_files": [],
+    "deliverables": "Automated script performing init/start placeholder run, verifying directory contents, and cleanup instructions.",
+    "acceptance_criteria": "Script creates ULID-based run dir, writes feature.json+plan.json placeholders, verifies logs+metrics files exist, and cleanup script archives & deletes sample run.",
+    "dependencies": [
+      "I1.T6"
+    ],
+    "parallelizable": false,
+    "done": false
+  }
+]
