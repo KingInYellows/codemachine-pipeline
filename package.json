@@ -14,7 +14,7 @@
   },
   "scripts": {
     "build": "tsc",
-    "postbuild": "cross-env NODE_ENV=development npx -y oclif manifest",
+    "postbuild": "cross-env NODE_ENV=production npx -y oclif manifest",
     "clean": "rm -rf dist",
     "lint": "eslint . --ext .ts",
     "lint:fix": "eslint . --ext .ts --fix",
