@@ -1,0 +1,46 @@
+# Source files (only dist/ should be published)
+src/
+test/
+*.test.ts
+
+# Configuration files
+tsconfig.json
+jest.config.js
+.eslintrc.json
+.prettierrc.json
+
+# Development files
+.test-temp/
+coverage/
+.vscode/
+.idea/
+
+# CI/CD
+.github/
+
+# Docker
+Dockerfile
+.dockerignore
+
+# Documentation (keep README.md)
+specification.md
+codemachine-plan.md
+
+# Git
+.git/
+.gitignore
+
+# Environment
+.env
+.env.*
+
+# Logs
+*.log
+logs/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# CodeMachine
+.codemachine/
