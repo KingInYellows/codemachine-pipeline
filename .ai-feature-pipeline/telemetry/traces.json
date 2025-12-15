@@ -1,0 +1,1 @@
+{"traceId":"9e310405e1e0366ae673ff4564c330ac","spanId":"3f7c19df9b8a6444","name":"cli.init","kind":0,"startTime":1765827935087,"endTime":1765827935094,"duration":7,"status":{"code":1},"attributes":{"service.name":"ai-feature-pipeline","run_id":"bootstrap","dry_run":false,"json_mode":false,"yes_mode":false,"force":false,"validate_only":false,"exit_code":0},"events":[]}
