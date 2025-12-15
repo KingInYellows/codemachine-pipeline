@@ -21,7 +21,11 @@
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
     "format:check": "prettier --check \"src/**/*.ts\" \"test/**/*.ts\"",
     "pretest": "npm run build",
-    "test": "jest",
+    "test": "npm run test:config && npm run test:jest",
+    "test:config": "vitest run src/core/config",
+    "test:config:watch": "vitest watch src/core/config",
+    "test:config:coverage": "vitest run src/core/config --coverage",
+    "test:jest": "jest",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
     "smoke": "npm run smoke:version && npm run smoke:help && npm run smoke:init",
@@ -29,7 +33,7 @@
     "smoke:help": "./bin/run.js --help",
     "smoke:init": "./bin/run.js init --help",
     "dev": "./bin/dev.js",
-    "validate:config": "node -e \"require('./dist/core/config/repo_config').validateConfig()\"",
+    "validate:config": "node -e \"require('./dist/core/config/RepoConfig').loadRepoConfig('.ai-feature-pipeline/config.json')\"",
     "prepack": "npm run clean && npm run build",
     "postpack": "npm run clean",
     "prepare": "npm run build"
@@ -50,6 +54,7 @@
     "@types/node": "^24.0.0",
     "@typescript-eslint/eslint-plugin": "^8.18.2",
     "@typescript-eslint/parser": "^8.18.2",
+    "@vitest/ui": "^4.0.15",
     "cross-env": "^10.1.0",
     "eslint": "^8.57.1",
     "eslint-config-prettier": "^9.1.0",
@@ -57,7 +62,8 @@
     "prettier": "^3.4.2",
     "ts-jest": "^29.2.5",
     "ts-node": "^10.9.2",
-    "typescript": "^5.7.2"
+    "typescript": "^5.7.2",
+    "vitest": "^4.0.15"
   },
   "oclif": {
     "bin": "ai-feature",

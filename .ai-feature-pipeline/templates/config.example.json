@@ -1,0 +1,155 @@
+{
+  "_comment": "Example RepoConfig for ai-feature-pipeline CLI - See docs/requirements/RepoConfig_schema.md for full documentation",
+
+  "schema_version": "1.0.0",
+
+  "project": {
+    "_comment": "Project metadata and repository information",
+    "id": "my-project",
+    "repo_url": "https://github.com/my-org/my-project.git",
+    "default_branch": "main",
+    "context_paths": [
+      "src/",
+      "docs/",
+      "README.md",
+      "package.json"
+    ],
+    "project_leads": [
+      "alice",
+      "bob"
+    ]
+  },
+
+  "github": {
+    "_comment": "GitHub integration - Set GITHUB_TOKEN environment variable",
+    "enabled": true,
+    "token_env_var": "GITHUB_TOKEN",
+    "api_base_url": "https://api.github.com",
+    "required_scopes": [
+      "repo",
+      "workflow"
+    ],
+    "default_reviewers": [
+      "tech-lead",
+      "senior-engineer"
+    ],
+    "branch_protection": {
+      "respect_required_reviews": true,
+      "respect_status_checks": true
+    }
+  },
+
+  "linear": {
+    "_comment": "Linear integration - Set LINEAR_API_KEY environment variable",
+    "enabled": true,
+    "api_key_env_var": "LINEAR_API_KEY",
+    "team_id": "TEAM-123",
+    "project_id": "PRJ-456",
+    "auto_link_issues": true
+  },
+
+  "runtime": {
+    "_comment": "Runtime execution settings - Set AGENT_ENDPOINT environment variable or specify agent_endpoint",
+    "agent_endpoint_env_var": "AGENT_ENDPOINT",
+    "max_concurrent_tasks": 3,
+    "timeout_minutes": 30,
+    "context_token_budget": 32000,
+    "logs_format": "ndjson",
+    "run_directory": ".ai-feature-pipeline/runs"
+  },
+
+  "safety": {
+    "_comment": "Security and safety controls (deprecated approval fields - use governance instead)",
+    "redact_secrets": true,
+    "require_approval_for_prd": true,
+    "require_approval_for_plan": true,
+    "require_approval_for_pr": true,
+    "prevent_force_push": true,
+    "allowed_file_patterns": [
+      "**/*.ts",
+      "**/*.tsx",
+      "**/*.js",
+      "**/*.jsx",
+      "**/*.md",
+      "**/*.json",
+      "**/*.yaml",
+      "**/*.yml"
+    ],
+    "blocked_file_patterns": [
+      ".env",
+      ".env.*",
+      "**/*.key",
+      "**/*.pem",
+      "**/*.p12",
+      "**/credentials.*",
+      "**/*secret*",
+      "**/*password*"
+    ]
+  },
+
+  "feature_flags": {
+    "_comment": "Feature flags for experimental functionality",
+    "enable_auto_merge": false,
+    "enable_deployment_triggers": false,
+    "enable_linear_sync": true,
+    "enable_context_summarization": true,
+    "enable_resumability": true,
+    "enable_developer_preview": false
+  },
+
+  "constraints": {
+    "_comment": "Resource constraints and rate limits",
+    "max_file_size_kb": 1000,
+    "max_context_files": 100,
+    "rate_limits": {
+      "github_requests_per_hour": 5000,
+      "linear_requests_per_minute": 60,
+      "agent_requests_per_hour": 100
+    }
+  },
+
+  "governance": {
+    "_comment": "Governance controls for approval workflows and accountability (ADR-5)",
+    "approval_workflow": {
+      "_comment": "Gate-by-gate approval requirements - at least one should be enabled per ADR-5",
+      "require_approval_for_prd": true,
+      "require_approval_for_spec": true,
+      "require_approval_for_plan": true,
+      "require_approval_for_code": true,
+      "require_approval_for_pr": true,
+      "require_approval_for_deploy": true
+    },
+    "accountability": {
+      "_comment": "Accountability and audit settings for compliance",
+      "record_approver_identity": true,
+      "require_approval_reason": false,
+      "audit_log_retention_days": 365
+    },
+    "risk_controls": {
+      "_comment": "Risk containment controls to limit blast radius",
+      "prevent_auto_merge": true,
+      "prevent_force_push": true,
+      "require_branch_protection": true,
+      "max_files_per_pr": 100,
+      "max_lines_changed_per_pr": 5000
+    },
+    "compliance_tags": [
+      "SOC2",
+      "internal-tooling"
+    ],
+    "governance_notes": "All PRs require approval per company policy. Auto-merge disabled for security. Branch protection enforced on main branch."
+  },
+
+  "config_history": [
+    {
+      "_comment": "Migration history for schema version tracking (ADR-2)",
+      "timestamp": "2025-12-15T10:00:00.000Z",
+      "schema_version": "1.0.0",
+      "changed_by": "alice@example.com",
+      "change_description": "Initial configuration with governance controls enabled",
+      "migration_applied": false
+    }
+  ],
+
+  "_footer_comment": "For complete documentation, see docs/requirements/RepoConfig_schema.md"
+}
