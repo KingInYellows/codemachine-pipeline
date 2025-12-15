@@ -2,72 +2,92 @@
   {
     "task_id": "I4.T1",
     "iteration_id": "I4",
-    "iteration_goal": "Finish CLI workflows across plan/resume/pr/deploy subcommands, enforce approval prompts, introduce notification hooks, polish UI/UX tokens, and ensure human operators receive actionable summaries.",
-    "description": "Build CLI rendering/tokens module implementing spacing, color palette, density toggles, badge styles, progress lanes, and JSON fallback as defined in UI architecture.",
-    "agent_type_hint": "FrontendAgent",
-    "inputs": "UI/UX Architecture Section, Section 4 directives.",
-    "target_files": [],
-    "input_files": [],
-    "deliverables": "Token definitions, reusable components, doc describing usage + accessibility guidelines.",
-    "acceptance_criteria": "Renderers support colorless mode, density toggles, anchors for automation; doc references design tokens.",
-    "dependencies": [
-      "I1.T1",
-      "I1.T7"
+    "iteration_goal": "Wire GitHub and Linear adapters with rate-limit safe HTTP calls, produce OpenAPI specs, add PR automation commands, detect branch protections/reviewer requirements, and ensure CLI status/resume surfaces show real-time integration data.",
+    "description": "Implement GitHub adapter covering repo metadata, branches, PR creation, reviewer requests, status checks, merges, and workflow dispatch, while emitting OpenAPI spec for future remote endpoints (per Section 2.1).\n            Handle authentication (PAT or App), Accept/API version headers, error taxonomy, and logging.",
+    "agent_type_hint": "BackendAgent",
+    "inputs": "Section 2 (Key Components), Section 2.1 (OpenAPI artifact), IR-1..IR-7, FR-15.",
+    "target_files": [
+      "src/adapters/github/GitHubAdapter.ts",
+      "api/ai_feature.yaml",
+      "docs/requirements/github_adapter.md",
+      "tests/integration/githubAdapter.spec.ts"
     ],
-    "parallelizable": true,
+    "input_files": [],
+    "deliverables": "Adapter implementation, OpenAPI additions, documentation, and integration tests verifying PR creation/reviewer requests/merge readiness under mocked responses.",
+    "acceptance_criteria": "REST calls include required headers; rate-limit retries invoked when headers indicate; tests assert correct payloads; doc explains configuration for Accept/Version, status-check endpoints, and branch creation.",
+    "dependencies": [
+      "I3.T2",
+      "I3.T6"
+    ],
+    "parallelizable": false,
     "done": false
   },
   {
     "task_id": "I4.T2",
     "iteration_id": "I4",
-    "iteration_goal": "Finish CLI workflows across plan/resume/pr/deploy subcommands, enforce approval prompts, introduce notification hooks, polish UI/UX tokens, and ensure human operators receive actionable summaries.",
-    "description": "Enhance `ai-feature status` command with improved layout (progress lanes, context tables, approval reminders, rate-limit ledger) plus `--json` schema documentation.",
-    "agent_type_hint": "FrontendAgent",
-    "inputs": "Renderer module, approval registry, context aggregator.",
-    "target_files": [],
-    "input_files": [],
-    "deliverables": "Styled status output, snapshot tests, doc referencing fields + exit codes.",
-    "acceptance_criteria": "Status shows sections per design, `--json` matches schema, tests protect formatting.",
-    "dependencies": [
-      "I4.T1",
-      "I2.T11"
+    "iteration_goal": "Wire GitHub and Linear adapters with rate-limit safe HTTP calls, produce OpenAPI specs, add PR automation commands, detect branch protections/reviewer requirements, and ensure CLI status/resume surfaces show real-time integration data.",
+    "description": "Build Linear integration via MCP server, covering issue fetch/snapshot, optional updates, and graceful degradation when preview APIs differ, referencing ADR-6.\n            Provide caching rules and CLI options for offline replays.",
+    "agent_type_hint": "BackendAgent",
+    "inputs": "Section 2 (Key Components), IR-8..IR-11, ADR-6.",
+    "target_files": [
+      "src/adapters/linear/LinearAdapter.ts",
+      "docs/requirements/linear_adapter.md",
+      "tests/integration/linearAdapter.spec.ts"
     ],
-    "parallelizable": false,
+    "input_files": [],
+    "deliverables": "MCP-driven Linear adapter, documentation describing offline mode and rate-limit handling, and integration tests with mocked MCP responses.",
+    "acceptance_criteria": "CLI `start --linear` loads snapshots, records metadata, caches responses; adapter respects 1,500 req/hour; doc covers developer preview toggles.",
+    "dependencies": [
+      "I2.T3",
+      "I3.T1"
+    ],
+    "parallelizable": true,
     "done": false
   },
   {
     "task_id": "I4.T3",
     "iteration_id": "I4",
-    "iteration_goal": "Finish CLI workflows across plan/resume/pr/deploy subcommands, enforce approval prompts, introduce notification hooks, polish UI/UX tokens, and ensure human operators receive actionable summaries.",
-    "description": "Implement `ai-feature resume` UX combining last_step/last_error, pending tasks, cooldowns, and manual action prompts with automation-friendly JSON output + docs.",
-    "agent_type_hint": "FrontendAgent",
-    "inputs": "Resume coordinator, renderer module.",
-    "target_files": [],
-    "input_files": [],
-    "deliverables": "CLI command hooking to coordinator, docs describing exit codes + instructions.",
-    "acceptance_criteria": "Resume prints blocking items, respects `--yes`, logs actions, JSON output includes tasks/cooldowns.",
-    "dependencies": [
-      "I3.T9",
-      "I4.T1"
+    "iteration_goal": "Wire GitHub and Linear adapters with rate-limit safe HTTP calls, produce OpenAPI specs, add PR automation commands, detect branch protections/reviewer requirements, and ensure CLI status/resume surfaces show real-time integration data.",
+    "description": "Expand rate-limit ledger + telemetry to surface integration-specific cooldown timers, backlog states, and CLI warnings; add Prometheus metrics for GitHub/Linear budgets, and CLI command `ai-feature rate-limits` for manual inspection.",
+    "agent_type_hint": "BackendAgent",
+    "inputs": "Section 2 (Observability), Section 4 (Directives), outputs from `I3.T6`.",
+    "target_files": [
+      "src/telemetry/rateLimitReporter.ts",
+      "src/cli/commands/rate-limits.ts",
+      "docs/requirements/rate_limit_dashboard.md",
+      "tests/unit/rateLimitReporter.spec.ts"
     ],
-    "parallelizable": false,
+    "input_files": [],
+    "deliverables": "Reporter module, CLI command, dashboards doc, tests verifying formatting.",
+    "acceptance_criteria": "CLI prints remaining/reset times; metrics include gauges per provider; doc ties warnings to required operator actions.",
+    "dependencies": [
+      "I4.T1",
+      "I4.T2"
+    ],
+    "parallelizable": true,
     "done": false
   },
   {
     "task_id": "I4.T4",
     "iteration_id": "I4",
-    "iteration_goal": "Finish CLI workflows across plan/resume/pr/deploy subcommands, enforce approval prompts, introduce notification hooks, polish UI/UX tokens, and ensure human operators receive actionable summaries.",
-    "description": "Implement PR workflow commands: `ai-feature pr create`, `ai-feature pr reviewers`, `ai-feature pr status`, `ai-feature pr disable-auto-merge`, leveraging GitHub adapter and approval gating.",
-    "agent_type_hint": "BackendAgent",
-    "inputs": "GitHub adapter, approval registry, execution engine outputs.",
-    "target_files": [],
+    "iteration_goal": "Wire GitHub and Linear adapters with rate-limit safe HTTP calls, produce OpenAPI specs, add PR automation commands, detect branch protections/reviewer requirements, and ensure CLI status/resume surfaces show real-time integration data.",
+    "description": "Implement PR automation CLI surfaces (`ai-feature pr create`, `pr status`, `pr reviewers`, `pr disable-auto-merge`) plus GitHub PR automation sequence diagram (Mermaid) detailing request flow, write action queue, and branch protection feedback loops.",
+    "agent_type_hint": "FrontendAgent",
+    "inputs": "Section 2 (Communication Patterns), Section 2.1 (PR diagram), FR-15, ADR-3.",
+    "target_files": [
+      "src/cli/commands/pr/create.ts",
+      "src/cli/commands/pr/status.ts",
+      "src/cli/commands/pr/reviewers.ts",
+      "docs/diagrams/pr_automation_sequence.mmd",
+      "docs/requirements/pr_playbook.md",
+      "tests/integration/pr_commands.spec.ts"
+    ],
     "input_files": [],
-    "deliverables": "CLI commands, doc covering gating + exit codes, smoke tests using fixtures.",
-    "acceptance_criteria": "Commands refuse to run without approvals/validations, display reviewer/required-check info, JSON output enumerates PR metadata.",
+    "deliverables": "CLI commands, sequence diagram, documentation, tests verifying JSON output and blocked states.",
+    "acceptance_criteria": "CLI can create PR, request reviewers, show status-check summary; doc explains gating vs auto-merge; diagram renders.",
     "dependencies": [
-      "I3.T2",
-      "I3.T7",
-      "I2.T8"
+      "I4.T1",
+      "I4.T3"
     ],
     "parallelizable": false,
     "done": false
@@ -75,35 +95,45 @@
   {
     "task_id": "I4.T5",
     "iteration_id": "I4",
-    "iteration_goal": "Finish CLI workflows across plan/resume/pr/deploy subcommands, enforce approval prompts, introduce notification hooks, polish UI/UX tokens, and ensure human operators receive actionable summaries.",
-    "description": "Deliver deployment CLI (`ai-feature deploy`) orchestrating branch protection checks, merge attempts, auto-merge toggles, workflow dispatch, and blocked reason reporting.",
+    "iteration_goal": "Wire GitHub and Linear adapters with rate-limit safe HTTP calls, produce OpenAPI specs, add PR automation commands, detect branch protections/reviewer requirements, and ensure CLI status/resume surfaces show real-time integration data.",
+    "description": "Build branch-protection intelligence module that fetches required status checks, review requirements, dismissal rules, and auto-merge eligibility, surfacing results in CLI `status` and `deploy` flows.\n            Include integration with ExecutionTask outputs to highlight missing validations or stale commits.",
     "agent_type_hint": "BackendAgent",
-    "inputs": "GitHub adapter, deployment module plan, validation registry.",
-    "target_files": [],
-    "input_files": [],
-    "deliverables": "CLI command, doc enumerating required statuses + exit codes, tests verifying blocked/merge success flows.",
-    "acceptance_criteria": "Command detects missing checks, waits/backoffs, records deployment.json, outputs actionable statuses.",
-    "dependencies": [
-      "I3.T2",
-      "I3.T7"
+    "inputs": "Section 2 (Key Components), FR-15, IR-5.",
+    "target_files": [
+      "src/adapters/github/branchProtection.ts",
+      "src/workflows/branchProtectionReporter.ts",
+      "docs/requirements/branch_protection_playbook.md",
+      "tests/unit/branchProtection.spec.ts"
     ],
-    "parallelizable": false,
+    "input_files": [],
+    "deliverables": "Branch protection module, doc explaining statuses, tests verifying translation to CLI output, and integration with plan/resume.",
+    "acceptance_criteria": "CLI surfaces missing checks/reviews; doc explains how to interpret results; tests cover outdated commit detection and up-to-date requirements.",
+    "dependencies": [
+      "I4.T1",
+      "I4.T4"
+    ],
+    "parallelizable": true,
     "done": false
   },
   {
     "task_id": "I4.T6",
     "iteration_id": "I4",
-    "iteration_goal": "Finish CLI workflows across plan/resume/pr/deploy subcommands, enforce approval prompts, introduce notification hooks, polish UI/UX tokens, and ensure human operators receive actionable summaries.",
-    "description": "Introduce notification adapter stubs (Slack/email/webhook) with throttled queue, templates referencing severity levels, redaction, and feature flags.",
-    "agent_type_hint": "BackendAgent",
-    "inputs": "Section 4 directives, observability spec.",
-    "target_files": [],
+    "iteration_goal": "Wire GitHub and Linear adapters with rate-limit safe HTTP calls, produce OpenAPI specs, add PR automation commands, detect branch protections/reviewer requirements, and ensure CLI status/resume surfaces show real-time integration data.",
+    "description": "Extend CLI `status`/`resume` to include GitHub/Linear integration state, rate-limit warnings, branch protection blockers, and links to ResearchTask snapshots, ensuring JSON schema remains stable.\n            Provide documentation for automation consumers parsing these responses.",
+    "agent_type_hint": "FrontendAgent",
+    "inputs": "Section 1 (Target Audience), Section 2 (Communication patterns), outputs from `I4.T1`..`I4.T5`.",
+    "target_files": [
+      "src/cli/commands/status.ts",
+      "src/cli/commands/resume.ts",
+      "docs/ui/cli_patterns.md",
+      "tests/integration/cli_status_plan.spec.ts"
+    ],
     "input_files": [],
-    "deliverables": "Adapter skeleton, queue config, doc describing enabling/disabling per repo.",
-    "acceptance_criteria": "Notifications disabled by default, throttle thresholds configurable, templates include anchors + severity labels; tests verify queue/resend logic.",
+    "deliverables": "Enhanced CLI outputs, documentation, tests verifying JSON schema, and sample transcripts for automation training.",
+    "acceptance_criteria": "JSON schema includes integration sections; human output highlights rate-limit warnings; doc enumerates fields for Graphite/CodeMachine ingestion.",
     "dependencies": [
-      "I1.T7",
-      "I3.T6"
+      "I4.T4",
+      "I4.T5"
     ],
     "parallelizable": true,
     "done": false
@@ -111,17 +141,21 @@
   {
     "task_id": "I4.T7",
     "iteration_id": "I4",
-    "iteration_goal": "Finish CLI workflows across plan/resume/pr/deploy subcommands, enforce approval prompts, introduce notification hooks, polish UI/UX tokens, and ensure human operators receive actionable summaries.",
-    "description": "Implement `ai-feature observe` command (cron-friendly) scanning run directories + GitHub merges to produce health report with KPIs, anomalies, and suggestions.",
+    "iteration_goal": "Wire GitHub and Linear adapters with rate-limit safe HTTP calls, produce OpenAPI specs, add PR automation commands, detect branch protections/reviewer requirements, and ensure CLI status/resume surfaces show real-time integration data.",
+    "description": "Build write action queue for GitHub (PR comments, labels, review requests) to throttle writes per IR-7, including serialization, retry/backoff, and telemetry.\n            Provide scenario tests hitting secondary limits to verify pause/resume logic.",
     "agent_type_hint": "BackendAgent",
-    "inputs": "Observability hub, GitHub adapter, run-directory metadata.",
-    "target_files": [],
+    "inputs": "Section 2 (Key Components), IR-6/IR-7, Section 4 (Rate-limit directives).",
+    "target_files": [
+      "src/workflows/writeActionQueue.ts",
+      "docs/requirements/write_action_playbook.md",
+      "tests/integration/writeActionQueue.spec.ts"
+    ],
     "input_files": [],
-    "deliverables": "CLI command writing `.ai-feature-pipeline/reports/<timestamp>.md`, doc describing scheduling + file lock usage.",
-    "acceptance_criteria": "Observe command reads run dirs, compiles KPI summary, respects concurrency lock, exit codes indicate success/anomaly.",
+    "deliverables": "Queue implementation, documentation describing usage, test suite simulating rate-limit responses, and CLI instrumentation linking actions to logs.",
+    "acceptance_criteria": "Secondary limit simulation triggers cooldown; queue persists to run directory; doc explains concurrency knobs; tests confirm deduping/idempotency keys.",
     "dependencies": [
-      "I1.T6",
-      "I3.T6"
+      "I4.T1",
+      "I4.T3"
     ],
     "parallelizable": true,
     "done": false
@@ -129,73 +163,24 @@
   {
     "task_id": "I4.T8",
     "iteration_id": "I4",
-    "iteration_goal": "Finish CLI workflows across plan/resume/pr/deploy subcommands, enforce approval prompts, introduce notification hooks, polish UI/UX tokens, and ensure human operators receive actionable summaries.",
-    "description": "Enhance `ai-feature export` CLI to package selected artifacts, run redaction scan, allow md/json output, and document manifest schema.",
-    "agent_type_hint": "BackendAgent",
-    "inputs": "Artifact bundle service, observability guidelines, Section 4 directives.",
-    "target_files": [],
+    "iteration_goal": "Wire GitHub and Linear adapters with rate-limit safe HTTP calls, produce OpenAPI specs, add PR automation commands, detect branch protections/reviewer requirements, and ensure CLI status/resume surfaces show real-time integration data.",
+    "description": "Create integration regression tests + fixtures covering GitHub/Linear success, rate-limit, and error paths, running via mocked HTTP servers and recorded responses; update milestone notes with coverage map.\n            Provide README instructions for updating fixtures.",
+    "agent_type_hint": "TestingAgent",
+    "inputs": "Section 2 (Technology Stack), FR/IR list, outputs from `I4.T1`..`I4.T7`.",
+    "target_files": [
+      "tests/integration/github_linear_regression.spec.ts",
+      "scripts/tooling/update_fixtures.sh",
+      "plan/milestone_notes.md",
+      "docs/ops/integration_testing.md"
+    ],
     "input_files": [],
-    "deliverables": "Enhanced command + doc, sample manifest, tests verifying redaction + inclusion toggles.",
-    "acceptance_criteria": "Export bundles include manifest/diffs/logs/telemetry, redaction filter passes tests, CLI prints shareable path.",
+    "deliverables": "Regression test suite, fixture updater script, documentation, milestone notes summarizing coverage + outstanding gaps.",
+    "acceptance_criteria": "Tests simulate success, 403 secondary, 429 primary, missing scopes; fixtures stored with hashed metadata; doc teaches contributors how to refresh fixtures; milestone notes call out remaining manual scenarios.",
     "dependencies": [
-      "I3.T7",
-      "I3.T9"
+      "I4.T1",
+      "I4.T7"
     ],
     "parallelizable": false,
-    "done": false
-  },
-  {
-    "task_id": "I4.T9",
-    "iteration_id": "I4",
-    "iteration_goal": "Finish CLI workflows across plan/resume/pr/deploy subcommands, enforce approval prompts, introduce notification hooks, polish UI/UX tokens, and ensure human operators receive actionable summaries.",
-    "description": "Publish comprehensive CLI help system + docs (README updates, command reference, FAQs) referencing anchors and cross-linking to plan sections.",
-    "agent_type_hint": "DocumentationAgent",
-    "inputs": "All CLI commands, UI architecture.",
-    "target_files": [],
-    "input_files": [],
-    "deliverables": "Up-to-date docs with tables for commands, flags, exit codes, reliability tips.",
-    "acceptance_criteria": "Each command documented with synopsis + exit codes; README includes quickstart; docs reference iterations + requirements.",
-    "dependencies": [
-      "I4.T2",
-      "I4.T8"
-    ],
-    "parallelizable": false,
-    "done": false
-  },
-  {
-    "task_id": "I4.T10",
-    "iteration_id": "I4",
-    "iteration_goal": "Finish CLI workflows across plan/resume/pr/deploy subcommands, enforce approval prompts, introduce notification hooks, polish UI/UX tokens, and ensure human operators receive actionable summaries.",
-    "description": "Implement interactive approval prompts (with `$EDITOR` fallback) capturing artifact hash, reason, signer, plus automation-friendly `--approved-by` flag for signed bundles.",
-    "agent_type_hint": "FrontendAgent",
-    "inputs": "Approval registry, UI renderer, Section 4 directives.",
-    "target_files": [],
-    "input_files": [],
-    "deliverables": "Prompt component, tests for $EDITOR fallback, doc updates covering automation usage.",
-    "acceptance_criteria": "Prompt shows artifact summary + diff hints, fallback instructions documented, CLI stores signatures + method, tests cover non-TTY behavior.",
-    "dependencies": [
-      "I2.T8",
-      "I4.T1"
-    ],
-    "parallelizable": true,
-    "done": false
-  },
-  {
-    "task_id": "I4.T11",
-    "iteration_id": "I4",
-    "iteration_goal": "Finish CLI workflows across plan/resume/pr/deploy subcommands, enforce approval prompts, introduce notification hooks, polish UI/UX tokens, and ensure human operators receive actionable summaries.",
-    "description": "Add `ai-feature cleanup` CLI for retention enforcement: detect old run directories, verify exports, archive to tar when requested, and log actions for audit.",
-    "agent_type_hint": "BackendAgent",
-    "inputs": "Run-directory design, export command, observability docs.",
-    "target_files": [],
-    "input_files": [],
-    "deliverables": "CLI command, doc describing retention settings, tests verifying dry-run + actual cleanup.",
-    "acceptance_criteria": "Command lists candidates, respects `--dry-run`, archives when `--archive` set, records actions to logs.",
-    "dependencies": [
-      "I1.T6",
-      "I4.T8"
-    ],
-    "parallelizable": true,
     "done": false
   }
 ]

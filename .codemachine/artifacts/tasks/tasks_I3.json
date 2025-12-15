@@ -2,16 +2,22 @@
   {
     "task_id": "I3.T1",
     "iteration_id": "I3",
-    "iteration_goal": "Implement shared HTTP client with rate-limit ledger, adapter interfaces (GitHub, Linear, Agent), task planner DAG, execution engine enforcing patch workflows, validation registry schemas, and capability manifests.",
-    "description": "Build shared HTTP client using undici that injects headers (Accept, X-GitHub-Api-Version, Authorization, Idempotency-Key), records rate-limit data, applies exponential backoff with jitter, and writes entries to `rate_limits.json`.",
+    "iteration_goal": "Translate specifications into actionable ExecutionTasks, build the queue/plan orchestration engine, manage patch application + git safety rails, codify validation and auto-fix loops, and extend resume/status commands so code generation is deterministic and auditable.",
+    "description": "Implement Task Planner upgrades that convert spec requirements + traceability entries into ExecutionTask DAGs, persist `plan.json`, manage dependencies, and render the Execution Engine Flow Diagram (PlantUML) committed under `docs/diagrams/execution_flow.puml`.\n            Include CLI outputs summarizing queue states, statuses, and blockers while referencing FR-12..FR-14.",
     "agent_type_hint": "BackendAgent",
-    "inputs": "Section 2 communication patterns, Requirements IR-1/IR-6.",
-    "target_files": [],
+    "inputs": "Section 2 (Key Components), Section 2.1 (Execution Flow diagram), FR-9..FR-14, ADR-7.",
+    "target_files": [
+      "src/workflows/taskPlanner.ts",
+      "docs/diagrams/execution_flow.puml",
+      "docs/requirements/execution_flow.md",
+      "tests/unit/taskPlanner.spec.ts"
+    ],
     "input_files": [],
-    "deliverables": "HTTP module, tests covering retry-after/x-ratelimit-reset, fixture harness.",
-    "acceptance_criteria": "Client logs headers, respects retry-after, writes ledger entries, surfaces structured errors (transient/permanent/human-action) with metadata.",
+    "deliverables": "Planner module, PlantUML diagram, narrative doc describing DAG semantics, and tests verifying dependency/resume logic.",
+    "acceptance_criteria": "`plan.json` includes nodes/edges with stable IDs; CLI `plan --json` prints DAG summary; diagram renders; tests confirm deterministic ordering and detection of cycles.",
     "dependencies": [
-      "I1.T7"
+      "I2.T5",
+      "I2.T7"
     ],
     "parallelizable": false,
     "done": false
@@ -19,34 +25,44 @@
   {
     "task_id": "I3.T2",
     "iteration_id": "I3",
-    "iteration_goal": "Implement shared HTTP client with rate-limit ledger, adapter interfaces (GitHub, Linear, Agent), task planner DAG, execution engine enforcing patch workflows, validation registry schemas, and capability manifests.",
-    "description": "Implement GitHub adapter supporting repo info, branch creation, branch protection queries, PR creation, reviewer requests, merge checks, workflow dispatch, status check polling, and auto-merge toggling (feature-flagged).",
+    "iteration_goal": "Translate specifications into actionable ExecutionTasks, build the queue/plan orchestration engine, manage patch application + git safety rails, codify validation and auto-fix loops, and extend resume/status commands so code generation is deterministic and auditable.",
+    "description": "Build Patch Application + Git Manager covering branch creation, patch previews (`git apply --check`), allowlist/denylist enforcement from RepoConfig constraints, and safe commit logging aligned with FR-12/FR-13.\n            Provide rollback snapshots and diff summaries stored within run directories for export.",
     "agent_type_hint": "BackendAgent",
-    "inputs": "Requirements IR-1–IR-7, FR-12–FR-16.",
-    "target_files": [],
-    "input_files": [],
-    "deliverables": "Adapter implementation, recorded fixtures, documentation referencing required scopes + headers.",
-    "acceptance_criteria": "Adapter uses HTTP client, honors Accept/API version header, handles primary/secondary rate limits, surfaces blocked reasons, supports reviewer assignments, includes dry-run mode.",
-    "dependencies": [
-      "I3.T1",
-      "I1.T8"
+    "inputs": "Section 2 (Key Components), FR-12/FR-13, Section 3 (Directory structure), ADR-3.",
+    "target_files": [
+      "src/workflows/patchManager.ts",
+      "src/workflows/branchManager.ts",
+      "docs/ops/patch_playbook.md",
+      "tests/unit/patchManager.spec.ts"
     ],
-    "parallelizable": false,
+    "input_files": [],
+    "deliverables": "Patch manager, branch manager, docs describing dry-run/diff preview flows, and tests verifying constraint enforcement plus rollback behavior.",
+    "acceptance_criteria": "CLI `start` can apply sample patch with dry-run; blocklist paths cause errors; branch created per feature; doc details conflict handling/resume instructions.",
+    "dependencies": [
+      "I3.T1"
+    ],
+    "parallelizable": true,
     "done": false
   },
   {
     "task_id": "I3.T3",
     "iteration_id": "I3",
-    "iteration_goal": "Implement shared HTTP client with rate-limit ledger, adapter interfaces (GitHub, Linear, Agent), task planner DAG, execution engine enforcing patch workflows, validation registry schemas, and capability manifests.",
-    "description": "Define adapter capability manifest schema (JSON) for agent providers, GitHub/Linear, and optional integrations plus manifest loader/resolver with validation + documentation.",
-    "agent_type_hint": "DocumentationAgent",
-    "inputs": "Section 2 components, Section 4 directives.",
-    "target_files": [],
+    "iteration_goal": "Translate specifications into actionable ExecutionTasks, build the queue/plan orchestration engine, manage patch application + git safety rails, codify validation and auto-fix loops, and extend resume/status commands so code generation is deterministic and auditable.",
+    "description": "Implement Validation Command Registry (lint/test/typecheck/build) plus auto-fix loop per ADR-7, including configuration ingestion, command templating, retry/backoff policy, and error summarization piped into run logs.\n            Add CLI command `ai-feature validate` for manual re-runs and doc covering exit codes.",
+    "agent_type_hint": "BackendAgent",
+    "inputs": "Section 2 (Technology stack), Section 3 (Tests/ scripts), ADR-7, FR-14.",
+    "target_files": [
+      "src/workflows/validationRegistry.ts",
+      "src/workflows/autoFixEngine.ts",
+      "src/cli/commands/validate.ts",
+      "docs/requirements/validation_playbook.md",
+      "tests/unit/validationRegistry.spec.ts"
+    ],
     "input_files": [],
-    "deliverables": "Schema + sample manifests for OpenAI-compatible + local LLMs; doc describing fields (model, tokens, rate limit, cost).",
-    "acceptance_criteria": "Schema validated; CLI command `ai-feature agents list` (stub) reads manifest; doc references BYO agent behavior + gating.",
+    "deliverables": "Registry service, auto-fix orchestrator, CLI command, documentation describing configuration, and tests covering success/failure/resume flows.",
+    "acceptance_criteria": "Registry loads from RepoConfig; auto-fix attempts logged with capped retries; CLI command prints summary + writes to logs; doc explains manual overrides.",
     "dependencies": [
-      "I1.T8"
+      "I3.T1"
     ],
     "parallelizable": true,
     "done": false
@@ -54,17 +70,21 @@
   {
     "task_id": "I3.T4",
     "iteration_id": "I3",
-    "iteration_goal": "Implement shared HTTP client with rate-limit ledger, adapter interfaces (GitHub, Linear, Agent), task planner DAG, execution engine enforcing patch workflows, validation registry schemas, and capability manifests.",
-    "description": "Implement Validation Registry (JSON schema + loader + CLI command) capturing lint/test/build/typecheck commands, env vars, failure handling, and gating references.",
+    "iteration_goal": "Translate specifications into actionable ExecutionTasks, build the queue/plan orchestration engine, manage patch application + git safety rails, codify validation and auto-fix loops, and extend resume/status commands so code generation is deterministic and auditable.",
+    "description": "Finalize Agent Adapter contract for execution contexts (code generation, review, test suggestions), produce JSON Schema for manifests, and update adapter implementations with capability routing, tool negotiation, and error taxonomy alignment.\n            Provide documentation referencing Section 2.1 artifact and sample manifests for code/test/review models.",
     "agent_type_hint": "BackendAgent",
-    "inputs": "Section 4 directives, Requirements FR-14.",
-    "target_files": [],
+    "inputs": "Section 2.1 (Agent adapter contract), I2 manifest loader, ADR-1, ADR-7.",
+    "target_files": [
+      "src/adapters/agents/AgentAdapter.ts",
+      "docs/requirements/agent_capability_contract.md",
+      "docs/requirements/agent_manifest_schema.json",
+      "tests/unit/agentAdapter.spec.ts"
+    ],
     "input_files": [],
-    "deliverables": "Schema, loader, doc referencing commands, CLI command `ai-feature validation list`.",
-    "acceptance_criteria": "Registry enforces required commands, supports overrides per feature, integrates with execution engine gating; tests cover invalid configs.",
+    "deliverables": "Adapter interface, schema updates, doc describing capability negotiation and fallback logic, plus tests verifying contract enforcement.",
+    "acceptance_criteria": "Execution tasks specify capability needs and adapter chooses matching provider; schema validated during CI; doc outlines cost tracking and failure remediation strategies.",
     "dependencies": [
-      "I1.T2",
-      "I1.T7"
+      "I2.T8"
     ],
     "parallelizable": true,
     "done": false
@@ -72,17 +92,23 @@
   {
     "task_id": "I3.T5",
     "iteration_id": "I3",
-    "iteration_goal": "Implement shared HTTP client with rate-limit ledger, adapter interfaces (GitHub, Linear, Agent), task planner DAG, execution engine enforcing patch workflows, validation registry schemas, and capability manifests.",
-    "description": "Build task planner service converting spec anchors + ResearchTasks into ExecutionTasks with dependency graph, retry policies, grouping for concurrency, and plan checksum.",
+    "iteration_goal": "Translate specifications into actionable ExecutionTasks, build the queue/plan orchestration engine, manage patch application + git safety rails, codify validation and auto-fix loops, and extend resume/status commands so code generation is deterministic and auditable.",
+    "description": "Enhance Resume Coordinator and queue persistence so failed tasks can resume precisely, including hashed input verification, queue snapshots, and CLI `resume` improvements showing remediation hints.\n            Document failure taxonomy with mapping to human/agent actions.",
     "agent_type_hint": "BackendAgent",
-    "inputs": "Spec composer outputs, Section 2 components.",
-    "target_files": [],
+    "inputs": "Section 2 (Key Components), Section 2.1 (Run directory schema), FR-3, ADR-2.",
+    "target_files": [
+      "src/workflows/resumeCoordinator.ts",
+      "src/workflows/queueStore.ts",
+      "docs/requirements/resume_playbook.md",
+      "tests/unit/resumeCoordinator.spec.ts",
+      "tests/integration/resume_flow.spec.ts"
+    ],
     "input_files": [],
-    "deliverables": "Planner, doc describing heuristics, tests verifying DAG + checksum.",
-    "acceptance_criteria": "Plan JSON captures nodes/edges, checksum updates on change, tasks tagged with spec anchors + dependencies; doc explains concurrency/gating rules.",
+    "deliverables": "Resume enhancements, queue serialization/test coverage, playbook describing failure classes, and integration test simulating crash/resume path.",
+    "acceptance_criteria": "CLI `resume` inspects `last_step/last_error`, verifies hashes, and restarts queue; tests inject corrupted queue and ensure safe halt; doc maps errors to required actions.",
     "dependencies": [
-      "I2.T7",
-      "I2.T8"
+      "I3.T1",
+      "I3.T3"
     ],
     "parallelizable": false,
     "done": false
@@ -90,109 +116,72 @@
   {
     "task_id": "I3.T6",
     "iteration_id": "I3",
-    "iteration_goal": "Implement shared HTTP client with rate-limit ledger, adapter interfaces (GitHub, Linear, Agent), task planner DAG, execution engine enforcing patch workflows, validation registry schemas, and capability manifests.",
-    "description": "Implement execution queue store (append-only JSONL) plus orchestrator to dequeue tasks, update statuses, respect dependencies, and persist progress for resumability.",
+    "iteration_goal": "Translate specifications into actionable ExecutionTasks, build the queue/plan orchestration engine, manage patch application + git safety rails, codify validation and auto-fix loops, and extend resume/status commands so code generation is deterministic and auditable.",
+    "description": "Instrument Execution Engine telemetry: per-task logs, diff stats, validation timing, agent cost usage, and queue depth metrics; integrate with Observability hub and ensure `logs.ndjson`, `metrics/prometheus.txt`, and `traces.json` capture necessary context.\n            Provide documentation describing new metrics and log fields for later iterations.",
     "agent_type_hint": "BackendAgent",
-    "inputs": "Task planner output, run-directory scaffolding.",
-    "target_files": [],
-    "input_files": [],
-    "deliverables": "Queue manager, tests, doc explaining JSONL format + resume semantics.",
-    "acceptance_criteria": "Queue file append-only, statuses persisted with timestamps, resume coordinator can reconstruct state, tests cover ordering + failure cases.",
-    "dependencies": [
-      "I3.T5"
+    "inputs": "Section 2 (Observability), I1 telemetry baseline, Section 4 directives.",
+    "target_files": [
+      "src/telemetry/executionMetrics.ts",
+      "src/telemetry/logWriters.ts",
+      "docs/ops/execution_telemetry.md",
+      "tests/unit/executionMetrics.spec.ts"
     ],
-    "parallelizable": false,
-    "done": false
-  },
-  {
-    "task_id": "I3.T7",
-    "iteration_id": "I3",
-    "iteration_goal": "Implement shared HTTP client with rate-limit ledger, adapter interfaces (GitHub, Linear, Agent), task planner DAG, execution engine enforcing patch workflows, validation registry schemas, and capability manifests.",
-    "description": "Develop execution engine to apply patches via git dry-run, enforce allowlists/denylists, snapshot files, and invoke validation registry prior to PR stage.",
-    "agent_type_hint": "BackendAgent",
-    "inputs": "Queue manager, validation registry, run-directory, GitHub adapter.",
-    "target_files": [],
     "input_files": [],
-    "deliverables": "Engine orchestrating tasks, hooking to Git operations, validation invocation, logging.",
-    "acceptance_criteria": "Engine records snapshots/diffs, respects constraints, aborts on validation failure with actionable errors, writes telemetry to logs, tests use fixture repo.",
+    "deliverables": "Metrics/logging helpers, documentation, tests verifying counters/histograms, and CLI integration.",
+    "acceptance_criteria": "`metrics/prometheus.txt` includes queue depth, validation durations, agent cost counters; logs capture patch IDs/diff stats; doc describes label names + retention.",
     "dependencies": [
+      "I3.T1",
       "I3.T2",
-      "I3.T4",
-      "I3.T6"
-    ],
-    "parallelizable": false,
-    "done": false
-  },
-  {
-    "task_id": "I3.T8",
-    "iteration_id": "I3",
-    "iteration_goal": "Implement shared HTTP client with rate-limit ledger, adapter interfaces (GitHub, Linear, Agent), task planner DAG, execution engine enforcing patch workflows, validation registry schemas, and capability manifests.",
-    "description": "Implement agent adapter service orchestrating prompts/responses with capability manifests, supporting streaming or batch, retries, and cost telemetry updates.",
-    "agent_type_hint": "BackendAgent",
-    "inputs": "Capability manifest schema, PRD/spec/composer requirements.",
-    "target_files": [],
-    "input_files": [],
-    "deliverables": "Adapter with provider registry, manifest loader, cost reporting, logging.",
-    "acceptance_criteria": "Adapter chooses provider based on capability + cost, records token use, handles fallback to local models, tests simulate streaming + errors.",
-    "dependencies": [
       "I3.T3"
     ],
     "parallelizable": true,
     "done": false
   },
   {
-    "task_id": "I3.T9",
+    "task_id": "I3.T7",
     "iteration_id": "I3",
-    "iteration_goal": "Implement shared HTTP client with rate-limit ledger, adapter interfaces (GitHub, Linear, Agent), task planner DAG, execution engine enforcing patch workflows, validation registry schemas, and capability manifests.",
-    "description": "Extend resume coordinator to read queue state, approvals, rate-limit ledger, and determine restart point with guardrails for hash mismatches.",
-    "agent_type_hint": "BackendAgent",
-    "inputs": "Run-directory design, queue manager, approvals registry.",
-    "target_files": [],
+    "iteration_goal": "Translate specifications into actionable ExecutionTasks, build the queue/plan orchestration engine, manage patch application + git safety rails, codify validation and auto-fix loops, and extend resume/status commands so code generation is deterministic and auditable.",
+    "description": "Update CLI surfaces (`plan`, `status`, `resume`, `validate`) to display ExecutionTask DAGs, patch previews, validation states, and resume instructions in both human and `--json` formats, ensuring anchors align with documentation.\n            Add plan diffing to highlight when specs change and tasks need regeneration.",
+    "agent_type_hint": "FrontendAgent",
+    "inputs": "Section 1 (Goal), Section 2 (Key Components), Section 4 (Directives), outputs from `I3.T1`..`I3.T5`.",
+    "target_files": [
+      "src/cli/commands/plan.ts",
+      "src/cli/commands/status.ts",
+      "src/cli/commands/resume.ts",
+      "docs/ui/cli_patterns.md",
+      "tests/integration/cli_status_plan.spec.ts"
+    ],
     "input_files": [],
-    "deliverables": "Resume logic + doc describing error categories + manual intervention instructions.",
-    "acceptance_criteria": "Resume handles success/failure/human action states, surfaces instructions referencing artifacts, tests cover collisions + corrupted data.",
+    "deliverables": "CLI enhancements, documentation describing layout/tokens, integration tests verifying JSON output, and plan diffing helper.",
+    "acceptance_criteria": "Commands display DAG summary, pending tasks, validation states; `--json` output matches schema; doc references anchors for CLI components; tests ensure deterministic ordering.",
     "dependencies": [
-      "I3.T6",
-      "I2.T8"
+      "I3.T1",
+      "I3.T5"
     ],
     "parallelizable": true,
     "done": false
   },
   {
-    "task_id": "I3.T10",
+    "task_id": "I3.T8",
     "iteration_id": "I3",
-    "iteration_goal": "Implement shared HTTP client with rate-limit ledger, adapter interfaces (GitHub, Linear, Agent), task planner DAG, execution engine enforcing patch workflows, validation registry schemas, and capability manifests.",
-    "description": "Wire validation registry + execution engine into CLI `ai-feature plan` and `ai-feature run --task` commands, enabling manual kicks and JSON outputs for automation.",
-    "agent_type_hint": "BackendAgent",
-    "inputs": "Planner, execution engine, CLI scaffolding.",
-    "target_files": [],
+    "iteration_goal": "Translate specifications into actionable ExecutionTasks, build the queue/plan orchestration engine, manage patch application + git safety rails, codify validation and auto-fix loops, and extend resume/status commands so code generation is deterministic and auditable.",
+    "description": "Create automated execution smoke tests covering context→PRD→spec→plan→patch apply→validation→resume flows, using fixture repo plus sample manifests to confirm reproducibility.\n            Update `plan/milestone_notes.md` with findings and ensure export bundle contains diff summaries.",
+    "agent_type_hint": "TestingAgent",
+    "inputs": "Sections 2 & 3, outputs from `I2` tasks, FR-9..FR-15, ADR-7.",
+    "target_files": [
+      "tests/integration/smoke_execution.spec.ts",
+      "scripts/tooling/smoke_execution.sh",
+      "plan/milestone_notes.md",
+      "docs/ops/smoke_test_guide.md"
+    ],
     "input_files": [],
-    "deliverables": "CLI commands showing DAG, allowing targeted task runs, JSON output schema.",
-    "acceptance_criteria": "`ai-feature plan` prints nodes/edges, writes JSON; `run --task` executes single task with validation gating; smoke tests pass.",
+    "deliverables": "Automated integration test, shell script for local smoke runs, doc describing how to interpret results, and milestone notes summarizing issues.",
+    "acceptance_criteria": "Smoke suite runs via `npm run test:smoke`; outputs stored in run directory; doc teaches developers how to run/triage; milestone notes link failures to remediation tasks.",
     "dependencies": [
-      "I3.T5",
+      "I3.T1",
       "I3.T7"
     ],
     "parallelizable": false,
-    "done": false
-  },
-  {
-    "task_id": "I3.T11",
-    "iteration_id": "I3",
-    "iteration_goal": "Implement shared HTTP client with rate-limit ledger, adapter interfaces (GitHub, Linear, Agent), task planner DAG, execution engine enforcing patch workflows, validation registry schemas, and capability manifests.",
-    "description": "Create fixture-based contract tests + mocks for GitHub/Linear/Agent adapters using nock/msw, ensuring reproducibility and offline CI runs.",
-    "agent_type_hint": "BackendAgent",
-    "inputs": "Adapter implementations, HTTP client.",
-    "target_files": [],
-    "input_files": [],
-    "deliverables": "Fixture library, contract tests, doc describing fixture refresh workflows.",
-    "acceptance_criteria": "Tests cover success + rate-limit responses; fixture refresh script documented; CI uses fixtures for deterministic runs.",
-    "dependencies": [
-      "I3.T1",
-      "I3.T2",
-      "I3.T10"
-    ],
-    "parallelizable": true,
     "done": false
   }
 ]

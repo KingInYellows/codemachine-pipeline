@@ -1,158 +1,140 @@
 <!-- anchor: iteration-4-plan -->
-### Iteration 4: Workflow UX, CLI Commands, and Human-in-the-Loop Experience
+### Iteration 4: Integration Adapters, PR Automation & Branch Protection Intelligence
 
 *   **Iteration ID:** `I4`
-*   **Goal:** Finish CLI workflows across plan/resume/pr/deploy subcommands, enforce approval prompts, introduce notification hooks, polish UI/UX tokens, and ensure human operators receive actionable summaries.
-*   **Prerequisites:** `I1`–`I3`
-*   **Key Deliverables:** CLI render utilities, density/color toggles, resume enhancements, PR command suite, reviewer assignment logic, notification adapter stubs, documentation for UX tokens, start/status/resume/plan/pr/deploy help pages, interactive approvals.
-*   **Key Risks:** Poor UX causing misuse of approvals, CLI outputs missing anchors for automation, notifications spamming external systems, watchers clashing with local-first constraints.
-*   **Coordination Plan:** Pair UI/UX writer with CLI engineers, run usability testing on sample runs, review notification templates with security + ops teams.
-*   **Success Metrics:** CLI commands share design tokens, approvals clearly spelled out, watch/observe commands run non-destructively, doc anchors referencing sections, exit codes reliable for automation.
-*   **Exit Criteria:** All core commands (`status`, `resume`, `plan`, `run`, `pr`, `deploy`, `observe`, `export`) provide polished UX with documentation, approvals, and optional JSON outputs.
+*   **Goal:** Wire GitHub and Linear adapters with rate-limit safe HTTP calls, produce OpenAPI specs, add PR automation commands, detect branch protections/reviewer requirements, and ensure CLI status/resume surfaces show real-time integration data.
+*   **Prerequisites:** `I1`–`I3` complete with execution engine smoke tests, traceability map, and agent manifests. GitHub/Linear credentials must be available in `.env` or OS keychain for integration testing.
+*   **Key Deliverables:** GitHub adapter + OpenAPI spec, Linear MCP adapter, rate-limit telemetry exposures, PR creation/reviewer commands with sequence diagram, branch protection intelligence, CLI status/resume enhancements, write action queue, and integration tests covering rate-limit scenarios.
+*   **Exit Criteria:** CLI can create PRs, request reviewers, inspect status checks, handle rate-limit responses, update Linear snapshots, and expose reliable `status`/`resume` information with integration telemetry.
+*   **Tasks:**
 
 <!-- anchor: task-i4-t1 -->
-*   **Task 4.1:**
-    *   **Task ID:** `I4.T1`
-    *   **Description:** Build CLI rendering/tokens module implementing spacing, color palette, density toggles, badge styles, progress lanes, and JSON fallback as defined in UI architecture.
-    *   **Agent Type Hint:** `FrontendAgent`
-    *   **Inputs:** UI/UX Architecture Section, Section 4 directives.
-    *   **Input Files:** [`src/cli/renderers/tokens.ts`, `docs/guides/ui_style.md`]
-    *   **Target Files:** [`src/cli/renderers/tokens.ts`, `src/cli/renderers/components.ts`, `docs/guides/ui_style.md`]
-    *   **Deliverables:** Token definitions, reusable components, doc describing usage + accessibility guidelines.
-    *   **Acceptance Criteria:** Renderers support colorless mode, density toggles, anchors for automation; doc references design tokens.
-    *   **Dependencies:** [`I1.T1`, `I1.T7`]
-    *   **Parallelizable:** Yes
+    *   **Task 4.1:**
+        *   **Task ID:** `I4.T1`
+        *   **Description:** Implement GitHub adapter covering repo metadata, branches, PR creation, reviewer requests, status checks, merges, and workflow dispatch, while emitting OpenAPI spec for future remote endpoints (per Section 2.1).
+            Handle authentication (PAT or App), Accept/API version headers, error taxonomy, and logging.
+        *   **Agent Type Hint:** `BackendAgent`
+        *   **Inputs:** Section 2 (Key Components), Section 2.1 (OpenAPI artifact), IR-1..IR-7, FR-15.
+        *   **Input Files**: ["docs/requirements/github_endpoints.md", "docs/ops/rate_limit_reference.md", "api/ai_feature.yaml"]
+        *   **Target Files:** ["src/adapters/github/GitHubAdapter.ts", "api/ai_feature.yaml", "docs/requirements/github_adapter.md", "tests/integration/githubAdapter.spec.ts"]
+        *   **Deliverables:** Adapter implementation, OpenAPI additions, documentation, and integration tests verifying PR creation/reviewer requests/merge readiness under mocked responses.
+        *   **Acceptance Criteria:** REST calls include required headers; rate-limit retries invoked when headers indicate; tests assert correct payloads; doc explains configuration for Accept/Version, status-check endpoints, and branch creation.
+        *   **Dependencies:** `I3.T2`, `I3.T6`
+        *   **Parallelizable:** No
 
 <!-- anchor: task-i4-t2 -->
-*   **Task 4.2:**
-    *   **Task ID:** `I4.T2`
-    *   **Description:** Enhance `ai-feature status` command with improved layout (progress lanes, context tables, approval reminders, rate-limit ledger) plus `--json` schema documentation.
-    *   **Agent Type Hint:** `FrontendAgent`
-    *   **Inputs:** Renderer module, approval registry, context aggregator.
-    *   **Input Files:** [`src/cli/commands/status.ts`, `docs/guides/status_command.md`]
-    *   **Target Files:** [`src/cli/commands/status.ts`, `docs/guides/status_command.md`, `tests/snapshot/status_output.test.ts`]
-    *   **Deliverables:** Styled status output, snapshot tests, doc referencing fields + exit codes.
-    *   **Acceptance Criteria:** Status shows sections per design, `--json` matches schema, tests protect formatting.
-    *   **Dependencies:** [`I4.T1`, `I2.T11`]
-    *   **Parallelizable:** No
+    *   **Task 4.2:**
+        *   **Task ID:** `I4.T2`
+        *   **Description:** Build Linear integration via MCP server, covering issue fetch/snapshot, optional updates, and graceful degradation when preview APIs differ, referencing ADR-6.
+            Provide caching rules and CLI options for offline replays.
+        *   **Agent Type Hint:** `BackendAgent`
+        *   **Inputs:** Section 2 (Key Components), IR-8..IR-11, ADR-6.
+        *   **Input Files**: ["docs/requirements/linear_integration.md", "docs/adr/ADR-6-linear-integration.md"]
+        *   **Target Files:** ["src/adapters/linear/LinearAdapter.ts", "docs/requirements/linear_adapter.md", "tests/integration/linearAdapter.spec.ts"]
+        *   **Deliverables:** MCP-driven Linear adapter, documentation describing offline mode and rate-limit handling, and integration tests with mocked MCP responses.
+        *   **Acceptance Criteria:** CLI `start --linear` loads snapshots, records metadata, caches responses; adapter respects 1,500 req/hour; doc covers developer preview toggles.
+        *   **Dependencies:** `I2.T3`, `I3.T1`
+        *   **Parallelizable:** Yes
 
 <!-- anchor: task-i4-t3 -->
-*   **Task 4.3:**
-    *   **Task ID:** `I4.T3`
-    *   **Description:** Implement `ai-feature resume` UX combining last_step/last_error, pending tasks, cooldowns, and manual action prompts with automation-friendly JSON output + docs.
-    *   **Agent Type Hint:** `FrontendAgent`
-    *   **Inputs:** Resume coordinator, renderer module.
-    *   **Input Files:** [`src/cli/commands/resume.ts`, `docs/guides/resume_flow.md`]
-    *   **Target Files:** [`src/cli/commands/resume.ts`, `tests/smoke/resume_cli.test.ts`, `docs/guides/resume_flow.md`]
-    *   **Deliverables:** CLI command hooking to coordinator, docs describing exit codes + instructions.
-    *   **Acceptance Criteria:** Resume prints blocking items, respects `--yes`, logs actions, JSON output includes tasks/cooldowns.
-    *   **Dependencies:** [`I3.T9`, `I4.T1`]
-    *   **Parallelizable:** No
+    *   **Task 4.3:**
+        *   **Task ID:** `I4.T3`
+        *   **Description:** Expand rate-limit ledger + telemetry to surface integration-specific cooldown timers, backlog states, and CLI warnings; add Prometheus metrics for GitHub/Linear budgets, and CLI command `ai-feature rate-limits` for manual inspection.
+        *   **Agent Type Hint:** `BackendAgent`
+        *   **Inputs:** Section 2 (Observability), Section 4 (Directives), outputs from `I3.T6`.
+        *   **Input Files**: ["docs/ops/rate_limit_reference.md", "docs/ops/execution_telemetry.md"]
+        *   **Target Files:** ["src/telemetry/rateLimitReporter.ts", "src/cli/commands/rate-limits.ts", "docs/requirements/rate_limit_dashboard.md", "tests/unit/rateLimitReporter.spec.ts"]
+        *   **Deliverables:** Reporter module, CLI command, dashboards doc, tests verifying formatting.
+        *   **Acceptance Criteria:** CLI prints remaining/reset times; metrics include gauges per provider; doc ties warnings to required operator actions.
+        *   **Dependencies:** `I4.T1`, `I4.T2`
+        *   **Parallelizable:** Yes
 
 <!-- anchor: task-i4-t4 -->
-*   **Task 4.4:**
-    *   **Task ID:** `I4.T4`
-    *   **Description:** Implement PR workflow commands: `ai-feature pr create`, `ai-feature pr reviewers`, `ai-feature pr status`, `ai-feature pr disable-auto-merge`, leveraging GitHub adapter and approval gating.
-    *   **Agent Type Hint:** `BackendAgent`
-    *   **Inputs:** GitHub adapter, approval registry, execution engine outputs.
-    *   **Input Files:** [`src/cli/commands/pr/create.ts`, `src/cli/commands/pr/reviewers.ts`, `src/cli/commands/pr/status.ts`]
-    *   **Target Files:** [`src/cli/commands/pr/create.ts`, `src/cli/commands/pr/reviewers.ts`, `src/cli/commands/pr/status.ts`, `docs/guides/pr_commands.md`, `tests/smoke/pr_commands.test.ts`]
-    *   **Deliverables:** CLI commands, doc covering gating + exit codes, smoke tests using fixtures.
-    *   **Acceptance Criteria:** Commands refuse to run without approvals/validations, display reviewer/required-check info, JSON output enumerates PR metadata.
-    *   **Dependencies:** [`I3.T2`, `I3.T7`, `I2.T8`]
-    *   **Parallelizable:** No
+    *   **Task 4.4:**
+        *   **Task ID:** `I4.T4`
+        *   **Description:** Implement PR automation CLI surfaces (`ai-feature pr create`, `pr status`, `pr reviewers`, `pr disable-auto-merge`) plus GitHub PR automation sequence diagram (Mermaid) detailing request flow, write action queue, and branch protection feedback loops.
+        *   **Agent Type Hint:** `FrontendAgent`
+        *   **Inputs:** Section 2 (Communication Patterns), Section 2.1 (PR diagram), FR-15, ADR-3.
+        *   **Input Files**: ["docs/requirements/github_endpoints.md", "docs/ops/approval_playbook.md", "docs/diagrams/execution_flow.puml"]
+        *   **Target Files:** ["src/cli/commands/pr/create.ts", "src/cli/commands/pr/status.ts", "src/cli/commands/pr/reviewers.ts", "docs/diagrams/pr_automation_sequence.mmd", "docs/requirements/pr_playbook.md", "tests/integration/pr_commands.spec.ts"]
+        *   **Deliverables:** CLI commands, sequence diagram, documentation, tests verifying JSON output and blocked states.
+        *   **Acceptance Criteria:** CLI can create PR, request reviewers, show status-check summary; doc explains gating vs auto-merge; diagram renders.
+        *   **Dependencies:** `I4.T1`, `I4.T3`
+        *   **Parallelizable:** No
 
 <!-- anchor: task-i4-t5 -->
-*   **Task 4.5:**
-    *   **Task ID:** `I4.T5`
-    *   **Description:** Deliver deployment CLI (`ai-feature deploy`) orchestrating branch protection checks, merge attempts, auto-merge toggles, workflow dispatch, and blocked reason reporting.
-    *   **Agent Type Hint:** `BackendAgent`
-    *   **Inputs:** GitHub adapter, deployment module plan, validation registry.
-    *   **Input Files:** [`src/cli/commands/deploy.ts`, `docs/guides/deploy_command.md`]
-    *   **Target Files:** [`src/cli/commands/deploy.ts`, `tests/smoke/deploy_command.test.ts`, `docs/guides/deploy_command.md`]
-    *   **Deliverables:** CLI command, doc enumerating required statuses + exit codes, tests verifying blocked/merge success flows.
-    *   **Acceptance Criteria:** Command detects missing checks, waits/backoffs, records deployment.json, outputs actionable statuses.
-    *   **Dependencies:** [`I3.T2`, `I3.T7`]
-    *   **Parallelizable:** No
+    *   **Task 4.5:**
+        *   **Task ID:** `I4.T5`
+        *   **Description:** Build branch-protection intelligence module that fetches required status checks, review requirements, dismissal rules, and auto-merge eligibility, surfacing results in CLI `status` and `deploy` flows.
+            Include integration with ExecutionTask outputs to highlight missing validations or stale commits.
+        *   **Agent Type Hint:** `BackendAgent`
+        *   **Inputs:** Section 2 (Key Components), FR-15, IR-5.
+        *   **Input Files**: ["docs/requirements/github_branch_protection.md", "docs/requirements/validation_playbook.md"]
+        *   **Target Files:** ["src/adapters/github/branchProtection.ts", "src/workflows/branchProtectionReporter.ts", "docs/requirements/branch_protection_playbook.md", "tests/unit/branchProtection.spec.ts"]
+        *   **Deliverables:** Branch protection module, doc explaining statuses, tests verifying translation to CLI output, and integration with plan/resume.
+        *   **Acceptance Criteria:** CLI surfaces missing checks/reviews; doc explains how to interpret results; tests cover outdated commit detection and up-to-date requirements.
+        *   **Dependencies:** `I4.T1`, `I4.T4`
+        *   **Parallelizable:** Yes
 
 <!-- anchor: task-i4-t6 -->
-*   **Task 4.6:**
-    *   **Task ID:** `I4.T6`
-    *   **Description:** Introduce notification adapter stubs (Slack/email/webhook) with throttled queue, templates referencing severity levels, redaction, and feature flags.
-    *   **Agent Type Hint:** `BackendAgent`
-    *   **Inputs:** Section 4 directives, observability spec.
-    *   **Input Files:** [`src/adapters/notifications/index.ts`, `docs/guides/notification_playbook.md`]
-    *   **Target Files:** [`src/adapters/notifications/index.ts`, `tests/unit/notification_adapter.test.ts`, `docs/guides/notification_playbook.md`]
-    *   **Deliverables:** Adapter skeleton, queue config, doc describing enabling/disabling per repo.
-    *   **Acceptance Criteria:** Notifications disabled by default, throttle thresholds configurable, templates include anchors + severity labels; tests verify queue/resend logic.
-    *   **Dependencies:** [`I1.T7`, `I3.T6`]
-    *   **Parallelizable:** Yes
+    *   **Task 4.6:**
+        *   **Task ID:** `I4.T6`
+        *   **Description:** Extend CLI `status`/`resume` to include GitHub/Linear integration state, rate-limit warnings, branch protection blockers, and links to ResearchTask snapshots, ensuring JSON schema remains stable.
+            Provide documentation for automation consumers parsing these responses.
+        *   **Agent Type Hint:** `FrontendAgent`
+        *   **Inputs:** Section 1 (Target Audience), Section 2 (Communication patterns), outputs from `I4.T1`..`I4.T5`.
+        *   **Input Files**: ["docs/requirements/cli_surface.md", "docs/requirements/github_adapter.md", "docs/requirements/linear_adapter.md"]
+        *   **Target Files:** ["src/cli/commands/status.ts", "src/cli/commands/resume.ts", "docs/ui/cli_patterns.md", "tests/integration/cli_status_plan.spec.ts"]
+        *   **Deliverables:** Enhanced CLI outputs, documentation, tests verifying JSON schema, and sample transcripts for automation training.
+        *   **Acceptance Criteria:** JSON schema includes integration sections; human output highlights rate-limit warnings; doc enumerates fields for Graphite/CodeMachine ingestion.
+        *   **Dependencies:** `I4.T4`, `I4.T5`
+        *   **Parallelizable:** Yes
 
 <!-- anchor: task-i4-t7 -->
-*   **Task 4.7:**
-    *   **Task ID:** `I4.T7`
-    *   **Description:** Implement `ai-feature observe` command (cron-friendly) scanning run directories + GitHub merges to produce health report with KPIs, anomalies, and suggestions.
-    *   **Agent Type Hint:** `BackendAgent`
-    *   **Inputs:** Observability hub, GitHub adapter, run-directory metadata.
-    *   **Input Files:** [`src/cli/commands/observe.ts`, `docs/guides/observe_command.md`]
-    *   **Target Files:** [`src/cli/commands/observe.ts`, `docs/guides/observe_command.md`, `tests/smoke/observe_command.test.ts`]
-    *   **Deliverables:** CLI command writing `.ai-feature-pipeline/reports/<timestamp>.md`, doc describing scheduling + file lock usage.
-    *   **Acceptance Criteria:** Observe command reads run dirs, compiles KPI summary, respects concurrency lock, exit codes indicate success/anomaly.
-    *   **Dependencies:** [`I1.T6`, `I3.T6`]
-    *   **Parallelizable:** Yes
+    *   **Task 4.7:**
+        *   **Task ID:** `I4.T7`
+        *   **Description:** Build write action queue for GitHub (PR comments, labels, review requests) to throttle writes per IR-7, including serialization, retry/backoff, and telemetry.
+            Provide scenario tests hitting secondary limits to verify pause/resume logic.
+        *   **Agent Type Hint:** `BackendAgent`
+        *   **Inputs:** Section 2 (Key Components), IR-6/IR-7, Section 4 (Rate-limit directives).
+        *   **Input Files**: ["docs/requirements/integration_constraints.md", "docs/ops/rate_limit_reference.md"]
+        *   **Target Files:** ["src/workflows/writeActionQueue.ts", "docs/requirements/write_action_playbook.md", "tests/integration/writeActionQueue.spec.ts"]
+        *   **Deliverables:** Queue implementation, documentation describing usage, test suite simulating rate-limit responses, and CLI instrumentation linking actions to logs.
+        *   **Acceptance Criteria:** Secondary limit simulation triggers cooldown; queue persists to run directory; doc explains concurrency knobs; tests confirm deduping/idempotency keys.
+        *   **Dependencies:** `I4.T1`, `I4.T3`
+        *   **Parallelizable:** Yes
 
 <!-- anchor: task-i4-t8 -->
-*   **Task 4.8:**
-    *   **Task ID:** `I4.T8`
-    *   **Description:** Enhance `ai-feature export` CLI to package selected artifacts, run redaction scan, allow md/json output, and document manifest schema.
-    *   **Agent Type Hint:** `BackendAgent`
-    *   **Inputs:** Artifact bundle service, observability guidelines, Section 4 directives.
-    *   **Input Files:** [`src/cli/commands/export.ts`, `docs/guides/export_command.md`]
-    *   **Target Files:** [`src/cli/commands/export.ts`, `tests/smoke/export_command.test.ts`, `docs/guides/export_command.md`, `docs/templates/export_manifest.json`]
-    *   **Deliverables:** Enhanced command + doc, sample manifest, tests verifying redaction + inclusion toggles.
-    *   **Acceptance Criteria:** Export bundles include manifest/diffs/logs/telemetry, redaction filter passes tests, CLI prints shareable path.
-    *   **Dependencies:** [`I3.T7`, `I3.T9`]
-    *   **Parallelizable:** No
+    *   **Task 4.8:**
+        *   **Task ID:** `I4.T8`
+        *   **Description:** Create integration regression tests + fixtures covering GitHub/Linear success, rate-limit, and error paths, running via mocked HTTP servers and recorded responses; update milestone notes with coverage map.
+            Provide README instructions for updating fixtures.
+        *   **Agent Type Hint:** `TestingAgent`
+        *   **Inputs:** Section 2 (Technology Stack), FR/IR list, outputs from `I4.T1`..`I4.T7`.
+        *   **Input Files**: ["tests/fixtures/github/*.json", "tests/fixtures/linear/*.json", "docs/ops/rate_limit_reference.md"]
+        *   **Target Files:** ["tests/integration/github_linear_regression.spec.ts", "scripts/tooling/update_fixtures.sh", "plan/milestone_notes.md", "docs/ops/integration_testing.md"]
+        *   **Deliverables:** Regression test suite, fixture updater script, documentation, milestone notes summarizing coverage + outstanding gaps.
+        *   **Acceptance Criteria:** Tests simulate success, 403 secondary, 429 primary, missing scopes; fixtures stored with hashed metadata; doc teaches contributors how to refresh fixtures; milestone notes call out remaining manual scenarios.
+        *   **Dependencies:** `I4.T1`..`I4.T7`
+        *   **Parallelizable:** No
 
-<!-- anchor: task-i4-t9 -->
-*   **Task 4.9:**
-    *   **Task ID:** `I4.T9`
-    *   **Description:** Publish comprehensive CLI help system + docs (README updates, command reference, FAQs) referencing anchors and cross-linking to plan sections.
-    *   **Agent Type Hint:** `DocumentationAgent`
-    *   **Inputs:** All CLI commands, UI architecture.
-    *   **Input Files:** [`docs/guides/command_reference.md`, `README.md`]
-    *   **Target Files:** [`docs/guides/command_reference.md`, `README.md`, `docs/guides/faq.md`]
-    *   **Deliverables:** Up-to-date docs with tables for commands, flags, exit codes, reliability tips.
-    *   **Acceptance Criteria:** Each command documented with synopsis + exit codes; README includes quickstart; docs reference iterations + requirements.
-    *   **Dependencies:** [`I4.T2`–`I4.T8`]
-    *   **Parallelizable:** No
+*   **Iteration Risks & Mitigations:**
+    - Risk: GitHub API schema changes; Mitigation: OpenAPI spec + contract tests highlight drift, and adapters log request IDs for support tickets.
+    - Risk: Linear MCP downtime; Mitigation: offline snapshot cache + ResearchTask fallback documented in `linear_adapter.md`.
+    - Risk: Rate-limit storms; Mitigation: write action queue with telemetry/warnings plus `ai-feature rate-limits` command instructing operators to pause.
+*   **Hand-off Checklist to I5:**
+    - Provide working PR/resume/deploy transcripts, OpenAPI spec, and integration fixture bundles for deployment automation work.
+    - Confirm CLI `status --json` schema updates documented and exported for Graphite/CodeMachine consumption.
+    - Populate `plan/milestone_notes.md` with integration coverage and TODOs for deployment/export stages.
+*   **Iteration Metrics Targets & Recording Plan:**
+    - Track API call counts, rate-limit wait durations, PR creation latency, reviewer assignment success, and Linear snapshot freshness.
+    - Export metrics to Prometheus textfiles plus `telemetry/costs.json` for referencing integration costs.
+    - Document integration incidents (403/429, schema drift) to inform future governance.
+*   **Iteration Validation Hooks:**
+    - Schedule nightly GitHub/Linear contract tests using recorded fixtures to catch API drift early.
+    - Add CLI smoke script `scripts/tooling/smoke_pr.sh` verifying PR creation + reviewer assignment run end-to-end.
+    - Archive rate-limit ledger samples plus CLI transcripts in `.ai-feature-pipeline/templates/integration/` for deployment team reference.
+    - Provide example GitHub Action workflow file in docs/ops/pr_playbook.md demonstrating how CLI output feeds status checks, ensuring deployment iteration has reproducible references.
+    - Capture write-action queue depth and GitHub/Linear latency histograms inside metrics/prometheus.txt so deployment auto-merge heuristics can reuse the data.
+    - Store sanitized API transcripts for successful and rate-limited calls under run_directory/api/ so I5 export tooling has representative payloads.
 
-<!-- anchor: task-i4-t10 -->
-*   **Task 4.10:**
-    *   **Task ID:** `I4.T10`
-    *   **Description:** Implement interactive approval prompts (with `$EDITOR` fallback) capturing artifact hash, reason, signer, plus automation-friendly `--approved-by` flag for signed bundles.
-    *   **Agent Type Hint:** `FrontendAgent`
-    *   **Inputs:** Approval registry, UI renderer, Section 4 directives.
-    *   **Input Files:** [`src/cli/prompts/approval_prompt.ts`, `docs/guides/approvals.md`]
-    *   **Target Files:** [`src/cli/prompts/approval_prompt.ts`, `tests/unit/approval_prompt.test.ts`, `docs/guides/approvals.md`]
-    *   **Deliverables:** Prompt component, tests for $EDITOR fallback, doc updates covering automation usage.
-    *   **Acceptance Criteria:** Prompt shows artifact summary + diff hints, fallback instructions documented, CLI stores signatures + method, tests cover non-TTY behavior.
-    *   **Dependencies:** [`I2.T8`, `I4.T1`]
-    *   **Parallelizable:** Yes
-
-<!-- anchor: task-i4-t11 -->
-*   **Task 4.11:**
-    *   **Task ID:** `I4.T11`
-    *   **Description:** Add `ai-feature cleanup` CLI for retention enforcement: detect old run directories, verify exports, archive to tar when requested, and log actions for audit.
-    *   **Agent Type Hint:** `BackendAgent`
-    *   **Inputs:** Run-directory design, export command, observability docs.
-    *   **Input Files:** [`src/cli/commands/cleanup.ts`, `docs/guides/cleanup_command.md`]
-    *   **Target Files:** [`src/cli/commands/cleanup.ts`, `tests/smoke/cleanup_command.test.ts`, `docs/guides/cleanup_command.md`]
-    *   **Deliverables:** CLI command, doc describing retention settings, tests verifying dry-run + actual cleanup.
-    *   **Acceptance Criteria:** Command lists candidates, respects `--dry-run`, archives when `--archive` set, records actions to logs.
-    *   **Dependencies:** [`I1.T6`, `I4.T8`]
-    *   **Parallelizable:** Yes
-
-*   **Iteration Reporting:** Produce `.codemachine/reports/I4_summary.md` summarizing CLI UX changes, documentation updates, and command coverage stats.
-*   **Carryover Handling:** Log UX backlog items (e.g., TUIs) if not finished, reference them in `docs/guides/ui_style.md` backlog section.
-*   **Retro Notes:** Capture operator feedback, notification tuning, and gating improvements inside `docs/guides/iteration_retrospectives.md`.

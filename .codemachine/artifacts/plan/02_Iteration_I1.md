@@ -1,140 +1,141 @@
 <!-- anchor: iteration-plan-overview -->
 ## 5. Iteration Plan
 
-*   **Total Iterations Planned:** 5 iterations spanning foundations, context/intelligence, adapters/execution, workflow UX, and deployment/compliance hardening.
-*   **Iteration Dependencies:** Iteration 1 delivers architectural scaffolding; Iteration 2 consumes diagrams/specs from Iteration 1; Iteration 3 builds adapters atop planners; Iteration 4 layers CLI workflows on execution engine; Iteration 5 finalizes deployment/export/ops guardrails.
-*   **Planning Cadence:** Two-week sprints with mid-point reviews; diagrams/specs frozen before downstream coding begins.
-*   **Collaboration Notes:** Structural architecture SMEs partner with Setup and Documentation agents; security reviewers embedded for schema/log topics.
+*   **Total Iterations Planned:** 5
+*   **Iteration Dependencies:** `I1` establishes the CLI shell, configuration schema, persistence, HTTP plumbing, and architectural documentation; `I2` layers context gathering plus PRD/spec flows atop those foundations; `I3` implements execution engines, validation loops, and queue management; `I4` finalizes GitHub/Linear/agent adapters plus PR automation; `I5` delivers deployment orchestration, exports, observability hardening, and operational runbooks.
 
 <!-- anchor: iteration-1-plan -->
-### Iteration 1: Foundational Architecture & Deterministic State
+### Iteration 1: Foundation & State Primitives
 
 *   **Iteration ID:** `I1`
-*   **Goal:** Establish project scaffolding, configuration schema, deterministic run-directory patterns, and canonical architectural artifacts needed for downstream autonomous work.
-*   **Prerequisites:** None.
-*   **Key Deliverables:** oclif skeleton, RepoConfig schema + init flow, PlantUML component diagram, Mermaid ERD + state machine, run-directory and hash-manifest templates, observability schema, ADR + governance notes.
-*   **Key Risks:** Misaligned schema versions causing migrations later; insufficient documentation of adapters leading to rework; run-directory design failing to capture resumability metadata; Docker image divergence relative to local environment.
-*   **Coordination Plan:** Hold kickoff aligning CLI scaffolding with documentation; share diagrams with agent integrators for review; schedule security check on schema.
-*   **Success Metrics:** CLI lint/test pass rate 100%; diagrams validated; init command bootstraps sample repo; run-directory tests cover create/load/lock >90% lines.
-*   **Exit Criteria:** Repo builds, config validated, diagrams committed, templates published, init flow proven with smoke test on sample repo, governance ADR merged.
+*   **Goal:** Bootstrap the Node.js/TypeScript CLI workspace, define RepoConfig schemas, implement deterministic run directory management, wire the HTTP/rate-limit layer, and capture initial architecture diagrams so every later iteration can build against stable contracts.
+*   **Prerequisites:** None; this iteration seeds the repo and authoritative documentation.
+*   **Key Deliverables:** CLI scaffold with lint/test tooling, RepoConfig validator + templates, run directory manager + schema doc, HTTP client with ledger, component diagram, telemetry baseline, data model ERD, and `ai-feature init/doctor` commands with readiness checklist.
+*   **Exit Criteria:** Commands compile and run locally, documentation and diagrams stored under `docs/`, automated tests cover config and persistence modules, and readiness checklist is published for I2 hand-off.
+*   **Tasks:**
 
 <!-- anchor: task-i1-t1 -->
-*   **Task 1.1:**
-    *   **Task ID:** `I1.T1`
-    *   **Description:** Scaffold oclif CLI, baseline tsconfig/eslint/prettier, Dockerfile (Node v24), and CI smoke test skeleton to guarantee deterministic builds for follow-on iterations.
-    *   **Agent Type Hint:** `SetupAgent`
-    *   **Inputs:** Architectural overview (Section 2), directory structure (Section 3).
-    *   **Input Files:** []
-    *   **Target Files:** [`package.json`, `tsconfig.json`, `Dockerfile`, `.github/workflows/ci.yml`, `src/cli/index.ts`]
-    *   **Deliverables:** Compiling CLI skeleton with placeholder `init` command, lint/test scripts, Docker build instructions.
-    *   **Acceptance Criteria:** `npm run lint` + `npm test` pass; Docker image builds; CI workflow references Node v24; README stub notes commands.
-    *   **Dependencies:** []
-    *   **Parallelizable:** Yes
+    *   **Task 1.1:**
+        *   **Task ID:** `I1.T1`
+        *   **Description:** Scaffold the `oclif` CLI workspace with strict TypeScript settings, shared lint/test scripts, and stub commands for `init`, `start`, and `status` so downstream agents inherit a predictable developer experience.
+            Include ESLint/Prettier configuration, npm scripts for lint/test/smoke, Dockerfile boilerplate, and Git hooks template entries documented in the README so contributors can reproduce builds locally or via Docker.
+        *   **Agent Type Hint:** `SetupAgent`
+        *   **Inputs:** Section 2 (Core Architecture), Section 3 (Directory Structure), ADR-1 (Agent Execution Model).
+        *   **Input Files**: ["docs/requirements/project_spec.md", "docs/adr/ADR-1-agent-execution.md"]
+        *   **Target Files:** ["package.json", "tsconfig.json", "src/cli/index.ts", "src/cli/commands/start.ts", "src/cli/commands/status.ts", "docker/Dockerfile", "README.md"]
+        *   **Deliverables:** Bootstrapped CLI with version banner, shared TypeScript config, lint/test scripts, Dockerfile entry, and README updates describing the new commands.
+        *   **Acceptance Criteria:** `npm run lint` and `npm run test -- --runInBand` pass on Node v24; running `bin/run --version` prints the semantic version; git diff limited to declared files with no leftover scaffolding; README lists prerequisites and installation hints plus `--json` usage.
+        *   **Dependencies:** None
+        *   **Parallelizable:** No
 
 <!-- anchor: task-i1-t2 -->
-*   **Task 1.2:**
-    *   **Task ID:** `I1.T2`
-    *   **Description:** Define RepoConfig schema (JSON Schema + zod types) and implement `ai-feature init` flow that detects git root, scaffolds `.ai-feature-pipeline/config.json`, and validates credentials stubs.
-    *   **Agent Type Hint:** `SetupAgent`
-    *   **Inputs:** Requirements FR-1/FR-17, Directory structure.
-    *   **Input Files:** [`config/schemas/repo_config.schema.json`, `docs/guides/rate_limit_playbook.md`]
-    *   **Target Files:** [`src/cli/commands/init.ts`, `src/core/config/repo_config.ts`, `examples/sample_repo_config/config.json`]
-    *   **Deliverables:** Schema-backed config loader, CLI prompt, sample config with feature flags, doc updates.
-    *   **Acceptance Criteria:** Running `ai-feature init` in sample repo creates config with schema_version, github/linear/runtime/safety blocks; invalid config surfaces actionable message and exit code 10.
-    *   **Dependencies:** [`I1.T1`]
-    *   **Parallelizable:** No
+    *   **Task 1.2:**
+        *   **Task ID:** `I1.T2`
+        *   **Description:** Define the RepoConfig schema using `zod`, include governance fields, integration toggles, runtime safety defaults, and `config_history` tracking so future migrations can be reasoned about deterministically.
+            Provide typed helpers that load/validate `.ai-feature-pipeline/config.json`, emit actionable error messages, render default configs, and integrate with CLI commands needing config resolution.
+        *   **Agent Type Hint:** `BackendAgent`
+        *   **Inputs:** Section 2 (Technology Stack & Key Components), Section 2.1 (Run Directory artifact), ADR-2 (State Persistence), ADR-5 (Approval workflow).
+        *   **Input Files**: ["docs/requirements/data_models.md", "docs/adr/ADR-2-state-persistence.md", "docs/adr/ADR-5-approval-workflow.md"]
+        *   **Target Files:** ["src/core/config/RepoConfig.ts", "src/core/config/validator.ts", "docs/requirements/RepoConfig_schema.md", ".ai-feature-pipeline/templates/config.example.json", "docs/requirements/config_migrations.md"]
+        *   **Deliverables:** Typed RepoConfig module, validation helper, schema documentation, example config referencing environment variables, and migration checklist template.
+        *   **Acceptance Criteria:** `vitest src/core/config` suite reports 100% pass; CLI errors on invalid config with actionable hints; doc enumerates each field with default, data type, ADR reference, and description of CLI overrides; template file loads without mutation; migration checklist stored for future iterations.
+        *   **Dependencies:** `I1.T1`
+        *   **Parallelizable:** No
 
 <!-- anchor: task-i1-t3 -->
-*   **Task 1.3:**
-    *   **Task ID:** `I1.T3`
-    *   **Description:** Produce PlantUML component diagram aligning with Section 2 components, annotating adapters, orchestration layers, persistence services, and observability.
-    *   **Agent Type Hint:** `DiagrammingAgent`
-    *   **Inputs:** Section 2 Core Architecture, directory tree.
-    *   **Input Files:** [`docs/diagrams/component_overview.puml`]
-    *   **Target Files:** [`docs/diagrams/component_overview.puml`, `docs/README.md`]
-    *   **Deliverables:** Renderable UML diagram plus doc blurb referencing usage and iteration placement.
-    *   **Acceptance Criteria:** Diagram compiles (PlantUML), matches listed modules, includes anchors for adapters/resume/observability, and doc cross-link added.
-    *   **Dependencies:** [`I1.T1`]
-    *   **Parallelizable:** Yes
+    *   **Task 1.3:**
+        *   **Task ID:** `I1.T3`
+        *   **Description:** Implement the Run Directory Manager that provisions `.ai-feature-pipeline/<feature_id>/`, writes manifests, enforces file locks, and optionally seeds SQLite WAL indexes, then document the structure in Markdown + Mermaid per Section 2.1.
+            Include helpers for hash manifests, `last_step` tracking, `last_error`, approvals, queue storage, manifest integrity checks, and cleanup hooks invoked by future `cleanup` command.
+        *   **Agent Type Hint:** `BackendAgent`
+        *   **Inputs:** Section 3 (Directory Structure), Section 2 (Data Model overview), ADR-2 (State Persistence).
+        *   **Input Files**: ["docs/requirements/run_directory.md", "docs/adr/ADR-2-state-persistence.md"]
+        *   **Target Files:** ["src/persistence/runDirectoryManager.ts", "src/persistence/hashManifest.ts", "docs/diagrams/run_directory_schema.mmd", ".ai-feature-pipeline/templates/run_manifest.json", "docs/requirements/run_directory_schema.md"]
+        *   **Deliverables:** TypeScript module with file-lock helpers, sample manifest JSON, Mermaid diagram plus Markdown narrative describing directories, queues, telemetry, and state machine transitions.
+        *   **Acceptance Criteria:** Persistence unit tests simulate concurrent access without corruption; diagram renders in CI; doc explains retention metadata and links to cleanup tasks; CLI dry-run command `bin/run status --json` references the manifest layout and prints `last_step/last_error` fields.
+        *   **Dependencies:** `I1.T2`
+        *   **Parallelizable:** Yes
 
 <!-- anchor: task-i1-t4 -->
-*   **Task 1.4:**
-    *   **Task ID:** `I1.T4`
-    *   **Description:** Model ERD using Mermaid covering Feature/RepoConfig/RunArtifact/PlanArtifact/ResearchTask/Specification/ExecutionTask/ContextDocument/RateLimitEnvelope/ApprovalRecord.
-    *   **Agent Type Hint:** `DatabaseAgent`
-    *   **Inputs:** Data model overview (Section 2), requirements Section 3.
-    *   **Input Files:** [`docs/diagrams/data_model.mmd`]
-    *   **Target Files:** [`docs/diagrams/data_model.mmd`, `docs/guides/data_dictionary.md`]
-    *   **Deliverables:** Mermaid ERD plus textual dictionary summarizing each entity and reference.
-    *   **Acceptance Criteria:** Diagram renders, includes cardinalities, field lists, and cross-links; dictionary stored under `docs/guides/data_dictionary.md` summarizing attributes/IDs.
-    *   **Dependencies:** [`I1.T2`]
-    *   **Parallelizable:** Yes
+    *   **Task 1.4:**
+        *   **Task ID:** `I1.T4`
+        *   **Description:** Build the shared `undici`-based HTTP client that injects Accept and `X-GitHub-Api-Version` headers, enforces idempotency keys, handles exponential backoff, records rate-limit envelopes, and surfaces structured errors for the adapter layer.
+            Provide typed error taxonomy (transient/permanent/human-action) and log sanitized request metadata for observability while writing ledger entries into run directories.
+        *   **Agent Type Hint:** `BackendAgent`
+        *   **Inputs:** Section 2 (Technology Stack, Communication Patterns), FR/IR requirements list, ADR-6 (Linear Integration), IR-1..IR-7.
+        *   **Input Files**: ["docs/requirements/integration_constraints.md", "docs/adr/ADR-6-linear-integration.md", "docs/requirements/rate_limit_playbook.md"]
+        *   **Target Files:** ["src/adapters/http/client.ts", "src/telemetry/rateLimitLedger.ts", "tests/unit/httpClient.spec.ts", "docs/ops/rate_limit_reference.md"]
+        *   **Deliverables:** HTTP client module, ledger writer, unit tests covering headers/retry logic, schema for ledger JSON, and documentation describing how envelopes are persisted and consumed.
+        *   **Acceptance Criteria:** Contract tests verify Accept + API headers on GitHub calls; logging demonstrates sanitized payloads plus request IDs; ledger JSON stored in run directory during smoke test; doc explains `retry-after` handling, cooldown states, and failure escalation guidance.
+        *   **Dependencies:** `I1.T1`
+        *   **Parallelizable:** Yes
 
 <!-- anchor: task-i1-t5 -->
-*   **Task 1.5:**
-    *   **Task ID:** `I1.T5`
-    *   **Description:** Document feature lifecycle + approvals as Mermaid state machine plus Markdown narrative referencing FR-3, FR-11, FR-15.
-    *   **Agent Type Hint:** `DiagrammingAgent`
-    *   **Inputs:** Requirements FR-3/FR-11/FR-15, Section 2 communication patterns.
-    *   **Input Files:** [`docs/diagrams/feature_state_machine.mmd`]
-    *   **Target Files:** [`docs/diagrams/feature_state_machine.mmd`, `docs/guides/state_machine.md`]
-    *   **Deliverables:** State machine diagram + explanation of gating + resume hooks.
-    *   **Acceptance Criteria:** Diagram passes Mermaid lint, includes states/gates/approvals/resume events; guide maps states to CLI commands.
-    *   **Dependencies:** [`I1.T3`, `I1.T4`]
-    *   **Parallelizable:** Yes
+    *   **Task 1.5:**
+        *   **Task ID:** `I1.T5`
+        *   **Description:** Author the PlantUML Component Diagram plus supporting Markdown narration that map CLI, orchestration services, adapters, persistence, and observability components called out in Section 2, enabling downstream agents to reason about boundaries.
+            Align diagram swim-lanes with ADR responsibilities, call out extension points, and include references to planned sequence diagrams in later iterations.
+        *   **Agent Type Hint:** `DiagrammingAgent`
+        *   **Inputs:** Section 2 (Key Components/Services), Section 2.1 artifact list, ADR-1..ADR-4.
+        *   **Input Files**: ["docs/architecture/overview.md", "docs/adr/ADR-1-agent-execution.md", "docs/adr/ADR-4-context-gathering.md"]
+        *   **Target Files:** ["docs/diagrams/component_overview.puml", "docs/diagrams/component_overview.md", "docs/architecture/component_index.md"]
+        *   **Deliverables:** PlantUML source plus Markdown commentary referencing anchors, exported preview (if scripted), and checklist for updating diagrams when new adapters land.
+        *   **Acceptance Criteria:** Diagram renders via CI; Markdown enumerates each component with responsibilities, dependencies, and ADR references; manifest entry ready for downstream agents; reviewers can navigate from documentation to PlantUML source quickly.
+        *   **Dependencies:** `I1.T1`, `I1.T3`, `I1.T4`
+        *   **Parallelizable:** Yes
 
 <!-- anchor: task-i1-t6 -->
-*   **Task 1.6:**
-    *   **Task ID:** `I1.T6`
-    *   **Description:** Design deterministic run-directory layout + hash-manifest format, implement scaffolding helpers, and produce templates for feature.json, plan.json, queue JSONL, logs, metrics.
-    *   **Agent Type Hint:** `BackendAgent`
-    *   **Inputs:** Section 3 directory structure, Section 4 directives.
-    *   **Input Files:** [`src/persistence/run_directory.ts`, `examples/run_directory_templates/feature.json`]
-    *   **Target Files:** [`src/persistence/run_directory.ts`, `src/persistence/hash_manifest.ts`, `docs/guides/run_directory.md`]
-    *   **Deliverables:** Code for directory creation, manifest writing, file-lock guidelines, and run-dir guide.
-    *   **Acceptance Criteria:** Unit tests cover create/load/lock operations; guide lists required files + sample ULID naming; CLI `ai-feature init` scaffolds `.ai-feature-pipeline` root.
-    *   **Dependencies:** [`I1.T2`]
-    *   **Parallelizable:** No
+    *   **Task 1.6:**
+        *   **Task ID:** `I1.T6`
+        *   **Description:** Establish baseline logging, metrics, and trace instrumentation plus documentation describing log schemas, redaction rules, and Prometheus textfile outputs so observability is consistent from the first run.
+            Implement shared logger with structured JSON lines, metrics writer for queue/rate-limit stats, OpenTelemetry file exporter wiring, and redaction utilities that scan for token patterns across CLI output and saved artifacts.
+        *   **Agent Type Hint:** `BackendAgent`
+        *   **Inputs:** Section 2 (Observability tools), Section 4 directives, NFR-6..NFR-10.
+        *   **Input Files**: ["docs/requirements/non_functional.md", "docs/ops/logging_playbook.md", "docs/ops/telemetry_matrix.md"]
+        *   **Target Files:** ["src/telemetry/logger.ts", "src/telemetry/metrics.ts", "src/telemetry/traces.ts", "docs/ops/observability_baseline.md", "tests/unit/logger.spec.ts"]
+        *   **Deliverables:** Shared telemetry utilities, metrics schema doc, redaction helper, sample log excerpts proving redaction plus severity tagging, and instructions for toggling verbosity.
+        *   **Acceptance Criteria:** `npm run test telemetry` passes; running `bin/run status --json` emits structured log lines and writes `metrics/prometheus.txt`; doc references log fields, metrics names, trace export locations, and redaction guarantees; telemetry components integrate with CLI dependency injection container.
+        *   **Dependencies:** `I1.T1`, `I1.T4`
+        *   **Parallelizable:** No
 
 <!-- anchor: task-i1-t7 -->
-*   **Task 1.7:**
-    *   **Task ID:** `I1.T7`
-    *   **Description:** Draft observability/logging specification describing logs.ndjson schema, metrics textfile structure, traces.json exporter, and governance of rate-limit ledger.
-    *   **Agent Type Hint:** `DocumentationAgent`
-    *   **Inputs:** Section 2 components, Section 4 directives, Requirements Section 7.
-    *   **Input Files:** [`docs/guides/observability.md`]
-    *   **Target Files:** [`docs/guides/observability.md`, `config/schemas/log_entry.schema.json`, `config/schemas/rate_limit.schema.json`]
-    *   **Deliverables:** Document referencing schema + sample log entries; JSON Schemas for telemetry.
-    *   **Acceptance Criteria:** Schema validated via npm script; guide includes severity mapping, rotation policy, and instructions for export bundling.
-    *   **Dependencies:** [`I1.T6`]
-    *   **Parallelizable:** Yes
+    *   **Task 1.7:**
+        *   **Task ID:** `I1.T7`
+        *   **Description:** Formalize Feature/RepoConfig/RunArtifact/PlanArtifact/ResearchTask/Specification/ExecutionTask/etc. interfaces in TypeScript, add serialization helpers, and produce the Mermaid ERD described in Section 2.1.
+            Ensure schemas capture telemetry fields (cost, rate limits), approvals, and resume metadata, integrating with `zod` validators where needed and documenting trace IDs.
+        *   **Agent Type Hint:** `StructuralDataAgent`
+        *   **Inputs:** Section 2 (Data Model Overview), Section 2.1 (ERD artifact), FR-1..FR-3, ADR-7 (Validation Policy).
+        *   **Input Files**: ["docs/requirements/data_models.md", "docs/adr/ADR-7-validation-policy.md", "docs/requirements/traceability_map.md"]
+        *   **Target Files:** ["src/core/models/Feature.ts", "src/core/models/ExecutionTask.ts", "src/core/models/index.ts", "docs/diagrams/data_model.mmd", "docs/requirements/data_model_dictionary.md", "tests/fixtures/model_samples.json"]
+        *   **Deliverables:** Strongly typed interfaces with serialization tests, ERD diagram, dictionary describing every field with units and ADR reference, plus `trace.json` schema outline and fixture set for later automated verifications.
+        *   **Acceptance Criteria:** Model tests ensure immutability/serialization; ERD renders and lists cardinalities; dictionary cross-links FR/IR IDs and CLI commands referencing each model; sample JSON fixtures checked into `tests/fixtures` and validated against schemas.
+        *   **Dependencies:** `I1.T2`, `I1.T3`
+        *   **Parallelizable:** Yes
 
 <!-- anchor: task-i1-t8 -->
-*   **Task 1.8:**
-    *   **Task ID:** `I1.T8`
-    *   **Description:** Capture governance + security ADR outlining approval gates, feature flags, token scopes, and change-control expectations aligned with Section 4 directives.
-    *   **Agent Type Hint:** `DocumentationAgent`
-    *   **Inputs:** Section 4 Directives, Requirements Section 8 & 9.
-    *   **Input Files:** [`docs/adr/0001-foundation.md`]
-    *   **Target Files:** [`docs/adr/0001-foundation.md`, `docs/guides/security_posture.md`]
-    *   **Deliverables:** ADR referencing decision drivers, consequences, and compliance hooks plus security posture overview.
-    *   **Acceptance Criteria:** ADR template filled, cross-linked in README; security guide lists PAT scopes, GitHub App roadmap, and log redaction guarantees.
-    *   **Dependencies:** [`I1.T2`, `I1.T7`]
-    *   **Parallelizable:** Yes
+    *   **Task 1.8:**
+        *   **Task ID:** `I1.T8`
+        *   **Description:** Implement `ai-feature init` (RepoConfig scaffolding + integration checks) and `ai-feature doctor` (environment diagnostics), including documentation of exact prompts, approvals, and safety nets so future runs start consistently.
+            Integrate telemetry to record command invocations, produce readiness checklist stored under `plan/readiness_checklist.md`, and describe exit codes for CI/homelab operators.
+        *   **Agent Type Hint:** `DocumentationAgent`
+        *   **Inputs:** Section 1 (Key Assumptions), Section 3 (Directory Structure), ADR-5 (Approval workflow).
+        *   **Input Files**: ["docs/requirements/cli_surface.md", "docs/ops/init_playbook.md", "plan/readiness_checklist.md"]
+        *   **Target Files:** ["src/cli/commands/init.ts", "src/cli/commands/doctor.ts", "docs/ops/init_playbook.md", "plan/readiness_checklist.md", "docs/ops/doctor_reference.md"]
+        *   **Deliverables:** CLI commands with interactive + `--yes` flows, documentation outlining prerequisites, outputs, and failure taxonomy, plus checklist template consumed by later iterations.
+        *   **Acceptance Criteria:** Running `bin/run init --dry-run --json` produces deterministic output; `bin/run doctor` inspects Node version, git, Docker, and token presence; docs explain exit codes (0/10/20/30), approvals, and next steps when checks fail; readiness checklist enumerates gating questions with status columns and references to RepoConfig fields.
+        *   **Dependencies:** `I1.T2`, `I1.T6`, `I1.T7`
+        *   **Parallelizable:** No
 
-<!-- anchor: task-i1-t9 -->
-*   **Task 1.9:**
-    *   **Task ID:** `I1.T9`
-    *   **Description:** Execute sample dogfood run using placeholder feature to validate init + run-directory scaffolding and document cleanup script for stale runs.
-    *   **Agent Type Hint:** `SetupAgent`
-    *   **Inputs:** Outputs from Tasks I1.T2/I1.T6, Observability spec.
-    *   **Input Files:** [`examples/run_directory_templates/feature.json`, `scripts/smoke_cli.sh`]
-    *   **Target Files:** [`scripts/smoke_cli.sh`, `docs/guides/dogfood_run.md`, `scripts/cleanup_runs.sh`]
-    *   **Deliverables:** Automated script performing init/start placeholder run, verifying directory contents, and cleanup instructions.
-    *   **Acceptance Criteria:** Script creates ULID-based run dir, writes feature.json+plan.json placeholders, verifies logs+metrics files exist, and cleanup script archives & deletes sample run.
-    *   **Dependencies:** [`I1.T6`]
-    *   **Parallelizable:** No
-
-*   **Iteration Reporting:** Summarize outputs (CLI scaffolding metrics, diagram links, schema versions) inside `.codemachine/reports/I1_summary.md` for downstream teams.
-*   **Carryover Handling:** Capture deferred scope or risks in `docs/adr/0001-foundation.md` appendix and tag associated feature flags for Iteration 2 triage.
-*   **Retro Notes:** Run retro at close, documenting action items and lessons learned in `docs/guides/iteration_retrospectives.md` with pointers to impacted artifacts.
+*   **Iteration Risks & Mitigations:**
+    - Risk: Toolchain drift or missing Node/gcc dependencies on target machines could block CLI scaffolding; Mitigation: `ai-feature doctor` enumerates required binaries and provides Docker instructions plus fallback offline doc references.
+    - Risk: Early HTTP client bugs could leak secrets; Mitigation: redaction unit tests, code review checklist, and telemetry verification ensure tokens are masked before logging.
+    - Risk: Data model churn may cascade into later iterations; Mitigation: `data_model_dictionary.md` records schema ownership and change-control process anchored in ADRs.
+*   **Hand-off Checklist to I2:**
+    - Run `bin/run init --dry-run` and `bin/run doctor` inside sample repo to confirm deterministic output captured in `plan/readiness_checklist.md`.
+    - Ensure `docs/diagrams/component_overview.puml`, `run_directory_schema.mmd`, and `data_model.mmd` render in CI and are linked from README sections referenced by I2 tasks.
+    - Provide sample `.ai-feature-pipeline/config.json`, hashed manifest fixture, and telemetry logs to context/PRD teams so they can simulate feature runs without revisiting foundational work.
+    - Archive `docs/ops/observability_baseline.md` preview plus logger sample output in `.ai-feature-pipeline/templates/` for reuse in context gathering smoke tests.
+*   **Iteration Metrics Targets & Recording Plan:**
+    - Track CLI bootstrap duration, lint/test runtimes, and HTTP client benchmark results within `metrics/prometheus.txt` so later iterations can detect regressions.
+    - Record rate-limit ledger samples even in synthetic mode to validate schema before real API calls.
+    - Document manual review outcomes (diagram approvals, schema sign-off) in `plan/milestone_notes.md` to create an auditable baseline for I2+ retrospectives.

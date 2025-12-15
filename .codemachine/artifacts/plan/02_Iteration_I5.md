@@ -1,145 +1,141 @@
 <!-- anchor: iteration-5-plan -->
-### Iteration 5: Deployment Automation, Reliability Hardening, and Compliance Bundles
+### Iteration 5: Deployment Automation, Export Bundles & Operational Hardening
 
 *   **Iteration ID:** `I5`
-*   **Goal:** Finalize deployment workflows, rate-limit resilience, compliance-ready exports, telemetry dashboards, and operational runbooks ensuring homelab-friendly automation.
-*   **Prerequisites:** `I1`–`I4`
-*   **Key Deliverables:** Deployment trigger module, branch protection diagnostics, auto-merge controls, status check monitoring, rate-limit playbooks, observability metrics dashboard, compliance/export bundles, policy documentation, cleanup automation tests.
-*   **Key Risks:** Merge loops due to stale checks, inaccurate deployment reporting, rate-limit storms, incomplete compliance bundles, missing cleanup/backups.
-*   **Coordination Plan:** Work with ops + security on policy docs, confirm GitHub workflow IDs with repo owners, rehearse deployment on sample repo.
-*   **Success Metrics:** Deploy command handles blocked/passed scenarios, rate-limit ledger alerts recorded, exports validated by `ai-feature export`, cleanup/observe commands produce actionable KPIs, compliance docs aligned with Section 5.2 scope.
-*   **Exit Criteria:** CLI ready for pilot usage with deployment automation, reliability docs, and compliance artifacts; backlog triaged.
+*   **Goal:** Finalize deployment orchestration (status-check polling, auto-merge toggles, workflow dispatch), implement export bundles + manifest schemas, deliver observability/cleanup commands, codify ops/compliance documentation, and ensure glossary/verification sections remain current.
+*   **Prerequisites:** Integrations operational (`I4`), execution pipeline stable (`I3`), context/spec flows ready (`I2`), and CLI foundation complete (`I1`). GitHub repo must support protected branches and workflow dispatch for testing.
+*   **Key Deliverables:** Deployment trigger module + state diagram, export bundler + schema, `ai-feature observe` & `cleanup`, notification adapter baseline, e2e deploy/resume tests, verification strategy updates, glossary refresh, and compliance/security docs.
+*   **Exit Criteria:** CLI can detect merge blockers, request approvals, enable auto-merge when allowed, trigger deployment workflows, generate export bundles, run observe/cleanup tasks, and document verification + glossary updates for downstream teams.
+*   **Tasks:**
 
 <!-- anchor: task-i5-t1 -->
-*   **Task 5.1:**
-    *   **Task ID:** `I5.T1`
-    *   **Description:** Implement deployment trigger module (service) orchestrating GitHub branch protection queries, status check polling, merge attempts, workflow dispatch, and auto-merge toggles with logging.
-    *   **Agent Type Hint:** `BackendAgent`
-    *   **Inputs:** GitHub adapter, requirements FR-15/FR-16, IR-5.
-    *   **Input Files:** [`src/services/deployment/trigger.ts`, `tests/integration/deployment_trigger.test.ts`]
-    *   **Target Files:** [`src/services/deployment/trigger.ts`, `tests/integration/deployment_trigger.test.ts`, `docs/guides/deployment_module.md`]
-    *   **Deliverables:** Deployment module, tests simulating blocked/passed states, documentation describing behavior.
-    *   **Acceptance Criteria:** Module inspects required checks vs latest SHA, respects retry-after, optionally registers auto-merge; tests cover blocked statuses + merges.
-    *   **Dependencies:** [`I3.T2`, `I3.T7`]
-    *   **Parallelizable:** No
+    *   **Task 5.1:**
+        *   **Task ID:** `I5.T1`
+        *   **Description:** Implement Deployment Trigger module controlling merge readiness, status-check polling, auto-merge toggles, and workflow dispatch, plus create the Deployment & Resume State Diagram (PlantUML) for Section 2.1.
+            Ensure module works with branch protection data from `I4.T5`, integrates with approvals, and records deployment records.
+        *   **Agent Type Hint:** `BackendAgent`
+        *   **Inputs:** Section 2.1 (Deployment Diagram), FR-15/FR-16, ADR-3.
+        *   **Input Files**: ["docs/requirements/github_branch_protection.md", "docs/requirements/deploy_flows.md", "docs/diagrams/pr_automation_sequence.mmd"]
+        *   **Target Files:** ["src/workflows/deploymentTrigger.ts", "docs/diagrams/deployment_resume_state.puml", "docs/requirements/deployment_playbook.md", "tests/integration/deploymentTrigger.spec.ts"]
+        *   **Deliverables:** Deployment module, PlantUML diagram, doc covering auto-merge/manual flows, and tests verifying branch protection detection.
+        *   **Acceptance Criteria:** CLI `deploy` reports blockers, can enable auto-merge when allowed, triggers workflow dispatch, updates `deployment.json`; diagram renders; doc outlines manual override path.
+        *   **Dependencies:** `I4.T1`..`I4.T5`
+        *   **Parallelizable:** No
 
 <!-- anchor: task-i5-t2 -->
-*   **Task 5.2:**
-    *   **Task ID:** `I5.T2`
-    *   **Description:** Create rate-limit + deployment playbooks (Markdown) detailing GitHub/Linear headers, retry strategies, manual override process, and compliance tie-ins.
-    *   **Agent Type Hint:** `DocumentationAgent`
-    *   **Inputs:** Requirements IR-6/IR-9, Section 4 directives.
-    *   **Input Files:** [`docs/guides/rate_limit_playbook.md`, `docs/guides/deployment_runbook.md`]
-    *   **Target Files:** [`docs/guides/rate_limit_playbook.md`, `docs/guides/deployment_runbook.md`]
-    *   **Deliverables:** Updated playbooks referencing ledger fields, human action steps, GitHub documentation links.
-    *   **Acceptance Criteria:** Playbooks cite Accept header, API version, `retry-after`, `x-ratelimit-reset`; include tables for GitHub vs Linear; cross-linked to CLI docs.
-    *   **Dependencies:** [`I3.T1`, `I5.T1`]
-    *   **Parallelizable:** Yes
+    *   **Task 5.2:**
+        *   **Task ID:** `I5.T2`
+        *   **Description:** Build Export Bundle service packaging prompts, context manifest, PRD/spec, plan, logs, metrics, diffs, approvals, rate-limit ledger, deployment records, and API transcripts; define JSON Schema + Markdown playbook per Section 2.1.
+            Support formats `json` and `md`, with CLI `ai-feature export` enhancements.
+        *   **Agent Type Hint:** `BackendAgent`
+        *   **Inputs:** Section 2.1 (Export schema), Section 3 (Directory structure), NFR-10.
+        *   **Input Files**: ["docs/requirements/export_bundles.md", "docs/requirements/run_directory_schema.md", "docs/requirements/traceability_playbook.md"]
+        *   **Target Files:** ["src/workflows/exportService.ts", "src/cli/commands/export.ts", "docs/requirements/export_manifest_schema.json", "docs/ops/export_playbook.md", "tests/integration/exportBundles.spec.ts"]
+        *   **Deliverables:** Export service, CLI updates, schema, documentation, and integration tests verifying completeness and redaction.
+        *   **Acceptance Criteria:** Bundles include manifest with hashes; CLI `export --format json` writes zipped folder; doc describes verifying signatures; schema validated in CI.
+        *   **Dependencies:** `I3.T6`, `I4.T4`
+        *   **Parallelizable:** Yes
 
 <!-- anchor: task-i5-t3 -->
-*   **Task 5.3:**
-    *   **Task ID:** `I5.T3`
-    *   **Description:** Harden export bundle builder to include trace.json, approvals, API transcripts, diff stats, telemetry, plus optional JSON signature for compliance.
-    *   **Agent Type Hint:** `BackendAgent`
-    *   **Inputs:** Export CLI, artifact bundle service.
-    *   **Input Files:** [`src/services/export/bundle_builder.ts`, `docs/templates/export_manifest.json`]
-    *   **Target Files:** [`src/services/export/bundle_builder.ts`, `tests/integration/export_bundle.test.ts`, `docs/guides/compliance_bundle.md`]
-    *   **Deliverables:** Enhanced builder, tests ensuring manifest completeness, compliance doc.
-    *   **Acceptance Criteria:** Bundle includes manifest/docs/logs/traces/rate-limits/diffs/approvals; optional signature stored; tests verify hash coverage.
-    *   **Dependencies:** [`I4.T8`]
-    *   **Parallelizable:** No
+    *   **Task 5.3:**
+        *   **Task ID:** `I5.T3`
+        *   **Description:** Deliver Observability operations: `ai-feature observe` command summarizing run health, KPIs, rate-limit events, plus operations runbook per Section 2.1; include metrics ingest instructions for homelab dashboards.
+            Integrate with telemetry files and schedule-friendly output.
+        *   **Agent Type Hint:** `OpsAgent`
+        *   **Inputs:** Section 2 (Observability), docs from `I1.T6` and `I3.T6`.
+        *   **Input Files**: ["docs/ops/observability_baseline.md", "docs/ops/execution_telemetry.md", "plan/milestone_notes.md"]
+        *   **Target Files:** ["src/cli/commands/observe.ts", "docs/ops/observe_playbook.md", "tests/integration/observe_command.spec.ts"]
+        *   **Deliverables:** CLI command, documentation detailing KPIs and scheduling, tests verifying JSON output, and instructions for storing reports under `.ai-feature-pipeline/reports/`.
+        *   **Acceptance Criteria:** Command enumerates active runs, blocked states, rate-limit warnings, KPIs; doc explains cron usage and retention; tests confirm deterministic JSON schema.
+        *   **Dependencies:** `I3.T6`, `I4.T3`
+        *   **Parallelizable:** Yes
 
 <!-- anchor: task-i5-t4 -->
-*   **Task 5.4:**
-    *   **Task ID:** `I5.T4`
-    *   **Description:** Build KPI/metrics exporter summarizing queue depth, retry counts, validation pass rates, cost telemetry, writing to `.ai-feature-pipeline/reports/kpi.json` for dashboards.
-    *   **Agent Type Hint:** `BackendAgent`
-    *   **Inputs:** Observability hub, context aggregator metrics, execution queue.
-    *   **Input Files:** [`src/services/telemetry/kpi_exporter.ts`, `tests/unit/kpi_exporter.test.ts`]
-    *   **Target Files:** [`src/services/telemetry/kpi_exporter.ts`, `tests/unit/kpi_exporter.test.ts`, `docs/guides/telemetry.md`]
-    *   **Deliverables:** Exporter module, tests, doc describing KPIs + scheduling via observe command.
-    *   **Acceptance Criteria:** Exporter produces JSON with counts/durations/costs; observe command includes path; doc outlines KPIs + thresholds.
-    *   **Dependencies:** [`I1.T7`, `I4.T7`]
-    *   **Parallelizable:** Yes
+    *   **Task 5.4:**
+        *   **Task ID:** `I5.T4`
+        *   **Description:** Implement `ai-feature cleanup` for run directories, honoring retention metadata, verifying export bundles before deletion, archiving artifacts optionally, and documenting safe usage with sample automation scripts.
+        *   **Agent Type Hint:** `BackendAgent`
+        *   **Inputs:** Section 3 (Directory structure), Section 4 (Directives), ADR-2.
+        *   **Input Files**: ["docs/requirements/run_directory_schema.md", "docs/ops/cleanup_policy.md"]
+        *   **Target Files:** ["src/cli/commands/cleanup.ts", "docs/ops/cleanup_playbook.md", "tests/integration/cleanup_command.spec.ts"]
+        *   **Deliverables:** Cleanup command, doc describing retention policies, test verifying safe deletion/archival.
+        *   **Acceptance Criteria:** Command rejects directories lacking exported bundles; doc outlines dry-run mode; tests ensure sample data archived appropriately.
+        *   **Dependencies:** `I5.T2`
+        *   **Parallelizable:** Yes
 
 <!-- anchor: task-i5-t5 -->
-*   **Task 5.5:**
-    *   **Task ID:** `I5.T5`
-    *   **Description:** Implement compliance checklist + SOC-style evidence mapping referencing artifacts, approvals, tokens, and ADRs for Section 5 + 9 controls.
-    *   **Agent Type Hint:** `DocumentationAgent`
-    *   **Inputs:** Requirements Section 5/9, export bundle guide.
-    *   **Input Files:** [`docs/guides/compliance_checklist.md`, `docs/adr/0001-foundation.md`]
-    *   **Target Files:** [`docs/guides/compliance_checklist.md`, `docs/guides/governance_notes.md`]
-    *   **Deliverables:** Checklist linking requirements to artifacts + commands; governance note template.
-    *   **Acceptance Criteria:** Checklist lists FR/IR/NFR references, evidence (file paths/commands), owners; doc added to README.
-    *   **Dependencies:** [`I3.T11`, `I5.T3`]
-    *   **Parallelizable:** Yes
+    *   **Task 5.5:**
+        *   **Task ID:** `I5.T5`
+        *   **Description:** Create end-to-end deployment/resume integration tests simulating blocked checks, approvals, auto-merge, workflow dispatch, and resume after failure; log outputs for documentation and export bundler verification.
+        *   **Agent Type Hint:** `TestingAgent`
+        *   **Inputs:** FR-15/FR-16, outputs from `I5.T1`..`I5.T4`.
+        *   **Input Files**: ["tests/fixtures/github/*.json", "docs/requirements/deployment_playbook.md", "docs/requirements/export_manifest_schema.json"]
+        *   **Target Files:** ["tests/integration/deploy_resume.spec.ts", "scripts/tooling/smoke_deploy.sh", "plan/milestone_notes.md"]
+        *   **Deliverables:** Integration tests, smoke script, milestone notes capturing reliability metrics.
+        *   **Acceptance Criteria:** Tests simulate required check failure + success; CLI logs show appropriate gating; milestone notes record flake rate and action items.
+        *   **Dependencies:** `I5.T1`, `I5.T2`
+        *   **Parallelizable:** No
 
 <!-- anchor: task-i5-t6 -->
-*   **Task 5.6:**
-    *   **Task ID:** `I5.T6`
-    *   **Description:** Add rate-limit alerting hooks (CLI warnings + optional notification) triggered when ledger remaining < threshold or repeated secondary limits occur.
-    *   **Agent Type Hint:** `BackendAgent`
-    *   **Inputs:** HTTP client ledger, notification adapter.
-    *   **Input Files:** [`src/services/telemetry/rate_limit_monitor.ts`, `tests/unit/rate_limit_monitor.test.ts`]
-    *   **Target Files:** [`src/services/telemetry/rate_limit_monitor.ts`, `tests/unit/rate_limit_monitor.test.ts`, `docs/guides/rate_limit_playbook.md`]
-    *   **Deliverables:** Monitor hooking to logs + notifications, tests, doc update.
-    *   **Acceptance Criteria:** Monitor triggers once thresholds crossed, logs action, optionally notifies; tests simulate exhaustion.
-    *   **Dependencies:** [`I3.T1`, `I4.T6`]
-    *   **Parallelizable:** Yes
+    *   **Task 5.6:**
+        *   **Task ID:** `I5.T6`
+        *   **Description:** Implement Notification adapter skeleton (Slack/email/webhook) for deployment success/failure and long-running approvals; integrate with approvals + observe command with feature flags for optional use.
+        *   **Agent Type Hint:** `BackendAgent`
+        *   **Inputs:** Section 2 (Key Components), Section 4 (Directives), FR-11.
+        *   **Input Files**: ["docs/requirements/notification_channels.md", "docs/ops/approval_playbook.md"]
+        *   **Target Files:** ["src/adapters/notifications/NotificationAdapter.ts", "src/workflows/notificationBridge.ts", "docs/requirements/notification_playbook.md", "tests/unit/notificationBridge.spec.ts"]
+        *   **Deliverables:** Adapter interface + minimal implementation, documentation describing opt-in behavior, tests verifying deduplication and gating.
+        *   **Acceptance Criteria:** Feature flags control notifications; CLI logs when notifications queued/delivered; doc warns about secrets/logging; tests ensure throttle windows honored.
+        *   **Dependencies:** `I4.T7`, `I5.T3`
+        *   **Parallelizable:** Yes
 
 <!-- anchor: task-i5-t7 -->
-*   **Task 5.7:**
-    *   **Task ID:** `I5.T7`
-    *   **Description:** Extend deployment logging + notification pipeline to capture status-check details, reviewer states, workflow URLs, storing them inside `deployment.json` and optional notification messages.
-    *   **Agent Type Hint:** `BackendAgent`
-    *   **Inputs:** Deployment module, notification adapter, docs.
-    *   **Input Files:** [`src/services/deployment/trigger.ts`, `docs/guides/deployment_module.md`]
-    *   **Target Files:** [`src/services/deployment/trigger.ts`, `docs/guides/deployment_module.md`, `tests/integration/deployment_logging.test.ts`]
-    *   **Deliverables:** Logging enhancements, doc updates, tests verifying data recorded + notifications throttled.
-    *   **Acceptance Criteria:** Deployment record stores status checks + reviewer list + workflow URL; notifications throttle and include severity.
-    *   **Dependencies:** [`I5.T1`, `I4.T6`]
-    *   **Parallelizable:** No
+    *   **Task 5.7:**
+        *   **Task ID:** `I5.T7`
+        *   **Description:** Update Verification & Integration Strategy (Section 6) and operations docs to reflect new deployment/export/observe flows; align with compliance requirements (token handling, PAT scopes, auto-merge governance) and include checklists for audits.
+        *   **Agent Type Hint:** `DocumentationAgent`
+        *   **Inputs:** Section 6 template, Section 4 directives, ADR-3/ADR-5/ADR-7.
+        *   **Input Files**: ["docs/requirements/verifications.md", "docs/ops/deployment_playbook.md", "docs/ops/export_playbook.md"]
+        *   **Target Files:** [".codemachine/artifacts/plan/03_Verification_and_Glossary.md", "docs/ops/security_runbook.md", "docs/ops/compliance_checklist.md"]
+        *   **Deliverables:** Updated Verification strategy, security/compliance runbooks, audit checklist referencing artifacts.
+        *   **Acceptance Criteria:** Section 6 references latest testing, CI, quality gates; docs explain token scopes + privacy; compliance checklist cross-links to export bundle schema; reviewers sign off.
+        *   **Dependencies:** `I5.T1`..`I5.T6`
+        *   **Parallelizable:** No
 
 <!-- anchor: task-i5-t8 -->
-*   **Task 5.8:**
-    *   **Task ID:** `I5.T8`
-    *   **Description:** Build `ai-feature diagnostics` command capturing logs, metrics, traces, config info, and bundling for support along with instructions for redaction.
-    *   **Agent Type Hint:** `BackendAgent`
-    *   **Inputs:** Run directories, export builder, observability hub.
-    *   **Input Files:** [`src/cli/commands/diagnostics.ts`, `docs/guides/diagnostics.md`]
-    *   **Target Files:** [`src/cli/commands/diagnostics.ts`, `tests/smoke/diagnostics_command.test.ts`, `docs/guides/diagnostics.md`]
-    *   **Deliverables:** Diagnostics ZIP generator, CLI help, doc describing when/how to share.
-    *   **Acceptance Criteria:** Command collects sanitized data, prompts for confirmation, writes manifest; tests verify excludes secrets.
-    *   **Dependencies:** [`I4.T8`, `I5.T3`]
-    *   **Parallelizable:** Yes
+    *   **Task 5.8:**
+        *   **Task ID:** `I5.T8`
+        *   **Description:** Refresh glossary (Section 7) and `docs/ui/` assets to capture updated terminology (observe, cleanup, export bundle, deployment record), ensuring anchors referenced by CLI help and downstream agents remain accurate.
+            Provide translation cues for key microcopy.
+        *   **Agent Type Hint:** `DocumentationAgent`
+        *   **Inputs:** Section 1 (Glossary references), `I5.T7` outputs, docs/UI tokens.
+        *   **Input Files**: ["docs/ui/microcopy.md", "docs/requirements/project_spec.md", ".codemachine/artifacts/plan/03_Verification_and_Glossary.md"]
+        *   **Target Files:** [".codemachine/artifacts/plan/03_Verification_and_Glossary.md", "docs/ui/cli_patterns.md", "docs/ui/design_tokens.json"]
+        *   **Deliverables:** Glossary updates, CLI UX docs, design token adjustments capturing new statuses.
+        *   **Acceptance Criteria:** Glossary list matches Section 7 entries, CLI help references new terms, design tokens include observe/cleanup/alert states, documentation cross-links anchors.
+        *   **Dependencies:** `I5.T7`
+        *   **Parallelizable:** Yes
 
-<!-- anchor: task-i5-t9 -->
-*   **Task 5.9:**
-    *   **Task ID:** `I5.T9`
-    *   **Description:** Automate cleanup + archival integration tests ensuring `cleanup` command respects retention, verifies exports, and writes audit logs before deletion.
-    *   **Agent Type Hint:** `BackendAgent`
-    *   **Inputs:** Cleanup command, export builder.
-    *   **Input Files:** [`tests/integration/cleanup_retention.test.ts`, `scripts/cleanup_runs.sh`]
-    *   **Target Files:** [`tests/integration/cleanup_retention.test.ts`, `docs/guides/cleanup_command.md`]
-    *   **Deliverables:** Integration tests, doc updates describing retention + archive process.
-    *   **Acceptance Criteria:** Tests simulate runs with/without bundles, ensure cleanup refuses incomplete exports; doc lists recommended retention.
-    *   **Dependencies:** [`I4.T11`, `I5.T3`]
-    *   **Parallelizable:** Yes
+*   **Iteration Risks & Mitigations:**
+    - Risk: Deployment automation may accidentally merge unready branches; Mitigation: approvals recorded, branch protection checks enforced, CLI logs gating decisions, and auto-merge disabled by default.
+    - Risk: Export bundles could leak secrets; Mitigation: redaction audit before bundling, schema validation, and docs describing manual review before sharing.
+    - Risk: Cleanup command might delete active runs; Mitigation: retention metadata + export verification + dry-run flag minimize mistakes.
+*   **Hand-off Checklist:**
+    - Run `ai-feature deploy --dry-run`, `ai-feature export --format json`, `ai-feature observe`, and `ai-feature cleanup --dry-run` on fixture repo, attaching outputs to `plan/milestone_notes.md`.
+    - Ensure deployment diagrams, export schema, and ops runbooks linked from README and `.ai-feature-pipeline/templates/` for future contributors.
+    - Share audit checklist + glossary updates with downstream automation (Graphite, CodeMachine) and tag completion in `plan/readiness_checklist.md`.
+*   **Iteration Metrics & Recording Plan:**
+    - Monitor deployment latency, workflow success rate, auto-merge enablement frequency, and export bundle generation time.
+    - Capture cleanup activity counts, observe report sizes, and notification send rates in telemetry.
+    - Document compliance checks (token scope audits, export reviews) within `docs/ops/compliance_checklist.md`.
+*   **Iteration Validation Hooks:**
+    - Schedule weekly export bundle verification comparing schema to actual output.
+    - Add `scripts/tooling/smoke_ops.sh` to run observe/cleanup/deploy/export flows with sample data and capture results for future regression.
+    - Archive sanitized deployment API transcripts and export bundles for use in training/support documentation.
+    - Capture observe/cleanup command metrics inside metrics/prometheus.txt and share weekly reports in docs/ops/reports.md for governance tracking.
+    - Provide demo video transcript or CLI transcript referencing export/deploy for onboarding docs stored under docs/ops/tutorials.md.
+    - Store compliance evidence (export hash list, approval logs, deployment records) in docs/ops/compliance_checklist.md to support audits.
+    - Publish glossary diff summary in plan/milestone_notes.md so downstream automation knows which terms changed between blueprint revisions.
+    - Tag release notes referencing deployment/export milestones and include pointer to  for navigation.
+    - Tag release notes referencing deployment/export milestones and include pointer to .codemachine/artifacts/plan/plan_manifest.json for navigation.
 
-<!-- anchor: task-i5-t10 -->
-*   **Task 5.10:**
-    *   **Task ID:** `I5.T10`
-    *   **Description:** Execute pilot dry-run covering start→deploy on sample repo, capture metrics, tune docs, file backlog issues, and produce release notes for CLI beta.
-    *   **Agent Type Hint:** `SetupAgent`
-    *   **Inputs:** Entire pipeline, documentation.
-    *   **Input Files:** [`scripts/smoke_cli.sh`, `.codemachine/reports/`]
-    *   **Target Files:** [`docs/releases/beta_notes.md`, `.codemachine/reports/pilot_run.md`, `docs/guides/iteration_retrospectives.md`]
-    *   **Deliverables:** Report summarizing metrics, release notes, backlog issue list.
-    *   **Acceptance Criteria:** Dry-run populates run directory, merges sample PR via mocks, release notes highlight features + known gaps, backlog issues filed.
-    *   **Dependencies:** [`I5.T1`–`I5.T9`]
-    *   **Parallelizable:** No
-
-*   **Iteration Reporting:** Store `.codemachine/reports/I5_summary.md` summarizing deployment success, rate-limit incidents, compliance readiness, and pilot outcomes.
-*   **Carryover Handling:** Document remaining enterprise features (GitHub App auth, TUIs) for future roadmap; note in `docs/releases/beta_notes.md`.
-*   **Retro Notes:** Capture reliability lessons, metric thresholds, and recommended watch schedules inside `docs/guides/iteration_retrospectives.md`.

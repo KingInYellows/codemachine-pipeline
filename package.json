@@ -22,6 +22,7 @@
     "test": "jest",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
+    "validate:config": "node -e \"require('./dist/core/config/repo_config').validateConfig()\"",
     "prepack": "npm run clean && npm run build",
     "postpack": "npm run clean",
     "prepare": "npm run build"
@@ -34,7 +35,8 @@
   "dependencies": {
     "@oclif/core": "^4.0.30",
     "@oclif/plugin-help": "^6.2.18",
-    "@oclif/plugin-plugins": "^5.4.15"
+    "@oclif/plugin-plugins": "^5.4.15",
+    "zod": "^3.22.4"
   },
   "devDependencies": {
     "@types/jest": "^29.5.14",

@@ -212,15 +212,29 @@ To create a repository-agnostic, AI-augmented pipeline that streamlines feature 
   * api_base_url (OPTIONAL, default: `https://api.linear.app/graphql`)
   * auth_method (REQUIRED if linear enabled, enum: api_key | oauth)
   * rate_limit_per_hour (OPTIONAL, default: 1500 when api_key) ([Linear][4])
+  * mcp_enabled (OPTIONAL, boolean, default: true when MCP Linear server detected) — **[ADR-6]** Delegate Linear operations to MCP server
 * runtime (OPTIONAL, object)
 
   * min_node_version (RECOMMENDED, default aligned to active LTS) ([Node.js][8])
   * concurrency (OPTIONAL, number; default 4)
+* context (OPTIONAL, object) — **[ADR-4]**
+
+  * embedding_model (OPTIONAL, string, default: `text-embedding-3-small`) — Model for semantic context ranking
+  * similarity_threshold (OPTIONAL, number, default: 0.3) — Minimum similarity score for context inclusion
+  * token_budget (OPTIONAL, object)
+    * context_ratio (OPTIONAL, number, default: 0.75) — Fraction of budget for ranked context
+    * instruction_ratio (OPTIONAL, number, default: 0.20) — Fraction for prompts/instructions
 * safety (OPTIONAL, object)
 
   * require_human_approval_for_merge (REQUIRED default true)
   * allow_force_push (REQUIRED default false)
   * redact_secrets_in_logs (REQUIRED default true)
+  * approval_timeout_seconds (OPTIONAL, number, default: 300) — **[ADR-5]** CLI approval gate timeout
+  * allow_non_interactive (OPTIONAL, boolean, default: false) — **[ADR-5]** Allow `--yes` flag to skip prompts
+* validation (OPTIONAL, object) — **[ADR-7]**
+
+  * max_fix_attempts (OPTIONAL, number, default: 3) — Auto-fix retry limit before halting
+  * skip_validation_allowed (OPTIONAL, boolean, default: false) — Allow `--skip-validation` flag
 
 ---
 
@@ -265,7 +279,9 @@ To create a repository-agnostic, AI-augmented pipeline that streamlines feature 
 
 ### 5.1 Document Control
 
-Version: 1.1 | Status: Updated Draft | Date: December 15, 2025 
+Version: 1.2 | Status: Specification Complete | Date: December 15, 2025
+
+**Change summary (since 1.1):** Added Section 5.4 Architectural Decision Records (ADRs) resolving 7 critical implementation decisions: Agent Execution Model, State Persistence (SQLite/WAL), Merge Governance, Context Gathering (Semantic Ranking), Approval Workflow, Linear Integration (MCP delegation), and Validation Policy (Auto-Fix Iteration). Updated RepoConfig data model with new configuration options.
 
 **Change summary (since 1.0):** Added implementation-smoothness research: GitHub API versioning + rate limiting, Node LTS targeting, Linear SDK/rate limits, and merge/status-check behaviors. ([GitHub Docs][1])
 
@@ -311,6 +327,152 @@ Version: 1.1 | Status: Updated Draft | Date: December 15, 2025
 * **Required Status Checks**: Repository branch protection can require CI checks to pass before merge. ([GitHub Docs][9])
 * **Auto-merge**: GitHub feature that merges automatically once requirements are met (if enabled for repo). ([GitHub Docs][7])
 * **Linear API Key**: Personal API key used to authenticate GraphQL calls (header `Authorization: <API_KEY>`). ([Linear][10])
+
+---
+
+## 5.4 Architectural Decision Records (ADRs)
+
+**Status:** Approved | **Date:** December 15, 2025
+
+The following architectural decisions resolve the ambiguities identified during specification review and establish binding constraints for implementation.
+
+---
+
+### ADR-1: AI Agent Execution Model
+
+**Decision:** Single Abstract Interface (Path A)
+
+**Context:** The system requires "bring-your-own-agent" execution with OpenAI-compatible endpoints, local models, or external agent services.
+
+**Resolution:**
+* The system SHALL implement a unified `AgentAdapter` interface with a standardized prompt/response contract.
+* All agents MUST conform to a fixed capability set: PRD generation, spec generation, code generation, code review, test generation.
+* The adapter SHALL include a simple retry mechanism (max 3 attempts with exponential backoff) for transient failures.
+* Quality thresholds: Agent outputs MUST pass validation (syntax check, schema conformance) before acceptance.
+* Escalation: When all retry attempts fail, the system SHALL halt execution, record the error in `last_error`, and await human intervention via `resume` command.
+
+**Rationale:** Simplicity and consistency outweigh provider-specific optimizations for the initial release. This can be extended to capability-based routing in future versions.
+
+---
+
+### ADR-2: State Persistence & Concurrency Control
+
+**Decision:** SQLite with WAL Mode (Tier 3)
+
+**Context:** The system requires local-first resumable state machines with run directories containing JSON/markdown artifacts.
+
+**Resolution:**
+* The system SHALL use SQLite with Write-Ahead Logging (WAL) mode for transactional state updates.
+* Database location: `.ai-feature-pipeline/state.db` within the repository root.
+* All state mutations (Feature, ExecutionTask, ResearchTask) SHALL be atomic transactions.
+* The system SHALL support concurrent reads from multiple processes.
+* JSON/markdown artifact files (prd.md, spec.md, etc.) SHALL remain as human-readable exports, with SQLite as the source of truth.
+* Schema migrations SHALL be versioned and applied automatically on CLI startup.
+
+**Rationale:** SQLite provides robust ACID guarantees, built-in concurrency control, and zero external dependencies while remaining local-first and homelab-friendly.
+
+---
+
+### ADR-3: GitHub Merge Automation Governance
+
+**Decision:** Conservative - Always Wait (Mode 1)
+
+**Context:** The specification mandates detection of required status checks and support for auto-merge, but governance policy was undefined.
+
+**Resolution:**
+* The system SHALL NEVER enable auto-merge automatically.
+* The system SHALL poll status checks and report merge readiness via `ai-feature status <feature_id>`.
+* Human operators MUST manually execute merge via `ai-feature deploy <feature_id>` or GitHub UI.
+* The system SHALL provide clear reporting of:
+  * Which required checks are passing/failing
+  * Whether required reviews are satisfied
+  * Whether the branch is up-to-date with base
+* Notification: The system SHALL output merge-readiness status to stdout and optionally to `logs.ndjson`.
+
+**Rationale:** Safety-first approach prevents accidental merges of untested code. Auto-merge can be added as an opt-in feature in future releases.
+
+---
+
+### ADR-4: Context Gathering & Token Budget Management
+
+**Decision:** Semantic Ranking (Strategy 2)
+
+**Context:** Context gathering from README, docs, and `context_paths` globs requires prioritization when content exceeds token budgets.
+
+**Resolution:**
+* The system SHALL use embedding-based similarity between the feature description and available files to rank context relevance.
+* Embedding model: The system SHALL support configurable embedding providers via `RepoConfig.context.embedding_model` (default: OpenAI `text-embedding-3-small`).
+* Token budget allocation: 75% for ranked context, 20% for instructions/prompts, 5% reserved for agent response parsing.
+* The system SHALL cache embeddings per file (keyed by file path + content hash) to minimize latency on subsequent runs.
+* Fallback: If embedding service is unavailable, the system SHALL fall back to static priority ordering (README > package.json > touched files > tests).
+* The system SHALL include in context: files with similarity score > 0.3 (configurable threshold).
+
+**Rationale:** Semantic ranking provides more accurate context selection for diverse codebases, improving AI output quality. Caching mitigates startup latency concerns.
+
+---
+
+### ADR-5: Human-in-the-Loop Approval Workflow
+
+**Decision:** Inline CLI Approval (Path A)
+
+**Context:** Human approval gates are required before code writing, PR creation, and merge/deploy.
+
+**Resolution:**
+* The system SHALL block execution and prompt for Y/N confirmation in the terminal at each gate.
+* Approval gates:
+  1. Before code generation (after spec acceptance)
+  2. Before PR creation (after validation passes)
+  3. Before merge/deploy trigger
+* Timeout: 5 minutes (configurable via `RepoConfig.safety.approval_timeout_seconds`).
+* On timeout: Execution halts, state is saved, user can `resume` later.
+* Audit trail: All approval/rejection events SHALL be logged to `logs.ndjson` with timestamp, gate name, and response.
+* Bypass: `--yes` flag SHALL skip interactive prompts for CI/scripted scenarios (requires explicit `RepoConfig.safety.allow_non_interactive: true`).
+
+**Rationale:** Inline CLI approval is zero-dependency and suitable for single-developer homelab scenarios. File-based or webhook approvals can be added as future enhancements.
+
+---
+
+### ADR-6: Linear Integration Strategy
+
+**Decision:** MCP Server Delegation
+
+**Context:** The specification requires Linear issue fetching and rate-limit-aware operations, but write-back strategy was undefined.
+
+**Resolution:**
+* The system SHALL delegate all Linear API operations to the configured MCP (Model Context Protocol) server.
+* Read operations: Issue fetching, metadata retrieval, and snapshot capture SHALL be performed via MCP Linear server tools.
+* Write operations: Status updates, label changes, and comment creation SHALL be performed via MCP Linear server tools when configured.
+* The system SHALL NOT implement direct Linear API client code; all Linear interactions are abstracted through MCP.
+* Rate limiting: The MCP server is responsible for rate limit compliance; the system SHALL respect any rate-limit errors returned by MCP tools and apply standard retry/backoff.
+* Fallback: If MCP Linear server is unavailable, the system SHALL operate in offline mode using cached issue snapshots.
+* Configuration: `RepoConfig.linear.mcp_enabled: true` (default when MCP Linear server is detected).
+
+**Rationale:** MCP delegation provides a clean abstraction layer, avoids duplicating Linear SDK integration, and leverages existing MCP infrastructure. This also future-proofs against Linear API changes.
+
+---
+
+### ADR-7: Testing & Validation Enforcement Policy
+
+**Decision:** Auto-Fix Iteration (Policy 3)
+
+**Context:** Validation steps (lint, test, typecheck, build) are mandated before PR creation, but failure handling was undefined.
+
+**Resolution:**
+* When validation fails, the system SHALL invoke the agent to fix failures automatically.
+* Maximum retry attempts: 3 (configurable via `RepoConfig.validation.max_fix_attempts`).
+* Per-attempt flow:
+  1. Run validation suite
+  2. On failure, extract error messages and failing file paths
+  3. Invoke agent with error context and request fixes
+  4. Apply agent patches
+  5. Re-run validation
+* If all attempts fail:
+  * The system SHALL halt and save detailed failure output to `run_directory/validation_failures.json`.
+  * Human intervention required via `resume` after manual fixes.
+* Test generation: The system SHALL NOT auto-generate tests for untested code paths unless explicitly requested via `--generate-tests` flag.
+* Escape hatch: `--skip-validation` flag allows PR creation with failing checks (adds `validation-skipped` label to PR).
+
+**Rationale:** Auto-fix iteration maximizes automation and reduces friction from minor agent-introduced issues (lint errors, type mismatches) while maintaining quality gates through bounded retries.
 
 ---
 

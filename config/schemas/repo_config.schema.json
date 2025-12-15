@@ -1,0 +1,314 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://ai-feature-pipeline/schemas/repo_config.json",
+  "title": "RepoConfig",
+  "description": "Configuration schema for ai-feature-pipeline repository settings",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "project",
+    "github",
+    "linear",
+    "runtime",
+    "safety",
+    "feature_flags"
+  ],
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "description": "Schema version for configuration migrations",
+      "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$",
+      "default": "1.0.0"
+    },
+    "project": {
+      "type": "object",
+      "description": "Project-level metadata and repository information",
+      "required": ["id", "repo_url", "default_branch"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique project identifier"
+        },
+        "repo_url": {
+          "type": "string",
+          "description": "Repository URL (GitHub HTTPS or SSH)",
+          "pattern": "^(https?://|git@)"
+        },
+        "default_branch": {
+          "type": "string",
+          "description": "Default branch for PRs",
+          "default": "main"
+        },
+        "context_paths": {
+          "type": "array",
+          "description": "Paths to include in context gathering",
+          "items": {
+            "type": "string"
+          },
+          "default": ["src/", "docs/", "README.md"]
+        },
+        "project_leads": {
+          "type": "array",
+          "description": "GitHub usernames of project leads",
+          "items": {
+            "type": "string"
+          },
+          "default": []
+        }
+      }
+    },
+    "github": {
+      "type": "object",
+      "description": "GitHub integration configuration and credentials",
+      "required": ["enabled"],
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "description": "Enable GitHub integration"
+        },
+        "token_env_var": {
+          "type": "string",
+          "description": "Environment variable name for GitHub PAT",
+          "default": "GITHUB_TOKEN"
+        },
+        "api_base_url": {
+          "type": "string",
+          "description": "GitHub API base URL (for Enterprise)",
+          "default": "https://api.github.com"
+        },
+        "required_scopes": {
+          "type": "array",
+          "description": "Required PAT scopes",
+          "items": {
+            "type": "string",
+            "enum": ["repo", "workflow", "read:org", "write:org"]
+          },
+          "default": ["repo", "workflow"]
+        },
+        "default_reviewers": {
+          "type": "array",
+          "description": "Default PR reviewers",
+          "items": {
+            "type": "string"
+          },
+          "default": []
+        },
+        "branch_protection": {
+          "type": "object",
+          "description": "Branch protection settings awareness",
+          "properties": {
+            "respect_required_reviews": {
+              "type": "boolean",
+              "default": true
+            },
+            "respect_status_checks": {
+              "type": "boolean",
+              "default": true
+            }
+          }
+        }
+      }
+    },
+    "linear": {
+      "type": "object",
+      "description": "Linear integration configuration",
+      "required": ["enabled"],
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "description": "Enable Linear integration"
+        },
+        "api_key_env_var": {
+          "type": "string",
+          "description": "Environment variable name for Linear API key",
+          "default": "LINEAR_API_KEY"
+        },
+        "team_id": {
+          "type": "string",
+          "description": "Linear team ID"
+        },
+        "project_id": {
+          "type": "string",
+          "description": "Linear project ID"
+        },
+        "auto_link_issues": {
+          "type": "boolean",
+          "description": "Automatically link Linear issues to PRs",
+          "default": true
+        }
+      }
+    },
+    "runtime": {
+      "type": "object",
+      "description": "Runtime execution settings",
+      "properties": {
+        "agent_endpoint": {
+          "type": "string",
+          "description": "AI agent service endpoint"
+        },
+        "agent_endpoint_env_var": {
+          "type": "string",
+          "description": "Environment variable for agent endpoint",
+          "default": "AGENT_ENDPOINT"
+        },
+        "max_concurrent_tasks": {
+          "type": "integer",
+          "description": "Maximum concurrent execution tasks",
+          "minimum": 1,
+          "maximum": 10,
+          "default": 3
+        },
+        "timeout_minutes": {
+          "type": "integer",
+          "description": "Task execution timeout in minutes",
+          "minimum": 5,
+          "maximum": 120,
+          "default": 30
+        },
+        "context_token_budget": {
+          "type": "integer",
+          "description": "Token budget for context gathering",
+          "minimum": 1000,
+          "maximum": 100000,
+          "default": 32000
+        },
+        "logs_format": {
+          "type": "string",
+          "description": "Log format for run artifacts",
+          "enum": ["ndjson", "json", "text"],
+          "default": "ndjson"
+        },
+        "run_directory": {
+          "type": "string",
+          "description": "Base directory for feature runs",
+          "default": ".ai-feature-pipeline/runs"
+        }
+      }
+    },
+    "safety": {
+      "type": "object",
+      "description": "Security and safety controls",
+      "properties": {
+        "redact_secrets": {
+          "type": "boolean",
+          "description": "Enable secret redaction in logs",
+          "default": true
+        },
+        "require_approval_for_prd": {
+          "type": "boolean",
+          "description": "Require human approval for PRD",
+          "default": true
+        },
+        "require_approval_for_plan": {
+          "type": "boolean",
+          "description": "Require human approval for execution plan",
+          "default": true
+        },
+        "require_approval_for_pr": {
+          "type": "boolean",
+          "description": "Require human approval before creating PR",
+          "default": true
+        },
+        "prevent_force_push": {
+          "type": "boolean",
+          "description": "Prevent force pushes to branches",
+          "default": true
+        },
+        "allowed_file_patterns": {
+          "type": "array",
+          "description": "File patterns allowed for modification",
+          "items": {
+            "type": "string"
+          },
+          "default": ["**/*.ts", "**/*.js", "**/*.md", "**/*.json"]
+        },
+        "blocked_file_patterns": {
+          "type": "array",
+          "description": "File patterns blocked from modification",
+          "items": {
+            "type": "string"
+          },
+          "default": [".env", "**/*.key", "**/*.pem", "**/credentials.*"]
+        }
+      }
+    },
+    "feature_flags": {
+      "type": "object",
+      "description": "Feature flags for experimental functionality",
+      "properties": {
+        "enable_auto_merge": {
+          "type": "boolean",
+          "description": "Enable automatic PR merge after approval",
+          "default": false
+        },
+        "enable_deployment_triggers": {
+          "type": "boolean",
+          "description": "Enable deployment workflow triggers",
+          "default": false
+        },
+        "enable_linear_sync": {
+          "type": "boolean",
+          "description": "Enable Linear issue synchronization",
+          "default": false
+        },
+        "enable_context_summarization": {
+          "type": "boolean",
+          "description": "Enable context summarization for large codebases",
+          "default": true
+        },
+        "enable_resumability": {
+          "type": "boolean",
+          "description": "Enable feature resumability from checkpoints",
+          "default": true
+        },
+        "enable_developer_preview": {
+          "type": "boolean",
+          "description": "Enable developer preview features",
+          "default": false
+        }
+      }
+    },
+    "constraints": {
+      "type": "object",
+      "description": "Resource constraints and limits",
+      "properties": {
+        "max_file_size_kb": {
+          "type": "integer",
+          "description": "Maximum file size for context in KB",
+          "minimum": 100,
+          "maximum": 10000,
+          "default": 1000
+        },
+        "max_context_files": {
+          "type": "integer",
+          "description": "Maximum files to include in context",
+          "minimum": 10,
+          "maximum": 1000,
+          "default": 100
+        },
+        "rate_limits": {
+          "type": "object",
+          "description": "API rate limit configurations",
+          "properties": {
+            "github_requests_per_hour": {
+              "type": "integer",
+              "default": 5000
+            },
+            "linear_requests_per_minute": {
+              "type": "integer",
+              "default": 60
+            },
+            "agent_requests_per_hour": {
+              "type": "integer",
+              "default": 100
+            }
+          }
+        }
+      }
+    },
+    "governance_notes": {
+      "type": "string",
+      "description": "Free-form governance and compliance notes"
+    }
+  }
+}
