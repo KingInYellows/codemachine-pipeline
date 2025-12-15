@@ -1,0 +1,84 @@
+---
+title: Specification Composer Flow
+description: PRD-to-Spec transformation workflow with approval gates and research feedback loops
+---
+
+flowchart TD
+    Start([CLI: ai-feature start --spec]) --> CheckPRD{PRD Approved?}
+
+    CheckPRD -->|No| ErrorPRD[Error: Exit 30<br/>PRD must be approved first]
+    CheckPRD -->|Yes| LoadPRD[Load PRD Metadata<br/>& Markdown Content]
+
+    LoadPRD --> ExtractSections[Extract PRD Sections:<br/>- Problem Statement<br/>- Goals & Non-Goals<br/>- Acceptance Criteria<br/>- Risks<br/>- Open Questions]
+
+    ExtractSections --> GenConstraints[Generate Technical Constraints:<br/>- Repo Config Policies<br/>- Performance Requirements<br/>- Quality Gates<br/>- Compatibility Rules]
+
+    GenConstraints --> GenRisks[Generate Risk Assessments:<br/>- Parse PRD Risks<br/>- Assign Severity<br/>- Extract Mitigations<br/>- Add Research Findings]
+
+    GenRisks --> GenTests[Generate Test Plan:<br/>- Unit Tests for Constraints<br/>- Integration Tests for Criteria<br/>- E2E Test Placeholder]
+
+    GenTests --> GenRollout[Generate Rollout Plan:<br/>- Canary if High Risk<br/>- Gradual if Low Risk<br/>- Define Phases & Rollback]
+
+    GenRollout --> BuildContent[Build Spec Content:<br/>- Markdown Sections<br/>- JSON Structure<br/>- Referenced Files]
+
+    BuildContent --> DetectUnknowns{Detect Unknowns:<br/>TODO/TBD Markers?}
+
+    DetectUnknowns -->|Yes| FlagUnknowns[Flag Unknowns:<br/>- Section Location<br/>- Suggested Research Objective<br/>- Add to Diagnostics]
+    DetectUnknowns -->|No| PersistSpec
+
+    FlagUnknowns --> NeedResearch{Require More<br/>Research?}
+    NeedResearch -->|Yes| TriggerResearch[Trigger Research Coordinator:<br/>- Queue Research Tasks<br/>- Halt Spec Approval]
+    NeedResearch -->|No| PersistSpec
+
+    TriggerResearch --> WaitResearch[Wait for<br/>Research Completion]
+    WaitResearch --> Resume[Resume Spec<br/>Composition]
+    Resume --> GenRisks
+
+    PersistSpec[Persist Artifacts:<br/>- spec.md<br/>- spec.json<br/>- spec_metadata.json]
+
+    PersistSpec --> ComputeHash[Compute SHA-256<br/>Hash of spec.md]
+
+    ComputeHash --> SaveMetadata[Save Metadata:<br/>- specHash<br/>- prdHash<br/>- approvalStatus: pending<br/>- traceId]
+
+    SaveMetadata --> ReturnDiagnostics[Return Diagnostics:<br/>- Unknowns Count<br/>- Incomplete Sections<br/>- Warnings<br/>- Citations]
+
+    ReturnDiagnostics --> ReviewGate{User Reviews<br/>spec.md}
+
+    ReviewGate -->|Request Changes| EditSpec[CLI: ai-feature spec edit]
+    EditSpec --> AddChangeLog[Add Change Log Entry:<br/>- Author<br/>- Description<br/>- Version]
+    AddChangeLog --> RecomputeHash[Recompute Hash]
+    RecomputeHash --> ResetApproval[Reset approvalStatus<br/>to pending]
+    ResetApproval --> ReviewGate
+
+    ReviewGate -->|Approve| ApproveCmd([CLI: ai-feature approve spec<br/>--signer user --rationale "..."])
+
+    ApproveCmd --> LoadSpecMeta[Load spec_metadata.json]
+    LoadSpecMeta --> VerifyHash{Hash Match?}
+
+    VerifyHash -->|No| ErrorHash[Error: Exit 40<br/>Spec changed, regenerate]
+    VerifyHash -->|Yes| CreateApproval[Create Approval Record:<br/>- APR-id.json<br/>- Signer, Verdict, Rationale<br/>- artifactHash]
+
+    CreateApproval --> UpdateMeta[Update Metadata:<br/>approvalStatus: approved<br/>approvals: [APR-id]]
+
+    UpdateMeta --> AppendIndex[Append to<br/>approvals.json]
+
+    AppendIndex --> EnablePlanner[Enable Next Stage:<br/>Task Planner Ready]
+
+    EnablePlanner --> End([Spec Approved &<br/>Ready for Planning])
+
+    ErrorPRD --> EndError([End: Blocked])
+    ErrorHash --> EndError
+
+    style Start fill:#e1f5e1
+    style End fill:#e1f5e1
+    style ErrorPRD fill:#ffe1e1
+    style ErrorHash fill:#ffe1e1
+    style EndError fill:#ffe1e1
+    style CheckPRD fill:#fff4e1
+    style DetectUnknowns fill:#fff4e1
+    style NeedResearch fill:#fff4e1
+    style ReviewGate fill:#fff4e1
+    style VerifyHash fill:#fff4e1
+    style TriggerResearch fill:#e1e5ff
+    style WaitResearch fill:#e1e5ff
+    style ApproveCmd fill:#e1ffe1
