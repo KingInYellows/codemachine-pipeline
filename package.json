@@ -21,10 +21,11 @@
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
     "format:check": "prettier --check \"src/**/*.ts\" \"test/**/*.ts\"",
     "pretest": "npm run build",
-    "test": "npm run test:config && npm run test:jest",
+    "test": "npm run test:config && npm run test:http && npm run test:jest",
     "test:config": "vitest run src/core/config",
     "test:config:watch": "vitest watch src/core/config",
     "test:config:coverage": "vitest run src/core/config --coverage",
+    "test:http": "vitest run tests/unit",
     "test:jest": "jest",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
@@ -47,6 +48,7 @@
     "@oclif/core": "^4.0.30",
     "@oclif/plugin-help": "^6.2.18",
     "@oclif/plugin-plugins": "^5.4.15",
+    "undici": "^7.16.0",
     "zod": "^3.22.4"
   },
   "devDependencies": {
