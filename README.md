@@ -192,7 +192,7 @@ ai-feature start --prompt "Add feature" --json
 - `20`: External API error
 - `30`: Human action required
 
-**Note:** This command is currently a stub and will be fully implemented in iteration I2.
+**Behavior:** `ai-feature start` runs context aggregation, queues research tasks, and generates `artifacts/prd.md`. When PRD approval is required by RepoConfig, the command exits with code `30` after writing the PRD so you can review it and run `ai-feature approve prd` before the pipeline continues.
 
 ---
 
@@ -225,8 +225,6 @@ ai-feature status --verbose --show-costs
 - `0`: Success
 - `1`: General error
 - `10`: Validation error (feature not found)
-
-**Note:** This command is currently a stub and will be fully implemented in iteration I2.
 
 ### `ai-feature resume` (Planned)
 
