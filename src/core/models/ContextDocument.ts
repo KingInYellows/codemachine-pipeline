@@ -38,6 +38,16 @@ export type ContextFileRecord = z.infer<typeof ContextFileRecordSchema>;
 // ============================================================================
 
 const ContextSummarySchema = z.object({
+  /** Chunk identifier (hash-derived) */
+  chunk_id: z.string().regex(/^[a-f0-9]{16}$/i, 'Chunk ID must be 16 hex characters'),
+  /** Source file path */
+  file_path: z.string().min(1),
+  /** Source file SHA */
+  file_sha: z.string().regex(/^[a-f0-9]{64}$/, 'Invalid SHA-256 hash format'),
+  /** Chunk index within the file */
+  chunk_index: z.number().int().nonnegative(),
+  /** Total chunk count for the file */
+  chunk_total: z.number().int().positive(),
   /** Summary text */
   summary: z.string().min(1),
   /** Token count for summary */
@@ -46,6 +56,10 @@ const ContextSummarySchema = z.object({
   generated_at: z.string().datetime(),
   /** Model or tool used to generate summary */
   generated_by: z.string().optional(),
+  /** Summarization method identifier */
+  method: z.string().min(1).default('single_chunk'),
+  /** Redaction flags applied during summarization */
+  redaction_flags: z.array(z.string()).default([]),
 });
 
 export type ContextSummary = z.infer<typeof ContextSummarySchema>;

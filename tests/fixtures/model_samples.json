@@ -345,10 +345,17 @@
       },
       "summaries": [
         {
+          "chunk_id": "0123456789abcdef",
+          "file_path": "README.md",
+          "file_sha": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+          "chunk_index": 0,
+          "chunk_total": 1,
           "summary": "Codebase includes Express-based backend with TypeScript",
           "token_count": 50,
           "generated_at": "2025-12-15T10:05:00.000Z",
-          "generated_by": "gpt-4o"
+          "generated_by": "gpt-4o",
+          "method": "single_chunk",
+          "redaction_flags": []
         }
       ],
       "total_token_count": 2100,

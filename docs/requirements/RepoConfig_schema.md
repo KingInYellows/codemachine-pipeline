@@ -112,6 +112,7 @@ Runtime execution settings for agent orchestration.
 | `max_concurrent_tasks` | `integer` | ✗ | `3` | Maximum concurrent execution tasks (1-10) | `AI_FEATURE_RUNTIME_MAX_CONCURRENT_TASKS` |
 | `timeout_minutes` | `integer` | ✗ | `30` | Task execution timeout in minutes (5-120) | `AI_FEATURE_RUNTIME_TIMEOUT_MINUTES` |
 | `context_token_budget` | `integer` | ✗ | `32000` | Token budget for context gathering (1000-100000) | - |
+| `context_cost_budget_usd` | `number` | ✗ | `5` | USD budget for context summarization | - |
 | `logs_format` | `string` | ✗ | `"ndjson"` | Log format: `"ndjson"`, `"json"`, or `"text"` | - |
 | `run_directory` | `string` | ✗ | `".ai-feature-pipeline/runs"` | Base directory for feature runs (ADR-2) | - |
 

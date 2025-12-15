@@ -23,7 +23,7 @@ The Context Manifest follows the `ContextDocument` schema defined in `src/core/m
   created_at: string;          // ISO 8601 timestamp
   updated_at: string;          // ISO 8601 timestamp
   files: Record<string, ContextFileRecord>;
-  summaries: ContextSummary[]; // Optional summaries (future enhancement)
+  summaries: ContextSummary[]; // Summaries with chunk metadata
   total_token_count: number;   // Aggregate token count for all files
   provenance: ProvenanceData;  // Git metadata and source tracking
   metadata?: Record<string, unknown>;
@@ -58,6 +58,26 @@ Provenance metadata tracks the source and git state:
 }
 ```
 
+### ContextSummary
+
+Chunk-level summaries capture provenance and redaction metadata:
+
+```typescript
+{
+  chunk_id: string;        // 16-character hash-derived chunk ID
+  file_path: string;       // Source file path
+  file_sha: string;        // Source file SHA-256
+  chunk_index: number;     // Chunk index (0-based)
+  chunk_total: number;     // Total chunks for the file
+  summary: string;         // Summary text
+  token_count: number;     // Tokens used to produce the summary
+  generated_at: string;    // ISO 8601 timestamp
+  generated_by?: string;   // Provider/model identifier
+  method: string;          // Summarization strategy (single_chunk, multi_chunk, etc.)
+  redaction_flags: string[]; // Secrets redacted during summarization
+}
+```
+
 ---
 
 ## Storage Location
@@ -67,6 +87,7 @@ Context artifacts are stored under the run directory:
 ```
 .ai-feature-pipeline/runs/<feature_id>/context/
 ├── summary.json          # ContextDocument manifest
+├── summarization.json    # Summarization run metadata
 └── file_hashes.json      # HashManifest for incremental updates
 ```
 
@@ -98,7 +119,21 @@ The primary context manifest. Contains the full `ContextDocument` with file reco
       "token_count": 512
     }
   },
-  "summaries": [],
+  "summaries": [
+    {
+      "chunk_id": "0123456789abcdef",
+      "file_path": "README.md",
+      "file_sha": "a3f8c9d2e1b4f5a6c7d8e9f0a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0",
+      "chunk_index": 0,
+      "chunk_total": 1,
+      "summary": "Documentation outlines architecture, setup, and iteration goals.",
+      "token_count": 120,
+      "generated_at": "2024-01-15T10:30:00.000Z",
+      "generated_by": "gpt-4o",
+      "method": "single_chunk",
+      "redaction_flags": []
+    }
+  ],
   "total_token_count": 768,
   "provenance": {
     "source": "manual",
@@ -106,6 +141,27 @@ The primary context manifest. Contains the full `ContextDocument` with file reco
     "commit_sha": "a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0",
     "branch": "main"
   }
+}
+```
+
+### summarization.json
+
+Summarization telemetry snapshot persisted after each CLI run:
+
+```json
+{
+  "feature_id": "01J9X8K2M3N4P5Q6R7S8T9V0WX",
+  "updated_at": "2024-01-15T10:45:00.000Z",
+  "chunks_generated": 18,
+  "chunks_cached": 4,
+  "tokens_used": {
+    "prompt": 12500,
+    "completion": 850,
+    "total": 13350
+  },
+  "warnings": [],
+  "patterns": [],
+  "force": false
 }
 ```
 
