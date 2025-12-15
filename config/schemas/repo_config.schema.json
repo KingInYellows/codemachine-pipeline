@@ -306,9 +306,74 @@
         }
       }
     },
+    "governance": {
+      "type": "object",
+      "description": "Governance controls for approval workflows and accountability (ADR-5)",
+      "properties": {
+        "approval_workflow": {
+          "type": "object",
+          "description": "Gate-by-gate approval requirements",
+          "properties": {
+            "require_approval_for_prd": { "type": "boolean", "default": true },
+            "require_approval_for_spec": { "type": "boolean", "default": true },
+            "require_approval_for_plan": { "type": "boolean", "default": true },
+            "require_approval_for_code": { "type": "boolean", "default": true },
+            "require_approval_for_pr": { "type": "boolean", "default": true },
+            "require_approval_for_deploy": { "type": "boolean", "default": true }
+          }
+        },
+        "accountability": {
+          "type": "object",
+          "description": "Accountability and audit settings",
+          "properties": {
+            "record_approver_identity": { "type": "boolean", "default": true },
+            "require_approval_reason": { "type": "boolean", "default": false },
+            "audit_log_retention_days": { "type": "integer", "minimum": 1, "maximum": 3650, "default": 365 }
+          }
+        },
+        "risk_controls": {
+          "type": "object",
+          "description": "Risk containment controls",
+          "properties": {
+            "prevent_auto_merge": { "type": "boolean", "default": true },
+            "prevent_force_push": { "type": "boolean", "default": true },
+            "require_branch_protection": { "type": "boolean", "default": true },
+            "max_files_per_pr": { "type": "integer", "minimum": 1, "maximum": 1000, "default": 100 },
+            "max_lines_changed_per_pr": { "type": "integer", "minimum": 1, "maximum": 50000, "default": 5000 }
+          }
+        },
+        "compliance_tags": {
+          "type": "array",
+          "description": "Compliance tags",
+          "items": { "type": "string" },
+          "default": []
+        },
+        "governance_notes": {
+          "type": "string",
+          "description": "Free-form governance documentation"
+        }
+      }
+    },
+    "config_history": {
+      "type": "array",
+      "description": "Migration history for schema version tracking (ADR-2)",
+      "items": {
+        "type": "object",
+        "required": ["timestamp", "schema_version", "changed_by", "change_description"],
+        "properties": {
+          "timestamp": { "type": "string", "format": "date-time" },
+          "schema_version": { "type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$" },
+          "changed_by": { "type": "string" },
+          "change_description": { "type": "string" },
+          "migration_applied": { "type": "boolean", "default": false },
+          "backup_path": { "type": "string" }
+        }
+      },
+      "default": []
+    },
     "governance_notes": {
       "type": "string",
-      "description": "Free-form governance and compliance notes"
+      "description": "DEPRECATED: Use governance.governance_notes instead"
     }
   }
 }
