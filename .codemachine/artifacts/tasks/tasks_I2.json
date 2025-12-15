@@ -42,7 +42,7 @@
       "I2.T1"
     ],
     "parallelizable": true,
-    "done": false
+    "done": true
   },
   {
     "task_id": "I2.T3",
@@ -64,7 +64,7 @@
       "I2.T1"
     ],
     "parallelizable": false,
-    "done": false
+    "done": true
   },
   {
     "task_id": "I2.T4",
@@ -139,7 +139,7 @@
     "task_id": "I2.T7",
     "iteration_id": "I2",
     "iteration_goal": "Build repository context discovery, summarization, and caching pipelines; implement ResearchTask orchestration; deliver PRD/spec authoring engines with approval gates; and formalize traceability/agent manifest flows so planning outputs remain deterministic and actionable.",
-    "description": "Implement traceability map generator that links PRD goals → spec requirements → planned ExecutionTasks using models defined in I1, storing results in `trace.json` and surfacing summary in CLI.\n            Provide Markdown guidance referencing FR-9/FR-10 so later teams can reason about completeness.",
+    "description": "Implement traceability map generator that links PRD goals \u2192 spec requirements \u2192 planned ExecutionTasks using models defined in I1, storing results in `trace.json` and surfacing summary in CLI.\n            Provide Markdown guidance referencing FR-9/FR-10 so later teams can reason about completeness.",
     "agent_type_hint": "StructuralDataAgent",
     "inputs": "Section 2 (Data Model Overview), Section 2.1 (Trace artifacts), FR-9/FR-10, ADR-7.",
     "target_files": [

@@ -1,0 +1,148 @@
+---
+title: Context & Research Sequence
+---
+
+sequenceDiagram
+    participant CLI as CLI Command
+    participant Orch as Orchestration Core
+    participant CtxAgg as Context Aggregator
+    participant ResCo as Research Coordinator
+    participant PRDEng as PRD Engine
+    participant SpecComp as Specification Composer
+    participant RunStore as Run Storage
+    participant Agent as Agent Adapter
+
+    Note over CLI,Agent: Phase 1: Context Gathering & Discovery
+
+    CLI->>Orch: start feature (prompt/Linear/spec)
+    activate Orch
+
+    Orch->>CtxAgg: aggregateContext(featureId, config)
+    activate CtxAgg
+
+    Note over CtxAgg: Discover files via globs<br/>Hash files (incremental)<br/>Rank by score + token budget
+
+    CtxAgg->>RunStore: Store file_hashes.json
+    CtxAgg->>RunStore: Store context/summary.json
+    CtxAgg-->>Orch: ContextDocument + diagnostics
+    deactivate CtxAgg
+
+    Note over CLI,Agent: Phase 2: Research Task Detection
+
+    Orch->>ResCo: detectUnknownsFromContext(contextDoc)
+    activate ResCo
+    Orch-->>ResCo: prompt/spec text + manualUnknowns
+    ResCo->>ResCo: scanPromptAndSpec(TBD/TODO/??? markers)
+    ResCo->>ResCo: scanContextFiles(max 12, README/docs)
+
+    Note over ResCo: Analyze context + prompt/spec<br/>Identify TBD/TODO markers<br/>Generate objectives + sources
+
+    loop For each unknown
+        ResCo->>ResCo: generateCacheKey(objectives, sources)
+
+        alt Cached task exists and fresh
+            ResCo->>RunStore: Load cached task
+            RunStore-->>ResCo: Cached ResearchTask
+            Note over ResCo: Mark as 'cached'<br/>Reuse existing results
+        else Create new task
+            ResCo->>ResCo: createResearchTask(taskId, objectives)
+            ResCo->>RunStore: Save research/tasks/{taskId}.json<br/>Include detection metadata + freshness
+            ResCo->>RunStore: Append research/tasks.jsonl
+            Note over ResCo: Status: 'pending'
+        end
+    end
+
+    ResCo-->>Orch: List of ResearchTask[]
+    deactivate ResCo
+
+    Note over CLI,Agent: Phase 3: Research Execution (Optional)
+
+    opt Execute research tasks
+        loop For each pending task
+            Orch->>ResCo: startTask(taskId)
+            activate ResCo
+            ResCo->>RunStore: Update task status='in_progress'
+            ResCo-->>Orch: Updated task
+            deactivate ResCo
+
+            Orch->>Agent: Query sources (codebase/web/API)
+            activate Agent
+            Agent-->>Orch: Research findings
+            deactivate Agent
+
+            Orch->>ResCo: completeTask(taskId, results)
+            activate ResCo
+            ResCo->>RunStore: Update task with results<br/>Store confidence score<br/>Record sources consulted
+            ResCo-->>Orch: Completed task
+            deactivate ResCo
+        end
+    end
+
+    Note over CLI,Agent: Phase 4: PRD/Spec Authoring with Context
+
+    Orch->>PRDEng: generatePRD(contextDoc, researchTasks)
+    activate PRDEng
+
+    Note over PRDEng: Assemble prompt with:<br/>- Context summaries<br/>- Research results<br/>- User requirements
+
+    PRDEng->>Agent: Generate PRD draft
+    activate Agent
+    Agent-->>PRDEng: PRD content
+    deactivate Agent
+
+    PRDEng->>RunStore: Save artifacts/prd.md
+    PRDEng-->>Orch: PRD document
+    deactivate PRDEng
+
+    Orch->>SpecComp: generateSpec(prd, contextDoc, researchTasks)
+    activate SpecComp
+
+    Note over SpecComp: Assemble prompt with:<br/>- PRD requirements<br/>- Context references<br/>- Research outputs
+
+    SpecComp->>Agent: Generate specification
+    activate Agent
+    Agent-->>SpecComp: Spec content
+    deactivate Agent
+
+    SpecComp->>RunStore: Save artifacts/spec.md
+    SpecComp-->>Orch: Specification document
+    deactivate SpecComp
+
+    Orch-->>CLI: Feature initialized with context + research
+    deactivate Orch
+
+    Note over CLI,Agent: CLI Commands for Research Management
+
+    rect rgb(240, 248, 255)
+        Note right of CLI: ai-feature research list<br/>Shows all research tasks<br/>with status and cache info
+
+        CLI->>ResCo: listTasks(filters)
+        activate ResCo
+        ResCo->>RunStore: Load research/tasks/*.json
+        RunStore-->>ResCo: Task files
+        ResCo-->>CLI: Filtered ResearchTask[]
+        deactivate ResCo
+    end
+
+    rect rgb(255, 250, 240)
+        Note right of CLI: ai-feature research show {taskId}<br/>Displays task details<br/>and results
+
+        CLI->>ResCo: getTask(taskId)
+        activate ResCo
+        ResCo->>RunStore: Load research/tasks/{taskId}.json
+        RunStore-->>ResCo: ResearchTask
+        ResCo-->>CLI: Task with results
+        deactivate ResCo
+    end
+
+    rect rgb(240, 255, 240)
+        Note right of CLI: Automatic rate limit handling<br/>and offline fallbacks
+
+        alt Rate limit hit
+            Agent-->>Orch: RateLimitError
+            Note over Orch: Record in rate_limits.json<br/>Queue tasks for retry
+        else Service offline (Linear/GitHub)
+            Agent-->>Orch: ServiceUnavailableError
+            Note over Orch: Mark tasks as 'pending'<br/>Log warning + fallback
+        end
+    end
