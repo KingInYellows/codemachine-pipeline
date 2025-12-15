@@ -6,9 +6,16 @@ import {
   listRunDirectories,
   readManifest,
   runDirectoryExists,
+  updateManifest,
   type RunManifest,
 } from '../../persistence/runDirectoryManager';
 import { loadRepoConfig } from '../../core/config/RepoConfig';
+import { createCliLogger, LogLevel } from '../../telemetry/logger';
+import { createRunMetricsCollector, StandardMetrics } from '../../telemetry/metrics';
+import { createRunTraceManager, SpanStatusCode, withSpan } from '../../telemetry/traces';
+import type { StructuredLogger } from '../../telemetry/logger';
+import type { MetricsCollector } from '../../telemetry/metrics';
+import type { TraceManager, ActiveSpan } from '../../telemetry/traces';
 
 const CONFIG_RELATIVE_PATH = path.join('.ai-feature-pipeline', 'config.json');
 const DEFAULT_RUNS_DIR = path.join('.ai-feature-pipeline', 'runs');
@@ -100,26 +107,129 @@ export default class Status extends Command {
     const { flags } = await this.parse(Status);
     const typedFlags = flags as StatusFlags;
 
+    if (typedFlags.json) {
+      process.env.JSON_OUTPUT = '1';
+    }
+
+    // Initialize telemetry (logger, metrics, traces)
+    let logger: StructuredLogger | undefined;
+    let metrics: MetricsCollector | undefined;
+    let traceManager: TraceManager | undefined;
+    let commandSpan: ActiveSpan | undefined;
+    let runDirPath: string | undefined;
+    const startTime = Date.now();
+
     try {
       const settings = this.resolveRunDirectorySettings();
       const featureId = await this.selectFeatureId(settings.baseDir, typedFlags.feature);
 
+      // Initialize telemetry if feature exists
+      if (featureId) {
+        runDirPath = getRunDirectoryPath(settings.baseDir, featureId);
+        logger = createCliLogger('status', featureId, runDirPath, {
+          minLevel: typedFlags.verbose ? LogLevel.DEBUG : LogLevel.INFO,
+          mirrorToStderr: !typedFlags.json,
+        });
+        metrics = createRunMetricsCollector(runDirPath, featureId);
+        traceManager = createRunTraceManager(runDirPath, featureId);
+        commandSpan = traceManager.startSpan('cli.status');
+        commandSpan.setAttribute('feature_id', featureId);
+        commandSpan.setAttribute('json_mode', typedFlags.json);
+        commandSpan.setAttribute('verbose_flag', typedFlags.verbose);
+
+        logger.info('Status command invoked', {
+          feature_id: featureId,
+          json_mode: typedFlags.json,
+          verbose: typedFlags.verbose,
+        });
+      }
+
       if (typedFlags.feature && featureId !== typedFlags.feature) {
+        if (logger) {
+          logger.error('Feature not found', { requested: typedFlags.feature });
+        }
         this.error(`Feature run directory not found: ${typedFlags.feature}`, { exit: 10 });
       }
 
       const manifestInfo = featureId
-        ? await this.loadManifestSnapshot(settings.baseDir, featureId)
+        ? await this.loadManifestWithTracing(traceManager, commandSpan, settings.baseDir, featureId)
         : undefined;
 
       const payload = this.buildStatusPayload(featureId, settings, manifestInfo);
 
       if (typedFlags.json) {
+        // Disable stderr mirroring in JSON mode (already set in createCliLogger)
         this.log(JSON.stringify(payload, null, 2));
       } else {
         this.printHumanReadable(payload, typedFlags);
       }
+
+      // Record success metrics
+      if (metrics) {
+        const duration = Date.now() - startTime;
+        metrics.observe(StandardMetrics.COMMAND_EXECUTION_DURATION_MS, duration, { command: 'status' });
+        metrics.increment(StandardMetrics.COMMAND_INVOCATIONS_TOTAL, { command: 'status', exit_code: '0' });
+        await metrics.flush();
+      }
+
+      if (commandSpan) {
+        commandSpan.setAttribute('exit_code', 0);
+        commandSpan.end({ code: SpanStatusCode.OK });
+      }
+
+      if (traceManager) {
+        await traceManager.flush();
+      }
+
+      if (runDirPath) {
+        await ensureTelemetryReferences(runDirPath);
+      }
+
+      if (logger) {
+        logger.info('Status command completed', { duration_ms: Date.now() - startTime });
+        await logger.flush();
+      }
     } catch (error) {
+      // Record error metrics
+      if (metrics) {
+        const duration = Date.now() - startTime;
+        metrics.observe(StandardMetrics.COMMAND_EXECUTION_DURATION_MS, duration, { command: 'status' });
+        metrics.increment(StandardMetrics.COMMAND_INVOCATIONS_TOTAL, { command: 'status', exit_code: '1' });
+        await metrics.flush();
+      }
+
+      if (commandSpan) {
+        commandSpan.setAttribute('exit_code', 1);
+        commandSpan.setAttribute('error', true);
+        if (error instanceof Error) {
+          commandSpan.setAttribute('error.message', error.message);
+          commandSpan.setAttribute('error.name', error.name);
+        }
+        commandSpan.end({
+          code: SpanStatusCode.ERROR,
+          message: error instanceof Error ? error.message : 'unknown error',
+        });
+      }
+
+      if (traceManager) {
+        await traceManager.flush();
+      }
+
+      if (runDirPath) {
+        await ensureTelemetryReferences(runDirPath);
+      }
+
+      if (logger) {
+        if (error instanceof Error) {
+          logger.error('Status command failed', {
+            error: error.message,
+            stack: error.stack,
+            duration_ms: Date.now() - startTime,
+          });
+        }
+        await logger.flush();
+      }
+
       // Re-throw oclif errors to preserve exit codes
       if (error && typeof error === 'object' && 'oclif' in error) {
         throw error;
@@ -266,6 +376,33 @@ export default class Status extends Command {
     return payload;
   }
 
+  private async loadManifestWithTracing(
+    traceManager: TraceManager | undefined,
+    parentSpan: ActiveSpan | undefined,
+    baseDir: string,
+    featureId: string
+  ): Promise<ManifestLoadResult> {
+    if (traceManager && parentSpan) {
+      return withSpan(
+        traceManager,
+        'status.load_manifest',
+        async (span) => {
+          span.setAttribute('feature_id', featureId);
+          const result = await this.loadManifestSnapshot(baseDir, featureId);
+          if (result.error) {
+            span.setAttribute('manifest_load_error', true);
+          } else if (result.manifest) {
+            span.setAttribute('manifest_status', result.manifest.status);
+          }
+          return result;
+        },
+        parentSpan.context
+      );
+    }
+
+    return this.loadManifestSnapshot(baseDir, featureId);
+  }
+
   private printHumanReadable(payload: StatusPayload, flags: StatusFlags): void {
     this.log('');
     this.log(`Feature: ${payload.feature_id ?? '(none detected)'}`);
@@ -343,4 +480,34 @@ export default class Status extends Command {
     }
     this.log('');
   }
+}
+
+async function ensureTelemetryReferences(runDir: string): Promise<void> {
+  const metricsPath = 'metrics/prometheus.txt';
+  const tracesPath = 'telemetry/traces.json';
+
+  await updateManifest(runDir, manifest => {
+    const telemetry = {
+      ...(manifest.telemetry ?? {}),
+    };
+
+    let changed = false;
+
+    if (!telemetry.logs_dir) {
+      telemetry.logs_dir = 'logs';
+      changed = true;
+    }
+
+    if (telemetry.metrics_file !== metricsPath) {
+      telemetry.metrics_file = metricsPath;
+      changed = true;
+    }
+
+    if (telemetry.traces_file !== tracesPath) {
+      telemetry.traces_file = tracesPath;
+      changed = true;
+    }
+
+    return changed ? { telemetry } : null;
+  });
 }

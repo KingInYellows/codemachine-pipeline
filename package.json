@@ -26,6 +26,7 @@
     "test:config:watch": "vitest watch src/core/config",
     "test:config:coverage": "vitest run src/core/config --coverage",
     "test:http": "vitest run tests/unit",
+    "test:telemetry": "vitest run tests/unit/logger.spec.ts",
     "test:jest": "jest",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
