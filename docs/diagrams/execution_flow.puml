@@ -1,0 +1,181 @@
+@startuml Execution Engine Flow
+!theme plain
+skinparam backgroundColor white
+skinparam shadowing false
+skinparam defaultFontName "SF Mono, Monaco, Consolas, monospace"
+skinparam ArrowColor #1a1a1a
+skinparam StateBackgroundColor #f0f0f0
+skinparam StateBorderColor #1a1a1a
+
+title Execution Engine Flow - Task Planning, Queueing, and Execution
+
+' ============================================================================
+' States
+' ============================================================================
+
+state "PRD & Spec Approved" as approved #90EE90
+state "Task Planner" as planner {
+  state "Load Spec Requirements" as load_spec
+  state "Generate Task Nodes" as gen_nodes
+  state "Build Dependency Graph" as build_dag
+  state "Validate DAG\n(Cycle Detection)" as validate
+  state "Compute Topological Order" as topo_sort
+  state "Persist plan.json" as persist_plan
+
+  load_spec --> gen_nodes : Extract test_plan
+  gen_nodes --> build_dag : Create ExecutionTasks
+  build_dag --> validate : Link dependencies
+  validate --> topo_sort : No cycles
+  validate --> [*] : Validation failed\n(exit with error)
+  topo_sort --> persist_plan : Deterministic ordering
+}
+
+state "Queue Coordinator" as queue {
+  state "Load plan.json" as load_plan
+  state "Enqueue Entry Tasks" as enqueue_entry
+  state "Monitor Dependencies" as monitor_deps
+  state "Update Queue State" as update_queue
+
+  load_plan --> enqueue_entry : Read entry tasks
+  enqueue_entry --> monitor_deps : Queue JSONL writes
+  monitor_deps --> update_queue : Dependency resolution
+  update_queue --> monitor_deps : Task status change
+}
+
+state "Execution Engine" as execution {
+  state "Dequeue Task" as dequeue
+  state "Apply Patch/Changes" as apply_patch
+  state "Run Validations" as run_validation
+  state "Commit to Branch" as commit_branch
+  state "Mark Complete" as mark_complete
+
+  dequeue --> apply_patch : Pop from queue
+  apply_patch --> run_validation : Git operations
+  run_validation --> commit_branch : Lint/test/build
+  run_validation --> apply_patch : Auto-fix retry
+  commit_branch --> mark_complete : Git commit
+  mark_complete --> dequeue : Update queue
+}
+
+state "Resume Coordinator" as resume {
+  state "Load Last State" as load_state
+  state "Read Queue Snapshot" as read_queue
+  state "Identify Restart Point" as find_restart
+  state "Skip Completed Tasks" as skip_completed
+
+  load_state --> read_queue : feature.json\nlast_step
+  read_queue --> find_restart : Queue entries
+  find_restart --> skip_completed : Find last success
+}
+
+state "Approval Gates" as gates #FFD700
+state "Plan Ready" as plan_ready #90EE90
+state "Execution Complete" as exec_complete #90EE90
+state "Resume Point" as resume_point #FFA500
+
+' ============================================================================
+' Transitions
+' ============================================================================
+
+[*] --> approved : PRD & Spec\napproval recorded
+
+approved --> planner : CLI: plan generate
+
+planner --> plan_ready : plan.json created\nwith checksum
+
+plan_ready --> queue : CLI: start execution
+
+queue --> execution : Entry tasks queued
+
+execution --> gates : Validation required
+gates --> execution : Approval granted
+gates --> [*] : Approval denied
+
+execution --> exec_complete : All tasks done
+
+exec_complete --> [*] : Success
+
+' Error/Resume flow
+execution --> resume_point : Failure detected
+resume_point --> resume : CLI: resume
+resume --> queue : Restart from\nlast success
+queue --> execution : Continue DAG
+
+' CLI inspection
+plan_ready --> [*] : CLI: plan --json\n(inspect without executing)
+
+' ============================================================================
+' Notes
+' ============================================================================
+
+note right of planner
+  **Task Planner (FR-12, FR-13)**
+  - Converts spec.json test_plan → ExecutionTask DAG
+  - Generates stable task IDs (e.g., I3-T-UNIT-001) derived from requirement IDs
+  - Enforces dependency ordering
+  - Detects cycles using DFS
+  - Computes topological sort (Kahn's algorithm)
+  - Persists plan.json with SHA-256 checksum
+  - Reuses trace.json ExecutionTask IDs for deterministic traceability
+
+  **Outputs:**
+  - plan.json (PlanArtifact schema)
+  - plan_metadata.json (hash, entry tasks)
+end note
+
+note right of queue
+  **Queue Coordinator**
+  - Reads plan.json and initializes queue
+  - Writes queue entries (JSONL format)
+  - Tracks statuses: pending → running → completed
+  - Ensures only tasks with satisfied dependencies run
+  - Supports idempotent replays
+
+  **Storage:**
+  - queue/tasks.jsonl (append-only)
+  - In-memory: Map<task_id, ExecutionTask>
+end note
+
+note right of execution
+  **Execution Engine**
+  - Pops tasks from queue (FIFO for same depth)
+  - Applies code patches with allowlist enforcement
+  - Runs validation commands (lint, test, build)
+  - Supports auto-fix retries (max 3 attempts)
+  - Commits changes to feature branch
+  - Records outputs/diffs in run directory
+
+  **Integrations:**
+  - Git adapter (branch, commit, diff)
+  - Validation registry (command resolution)
+  - Agent adapter (code generation invocation)
+end note
+
+note right of resume
+  **Resume Coordinator (FR-14)**
+  - Loads feature.json (last_step, last_error)
+  - Reads queue snapshot (completed vs. pending)
+  - Identifies restart point in DAG
+  - Skips completed tasks via checksum verification
+  - Replays from failure point deterministically
+
+  **Resume Logic:**
+  1. Load plan.json
+  2. Find last completed task in queue
+  3. Mark descendants as pending
+  4. Re-enqueue starting from failure
+end note
+
+note bottom of gates
+  **Approval Gates (ADR-5)**
+  - PRD approval → enables spec generation
+  - Spec approval → enables plan generation
+  - Plan generation → enables execution
+  - Validation failures → manual review gate
+
+  **Approval Storage:**
+  - approvals.json (append-only log)
+  - Approval records reference artifact hashes
+end note
+
+@enduml
