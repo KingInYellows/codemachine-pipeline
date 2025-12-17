@@ -19,6 +19,7 @@ import {
   type RunDirectorySettings,
 } from '../utils/runDirectory';
 import { parseContextDocument } from '../../core/models/ContextDocument';
+import { loadTraceSummary } from '../../workflows/traceabilityMapper';
 
 const MANIFEST_FILE = 'manifest.json';
 const MANIFEST_SCHEMA_DOC = 'docs/requirements/run_directory_schema.md';
@@ -57,6 +58,7 @@ interface StatusPayload {
   notes: string[];
   manifest_error?: string;
   context?: StatusContextPayload;
+  traceability?: StatusTraceabilityPayload;
 }
 
 interface StatusContextPayload {
@@ -83,6 +85,16 @@ interface StatusContextPayload {
   warnings?: string[];
   budget_warnings?: string[];
   error?: string;
+}
+
+interface StatusTraceabilityPayload {
+  trace_path: string;
+  total_links: number;
+  prd_goals_mapped: number;
+  spec_requirements_mapped: number;
+  execution_tasks_mapped: number;
+  last_updated: string;
+  outstanding_gaps: number;
 }
 
 /**
@@ -180,7 +192,11 @@ export default class Status extends Command {
         ? await this.loadContextStatus(settings.baseDir, featureId)
         : undefined;
 
-      const payload = this.buildStatusPayload(featureId, settings, manifestInfo, contextInfo);
+      const traceInfo = featureId
+        ? await this.loadTraceabilityStatus(settings.baseDir, featureId)
+        : undefined;
+
+      const payload = this.buildStatusPayload(featureId, settings, manifestInfo, contextInfo, traceInfo);
 
       if (typedFlags.json) {
         // Disable stderr mirroring in JSON mode (already set in createCliLogger)
@@ -298,7 +314,8 @@ export default class Status extends Command {
     featureId: string | undefined,
     settings: RunDirectorySettings,
     manifestInfo?: ManifestLoadResult,
-    contextInfo?: StatusContextPayload
+    contextInfo?: StatusContextPayload,
+    traceInfo?: StatusTraceabilityPayload
   ): StatusPayload {
     const manifest = manifestInfo?.manifest;
     const manifestPath = manifestInfo?.manifestPath ?? this.deriveManifestPath(settings.baseDir, featureId);
@@ -323,6 +340,7 @@ export default class Status extends Command {
         `Template manifest available at ${MANIFEST_TEMPLATE}`,
       ],
       ...(contextInfo && { context: contextInfo }),
+      ...(traceInfo && { traceability: traceInfo }),
     };
 
     if (manifest?.title) {
@@ -343,6 +361,34 @@ export default class Status extends Command {
     }
 
     return payload;
+  }
+
+  private async loadTraceabilityStatus(
+    baseDir: string,
+    featureId: string
+  ): Promise<StatusTraceabilityPayload | undefined> {
+    const runDir = getRunDirectoryPath(baseDir, featureId);
+
+    try {
+      const traceSummary = await loadTraceSummary(runDir);
+
+      if (!traceSummary) {
+        return undefined;
+      }
+
+      return {
+        trace_path: traceSummary.tracePath,
+        total_links: traceSummary.totalLinks,
+        prd_goals_mapped: traceSummary.prdGoalsMapped,
+        spec_requirements_mapped: traceSummary.specRequirementsMapped,
+        execution_tasks_mapped: traceSummary.executionTasksMapped,
+        last_updated: traceSummary.lastUpdated,
+        outstanding_gaps: traceSummary.outstandingGaps,
+      };
+    } catch {
+      // Silently return undefined if trace.json doesn't exist or is invalid
+      return undefined;
+    }
   }
 
   private async loadContextStatus(
@@ -577,6 +623,21 @@ export default class Status extends Command {
             this.log(`  - ${preview.file_path} (${preview.chunk_id}): ${preview.summary}`);
           }
         }
+      }
+    }
+
+    if (payload.traceability) {
+      this.log(
+        `Traceability: ${payload.traceability.total_links} links (${payload.traceability.prd_goals_mapped} PRD goals → ${payload.traceability.spec_requirements_mapped} spec requirements → ${payload.traceability.execution_tasks_mapped} tasks)`
+      );
+      this.log(`Last updated: ${payload.traceability.last_updated}`);
+      if (payload.traceability.outstanding_gaps > 0) {
+        this.warn(`Outstanding gaps: ${payload.traceability.outstanding_gaps}`);
+      } else {
+        this.log('Outstanding gaps: None');
+      }
+      if (flags.verbose) {
+        this.log(`Trace file: ${payload.traceability.trace_path}`);
       }
     }
 

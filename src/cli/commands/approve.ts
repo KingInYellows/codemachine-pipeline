@@ -2,8 +2,8 @@ import { Args, Command, Flags } from '@oclif/core';
 import * as path from 'node:path';
 import { execSync } from 'node:child_process';
 import * as os from 'node:os';
-import { createCliLogger, LogLevel } from '../../telemetry/logger';
-import { createRunMetricsCollector, StandardMetrics } from '../../telemetry/metrics';
+import { createCliLogger, LogLevel, type StructuredLogger } from '../../telemetry/logger';
+import { createRunMetricsCollector, StandardMetrics, type MetricsCollector } from '../../telemetry/metrics';
 import { createRunTraceManager, SpanStatusCode } from '../../telemetry/traces';
 import {
   getRunDirectoryPath,
@@ -19,6 +19,7 @@ import {
   type DenyApprovalOptions,
 } from '../../workflows/approvalRegistry';
 import { ApprovalGateType } from '../../core/models/ApprovalRecord';
+import { updateTraceMapOnSpecChange } from '../../workflows/traceabilityMapper';
 import {
   resolveRunDirectorySettings,
   selectFeatureId,
@@ -257,6 +258,14 @@ export default class Approve extends Command {
           signer: approvalRecord.signer,
           approval_id: approvalRecord.approval_id,
         });
+
+        await this.generateTraceAfterSpecApproval({
+          gateType,
+          featureId,
+          runDir,
+          logger,
+          metrics,
+        });
       } else {
         // Deny approval
         const denyOptions: DenyApprovalOptions = {
@@ -478,6 +487,38 @@ export default class Approve extends Command {
     this.log('Next steps:');
     payload.next_steps.forEach(step => this.log(`  • ${step}`));
     this.log('');
+  }
+
+  private async generateTraceAfterSpecApproval(options: {
+    gateType: ApprovalGateType;
+    featureId: string;
+    runDir: string;
+    logger: StructuredLogger;
+    metrics: MetricsCollector;
+  }): Promise<void> {
+    if (options.gateType !== 'spec') {
+      return;
+    }
+
+    try {
+      const result = await updateTraceMapOnSpecChange(
+        { runDir: options.runDir, featureId: options.featureId },
+        options.logger,
+        options.metrics
+      );
+
+      options.logger.info('Trace map generated after spec approval', {
+        trace_path: result.tracePath,
+        total_links: result.statistics.totalLinks,
+        prd_to_spec_links: result.statistics.prdToSpecLinks,
+        spec_to_task_links: result.statistics.specToTaskLinks,
+        duplicates_prevented: result.statistics.duplicatesPrevented,
+      });
+    } catch (error) {
+      options.logger.warn('Failed to generate trace map after spec approval', {
+        error: this.formatUnknownError(error),
+      });
+    }
   }
 
   private formatUnknownError(error: unknown): string {
