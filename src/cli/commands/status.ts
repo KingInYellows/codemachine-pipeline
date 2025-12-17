@@ -539,6 +539,23 @@ export default class Status extends Command {
       this.log(
         `Approvals: pending=${payload.approvals.pending.length} completed=${payload.approvals.completed.length}`
       );
+
+      // Highlight pending approvals with actionable prompts
+      if (payload.approvals.pending.length > 0) {
+        this.log('');
+        this.warn('⚠ Pending approvals required:');
+        payload.approvals.pending.forEach(gate => {
+          this.warn(`  • ${gate.toUpperCase()} - Review artifact and run: ai-feature approve ${gate} --signer "<your-email>"`);
+        });
+      }
+
+      // Show completed approvals in verbose mode
+      if (flags.verbose && payload.approvals.completed.length > 0) {
+        this.log('Completed approvals:');
+        payload.approvals.completed.forEach(gate => {
+          this.log(`  • ${gate.toUpperCase()}`);
+        });
+      }
     }
 
     if (payload.context) {
