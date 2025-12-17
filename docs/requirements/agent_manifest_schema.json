@@ -1,0 +1,284 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://codemachine.dev/schemas/agent-manifest-v1.json",
+  "title": "Agent Provider Manifest",
+  "description": "Schema for agent provider capability manifests supporting bring-your-own-agent workflows with declarative metadata, rate limits, tool support, and cost hints.",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "providerId",
+    "name",
+    "version",
+    "rateLimits",
+    "costConfig"
+  ],
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$",
+      "description": "Semantic version of this manifest schema (e.g., '1.0.0')",
+      "examples": ["1.0.0"]
+    },
+    "providerId": {
+      "type": "string",
+      "pattern": "^[a-z0-9_-]+$",
+      "minLength": 1,
+      "description": "Unique identifier for this agent provider (lowercase alphanumeric, hyphens, underscores)",
+      "examples": ["openai", "anthropic", "local-ollama", "azure-openai"]
+    },
+    "name": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Human-readable provider name",
+      "examples": ["OpenAI GPT-4", "Anthropic Claude", "Local Ollama"]
+    },
+    "version": {
+      "type": "string",
+      "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$",
+      "description": "Provider implementation version (semver)",
+      "examples": ["1.0.0", "2.1.3"]
+    },
+    "description": {
+      "type": "string",
+      "description": "Optional description of this provider's capabilities and use cases"
+    },
+    "rateLimits": {
+      "type": "object",
+      "required": ["requestsPerMinute"],
+      "description": "Rate limit constraints for this provider (REQUIRED per acceptance criteria)",
+      "properties": {
+        "requestsPerMinute": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Maximum API requests per minute"
+        },
+        "tokensPerMinute": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Maximum tokens processable per minute (optional)"
+        },
+        "burstCapacity": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Maximum burst requests allowed above steady rate (optional)"
+        },
+        "concurrentRequests": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Maximum concurrent in-flight requests (optional)"
+        }
+      },
+      "additionalProperties": false
+    },
+    "costConfig": {
+      "type": "object",
+      "required": ["models"],
+      "description": "Cost estimation configuration with per-model pricing tables",
+      "properties": {
+        "currency": {
+          "type": "string",
+          "pattern": "^[A-Z]{3}$",
+          "default": "USD",
+          "description": "Currency code (ISO 4217, default: USD)",
+          "examples": ["USD", "EUR"]
+        },
+        "models": {
+          "type": "array",
+          "minItems": 1,
+          "description": "Array of model-specific pricing configurations",
+          "items": {
+            "type": "object",
+            "required": ["modelId", "inputCostPer1kTokens", "outputCostPer1kTokens"],
+            "properties": {
+              "modelId": {
+                "type": "string",
+                "minLength": 1,
+                "description": "Model identifier (e.g., 'gpt-4', 'claude-3-opus')",
+                "examples": ["gpt-4", "gpt-3.5-turbo", "claude-3-opus"]
+              },
+              "inputCostPer1kTokens": {
+                "type": "number",
+                "minimum": 0,
+                "description": "Cost per 1000 input/prompt tokens in specified currency"
+              },
+              "outputCostPer1kTokens": {
+                "type": "number",
+                "minimum": 0,
+                "description": "Cost per 1000 output/completion tokens in specified currency"
+              },
+              "contextWindow": {
+                "type": "integer",
+                "minimum": 1,
+                "description": "Maximum context window size in tokens (optional)"
+              },
+              "maxOutputTokens": {
+                "type": "integer",
+                "minimum": 1,
+                "description": "Maximum output tokens per request (optional)"
+              }
+            },
+            "additionalProperties": false
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "tools": {
+      "type": "object",
+      "description": "Tool and feature support flags",
+      "properties": {
+        "streaming": {
+          "type": "boolean",
+          "default": false,
+          "description": "Supports streaming responses"
+        },
+        "functionCalling": {
+          "type": "boolean",
+          "default": false,
+          "description": "Supports function/tool calling"
+        },
+        "vision": {
+          "type": "boolean",
+          "default": false,
+          "description": "Supports image/vision inputs"
+        },
+        "jsonMode": {
+          "type": "boolean",
+          "default": false,
+          "description": "Supports structured JSON output mode"
+        },
+        "embeddings": {
+          "type": "boolean",
+          "default": false,
+          "description": "Supports text embedding generation"
+        }
+      },
+      "additionalProperties": false
+    },
+    "features": {
+      "type": "object",
+      "description": "Pipeline-specific capability flags (aligns with ADR-1 capability set)",
+      "properties": {
+        "prdGeneration": {
+          "type": "boolean",
+          "default": true,
+          "description": "Supports PRD generation workflow"
+        },
+        "specGeneration": {
+          "type": "boolean",
+          "default": true,
+          "description": "Supports specification generation workflow"
+        },
+        "codeGeneration": {
+          "type": "boolean",
+          "default": true,
+          "description": "Supports code generation workflow"
+        },
+        "codeReview": {
+          "type": "boolean",
+          "default": true,
+          "description": "Supports code review workflow"
+        },
+        "testGeneration": {
+          "type": "boolean",
+          "default": true,
+          "description": "Supports test generation workflow"
+        },
+        "summarization": {
+          "type": "boolean",
+          "default": true,
+          "description": "Supports context summarization workflow"
+        }
+      },
+      "additionalProperties": false
+    },
+    "endpoint": {
+      "type": "object",
+      "description": "API endpoint configuration",
+      "properties": {
+        "baseUrl": {
+          "type": "string",
+          "format": "uri",
+          "description": "Base URL for API requests (optional, for custom endpoints)"
+        },
+        "authMethod": {
+          "type": "string",
+          "enum": ["bearer", "api-key", "oauth", "none"],
+          "default": "bearer",
+          "description": "Authentication method"
+        },
+        "timeout": {
+          "type": "integer",
+          "minimum": 1000,
+          "default": 30000,
+          "description": "Request timeout in milliseconds (default: 30s)"
+        }
+      },
+      "additionalProperties": false
+    },
+    "fallbackProvider": {
+      "type": "string",
+      "pattern": "^[a-z0-9_-]+$",
+      "description": "Optional fallback provider ID to use if this provider fails"
+    },
+    "metadata": {
+      "type": "object",
+      "description": "Additional provider-specific metadata",
+      "additionalProperties": true
+    }
+  },
+  "additionalProperties": false,
+  "examples": [
+    {
+      "schema_version": "1.0.0",
+      "providerId": "openai",
+      "name": "OpenAI GPT-4",
+      "version": "1.0.0",
+      "description": "OpenAI GPT-4 and GPT-3.5 Turbo models via official API",
+      "rateLimits": {
+        "requestsPerMinute": 500,
+        "tokensPerMinute": 150000,
+        "burstCapacity": 50
+      },
+      "costConfig": {
+        "currency": "USD",
+        "models": [
+          {
+            "modelId": "gpt-4",
+            "inputCostPer1kTokens": 0.03,
+            "outputCostPer1kTokens": 0.06,
+            "contextWindow": 8192,
+            "maxOutputTokens": 4096
+          },
+          {
+            "modelId": "gpt-3.5-turbo",
+            "inputCostPer1kTokens": 0.0015,
+            "outputCostPer1kTokens": 0.002,
+            "contextWindow": 16384,
+            "maxOutputTokens": 4096
+          }
+        ]
+      },
+      "tools": {
+        "streaming": true,
+        "functionCalling": true,
+        "vision": false,
+        "jsonMode": true,
+        "embeddings": false
+      },
+      "features": {
+        "prdGeneration": true,
+        "specGeneration": true,
+        "codeGeneration": true,
+        "codeReview": true,
+        "testGeneration": true,
+        "summarization": true
+      },
+      "endpoint": {
+        "baseUrl": "https://api.openai.com/v1",
+        "authMethod": "bearer",
+        "timeout": 60000
+      }
+    }
+  ]
+}
