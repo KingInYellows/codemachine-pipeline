@@ -2,7 +2,7 @@
 ai_feature_pipeline_command_invocations_total{command="init",exit_code="0",run_id="bootstrap"} 1
 
 # TYPE ai_feature_pipeline_command_execution_duration_ms_bucket histogram
-ai_feature_pipeline_command_execution_duration_ms_bucket{command="init",le="10",run_id="bootstrap"} 0
+ai_feature_pipeline_command_execution_duration_ms_bucket{command="init",le="10",run_id="bootstrap"} 1
 ai_feature_pipeline_command_execution_duration_ms_bucket{command="init",le="25",run_id="bootstrap"} 1
 ai_feature_pipeline_command_execution_duration_ms_bucket{command="init",le="50",run_id="bootstrap"} 1
 ai_feature_pipeline_command_execution_duration_ms_bucket{command="init",le="100",run_id="bootstrap"} 1
@@ -15,7 +15,7 @@ ai_feature_pipeline_command_execution_duration_ms_bucket{command="init",le="1000
 ai_feature_pipeline_command_execution_duration_ms_bucket{command="init",le="+Inf",run_id="bootstrap"} 1
 
 # TYPE ai_feature_pipeline_command_execution_duration_ms_sum histogram
-ai_feature_pipeline_command_execution_duration_ms_sum{command="init",run_id="bootstrap"} 12
+ai_feature_pipeline_command_execution_duration_ms_sum{command="init",run_id="bootstrap"} 10
 
 # TYPE ai_feature_pipeline_command_execution_duration_ms_count histogram
 ai_feature_pipeline_command_execution_duration_ms_count{command="init",run_id="bootstrap"} 1
