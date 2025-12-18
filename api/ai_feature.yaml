@@ -1,0 +1,805 @@
+openapi: 3.1.0
+info:
+  title: AI Feature Pipeline API
+  version: 1.0.0
+  description: |
+    OpenAPI specification for AI Feature Pipeline adapters and remote endpoints.
+
+    This specification documents the GitHub adapter operations and provides
+    a contract for future remote endpoints that may wrap these adapters.
+
+    **Note:** This specification describes the adapter interface, not a REST API.
+    Future iterations may expose these operations via HTTP endpoints.
+  contact:
+    name: AI Feature Pipeline Team
+  license:
+    name: MIT
+
+servers:
+  - url: https://api.github.com
+    description: GitHub REST API v3
+
+tags:
+  - name: Repository
+    description: Repository metadata operations
+  - name: Branches
+    description: Branch management operations
+  - name: Pull Requests
+    description: Pull request operations
+  - name: Reviews
+    description: Code review operations
+  - name: Status Checks
+    description: Status check operations
+  - name: Merges
+    description: Merge operations
+  - name: Workflows
+    description: GitHub Actions workflow dispatch
+
+components:
+  securitySchemes:
+    GitHubToken:
+      type: http
+      scheme: bearer
+      description: GitHub personal access token (PAT) or GitHub App token
+
+  schemas:
+    RepositoryInfo:
+      type: object
+      required:
+        - id
+        - full_name
+        - default_branch
+        - private
+        - clone_url
+        - created_at
+        - updated_at
+      properties:
+        id:
+          type: integer
+          description: Repository ID
+          example: 123456789
+        full_name:
+          type: string
+          description: Full repository name (owner/repo)
+          example: "octocat/Hello-World"
+        default_branch:
+          type: string
+          description: Default branch name
+          example: "main"
+        private:
+          type: boolean
+          description: Whether the repository is private
+          example: false
+        clone_url:
+          type: string
+          format: uri
+          description: Clone URL (HTTPS)
+          example: "https://github.com/octocat/Hello-World.git"
+        description:
+          type: string
+          nullable: true
+          description: Repository description
+          example: "My first repository on GitHub!"
+        created_at:
+          type: string
+          format: date-time
+          description: Repository creation timestamp
+        updated_at:
+          type: string
+          format: date-time
+          description: Last update timestamp
+
+    GitReference:
+      type: object
+      required:
+        - ref
+        - url
+        - object
+      properties:
+        ref:
+          type: string
+          description: Reference name
+          example: "refs/heads/feature-branch"
+        url:
+          type: string
+          format: uri
+          description: Reference URL
+        object:
+          type: object
+          required:
+            - sha
+            - type
+            - url
+          properties:
+            sha:
+              type: string
+              description: SHA of the commit
+              example: "aa218f56b14c9653891f9e74264a383fa43fefbd"
+            type:
+              type: string
+              description: Object type
+              example: "commit"
+            url:
+              type: string
+              format: uri
+              description: Object URL
+
+    CreateBranchRequest:
+      type: object
+      required:
+        - branch
+        - sha
+      properties:
+        branch:
+          type: string
+          description: Branch name (without refs/heads/ prefix)
+          example: "feature-new-api"
+        sha:
+          type: string
+          description: SHA to branch from
+          example: "aa218f56b14c9653891f9e74264a383fa43fefbd"
+
+    CreatePullRequestRequest:
+      type: object
+      required:
+        - title
+        - body
+        - head
+        - base
+      properties:
+        title:
+          type: string
+          description: PR title
+          example: "Add new feature"
+        body:
+          type: string
+          description: PR body/description
+          example: "This PR adds a new feature to improve performance."
+        head:
+          type: string
+          description: Head branch (source)
+          example: "feature-branch"
+        base:
+          type: string
+          description: Base branch (target)
+          example: "main"
+        draft:
+          type: boolean
+          description: Whether PR is a draft
+          default: false
+        maintainer_can_modify:
+          type: boolean
+          description: Whether maintainers can edit
+          default: true
+
+    PullRequest:
+      type: object
+      required:
+        - number
+        - id
+        - state
+        - title
+        - html_url
+        - url
+        - head
+        - base
+        - draft
+        - merged
+        - created_at
+        - updated_at
+      properties:
+        number:
+          type: integer
+          description: PR number
+          example: 42
+        id:
+          type: integer
+          description: PR ID
+        state:
+          type: string
+          enum: [open, closed]
+          description: PR state
+        title:
+          type: string
+          description: PR title
+        body:
+          type: string
+          nullable: true
+          description: PR body/description
+        html_url:
+          type: string
+          format: uri
+          description: PR HTML URL
+        url:
+          type: string
+          format: uri
+          description: PR API URL
+        head:
+          type: object
+          required:
+            - ref
+            - sha
+          properties:
+            ref:
+              type: string
+              description: Head branch name
+            sha:
+              type: string
+              description: Head commit SHA
+        base:
+          type: object
+          required:
+            - ref
+            - sha
+          properties:
+            ref:
+              type: string
+              description: Base branch name
+            sha:
+              type: string
+              description: Base commit SHA
+        draft:
+          type: boolean
+          description: Whether PR is draft
+        merged:
+          type: boolean
+          description: Whether PR is merged
+        mergeable:
+          type: boolean
+          nullable: true
+          description: Whether PR is mergeable
+        mergeable_state:
+          type: string
+          nullable: true
+          description: Mergeable state
+          example: "clean"
+        created_at:
+          type: string
+          format: date-time
+          description: Creation timestamp
+        updated_at:
+          type: string
+          format: date-time
+          description: Last update timestamp
+
+    RequestReviewersRequest:
+      type: object
+      properties:
+        reviewers:
+          type: array
+          items:
+            type: string
+          description: List of reviewer usernames
+          example: ["octocat", "hubot"]
+        team_reviewers:
+          type: array
+          items:
+            type: string
+          description: List of team slugs
+          example: ["team-alpha"]
+
+    StatusCheck:
+      type: object
+      required:
+        - id
+        - status
+        - head_sha
+      properties:
+        id:
+          type: integer
+          description: Check suite ID
+        status:
+          type: string
+          description: Check suite status
+          enum: [queued, in_progress, completed]
+        conclusion:
+          type: string
+          nullable: true
+          description: Check suite conclusion
+          enum: [success, failure, neutral, cancelled, skipped, timed_out, action_required]
+        head_sha:
+          type: string
+          description: Head SHA
+        check_runs:
+          type: array
+          items:
+            type: object
+            required:
+              - id
+              - name
+              - status
+            properties:
+              id:
+                type: integer
+                description: Check run ID
+              name:
+                type: string
+                description: Check run name
+              status:
+                type: string
+                description: Check run status
+              conclusion:
+                type: string
+                nullable: true
+                description: Check run conclusion
+              started_at:
+                type: string
+                format: date-time
+                nullable: true
+                description: Start time
+              completed_at:
+                type: string
+                format: date-time
+                nullable: true
+                description: Completion time
+
+    MergePullRequestRequest:
+      type: object
+      properties:
+        commit_title:
+          type: string
+          description: Merge commit message title
+        commit_message:
+          type: string
+          description: Merge commit message body
+        merge_method:
+          type: string
+          enum: [merge, squash, rebase]
+          default: merge
+          description: Merge method
+        sha:
+          type: string
+          description: SHA that pull request head must match
+
+    MergeResult:
+      type: object
+      required:
+        - merged
+        - sha
+        - message
+      properties:
+        merged:
+          type: boolean
+          description: Whether merge was successful
+        sha:
+          type: string
+          description: SHA of the merge commit
+        message:
+          type: string
+          description: Result message
+
+    WorkflowDispatchRequest:
+      type: object
+      required:
+        - ref
+      properties:
+        ref:
+          type: string
+          description: Branch/tag/SHA reference
+          example: "main"
+        inputs:
+          type: object
+          additionalProperties:
+            type: string
+          description: Workflow inputs
+          example:
+            environment: "production"
+            debug: "false"
+
+    MergeReadinessCheck:
+      type: object
+      required:
+        - ready
+        - reasons
+      properties:
+        ready:
+          type: boolean
+          description: Whether PR is ready to merge
+        reasons:
+          type: array
+          items:
+            type: string
+          description: Reasons why PR is not ready (if applicable)
+          example: ["PR is in draft mode", "2 status check(s) failed"]
+
+    Error:
+      type: object
+      required:
+        - name
+        - message
+        - errorType
+      properties:
+        name:
+          type: string
+          description: Error name
+          example: "GitHubAdapterError"
+        message:
+          type: string
+          description: Error message
+          example: "Failed to create pull request"
+        errorType:
+          type: string
+          enum: [transient, permanent, human_action_required]
+          description: Error category
+        statusCode:
+          type: integer
+          description: HTTP status code (if applicable)
+        requestId:
+          type: string
+          description: Request ID for tracing
+        operation:
+          type: string
+          description: Operation that failed
+
+paths:
+  /repos/{owner}/{repo}:
+    get:
+      tags:
+        - Repository
+      summary: Get repository metadata
+      operationId: getRepository
+      security:
+        - GitHubToken: []
+      parameters:
+        - name: owner
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Repository owner
+        - name: repo
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Repository name
+      responses:
+        '200':
+          description: Repository metadata
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RepositoryInfo'
+        '404':
+          description: Repository not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /repos/{owner}/{repo}/git/refs:
+    post:
+      tags:
+        - Branches
+      summary: Create a branch
+      operationId: createBranch
+      security:
+        - GitHubToken: []
+      parameters:
+        - name: owner
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: repo
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - ref
+                - sha
+              properties:
+                ref:
+                  type: string
+                  description: Full reference name (refs/heads/branch-name)
+                sha:
+                  type: string
+                  description: SHA to branch from
+      responses:
+        '201':
+          description: Branch created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GitReference'
+        '422':
+          description: Validation failed (branch already exists)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /repos/{owner}/{repo}/git/ref/heads/{branch}:
+    get:
+      tags:
+        - Branches
+      summary: Get branch reference
+      operationId: getBranch
+      security:
+        - GitHubToken: []
+      parameters:
+        - name: owner
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: repo
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: branch
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Branch name
+      responses:
+        '200':
+          description: Branch reference
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GitReference'
+        '404':
+          description: Branch not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /repos/{owner}/{repo}/pulls:
+    post:
+      tags:
+        - Pull Requests
+      summary: Create a pull request
+      operationId: createPullRequest
+      security:
+        - GitHubToken: []
+      parameters:
+        - name: owner
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: repo
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreatePullRequestRequest'
+      responses:
+        '201':
+          description: Pull request created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PullRequest'
+        '422':
+          description: Validation failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /repos/{owner}/{repo}/pulls/{pull_number}:
+    get:
+      tags:
+        - Pull Requests
+      summary: Get pull request details
+      operationId: getPullRequest
+      security:
+        - GitHubToken: []
+      parameters:
+        - name: owner
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: repo
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: pull_number
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Pull request details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PullRequest'
+        '404':
+          description: Pull request not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /repos/{owner}/{repo}/pulls/{pull_number}/requested_reviewers:
+    post:
+      tags:
+        - Reviews
+      summary: Request reviewers for a pull request
+      operationId: requestReviewers
+      security:
+        - GitHubToken: []
+      parameters:
+        - name: owner
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: repo
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: pull_number
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RequestReviewersRequest'
+      responses:
+        '201':
+          description: Reviewers requested
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PullRequest'
+        '422':
+          description: Validation failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /repos/{owner}/{repo}/commits/{sha}/check-suites:
+    get:
+      tags:
+        - Status Checks
+      summary: Get status checks for a commit
+      operationId: getStatusChecks
+      security:
+        - GitHubToken: []
+      parameters:
+        - name: owner
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: repo
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: sha
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Status checks
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  check_suites:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/StatusCheck'
+
+  /repos/{owner}/{repo}/pulls/{pull_number}/merge:
+    put:
+      tags:
+        - Merges
+      summary: Merge a pull request
+      operationId: mergePullRequest
+      security:
+        - GitHubToken: []
+      parameters:
+        - name: owner
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: repo
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: pull_number
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MergePullRequestRequest'
+      responses:
+        '200':
+          description: Pull request merged
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MergeResult'
+        '405':
+          description: Pull request not mergeable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /repos/{owner}/{repo}/actions/workflows/{workflow_id}/dispatches:
+    post:
+      tags:
+        - Workflows
+      summary: Trigger a workflow dispatch
+      operationId: triggerWorkflow
+      security:
+        - GitHubToken: []
+      parameters:
+        - name: owner
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: repo
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: workflow_id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Workflow ID or filename
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WorkflowDispatchRequest'
+      responses:
+        '204':
+          description: Workflow dispatch triggered
+        '404':
+          description: Workflow not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
