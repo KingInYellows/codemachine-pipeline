@@ -1,0 +1,169 @@
+sequenceDiagram
+    participant CLI as CLI Orchestrator
+    participant PRContext as PR Context
+    participant GitHubAdapter as GitHub Adapter
+    participant WriteQueue as Write Action Queue
+    participant GitHub as GitHub API
+    participant Manifest as Manifest/Artifacts
+
+    Note over CLI,Manifest: PR Creation Flow (ai-feature pr create)
+
+    CLI->>PRContext: Load PR context
+    PRContext->>Manifest: Read manifest.json
+    Manifest-->>PRContext: Return manifest
+    PRContext->>Manifest: Check approvals
+    alt Code approval missing
+        Manifest-->>CLI: Error: Code gate not approved
+        CLI-->>CLI: Exit 30 (human action required)
+    end
+    PRContext->>Manifest: Check validation.json
+    alt Validations failed
+        Manifest-->>CLI: Error: Validations not passed
+        CLI-->>CLI: Exit 30 (human action required)
+    end
+    PRContext->>CLI: Context loaded
+
+    CLI->>GitHubAdapter: Create adapter instance
+    GitHubAdapter->>GitHub: Validate token & credentials
+    GitHub-->>GitHubAdapter: Token valid
+
+    CLI->>GitHubAdapter: createPullRequest(params)
+    GitHubAdapter->>GitHub: POST /repos/{owner}/{repo}/pulls
+    Note right of GitHub: Rate-limit check<br/>before request
+    GitHub-->>GitHubAdapter: PR created (number, url, etc)
+    GitHubAdapter-->>CLI: Return PR metadata
+
+    alt Reviewers requested
+        CLI->>WriteQueue: Queue reviewer request
+        WriteQueue->>GitHubAdapter: requestReviewers(params)
+        GitHubAdapter->>GitHub: POST /pulls/{number}/requested_reviewers
+        Note right of GitHub: Rate-limit check<br/>before request
+        GitHub-->>GitHubAdapter: Reviewers requested
+        GitHubAdapter-->>WriteQueue: Success
+        WriteQueue-->>CLI: Action queued
+    end
+
+    CLI->>Manifest: Persist pr.json
+    Manifest-->>CLI: Saved
+    CLI->>Manifest: Update feature.json external_links
+    Manifest-->>CLI: Updated
+    CLI->>Manifest: Log deployment action
+    Manifest-->>CLI: Logged to deployment.json
+    CLI-->>CLI: Output PR URL & details
+
+    Note over CLI,Manifest: PR Status Check Flow (ai-feature pr status)
+
+    CLI->>PRContext: Load PR context
+    PRContext->>Manifest: Read pr.json
+    Manifest-->>PRContext: Return PR metadata
+
+    CLI->>GitHubAdapter: getPullRequest(pr_number)
+    GitHubAdapter->>GitHub: GET /repos/{owner}/{repo}/pulls/{number}
+    GitHub-->>GitHubAdapter: PR details
+    GitHubAdapter-->>CLI: Return PR
+
+    CLI->>GitHubAdapter: getStatusChecks(head_sha)
+    GitHubAdapter->>GitHub: GET /repos/{owner}/{repo}/commits/{sha}/check-suites
+    GitHub-->>GitHubAdapter: Status check suites
+    GitHubAdapter-->>CLI: Return status checks
+
+    CLI->>GitHubAdapter: isPullRequestReadyToMerge(pr_number)
+    GitHubAdapter->>GitHubAdapter: Evaluate merge readiness
+    Note right of GitHubAdapter: Check:<br/>- PR state (open)<br/>- Draft mode<br/>- Mergeable<br/>- Status checks<br/>- Branch protection
+    GitHubAdapter-->>CLI: Return {ready, reasons[]}
+
+    alt Blockers present
+        CLI->>CLI: Build blocker list
+        Note over CLI: Blockers:<br/>- Status checks failed<br/>- Required reviews missing<br/>- Branch protection rules<br/>- Merge conflicts
+    end
+
+    CLI->>Manifest: Update pr.json with fresh data
+    Manifest-->>CLI: Saved
+    CLI-->>CLI: Output merge status & blockers
+
+    Note over CLI,Manifest: Reviewer Request Flow (ai-feature pr reviewers)
+
+    CLI->>PRContext: Load PR context
+    PRContext->>Manifest: Read pr.json
+    Manifest-->>PRContext: Return PR metadata
+
+    CLI->>WriteQueue: Queue reviewer request
+    WriteQueue->>GitHubAdapter: requestReviewers(params)
+    GitHubAdapter->>GitHub: POST /pulls/{number}/requested_reviewers
+    Note right of GitHub: Rate-limit check<br/>before request
+    GitHub-->>GitHubAdapter: Reviewers requested
+    GitHubAdapter-->>WriteQueue: Success
+    WriteQueue-->>CLI: Action completed
+
+    CLI->>Manifest: Update pr.json reviewers list
+    Manifest-->>CLI: Saved
+    CLI->>Manifest: Log to deployment.json
+    Manifest-->>CLI: Logged
+    CLI-->>CLI: Output updated reviewers
+
+    Note over CLI,Manifest: Auto-Merge Control Flow (ai-feature pr disable-auto-merge)
+
+    CLI->>PRContext: Load PR context
+    PRContext->>Manifest: Read pr.json
+    Manifest-->>PRContext: Return PR metadata
+
+    alt Auto-merge already disabled
+        CLI-->>CLI: Exit early (no-op)
+    end
+
+    CLI->>WriteQueue: Queue auto-merge disable
+    WriteQueue->>GitHubAdapter: disableAutoMerge(pr_number)
+    GitHubAdapter->>GitHub: POST /graphql (DisableAutoMerge mutation)
+    Note right of GitHub: GraphQL mutation:<br/>disablePullRequestAutoMerge
+    GitHub-->>GitHubAdapter: Auto-merge disabled
+    GitHubAdapter-->>WriteQueue: Success
+    WriteQueue-->>CLI: Action completed
+
+    CLI->>Manifest: Update pr.json (auto_merge_enabled: false)
+    Manifest-->>CLI: Saved
+    CLI->>Manifest: Log governance note to deployment.json
+    Note over Manifest: Record reason<br/>for disabling<br/>auto-merge
+    Manifest-->>CLI: Logged
+    CLI-->>CLI: Output confirmation
+
+    Note over CLI,Manifest: Write Action Queue & Rate Limiting
+
+    rect rgb(240, 248, 255)
+        Note over WriteQueue: Write Action Queue serializes<br/>all write operations (comments,<br/>reviewers, labels, auto-merge)<br/>to prevent GitHub abuse detection
+        WriteQueue->>WriteQueue: Check queue backlog
+        alt Queue backlog high
+            WriteQueue->>WriteQueue: Wait for drain
+            Note over WriteQueue: Observability hub alerts<br/>operators if backlog grows
+        end
+        WriteQueue->>GitHubAdapter: Execute next action
+        GitHubAdapter->>GitHub: API call with rate-limit headers
+        GitHub-->>GitHubAdapter: Response + rate-limit info
+        GitHubAdapter->>GitHubAdapter: Update rate-limit ledger
+        alt Rate limit approaching
+            GitHubAdapter->>WriteQueue: Throttle signal
+            WriteQueue->>WriteQueue: Increase inter-request delay
+        end
+        WriteQueue->>Manifest: Persist queue state to disk
+        Note over Manifest: Enables resume after crash
+    end
+
+    Note over CLI,Manifest: Branch Protection Feedback Loop
+
+    rect rgb(255, 248, 240)
+        CLI->>GitHubAdapter: isPullRequestReadyToMerge(pr_number)
+        GitHubAdapter->>GitHub: GET /repos/{owner}/{repo}/pulls/{number}
+        GitHub-->>GitHubAdapter: PR details (mergeable_state: blocked)
+        GitHubAdapter->>GitHub: GET /repos/{owner}/{repo}/commits/{sha}/check-suites
+        GitHub-->>GitHubAdapter: Failed status checks
+        GitHubAdapter-->>CLI: {ready: false, reasons: ["Status checks failed", "Required reviews missing"]}
+        CLI->>Manifest: Record failing contexts
+        Manifest-->>CLI: Saved to pr.json
+        CLI-->>CLI: Surface blockers to user
+        Note over CLI: User resolves blockers<br/>manually or via re-run
+        CLI->>CLI: Retry status check
+        CLI->>GitHubAdapter: isPullRequestReadyToMerge(pr_number)
+        GitHubAdapter->>GitHub: GET /repos/{owner}/{repo}/pulls/{number}
+        GitHub-->>GitHubAdapter: PR details (mergeable_state: clean)
+        GitHubAdapter-->>CLI: {ready: true, reasons: []}
+        CLI-->>CLI: Proceed with merge
+    end
