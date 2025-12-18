@@ -3,6 +3,9 @@ import { getRunDirectoryPath } from '../../persistence/runDirectoryManager';
 import { createCliLogger, LogLevel } from '../../telemetry/logger';
 import { createRunMetricsCollector, StandardMetrics } from '../../telemetry/metrics';
 import { createRunTraceManager, SpanStatusCode } from '../../telemetry/traces';
+import { createExecutionMetrics } from '../../telemetry/executionMetrics';
+import { createExecutionLogWriter } from '../../telemetry/logWriters';
+import type { ExecutionTelemetry } from '../../telemetry/executionTelemetry';
 import type { StructuredLogger } from '../../telemetry/logger';
 import type { MetricsCollector } from '../../telemetry/metrics';
 import type { TraceManager, ActiveSpan } from '../../telemetry/traces';
@@ -103,6 +106,7 @@ export default class Validate extends Command {
     let metrics: MetricsCollector | undefined;
     let traceManager: TraceManager | undefined;
     let commandSpan: ActiveSpan | undefined;
+    let executionTelemetry: ExecutionTelemetry | undefined;
     let runDirPath: string | undefined;
     const startTime = Date.now();
 
@@ -130,6 +134,14 @@ export default class Validate extends Command {
       commandSpan.setAttribute('feature_id', featureId);
       commandSpan.setAttribute('json_mode', flags.json);
       commandSpan.setAttribute('auto_fix_enabled', flags['auto-fix']);
+      if (!metrics || !logger) {
+        throw new Error('Telemetry initialization failed for validate command');
+      }
+      executionTelemetry = {
+        metrics: createExecutionMetrics(metrics, { runDir: runDirPath, runId: featureId, component: 'validation' }),
+        logs: createExecutionLogWriter(logger, { runDir: runDirPath, runId: featureId }),
+        traceManager,
+      };
 
       logger.info('Validate command invoked', {
         feature_id: featureId,
@@ -179,7 +191,8 @@ export default class Validate extends Command {
           commandType,
           options,
           logger,
-          metrics
+          metrics,
+          executionTelemetry
         );
 
         result = {
@@ -192,7 +205,7 @@ export default class Validate extends Command {
         };
       } else {
         // All validations
-        result = await executeAllValidations(runDirPath, undefined, options, logger, metrics);
+        result = await executeAllValidations(runDirPath, undefined, options, logger, metrics, executionTelemetry);
       }
 
       // Load validation summary for JSON output

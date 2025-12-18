@@ -1,0 +1,404 @@
+/**
+ * Execution Engine Telemetry
+ *
+ * Provides specialized metrics and logging helpers for the execution engine,
+ * instrumenting task lifecycle events, validation runs, diff generation, and
+ * agent cost tracking.
+ *
+ * Key features:
+ * - Per-task execution metrics (start, completion, failure)
+ * - Diff statistics histograms (files changed, line counts)
+ * - Validation duration tracking
+ * - Queue depth gauges
+ * - Agent cost counters (integrated with CostTracker)
+ *
+ * Implements Observability Rulebook and Iteration I3 execution telemetry requirements.
+ */
+
+import type { MetricsCollector, Labels } from './metrics';
+import { LATENCY_BUCKETS } from './metrics';
+
+// ============================================================================
+// Types & Interfaces
+// ============================================================================
+
+/**
+ * Execution task status
+ */
+export enum ExecutionTaskStatus {
+  STARTED = 'started',
+  COMPLETED = 'completed',
+  FAILED = 'failed',
+  SKIPPED = 'skipped',
+}
+
+/**
+ * Execution task type (mirrors ExecutionTask schema)
+ */
+export enum ExecutionTaskType {
+  CODE_GENERATION = 'code_generation',
+  VALIDATION = 'validation',
+  PATCH_APPLICATION = 'patch_application',
+  GIT_OPERATION = 'git_operation',
+  CUSTOM = 'custom',
+}
+
+/**
+ * Diff statistics summary
+ */
+export interface DiffStats {
+  /** Number of files changed */
+  filesChanged: number;
+  /** Lines inserted */
+  insertions: number;
+  /** Lines deleted */
+  deletions: number;
+  /** Patch ID for correlation */
+  patchId?: string;
+}
+
+/**
+ * Validation result summary
+ */
+export interface ValidationResult {
+  /** Validation passed */
+  passed: boolean;
+  /** Validation duration in milliseconds */
+  durationMs: number;
+  /** Number of errors encountered */
+  errorCount?: number;
+  /** Error types */
+  errorTypes?: string[];
+}
+
+/**
+ * Execution metrics options
+ */
+export interface ExecutionMetricsOptions {
+  /** Run directory path */
+  runDir: string;
+  /** Run ID (feature_id) */
+  runId: string;
+  /** Component identifier */
+  component?: string;
+}
+
+// ============================================================================
+// Standard Execution Metric Names
+// ============================================================================
+
+/**
+ * Standard metric names for execution engine telemetry
+ */
+export const ExecutionMetrics = {
+  // Task lifecycle metrics
+  EXECUTION_TASKS_TOTAL: 'execution_tasks_total',
+  EXECUTION_TASK_DURATION_MS: 'execution_task_duration_ms',
+
+  // Validation metrics
+  VALIDATION_DURATION_SECONDS: 'validation_duration_seconds',
+  VALIDATION_ERRORS_TOTAL: 'validation_errors_total',
+  VALIDATION_RUNS_TOTAL: 'validation_runs_total',
+
+  // Diff statistics
+  DIFF_FILES_CHANGED: 'diff_files_changed',
+  DIFF_LINES_TOTAL: 'diff_lines_total',
+  DIFF_OPERATIONS_TOTAL: 'diff_operations_total',
+
+  // Queue depth
+  EXECUTION_QUEUE_DEPTH: 'execution_queue_depth',
+  EXECUTION_QUEUE_PENDING: 'execution_queue_pending',
+  EXECUTION_QUEUE_COMPLETED: 'execution_queue_completed',
+  EXECUTION_QUEUE_FAILED: 'execution_queue_failed',
+
+  // Agent cost tracking
+  AGENT_COST_TOKENS_TOTAL: 'agent_cost_tokens_total',
+  AGENT_COST_USD_TOTAL: 'agent_cost_usd_total',
+} as const;
+
+/**
+ * Histogram buckets for diff size measurements (file counts)
+ */
+export const DIFF_SIZE_BUCKETS = [1, 2, 5, 10, 20, 50, 100, 200, 500];
+
+/**
+ * Histogram buckets for line count measurements
+ */
+export const LINE_COUNT_BUCKETS = [10, 50, 100, 250, 500, 1000, 2500, 5000, 10000];
+
+/**
+ * Histogram buckets for validation durations (seconds)
+ */
+export const VALIDATION_DURATION_BUCKETS = [0.1, 0.5, 1, 2.5, 5, 10, 30, 60, 120];
+
+// ============================================================================
+// Execution Metrics Helper
+// ============================================================================
+
+/**
+ * Specialized metrics helper for execution engine instrumentation
+ */
+export class ExecutionMetricsHelper {
+  private readonly metrics: MetricsCollector;
+  private readonly options: Required<ExecutionMetricsOptions>;
+  private readonly defaultLabels: Labels;
+
+  constructor(metrics: MetricsCollector, options: ExecutionMetricsOptions) {
+    this.metrics = metrics;
+    this.options = {
+      runDir: options.runDir,
+      runId: options.runId,
+      component: options.component ?? 'execution',
+    };
+
+    this.defaultLabels = {
+      run_id: this.options.runId,
+      component: this.options.component,
+    };
+  }
+
+  /**
+   * Record task lifecycle event (start, completion, failure)
+   */
+  recordTaskLifecycle(
+    taskId: string,
+    taskType: ExecutionTaskType,
+    status: ExecutionTaskStatus,
+    durationMs?: number
+  ): void {
+    try {
+      const labels: Labels = {
+        ...this.defaultLabels,
+        task_id: taskId,
+        task_type: taskType,
+        status,
+      };
+
+      // Increment task counter
+      this.metrics.increment(
+        ExecutionMetrics.EXECUTION_TASKS_TOTAL,
+        labels,
+        1,
+        'Total execution tasks by status and type'
+      );
+
+      // Record duration for completed/failed tasks
+      if (durationMs !== undefined && (status === ExecutionTaskStatus.COMPLETED || status === ExecutionTaskStatus.FAILED)) {
+        this.metrics.observe(
+          ExecutionMetrics.EXECUTION_TASK_DURATION_MS,
+          durationMs,
+          { ...this.defaultLabels, task_type: taskType },
+          LATENCY_BUCKETS,
+          'Execution task duration distribution in milliseconds'
+        );
+      }
+    } catch (error) {
+      // Never throw from instrumentation code
+      console.error('[ExecutionMetrics] Failed to record task lifecycle:', error);
+    }
+  }
+
+  /**
+   * Record validation run metrics
+   */
+  recordValidationRun(result: ValidationResult): void {
+    try {
+      const labels: Labels = {
+        ...this.defaultLabels,
+        passed: String(result.passed),
+      };
+
+      // Increment validation run counter
+      this.metrics.increment(
+        ExecutionMetrics.VALIDATION_RUNS_TOTAL,
+        labels,
+        1,
+        'Total validation runs by result'
+      );
+
+      // Record validation duration (convert to seconds for Prometheus convention)
+      const durationSeconds = result.durationMs / 1000;
+      this.metrics.observe(
+        ExecutionMetrics.VALIDATION_DURATION_SECONDS,
+        durationSeconds,
+        labels,
+        VALIDATION_DURATION_BUCKETS,
+        'Validation duration distribution in seconds'
+      );
+
+      // Record error count if validation failed
+      if (!result.passed && result.errorCount !== undefined) {
+        // Record each error type separately to avoid label value issues
+        const errorTypes = result.errorTypes ?? ['unknown'];
+        for (const errorType of errorTypes) {
+          this.metrics.increment(
+            ExecutionMetrics.VALIDATION_ERRORS_TOTAL,
+            { ...this.defaultLabels, error_type: errorType },
+            1,
+            'Total validation errors by type'
+          );
+        }
+      }
+    } catch (error) {
+      console.error('[ExecutionMetrics] Failed to record validation run:', error);
+    }
+  }
+
+  /**
+   * Record diff statistics
+   */
+  recordDiffStats(stats: DiffStats): void {
+    try {
+      const baseLabels: Labels = {
+        ...this.defaultLabels,
+        ...(stats.patchId ? { patch_id: stats.patchId } : {}),
+      };
+
+      // Record files changed histogram
+      this.metrics.observe(
+        ExecutionMetrics.DIFF_FILES_CHANGED,
+        stats.filesChanged,
+        baseLabels,
+        DIFF_SIZE_BUCKETS,
+        'Number of files changed in diff'
+      );
+
+      // Record line insertions
+      this.metrics.observe(
+        ExecutionMetrics.DIFF_LINES_TOTAL,
+        stats.insertions,
+        { ...baseLabels, operation: 'insertion' },
+        LINE_COUNT_BUCKETS,
+        'Lines added/removed in diff'
+      );
+
+      // Record line deletions
+      this.metrics.observe(
+        ExecutionMetrics.DIFF_LINES_TOTAL,
+        stats.deletions,
+        { ...baseLabels, operation: 'deletion' },
+        LINE_COUNT_BUCKETS,
+        'Lines added/removed in diff'
+      );
+
+      // Increment diff operations counter
+      this.metrics.increment(
+        ExecutionMetrics.DIFF_OPERATIONS_TOTAL,
+        baseLabels,
+        1,
+        'Total diff generation operations'
+      );
+    } catch (error) {
+      console.error('[ExecutionMetrics] Failed to record diff stats:', error);
+    }
+  }
+
+  /**
+   * Set current queue depth metrics (snapshot)
+   */
+  setQueueDepth(pending: number, completed: number, failed: number): void {
+    try {
+      const labels = this.defaultLabels;
+
+      this.metrics.gauge(
+        ExecutionMetrics.EXECUTION_QUEUE_PENDING,
+        pending,
+        labels,
+        'Number of pending execution tasks'
+      );
+
+      this.metrics.gauge(
+        ExecutionMetrics.EXECUTION_QUEUE_COMPLETED,
+        completed,
+        labels,
+        'Number of completed execution tasks'
+      );
+
+      this.metrics.gauge(
+        ExecutionMetrics.EXECUTION_QUEUE_FAILED,
+        failed,
+        labels,
+        'Number of failed execution tasks'
+      );
+
+      this.metrics.gauge(
+        ExecutionMetrics.EXECUTION_QUEUE_DEPTH,
+        pending + completed + failed,
+        labels,
+        'Total execution queue depth'
+      );
+    } catch (error) {
+      console.error('[ExecutionMetrics] Failed to set queue depth:', error);
+    }
+  }
+
+  /**
+   * Record agent cost usage (token-based)
+   *
+   * Note: Prefer using CostTracker.recordUsage() for comprehensive cost tracking.
+   * This method provides execution-specific counters for quick aggregation.
+   */
+  recordAgentCost(model: string, promptTokens: number, completionTokens: number): void {
+    try {
+      const labels: Labels = {
+        ...this.defaultLabels,
+        model,
+      };
+
+      // Record prompt tokens
+      this.metrics.increment(
+        ExecutionMetrics.AGENT_COST_TOKENS_TOTAL,
+        { ...labels, type: 'prompt' },
+        promptTokens,
+        'Agent token usage (prompt and completion)'
+      );
+
+      // Record completion tokens
+      this.metrics.increment(
+        ExecutionMetrics.AGENT_COST_TOKENS_TOTAL,
+        { ...labels, type: 'completion' },
+        completionTokens,
+        'Agent token usage (prompt and completion)'
+      );
+    } catch (error) {
+      console.error('[ExecutionMetrics] Failed to record agent cost:', error);
+    }
+  }
+
+  /**
+   * Set agent cost USD total (from CostTracker state)
+   */
+  setAgentCostUsd(totalCostUsd: number): void {
+    try {
+      this.metrics.gauge(
+        ExecutionMetrics.AGENT_COST_USD_TOTAL,
+        totalCostUsd,
+        this.defaultLabels,
+        'Total agent cost in USD'
+      );
+    } catch (error) {
+      console.error('[ExecutionMetrics] Failed to set agent cost USD:', error);
+    }
+  }
+
+  /**
+   * Flush metrics to disk
+   */
+  async flush(): Promise<void> {
+    await this.metrics.flush();
+  }
+}
+
+// ============================================================================
+// Factory Functions
+// ============================================================================
+
+/**
+ * Create execution metrics helper
+ */
+export function createExecutionMetrics(
+  metrics: MetricsCollector,
+  options: ExecutionMetricsOptions
+): ExecutionMetricsHelper {
+  return new ExecutionMetricsHelper(metrics, options);
+}

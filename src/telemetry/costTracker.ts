@@ -19,6 +19,7 @@ import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 import type { MetricsCollector } from './metrics';
 import type { StructuredLogger } from './logger';
+import { ExecutionMetricsHelper } from './executionMetrics';
 
 // ============================================================================
 // Types
@@ -150,6 +151,7 @@ export class CostTracker {
   private readonly metrics: MetricsCollector;
   private readonly costsFilePath: string;
   private readonly costsLogPath: string;
+  private readonly executionMetrics: ExecutionMetricsHelper;
 
   constructor(
     featureId: string,
@@ -162,6 +164,11 @@ export class CostTracker {
     this.metrics = metrics;
     this.costsFilePath = path.join(runDir, 'telemetry', 'costs.json');
     this.costsLogPath = path.join(runDir, 'telemetry', 'costs.ndjson');
+    this.executionMetrics = new ExecutionMetricsHelper(metrics, {
+      runDir,
+      runId: featureId,
+      component: 'cost_tracker',
+    });
 
     this.state = {
       schema_version: '1.0.0',
@@ -362,6 +369,8 @@ export class CostTracker {
       model: model ?? 'unknown',
       operation,
     });
+    this.executionMetrics.recordAgentCost(model ?? provider, promptTokens, completionTokens);
+    this.executionMetrics.setAgentCostUsd(this.state.totals.totalCostUsd);
 
     // Record cost metric (custom gauge)
     this.metrics.gauge('cost_usd_total', this.state.totals.totalCostUsd, {
