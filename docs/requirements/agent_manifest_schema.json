@@ -219,7 +219,100 @@
     "fallbackProvider": {
       "type": "string",
       "pattern": "^[a-z0-9_-]+$",
-      "description": "Optional fallback provider ID to use if this provider fails"
+      "description": "Optional fallback provider ID to use if this provider fails (references ADR-1, Section 2.1 adapter contract)"
+    },
+    "errorTaxonomy": {
+      "type": "object",
+      "description": "Error classification rules for deterministic failure handling (per acceptance criteria: failure remediation strategies)",
+      "properties": {
+        "transientErrorCodes": {
+          "type": "array",
+          "description": "Error codes classified as transient (retry automatically with backoff)",
+          "items": {
+            "type": "string"
+          },
+          "examples": [["RATE_LIMIT_EXCEEDED", "TIMEOUT", "503_SERVICE_UNAVAILABLE", "429_TOO_MANY_REQUESTS"]]
+        },
+        "permanentErrorCodes": {
+          "type": "array",
+          "description": "Error codes classified as permanent (do not retry, fail task)",
+          "items": {
+            "type": "string"
+          },
+          "examples": [["INVALID_API_KEY", "MODEL_NOT_FOUND", "400_BAD_REQUEST", "401_UNAUTHORIZED"]]
+        },
+        "humanActionErrorCodes": {
+          "type": "array",
+          "description": "Error codes requiring human intervention (escalate to user)",
+          "items": {
+            "type": "string"
+          },
+          "examples": [["POLICY_VIOLATION", "CONTENT_FILTER", "AMBIGUOUS_INPUT", "CLARIFICATION_NEEDED"]]
+        },
+        "retryPolicy": {
+          "type": "object",
+          "description": "Retry policy configuration for transient errors",
+          "properties": {
+            "maxAttempts": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 3,
+              "description": "Maximum retry attempts for transient errors"
+            },
+            "baseDelayMs": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 1000,
+              "description": "Base delay in milliseconds for exponential backoff"
+            },
+            "maxDelayMs": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 60000,
+              "description": "Maximum delay in milliseconds between retries"
+            },
+            "backoffMultiplier": {
+              "type": "number",
+              "minimum": 1,
+              "default": 2,
+              "description": "Multiplier for exponential backoff calculation"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    "executionContexts": {
+      "type": "object",
+      "description": "Execution context specific configurations (per acceptance criteria: execution tasks specify capability needs)",
+      "properties": {
+        "code_generation": {
+          "$ref": "#/definitions/contextConfig"
+        },
+        "code_review": {
+          "$ref": "#/definitions/contextConfig"
+        },
+        "test_generation": {
+          "$ref": "#/definitions/contextConfig"
+        },
+        "refactoring": {
+          "$ref": "#/definitions/contextConfig"
+        },
+        "documentation": {
+          "$ref": "#/definitions/contextConfig"
+        },
+        "prd_generation": {
+          "$ref": "#/definitions/contextConfig"
+        },
+        "spec_generation": {
+          "$ref": "#/definitions/contextConfig"
+        },
+        "summarization": {
+          "$ref": "#/definitions/contextConfig"
+        }
+      },
+      "additionalProperties": false
     },
     "metadata": {
       "type": "object",
@@ -228,6 +321,35 @@
     }
   },
   "additionalProperties": false,
+  "definitions": {
+    "contextConfig": {
+      "type": "object",
+      "description": "Configuration overrides for specific execution context",
+      "properties": {
+        "preferredModelId": {
+          "type": "string",
+          "description": "Preferred model for this context (overrides default selection)"
+        },
+        "maxTokensOverride": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Context-specific max tokens override"
+        },
+        "temperatureOverride": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 2,
+          "description": "Context-specific temperature override"
+        },
+        "timeoutOverride": {
+          "type": "integer",
+          "minimum": 1000,
+          "description": "Context-specific timeout in milliseconds"
+        }
+      },
+      "additionalProperties": false
+    }
+  },
   "examples": [
     {
       "schema_version": "1.0.0",
