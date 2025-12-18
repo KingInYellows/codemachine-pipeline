@@ -151,6 +151,64 @@ interface StatusPayload {
     plan_valid?: boolean;
     integrity_warnings?: string[];
   };
+  integrations?: {
+    github?: {
+      enabled: boolean;
+      rate_limit?: {
+        remaining: number;
+        reset_at: string;
+        in_cooldown: boolean;
+      };
+      pr_status?: {
+        number: number;
+        state: string;
+        mergeable: boolean | null;
+        url: string;
+      };
+      warnings: string[];
+    };
+    linear?: {
+      enabled: boolean;
+      rate_limit?: {
+        remaining: number;
+        reset_at: string;
+        in_cooldown: boolean;
+      };
+      issue_status?: {
+        identifier: string;
+        state: string;
+        url: string;
+      };
+      warnings: string[];
+    };
+  };
+  rate_limits?: {
+    providers: Record<string, {
+      remaining: number;
+      reset_at: string;
+      in_cooldown: boolean;
+      manual_ack_required: boolean;
+      recent_hit_count: number;
+    }>;
+    summary: {
+      any_in_cooldown: boolean;
+      any_requires_ack: boolean;
+      providers_in_cooldown: number;
+    };
+    warnings: string[];
+  };
+  research?: {
+    total_tasks: number;
+    pending_tasks: number;
+    in_progress_tasks: number;
+    completed_tasks: number;
+    failed_tasks: number;
+    cached_tasks: number;
+    stale_tasks: number;
+    research_dir: string;
+    tasks_file: string;
+    warnings: string[];
+  };
 }
 ```
 
@@ -373,6 +431,17 @@ interface ResumePayload {
     next_step?: string;
     pending_approvals?: string[];
   };
+  rate_limit_warnings?: Array<{
+    provider: string;
+    in_cooldown: boolean;
+    manual_ack_required: boolean;
+    reset_at: string;
+  }>;
+  integration_blockers?: {
+    github?: string[];
+    linear?: string[];
+  };
+  branch_protection_blockers?: string[];
   dry_run: boolean;
   playbook_reference: string;
 }
