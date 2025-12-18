@@ -25,6 +25,8 @@ import {
   selectFeatureId,
 } from '../utils/runDirectory';
 import { loadPlanSummary } from '../../workflows/taskPlanner';
+import { RateLimitReporter } from '../../telemetry/rateLimitReporter';
+import { loadReport as loadBranchProtectionReport } from '../../workflows/branchProtectionReporter';
 
 type ResumeFlags = {
   feature?: string;
@@ -86,6 +88,17 @@ interface ResumePayload {
     next_step?: string;
     pending_approvals?: string[];
   };
+  rate_limit_warnings?: Array<{
+    provider: string;
+    in_cooldown: boolean;
+    manual_ack_required: boolean;
+    reset_at: string;
+  }>;
+  integration_blockers?: {
+    github?: string[];
+    linear?: string[];
+  };
+  branch_protection_blockers?: string[];
   dry_run: boolean;
   playbook_reference: string;
 }
@@ -232,12 +245,12 @@ export default class Resume extends Command {
       }
 
       // Build output payload
-      const payload = this.buildResumePayload(analysis, queueValidation, planSummary, typedFlags['dry-run']);
+      const payload = await this.buildResumePayload(analysis, queueValidation, planSummary, typedFlags['dry-run'], runDirPath);
 
       if (typedFlags.json) {
         this.log(JSON.stringify(payload, null, 2));
       } else {
-        this.printHumanReadable(analysis, queueValidation, typedFlags);
+        this.printHumanReadable(analysis, queueValidation, typedFlags, payload);
       }
 
       // Dry run - stop here
@@ -336,12 +349,13 @@ export default class Resume extends Command {
     }
   }
 
-  private buildResumePayload(
+  private async buildResumePayload(
     analysis: Awaited<ReturnType<typeof analyzeResumeState>>,
     queueValidation?: QueueValidationResult,
     planSummary?: Awaited<ReturnType<typeof loadPlanSummary>>,
-    dryRun = false
-  ): ResumePayload {
+    dryRun = false,
+    runDir?: string
+  ): Promise<ResumePayload> {
     const payload: ResumePayload = {
       feature_id: analysis.featureId,
       can_resume: analysis.canResume,
@@ -416,13 +430,92 @@ export default class Resume extends Command {
       payload.resume_instructions = resumeInstructions;
     }
 
+    // Load rate limit warnings and integration blockers
+    if (runDir) {
+      await this.attachRateLimitWarnings(payload, runDir);
+      await this.attachBranchProtectionBlockers(payload, runDir);
+    }
+
     return payload;
+  }
+
+  private async attachRateLimitWarnings(
+    payload: ResumePayload,
+    runDir: string
+  ): Promise<void> {
+    try {
+      const rateLimitReport = await RateLimitReporter.generateReport(runDir);
+
+      const rateLimitWarnings: ResumePayload['rate_limit_warnings'] = [];
+      const integrationBlockers: ResumePayload['integration_blockers'] = {};
+
+      for (const [providerName, providerData] of Object.entries(rateLimitReport.providers)) {
+      if (providerData.inCooldown || providerData.manualAckRequired) {
+        rateLimitWarnings.push({
+          provider: providerName,
+          in_cooldown: providerData.inCooldown,
+          manual_ack_required: providerData.manualAckRequired,
+            reset_at: providerData.resetAt,
+          });
+
+          // Track integration-specific blockers
+          if (providerName === 'github') {
+            if (!integrationBlockers.github) {
+              integrationBlockers.github = [];
+            }
+            if (providerData.inCooldown) {
+              integrationBlockers.github.push(`Rate limit cooldown until ${providerData.resetAt}`);
+            }
+            if (providerData.manualAckRequired) {
+              integrationBlockers.github.push(`Manual acknowledgement required (${providerData.recentHitCount} consecutive hits)`);
+            }
+          }
+
+          if (providerName === 'linear') {
+            if (!integrationBlockers.linear) {
+              integrationBlockers.linear = [];
+            }
+            if (providerData.inCooldown) {
+              integrationBlockers.linear.push(`Rate limit cooldown until ${providerData.resetAt}`);
+            }
+            if (providerData.manualAckRequired) {
+              integrationBlockers.linear.push(`Manual acknowledgement required (${providerData.recentHitCount} consecutive hits)`);
+            }
+          }
+        }
+      }
+
+      if (rateLimitWarnings.length > 0) {
+        payload.rate_limit_warnings = rateLimitWarnings;
+      }
+
+      if (Object.keys(integrationBlockers).length > 0) {
+        payload.integration_blockers = integrationBlockers;
+      }
+    } catch {
+      // Rate limit data unavailable, skip
+    }
+  }
+
+  private async attachBranchProtectionBlockers(
+    payload: ResumePayload,
+    runDir: string
+  ): Promise<void> {
+    try {
+      const report = await loadBranchProtectionReport(runDir);
+      if (report && report.blockers.length > 0) {
+        payload.branch_protection_blockers = [...report.blockers];
+      }
+    } catch {
+      // Branch protection artifact missing or invalid; skip without blocking resume output
+    }
   }
 
   private printHumanReadable(
     analysis: Awaited<ReturnType<typeof analyzeResumeState>>,
     queueValidation?: QueueValidationResult,
-    flags?: ResumeFlags
+    flags?: ResumeFlags,
+    payload?: ResumePayload
   ): void {
     this.log('');
     this.log('═══════════════════════════════════════════════════════════');
@@ -471,6 +564,53 @@ export default class Resume extends Command {
           }
         }
       }
+    }
+
+    // Rate limit warnings
+    if (payload?.rate_limit_warnings && payload.rate_limit_warnings.length > 0) {
+      this.log('');
+      this.log('Rate Limit Warnings:');
+      for (const warning of payload.rate_limit_warnings) {
+        this.log(`  ${warning.provider}:`);
+        if (warning.in_cooldown) {
+          this.warn(`    ⚠ In cooldown until ${warning.reset_at}`);
+        }
+        if (warning.manual_ack_required) {
+          this.warn(`    ⚠ Manual acknowledgement required`);
+          this.log(`       Use: ai-feature rate-limits clear ${warning.provider}`);
+        }
+      }
+    }
+
+    // Integration blockers
+    if (payload?.integration_blockers) {
+      const blockers = payload.integration_blockers;
+      if ((blockers.github && blockers.github.length > 0) || (blockers.linear && blockers.linear.length > 0)) {
+        this.log('');
+        this.log('Integration Blockers:');
+
+        if (blockers.github && blockers.github.length > 0) {
+          this.log('  GitHub:');
+          blockers.github.forEach(blocker => {
+            this.warn(`    ⚠ ${blocker}`);
+          });
+        }
+
+        if (blockers.linear && blockers.linear.length > 0) {
+          this.log('  Linear:');
+          blockers.linear.forEach(blocker => {
+            this.warn(`    ⚠ ${blocker}`);
+          });
+        }
+      }
+    }
+
+    if (payload?.branch_protection_blockers && payload.branch_protection_blockers.length > 0) {
+      this.log('');
+      this.log('Branch Protection Blockers:');
+      payload.branch_protection_blockers.forEach(blocker => {
+        this.warn(`  ⚠ ${blocker}`);
+      });
     }
 
     this.log('');

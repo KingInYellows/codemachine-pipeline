@@ -31,6 +31,8 @@ import {
   type ValidationMismatch,
 } from '../../workflows/branchProtectionReporter';
 import type { PRMetadata } from '../pr/shared';
+import { RateLimitReporter } from '../../telemetry/rateLimitReporter';
+import { createResearchCoordinator } from '../../workflows/researchCoordinator';
 
 const MANIFEST_FILE = 'manifest.json';
 const MANIFEST_SCHEMA_DOC = 'docs/requirements/run_directory_schema.md';
@@ -73,6 +75,9 @@ interface StatusPayload {
   plan?: StatusPlanPayload;
   validation?: StatusValidationPayload;
   branch_protection?: StatusBranchProtectionPayload;
+  integrations?: StatusIntegrationsPayload;
+  rate_limits?: StatusRateLimitsPayload;
+  research?: StatusResearchPayload;
 }
 
 interface StatusContextPayload {
@@ -155,6 +160,67 @@ interface StatusBranchProtectionPayload {
   };
   evaluated_at?: string;
   validation_mismatch?: ValidationMismatch;
+}
+
+interface StatusIntegrationsPayload {
+  github?: {
+    enabled: boolean;
+    rate_limit?: {
+      remaining: number;
+      reset_at: string;
+      in_cooldown: boolean;
+    };
+    pr_status?: {
+      number: number;
+      state: string;
+      mergeable: boolean | null;
+      url: string;
+    };
+    warnings: string[];
+  };
+  linear?: {
+    enabled: boolean;
+    rate_limit?: {
+      remaining: number;
+      reset_at: string;
+      in_cooldown: boolean;
+    };
+    issue_status?: {
+      identifier: string;
+      state: string;
+      url: string;
+    };
+    warnings: string[];
+  };
+}
+
+interface StatusRateLimitsPayload {
+  providers: Record<string, {
+    remaining: number;
+    reset_at: string;
+    in_cooldown: boolean;
+    manual_ack_required: boolean;
+    recent_hit_count: number;
+  }>;
+  summary: {
+    any_in_cooldown: boolean;
+    any_requires_ack: boolean;
+    providers_in_cooldown: number;
+  };
+  warnings: string[];
+}
+
+interface StatusResearchPayload {
+  total_tasks: number;
+  pending_tasks: number;
+  in_progress_tasks: number;
+  completed_tasks: number;
+  failed_tasks: number;
+  cached_tasks: number;
+  stale_tasks: number;
+  research_dir: string;
+  tasks_file: string;
+  warnings: string[];
 }
 
 /**
@@ -279,7 +345,31 @@ export default class Status extends Command {
         ? await this.loadBranchProtectionStatus(settings.baseDir, featureId)
         : undefined;
 
-      const payload = this.buildStatusPayload(featureId, settings, manifestInfo, contextInfo, traceInfo, planInfo, validationInfo, branchProtectionInfo);
+      const integrationsInfo = featureId
+        ? await this.loadIntegrationsStatus(settings, featureId)
+        : undefined;
+
+      const rateLimitsInfo = featureId
+        ? await this.loadRateLimitsStatus(settings.baseDir, featureId)
+        : undefined;
+
+      const researchInfo = featureId
+        ? await this.loadResearchStatus(settings.baseDir, featureId, logger, metrics)
+        : undefined;
+
+      const payload = this.buildStatusPayload(
+        featureId,
+        settings,
+        manifestInfo,
+        contextInfo,
+        traceInfo,
+        planInfo,
+        validationInfo,
+        branchProtectionInfo,
+        integrationsInfo,
+        rateLimitsInfo,
+        researchInfo
+      );
 
       if (typedFlags.json) {
         // Disable stderr mirroring in JSON mode (already set in createCliLogger)
@@ -401,7 +491,10 @@ export default class Status extends Command {
     traceInfo?: StatusTraceabilityPayload,
     planInfo?: StatusPlanPayload,
     validationInfo?: StatusValidationPayload,
-    branchProtectionInfo?: StatusBranchProtectionPayload
+    branchProtectionInfo?: StatusBranchProtectionPayload,
+    integrationsInfo?: StatusIntegrationsPayload,
+    rateLimitsInfo?: StatusRateLimitsPayload,
+    researchInfo?: StatusResearchPayload
   ): StatusPayload {
     const manifest = manifestInfo?.manifest;
     const manifestPath = manifestInfo?.manifestPath ?? this.deriveManifestPath(settings.baseDir, featureId);
@@ -430,6 +523,9 @@ export default class Status extends Command {
       ...(planInfo && { plan: planInfo }),
       ...(validationInfo && { validation: validationInfo }),
       ...(branchProtectionInfo && { branch_protection: branchProtectionInfo }),
+      ...(integrationsInfo && { integrations: integrationsInfo }),
+      ...(rateLimitsInfo && { rate_limits: rateLimitsInfo }),
+      ...(researchInfo && { research: researchInfo }),
     };
 
     if (manifest?.title) {
@@ -730,6 +826,254 @@ export default class Status extends Command {
         return null;
       }
       throw error;
+    }
+  }
+
+  private async loadIntegrationsStatus(
+    settings: RunDirectorySettings,
+    featureId: string
+  ): Promise<StatusIntegrationsPayload | undefined> {
+    const runDir = getRunDirectoryPath(settings.baseDir, featureId);
+    const integrations: StatusIntegrationsPayload = {};
+
+    // GitHub integration
+    if (settings.config?.github.enabled) {
+      const githubWarnings: string[] = [];
+
+      try {
+        const rateLimitReport = await RateLimitReporter.generateReport(runDir);
+        const githubProvider = rateLimitReport.providers['github'];
+
+        const github: StatusIntegrationsPayload['github'] = {
+          enabled: true,
+          warnings: githubWarnings,
+        };
+
+        if (githubProvider) {
+          github.rate_limit = {
+            remaining: githubProvider.remaining,
+            reset_at: githubProvider.resetAt,
+            in_cooldown: githubProvider.inCooldown,
+          };
+
+          if (githubProvider.inCooldown) {
+            githubWarnings.push(`GitHub API is in cooldown until ${githubProvider.resetAt}`);
+          }
+          if (githubProvider.manualAckRequired) {
+            githubWarnings.push(`GitHub rate limit requires manual acknowledgement (${githubProvider.recentHitCount} consecutive hits)`);
+          }
+        }
+
+        // Load PR status
+        const prMetadata = await this.loadPRMetadata(runDir);
+        if (prMetadata && prMetadata.pr_number) {
+          github.pr_status = {
+            number: prMetadata.pr_number,
+            state: prMetadata.state ?? 'unknown',
+            mergeable: prMetadata.mergeable ?? null,
+            url: prMetadata.url ?? '',
+          };
+        }
+
+        integrations.github = github;
+      } catch (error) {
+        integrations.github = {
+          enabled: true,
+          warnings: [`Failed to load GitHub integration data: ${error instanceof Error ? error.message : 'unknown error'}`],
+        };
+      }
+    }
+
+    // Linear integration
+    if (settings.config?.linear?.enabled) {
+      const linearWarnings: string[] = [];
+
+      try {
+        const rateLimitReport = await RateLimitReporter.generateReport(runDir);
+        const linearProvider = rateLimitReport.providers['linear'];
+
+        const linear: StatusIntegrationsPayload['linear'] = {
+          enabled: true,
+          warnings: linearWarnings,
+        };
+
+        if (linearProvider) {
+          linear.rate_limit = {
+            remaining: linearProvider.remaining,
+            reset_at: linearProvider.resetAt,
+            in_cooldown: linearProvider.inCooldown,
+          };
+
+          if (linearProvider.inCooldown) {
+            linearWarnings.push(`Linear API is in cooldown until ${linearProvider.resetAt}`);
+          }
+          if (linearProvider.manualAckRequired) {
+            linearWarnings.push(`Linear rate limit requires manual acknowledgement (${linearProvider.recentHitCount} consecutive hits)`);
+          }
+        }
+
+        // Load Linear issue status from manifest
+        const manifestPath = path.join(runDir, 'manifest.json');
+        try {
+          const manifestContent = await fs.readFile(manifestPath, 'utf-8');
+          const manifest = JSON.parse(manifestContent) as RunManifest;
+          if (manifest.source === 'linear' && manifest.title) {
+            linear.issue_status = {
+              identifier: manifest.title.split(':')[0]?.trim() ?? 'unknown',
+              state: 'tracked',
+              url: '',
+            };
+          }
+        } catch {
+          // Manifest read failed, skip issue status
+        }
+
+        integrations.linear = linear;
+      } catch (error) {
+        integrations.linear = {
+          enabled: true,
+          warnings: [`Failed to load Linear integration data: ${error instanceof Error ? error.message : 'unknown error'}`],
+        };
+      }
+    }
+
+    return Object.keys(integrations).length > 0 ? integrations : undefined;
+  }
+
+  private async loadRateLimitsStatus(
+    baseDir: string,
+    featureId: string
+  ): Promise<StatusRateLimitsPayload | undefined> {
+    const runDir = getRunDirectoryPath(baseDir, featureId);
+
+    try {
+      const report = await RateLimitReporter.generateReport(runDir);
+
+      if (Object.keys(report.providers).length === 0) {
+        return undefined;
+      }
+
+      const providers: StatusRateLimitsPayload['providers'] = {};
+      const warnings: string[] = [];
+
+      for (const [providerName, providerReport] of Object.entries(report.providers)) {
+        providers[providerName] = {
+          remaining: providerReport.remaining,
+          reset_at: providerReport.resetAt,
+          in_cooldown: providerReport.inCooldown,
+          manual_ack_required: providerReport.manualAckRequired,
+          recent_hit_count: providerReport.recentHitCount,
+        };
+
+        if (providerReport.inCooldown) {
+          warnings.push(`${providerName}: In cooldown until ${providerReport.resetAt}`);
+        }
+        if (providerReport.manualAckRequired) {
+          warnings.push(`${providerName}: Manual acknowledgement required (${providerReport.recentHitCount} consecutive rate limit hits)`);
+        }
+      }
+
+      return {
+        providers,
+        summary: {
+          any_in_cooldown: report.summary.anyInCooldown,
+          any_requires_ack: report.summary.anyRequiresAck,
+          providers_in_cooldown: report.summary.providersInCooldown,
+        },
+        warnings,
+      };
+    } catch {
+      // Rate limit ledger doesn't exist yet
+      return undefined;
+    }
+  }
+
+  private async loadResearchStatus(
+    baseDir: string,
+    featureId: string,
+    logger?: StructuredLogger,
+    metrics?: MetricsCollector
+  ): Promise<StatusResearchPayload | undefined> {
+    const runDir = getRunDirectoryPath(baseDir, featureId);
+    const researchDir = path.join(runDir, 'research');
+    const tasksFile = path.join(researchDir, 'tasks.jsonl');
+
+    // Check if research directory exists
+    try {
+      await fs.access(researchDir);
+    } catch {
+      // No research directory yet
+      return undefined;
+    }
+
+    try {
+      // Create coordinator to get diagnostics
+      if (!logger || !metrics) {
+        return {
+          total_tasks: 0,
+          pending_tasks: 0,
+          in_progress_tasks: 0,
+          completed_tasks: 0,
+          failed_tasks: 0,
+          cached_tasks: 0,
+          stale_tasks: 0,
+          research_dir: researchDir,
+          tasks_file: tasksFile,
+          warnings: ['Research coordinator telemetry unavailable'],
+        };
+      }
+
+      const coordinator = createResearchCoordinator(
+        {
+          repoRoot: process.cwd(),
+          runDir,
+          featureId,
+        },
+        logger,
+        metrics
+      );
+
+      const diagnostics = await coordinator.getDiagnostics();
+      const warnings: string[] = [...diagnostics.warnings];
+
+      if (diagnostics.errors.length > 0) {
+        warnings.push(...diagnostics.errors);
+      }
+
+      // Count stale tasks
+      const allTasks = await coordinator.listTasks({});
+      const { isCachedResultFresh } = await import('../../core/models/ResearchTask.js');
+      const staleTasks = allTasks.filter(task => {
+        if (task.status !== 'completed' || !task.results) return false;
+        const freshnessReq = task.freshness_requirements ?? { max_age_hours: 24, force_fresh: false };
+        return !isCachedResultFresh(task.results, freshnessReq);
+      });
+
+      return {
+        total_tasks: diagnostics.totalTasks,
+        pending_tasks: diagnostics.pendingTasks,
+        in_progress_tasks: diagnostics.inProgressTasks,
+        completed_tasks: diagnostics.completedTasks,
+        failed_tasks: diagnostics.failedTasks,
+        cached_tasks: diagnostics.cachedTasks,
+        stale_tasks: staleTasks.length,
+        research_dir: researchDir,
+        tasks_file: tasksFile,
+        warnings,
+      };
+    } catch (error) {
+      return {
+        total_tasks: 0,
+        pending_tasks: 0,
+        in_progress_tasks: 0,
+        completed_tasks: 0,
+        failed_tasks: 0,
+        cached_tasks: 0,
+        stale_tasks: 0,
+        research_dir: researchDir,
+        tasks_file: tasksFile,
+        warnings: [`Failed to load research status: ${error instanceof Error ? error.message : 'unknown error'}`],
+      };
     }
   }
 
@@ -1100,6 +1444,120 @@ export default class Status extends Command {
 
       if (flags.verbose && bp.evaluated_at) {
         this.log(`  Last Evaluated: ${bp.evaluated_at}`);
+      }
+    }
+
+    // Rate limits section (API ledger block per architecture)
+    if (payload.rate_limits) {
+      const rl = payload.rate_limits;
+      this.log('');
+      this.log('────────────────────────────────────────────────────────────');
+      this.log('API Ledger (Rate Limits)');
+      this.log('────────────────────────────────────────────────────────────');
+
+      if (Object.keys(rl.providers).length === 0) {
+        this.log('No rate limit data recorded yet.');
+      } else {
+        for (const [providerName, providerData] of Object.entries(rl.providers)) {
+          this.log(`\n${providerName}:`);
+          this.log(`  Remaining: ${providerData.remaining}`);
+          this.log(`  Reset: ${providerData.reset_at}`);
+          this.log(`  In Cooldown: ${providerData.in_cooldown ? 'Yes' : 'No'}`);
+
+          if (providerData.manual_ack_required) {
+            this.warn(`  ⚠ Manual Acknowledgement Required (${providerData.recent_hit_count} consecutive hits)`);
+          }
+
+          if (flags.verbose) {
+            this.log(`  Recent Hits: ${providerData.recent_hit_count}`);
+          }
+        }
+      }
+
+      if (rl.warnings.length > 0) {
+        this.log('\nRate Limit Warnings:');
+        rl.warnings.forEach(warning => {
+          this.warn(`  ⚠ ${warning}`);
+        });
+      }
+
+      this.log('────────────────────────────────────────────────────────────');
+    }
+
+    // Integrations section
+    if (payload.integrations) {
+      const integrations = payload.integrations;
+      this.log('');
+      this.log('Integration Status:');
+
+      if (integrations.github) {
+        this.log('  GitHub:');
+        this.log(`    Enabled: ${integrations.github.enabled ? 'Yes' : 'No'}`);
+
+        if (integrations.github.rate_limit) {
+          this.log(`    Rate Limit: ${integrations.github.rate_limit.remaining} remaining`);
+          if (integrations.github.rate_limit.in_cooldown) {
+            this.warn(`    ⚠ In cooldown until ${integrations.github.rate_limit.reset_at}`);
+          }
+        }
+
+        if (integrations.github.pr_status) {
+          this.log(`    PR #${integrations.github.pr_status.number}: ${integrations.github.pr_status.state}`);
+          this.log(`    Mergeable: ${integrations.github.pr_status.mergeable === null ? 'Unknown' : integrations.github.pr_status.mergeable ? 'Yes' : 'No'}`);
+          if (flags.verbose && integrations.github.pr_status.url) {
+            this.log(`    URL: ${integrations.github.pr_status.url}`);
+          }
+        }
+
+        if (integrations.github.warnings.length > 0) {
+          integrations.github.warnings.forEach(warning => {
+            this.warn(`    ⚠ ${warning}`);
+          });
+        }
+      }
+
+      if (integrations.linear) {
+        this.log('  Linear:');
+        this.log(`    Enabled: ${integrations.linear.enabled ? 'Yes' : 'No'}`);
+
+        if (integrations.linear.rate_limit) {
+          this.log(`    Rate Limit: ${integrations.linear.rate_limit.remaining} remaining`);
+          if (integrations.linear.rate_limit.in_cooldown) {
+            this.warn(`    ⚠ In cooldown until ${integrations.linear.rate_limit.reset_at}`);
+          }
+        }
+
+        if (integrations.linear.issue_status) {
+          this.log(`    Issue: ${integrations.linear.issue_status.identifier} (${integrations.linear.issue_status.state})`);
+          if (flags.verbose && integrations.linear.issue_status.url) {
+            this.log(`    URL: ${integrations.linear.issue_status.url}`);
+          }
+        }
+
+        if (integrations.linear.warnings.length > 0) {
+          integrations.linear.warnings.forEach(warning => {
+            this.warn(`    ⚠ ${warning}`);
+          });
+        }
+      }
+    }
+
+    // Research section
+    if (payload.research) {
+      const research = payload.research;
+      this.log('');
+      this.log('Research Tasks:');
+      this.log(`  Total: ${research.total_tasks}`);
+      this.log(`  Pending: ${research.pending_tasks}, In Progress: ${research.in_progress_tasks}`);
+      this.log(`  Completed: ${research.completed_tasks}, Failed: ${research.failed_tasks}`);
+      this.log(`  Cached: ${research.cached_tasks}, Stale: ${research.stale_tasks}`);
+      this.log(`  Research Directory: ${research.research_dir}`);
+      this.log(`  Snapshot: ${research.tasks_file}`);
+
+      if (research.warnings.length > 0) {
+        research.warnings.forEach(warning => {
+          this.warn(`  ⚠ ${warning}`);
+        });
       }
     }
 
