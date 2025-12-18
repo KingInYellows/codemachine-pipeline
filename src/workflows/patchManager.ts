@@ -28,6 +28,8 @@ import { withLock, getSubdirectoryPath, updateManifest } from '../persistence/ru
 import type { RepoConfig } from '../core/config/RepoConfig';
 import type { StructuredLogger } from '../telemetry/logger';
 import type { MetricsCollector } from '../telemetry/metrics';
+import type { ExecutionTelemetry } from '../telemetry/executionTelemetry';
+import type { DiffStats } from '../telemetry/executionMetrics';
 
 const execAsync = promisify(exec);
 
@@ -226,6 +228,35 @@ export function extractAffectedFiles(patchContent: string): string[] {
   }
 
   return Array.from(files);
+}
+
+/**
+ * Calculate insertion/deletion counts from a unified diff.
+ */
+function summarizeLineChanges(patchContent: string): { insertions: number; deletions: number } {
+  let insertions = 0;
+  let deletions = 0;
+
+  const lines = patchContent.split('\n');
+  for (const line of lines) {
+    if (
+      line.startsWith('+++') ||
+      line.startsWith('---') ||
+      line.startsWith('diff ') ||
+      line.startsWith('@@') ||
+      line === '\\ No newline at end of file'
+    ) {
+      continue;
+    }
+
+    if (line.startsWith('+')) {
+      insertions++;
+    } else if (line.startsWith('-')) {
+      deletions++;
+    }
+  }
+
+  return { insertions, deletions };
 }
 
 // ============================================================================
@@ -443,7 +474,8 @@ export async function applyPatch(
   patch: Patch,
   config: PatchConfig,
   logger: StructuredLogger,
-  metrics: MetricsCollector
+  metrics: MetricsCollector,
+  telemetry?: ExecutionTelemetry
 ): Promise<PatchApplicationResult> {
   logger.info('Starting patch application', {
     patchId: patch.patchId,
@@ -505,6 +537,15 @@ export async function applyPatch(
         logger.debug('Generating diff summary');
         const diffSummaryPath = await generateDiffSummary(patch, config, result.modifiedFiles);
         result.diffSummaryPath = diffSummaryPath;
+        const { insertions, deletions } = summarizeLineChanges(patch.content);
+        const diffStats: DiffStats = {
+          filesChanged: result.modifiedFiles.length,
+          insertions,
+          deletions,
+          patchId: patch.patchId,
+        };
+        telemetry?.metrics?.recordDiffStats(diffStats);
+        telemetry?.logs?.diffGenerated(config.taskId ?? patch.patchId, patch.patchId, diffStats);
 
         // Step 5: Update run manifest
         await updateManifest(config.runDir, manifest => ({
@@ -520,6 +561,22 @@ export async function applyPatch(
         }));
 
         result.success = true;
+        if (telemetry?.logs) {
+          try {
+            const gitRef = await getCurrentGitRef(config.workingDir);
+            telemetry.logs.patchApplied(
+              config.taskId ?? patch.patchId,
+              patch.patchId,
+              gitRef.ref,
+              gitRef.sha
+            );
+          } catch (error) {
+            logger.debug('Failed to record patch application telemetry', {
+              patchId: patch.patchId,
+              error: error instanceof Error ? error.message : String(error),
+            });
+          }
+        }
 
         metrics.increment('patch_application_success_total', {
           feature_id: config.featureId,
@@ -571,9 +628,10 @@ export async function applyPatchWithStateManagement(
   patch: Patch,
   config: PatchConfig,
   logger: StructuredLogger,
-  metrics: MetricsCollector
+  metrics: MetricsCollector,
+  telemetry?: ExecutionTelemetry
 ): Promise<PatchApplicationResult> {
-  const result = await applyPatch(patch, config, logger, metrics);
+  const result = await applyPatch(patch, config, logger, metrics, telemetry);
 
   // If patch failed and is recoverable, mark task as human-action-required
   if (!result.success && result.recoverable) {

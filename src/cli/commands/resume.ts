@@ -13,6 +13,9 @@ import type { QueueValidationResult } from '../../workflows/queueStore';
 import { createCliLogger, LogLevel } from '../../telemetry/logger';
 import { createRunMetricsCollector, StandardMetrics } from '../../telemetry/metrics';
 import { createRunTraceManager, SpanStatusCode } from '../../telemetry/traces';
+import { createExecutionMetrics } from '../../telemetry/executionMetrics';
+import { createExecutionLogWriter } from '../../telemetry/logWriters';
+import type { ExecutionTelemetry } from '../../telemetry/executionTelemetry';
 import type { StructuredLogger } from '../../telemetry/logger';
 import type { MetricsCollector } from '../../telemetry/metrics';
 import type { TraceManager, ActiveSpan } from '../../telemetry/traces';
@@ -147,6 +150,7 @@ export default class Resume extends Command {
     let metrics: MetricsCollector | undefined;
     let traceManager: TraceManager | undefined;
     let commandSpan: ActiveSpan | undefined;
+    let executionTelemetry: ExecutionTelemetry | undefined;
     let runDirPath: string | undefined;
     const startTime = Date.now();
 
@@ -175,6 +179,18 @@ export default class Resume extends Command {
       commandSpan.setAttribute('dry_run', typedFlags['dry-run']);
       commandSpan.setAttribute('force', typedFlags.force);
       commandSpan.setAttribute('skip_hash_verification', typedFlags['skip-hash-verification']);
+      if (!metrics || !logger) {
+        throw new Error('Telemetry initialization failed for resume command');
+      }
+      executionTelemetry = {
+        metrics: createExecutionMetrics(metrics, {
+          runDir: runDirPath,
+          runId: featureId,
+          component: 'execution_queue',
+        }),
+        logs: createExecutionLogWriter(logger, { runDir: runDirPath, runId: featureId }),
+        traceManager,
+      };
 
       logger.info('Resume command invoked', {
         feature_id: featureId,
@@ -191,7 +207,7 @@ export default class Resume extends Command {
       };
 
       // Analyze resume state
-      const analysis = await analyzeResumeState(runDirPath, resumeOptions);
+      const analysis = await analyzeResumeState(runDirPath, resumeOptions, executionTelemetry);
 
       const queueValidation = analysis.queueValidation;
       if (queueValidation && !queueValidation.valid && !typedFlags.force) {
@@ -241,7 +257,7 @@ export default class Resume extends Command {
       // Execute resume
       logger.info('Preparing resume', { feature_id: featureId });
 
-      await prepareResume(runDirPath, resumeOptions);
+      await prepareResume(runDirPath, resumeOptions, executionTelemetry);
 
       logger.info('Resume preparation completed', { feature_id: featureId });
 

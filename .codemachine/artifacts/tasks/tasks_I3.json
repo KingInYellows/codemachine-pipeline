@@ -87,7 +87,7 @@
       "I2.T8"
     ],
     "parallelizable": true,
-    "done": false
+    "done": true
   },
   {
     "task_id": "I3.T5",
@@ -111,7 +111,7 @@
       "I3.T3"
     ],
     "parallelizable": false,
-    "done": false
+    "done": true
   },
   {
     "task_id": "I3.T6",
@@ -135,7 +135,7 @@
       "I3.T3"
     ],
     "parallelizable": true,
-    "done": false
+    "done": true
   },
   {
     "task_id": "I3.T7",
@@ -165,7 +165,7 @@
     "task_id": "I3.T8",
     "iteration_id": "I3",
     "iteration_goal": "Translate specifications into actionable ExecutionTasks, build the queue/plan orchestration engine, manage patch application + git safety rails, codify validation and auto-fix loops, and extend resume/status commands so code generation is deterministic and auditable.",
-    "description": "Create automated execution smoke tests covering context→PRD→spec→plan→patch apply→validation→resume flows, using fixture repo plus sample manifests to confirm reproducibility.\n            Update `plan/milestone_notes.md` with findings and ensure export bundle contains diff summaries.",
+    "description": "Create automated execution smoke tests covering context\u2192PRD\u2192spec\u2192plan\u2192patch apply\u2192validation\u2192resume flows, using fixture repo plus sample manifests to confirm reproducibility.\n            Update `plan/milestone_notes.md` with findings and ensure export bundle contains diff summaries.",
     "agent_type_hint": "TestingAgent",
     "inputs": "Sections 2 & 3, outputs from `I2` tasks, FR-9..FR-15, ADR-7.",
     "target_files": [

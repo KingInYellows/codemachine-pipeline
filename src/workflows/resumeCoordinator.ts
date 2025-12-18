@@ -22,6 +22,7 @@ import {
   type QueueValidationResult,
   type QueueSnapshot as QueueStoreSnapshot,
 } from './queueStore';
+import type { ExecutionTelemetry } from '../telemetry/executionTelemetry';
 
 /**
  * Resume Coordinator
@@ -135,7 +136,8 @@ export interface QueueSnapshotMetadata {
  */
 export async function analyzeResumeState(
   runDir: string,
-  options: ResumeOptions = {}
+  options: ResumeOptions = {},
+  telemetry?: ExecutionTelemetry
 ): Promise<ResumeAnalysis> {
   const manifest = await readManifest(runDir);
   const runState = await getRunState(runDir);
@@ -185,6 +187,17 @@ export async function analyzeResumeState(
 
   // Validate queue files if requested
   await checkQueueFiles(analysis, runDir, options);
+
+  telemetry?.metrics?.setQueueDepth(
+    analysis.queueState.pending,
+    analysis.queueState.completed,
+    analysis.queueState.failed
+  );
+  telemetry?.logs?.queueStateChanged(
+    analysis.queueState.pending,
+    analysis.queueState.completed,
+    analysis.queueState.failed
+  );
 
   // Determine final resume eligibility
   const canResumeBeforeBlockers = analysis.canResume;
@@ -570,10 +583,11 @@ function generateRecommendations(analysis: ResumeAnalysis): void {
  */
 export async function prepareResume(
   runDir: string,
-  options: ResumeOptions = {}
+  options: ResumeOptions = {},
+  telemetry?: ExecutionTelemetry
 ): Promise<ResumeAnalysis> {
   return withLock(runDir, async () => {
-    const analysis = await analyzeResumeState(runDir, options);
+    const analysis = await analyzeResumeState(runDir, options, telemetry);
 
     if (!analysis.canResume) {
       const blockerMessages = analysis.diagnostics

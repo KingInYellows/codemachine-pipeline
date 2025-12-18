@@ -4,6 +4,13 @@ import { spawn } from 'node:child_process';
 import type { StructuredLogger } from '../telemetry/logger';
 import type { MetricsCollector } from '../telemetry/metrics';
 import { StandardMetrics } from '../telemetry/metrics';
+import {
+  ExecutionTaskStatus,
+  ExecutionTaskType,
+  type ValidationResult as ExecutionValidationTelemetry,
+} from '../telemetry/executionMetrics';
+import type { ExecutionTelemetry } from '../telemetry/executionTelemetry';
+import { endExecutionSpan, startExecutionSpan } from '../telemetry/executionTelemetry';
 import type { ValidationCommandConfig, ValidationCommandType } from '../core/validation/validationCommandConfig';
 import {
   type ValidationAttempt,
@@ -92,9 +99,20 @@ export async function executeValidationWithAutoFix(
   commandType: ValidationCommandType,
   options: AutoFixOptions,
   logger?: StructuredLogger,
-  metrics?: MetricsCollector
+  metrics?: MetricsCollector,
+  telemetry?: ExecutionTelemetry
 ): Promise<ValidationResult> {
   const startTime = Date.now();
+  const taskId = `validation:${commandType}`;
+  telemetry?.logs?.taskStarted(taskId, ExecutionTaskType.VALIDATION, {
+    command_type: commandType,
+    auto_fix_enabled: options.enableAutoFix,
+  });
+  telemetry?.metrics?.recordTaskLifecycle(taskId, ExecutionTaskType.VALIDATION, ExecutionTaskStatus.STARTED);
+  const span = startExecutionSpan(telemetry, `validation.${commandType}`, {
+    task_id: taskId,
+    command_type: commandType,
+  });
 
   logger?.info('Starting validation execution', { command_type: commandType });
 
@@ -149,10 +167,17 @@ export async function executeValidationWithAutoFix(
       isAutoFixAttempt,
       options,
       logger,
-      metrics
+      metrics,
+      telemetry
     );
 
     lastResult = result;
+    span?.addEvent('validation.attempt', {
+      attempt_number: attemptNumber,
+      success: result.success,
+      duration_ms: result.durationMs,
+      auto_fix_attempt: isAutoFixAttempt,
+    });
 
     // Record attempt
     await recordValidationAttempt(runDir, result.attempt, logger);
@@ -172,6 +197,21 @@ export async function executeValidationWithAutoFix(
         auto_fix: isAutoFixAttempt.toString(),
       });
 
+      const totalDuration = Date.now() - startTime;
+      telemetry?.metrics?.recordTaskLifecycle(
+        taskId,
+        ExecutionTaskType.VALIDATION,
+        ExecutionTaskStatus.COMPLETED,
+        totalDuration
+      );
+      telemetry?.logs?.taskCompleted(taskId, ExecutionTaskType.VALIDATION, totalDuration, {
+        command_type: commandType,
+        attempt_number: attemptNumber,
+        auto_fix_attempt: isAutoFixAttempt,
+      });
+      span?.setAttribute('validation.attempts', attemptNumber);
+      span?.setAttribute('validation.success', true);
+      endExecutionSpan(span, true);
       return result;
     }
 
@@ -202,6 +242,22 @@ export async function executeValidationWithAutoFix(
     attempts: attemptNumber.toString(),
   });
 
+  const failureError = new Error(lastResult?.errorSummary ?? `Validation command "${commandType}" failed`);
+  const totalDuration = Date.now() - startTime;
+  telemetry?.metrics?.recordTaskLifecycle(
+    taskId,
+    ExecutionTaskType.VALIDATION,
+    ExecutionTaskStatus.FAILED,
+    totalDuration
+  );
+  telemetry?.logs?.taskFailed(taskId, ExecutionTaskType.VALIDATION, failureError, totalDuration, {
+    command_type: commandType,
+    attempt_number: attemptNumber,
+  });
+  span?.setAttribute('validation.attempts', attemptNumber);
+  span?.setAttribute('validation.success', false);
+  endExecutionSpan(span, false, failureError.message);
+
   return lastResult!;
 }
 
@@ -220,7 +276,8 @@ export async function executeAllValidations(
   commandTypes: ValidationCommandType[] | undefined,
   options: AutoFixOptions,
   logger?: StructuredLogger,
-  metrics?: MetricsCollector
+  metrics?: MetricsCollector,
+  telemetry?: ExecutionTelemetry
 ): Promise<AutoFixResult> {
   const startTime = Date.now();
 
@@ -253,7 +310,14 @@ export async function executeAllValidations(
   // Execute each command sequentially (to avoid resource conflicts)
   for (const commandType of targetCommands) {
     try {
-      const result = await executeValidationWithAutoFix(runDir, commandType, options, logger, metrics);
+      const result = await executeValidationWithAutoFix(
+        runDir,
+        commandType,
+        options,
+        logger,
+        metrics,
+        telemetry
+      );
 
       results.set(commandType, result);
       totalAttempts += result.attempt.attempt_number;
@@ -312,7 +376,8 @@ async function executeValidationCommand(
   isAutoFixAttempt: boolean,
   options: AutoFixOptions,
   logger?: StructuredLogger,
-  metrics?: MetricsCollector
+  metrics?: MetricsCollector,
+  telemetry?: ExecutionTelemetry
 ): Promise<ValidationResult> {
   const attemptId = generateAttemptId();
   const startedAt = new Date().toISOString();
@@ -412,6 +477,20 @@ async function executeValidationCommand(
   if (typeof errorSummary !== 'undefined') {
     validationResult.errorSummary = errorSummary;
   }
+
+  const telemetryPayload: ExecutionValidationTelemetry = {
+    passed: validationResult.success,
+    durationMs,
+    ...(validationResult.success
+      ? {}
+      : {
+          errorCount: 1,
+          errorTypes: [`validation.${command.type}`],
+        }),
+  };
+  const telemetryTaskId = `validation:${command.type}`;
+  telemetry?.metrics?.recordValidationRun(telemetryPayload);
+  telemetry?.logs?.validationCompleted(telemetryTaskId, telemetryPayload);
 
   return validationResult;
 }
