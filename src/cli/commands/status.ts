@@ -20,6 +20,7 @@ import {
 } from '../utils/runDirectory';
 import { parseContextDocument } from '../../core/models/ContextDocument';
 import { loadTraceSummary } from '../../workflows/traceabilityMapper';
+import { loadPlanSummary } from '../../workflows/taskPlanner';
 
 const MANIFEST_FILE = 'manifest.json';
 const MANIFEST_SCHEMA_DOC = 'docs/requirements/run_directory_schema.md';
@@ -59,6 +60,8 @@ interface StatusPayload {
   manifest_error?: string;
   context?: StatusContextPayload;
   traceability?: StatusTraceabilityPayload;
+  plan?: StatusPlanPayload;
+  validation?: StatusValidationPayload;
 }
 
 interface StatusContextPayload {
@@ -95,6 +98,29 @@ interface StatusTraceabilityPayload {
   execution_tasks_mapped: number;
   last_updated: string;
   outstanding_gaps: number;
+}
+
+interface StatusPlanPayload {
+  plan_path: string;
+  plan_exists: boolean;
+  total_tasks?: number;
+  entry_tasks?: number;
+  blocked_tasks?: number;
+  task_type_breakdown?: Record<string, number>;
+  dag_metadata?: {
+    parallel_paths?: number;
+    critical_path_depth?: number;
+    generated_at: string;
+  };
+  checksum?: string;
+  last_updated?: string;
+}
+
+interface StatusValidationPayload {
+  has_validation_data: boolean;
+  queue_valid?: boolean;
+  plan_valid?: boolean;
+  integrity_warnings?: string[];
 }
 
 /**
@@ -196,7 +222,15 @@ export default class Status extends Command {
         ? await this.loadTraceabilityStatus(settings.baseDir, featureId)
         : undefined;
 
-      const payload = this.buildStatusPayload(featureId, settings, manifestInfo, contextInfo, traceInfo);
+      const planInfo = featureId
+        ? await this.loadPlanStatus(settings.baseDir, featureId)
+        : undefined;
+
+      const validationInfo = featureId
+        ? await this.loadValidationStatus(settings.baseDir, featureId)
+        : undefined;
+
+      const payload = this.buildStatusPayload(featureId, settings, manifestInfo, contextInfo, traceInfo, planInfo, validationInfo);
 
       if (typedFlags.json) {
         // Disable stderr mirroring in JSON mode (already set in createCliLogger)
@@ -315,7 +349,9 @@ export default class Status extends Command {
     settings: RunDirectorySettings,
     manifestInfo?: ManifestLoadResult,
     contextInfo?: StatusContextPayload,
-    traceInfo?: StatusTraceabilityPayload
+    traceInfo?: StatusTraceabilityPayload,
+    planInfo?: StatusPlanPayload,
+    validationInfo?: StatusValidationPayload
   ): StatusPayload {
     const manifest = manifestInfo?.manifest;
     const manifestPath = manifestInfo?.manifestPath ?? this.deriveManifestPath(settings.baseDir, featureId);
@@ -341,6 +377,8 @@ export default class Status extends Command {
       ],
       ...(contextInfo && { context: contextInfo }),
       ...(traceInfo && { traceability: traceInfo }),
+      ...(planInfo && { plan: planInfo }),
+      ...(validationInfo && { validation: validationInfo }),
     };
 
     if (manifest?.title) {
@@ -361,6 +399,111 @@ export default class Status extends Command {
     }
 
     return payload;
+  }
+
+  private async loadPlanStatus(
+    baseDir: string,
+    featureId: string
+  ): Promise<StatusPlanPayload | undefined> {
+    const runDir = getRunDirectoryPath(baseDir, featureId);
+    const planPath = path.join(runDir, 'plan.json');
+
+    try {
+      const planSummary = await loadPlanSummary(runDir);
+      if (!planSummary) {
+        return {
+          plan_path: planPath,
+          plan_exists: false,
+        };
+      }
+
+      const result: StatusPlanPayload = {
+        plan_path: planPath,
+        plan_exists: true,
+        total_tasks: planSummary.totalTasks,
+        entry_tasks: planSummary.entryTasks.length,
+        blocked_tasks: planSummary.blockedTasks,
+        task_type_breakdown: planSummary.taskTypeBreakdown,
+        ...(planSummary.checksum !== undefined && { checksum: planSummary.checksum }),
+        ...(planSummary.lastUpdated && { last_updated: planSummary.lastUpdated }),
+      };
+
+      if (planSummary.dag) {
+        result.dag_metadata = {
+          ...(planSummary.dag.parallelPaths !== undefined && { parallel_paths: planSummary.dag.parallelPaths }),
+          ...(planSummary.dag.criticalPathDepth !== undefined && { critical_path_depth: planSummary.dag.criticalPathDepth }),
+          generated_at: planSummary.dag.generatedAt,
+        };
+      }
+
+      return result;
+    } catch {
+      return {
+        plan_path: planPath,
+        plan_exists: false,
+      };
+    }
+  }
+
+  private async loadValidationStatus(
+    baseDir: string,
+    featureId: string
+  ): Promise<StatusValidationPayload | undefined> {
+    const runDir = getRunDirectoryPath(baseDir, featureId);
+
+    // Check for validation artifacts (queue validation, plan validation)
+    const queueValidationPath = path.join(runDir, 'queue_validation.json');
+    const planValidationPath = path.join(runDir, 'plan_validation.json');
+
+    let queueValid: boolean | undefined;
+    let planValid: boolean | undefined;
+    const integrityWarnings: string[] = [];
+
+    try {
+      const queueContent = await fs.readFile(queueValidationPath, 'utf-8');
+      const queueData = JSON.parse(queueContent) as { valid: boolean; errors?: unknown[] };
+      queueValid = queueData.valid;
+      if (!queueData.valid && queueData.errors && Array.isArray(queueData.errors)) {
+        integrityWarnings.push(`Queue validation found ${queueData.errors.length} errors`);
+      }
+    } catch {
+      // Queue validation file doesn't exist
+    }
+
+    try {
+      const planContent = await fs.readFile(planValidationPath, 'utf-8');
+      const planData = JSON.parse(planContent) as { valid: boolean; errors?: string[] };
+      planValid = planData.valid;
+      if (!planData.valid && planData.errors && Array.isArray(planData.errors)) {
+        integrityWarnings.push(...planData.errors);
+      }
+    } catch {
+      // Plan validation file doesn't exist
+    }
+
+    const hasValidationData = queueValid !== undefined || planValid !== undefined;
+
+    if (!hasValidationData) {
+      return undefined;
+    }
+
+    const validationPayload: StatusValidationPayload = {
+      has_validation_data: hasValidationData,
+    };
+
+    if (queueValid !== undefined) {
+      validationPayload.queue_valid = queueValid;
+    }
+
+    if (planValid !== undefined) {
+      validationPayload.plan_valid = planValid;
+    }
+
+    if (integrityWarnings.length > 0) {
+      validationPayload.integrity_warnings = integrityWarnings;
+    }
+
+    return validationPayload;
   }
 
   private async loadTraceabilityStatus(
@@ -623,6 +766,49 @@ export default class Status extends Command {
             this.log(`  - ${preview.file_path} (${preview.chunk_id}): ${preview.summary}`);
           }
         }
+      }
+    }
+
+    if (payload.plan) {
+      if (payload.plan.plan_exists) {
+        this.log(
+          `Plan: ${payload.plan.total_tasks} tasks (${payload.plan.entry_tasks} entry, ${payload.plan.blocked_tasks} blocked)`
+        );
+        if (payload.plan.dag_metadata) {
+          this.log(
+            `DAG: parallel_paths=${payload.plan.dag_metadata.parallel_paths ?? 'N/A'} depth=${payload.plan.dag_metadata.critical_path_depth ?? 'N/A'}`
+          );
+        }
+        if (flags.verbose && payload.plan.task_type_breakdown) {
+          this.log('Task types:');
+          for (const [taskType, count] of Object.entries(payload.plan.task_type_breakdown)) {
+            this.log(`  • ${taskType}: ${count}`);
+          }
+        }
+        if (flags.verbose && payload.plan.checksum) {
+          this.log(`Plan checksum: ${payload.plan.checksum.substring(0, 16)}...`);
+        }
+      } else {
+        this.log('Plan: not generated yet');
+      }
+    }
+
+    if (payload.validation) {
+      const validationParts: string[] = [];
+      if (payload.validation.queue_valid !== undefined) {
+        validationParts.push(`queue=${payload.validation.queue_valid ? '✓' : '✗'}`);
+      }
+      if (payload.validation.plan_valid !== undefined) {
+        validationParts.push(`plan=${payload.validation.plan_valid ? '✓' : '✗'}`);
+      }
+      if (validationParts.length > 0) {
+        this.log(`Validation: ${validationParts.join(' ')}`);
+      }
+      if (payload.validation.integrity_warnings && payload.validation.integrity_warnings.length > 0) {
+        this.warn('Integrity warnings:');
+        payload.validation.integrity_warnings.forEach(warning => {
+          this.warn(`  • ${warning}`);
+        });
       }
     }
 
