@@ -1,0 +1,39 @@
+{
+  "status": 200,
+  "headers": {
+    "content-type": "application/json",
+    "x-request-id": "linear-req-12346"
+  },
+  "data": {
+    "data": {
+      "issue": {
+        "comments": {
+          "nodes": [
+            {
+              "id": "comment-uuid-1",
+              "body": "Starting implementation of regression test suite. Will cover GitHub API success/failure scenarios.",
+              "user": {
+                "id": "user-uuid-1",
+                "name": "Test User",
+                "email": "test@example.com"
+              },
+              "createdAt": "2024-12-10T09:00:00Z",
+              "updatedAt": "2024-12-10T09:00:00Z"
+            },
+            {
+              "id": "comment-uuid-2",
+              "body": "Added fixtures for 429 rate limit and 403 secondary rate limit responses. Need to add missing scope scenarios.",
+              "user": {
+                "id": "user-uuid-2",
+                "name": "Code Reviewer",
+                "email": "reviewer@example.com"
+              },
+              "createdAt": "2024-12-12T14:30:00Z",
+              "updatedAt": "2024-12-12T14:30:00Z"
+            }
+          ]
+        }
+      }
+    }
+  }
+}

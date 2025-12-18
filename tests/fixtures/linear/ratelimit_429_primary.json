@@ -1,0 +1,19 @@
+{
+  "status": 429,
+  "headers": {
+    "content-type": "application/json",
+    "retry-after": "3600",
+    "x-request-id": "linear-req-ratelimit"
+  },
+  "data": {
+    "errors": [
+      {
+        "message": "Too many requests. You have exceeded the rate limit of 1500 requests per hour.",
+        "extensions": {
+          "code": "RATE_LIMITED",
+          "retryAfter": 3600
+        }
+      }
+    ]
+  }
+}

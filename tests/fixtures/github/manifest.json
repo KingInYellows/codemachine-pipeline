@@ -1,0 +1,45 @@
+{
+  "description": "GitHub adapter integration test fixtures",
+  "created": "2024-12-17T12:00:00Z",
+  "updated": "2025-12-18T05:56:02Z",
+  "source_branch": "codemacine/dev",
+  "refresh_command": "scripts/tooling/update_fixtures.sh --provider github",
+  "fixtures": [
+    {
+      "file": "success_repository.json",
+      "scenario": "Success - Repository fetch",
+      "endpoint": "GET /repos/{owner}/{repo}",
+      "hash": "83925a3ad45aa98a48a37f96a57a1210d6c35a5327c88dbe5448b0fb45c62025"
+    },
+    {
+      "file": "success_pull_request.json",
+      "scenario": "Success - Pull request creation",
+      "endpoint": "POST /repos/{owner}/{repo}/pulls",
+      "hash": "82a4b9aff011e264728b95e1cc68d4e216bb1a940c4f874edc2750f5f7ba6002"
+    },
+    {
+      "file": "success_branch_protection.json",
+      "scenario": "Success - Branch protection rules",
+      "endpoint": "GET /repos/{owner}/{repo}/branches/{branch}/protection",
+      "hash": "74286c31597f691c5a25cdb7c4d115d680bf0e34af284533851dac24936002c2"
+    },
+    {
+      "file": "ratelimit_429_primary.json",
+      "scenario": "Rate Limit - Primary rate limit exceeded (429)",
+      "endpoint": "ANY",
+      "hash": "9d0738c11f5eba2a81ec915973c9852324f7cbdcacbe3fe8b1670e4de64cdead"
+    },
+    {
+      "file": "error_403_secondary.json",
+      "scenario": "Rate Limit - Secondary rate limit exceeded (403)",
+      "endpoint": "ANY",
+      "hash": "0d117428236cefa1bd01569ee0bb248bcac0925fd21fd299c4e4f7918ee12070"
+    },
+    {
+      "file": "error_missing_scopes.json",
+      "scenario": "Error - Insufficient OAuth scopes (403)",
+      "endpoint": "POST /repos/{owner}/{repo}/actions/workflows/{workflow_id}/dispatches",
+      "hash": "d2ab1a40013702b581ec10be3daaf363b8f4c5482d9525be8ee238ca4c0d8176"
+    }
+  ]
+}

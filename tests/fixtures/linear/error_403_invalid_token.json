@@ -1,0 +1,17 @@
+{
+  "status": 403,
+  "headers": {
+    "content-type": "application/json",
+    "x-request-id": "linear-req-auth-error"
+  },
+  "data": {
+    "errors": [
+      {
+        "message": "Authentication failed. The provided API key is invalid or has been revoked.",
+        "extensions": {
+          "code": "AUTHENTICATION_ERROR"
+        }
+      }
+    ]
+  }
+}

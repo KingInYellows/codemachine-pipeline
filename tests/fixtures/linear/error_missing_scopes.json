@@ -1,0 +1,19 @@
+{
+  "status": 403,
+  "headers": {
+    "content-type": "application/json",
+    "x-request-id": "linear-req-scope-error"
+  },
+  "data": {
+    "errors": [
+      {
+        "message": "Insufficient permissions. Your API key does not have the required write:issues scope.",
+        "extensions": {
+          "code": "INSUFFICIENT_PERMISSIONS",
+          "requiredScopes": ["write:issues"],
+          "currentScopes": ["read:issues"]
+        }
+      }
+    ]
+  }
+}
