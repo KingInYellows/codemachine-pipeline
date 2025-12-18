@@ -406,6 +406,16 @@ The project uses GitHub Actions for continuous integration:
 
 All checks run on Node v24.x.
 
+## Updating Integration Fixtures
+
+Regression tests for the GitHub and Linear adapters replay recorded HTTP fixtures stored under `tests/fixtures/{github,linear}`. Refresh them whenever adapter logic or API payloads change:
+
+1. Run `./scripts/tooling/update_fixtures.sh [--provider github|linear|all] [--dry-run]` to validate fixture structure, recompute SHA256 hashes, and update each provider's `manifest.json` with the latest metadata.
+2. Follow the workflow documented in `docs/ops/integration_testing.md` when adding new fixtures—record the response, describe the scenario in the manifest, and rerun the update script so hashes stay in sync.
+3. Execute `npm run test tests/integration/github_linear_regression.spec.ts` to confirm both adapters still pass the regression suite before committing the refreshed fixtures.
+
+Every manifest entry serves as an audit log (`file`, `scenario`, `endpoint/query`, `hash`, timestamps, source branch), so never edit hashes manually—always rely on the update script.
+
 ## Architecture
 
 The pipeline operates on a state machine model with the following phases:

@@ -1,0 +1,52 @@
+{
+  "status": 200,
+  "headers": {
+    "content-type": "application/json",
+    "x-request-id": "linear-req-12345"
+  },
+  "data": {
+    "data": {
+      "issue": {
+        "id": "linear-uuid-1234-5678-abcd",
+        "identifier": "ENG-123",
+        "title": "Implement GitHub/Linear integration regression tests",
+        "description": "Create comprehensive test suite covering success, rate-limit, and error paths for GitHub and Linear adapters with recorded HTTP fixtures.",
+        "state": {
+          "id": "state-uuid-1",
+          "name": "In Progress",
+          "type": "started"
+        },
+        "priority": 2,
+        "labels": [
+          {
+            "id": "label-uuid-1",
+            "name": "testing",
+            "color": "#0066FF"
+          },
+          {
+            "id": "label-uuid-2",
+            "name": "integration",
+            "color": "#00CC66"
+          }
+        ],
+        "assignee": {
+          "id": "user-uuid-1",
+          "name": "Test User",
+          "email": "test@example.com"
+        },
+        "team": {
+          "id": "team-uuid-1",
+          "name": "Engineering",
+          "key": "ENG"
+        },
+        "project": {
+          "id": "project-uuid-1",
+          "name": "Q1 2025 Features"
+        },
+        "createdAt": "2024-12-01T10:00:00Z",
+        "updatedAt": "2024-12-17T12:00:00Z",
+        "url": "https://linear.app/acme/issue/ENG-123"
+      }
+    }
+  }
+}

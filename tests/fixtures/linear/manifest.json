@@ -1,0 +1,45 @@
+{
+  "description": "Linear adapter integration test fixtures",
+  "created": "2024-12-17T12:00:00Z",
+  "updated": "2025-12-18T05:56:03Z",
+  "source_branch": "codemacine/dev",
+  "refresh_command": "scripts/tooling/update_fixtures.sh --provider linear",
+  "fixtures": [
+    {
+      "file": "success_issue.json",
+      "scenario": "Success - Issue fetch",
+      "query": "GetIssue",
+      "hash": "c06f6e31ee9dd72bb3d92a34805e586925d875b004da8f1f5ca392fdd21e0eb5"
+    },
+    {
+      "file": "success_comments.json",
+      "scenario": "Success - Comments fetch",
+      "query": "GetComments",
+      "hash": "9969481957590c6274a65898423716853db9ee3ae6d1326840a52deba8d0ce54"
+    },
+    {
+      "file": "success_update_issue.json",
+      "scenario": "Success - Issue update (preview feature)",
+      "query": "UpdateIssue",
+      "hash": "e5a7c3ccc57ab59d105148e128b3182a647977553c315470b26aa3148f8d0048"
+    },
+    {
+      "file": "ratelimit_429_primary.json",
+      "scenario": "Rate Limit - Primary rate limit exceeded (429)",
+      "query": "ANY",
+      "hash": "09920a60246bb9dfdfbf0c709f6e990c55c42fff8e65f717ecc597e941713e2f"
+    },
+    {
+      "file": "error_403_invalid_token.json",
+      "scenario": "Error - Invalid API key (403)",
+      "query": "ANY",
+      "hash": "227dfa4e58302450ef260516c2ea35cd8971e3b4065ebb30ea27a87fff77f7dd"
+    },
+    {
+      "file": "error_missing_scopes.json",
+      "scenario": "Error - Insufficient scopes (403)",
+      "query": "UpdateIssue",
+      "hash": "f9dfb8ccab65a6228728b1b53804b32df1d1457affcbf39a435bf56202573372"
+    }
+  ]
+}
