@@ -97,6 +97,50 @@
     "enable_developer_preview": false
   },
 
+  "validation": {
+    "_comment": "Validation command registry per ADR-7 / FR-14",
+    "template_context": {
+      "_comment": "Optional template variables for commands (available as {{variable}})",
+      "validation_branch": "feature/{{feature_id}}"
+    },
+    "commands": [
+      {
+        "type": "lint",
+        "command": "npm run lint",
+        "auto_fix_command": "npm run lint:fix",
+        "supports_auto_fix": true,
+        "required": true,
+        "timeout_ms": 60000,
+        "max_retries": 2,
+        "backoff_ms": 500
+      },
+      {
+        "type": "typecheck",
+        "command": "npm run typecheck",
+        "required": true,
+        "timeout_ms": 120000,
+        "max_retries": 1,
+        "backoff_ms": 1000
+      },
+      {
+        "type": "test",
+        "command": "npm run test",
+        "required": true,
+        "timeout_ms": 180000,
+        "max_retries": 2,
+        "backoff_ms": 2000
+      },
+      {
+        "type": "build",
+        "command": "npm run build",
+        "required": true,
+        "timeout_ms": 180000,
+        "max_retries": 1,
+        "backoff_ms": 1000
+      }
+    ]
+  },
+
   "constraints": {
     "_comment": "Resource constraints and rate limits",
     "max_file_size_kb": 1000,
