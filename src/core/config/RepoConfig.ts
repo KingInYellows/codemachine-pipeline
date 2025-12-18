@@ -1,5 +1,10 @@
 import { z } from 'zod';
 import * as fs from 'node:fs';
+import {
+  DEFAULT_VALIDATION_COMMANDS,
+  ValidationCommandConfigSchema,
+  type ValidationCommandConfig,
+} from '../validation/validationCommandConfig';
 
 /**
  * Enhanced RepoConfig schema with governance and history tracking
@@ -161,6 +166,17 @@ const FeatureFlagsSchema = z.object({
 export type FeatureFlags = z.infer<typeof FeatureFlagsSchema>;
 
 // ============================================================================
+// Validation Settings
+// ============================================================================
+
+const ValidationSettingsSchema = z.object({
+  commands: z.array(ValidationCommandConfigSchema).min(1),
+  template_context: z.record(z.string()).optional(),
+});
+
+export type ValidationSettings = z.infer<typeof ValidationSettingsSchema>;
+
+// ============================================================================
 // Resource Constraints
 // ============================================================================
 
@@ -188,6 +204,7 @@ export const RepoConfigSchema = z.object({
   runtime: RuntimeSchema,
   safety: SafetySchema,
   feature_flags: FeatureFlagsSchema,
+  validation: ValidationSettingsSchema.optional(),
   constraints: ConstraintsSchema.optional(),
 
   // Enhanced governance controls (ADR-5)
@@ -438,6 +455,14 @@ export function applyEnvironmentOverrides(config: RepoConfig): RepoConfig {
  * @param options Optional creation settings
  * @returns Default config object
  */
+function cloneDefaultValidationCommands(): ValidationCommandConfig[] {
+  return DEFAULT_VALIDATION_COMMANDS.map((command) => ({
+    ...command,
+    env: command.env ? { ...command.env } : undefined,
+    template_context: command.template_context ? { ...command.template_context } : undefined,
+  }));
+}
+
 export function createDefaultConfig(
   repoUrl: string,
   options?: { includeGovernance?: boolean; changedBy?: string }
@@ -497,6 +522,9 @@ export function createDefaultConfig(
       enable_context_summarization: true,
       enable_resumability: true,
       enable_developer_preview: false,
+    },
+    validation: {
+      commands: cloneDefaultValidationCommands(),
     },
     constraints: {
       max_file_size_kb: 1000,

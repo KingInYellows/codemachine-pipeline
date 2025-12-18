@@ -557,7 +557,7 @@ describe('TraceManager', () => {
       const traceManager = createRunTraceManager(tempDir);
 
       const span = traceManager.startSpan('timed_operation');
-      await new Promise(resolve => setTimeout(resolve, 50)); // Wait 50ms
+      await new Promise(resolve => setTimeout(resolve, 75)); // Wait for measurable duration
       span.end();
 
       await traceManager.flush();

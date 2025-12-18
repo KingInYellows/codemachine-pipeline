@@ -148,6 +148,33 @@ Feature flags for experimental functionality.
 | `enable_resumability` | `boolean` | ✗ | `true` | Enable feature resumability from checkpoints (ADR-2) | - |
 | `enable_developer_preview` | `boolean` | ✗ | `false` | Enable developer preview features | - |
 
+### validation
+
+Validation command registry configuration (ADR-7 / FR-14).
+
+| Field | Type | Required | Default | Description | CLI Override |
+|-------|------|----------|---------|-------------|--------------|
+| `commands` | `object[]` | ✗ | lint/test/typecheck/build defaults | Validation command definitions | - |
+| `template_context` | `record<string,string>` | ✗ | `{}` | Global templating tokens applied to each command | - |
+
+**commands[] definition:**
+| Field | Type | Required | Default | Description |
+|-------|------|----------|---------|-------------|
+| `type` | `enum("lint","test","typecheck","build")` | ✓ | - | Validation command type |
+| `command` | `string` | ✓ | - | Shell command template |
+| `auto_fix_command` | `string` | ✗ | - | Alternate command for auto-fix attempts |
+| `supports_auto_fix` | `boolean` | ✗ | `false` | Enable auto-fix loop |
+| `cwd` | `string` | ✗ | `"."` | Working directory (relative or absolute) |
+| `env` | `record<string,string>` | ✗ | `{}` | Additional environment variables |
+| `required` | `boolean` | ✗ | `true` | Whether the command blocks PR/deploy |
+| `timeout_ms` | `integer` | ✗ | `120000` | Timeout per attempt (1000-600000 ms) |
+| `max_retries` | `integer` | ✗ | `3` | Additional retries after the first attempt |
+| `backoff_ms` | `integer` | ✗ | `1000` | Backoff multiplier between retries |
+| `description` | `string` | ✗ | - | Human-friendly description |
+| `template_context` | `record<string,string>` | ✗ | `{}` | Per-command templating tokens |
+
+**Templating tokens:** Commands may include placeholders such as `{{feature_id}}`, `{{run_dir}}`, `{{repo_root}}`, `{{command_cwd}}`, and any keys defined in `template_context`. Run `ai-feature validate --init` after editing this section so the run directory registry stays in sync.
+
 ### constraints
 
 Resource constraints and rate limits.
