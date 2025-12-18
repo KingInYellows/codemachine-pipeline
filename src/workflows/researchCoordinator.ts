@@ -824,6 +824,7 @@ export class ResearchCoordinator {
   private readonly config: ResearchCoordinatorConfig;
   private readonly logger: StructuredLogger;
   private readonly metrics: MetricsCollector;
+  private lastCreatedAtMs = 0;
 
   constructor(
     config: ResearchCoordinatorConfig,
@@ -915,13 +916,15 @@ export class ResearchCoordinator {
         taskOptions.metadata = options.metadata;
       }
 
-      const task = createResearchTask(
+      const rawTask = createResearchTask(
         taskId,
         this.config.featureId,
         options.title,
         options.objectives,
         taskOptions
       );
+
+      const task = this.normalizeTaskTimestamps(rawTask);
 
       await saveTask(this.config.runDir, task);
 
@@ -940,6 +943,8 @@ export class ResearchCoordinator {
       this.logger.info('Created research task', {
         taskId: task.task_id,
         cacheKey,
+        objectives: options.objectives.length,
+        sources: sources.length,
       });
 
       this.metrics.increment('research_tasks_created_total', {
@@ -952,6 +957,31 @@ export class ResearchCoordinator {
         cached: false,
       };
     });
+  }
+
+  /**
+   * Ensure created_at timestamps are strictly monotonic to guarantee deterministic ordering
+   */
+  private normalizeTaskTimestamps(task: ResearchTask): ResearchTask {
+    const createdMs = Date.parse(task.created_at);
+    if (Number.isNaN(createdMs)) {
+      return task;
+    }
+
+    const normalizedMs = Math.max(createdMs, this.lastCreatedAtMs + 1);
+    this.lastCreatedAtMs = normalizedMs;
+
+    if (normalizedMs === createdMs) {
+      return task;
+    }
+
+    const normalizedIso = new Date(normalizedMs).toISOString();
+
+    return {
+      ...task,
+      created_at: normalizedIso,
+      updated_at: normalizedIso,
+    };
   }
 
   /**

@@ -92,6 +92,47 @@ const EndpointSchema = z.object({
 }).strict().optional();
 
 /**
+ * Retry policy schema for transient error handling
+ */
+const RetryPolicySchema = z.object({
+  maxAttempts: z.number().int().nonnegative().default(3),
+  baseDelayMs: z.number().int().nonnegative().default(1000),
+  maxDelayMs: z.number().int().nonnegative().default(60000),
+  backoffMultiplier: z.number().min(1).default(2),
+}).strict();
+
+/**
+ * Error taxonomy schema for deterministic failure classification
+ */
+const ErrorTaxonomySchema = z.object({
+  transientErrorCodes: z.array(z.string()).optional(),
+  permanentErrorCodes: z.array(z.string()).optional(),
+  humanActionErrorCodes: z.array(z.string()).optional(),
+  retryPolicy: RetryPolicySchema.optional(),
+}).strict().optional();
+
+/**
+ * Execution context override schema
+ */
+const ContextConfigSchema = z.object({
+  preferredModelId: z.string().optional(),
+  maxTokensOverride: z.number().int().positive().optional(),
+  temperatureOverride: z.number().min(0).max(2).optional(),
+  timeoutOverride: z.number().int().min(1000).optional(),
+}).strict();
+
+const ExecutionContextsSchema = z.object({
+  code_generation: ContextConfigSchema.optional(),
+  code_review: ContextConfigSchema.optional(),
+  test_generation: ContextConfigSchema.optional(),
+  refactoring: ContextConfigSchema.optional(),
+  documentation: ContextConfigSchema.optional(),
+  prd_generation: ContextConfigSchema.optional(),
+  spec_generation: ContextConfigSchema.optional(),
+  summarization: ContextConfigSchema.optional(),
+}).strict().optional();
+
+/**
  * Complete agent manifest schema
  */
 export const AgentManifestSchema = z.object({
@@ -112,6 +153,8 @@ export const AgentManifestSchema = z.object({
   features: FeaturesSchema,
   endpoint: EndpointSchema,
   fallbackProvider: z.string().regex(/^[a-z0-9_-]+$/).optional(),
+  errorTaxonomy: ErrorTaxonomySchema,
+  executionContexts: ExecutionContextsSchema,
   metadata: z.record(z.unknown()).optional(),
 }).strict();
 
@@ -122,6 +165,10 @@ export type CostConfig = z.infer<typeof CostConfigSchema>;
 export type Tools = z.infer<typeof ToolsSchema>;
 export type Features = z.infer<typeof FeaturesSchema>;
 export type Endpoint = z.infer<typeof EndpointSchema>;
+export type RetryPolicy = z.infer<typeof RetryPolicySchema>;
+export type ErrorTaxonomy = z.infer<typeof ErrorTaxonomySchema>;
+export type ExecutionContextConfig = z.infer<typeof ContextConfigSchema>;
+export type ExecutionContextOverrides = z.infer<typeof ExecutionContextsSchema>;
 
 // ============================================================================
 // Manifest Loading & Validation
@@ -400,6 +447,23 @@ export class ManifestLoader {
     });
 
     return manifest;
+  }
+
+  /**
+   * Register manifest directly (used for test fixtures or preloaded providers)
+   */
+  registerManifest(
+    manifest: AgentManifest,
+    metadata?: { hash?: string; loadedAt?: string; sourcePath?: string }
+  ): void {
+    const cached: CachedManifest = {
+      manifest,
+      hash: metadata?.hash ?? computeManifestHash(JSON.stringify(manifest)),
+      loadedAt: metadata?.loadedAt ?? new Date().toISOString(),
+      sourcePath: metadata?.sourcePath ?? '<in-memory>',
+    };
+
+    this.registry.set(manifest.providerId, cached);
   }
 
   /**
