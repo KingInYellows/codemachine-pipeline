@@ -21,6 +21,16 @@ import {
 import { parseContextDocument } from '../../core/models/ContextDocument';
 import { loadTraceSummary } from '../../workflows/traceabilityMapper';
 import { loadPlanSummary } from '../../workflows/taskPlanner';
+import { createBranchProtectionAdapter, type BranchProtectionConfig } from '../../adapters/github/branchProtection';
+import {
+  loadReport as loadBranchProtectionReport,
+  generateSummary as generateBranchProtectionSummary,
+  generateReport as buildBranchProtectionReport,
+  persistReport as persistBranchProtectionReport,
+  detectValidationMismatch,
+  type ValidationMismatch,
+} from '../../workflows/branchProtectionReporter';
+import type { PRMetadata } from '../pr/shared';
 
 const MANIFEST_FILE = 'manifest.json';
 const MANIFEST_SCHEMA_DOC = 'docs/requirements/run_directory_schema.md';
@@ -62,6 +72,7 @@ interface StatusPayload {
   traceability?: StatusTraceabilityPayload;
   plan?: StatusPlanPayload;
   validation?: StatusValidationPayload;
+  branch_protection?: StatusBranchProtectionPayload;
 }
 
 interface StatusContextPayload {
@@ -121,6 +132,29 @@ interface StatusValidationPayload {
   queue_valid?: boolean;
   plan_valid?: boolean;
   integrity_warnings?: string[];
+}
+
+interface StatusBranchProtectionPayload {
+  protected: boolean;
+  compliant: boolean;
+  blockers_count: number;
+  blockers: string[];
+  missing_checks: string[];
+  reviews_status: {
+    required: number;
+    completed: number;
+    satisfied: boolean;
+  };
+  branch_status: {
+    up_to_date: boolean;
+    stale: boolean;
+  };
+  auto_merge: {
+    allowed: boolean;
+    enabled: boolean;
+  };
+  evaluated_at?: string;
+  validation_mismatch?: ValidationMismatch;
 }
 
 /**
@@ -230,7 +264,22 @@ export default class Status extends Command {
         ? await this.loadValidationStatus(settings.baseDir, featureId)
         : undefined;
 
-      const payload = this.buildStatusPayload(featureId, settings, manifestInfo, contextInfo, traceInfo, planInfo, validationInfo);
+      if (featureId) {
+        await this.refreshBranchProtectionArtifact(
+          settings,
+          featureId,
+          manifestInfo?.manifest,
+          logger,
+          traceManager,
+          commandSpan
+        );
+      }
+
+      const branchProtectionInfo = featureId
+        ? await this.loadBranchProtectionStatus(settings.baseDir, featureId)
+        : undefined;
+
+      const payload = this.buildStatusPayload(featureId, settings, manifestInfo, contextInfo, traceInfo, planInfo, validationInfo, branchProtectionInfo);
 
       if (typedFlags.json) {
         // Disable stderr mirroring in JSON mode (already set in createCliLogger)
@@ -351,7 +400,8 @@ export default class Status extends Command {
     contextInfo?: StatusContextPayload,
     traceInfo?: StatusTraceabilityPayload,
     planInfo?: StatusPlanPayload,
-    validationInfo?: StatusValidationPayload
+    validationInfo?: StatusValidationPayload,
+    branchProtectionInfo?: StatusBranchProtectionPayload
   ): StatusPayload {
     const manifest = manifestInfo?.manifest;
     const manifestPath = manifestInfo?.manifestPath ?? this.deriveManifestPath(settings.baseDir, featureId);
@@ -379,6 +429,7 @@ export default class Status extends Command {
       ...(traceInfo && { traceability: traceInfo }),
       ...(planInfo && { plan: planInfo }),
       ...(validationInfo && { validation: validationInfo }),
+      ...(branchProtectionInfo && { branch_protection: branchProtectionInfo }),
     };
 
     if (manifest?.title) {
@@ -504,6 +555,182 @@ export default class Status extends Command {
     }
 
     return validationPayload;
+  }
+
+  private async loadBranchProtectionStatus(
+    baseDir: string,
+    featureId: string
+  ): Promise<StatusBranchProtectionPayload | undefined> {
+    const runDir = getRunDirectoryPath(baseDir, featureId);
+
+    try {
+      const report = await loadBranchProtectionReport(runDir);
+
+      if (!report) {
+        return undefined;
+      }
+
+      const summary = generateBranchProtectionSummary(report);
+
+      return {
+        ...summary,
+        evaluated_at: report.evaluated_at,
+        ...(report.validation_mismatch && { validation_mismatch: report.validation_mismatch }),
+      };
+    } catch {
+      // Silently return undefined if branch_protection.json doesn't exist or is invalid
+      return undefined;
+    }
+  }
+
+  private async refreshBranchProtectionArtifact(
+    settings: RunDirectorySettings,
+    featureId: string,
+    manifest?: RunManifest,
+    logger?: StructuredLogger,
+    traceManager?: TraceManager,
+    parentSpan?: ActiveSpan
+  ): Promise<void> {
+    const config = settings.config;
+    if (!config?.github.enabled) {
+      return;
+    }
+
+    const tokenEnvVar = config.github.token_env_var;
+    const token = tokenEnvVar ? process.env[tokenEnvVar] : undefined;
+    if (!token) {
+      logger?.warn('Skipping branch protection refresh: GitHub token not found', {
+        token_env_var: tokenEnvVar,
+      });
+      return;
+    }
+
+    const repoUrl = config.project.repo_url;
+    const match = repoUrl.match(/github\.com[:/]([^/]+)\/([^/.]+)/);
+    if (!match) {
+      logger?.warn('Skipping branch protection refresh: Unable to parse GitHub repository URL', {
+        repo_url: repoUrl,
+      });
+      return;
+    }
+
+    const [, owner, repo] = match;
+    const runDir = getRunDirectoryPath(settings.baseDir, featureId);
+
+    let prMetadata: PRMetadata | null;
+    try {
+      prMetadata = await this.loadPRMetadata(runDir);
+    } catch (error) {
+      logger?.warn('Failed to read PR metadata for branch protection refresh', {
+        error: error instanceof Error ? error.message : 'unknown error',
+      });
+      return;
+    }
+
+    if (!prMetadata) {
+      logger?.debug('Skipping branch protection refresh: No PR metadata recorded', {
+        feature_id: featureId,
+      });
+      return;
+    }
+
+    const branch = prMetadata.branch;
+    const baseBranch = prMetadata.base_branch ?? manifest?.repo.default_branch;
+
+    if (!branch || !baseBranch) {
+      logger?.warn('Skipping branch protection refresh: Missing branch metadata', {
+        branch,
+        base_branch: baseBranch,
+      });
+      return;
+    }
+
+    const executeRefresh = async (): Promise<void> => {
+      const adapterConfig: BranchProtectionConfig = {
+        owner,
+        repo,
+        token,
+        baseUrl: config.github.api_base_url,
+        runDir,
+      };
+
+      if (logger) {
+        adapterConfig.logger = logger;
+      }
+
+      const adapter = createBranchProtectionAdapter(adapterConfig);
+
+      const compliance = await adapter.evaluateCompliance({
+        branch,
+        sha: branch,
+        base_sha: baseBranch,
+        pull_number: prMetadata?.pr_number,
+      });
+
+      const report = buildBranchProtectionReport(featureId, compliance, {
+        owner,
+        repo,
+        base_sha: baseBranch,
+        pull_number: prMetadata?.pr_number,
+      });
+
+      if (report.required_checks.length > 0) {
+        try {
+          report.validation_mismatch = await detectValidationMismatch(runDir, report.required_checks);
+        } catch (error) {
+          logger?.warn('Failed to compare ExecutionTask validations with required checks', {
+            error: error instanceof Error ? error.message : 'unknown error',
+          });
+        }
+      }
+
+      await persistBranchProtectionReport(runDir, report);
+
+      logger?.info('Branch protection report refreshed', {
+        branch,
+        base_branch: baseBranch,
+        compliant: report.compliant,
+        blockers: report.blockers.length,
+      });
+    };
+
+    try {
+      if (traceManager && parentSpan) {
+        await withSpan(
+          traceManager,
+          'status.refresh_branch_protection',
+          async span => {
+            span.setAttribute('feature_id', featureId);
+            span.setAttribute('branch', branch);
+            span.setAttribute('base_branch', baseBranch);
+            if (prMetadata?.pr_number) {
+              span.setAttribute('pr_number', prMetadata.pr_number);
+            }
+            await executeRefresh();
+          },
+          parentSpan.context
+        );
+      } else {
+        await executeRefresh();
+      }
+    } catch (error) {
+      logger?.warn('Branch protection refresh failed', {
+        error: error instanceof Error ? error.message : 'unknown error',
+      });
+    }
+  }
+
+  private async loadPRMetadata(runDir: string): Promise<PRMetadata | null> {
+    const prPath = path.join(runDir, 'pr.json');
+    try {
+      const content = await fs.readFile(prPath, 'utf-8');
+      return JSON.parse(content) as PRMetadata;
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+        return null;
+      }
+      throw error;
+    }
   }
 
   private async loadTraceabilityStatus(
@@ -824,6 +1051,55 @@ export default class Status extends Command {
       }
       if (flags.verbose) {
         this.log(`Trace file: ${payload.traceability.trace_path}`);
+      }
+    }
+
+    if (payload.branch_protection) {
+      const bp = payload.branch_protection;
+      this.log('');
+      this.log('Branch Protection:');
+      this.log(`  Protected: ${bp.protected ? 'Yes' : 'No'}`);
+      this.log(`  Compliant: ${bp.compliant ? 'Yes' : 'No'}`);
+
+      if (bp.blockers_count > 0) {
+        this.warn(`  Blockers (${bp.blockers_count}):`);
+        bp.blockers.forEach(blocker => {
+          this.warn(`    • ${blocker}`);
+        });
+      }
+
+      if (bp.missing_checks.length > 0) {
+        this.log(`  Missing Checks:`);
+        bp.missing_checks.forEach(check => {
+          this.log(`    - ${check}`);
+        });
+      }
+
+      this.log(`  Reviews: ${bp.reviews_status.completed}/${bp.reviews_status.required} (${bp.reviews_status.satisfied ? 'satisfied' : 'not satisfied'})`);
+      this.log(`  Branch Up-to-date: ${bp.branch_status.up_to_date ? 'Yes' : 'No'}`);
+      this.log(`  Auto-merge Allowed: ${bp.auto_merge.allowed ? 'Yes' : 'No'}`);
+
+      if (bp.validation_mismatch) {
+        const { missing_in_registry, extra_in_registry, recommendations } = bp.validation_mismatch;
+        if (missing_in_registry.length === 0 && extra_in_registry.length === 0) {
+          this.log('  Validation Alignment: ExecutionTask validations cover all required checks');
+        } else {
+          this.log('  Validation Alignment:');
+          if (missing_in_registry.length > 0) {
+            this.warn(`    Missing ExecutionTask validations for: ${missing_in_registry.join(', ')}`);
+          }
+          if (extra_in_registry.length > 0) {
+            this.log(`    Extra validations not required by branch protection: ${extra_in_registry.join(', ')}`);
+          }
+          if (flags.verbose && recommendations.length > 0) {
+            this.log('    Recommendations:');
+            recommendations.forEach(rec => this.log(`      • ${rec}`));
+          }
+        }
+      }
+
+      if (flags.verbose && bp.evaluated_at) {
+        this.log(`  Last Evaluated: ${bp.evaluated_at}`);
       }
     }
 
