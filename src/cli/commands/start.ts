@@ -23,6 +23,7 @@ import { aggregateContext, type AggregatorConfig } from '../../workflows/context
 import { createResearchCoordinator, type UnknownDetectionOptions } from '../../workflows/researchCoordinator';
 import type { ResearchTask } from '../../core/models/ResearchTask';
 import { draftPRD } from '../../workflows/prdAuthoringEngine';
+import { createLinearAdapter, type IssueSnapshot } from '../../adapters/linear/LinearAdapter';
 
 const EXECUTION_STEPS = {
   Context: 'context_aggregation',
@@ -198,6 +199,12 @@ export default class Start extends Command {
         ? await fs.readFile(resolvedSpecPath, 'utf-8')
         : undefined;
 
+      // Fetch Linear issue snapshot if --linear flag is provided
+      let linearSnapshot: IssueSnapshot | undefined;
+      if (typedFlags.linear) {
+        linearSnapshot = await this.fetchLinearIssue(typedFlags.linear, runDir, logger);
+      }
+
       currentStepLabel = EXECUTION_STEPS.Context;
       const contextResult = await this.runContextAggregation({
         repoRoot,
@@ -223,6 +230,14 @@ export default class Start extends Command {
 
       if (specText) {
         researchOptions.specText = specText;
+      }
+
+      // Include Linear issue data in research context
+      if (linearSnapshot) {
+        const linearContext = this.formatLinearContext(linearSnapshot);
+        researchOptions.specText = specText
+          ? `${specText}\n\n${linearContext}`
+          : linearContext;
       }
 
       const researchTasks = await this.runResearchDetection(researchOptions);
@@ -578,6 +593,114 @@ export default class Start extends Command {
       return config.governance.approval_workflow.require_approval_for_prd;
     }
     return config.safety.require_approval_for_prd;
+  }
+
+  private async fetchLinearIssue(
+    issueId: string,
+    runDir: string,
+    logger: StructuredLogger
+  ): Promise<IssueSnapshot> {
+    logger.info('Fetching Linear issue snapshot', { issueId });
+
+    const apiKey = process.env.LINEAR_API_KEY;
+    if (!apiKey) {
+      throw new Error(
+        'LINEAR_API_KEY environment variable is required when using --linear flag'
+      );
+    }
+
+    const adapter = createLinearAdapter({
+      apiKey,
+      runDir,
+      logger,
+      enablePreviewFeatures: process.env.LINEAR_ENABLE_PREVIEW === 'true',
+    });
+
+    try {
+      const snapshot = await adapter.fetchIssueSnapshot(issueId);
+      logger.info('Linear issue snapshot loaded', {
+        issueId: snapshot.issue.identifier,
+        title: snapshot.issue.title,
+        commentsCount: snapshot.comments.length,
+        cached: snapshot.metadata.last_error !== undefined,
+      });
+      return snapshot;
+    } catch (error) {
+      logger.error('Failed to fetch Linear issue', {
+        issueId,
+        error: error instanceof Error ? error.message : String(error),
+      });
+      throw new Error(
+        `Failed to fetch Linear issue ${issueId}: ${error instanceof Error ? error.message : String(error)}`
+      );
+    }
+  }
+
+  private formatLinearContext(snapshot: IssueSnapshot): string {
+    const { issue, comments } = snapshot;
+    const parts: string[] = [];
+
+    parts.push('# Linear Issue Context');
+    parts.push('');
+    parts.push(`**Issue**: ${issue.identifier} - ${issue.title}`);
+    parts.push(`**URL**: ${issue.url}`);
+    parts.push(`**State**: ${issue.state.name} (${issue.state.type})`);
+    parts.push(`**Priority**: ${this.formatPriority(issue.priority)}`);
+
+    if (issue.assignee) {
+      parts.push(`**Assignee**: ${issue.assignee.name} (${issue.assignee.email})`);
+    }
+
+    if (issue.team) {
+      parts.push(`**Team**: ${issue.team.name} (${issue.team.key})`);
+    }
+
+    if (issue.project) {
+      parts.push(`**Project**: ${issue.project.name}`);
+    }
+
+    if (issue.labels.length > 0) {
+      parts.push(`**Labels**: ${issue.labels.map(l => l.name).join(', ')}`);
+    }
+
+    parts.push('');
+    parts.push('## Description');
+    parts.push('');
+    parts.push(issue.description || '_No description provided_');
+
+    if (comments.length > 0) {
+      parts.push('');
+      parts.push('## Comments');
+      parts.push('');
+
+      for (const comment of comments) {
+        parts.push(`### ${comment.user.name} - ${new Date(comment.createdAt).toLocaleDateString()}`);
+        parts.push('');
+        parts.push(comment.body);
+        parts.push('');
+      }
+    }
+
+    parts.push('');
+    parts.push('---');
+    parts.push(`_Snapshot retrieved at: ${snapshot.metadata.retrieved_at}_`);
+
+    if (snapshot.metadata.last_error) {
+      parts.push(`_Note: Using cached snapshot due to API unavailability_`);
+    }
+
+    return parts.join('\n');
+  }
+
+  private formatPriority(priority: number): string {
+    const priorityMap: Record<number, string> = {
+      0: 'No priority',
+      1: 'Low',
+      2: 'Medium',
+      3: 'High',
+      4: 'Urgent',
+    };
+    return priorityMap[priority] || `Priority ${priority}`;
   }
 
 }
