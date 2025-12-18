@@ -302,6 +302,24 @@ describe('BranchProtectionReporter', () => {
         satisfied: false,
       });
     });
+
+    it('should flag stale branch status when commits are behind base', () => {
+      const compliance = createTestCompliance({
+        up_to_date: false,
+        stale_commit: true,
+        compliant: false,
+        blockers: ['Branch is 1 commit(s) behind base - must be up-to-date'],
+      });
+
+      const report = generateReport('feature-test-123', compliance);
+      const summary = generateSummary(report);
+
+      expect(summary.branch_status).toEqual({
+        up_to_date: false,
+        stale: true,
+      });
+      expect(summary.blockers).toContain('Branch is 1 commit(s) behind base - must be up-to-date');
+    });
   });
 
   describe('formatSummary', () => {

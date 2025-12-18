@@ -371,8 +371,9 @@ export class BranchProtectionAdapter {
     this.logger.debug('Fetching commit statuses', { sha });
 
     try {
+      const encodedSha = encodeURIComponent(sha);
       const response = await this.client.get<CommitStatus[]>(
-        `/repos/${this.owner}/${this.repo}/commits/${sha}/statuses`,
+        `/repos/${this.owner}/${this.repo}/commits/${encodedSha}/statuses`,
         {
           metadata: { operation: 'getCommitStatuses', sha },
         }
@@ -400,11 +401,12 @@ export class BranchProtectionAdapter {
     this.logger.debug('Fetching check runs', { sha });
 
     try {
+      const encodedSha = encodeURIComponent(sha);
       const response = await this.client.get<{
         total_count: number;
         check_runs: CheckRun[];
       }>(
-        `/repos/${this.owner}/${this.repo}/commits/${sha}/check-runs`,
+        `/repos/${this.owner}/${this.repo}/commits/${encodedSha}/check-runs`,
         {
           metadata: { operation: 'getCheckRuns', sha },
         }
@@ -455,6 +457,44 @@ export class BranchProtectionAdapter {
   }
 
   /**
+   * Get pull request details for head/base references
+   */
+  async getPullRequest(pull_number: number): Promise<{
+    number: number;
+    state: string;
+    head: { ref: string; sha: string };
+    base: { ref: string; sha: string };
+    mergeable: boolean | null;
+    mergeable_state: string | null;
+  }> {
+    this.logger.debug('Fetching pull request details', { pull_number });
+
+    try {
+      const response = await this.client.get<{
+        number: number;
+        state: string;
+        head: { ref: string; sha: string };
+        base: { ref: string; sha: string };
+        mergeable: boolean | null;
+        mergeable_state: string | null;
+      }>(
+        `/repos/${this.owner}/${this.repo}/pulls/${pull_number}`,
+        {
+          metadata: { operation: 'getPullRequest', pull_number },
+        }
+      );
+
+      return response.data;
+    } catch (error) {
+      this.logger.error('Failed to fetch pull request details', {
+        pull_number,
+        error: this.serializeError(error),
+      });
+      throw this.normalizeError(error, 'getPullRequest');
+    }
+  }
+
+  /**
    * Compare commits to check if head is up-to-date with base
    */
   async compareCommits(base: string, head: string): Promise<{
@@ -465,12 +505,14 @@ export class BranchProtectionAdapter {
     this.logger.debug('Comparing commits', { base, head });
 
     try {
+      const encodedBase = encodeURIComponent(base);
+      const encodedHead = encodeURIComponent(head);
       const response = await this.client.get<{
         ahead_by: number;
         behind_by: number;
         status: string;
       }>(
-        `/repos/${this.owner}/${this.repo}/compare/${base}...${head}`,
+        `/repos/${this.owner}/${this.repo}/compare/${encodedBase}...${encodedHead}`,
         {
           metadata: { operation: 'compareCommits', base, head },
         }
@@ -536,6 +578,46 @@ export class BranchProtectionAdapter {
       evaluated_at: new Date().toISOString(),
     };
 
+    let branchRef = params.branch;
+    let evaluationSha = params.sha;
+    let baseRef = params.base_sha;
+
+    if (params.pull_number) {
+      try {
+        const prDetails = await this.getPullRequest(params.pull_number);
+        if (prDetails.head?.ref) {
+          branchRef = prDetails.head.ref;
+        }
+        if (prDetails.head?.sha) {
+          evaluationSha = prDetails.head.sha;
+        }
+        if (prDetails.base?.ref) {
+          baseRef = prDetails.base.ref;
+        }
+
+        compliance.branch = branchRef;
+        compliance.sha = evaluationSha;
+      } catch (error) {
+        this.logger.warn('Failed to refresh PR references for branch protection evaluation', {
+          pull_number: params.pull_number,
+          error: this.serializeError(error),
+        });
+      }
+    }
+
+    if (!evaluationSha) {
+      throw new BranchProtectionError(
+        'Unable to determine commit SHA for branch protection evaluation',
+        ErrorType.PERMANENT,
+        undefined,
+        undefined,
+        'evaluateCompliance'
+      );
+    }
+
+    compliance.branch = branchRef;
+    compliance.sha = evaluationSha;
+
     // If branch is not protected, it's compliant by default
     if (!protection) {
       this.logger.info('Branch is not protected - compliant by default', {
@@ -546,8 +628,8 @@ export class BranchProtectionAdapter {
 
     // Fetch commit statuses and check runs
     const [statuses, checkRuns] = await Promise.all([
-      this.getCommitStatuses(params.sha),
-      this.getCheckRuns(params.sha),
+      this.getCommitStatuses(evaluationSha),
+      this.getCheckRuns(evaluationSha),
     ]);
 
     compliance.actual_checks = statuses;
@@ -575,15 +657,22 @@ export class BranchProtectionAdapter {
 
       // Check if branch needs to be up-to-date
       if (protection.required_status_checks.strict) {
-        const comparison = await this.compareCommits(params.base_sha, params.sha);
-        compliance.up_to_date = comparison.behind_by === 0;
-        compliance.stale_commit = comparison.behind_by > 0;
+        if (baseRef) {
+          const comparison = await this.compareCommits(baseRef, evaluationSha);
+          compliance.up_to_date = comparison.behind_by === 0;
+          compliance.stale_commit = comparison.behind_by > 0;
 
-        if (!compliance.up_to_date) {
-          compliance.compliant = false;
-          compliance.blockers.push(
-            `Branch is ${comparison.behind_by} commit(s) behind base - must be up-to-date`
-          );
+          if (!compliance.up_to_date) {
+            compliance.compliant = false;
+            compliance.blockers.push(
+              `Branch is ${comparison.behind_by} commit(s) behind base - must be up-to-date`
+            );
+          }
+        } else {
+          this.logger.warn('Strict status checks enabled but base reference is missing', {
+            branch: branchRef,
+            pull_number: params.pull_number,
+          });
         }
       }
     }
