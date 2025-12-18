@@ -1,0 +1,129 @@
+@startuml Deployment and Resume State Diagram
+!theme plain
+title Deployment & Resume State Machine\nAI Feature Pipeline - Section 2.1
+
+' State definitions
+state "IDLE" as idle : No deployment in progress
+state "LOADING_CONTEXT" as loading : Loading PR metadata\nLoading branch protection report\nLoading deployment config
+state "ASSESSING_READINESS" as assessing : Fetching fresh PR data\nValidating status checks\nValidating reviews\nChecking branch staleness
+state "READY" as ready : All requirements met\nNo blockers detected
+state "BLOCKED" as blocked : Deployment blocked\nBlockers recorded
+state "SELECTING_STRATEGY" as selecting : Evaluating config\nChecking feature flags\nDetermining merge method
+state "AUTO_MERGING" as auto_merging : Enabling GitHub auto-merge\nWaiting for GitHub to merge
+state "MANUAL_MERGING" as manual_merging : Directly merging PR\nvia GitHub API
+state "DISPATCHING_WORKFLOW" as dispatching : Triggering GitHub Actions\nworkflow dispatch
+state "MERGED" as merged : PR successfully merged\nMerge SHA recorded
+state "WORKFLOW_TRIGGERED" as workflow_triggered : Workflow dispatch successful\nDeployment handed off to Actions
+state "FAILED" as failed : Deployment failed\nError recorded
+state "PERSISTING" as persisting : Writing deployment.json\nRecording audit trail
+
+' Initial state
+[*] --> idle
+
+' Normal flow
+idle --> loading : triggerDeployment()
+loading --> assessing : [context loaded]
+loading --> failed : [missing pr.json]
+
+assessing --> ready : [eligible = true\nblockers = 0]
+assessing --> blocked : [eligible = false\nblockers > 0]
+assessing --> failed : [GitHub API error]
+
+ready --> selecting : [proceed]
+blocked --> persisting : [record blockers]
+
+' Strategy selection
+selecting --> auto_merging : [strategy = AUTO_MERGE\nauto-merge enabled\nallowed by protection]
+selecting --> manual_merging : [strategy = MANUAL_MERGE\nauto-merge disabled OR\nnot allowed]
+selecting --> dispatching : [strategy = WORKFLOW_DISPATCH\nworkflow configured]
+
+' Execution paths
+auto_merging --> merged : [auto-merge enabled\nGitHub merges PR]
+auto_merging --> failed : [enableAutoMerge() error\nnode_id missing]
+
+manual_merging --> merged : [mergePullRequest() success\nSHA returned]
+manual_merging --> failed : [merge conflict\nrate limit\nAPI error]
+
+dispatching --> workflow_triggered : [triggerWorkflow() success\ndispatch accepted]
+dispatching --> failed : [workflow not found\ninvalid inputs\nAPI error]
+
+' Persistence and completion
+merged --> persisting : [record merge SHA]
+workflow_triggered --> persisting : [record workflow URL]
+failed --> persisting : [record error]
+
+persisting --> [*] : [outcome persisted\ndeployment.json updated]
+
+' Resume paths (blocked → ready)
+blocked --> idle : [resume: operator resolves blockers]
+note right of blocked
+  **Resume Scenarios:**
+  - Operator requests approvals
+  - CI fixes failing checks
+  - Branch rebased to be up-to-date
+  - Conflicts resolved
+  Then re-run: ai-feature deploy
+end note
+
+' Guard conditions
+note right of assessing
+  **Readiness Checks:**
+  1. PR state = open (not closed)
+  2. PR not draft
+  3. No merge conflicts (mergeable = true)
+  4. Required status checks passing
+  5. Sufficient approving reviews
+  6. Branch up-to-date (if strict mode)
+end note
+
+note right of selecting
+  **Strategy Decision Tree:**
+  1. Blockers exist → BLOCKED
+  2. Workflow inputs → WORKFLOW_DISPATCH
+  3. prevent_auto_merge = true → MANUAL_MERGE
+  4. enable_auto_merge = false → MANUAL_MERGE
+  5. Protection disallows auto-merge → MANUAL_MERGE
+  6. Otherwise → AUTO_MERGE
+end note
+
+note left of blocked
+  **Blocker Types:**
+  - status_checks: Required checks failing
+  - reviews: Insufficient approvals
+  - branch_stale: Branch behind base
+  - conflicts: Merge conflicts
+  - draft: PR in draft mode
+  - closed: PR not open
+  - protection: Branch protection violation
+  - approvals: Deploy gate or other approvals pending
+end note
+
+note left of merged
+  **Success Metadata:**
+  - merge_sha: Commit SHA from merge
+  - timestamp: ISO 8601
+  - strategy: Which path was taken
+  - approvals_hash: Audit reference
+  - protection_report_hash: Compliance ref
+end note
+
+' Options and overrides
+note bottom of idle
+  **Deployment Options:**
+  - --dry-run: Assess without executing
+  - --force: Override blockers (admin)
+  - --merge-method: Specify merge/squash/rebase
+  - --workflow-inputs: Custom workflow params
+end note
+
+' Error handling
+note bottom of failed
+  **Error Recovery:**
+  - Rate limit → Retry with backoff
+  - Transient error → Retry
+  - Human action required → Exit with code 30
+  - Permanent error → Exit with code 1
+  All errors recorded in deployment.json
+end note
+
+@enduml
