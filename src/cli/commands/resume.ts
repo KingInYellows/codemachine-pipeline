@@ -24,6 +24,7 @@ import {
   resolveRunDirectorySettings,
   selectFeatureId,
 } from '../utils/runDirectory';
+import { loadPlanSummary } from '../../workflows/taskPlanner';
 
 type ResumeFlags = {
   feature?: string;
@@ -74,6 +75,16 @@ interface ResumePayload {
       line: number;
       message: string;
     }>;
+  };
+  plan_summary?: {
+    total_tasks: number;
+    entry_tasks: number;
+    next_tasks: string[];
+  };
+  resume_instructions?: {
+    checkpoint?: string;
+    next_step?: string;
+    pending_approvals?: string[];
   };
   dry_run: boolean;
   playbook_reference: string;
@@ -209,6 +220,9 @@ export default class Resume extends Command {
       // Analyze resume state
       const analysis = await analyzeResumeState(runDirPath, resumeOptions, executionTelemetry);
 
+      // Load plan summary for context
+      const planSummary = await loadPlanSummary(runDirPath);
+
       const queueValidation = analysis.queueValidation;
       if (queueValidation && !queueValidation.valid && !typedFlags.force) {
         logger.error('Queue validation failed', {
@@ -218,7 +232,7 @@ export default class Resume extends Command {
       }
 
       // Build output payload
-      const payload = this.buildResumePayload(analysis, queueValidation, typedFlags['dry-run']);
+      const payload = this.buildResumePayload(analysis, queueValidation, planSummary, typedFlags['dry-run']);
 
       if (typedFlags.json) {
         this.log(JSON.stringify(payload, null, 2));
@@ -325,6 +339,7 @@ export default class Resume extends Command {
   private buildResumePayload(
     analysis: Awaited<ReturnType<typeof analyzeResumeState>>,
     queueValidation?: QueueValidationResult,
+    planSummary?: Awaited<ReturnType<typeof loadPlanSummary>>,
     dryRun = false
   ): ResumePayload {
     const payload: ResumePayload = {
@@ -374,6 +389,33 @@ export default class Resume extends Command {
       };
     }
 
+    if (planSummary) {
+      payload.plan_summary = {
+        total_tasks: planSummary.totalTasks,
+        entry_tasks: planSummary.entryTasks.length,
+        next_tasks: planSummary.queueState.ready.slice(0, 3),
+      };
+    }
+
+    // Build resume instructions
+    const resumeInstructions: ResumePayload['resume_instructions'] = {};
+
+    if (analysis.lastStep) {
+      resumeInstructions.checkpoint = analysis.lastStep;
+    }
+
+    if (analysis.currentStep) {
+      resumeInstructions.next_step = analysis.currentStep;
+    }
+
+    if (analysis.pendingApprovals.length > 0) {
+      resumeInstructions.pending_approvals = analysis.pendingApprovals;
+    }
+
+    if (Object.keys(resumeInstructions).length > 0) {
+      payload.resume_instructions = resumeInstructions;
+    }
+
     return payload;
   }
 
@@ -390,6 +432,24 @@ export default class Resume extends Command {
 
     // Use the formatted output from resumeCoordinator
     this.log(formatResumeAnalysis(analysis));
+
+    // Resume instructions section
+    if (analysis.canResume && !flags?.['dry-run']) {
+      this.log('');
+      this.log('Resume Instructions:');
+      if (analysis.lastStep) {
+        this.log(`  Last checkpoint: ${analysis.lastStep}`);
+      }
+      if (analysis.currentStep) {
+        this.log(`  Next step: ${analysis.currentStep}`);
+      }
+      if (analysis.pendingApprovals.length > 0) {
+        this.log('  Pending approvals:');
+        analysis.pendingApprovals.forEach(gate => {
+          this.log(`    • ${gate.toUpperCase()} - Run: ai-feature approve ${gate}`);
+        });
+      }
+    }
 
     // Queue validation results
     if (queueValidation && flags?.verbose) {
