@@ -182,6 +182,8 @@ export default class PRStatus extends Command {
         // Update PR metadata
         const updatedMetadata: PRMetadata = {
           ...prMetadata,
+          head_sha: pr.head.sha,
+          base_sha: pr.base.sha,
           status_checks: statusChecks.map((check: StatusCheck) => ({
             context: check.id.toString(),
             state: check.status,

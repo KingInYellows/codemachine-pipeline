@@ -183,6 +183,18 @@ The system compares GitHub required checks against the validation registry (`val
 
 ---
 
+### Real-Time Head Commit Resolution
+
+`ai-feature status` refreshes branch protection data by loading the latest PR head/base references directly from GitHub before evaluating compliance. The persisted artifact therefore records:
+
+- `branch`: Current PR head ref (e.g., `feature/payments-updates`)
+- `sha`: Exact head commit SHA resolved at refresh time
+- `base_sha`: Base branch ref used for comparison
+
+By pinning to explicit SHAs the reporter avoids issues with feature branches that contain path separators (e.g., `feature/auth/login`), keeps check-run queries valid, and guarantees stale-commit detection works even if developers have not run `ai-feature pr status` after pushing new commits.
+
+---
+
 ## Review Requirements
 
 ### Review Counting

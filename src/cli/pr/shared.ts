@@ -26,6 +26,8 @@ export interface PRMetadata {
   url: string;
   branch: string;
   base_branch: string;
+  head_sha?: string;
+  base_sha?: string;
   state?: string;
   mergeable?: boolean | null;
   created_at: string;

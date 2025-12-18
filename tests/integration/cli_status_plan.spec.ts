@@ -559,6 +559,8 @@ async function seedPRMetadata(runDir: string): Promise<void> {
     url: 'https://github.com/test/repo/pull/42',
     branch: 'feature/cli-status',
     base_branch: 'main',
+    head_sha: 'abc123def456',
+    base_sha: 'main',
     state: 'open',
     mergeable: true,
     created_at: now,

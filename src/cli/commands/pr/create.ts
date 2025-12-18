@@ -291,6 +291,8 @@ export default class PRCreate extends Command {
           url: pr.html_url,
           branch: branchName,
           base_branch: baseBranch,
+          head_sha: pr.head.sha,
+          base_sha: pr.base.sha,
           created_at: pr.created_at,
           reviewers_requested: reviewersRequested,
           auto_merge_enabled: false,
