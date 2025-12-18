@@ -1,0 +1,48 @@
+{
+  "schema_version": "1.0.0",
+  "repo_info": {
+    "repo_url": "https://github.com/test/sample-repo.git",
+    "default_branch": "main",
+    "team": "smoke-test-team"
+  },
+  "validation": {
+    "commands": [
+      {
+        "type": "lint",
+        "command": "echo 'Lint check passed'",
+        "auto_fix_command": "echo 'Auto-fixing lint issues'",
+        "required": true,
+        "supports_auto_fix": true,
+        "timeout_ms": 5000,
+        "max_retries": 2,
+        "backoff_ms": 100,
+        "cwd": "."
+      },
+      {
+        "type": "test",
+        "command": "echo 'Tests passed'",
+        "required": true,
+        "supports_auto_fix": false,
+        "timeout_ms": 10000,
+        "max_retries": 1,
+        "backoff_ms": 200,
+        "cwd": "."
+      },
+      {
+        "type": "build",
+        "command": "echo 'Build successful'",
+        "required": true,
+        "supports_auto_fix": false,
+        "timeout_ms": 10000,
+        "max_retries": 1,
+        "backoff_ms": 200,
+        "cwd": "."
+      }
+    ]
+  },
+  "branch_management": {
+    "branch_prefix": "feature/",
+    "require_approval": true,
+    "auto_merge": false
+  }
+}

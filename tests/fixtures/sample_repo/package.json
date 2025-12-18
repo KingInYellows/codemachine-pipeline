@@ -1,0 +1,10 @@
+{
+  "name": "smoke-test-fixture",
+  "version": "1.0.0",
+  "description": "Fixture repository for smoke testing",
+  "scripts": {
+    "lint": "echo 'Running lint'",
+    "test": "echo 'Running tests'",
+    "build": "echo 'Running build'"
+  }
+}

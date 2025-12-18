@@ -27,6 +27,7 @@
     "test:config:coverage": "vitest run src/core/config --coverage",
     "test:http": "vitest run tests/unit",
     "test:integration": "vitest run tests/integration/resume_flow.spec.ts tests/integration/cli_status_plan.spec.ts",
+    "test:smoke": "vitest run tests/integration/smoke_execution.spec.ts",
     "test:telemetry": "vitest run tests/unit/logger.spec.ts",
     "test:jest": "jest",
     "test:watch": "jest --watch",
