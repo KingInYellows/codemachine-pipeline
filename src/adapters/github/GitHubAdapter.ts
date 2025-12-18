@@ -696,6 +696,68 @@ export class GitHubAdapter {
   }
 
   /**
+   * Disable auto-merge for a pull request using GraphQL mutation
+   *
+   * Note: This uses the GraphQL API wrapped in REST-like envelope
+   */
+  async disableAutoMerge(pull_number: number): Promise<void> {
+    this.logger.info('Disabling auto-merge', {
+      pull_number,
+    });
+
+    try {
+      // Get PR node ID for GraphQL mutation
+      const pr = await this.getPullRequest(pull_number);
+      const prNodeId = (pr as unknown as { node_id: string }).node_id;
+
+      if (!prNodeId) {
+        throw new Error('PR node_id not available');
+      }
+
+      // GraphQL mutation for disabling auto-merge
+      const mutation = `
+        mutation DisableAutoMerge($pullRequestId: ID!) {
+          disablePullRequestAutoMerge(input: {
+            pullRequestId: $pullRequestId
+          }) {
+            pullRequest {
+              id
+            }
+          }
+        }
+      `;
+
+      const variables = {
+        pullRequestId: prNodeId,
+      };
+
+      await this.client.post(
+        '/graphql',
+        {
+          query: mutation,
+          variables,
+        },
+        {
+          metadata: {
+            operation: 'disableAutoMerge',
+            pull_number,
+          },
+        }
+      );
+
+      this.logger.info('Auto-merge disabled successfully', {
+        pull_number,
+      });
+    } catch (error) {
+      this.logger.error('Failed to disable auto-merge', {
+        pull_number,
+        error: this.serializeError(error),
+      });
+      throw this.normalizeError(error, 'disableAutoMerge');
+    }
+  }
+
+  /**
    * Trigger a workflow dispatch
    */
   async triggerWorkflow(params: WorkflowDispatchParams): Promise<void> {
