@@ -25,7 +25,7 @@ import * as crypto from 'node:crypto';
 import { HttpClient, Provider, HttpError, ErrorType } from '../http/client';
 import type { LoggerInterface, HttpClientConfig } from '../http/client';
 import { RateLimitLedger } from '../../telemetry/rateLimitLedger';
-import { serializeError } from '../../utils/errors';
+import { serializeError, createErrorNormalizer } from '../../utils/errors';
 
 // ============================================================================
 // Types & Schemas
@@ -748,33 +748,7 @@ export class LinearAdapter {
     );
   }
 
-  /**
-   * Normalize errors to LinearAdapterError
-   */
-  private normalizeError(error: unknown, operation: string): LinearAdapterError {
-    if (error instanceof HttpError) {
-      return new LinearAdapterError(
-        `Linear ${operation} failed: ${error.message}`,
-        error.type,
-        error.statusCode,
-        error.requestId,
-        operation
-      );
-    }
-
-    if (error instanceof LinearAdapterError) {
-      return error;
-    }
-
-    const message = error instanceof Error ? error.message : String(error);
-    return new LinearAdapterError(
-      `Linear ${operation} failed: ${message}`,
-      ErrorType.PERMANENT,
-      undefined,
-      undefined,
-      operation
-    );
-  }
+  private readonly normalizeError = createErrorNormalizer(LinearAdapterError, 'Linear');
 
   /**
    * Format error message

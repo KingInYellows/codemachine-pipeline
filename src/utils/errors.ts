@@ -91,3 +91,39 @@ export function classifyError(error: unknown): ErrorType {
 
   return ErrorType.PERMANENT;
 }
+
+export function createErrorNormalizer<T extends Error>(
+  AdapterErrorClass: new (
+    message: string,
+    type: ErrorType,
+    statusCode?: number,
+    requestId?: string,
+    operation?: string
+  ) => T,
+  adapterName: string
+): (error: unknown, operation: string) => T {
+  return (error: unknown, operation: string): T => {
+    if (error instanceof AdapterErrorClass) {
+      return error;
+    }
+
+    if (error instanceof HttpError) {
+      return new AdapterErrorClass(
+        `${adapterName} ${operation} failed: ${error.message}`,
+        error.type,
+        error.statusCode,
+        error.requestId,
+        operation
+      );
+    }
+
+    const message = error instanceof Error ? error.message : String(error);
+    return new AdapterErrorClass(
+      `${adapterName} ${operation} failed: ${message}`,
+      ErrorType.PERMANENT,
+      undefined,
+      undefined,
+      operation
+    );
+  };
+}
