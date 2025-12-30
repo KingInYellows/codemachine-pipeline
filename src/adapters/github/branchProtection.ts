@@ -12,7 +12,7 @@
 
 import { HttpClient, Provider, HttpError, ErrorType } from '../http/client';
 import type { LoggerInterface, HttpClientConfig } from '../http/client';
-import { serializeError } from '../../utils/errors';
+import { serializeError, createErrorNormalizer } from '../../utils/errors';
 
 // ============================================================================
 // Types & Schemas
@@ -719,33 +719,10 @@ export class BranchProtectionAdapter {
     return compliance;
   }
 
-  /**
-   * Normalize errors to BranchProtectionError
-   */
-  private normalizeError(error: unknown, operation: string): BranchProtectionError {
-    if (error instanceof HttpError) {
-      return new BranchProtectionError(
-        `Branch protection ${operation} failed: ${error.message}`,
-        error.type,
-        error.statusCode,
-        error.requestId,
-        operation
-      );
-    }
-
-    if (error instanceof BranchProtectionError) {
-      return error;
-    }
-
-    const message = error instanceof Error ? error.message : String(error);
-    return new BranchProtectionError(
-      `Branch protection ${operation} failed: ${message}`,
-      ErrorType.PERMANENT,
-      undefined,
-      undefined,
-      operation
-    );
-  }
+  private readonly normalizeError = createErrorNormalizer(
+    BranchProtectionError,
+    'Branch protection'
+  );
 
   /**
    * Create default console logger

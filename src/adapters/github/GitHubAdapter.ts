@@ -18,9 +18,9 @@
  * - FR-15: PR automation
  */
 
-import { HttpClient, Provider, HttpError, ErrorType } from '../http/client';
+import { HttpClient, Provider, ErrorType } from '../http/client';
 import type { LoggerInterface, HttpClientConfig } from '../http/client';
-import { serializeError } from '../../utils/errors';
+import { serializeError, createErrorNormalizer } from '../../utils/errors';
 
 // ============================================================================
 // Types & Schemas
@@ -796,33 +796,7 @@ export class GitHubAdapter {
     }
   }
 
-  /**
-   * Normalize errors to GitHubAdapterError
-   */
-  private normalizeError(error: unknown, operation: string): GitHubAdapterError {
-    if (error instanceof HttpError) {
-      return new GitHubAdapterError(
-        `GitHub ${operation} failed: ${error.message}`,
-        error.type,
-        error.statusCode,
-        error.requestId,
-        operation
-      );
-    }
-
-    if (error instanceof GitHubAdapterError) {
-      return error;
-    }
-
-    const message = error instanceof Error ? error.message : String(error);
-    return new GitHubAdapterError(
-      `GitHub ${operation} failed: ${message}`,
-      ErrorType.PERMANENT,
-      undefined,
-      undefined,
-      operation
-    );
-  }
+  private readonly normalizeError = createErrorNormalizer(GitHubAdapterError, 'GitHub');
 
   /**
    * Create default console logger
