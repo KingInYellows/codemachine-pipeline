@@ -25,6 +25,7 @@ import * as crypto from 'node:crypto';
 import { HttpClient, Provider, HttpError, ErrorType } from '../http/client';
 import type { LoggerInterface, HttpClientConfig } from '../http/client';
 import { RateLimitLedger } from '../../telemetry/rateLimitLedger';
+import { serializeError } from '../../utils/errors';
 
 // ============================================================================
 // Types & Schemas
@@ -339,11 +340,7 @@ export class LinearAdapter {
 
     if (config.runDir) {
       clientConfig.runDir = config.runDir;
-      this.rateLimitLedger = new RateLimitLedger(
-        config.runDir,
-        Provider.LINEAR,
-        this.logger
-      );
+      this.rateLimitLedger = new RateLimitLedger(config.runDir, Provider.LINEAR, this.logger);
     }
 
     this.client = new HttpClient(clientConfig);
@@ -359,12 +356,15 @@ export class LinearAdapter {
    *
    * Implements offline mode: returns cached snapshot if available and API fails
    */
-  async fetchIssueSnapshot(issueId: string, options?: {
-    /** Force refresh from API even if cache is valid */
-    forceRefresh?: boolean;
-    /** Skip cache and only use API */
-    noCache?: boolean;
-  }): Promise<IssueSnapshot> {
+  async fetchIssueSnapshot(
+    issueId: string,
+    options?: {
+      /** Force refresh from API even if cache is valid */
+      forceRefresh?: boolean;
+      /** Skip cache and only use API */
+      noCache?: boolean;
+    }
+  ): Promise<IssueSnapshot> {
     this.logger.info('Fetching issue snapshot', {
       issueId,
       forceRefresh: options?.forceRefresh,
@@ -414,7 +414,7 @@ export class LinearAdapter {
     } catch (error) {
       this.logger.warn('API fetch failed, attempting to use cached snapshot', {
         issueId,
-        error: this.serializeError(error),
+        error: serializeError(error),
       });
 
       // Try to use cached snapshot as fallback
@@ -440,7 +440,7 @@ export class LinearAdapter {
       // No cache available, propagate error
       this.logger.error('Failed to fetch issue snapshot and no cache available', {
         issueId,
-        error: this.serializeError(error),
+        error: serializeError(error),
       });
       throw this.normalizeError(error, 'fetchIssueSnapshot');
     }
@@ -483,7 +483,7 @@ export class LinearAdapter {
     } catch (error) {
       this.logger.error('Failed to fetch issue', {
         issueId,
-        error: this.serializeError(error),
+        error: serializeError(error),
       });
       throw this.normalizeError(error, 'fetchIssue');
     }
@@ -518,7 +518,7 @@ export class LinearAdapter {
     } catch (error) {
       this.logger.error('Failed to fetch comments', {
         issueId,
-        error: this.serializeError(error),
+        error: serializeError(error),
       });
       throw this.normalizeError(error, 'fetchComments');
     }
@@ -540,7 +540,7 @@ export class LinearAdapter {
 
     this.logger.info('Updating issue', {
       issueId: params.issueId,
-      updates: Object.keys(params).filter(k => k !== 'issueId'),
+      updates: Object.keys(params).filter((k) => k !== 'issueId'),
     });
 
     try {
@@ -577,7 +577,7 @@ export class LinearAdapter {
     } catch (error) {
       this.logger.error('Failed to update issue', {
         issueId: params.issueId,
-        error: this.serializeError(error),
+        error: serializeError(error),
       });
       throw this.normalizeError(error, 'updateIssue');
     }
@@ -632,7 +632,7 @@ export class LinearAdapter {
     } catch (error) {
       this.logger.error('Failed to post comment', {
         issueId: params.issueId,
-        error: this.serializeError(error),
+        error: serializeError(error),
       });
       throw this.normalizeError(error, 'postComment');
     }
@@ -665,7 +665,7 @@ export class LinearAdapter {
 
       this.logger.warn('Failed to load cached snapshot', {
         issueId,
-        error: this.serializeError(error),
+        error: serializeError(error),
       });
       return null;
     }
@@ -694,7 +694,7 @@ export class LinearAdapter {
     } catch (error) {
       this.logger.warn('Failed to save snapshot to cache', {
         issueId: snapshot.metadata.issueId,
-        error: this.serializeError(error),
+        error: serializeError(error),
       });
     }
   }
@@ -774,25 +774,6 @@ export class LinearAdapter {
       undefined,
       operation
     );
-  }
-
-  /**
-   * Serialize error for logging
-   */
-  private serializeError(error: unknown): Record<string, unknown> {
-    if (error instanceof HttpError) {
-      return error.toJSON();
-    }
-
-    if (error instanceof Error) {
-      return {
-        name: error.name,
-        message: error.message,
-        stack: error.stack,
-      };
-    }
-
-    return { error: String(error) };
   }
 
   /**

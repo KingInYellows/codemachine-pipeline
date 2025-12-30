@@ -12,6 +12,7 @@
 
 import { HttpClient, Provider, HttpError, ErrorType } from '../http/client';
 import type { LoggerInterface, HttpClientConfig } from '../http/client';
+import { serializeError } from '../../utils/errors';
 
 // ============================================================================
 // Types & Schemas
@@ -293,12 +294,9 @@ export class BranchProtectionAdapter {
         lock_branch?: { enabled: boolean };
         required_linear_history?: { enabled: boolean };
         required_conversation_resolution?: { enabled: boolean };
-      }>(
-        `/repos/${this.owner}/${this.repo}/branches/${branch}/protection`,
-        {
-          metadata: { operation: 'getBranchProtection', branch },
-        }
-      );
+      }>(`/repos/${this.owner}/${this.repo}/branches/${branch}/protection`, {
+        metadata: { operation: 'getBranchProtection', branch },
+      });
 
       const data = response.data;
 
@@ -310,18 +308,23 @@ export class BranchProtectionAdapter {
               enabled: true,
               strict: data.required_status_checks.strict,
               contexts: data.required_status_checks.contexts,
-              ...(data.required_status_checks.checks && { checks: data.required_status_checks.checks }),
+              ...(data.required_status_checks.checks && {
+                checks: data.required_status_checks.checks,
+              }),
             }
           : null,
         required_pull_request_reviews: data.required_pull_request_reviews
           ? {
               enabled: true,
               dismiss_stale_reviews: data.required_pull_request_reviews.dismiss_stale_reviews,
-              require_code_owner_reviews: data.required_pull_request_reviews.require_code_owner_reviews,
+              require_code_owner_reviews:
+                data.required_pull_request_reviews.require_code_owner_reviews,
               required_approving_review_count:
                 data.required_pull_request_reviews.required_approving_review_count,
-              ...(typeof data.required_pull_request_reviews.require_last_push_approval === 'boolean' && {
-                require_last_push_approval: data.required_pull_request_reviews.require_last_push_approval,
+              ...(typeof data.required_pull_request_reviews.require_last_push_approval ===
+                'boolean' && {
+                require_last_push_approval:
+                  data.required_pull_request_reviews.require_last_push_approval,
               }),
               ...(data.required_pull_request_reviews.dismissal_restrictions && {
                 dismissal_restrictions: data.required_pull_request_reviews.dismissal_restrictions,
@@ -345,7 +348,8 @@ export class BranchProtectionAdapter {
         branch,
         protected: true,
         required_checks: protection.required_status_checks?.contexts.length ?? 0,
-        required_reviews: protection.required_pull_request_reviews?.required_approving_review_count ?? 0,
+        required_reviews:
+          protection.required_pull_request_reviews?.required_approving_review_count ?? 0,
       });
 
       return protection;
@@ -358,7 +362,7 @@ export class BranchProtectionAdapter {
 
       this.logger.error('Failed to fetch branch protection rules', {
         branch,
-        error: this.serializeError(error),
+        error: serializeError(error),
       });
       throw this.normalizeError(error, 'getBranchProtection');
     }
@@ -388,7 +392,7 @@ export class BranchProtectionAdapter {
     } catch (error) {
       this.logger.error('Failed to fetch commit statuses', {
         sha,
-        error: this.serializeError(error),
+        error: serializeError(error),
       });
       throw this.normalizeError(error, 'getCommitStatuses');
     }
@@ -405,12 +409,9 @@ export class BranchProtectionAdapter {
       const response = await this.client.get<{
         total_count: number;
         check_runs: CheckRun[];
-      }>(
-        `/repos/${this.owner}/${this.repo}/commits/${encodedSha}/check-runs`,
-        {
-          metadata: { operation: 'getCheckRuns', sha },
-        }
-      );
+      }>(`/repos/${this.owner}/${this.repo}/commits/${encodedSha}/check-runs`, {
+        metadata: { operation: 'getCheckRuns', sha },
+      });
 
       this.logger.debug('Check runs fetched', {
         sha,
@@ -421,7 +422,7 @@ export class BranchProtectionAdapter {
     } catch (error) {
       this.logger.error('Failed to fetch check runs', {
         sha,
-        error: this.serializeError(error),
+        error: serializeError(error),
       });
       throw this.normalizeError(error, 'getCheckRuns');
     }
@@ -450,7 +451,7 @@ export class BranchProtectionAdapter {
     } catch (error) {
       this.logger.error('Failed to fetch pull request reviews', {
         pull_number,
-        error: this.serializeError(error),
+        error: serializeError(error),
       });
       throw this.normalizeError(error, 'getPullRequestReviews');
     }
@@ -477,18 +478,15 @@ export class BranchProtectionAdapter {
         base: { ref: string; sha: string };
         mergeable: boolean | null;
         mergeable_state: string | null;
-      }>(
-        `/repos/${this.owner}/${this.repo}/pulls/${pull_number}`,
-        {
-          metadata: { operation: 'getPullRequest', pull_number },
-        }
-      );
+      }>(`/repos/${this.owner}/${this.repo}/pulls/${pull_number}`, {
+        metadata: { operation: 'getPullRequest', pull_number },
+      });
 
       return response.data;
     } catch (error) {
       this.logger.error('Failed to fetch pull request details', {
         pull_number,
-        error: this.serializeError(error),
+        error: serializeError(error),
       });
       throw this.normalizeError(error, 'getPullRequest');
     }
@@ -497,7 +495,10 @@ export class BranchProtectionAdapter {
   /**
    * Compare commits to check if head is up-to-date with base
    */
-  async compareCommits(base: string, head: string): Promise<{
+  async compareCommits(
+    base: string,
+    head: string
+  ): Promise<{
     ahead_by: number;
     behind_by: number;
     status: string;
@@ -511,12 +512,9 @@ export class BranchProtectionAdapter {
         ahead_by: number;
         behind_by: number;
         status: string;
-      }>(
-        `/repos/${this.owner}/${this.repo}/compare/${encodedBase}...${encodedHead}`,
-        {
-          metadata: { operation: 'compareCommits', base, head },
-        }
-      );
+      }>(`/repos/${this.owner}/${this.repo}/compare/${encodedBase}...${encodedHead}`, {
+        metadata: { operation: 'compareCommits', base, head },
+      });
 
       this.logger.debug('Commits compared', {
         base,
@@ -531,7 +529,7 @@ export class BranchProtectionAdapter {
       this.logger.error('Failed to compare commits', {
         base,
         head,
-        error: this.serializeError(error),
+        error: serializeError(error),
       });
       throw this.normalizeError(error, 'compareCommits');
     }
@@ -600,7 +598,7 @@ export class BranchProtectionAdapter {
       } catch (error) {
         this.logger.warn('Failed to refresh PR references for branch protection evaluation', {
           pull_number: params.pull_number,
-          error: this.serializeError(error),
+          error: serializeError(error),
         });
       }
     }
@@ -640,10 +638,10 @@ export class BranchProtectionAdapter {
       compliance.required_checks = protection.required_status_checks.contexts;
 
       const passingContexts = new Set(
-        statuses.filter(s => s.state === 'success').map(s => s.context)
+        statuses.filter((s) => s.state === 'success').map((s) => s.context)
       );
       const passingCheckRuns = new Set(
-        checkRuns.filter(c => c.conclusion === 'success').map(c => c.name)
+        checkRuns.filter((c) => c.conclusion === 'success').map((c) => c.name)
       );
 
       for (const requiredContext of compliance.required_checks) {
@@ -695,7 +693,7 @@ export class BranchProtectionAdapter {
       }
 
       const approvedCount = Array.from(latestReviews.values()).filter(
-        r => r.state === 'APPROVED'
+        (r) => r.state === 'APPROVED'
       ).length;
 
       compliance.reviews_satisfied = approvedCount >= compliance.reviews_required;
@@ -747,25 +745,6 @@ export class BranchProtectionAdapter {
       undefined,
       operation
     );
-  }
-
-  /**
-   * Serialize error for logging
-   */
-  private serializeError(error: unknown): Record<string, unknown> {
-    if (error instanceof HttpError) {
-      return error.toJSON();
-    }
-
-    if (error instanceof Error) {
-      return {
-        name: error.name,
-        message: error.message,
-        stack: error.stack,
-      };
-    }
-
-    return { error: String(error) };
   }
 
   /**

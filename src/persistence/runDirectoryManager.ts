@@ -4,6 +4,7 @@ import * as path from 'node:path';
 import * as crypto from 'node:crypto';
 import * as os from 'node:os';
 import { Buffer } from 'node:buffer';
+import { wrapError } from '../utils/errors';
 import {
   createHashManifest,
   verifyHashManifest,
@@ -291,9 +292,8 @@ export async function acquireLock(
           try {
             await fs.unlink(lockPath);
             continue;
-          } catch {
-            // Someone else might have removed it, retry
-            continue;
+          } catch (unlinkError) {
+            throw wrapError(unlinkError, 'remove stale lock');
           }
         }
 
@@ -303,7 +303,7 @@ export async function acquireLock(
       }
 
       // Other error, propagate
-      throw error;
+      throw wrapError(error, `acquire lock for ${runDir}`);
     }
   }
 
@@ -328,7 +328,7 @@ export async function releaseLock(runDir: string): Promise<void> {
     if (error && typeof error === 'object' && 'code' in error && error.code === 'ENOENT') {
       return;
     }
-    throw error;
+    throw wrapError(error, `release lock for ${runDir}`);
   }
 }
 
@@ -345,8 +345,8 @@ export async function isLocked(runDir: string): Promise<boolean> {
     await fs.access(lockPath);
     const isStale = await isLockStale(lockPath);
     return !isStale;
-  } catch {
-    return false;
+  } catch (error) {
+    throw wrapError(error, `check lock status for ${runDir}`);
   }
 }
 
@@ -385,15 +385,14 @@ async function isLockStale(lockPath: string): Promise<boolean> {
         // Signal 0 checks if process exists without killing it
         process.kill(lockData.pid, 0);
         return false; // Process exists
-      } catch {
-        return true; // Process doesn't exist
+      } catch (killError) {
+        throw wrapError(killError, `check if lock process ${lockData.pid} exists`);
       }
     }
 
     return false;
-  } catch {
-    // Can't read lock file, consider it stale
-    return true;
+  } catch (readError) {
+    throw wrapError(readError, `check if lock is stale at ${lockPath}`);
   }
 }
 
@@ -544,7 +543,7 @@ export async function listRunDirectories(baseDir: string): Promise<string[]> {
     if (error && typeof error === 'object' && 'code' in error && error.code === 'ENOENT') {
       return [];
     }
-    throw error;
+    throw wrapError(error, `list run directories in ${baseDir}`);
   }
 }
 
@@ -634,10 +633,10 @@ export async function writeManifest(
     // Clean up temp file on error
     try {
       await fs.unlink(tempPath);
-    } catch {
-      // Ignore cleanup errors
+    } catch (cleanupError) {
+      throw wrapError(cleanupError, `cleanup temp manifest file ${tempPath}`);
     }
-    throw error;
+    throw wrapError(error, `write manifest to ${runDir}`);
   }
 }
 
@@ -662,10 +661,7 @@ export async function readManifest(runDir: string): Promise<RunManifest> {
 
     return manifest;
   } catch (error) {
-    if (error instanceof Error) {
-      throw new Error(`Failed to read manifest: ${error.message}`);
-    }
-    throw new Error('Failed to read manifest: Unknown error');
+    throw wrapError(error, 'read manifest');
   }
 }
 
