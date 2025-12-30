@@ -166,6 +166,7 @@ export abstract class BaseCommand extends Command {
       commandSpan.end({ code: SpanStatusCode.OK });
       metrics.observe(StandardMetrics.COMMAND_EXECUTION_DURATION_MS, duration, {
         command: this.commandName,
+        status: 'success',
       });
       metrics.increment(StandardMetrics.COMMAND_INVOCATIONS_TOTAL, {
         command: this.commandName,

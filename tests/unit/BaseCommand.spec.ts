@@ -11,6 +11,7 @@ import { BaseCommand, type CommandContext } from '../../src/cli/BaseCommand';
 import type { StructuredLogger } from '../../src/telemetry/logger';
 import type { MetricsCollector } from '../../src/telemetry/metrics';
 import type { TraceManager } from '../../src/telemetry/traces';
+import { SpanStatusCode } from '../../src/telemetry/traces';
 
 vi.mock('../../src/telemetry/logger');
 vi.mock('../../src/telemetry/metrics');
@@ -205,7 +206,7 @@ describe('BaseCommand', () => {
       expect(mockMetrics.observe).toHaveBeenCalledWith(
         'command_execution_duration_ms',
         expect.any(Number),
-        { command: 'test-command' }
+        { command: 'test-command', status: 'success' }
       );
       expect(mockMetrics.increment).toHaveBeenCalledWith('command_invocations_total', {
         command: 'test-command',
@@ -219,7 +220,7 @@ describe('BaseCommand', () => {
 
       await command.run();
 
-      expect(mockSpan.end).toHaveBeenCalledWith({ code: 1 });
+      expect(mockSpan.end).toHaveBeenCalledWith({ code: SpanStatusCode.OK });
     });
   });
 
@@ -250,7 +251,7 @@ describe('BaseCommand', () => {
       await expect(command.run()).rejects.toThrow();
 
       expect(mockSpan.end).toHaveBeenCalledWith({
-        code: 2,
+        code: SpanStatusCode.ERROR,
         message: expect.stringContaining('Test error'),
       });
     });
