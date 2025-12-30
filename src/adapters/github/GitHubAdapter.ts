@@ -20,6 +20,7 @@
 
 import { HttpClient, Provider, HttpError, ErrorType } from '../http/client';
 import type { LoggerInterface, HttpClientConfig } from '../http/client';
+import { serializeError } from '../../utils/errors';
 
 // ============================================================================
 // Types & Schemas
@@ -288,12 +289,9 @@ export class GitHubAdapter {
     });
 
     try {
-      const response = await this.client.get<RepositoryInfo>(
-        `/repos/${this.owner}/${this.repo}`,
-        {
-          metadata: { operation: 'getRepository' },
-        }
-      );
+      const response = await this.client.get<RepositoryInfo>(`/repos/${this.owner}/${this.repo}`, {
+        metadata: { operation: 'getRepository' },
+      });
 
       this.logger.debug('Repository metadata fetched', {
         repo: response.data.full_name,
@@ -303,7 +301,7 @@ export class GitHubAdapter {
       return response.data;
     } catch (error) {
       this.logger.error('Failed to fetch repository metadata', {
-        error: this.serializeError(error),
+        error: serializeError(error),
       });
       throw this.normalizeError(error, 'getRepository');
     }
@@ -339,7 +337,7 @@ export class GitHubAdapter {
     } catch (error) {
       this.logger.error('Failed to create branch', {
         branch: params.branch,
-        error: this.serializeError(error),
+        error: serializeError(error),
       });
       throw this.normalizeError(error, 'createBranch');
     }
@@ -363,7 +361,7 @@ export class GitHubAdapter {
     } catch (error) {
       this.logger.error('Failed to fetch branch reference', {
         branch,
-        error: this.serializeError(error),
+        error: serializeError(error),
       });
       throw this.normalizeError(error, 'getBranch');
     }
@@ -409,7 +407,7 @@ export class GitHubAdapter {
     } catch (error) {
       this.logger.error('Failed to create pull request', {
         title: params.title,
-        error: this.serializeError(error),
+        error: serializeError(error),
       });
       throw this.normalizeError(error, 'createPullRequest');
     }
@@ -433,7 +431,7 @@ export class GitHubAdapter {
     } catch (error) {
       this.logger.error('Failed to fetch pull request', {
         pull_number,
-        error: this.serializeError(error),
+        error: serializeError(error),
       });
       throw this.normalizeError(error, 'getPullRequest');
     }
@@ -477,7 +475,7 @@ export class GitHubAdapter {
     } catch (error) {
       this.logger.error('Failed to request reviewers', {
         pull_number: params.pull_number,
-        error: this.serializeError(error),
+        error: serializeError(error),
       });
       throw this.normalizeError(error, 'requestReviewers');
     }
@@ -507,7 +505,7 @@ export class GitHubAdapter {
     } catch (error) {
       this.logger.error('Failed to fetch status checks', {
         sha,
-        error: this.serializeError(error),
+        error: serializeError(error),
       });
       throw this.normalizeError(error, 'getStatusChecks');
     }
@@ -550,7 +548,7 @@ export class GitHubAdapter {
       // Check status checks
       const statusChecks = await this.getStatusChecks(pr.head.sha);
       const failedChecks = statusChecks.filter(
-        check => check.conclusion === 'failure' || check.conclusion === 'cancelled'
+        (check) => check.conclusion === 'failure' || check.conclusion === 'cancelled'
       );
 
       if (failedChecks.length > 0) {
@@ -569,7 +567,7 @@ export class GitHubAdapter {
     } catch (error) {
       this.logger.error('Failed to check merge readiness', {
         pull_number,
-        error: this.serializeError(error),
+        error: serializeError(error),
       });
       throw this.normalizeError(error, 'isPullRequestReadyToMerge');
     }
@@ -621,7 +619,7 @@ export class GitHubAdapter {
     } catch (error) {
       this.logger.error('Failed to merge pull request', {
         pull_number: params.pull_number,
-        error: this.serializeError(error),
+        error: serializeError(error),
       });
       throw this.normalizeError(error, 'mergePullRequest');
     }
@@ -632,7 +630,10 @@ export class GitHubAdapter {
    *
    * Note: This uses the GraphQL API wrapped in REST-like envelope
    */
-  async enableAutoMerge(pull_number: number, merge_method?: 'MERGE' | 'SQUASH' | 'REBASE'): Promise<void> {
+  async enableAutoMerge(
+    pull_number: number,
+    merge_method?: 'MERGE' | 'SQUASH' | 'REBASE'
+  ): Promise<void> {
     this.logger.info('Enabling auto-merge', {
       pull_number,
       merge_method,
@@ -689,7 +690,7 @@ export class GitHubAdapter {
     } catch (error) {
       this.logger.error('Failed to enable auto-merge', {
         pull_number,
-        error: this.serializeError(error),
+        error: serializeError(error),
       });
       throw this.normalizeError(error, 'enableAutoMerge');
     }
@@ -751,7 +752,7 @@ export class GitHubAdapter {
     } catch (error) {
       this.logger.error('Failed to disable auto-merge', {
         pull_number,
-        error: this.serializeError(error),
+        error: serializeError(error),
       });
       throw this.normalizeError(error, 'disableAutoMerge');
     }
@@ -789,7 +790,7 @@ export class GitHubAdapter {
     } catch (error) {
       this.logger.error('Failed to trigger workflow dispatch', {
         workflow_id: params.workflow_id,
-        error: this.serializeError(error),
+        error: serializeError(error),
       });
       throw this.normalizeError(error, 'triggerWorkflow');
     }
@@ -821,25 +822,6 @@ export class GitHubAdapter {
       undefined,
       operation
     );
-  }
-
-  /**
-   * Serialize error for logging
-   */
-  private serializeError(error: unknown): Record<string, unknown> {
-    if (error instanceof HttpError) {
-      return error.toJSON();
-    }
-
-    if (error instanceof Error) {
-      return {
-        name: error.name,
-        message: error.message,
-        stack: error.stack,
-      };
-    }
-
-    return { error: String(error) };
   }
 
   /**
