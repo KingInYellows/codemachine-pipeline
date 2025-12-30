@@ -22,6 +22,7 @@ import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 import { exec } from 'node:child_process';
 import { promisify } from 'node:util';
+import { wrapError } from '../utils/errors';
 import { withLock, getSubdirectoryPath, updateManifest } from '../persistence/runDirectoryManager';
 import type { RepoConfig } from '../core/config/RepoConfig';
 import type { StructuredLogger } from '../telemetry/logger';
@@ -188,9 +189,7 @@ export async function getCurrentBranch(workingDir: string): Promise<string> {
     const { stdout } = await execAsync('git rev-parse --abbrev-ref HEAD', { cwd: workingDir });
     return stdout.trim();
   } catch (error) {
-    throw new Error(
-      `Failed to get current branch: ${error instanceof Error ? error.message : 'Unknown error'}`
-    );
+    throw wrapError(error, 'get current branch');
   }
 }
 
@@ -214,9 +213,7 @@ export async function getCommitSha(ref: string, workingDir: string): Promise<str
     const { stdout } = await execAsync(`git rev-parse "${ref}"`, { cwd: workingDir });
     return stdout.trim();
   } catch (error) {
-    throw new Error(
-      `Failed to get commit SHA for ${ref}: ${error instanceof Error ? error.message : 'Unknown error'}`
-    );
+    throw wrapError(error, `get commit SHA for ${ref}`);
   }
 }
 
@@ -381,7 +378,7 @@ export async function createBranch(
       feature_id: config.featureId,
     });
   } catch (error) {
-    result.error = `Failed to create branch: ${error instanceof Error ? error.message : 'Unknown error'}`;
+    result.error = wrapError(error, 'create branch').message;
     logger.error('Branch creation failed', {
       featureId: config.featureId,
       error: error instanceof Error ? error.message : 'Unknown error',
@@ -459,7 +456,7 @@ export async function pushBranch(
       feature_id: config.featureId,
     });
   } catch (error) {
-    result.error = `Failed to push branch: ${error instanceof Error ? error.message : 'Unknown error'}`;
+    result.error = wrapError(error, 'push branch').message;
     logger.error('Branch push failed', {
       branchName,
       error: error instanceof Error ? error.message : 'Unknown error',
@@ -686,7 +683,7 @@ export async function createSafeCommit(
 
     return {
       success: false,
-      error: `Failed to create commit: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      error: wrapError(error, 'create commit').message,
     };
   }
 }
