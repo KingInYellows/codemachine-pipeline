@@ -97,9 +97,10 @@ export async function generateWriteActionQueueReport(
 
     // Calculate derived metrics
     const backlog = manifest.pending_count + manifest.in_progress_count;
-    const utilizationPercent = manifest.concurrency_limit > 0
-      ? Math.round((manifest.in_progress_count / manifest.concurrency_limit) * 100)
-      : 0;
+    const utilizationPercent =
+      manifest.concurrency_limit > 0
+        ? Math.round((manifest.in_progress_count / manifest.concurrency_limit) * 100)
+        : 0;
 
     const hasFailures = manifest.failed_count > 0;
     const hasPending = manifest.pending_count > 0;
@@ -152,29 +153,40 @@ function calculateHealth(
   // Check backlog
   if (backlog >= BACKLOG_CRITICAL_THRESHOLD) {
     escalate(2);
-    reasons.push(`Critical backlog: ${backlog} actions pending/in-progress (threshold: ${BACKLOG_CRITICAL_THRESHOLD})`);
+    reasons.push(
+      `Critical backlog: ${backlog} actions pending/in-progress (threshold: ${BACKLOG_CRITICAL_THRESHOLD})`
+    );
   } else if (backlog >= BACKLOG_WARNING_THRESHOLD) {
     escalate(1);
-    reasons.push(`High backlog: ${backlog} actions pending/in-progress (threshold: ${BACKLOG_WARNING_THRESHOLD})`);
+    reasons.push(
+      `High backlog: ${backlog} actions pending/in-progress (threshold: ${BACKLOG_WARNING_THRESHOLD})`
+    );
   }
 
   // Check failures
   if (manifest.failed_count >= FAILURE_CRITICAL_THRESHOLD) {
     escalate(2);
-    reasons.push(`Critical failures: ${manifest.failed_count} actions failed (threshold: ${FAILURE_CRITICAL_THRESHOLD})`);
+    reasons.push(
+      `Critical failures: ${manifest.failed_count} actions failed (threshold: ${FAILURE_CRITICAL_THRESHOLD})`
+    );
   } else if (manifest.failed_count >= FAILURE_WARNING_THRESHOLD) {
     escalate(1);
-    reasons.push(`Multiple failures: ${manifest.failed_count} actions failed (threshold: ${FAILURE_WARNING_THRESHOLD})`);
+    reasons.push(
+      `Multiple failures: ${manifest.failed_count} actions failed (threshold: ${FAILURE_WARNING_THRESHOLD})`
+    );
   }
 
   // Check utilization
-  const utilizationPercent = manifest.concurrency_limit > 0
-    ? Math.round((manifest.in_progress_count / manifest.concurrency_limit) * 100)
-    : 0;
+  const utilizationPercent =
+    manifest.concurrency_limit > 0
+      ? Math.round((manifest.in_progress_count / manifest.concurrency_limit) * 100)
+      : 0;
 
   if (utilizationPercent >= 100 && manifest.pending_count > 0) {
     escalate(1);
-    reasons.push(`Queue at capacity: ${manifest.in_progress_count}/${manifest.concurrency_limit} slots used, ${manifest.pending_count} pending`);
+    reasons.push(
+      `Queue at capacity: ${manifest.in_progress_count}/${manifest.concurrency_limit} slots used, ${manifest.pending_count} pending`
+    );
   }
 
   const health: 'healthy' | 'warning' | 'critical' =
@@ -209,7 +221,9 @@ export function formatWriteActionQueueCLIOutput(
 
   // Summary
   lines.push(`Total actions: ${report.totalActions}`);
-  lines.push(`Backlog: ${report.backlog} (${report.pendingCount} pending + ${report.inProgressCount} in-progress)`);
+  lines.push(
+    `Backlog: ${report.backlog} (${report.pendingCount} pending + ${report.inProgressCount} in-progress)`
+  );
   lines.push(`Completed: ${report.completedCount}`);
 
   if (report.failedCount > 0) {
@@ -223,7 +237,9 @@ export function formatWriteActionQueueCLIOutput(
   lines.push('');
 
   // Concurrency & utilization
-  lines.push(`Concurrency: ${report.inProgressCount}/${report.concurrencyLimit} (${report.utilizationPercent}% utilized)`);
+  lines.push(
+    `Concurrency: ${report.inProgressCount}/${report.concurrencyLimit} (${report.utilizationPercent}% utilized)`
+  );
   lines.push(`Last updated: ${report.updatedAt}`);
   lines.push('');
 
@@ -269,7 +285,9 @@ function generateRecommendations(report: WriteActionQueueReport): string[] {
   if (report.failedCount >= FAILURE_WARNING_THRESHOLD) {
     recommendations.push('Review failed actions in queue logs');
     recommendations.push('Check for auth errors or API permission issues');
-    recommendations.push('Clear failed actions after resolving: ai-feature queue clear-failed (if implemented)');
+    recommendations.push(
+      'Clear failed actions after resolving: ai-feature queue clear-failed (if implemented)'
+    );
   }
 
   // Queue at capacity

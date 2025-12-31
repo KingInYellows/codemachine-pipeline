@@ -96,23 +96,55 @@ export interface LoggerOptions {
  */
 const SECRET_PATTERNS: Array<{ name: string; pattern: RegExp; replacement: string }> = [
   // GitHub tokens (ghp_, gho_, ghs_, ghr_)
-  { name: 'github_token', pattern: /\bgh[psor]_[A-Za-z0-9_]{36,}\b/g, replacement: '[REDACTED_GITHUB_TOKEN]' },
+  {
+    name: 'github_token',
+    pattern: /\bgh[psor]_[A-Za-z0-9_]{36,}\b/g,
+    replacement: '[REDACTED_GITHUB_TOKEN]',
+  },
   // GitHub App installation tokens
-  { name: 'github_app_token', pattern: /\bghs_[A-Za-z0-9_]{36,}\b/g, replacement: '[REDACTED_GITHUB_APP_TOKEN]' },
+  {
+    name: 'github_app_token',
+    pattern: /\bghs_[A-Za-z0-9_]{36,}\b/g,
+    replacement: '[REDACTED_GITHUB_APP_TOKEN]',
+  },
   // Linear API keys
-  { name: 'linear_key', pattern: /\blin_api_[A-Za-z0-9]{40}\b/g, replacement: '[REDACTED_LINEAR_KEY]' },
+  {
+    name: 'linear_key',
+    pattern: /\blin_api_[A-Za-z0-9]{40}\b/g,
+    replacement: '[REDACTED_LINEAR_KEY]',
+  },
   // Generic API keys
-  { name: 'api_key', pattern: /\b[Aa][Pp][Ii][-_]?[Kk][Ee][Yy]\s*[:=]\s*['"]?([A-Za-z0-9_-]{20,})['"]?/g, replacement: 'api_key=[REDACTED_API_KEY]' },
+  {
+    name: 'api_key',
+    pattern: /\b[Aa][Pp][Ii][-_]?[Kk][Ee][Yy]\s*[:=]\s*['"]?([A-Za-z0-9_-]{20,})['"]?/g,
+    replacement: 'api_key=[REDACTED_API_KEY]',
+  },
   // JWTs (Bearer tokens)
-  { name: 'jwt', pattern: /\beyJ[A-Za-z0-9_-]+\.eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\b/g, replacement: '[REDACTED_JWT]' },
+  {
+    name: 'jwt',
+    pattern: /\beyJ[A-Za-z0-9_-]+\.eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\b/g,
+    replacement: '[REDACTED_JWT]',
+  },
   // Authorization headers
-  { name: 'auth_header', pattern: /\b[Aa]uthorization\s*:\s*['"]?Bearer\s+([A-Za-z0-9_.-]+)['"]?/g, replacement: 'Authorization: Bearer [REDACTED_TOKEN]' },
+  {
+    name: 'auth_header',
+    pattern: /\b[Aa]uthorization\s*:\s*['"]?Bearer\s+([A-Za-z0-9_.-]+)['"]?/g,
+    replacement: 'Authorization: Bearer [REDACTED_TOKEN]',
+  },
   // Generic tokens
-  { name: 'token', pattern: /\b[Tt]oken\s*[:=]\s*['"]?([A-Za-z0-9_-]{20,})['"]?/g, replacement: 'token=[REDACTED_TOKEN]' },
+  {
+    name: 'token',
+    pattern: /\b[Tt]oken\s*[:=]\s*['"]?([A-Za-z0-9_-]{20,})['"]?/g,
+    replacement: 'token=[REDACTED_TOKEN]',
+  },
   // AWS credentials
   { name: 'aws_key', pattern: /\bAKIA[0-9A-Z]{16}\b/g, replacement: '[REDACTED_AWS_KEY]' },
   // Generic secrets in environment variable format
-  { name: 'env_secret', pattern: /\b([A-Z_]+_SECRET|[A-Z_]+_PASSWORD|[A-Z_]+_KEY)\s*=\s*['"]?([^\s'"]+)['"]?/g, replacement: '$1=[REDACTED]' },
+  {
+    name: 'env_secret',
+    pattern: /\b([A-Z_]+_SECRET|[A-Z_]+_PASSWORD|[A-Z_]+_KEY)\s*=\s*['"]?([^\s'"]+)['"]?/g,
+    replacement: '$1=[REDACTED]',
+  },
 ];
 
 /**
@@ -129,7 +161,10 @@ export class RedactionEngine {
   private readonly patterns: Array<{ name: string; pattern: RegExp; replacement: string }>;
   private readonly enabled: boolean;
 
-  constructor(enabled = true, customPatterns?: Array<{ name: string; pattern: RegExp; replacement: string }>) {
+  constructor(
+    enabled = true,
+    customPatterns?: Array<{ name: string; pattern: RegExp; replacement: string }>
+  ) {
     this.enabled = enabled;
     this.patterns = customPatterns ?? SECRET_PATTERNS;
   }
@@ -177,7 +212,7 @@ export class RedactionEngine {
     }
 
     if (Array.isArray(obj)) {
-      return obj.map(item => this.redactObject(item));
+      return obj.map((item) => this.redactObject(item));
     }
 
     if (obj && typeof obj === 'object') {
@@ -216,7 +251,7 @@ export class RedactionEngine {
       'privatekey',
     ];
 
-    return sensitiveNames.some(pattern => lowerName.includes(pattern));
+    return sensitiveNames.some((pattern) => lowerName.includes(pattern));
   }
 }
 
@@ -276,7 +311,12 @@ export class StructuredLogger implements LoggerInterface {
   /**
    * Log with explicit error object
    */
-  logError(level: LogLevel, message: string, error: Error, context?: Record<string, unknown>): void {
+  logError(
+    level: LogLevel,
+    message: string,
+    error: Error,
+    context?: Record<string, unknown>
+  ): void {
     const errorContext = {
       ...context,
       error: {
@@ -329,7 +369,11 @@ export class StructuredLogger implements LoggerInterface {
   /**
    * Build structured log entry
    */
-  private buildLogEntry(level: LogLevel, message: string, context?: Record<string, unknown>): LogEntry {
+  private buildLogEntry(
+    level: LogLevel,
+    message: string,
+    context?: Record<string, unknown>
+  ): LogEntry {
     const entry: LogEntry = {
       timestamp: new Date().toISOString(),
       level,
@@ -451,7 +495,11 @@ export function createCliLogger(
 /**
  * Create a logger for HTTP adapters
  */
-export function createHttpLogger(provider: string, runId?: string, runDir?: string): StructuredLogger {
+export function createHttpLogger(
+  provider: string,
+  runId?: string,
+  runDir?: string
+): StructuredLogger {
   const options: LoggerOptions = {
     component: `http:${provider}`,
     minLevel: LogLevel.DEBUG,

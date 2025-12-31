@@ -28,7 +28,7 @@ export function resolveRunDirectorySettings(): RunDirectorySettings {
       baseDir: path.resolve(process.cwd(), DEFAULT_RUNS_DIR),
       configPath,
       warnings: validation.warnings ?? [],
-      errors: (validation.errors ?? []).map(err => `${err.path}: ${err.message}`),
+      errors: (validation.errors ?? []).map((err) => `${err.path}: ${err.message}`),
     };
   }
 
@@ -46,7 +46,10 @@ export function resolveRunDirectorySettings(): RunDirectorySettings {
   };
 }
 
-export async function selectFeatureId(baseDir: string, explicit?: string): Promise<string | undefined> {
+export async function selectFeatureId(
+  baseDir: string,
+  explicit?: string
+): Promise<string | undefined> {
   if (explicit) {
     const exists = await runDirectoryExists(baseDir, explicit);
     return exists ? explicit : undefined;
@@ -60,10 +63,7 @@ export async function findMostRecentRun(baseDir: string): Promise<string | undef
   let mostRecent: { id: string; mtime: number } | undefined;
 
   for (const candidate of candidates) {
-    const manifestPath = path.join(
-      getRunDirectoryPath(baseDir, candidate),
-      'manifest.json'
-    );
+    const manifestPath = path.join(getRunDirectoryPath(baseDir, candidate), 'manifest.json');
 
     try {
       const stats = await fs.stat(manifestPath);
@@ -83,7 +83,7 @@ export async function ensureTelemetryReferences(runDir: string): Promise<void> {
   const tracesPath = 'telemetry/traces.json';
   const costsPath = 'telemetry/costs.json';
 
-  await updateManifest(runDir, manifest => {
+  await updateManifest(runDir, (manifest) => {
     const telemetry = {
       ...(manifest.telemetry ?? {}),
     };

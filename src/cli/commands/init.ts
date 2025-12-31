@@ -155,7 +155,14 @@ export default class Init extends Command {
           await this.exitCommand(exitCode, startTime, metrics, commandSpan, traceManager, logger);
         }
 
-        await this.finalizeTelemetry(exitCode, startTime, metrics, commandSpan, traceManager, logger);
+        await this.finalizeTelemetry(
+          exitCode,
+          startTime,
+          metrics,
+          commandSpan,
+          traceManager,
+          logger
+        );
         return;
       }
 
@@ -175,12 +182,18 @@ export default class Init extends Command {
         if (!result.success) {
           exitCode = 10;
           if (flags.json) {
-            this.log(JSON.stringify({
-              status: 'validation_error',
-              config_path: configPath,
-              exit_code: exitCode,
-              errors: result.errors,
-            }, null, 2));
+            this.log(
+              JSON.stringify(
+                {
+                  status: 'validation_error',
+                  config_path: configPath,
+                  exit_code: exitCode,
+                  errors: result.errors,
+                },
+                null,
+                2
+              )
+            );
           } else {
             this.log('\nExisting configuration has validation errors:');
             this.log(formatValidationErrors(result.errors!));
@@ -189,13 +202,19 @@ export default class Init extends Command {
         }
 
         if (flags.json) {
-          this.log(JSON.stringify({
-            status: 'already_initialized',
-            config_path: configPath,
-            exit_code: 0,
-            warnings: result.warnings || [],
-            config: result.config,
-          }, null, 2));
+          this.log(
+            JSON.stringify(
+              {
+                status: 'already_initialized',
+                config_path: configPath,
+                exit_code: 0,
+                warnings: result.warnings || [],
+                config: result.config,
+              },
+              null,
+              2
+            )
+          );
         } else {
           if (result.warnings && result.warnings.length > 0) {
             this.log('\nWarnings:');
@@ -205,12 +224,25 @@ export default class Init extends Command {
           }
           this.log('\n✓ Configuration is valid');
         }
-        await this.finalizeTelemetry(exitCode, startTime, metrics, commandSpan, traceManager, logger);
+        await this.finalizeTelemetry(
+          exitCode,
+          startTime,
+          metrics,
+          commandSpan,
+          traceManager,
+          logger
+        );
         return;
       }
 
       // Step 2b: Confirm initialization when interactive
-      if (!flags['dry-run'] && !flags.yes && !flags.json && process.stdin.isTTY && process.stdout.isTTY) {
+      if (
+        !flags['dry-run'] &&
+        !flags.yes &&
+        !flags.json &&
+        process.stdin.isTTY &&
+        process.stdout.isTTY
+      ) {
         const promptMessage = flags.force
           ? 'This will overwrite existing .ai-feature-pipeline/config.json. Continue?'
           : `Proceed with creating .ai-feature-pipeline scaffolding at ${pipelineDir}?`;
@@ -220,7 +252,14 @@ export default class Init extends Command {
           if (!flags.json) {
             this.warn('Initialization cancelled by user input.');
           }
-          await this.finalizeTelemetry(exitCode, startTime, metrics, commandSpan, traceManager, logger);
+          await this.finalizeTelemetry(
+            exitCode,
+            startTime,
+            metrics,
+            commandSpan,
+            traceManager,
+            logger
+          );
           return;
         }
       }
@@ -249,12 +288,18 @@ export default class Init extends Command {
       if (!validationResult.success) {
         exitCode = 10;
         if (flags.json) {
-          this.log(JSON.stringify({
-            status: 'validation_error',
-            config_path: configPath,
-            exit_code: exitCode,
-            errors: validationResult.errors,
-          }, null, 2));
+          this.log(
+            JSON.stringify(
+              {
+                status: 'validation_error',
+                config_path: configPath,
+                exit_code: exitCode,
+                errors: validationResult.errors,
+              },
+              null,
+              2
+            )
+          );
         } else {
           this.log('\n❌ Configuration validation failed after creation:\n');
           this.log(formatValidationErrors(validationResult.errors!));
@@ -317,12 +362,23 @@ export default class Init extends Command {
       if (error instanceof Error) {
         if (error.message.includes('Not a git repository')) {
           errorExitCode = 20;
-        } else if (error.message.includes('permission denied') || error.message.includes('EACCES')) {
+        } else if (
+          error.message.includes('permission denied') ||
+          error.message.includes('EACCES')
+        ) {
           errorExitCode = 20;
         }
       }
 
-      await this.finalizeTelemetry(errorExitCode, startTime, metrics, commandSpan, traceManager, logger, error);
+      await this.finalizeTelemetry(
+        errorExitCode,
+        startTime,
+        metrics,
+        commandSpan,
+        traceManager,
+        logger,
+        error
+      );
 
       // Re-throw oclif errors to preserve exit codes
       if (error && typeof error === 'object' && 'oclif' in error) {
@@ -347,12 +403,15 @@ export default class Init extends Command {
     commandSpan?: ActiveSpan,
     traceManager?: TraceManager,
     logger?: StructuredLogger,
-    error?: unknown,
+    error?: unknown
   ): Promise<void> {
     if (metrics) {
       const duration = Date.now() - startTime;
       metrics.observe(StandardMetrics.COMMAND_EXECUTION_DURATION_MS, duration, { command: 'init' });
-      metrics.increment(StandardMetrics.COMMAND_INVOCATIONS_TOTAL, { command: 'init', exit_code: String(exitCode) });
+      metrics.increment(StandardMetrics.COMMAND_INVOCATIONS_TOTAL, {
+        command: 'init',
+        exit_code: String(exitCode),
+      });
       await metrics.flush();
     }
 
@@ -406,9 +465,17 @@ export default class Init extends Command {
     commandSpan?: ActiveSpan,
     traceManager?: TraceManager,
     logger?: StructuredLogger,
-    error?: unknown,
+    error?: unknown
   ): Promise<never> {
-    await this.finalizeTelemetry(exitCode, startTime, metrics, commandSpan, traceManager, logger, error);
+    await this.finalizeTelemetry(
+      exitCode,
+      startTime,
+      metrics,
+      commandSpan,
+      traceManager,
+      logger,
+      error
+    );
     process.exit(exitCode);
   }
 
@@ -515,7 +582,12 @@ export default class Init extends Command {
    * @param force Whether to overwrite existing config
    * @param silent Suppress log output for JSON mode
    */
-  private writeConfiguration(configPath: string, config: RepoConfig, force: boolean, silent = false): void {
+  private writeConfiguration(
+    configPath: string,
+    config: RepoConfig,
+    force: boolean,
+    silent = false
+  ): void {
     if (fs.existsSync(configPath) && !force) {
       throw new Error('Configuration file already exists. Use --force to overwrite.');
     }
@@ -537,12 +609,10 @@ export default class Init extends Command {
     const parseResult = RepoConfigSchema.safeParse(config);
 
     if (!parseResult.success) {
-      const errors: ValidationError[] = parseResult.error.errors.map(
-        (issue: ZodIssue) => ({
-          path: issue.path.join('.') || 'root',
-          message: issue.message,
-        })
-      );
+      const errors: ValidationError[] = parseResult.error.errors.map((issue: ZodIssue) => ({
+        path: issue.path.join('.') || 'root',
+        message: issue.message,
+      }));
 
       return {
         success: false,
@@ -558,7 +628,7 @@ export default class Init extends Command {
       if (!githubToken) {
         warnings.push(
           `GitHub integration enabled but ${config.github.token_env_var} not set. ` +
-          `Set ${config.github.token_env_var} with scopes: ${config.github.required_scopes.join(', ')}`
+            `Set ${config.github.token_env_var} with scopes: ${config.github.required_scopes.join(', ')}`
         );
       }
     }
@@ -566,9 +636,7 @@ export default class Init extends Command {
     if (config.linear.enabled) {
       const linearKey = process.env[config.linear.api_key_env_var];
       if (!linearKey) {
-        warnings.push(
-          `Linear integration enabled but ${config.linear.api_key_env_var} not set`
-        );
+        warnings.push(`Linear integration enabled but ${config.linear.api_key_env_var} not set`);
       }
     }
 

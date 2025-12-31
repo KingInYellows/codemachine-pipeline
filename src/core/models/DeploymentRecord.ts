@@ -63,44 +63,49 @@ export type ReviewRecord = z.infer<typeof ReviewRecordSchema>;
 // DeploymentRecord Schema
 // ============================================================================
 
-export const DeploymentRecordSchema = z.object({
-  /** Schema version for future migrations (semver) */
-  schema_version: z.string().regex(/^[0-9]+\.[0-9]+\.[0-9]+$/, 'Invalid semver format'),
-  /** Unique deployment record identifier */
-  deployment_id: z.string().min(1),
-  /** Feature ID this deployment belongs to */
-  feature_id: z.string().min(1),
-  /** Current deployment status */
-  status: DeploymentStatusSchema,
-  /** Pull request number */
-  pr_number: z.number().int().positive().optional(),
-  /** Pull request URL */
-  pr_url: z.string().url().optional(),
-  /** Merge commit SHA (40-character Git hash) */
-  merge_sha: z.string().regex(/^[a-f0-9]{40}$/, 'Invalid Git SHA format').optional(),
-  /** Source branch name */
-  source_branch: z.string().optional(),
-  /** Target branch name */
-  target_branch: z.string().optional(),
-  /** Status checks for this deployment */
-  status_checks: z.array(StatusCheckSchema).default([]),
-  /** Required reviews for this deployment */
-  required_reviews: z.array(ReviewRecordSchema).default([]),
-  /** Whether auto-merge is enabled */
-  auto_merge_enabled: z.boolean().default(false),
-  /** Deployment job/workflow URL */
-  deployment_job_url: z.string().url().optional(),
-  /** ISO 8601 timestamp when deployment was created */
-  created_at: z.string().datetime(),
-  /** ISO 8601 timestamp when deployment was last updated */
-  updated_at: z.string().datetime(),
-  /** ISO 8601 timestamp when deployment started */
-  started_at: z.string().datetime().nullable().optional(),
-  /** ISO 8601 timestamp when deployment completed */
-  completed_at: z.string().datetime().nullable().optional(),
-  /** Optional deployment metadata */
-  metadata: z.record(z.unknown()).optional(),
-}).strict();
+export const DeploymentRecordSchema = z
+  .object({
+    /** Schema version for future migrations (semver) */
+    schema_version: z.string().regex(/^[0-9]+\.[0-9]+\.[0-9]+$/, 'Invalid semver format'),
+    /** Unique deployment record identifier */
+    deployment_id: z.string().min(1),
+    /** Feature ID this deployment belongs to */
+    feature_id: z.string().min(1),
+    /** Current deployment status */
+    status: DeploymentStatusSchema,
+    /** Pull request number */
+    pr_number: z.number().int().positive().optional(),
+    /** Pull request URL */
+    pr_url: z.string().url().optional(),
+    /** Merge commit SHA (40-character Git hash) */
+    merge_sha: z
+      .string()
+      .regex(/^[a-f0-9]{40}$/, 'Invalid Git SHA format')
+      .optional(),
+    /** Source branch name */
+    source_branch: z.string().optional(),
+    /** Target branch name */
+    target_branch: z.string().optional(),
+    /** Status checks for this deployment */
+    status_checks: z.array(StatusCheckSchema).default([]),
+    /** Required reviews for this deployment */
+    required_reviews: z.array(ReviewRecordSchema).default([]),
+    /** Whether auto-merge is enabled */
+    auto_merge_enabled: z.boolean().default(false),
+    /** Deployment job/workflow URL */
+    deployment_job_url: z.string().url().optional(),
+    /** ISO 8601 timestamp when deployment was created */
+    created_at: z.string().datetime(),
+    /** ISO 8601 timestamp when deployment was last updated */
+    updated_at: z.string().datetime(),
+    /** ISO 8601 timestamp when deployment started */
+    started_at: z.string().datetime().nullable().optional(),
+    /** ISO 8601 timestamp when deployment completed */
+    completed_at: z.string().datetime().nullable().optional(),
+    /** Optional deployment metadata */
+    metadata: z.record(z.unknown()).optional(),
+  })
+  .strict();
 
 export type DeploymentRecord = Readonly<z.infer<typeof DeploymentRecordSchema>>;
 
@@ -111,13 +116,15 @@ export type DeploymentRecord = Readonly<z.infer<typeof DeploymentRecordSchema>>;
 /**
  * Parse and validate DeploymentRecord from JSON
  */
-export function parseDeploymentRecord(json: unknown): {
-  success: true;
-  data: DeploymentRecord;
-} | {
-  success: false;
-  errors: Array<{ path: string; message: string }>;
-} {
+export function parseDeploymentRecord(json: unknown):
+  | {
+      success: true;
+      data: DeploymentRecord;
+    }
+  | {
+      success: false;
+      errors: Array<{ path: string; message: string }>;
+    } {
   const result = DeploymentRecordSchema.safeParse(json);
 
   if (result.success) {
@@ -129,7 +136,7 @@ export function parseDeploymentRecord(json: unknown): {
 
   return {
     success: false,
-    errors: result.error.errors.map(err => ({
+    errors: result.error.errors.map((err) => ({
       path: err.path.join('.') || 'root',
       message: err.message,
     })),
@@ -186,7 +193,7 @@ export function allStatusChecksPassed(record: DeploymentRecord): boolean {
     return true;
   }
 
-  return record.status_checks.every(check => check.state === 'success');
+  return record.status_checks.every((check) => check.state === 'success');
 }
 
 /**
@@ -197,7 +204,7 @@ export function allReviewsApproved(record: DeploymentRecord): boolean {
     return true;
   }
 
-  return record.required_reviews.every(review => review.state === 'approved');
+  return record.required_reviews.every((review) => review.state === 'approved');
 }
 
 /**

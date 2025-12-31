@@ -5,7 +5,6 @@ import { execSync } from 'node:child_process';
 
 describe('plan command', () => {
   const testDir = path.join(__dirname, '../../.test-temp-plan');
-  const pipelineDir = path.join(testDir, '.ai-feature-pipeline');
   const binPath = path.join(__dirname, '../../bin/run.js');
 
   beforeEach(() => {

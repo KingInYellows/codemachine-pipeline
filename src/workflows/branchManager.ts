@@ -147,7 +147,8 @@ export function isProtectedBranch(branchName: string, repoConfig: RepoConfig): b
   ];
 
   return protectedBranches.some(
-    protectedBranch => branchName === protectedBranch || branchName.endsWith(`/${protectedBranch}`)
+    (protectedBranch) =>
+      branchName === protectedBranch || branchName.endsWith(`/${protectedBranch}`)
   );
 }
 
@@ -542,29 +543,33 @@ export async function saveBranchMetadata(
   metadata: BranchMetadata,
   logger: StructuredLogger
 ): Promise<string> {
-  return withLock(config.runDir, async () => {
-    const metadataPath = getBranchMetadataPath(config);
-    const artifactsDir = path.dirname(metadataPath);
-    await fs.mkdir(artifactsDir, { recursive: true });
+  return withLock(
+    config.runDir,
+    async () => {
+      const metadataPath = getBranchMetadataPath(config);
+      const artifactsDir = path.dirname(metadataPath);
+      await fs.mkdir(artifactsDir, { recursive: true });
 
-    await fs.writeFile(metadataPath, JSON.stringify(metadata, null, 2), 'utf-8');
+      await fs.writeFile(metadataPath, JSON.stringify(metadata, null, 2), 'utf-8');
 
-    logger.debug('Saved branch metadata', { metadataPath });
+      logger.debug('Saved branch metadata', { metadataPath });
 
-    // Update run manifest
-    await updateManifest(config.runDir, manifest => ({
-      artifacts: {
-        ...manifest.artifacts,
-        branch_metadata: 'artifacts/branch_metadata.json',
-      },
-      metadata: {
-        ...(manifest.metadata ?? {}),
-        current_branch: metadata.branch_name,
-      },
-    }));
+      // Update run manifest
+      await updateManifest(config.runDir, (manifest) => ({
+        artifacts: {
+          ...manifest.artifacts,
+          branch_metadata: 'artifacts/branch_metadata.json',
+        },
+        metadata: {
+          ...(manifest.metadata ?? {}),
+          current_branch: metadata.branch_name,
+        },
+      }));
 
-    return metadataPath;
-  }, { operation: 'save_branch_metadata' });
+      return metadataPath;
+    },
+    { operation: 'save_branch_metadata' }
+  );
 }
 
 /**
@@ -575,36 +580,40 @@ export async function updateBranchMetadata(
   updates: Partial<BranchMetadata>,
   logger: StructuredLogger
 ): Promise<void> {
-  return withLock(config.runDir, async () => {
-    const metadataPath = getBranchMetadataPath(config);
+  return withLock(
+    config.runDir,
+    async () => {
+      const metadataPath = getBranchMetadataPath(config);
 
-    let metadata: BranchMetadata;
-    try {
-      const content = await fs.readFile(metadataPath, 'utf-8');
-      metadata = JSON.parse(content) as BranchMetadata;
-    } catch {
-      // If metadata doesn't exist, create minimal metadata
-      metadata = {
-        schema_version: '1.0.0',
-        feature_id: config.featureId,
-        branch_name: await getCurrentBranch(config.workingDir),
-        base_branch: config.repoConfig.project.default_branch,
-        created_at: new Date().toISOString(),
+      let metadata: BranchMetadata;
+      try {
+        const content = await fs.readFile(metadataPath, 'utf-8');
+        metadata = JSON.parse(content) as BranchMetadata;
+      } catch {
+        // If metadata doesn't exist, create minimal metadata
+        metadata = {
+          schema_version: '1.0.0',
+          feature_id: config.featureId,
+          branch_name: await getCurrentBranch(config.workingDir),
+          base_branch: config.repoConfig.project.default_branch,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+          sync_status: 'unknown',
+        };
+      }
+
+      const updated: BranchMetadata = {
+        ...metadata,
+        ...updates,
         updated_at: new Date().toISOString(),
-        sync_status: 'unknown',
       };
-    }
 
-    const updated: BranchMetadata = {
-      ...metadata,
-      ...updates,
-      updated_at: new Date().toISOString(),
-    };
+      await fs.writeFile(metadataPath, JSON.stringify(updated, null, 2), 'utf-8');
 
-    await fs.writeFile(metadataPath, JSON.stringify(updated, null, 2), 'utf-8');
-
-    logger.debug('Updated branch metadata', { metadataPath });
-  }, { operation: 'update_branch_metadata' });
+      logger.debug('Updated branch metadata', { metadataPath });
+    },
+    { operation: 'update_branch_metadata' }
+  );
 }
 
 /**

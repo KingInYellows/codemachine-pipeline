@@ -175,13 +175,19 @@ class MetricsBuffer {
   /**
    * Observe a value in a histogram
    */
-  observeHistogram(name: string, labels: Labels, value: number, buckets: number[], help?: string): void {
+  observeHistogram(
+    name: string,
+    labels: Labels,
+    value: number,
+    buckets: number[],
+    help?: string
+  ): void {
     const key = this.serializeKey(name, labels);
     let histogram = this.histograms.get(key);
 
     if (!histogram) {
       histogram = {
-        buckets: buckets.map(le => ({ le, count: 0 })),
+        buckets: buckets.map((le) => ({ le, count: 0 })),
         sum: 0,
         count: 0,
       };
@@ -381,7 +387,13 @@ export class MetricsCollector {
   /**
    * Observe a histogram value
    */
-  observe(name: string, value: number, labels: Labels = {}, buckets = LATENCY_BUCKETS, help?: string): void {
+  observe(
+    name: string,
+    value: number,
+    labels: Labels = {},
+    buckets = LATENCY_BUCKETS,
+    help?: string
+  ): void {
     const fullName = this.prefixMetricName(name);
     const fullLabels = this.mergeLabels(labels);
     this.buffer.observeHistogram(fullName, fullLabels, value, buckets, help);
@@ -391,10 +403,25 @@ export class MetricsCollector {
    * Record queue depth metrics
    */
   recordQueueDepth(pending: number, completed: number, failed: number, labels: Labels = {}): void {
-    this.gauge(StandardMetrics.QUEUE_PENDING_COUNT, pending, labels, 'Number of pending queue tasks');
-    this.gauge(StandardMetrics.QUEUE_COMPLETED_COUNT, completed, labels, 'Number of completed queue tasks');
+    this.gauge(
+      StandardMetrics.QUEUE_PENDING_COUNT,
+      pending,
+      labels,
+      'Number of pending queue tasks'
+    );
+    this.gauge(
+      StandardMetrics.QUEUE_COMPLETED_COUNT,
+      completed,
+      labels,
+      'Number of completed queue tasks'
+    );
     this.gauge(StandardMetrics.QUEUE_FAILED_COUNT, failed, labels, 'Number of failed queue tasks');
-    this.gauge(StandardMetrics.QUEUE_DEPTH, pending + completed + failed, labels, 'Total queue depth');
+    this.gauge(
+      StandardMetrics.QUEUE_DEPTH,
+      pending + completed + failed,
+      labels,
+      'Total queue depth'
+    );
   }
 
   /**
@@ -402,18 +429,40 @@ export class MetricsCollector {
    */
   recordRateLimit(provider: string, remaining: number, resetTimestamp: number): void {
     const labels = { provider };
-    this.gauge(StandardMetrics.RATE_LIMIT_REMAINING, remaining, labels, 'Requests remaining before rate limit');
-    this.gauge(StandardMetrics.RATE_LIMIT_RESET_TIMESTAMP, resetTimestamp, labels, 'Unix timestamp when rate limit resets');
+    this.gauge(
+      StandardMetrics.RATE_LIMIT_REMAINING,
+      remaining,
+      labels,
+      'Requests remaining before rate limit'
+    );
+    this.gauge(
+      StandardMetrics.RATE_LIMIT_RESET_TIMESTAMP,
+      resetTimestamp,
+      labels,
+      'Unix timestamp when rate limit resets'
+    );
   }
 
   /**
    * Record HTTP request metrics
    */
-  recordHttpRequest(provider: string, endpoint: string, statusCode: number, durationMs: number, success: boolean): void {
+  recordHttpRequest(
+    provider: string,
+    endpoint: string,
+    statusCode: number,
+    durationMs: number,
+    success: boolean
+  ): void {
     const labels = { provider, endpoint, status: String(statusCode) };
 
     this.increment(StandardMetrics.HTTP_REQUESTS_TOTAL, labels, 1, 'Total HTTP requests');
-    this.observe(StandardMetrics.HTTP_REQUEST_DURATION_MS, durationMs, labels, LATENCY_BUCKETS, 'HTTP request duration in milliseconds');
+    this.observe(
+      StandardMetrics.HTTP_REQUEST_DURATION_MS,
+      durationMs,
+      labels,
+      LATENCY_BUCKETS,
+      'HTTP request duration in milliseconds'
+    );
 
     if (!success) {
       this.increment(StandardMetrics.HTTP_ERRORS_TOTAL, labels, 1, 'Total HTTP errors');
@@ -425,16 +474,36 @@ export class MetricsCollector {
    */
   recordHttpRetry(provider: string, endpoint: string, attempt: number): void {
     const labels = { provider, endpoint };
-    this.increment(StandardMetrics.HTTP_RETRY_COUNT, { ...labels, attempt: String(attempt) }, 1, 'HTTP retry attempts');
+    this.increment(
+      StandardMetrics.HTTP_RETRY_COUNT,
+      { ...labels, attempt: String(attempt) },
+      1,
+      'HTTP retry attempts'
+    );
   }
 
   /**
    * Record token usage
    */
   recordTokenUsage(promptTokens: number, completionTokens: number, labels: Labels = {}): void {
-    this.increment(StandardMetrics.TOKEN_USAGE_PROMPT, labels, promptTokens, 'Prompt tokens consumed');
-    this.increment(StandardMetrics.TOKEN_USAGE_COMPLETION, labels, completionTokens, 'Completion tokens consumed');
-    this.increment(StandardMetrics.TOKEN_USAGE_TOTAL, labels, promptTokens + completionTokens, 'Total tokens consumed');
+    this.increment(
+      StandardMetrics.TOKEN_USAGE_PROMPT,
+      labels,
+      promptTokens,
+      'Prompt tokens consumed'
+    );
+    this.increment(
+      StandardMetrics.TOKEN_USAGE_COMPLETION,
+      labels,
+      completionTokens,
+      'Completion tokens consumed'
+    );
+    this.increment(
+      StandardMetrics.TOKEN_USAGE_TOTAL,
+      labels,
+      promptTokens + completionTokens,
+      'Total tokens consumed'
+    );
   }
 
   /**
@@ -537,10 +606,7 @@ export class MetricsCollector {
    * Escape label value for Prometheus format
    */
   private escapeLabel(value: string): string {
-    return value
-      .replace(/\\/g, '\\\\')
-      .replace(/"/g, '\\"')
-      .replace(/\n/g, '\\n');
+    return value.replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/\n/g, '\\n');
   }
 
   /**

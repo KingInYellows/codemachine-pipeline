@@ -36,7 +36,7 @@ describe('start command', () => {
   describe('input validation', () => {
     it('requires at least one input source', async () => {
       try {
-        execSync('node bin/run.js start', { cwd: tempDir, encoding: 'utf8', stdio: 'pipe' });
+        execSync('node bin/run.js start', { cwd: testDir, encoding: 'utf8', stdio: 'pipe' });
         throw new Error('Command should have failed');
       } catch (error: unknown) {
         if (error && typeof error === 'object' && 'status' in error) {
@@ -238,7 +238,7 @@ describe('start command', () => {
   describe('exit codes', () => {
     test('returns exit code 10 when no input source provided', () => {
       try {
-        execSync('node bin/run.js start', { cwd: tempDir, encoding: 'utf8', stdio: 'pipe' });
+        execSync('node bin/run.js start', { cwd: testDir, encoding: 'utf8', stdio: 'pipe' });
         throw new Error('Command should have failed');
       } catch (error: unknown) {
         if (error && typeof error === 'object' && 'status' in error) {

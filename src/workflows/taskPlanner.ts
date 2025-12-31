@@ -201,7 +201,7 @@ async function extractSpecRequirements(runDir: string): Promise<SpecRequirement[
   };
 
   if (spec.test_plan && Array.isArray(spec.test_plan)) {
-    spec.test_plan.forEach(test => {
+    spec.test_plan.forEach((test) => {
       const dependsOn = Array.isArray(test.depends_on)
         ? test.depends_on
         : Array.isArray(test.dependencies)
@@ -272,7 +272,11 @@ function generateTaskNodes(
 /**
  * Build stable fallback task ID from requirement/iteration
  */
-function buildDefaultTaskId(requirementId: string, iterationId: string | undefined, index: number): string {
+function buildDefaultTaskId(
+  requirementId: string,
+  iterationId: string | undefined,
+  index: number
+): string {
   const normalizedRequirement = requirementId
     ? normalizeIdentifier(requirementId)
     : `REQ-${(index + 1).toString().padStart(2, '0')}`;
@@ -333,10 +337,12 @@ function buildDependencyGraph(
   }
 ): PlanDiagnostics['blockers'] {
   const blockers: PlanDiagnostics['blockers'] = [];
-  const taskIndex = new Map(tasks.map(task => [task.task_id, task]));
+  const taskIndex = new Map(tasks.map((task) => [task.task_id, task]));
 
   for (const req of options.requirements) {
-    const taskId = req.requirementId ? options.requirementTaskMap.get(req.requirementId) : undefined;
+    const taskId = req.requirementId
+      ? options.requirementTaskMap.get(req.requirementId)
+      : undefined;
     if (!taskId) {
       continue;
     }
@@ -366,7 +372,7 @@ function buildDependencyGraph(
         continue;
       }
 
-      if (!task.dependencies.some(dep => dep.task_id === dependencyTaskId)) {
+      if (!task.dependencies.some((dep) => dep.task_id === dependencyTaskId)) {
         task.dependencies.push({
           task_id: dependencyTaskId,
           type: 'required',
@@ -376,8 +382,8 @@ function buildDependencyGraph(
   }
 
   // Simple heuristic: testing tasks depend on code_generation tasks
-  const codeGenTasks = tasks.filter(t => t.task_type === 'code_generation');
-  const testingTasks = tasks.filter(t => t.task_type === 'testing');
+  const codeGenTasks = tasks.filter((t) => t.task_type === 'code_generation');
+  const testingTasks = tasks.filter((t) => t.task_type === 'testing');
 
   // Make all testing tasks depend on all code generation tasks
   for (const testTask of testingTasks) {
@@ -390,14 +396,14 @@ function buildDependencyGraph(
   }
 
   // Sort testing tasks by type priority (unit -> integration -> e2e)
-  const unitTests = testingTasks.filter(t => t.config?.test_type === 'unit');
-  const integrationTests = testingTasks.filter(t => t.config?.test_type === 'integration');
-  const e2eTests = testingTasks.filter(t => t.config?.test_type === 'e2e');
+  const unitTests = testingTasks.filter((t) => t.config?.test_type === 'unit');
+  const integrationTests = testingTasks.filter((t) => t.config?.test_type === 'integration');
+  const e2eTests = testingTasks.filter((t) => t.config?.test_type === 'e2e');
 
   // Integration tests depend on unit tests
   for (const intTest of integrationTests) {
     for (const unitTest of unitTests) {
-      if (!intTest.dependencies.some(d => d.task_id === unitTest.task_id)) {
+      if (!intTest.dependencies.some((d) => d.task_id === unitTest.task_id)) {
         intTest.dependencies.push({
           task_id: unitTest.task_id,
           type: 'required',
@@ -409,7 +415,7 @@ function buildDependencyGraph(
   // E2E tests depend on integration tests
   for (const e2eTest of e2eTests) {
     for (const intTest of integrationTests) {
-      if (!e2eTest.dependencies.some(d => d.task_id === intTest.task_id)) {
+      if (!e2eTest.dependencies.some((d) => d.task_id === intTest.task_id)) {
         e2eTest.dependencies.push({
           task_id: intTest.task_id,
           type: 'required',
@@ -458,7 +464,7 @@ function computeTopologicalOrder(tasks: TaskNode[]): {
 
     // Find tasks that depend on current
     for (const task of tasks) {
-      if (task.dependencies.some(d => d.task_id === current)) {
+      if (task.dependencies.some((d) => d.task_id === current)) {
         const remaining = (inDegree.get(task.task_id) ?? 0) - 1;
         inDegree.set(task.task_id, remaining);
 
@@ -509,16 +515,20 @@ function buildTaskTypeBreakdown(tasks: TaskNode[]): Record<string, number> {
 /**
  * Create plan summary for CLI output or JSON mode
  */
-function createPlanSummary(plan: PlanArtifact, planPath: string, diagnostics?: PlanDiagnostics): PlanSummary {
+function createPlanSummary(
+  plan: PlanArtifact,
+  planPath: string,
+  diagnostics?: PlanDiagnostics
+): PlanSummary {
   const entryTaskIds = getEntryTasks(plan);
   const blockedDetails = plan.tasks
-    .filter(task => task.dependencies.length > 0)
-    .map(task => ({
+    .filter((task) => task.dependencies.length > 0)
+    .map((task) => ({
       taskId: task.task_id,
-      waitingOn: task.dependencies.map(dep => dep.task_id),
+      waitingOn: task.dependencies.map((dep) => dep.task_id),
     }));
 
-  const defaultBlockers: PlanDiagnostics['blockers'] = blockedDetails.map(detail => ({
+  const defaultBlockers: PlanDiagnostics['blockers'] = blockedDetails.map((detail) => ({
     taskId: detail.taskId,
     reason: 'Waiting for dependency completion',
     ...(detail.waitingOn.length > 0 ? { missingDependencies: detail.waitingOn } : {}),
@@ -623,9 +633,11 @@ async function loadTraceabilityTaskIds(runDir: string): Promise<RequirementTaskM
     }
 
     for (const link of traceDoc.links) {
-      if (link.source_type === 'execution_task' &&
+      if (
+        link.source_type === 'execution_task' &&
         link.target_type === 'spec_requirement' &&
-        link.target_id) {
+        link.target_id
+      ) {
         mapping.set(link.target_id, link.source_id);
       }
     }
@@ -716,7 +728,11 @@ export async function generateExecutionPlan(
 
   // Step 3: Generate task nodes
   const traceabilityTaskIds = await loadTraceabilityTaskIds(config.runDir);
-  const { tasks, requirementTaskMap } = generateTaskNodes(requirements, config.iterationId, traceabilityTaskIds);
+  const { tasks, requirementTaskMap } = generateTaskNodes(
+    requirements,
+    config.iterationId,
+    traceabilityTaskIds
+  );
 
   logger.debug('Generated task nodes', {
     count: tasks.length,
@@ -779,14 +795,14 @@ export async function generateExecutionPlan(
   const blockers: PlanDiagnostics['blockers'] = [...dependencyBlockers];
   for (const task of tasks) {
     const missingDeps = task.dependencies.filter(
-      dep => !tasks.some(t => t.task_id === dep.task_id)
+      (dep) => !tasks.some((t) => t.task_id === dep.task_id)
     );
 
     if (missingDeps.length > 0) {
       blockers.push({
         taskId: task.task_id,
         reason: 'Missing dependencies',
-        missingDependencies: missingDeps.map(d => d.task_id),
+        missingDependencies: missingDeps.map((d) => d.task_id),
       });
     }
   }
@@ -820,7 +836,7 @@ export async function generateExecutionPlan(
     entry_tasks: summary.entryTasks,
     blocked_tasks: summary.blockedTasks,
     queue_ready: summary.queueState.ready,
-    queue_blocked: summary.queueState.blocked.map(blocked => blocked.taskId),
+    queue_blocked: summary.queueState.blocked.map((blocked) => blocked.taskId),
     dag_parallel_paths: summary.dag?.parallelPaths ?? 0,
     dag_critical_path_depth: summary.dag?.criticalPathDepth ?? 0,
   });

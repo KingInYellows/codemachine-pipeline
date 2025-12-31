@@ -154,7 +154,9 @@ export async function createHashManifest(
       files[filePath] = record;
     } catch (error) {
       // Skip files that can't be read but log the issue
-      console.warn(`Skipping file ${filePath}: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      console.warn(
+        `Skipping file ${filePath}: ${error instanceof Error ? error.message : 'Unknown error'}`
+      );
     }
   }
 
@@ -190,7 +192,9 @@ export async function updateHashManifest(
       const record = await createFileHashRecord(filePath);
       updatedFiles[filePath] = record;
     } catch (error) {
-      console.warn(`Skipping file ${filePath}: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      console.warn(
+        `Skipping file ${filePath}: ${error instanceof Error ? error.message : 'Unknown error'}`
+      );
     }
   }
 
@@ -291,10 +295,7 @@ export async function verifyHashManifest(
  * @param expectedHash - Expected SHA-256 hash
  * @returns True if hash matches, false otherwise
  */
-export async function verifyFileHash(
-  filePath: string,
-  expectedHash: string
-): Promise<boolean> {
+export async function verifyFileHash(filePath: string, expectedHash: string): Promise<boolean> {
   try {
     const actualHash = await computeFileHash(filePath);
     return actualHash === expectedHash;
@@ -313,10 +314,7 @@ export async function verifyFileHash(
  * @param manifest - Hash manifest to save
  * @param outputPath - Path where manifest should be written
  */
-export async function saveHashManifest(
-  manifest: HashManifest,
-  outputPath: string
-): Promise<void> {
+export async function saveHashManifest(manifest: HashManifest, outputPath: string): Promise<void> {
   const dir = path.dirname(outputPath);
   await fs.mkdir(dir, { recursive: true });
 
@@ -381,10 +379,7 @@ export function getManifestTotalSize(manifest: HashManifest): number {
  * @param pattern - Regex pattern or glob-like string
  * @returns Filtered hash manifest
  */
-export function filterManifest(
-  manifest: HashManifest,
-  pattern: RegExp | string
-): HashManifest {
+export function filterManifest(manifest: HashManifest, pattern: RegExp | string): HashManifest {
   const regex = typeof pattern === 'string' ? new RegExp(pattern) : pattern;
   const filteredFiles: Record<string, FileHashRecord> = {};
 

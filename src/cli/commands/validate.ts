@@ -43,7 +43,8 @@ import {
  * - 11: Retry limit exceeded (cannot proceed without manual intervention)
  */
 export default class Validate extends Command {
-  static description = 'Execute validation commands (lint, test, typecheck, build) with auto-fix retry loops';
+  static description =
+    'Execute validation commands (lint, test, typecheck, build) with auto-fix retry loops';
 
   static examples = [
     '<%= config.bin %> <%= command.id %>',
@@ -138,7 +139,11 @@ export default class Validate extends Command {
         throw new Error('Telemetry initialization failed for validate command');
       }
       executionTelemetry = {
-        metrics: createExecutionMetrics(metrics, { runDir: runDirPath, runId: featureId, component: 'validation' }),
+        metrics: createExecutionMetrics(metrics, {
+          runDir: runDirPath,
+          runId: featureId,
+          component: 'validation',
+        }),
         logs: createExecutionLogWriter(logger, { runDir: runDirPath, runId: featureId }),
         traceManager,
       };
@@ -199,13 +204,21 @@ export default class Validate extends Command {
           success: validationResult.success,
           results: new Map([[commandType, validationResult]]),
           totalAttempts: validationResult.attempt.attempt_number,
-          autoFixSuccesses: validationResult.attempt.auto_fix_attempted && validationResult.success ? 1 : 0,
+          autoFixSuccesses:
+            validationResult.attempt.auto_fix_attempted && validationResult.success ? 1 : 0,
           exceededRetryLimits: [],
           summary: buildSingleCommandSummary(validationResult),
         };
       } else {
         // All validations
-        result = await executeAllValidations(runDirPath, undefined, options, logger, metrics, executionTelemetry);
+        result = await executeAllValidations(
+          runDirPath,
+          undefined,
+          options,
+          logger,
+          metrics,
+          executionTelemetry
+        );
       }
 
       // Load validation summary for JSON output
@@ -220,7 +233,9 @@ export default class Validate extends Command {
 
       // Record success metrics
       const duration = Date.now() - startTime;
-      metrics.observe(StandardMetrics.COMMAND_EXECUTION_DURATION_MS, duration, { command: 'validate' });
+      metrics.observe(StandardMetrics.COMMAND_EXECUTION_DURATION_MS, duration, {
+        command: 'validate',
+      });
       metrics.increment(StandardMetrics.COMMAND_INVOCATIONS_TOTAL, {
         command: 'validate',
         exit_code: result.success ? '0' : '10',
@@ -256,8 +271,13 @@ export default class Validate extends Command {
       // Record error metrics
       if (metrics) {
         const duration = Date.now() - startTime;
-        metrics.observe(StandardMetrics.COMMAND_EXECUTION_DURATION_MS, duration, { command: 'validate' });
-        metrics.increment(StandardMetrics.COMMAND_INVOCATIONS_TOTAL, { command: 'validate', exit_code: '1' });
+        metrics.observe(StandardMetrics.COMMAND_EXECUTION_DURATION_MS, duration, {
+          command: 'validate',
+        });
+        metrics.increment(StandardMetrics.COMMAND_INVOCATIONS_TOTAL, {
+          command: 'validate',
+          exit_code: '1',
+        });
         await metrics.flush();
       }
 
@@ -317,9 +337,12 @@ export default class Validate extends Command {
     const configResult = loadRepoConfig(configPath);
     if (!configResult.success || !configResult.config) {
       logger.error('Failed to load repo config', { errors: configResult.errors });
-      this.error('Config validation failed. Fix configuration errors before initializing validation registry.', {
-        exit: 1,
-      });
+      this.error(
+        'Config validation failed. Fix configuration errors before initializing validation registry.',
+        {
+          exit: 1,
+        }
+      );
     }
 
     // Initialize registry
@@ -357,17 +380,19 @@ export default class Validate extends Command {
     result: AutoFixResult,
     validationSummary: ValidationLedger['summary'] | undefined
   ): void {
-    const resultsArray = Array.from(result.results.entries()).map(([commandType, validationResult]) => ({
-      command_type: commandType,
-      success: validationResult.success,
-      exit_code: validationResult.exitCode,
-      duration_ms: validationResult.durationMs,
-      attempt_number: validationResult.attempt.attempt_number,
-      auto_fix_attempted: validationResult.attempt.auto_fix_attempted,
-      stdout_path: validationResult.attempt.stdout_path,
-      stderr_path: validationResult.attempt.stderr_path,
-      error_summary: validationResult.errorSummary,
-    }));
+    const resultsArray = Array.from(result.results.entries()).map(
+      ([commandType, validationResult]) => ({
+        command_type: commandType,
+        success: validationResult.success,
+        exit_code: validationResult.exitCode,
+        duration_ms: validationResult.durationMs,
+        attempt_number: validationResult.attempt.attempt_number,
+        auto_fix_attempted: validationResult.attempt.auto_fix_attempted,
+        stdout_path: validationResult.attempt.stdout_path,
+        stderr_path: validationResult.attempt.stderr_path,
+        error_summary: validationResult.errorSummary,
+      })
+    );
 
     const output = {
       feature_id: featureId,
@@ -407,7 +432,8 @@ export default class Validate extends Command {
 function buildSingleCommandSummary(result: ValidationResult): string {
   const lines: string[] = [];
   const status = result.success ? '✓ PASS' : '✗ FAIL';
-  const attempts = result.attempt.attempt_number > 1 ? ` (${result.attempt.attempt_number} attempts)` : '';
+  const attempts =
+    result.attempt.attempt_number > 1 ? ` (${result.attempt.attempt_number} attempts)` : '';
   const autoFix = result.attempt.auto_fix_attempted && result.success ? ' [auto-fixed]' : '';
 
   lines.push(`Validation Result:`);

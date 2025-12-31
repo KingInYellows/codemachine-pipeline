@@ -118,12 +118,7 @@ export default class PRCreate extends Command {
       }
 
       // Load PR context
-      const context = await loadPRContext(
-        settings.baseDir,
-        featureId,
-        settings.config!,
-        false
-      );
+      const context = await loadPRContext(settings.baseDir, featureId, settings.config!, false);
 
       const { logger, manifest, runDir, config } = context;
       const metrics = createRunMetricsCollector(runDir, featureId);
@@ -257,8 +252,8 @@ export default class PRCreate extends Command {
             traceManager,
             'pr.create.request_reviewers',
             async (span) => {
-              const reviewersList = typedFlags.reviewers!
-                .split(',')
+              const reviewersList = typedFlags
+                .reviewers!.split(',')
                 .map((r) => r.trim())
                 .filter((r) => r.length > 0);
 

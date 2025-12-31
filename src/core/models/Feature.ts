@@ -157,34 +157,36 @@ export type RateLimitReferences = z.infer<typeof RateLimitReferencesSchema>;
 // Main Feature Schema
 // ============================================================================
 
-export const FeatureSchema = z.object({
-  /** Schema version for future migrations (semver) */
-  schema_version: z.string().regex(/^[0-9]+\.[0-9]+\.[0-9]+$/, 'Invalid semver format'),
-  /** Unique feature identifier (ULID/UUIDv7) */
-  feature_id: z.string().min(1),
-  /** Human-readable feature title or description */
-  title: z.string().optional(),
-  /** Feature source (e.g., linear:PROJ-123, manual:prompt) */
-  source: z.string().optional(),
-  /** Repository metadata */
-  repo: RepoMetadataSchema,
-  /** Current execution status */
-  status: FeatureStatusSchema,
-  /** Execution progress tracking */
-  execution: ExecutionTrackingSchema,
-  /** Lifecycle timestamps */
-  timestamps: TimestampsSchema,
-  /** Approval workflow tracking */
-  approvals: ApprovalsSchema,
-  /** References to generated artifacts */
-  artifacts: ArtifactReferencesSchema,
-  /** Telemetry and observability references */
-  telemetry: TelemetryReferencesSchema,
-  /** Rate limit tracking references */
-  rate_limits: RateLimitReferencesSchema.optional(),
-  /** Extensible metadata for custom fields */
-  metadata: z.record(z.unknown()).optional(),
-}).strict();
+export const FeatureSchema = z
+  .object({
+    /** Schema version for future migrations (semver) */
+    schema_version: z.string().regex(/^[0-9]+\.[0-9]+\.[0-9]+$/, 'Invalid semver format'),
+    /** Unique feature identifier (ULID/UUIDv7) */
+    feature_id: z.string().min(1),
+    /** Human-readable feature title or description */
+    title: z.string().optional(),
+    /** Feature source (e.g., linear:PROJ-123, manual:prompt) */
+    source: z.string().optional(),
+    /** Repository metadata */
+    repo: RepoMetadataSchema,
+    /** Current execution status */
+    status: FeatureStatusSchema,
+    /** Execution progress tracking */
+    execution: ExecutionTrackingSchema,
+    /** Lifecycle timestamps */
+    timestamps: TimestampsSchema,
+    /** Approval workflow tracking */
+    approvals: ApprovalsSchema,
+    /** References to generated artifacts */
+    artifacts: ArtifactReferencesSchema,
+    /** Telemetry and observability references */
+    telemetry: TelemetryReferencesSchema,
+    /** Rate limit tracking references */
+    rate_limits: RateLimitReferencesSchema.optional(),
+    /** Extensible metadata for custom fields */
+    metadata: z.record(z.unknown()).optional(),
+  })
+  .strict();
 
 export type Feature = Readonly<z.infer<typeof FeatureSchema>>;
 
@@ -198,13 +200,15 @@ export type Feature = Readonly<z.infer<typeof FeatureSchema>>;
  * @param json - Raw JSON object or string
  * @returns Parsed Feature or error details
  */
-export function parseFeature(json: unknown): {
-  success: true;
-  data: Feature;
-} | {
-  success: false;
-  errors: Array<{ path: string; message: string }>;
-} {
+export function parseFeature(json: unknown):
+  | {
+      success: true;
+      data: Feature;
+    }
+  | {
+      success: false;
+      errors: Array<{ path: string; message: string }>;
+    } {
   const result = FeatureSchema.safeParse(json);
 
   if (result.success) {
@@ -216,7 +220,7 @@ export function parseFeature(json: unknown): {
 
   return {
     success: false,
-    errors: result.error.errors.map(err => ({
+    errors: result.error.errors.map((err) => ({
       path: err.path.join('.') || 'root',
       message: err.message,
     })),

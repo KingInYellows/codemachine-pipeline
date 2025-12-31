@@ -108,16 +108,20 @@ const RolloutPlanSchema = z.object({
   /** Rollout strategy (all_at_once, gradual, canary, blue_green) */
   strategy: z.enum(['all_at_once', 'gradual', 'canary', 'blue_green']).default('gradual'),
   /** Rollout phases or stages */
-  phases: z.array(z.object({
-    /** Phase number or identifier */
-    phase_id: z.string().min(1),
-    /** Phase description */
-    description: z.string().min(1),
-    /** Percentage of users or traffic for this phase */
-    percentage: z.number().min(0).max(100).optional(),
-    /** Duration of this phase */
-    duration: z.string().optional(),
-  })).default([]),
+  phases: z
+    .array(
+      z.object({
+        /** Phase number or identifier */
+        phase_id: z.string().min(1),
+        /** Phase description */
+        description: z.string().min(1),
+        /** Percentage of users or traffic for this phase */
+        percentage: z.number().min(0).max(100).optional(),
+        /** Duration of this phase */
+        duration: z.string().optional(),
+      })
+    )
+    .default([]),
   /** Rollback plan in case of issues */
   rollback_plan: z.string().optional(),
 });
@@ -128,38 +132,40 @@ export type RolloutPlan = z.infer<typeof RolloutPlanSchema>;
 // Specification Schema
 // ============================================================================
 
-export const SpecificationSchema = z.object({
-  /** Schema version for future migrations (semver) */
-  schema_version: z.string().regex(/^[0-9]+\.[0-9]+\.[0-9]+$/, 'Invalid semver format'),
-  /** Unique specification identifier */
-  spec_id: z.string().min(1),
-  /** Feature ID this specification belongs to */
-  feature_id: z.string().min(1),
-  /** Specification title */
-  title: z.string().min(1),
-  /** Full specification content (markdown or structured text) */
-  content: z.string().min(1),
-  /** Current specification status */
-  status: SpecificationStatusSchema,
-  /** Reviewers assigned to this specification */
-  reviewers: z.array(ReviewerInfoSchema).default([]),
-  /** Change log tracking specification revisions */
-  change_log: z.array(ChangeLogEntrySchema).default([]),
-  /** Risk assessments identified during specification */
-  risks: z.array(RiskAssessmentSchema).default([]),
-  /** Test plan derived from specification */
-  test_plan: z.array(TestPlanItemSchema).default([]),
-  /** Rollout plan for deploying this feature */
-  rollout_plan: RolloutPlanSchema.optional(),
-  /** ISO 8601 timestamp when specification was created */
-  created_at: z.string().datetime(),
-  /** ISO 8601 timestamp when specification was last updated */
-  updated_at: z.string().datetime(),
-  /** ISO 8601 timestamp when specification was approved */
-  approved_at: z.string().datetime().nullable().optional(),
-  /** Optional specification metadata */
-  metadata: z.record(z.unknown()).optional(),
-}).strict();
+export const SpecificationSchema = z
+  .object({
+    /** Schema version for future migrations (semver) */
+    schema_version: z.string().regex(/^[0-9]+\.[0-9]+\.[0-9]+$/, 'Invalid semver format'),
+    /** Unique specification identifier */
+    spec_id: z.string().min(1),
+    /** Feature ID this specification belongs to */
+    feature_id: z.string().min(1),
+    /** Specification title */
+    title: z.string().min(1),
+    /** Full specification content (markdown or structured text) */
+    content: z.string().min(1),
+    /** Current specification status */
+    status: SpecificationStatusSchema,
+    /** Reviewers assigned to this specification */
+    reviewers: z.array(ReviewerInfoSchema).default([]),
+    /** Change log tracking specification revisions */
+    change_log: z.array(ChangeLogEntrySchema).default([]),
+    /** Risk assessments identified during specification */
+    risks: z.array(RiskAssessmentSchema).default([]),
+    /** Test plan derived from specification */
+    test_plan: z.array(TestPlanItemSchema).default([]),
+    /** Rollout plan for deploying this feature */
+    rollout_plan: RolloutPlanSchema.optional(),
+    /** ISO 8601 timestamp when specification was created */
+    created_at: z.string().datetime(),
+    /** ISO 8601 timestamp when specification was last updated */
+    updated_at: z.string().datetime(),
+    /** ISO 8601 timestamp when specification was approved */
+    approved_at: z.string().datetime().nullable().optional(),
+    /** Optional specification metadata */
+    metadata: z.record(z.unknown()).optional(),
+  })
+  .strict();
 
 export type Specification = Readonly<z.infer<typeof SpecificationSchema>>;
 
@@ -173,13 +179,15 @@ export type Specification = Readonly<z.infer<typeof SpecificationSchema>>;
  * @param json - Raw JSON object or string
  * @returns Parsed Specification or error details
  */
-export function parseSpecification(json: unknown): {
-  success: true;
-  data: Specification;
-} | {
-  success: false;
-  errors: Array<{ path: string; message: string }>;
-} {
+export function parseSpecification(json: unknown):
+  | {
+      success: true;
+      data: Specification;
+    }
+  | {
+      success: false;
+      errors: Array<{ path: string; message: string }>;
+    } {
   const result = SpecificationSchema.safeParse(json);
 
   if (result.success) {
@@ -191,7 +199,7 @@ export function parseSpecification(json: unknown): {
 
   return {
     success: false,
-    errors: result.error.errors.map(err => ({
+    errors: result.error.errors.map((err) => ({
       path: err.path.join('.') || 'root',
       message: err.message,
     })),
@@ -292,7 +300,7 @@ export function isFullyApproved(specification: Specification): boolean {
     return false;
   }
 
-  return specification.reviewers.every(reviewer => reviewer.verdict === 'approved');
+  return specification.reviewers.every((reviewer) => reviewer.verdict === 'approved');
 }
 
 /**
@@ -302,7 +310,7 @@ export function isFullyApproved(specification: Specification): boolean {
  * @returns Array of reviewers with pending status
  */
 export function getPendingReviewers(specification: Specification): ReviewerInfo[] {
-  return specification.reviewers.filter(reviewer => reviewer.verdict === 'pending');
+  return specification.reviewers.filter((reviewer) => reviewer.verdict === 'pending');
 }
 
 /**

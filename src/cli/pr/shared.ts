@@ -105,13 +105,19 @@ export async function loadPRContext(
     logger.error('Failed to read manifest', {
       error: error instanceof Error ? error.message : String(error),
     });
-    throw new Error(`Failed to read manifest for feature ${featureId}: ${error instanceof Error ? error.message : String(error)}`);
+    throw new Error(
+      `Failed to read manifest for feature ${featureId}: ${error instanceof Error ? error.message : String(error)}`
+    );
   }
 
   // Validate GitHub integration is enabled
   if (!config.github.enabled) {
-    logger.error('GitHub integration disabled', { config_path: '.ai-feature-pipeline/config.json' });
-    throw new Error('GitHub integration is disabled. Enable it in .ai-feature-pipeline/config.json');
+    logger.error('GitHub integration disabled', {
+      config_path: '.ai-feature-pipeline/config.json',
+    });
+    throw new Error(
+      'GitHub integration is disabled. Enable it in .ai-feature-pipeline/config.json'
+    );
   }
 
   // Load existing PR metadata if available
@@ -193,10 +199,7 @@ export function getPRAdapter(context: PRContext): GitHubAdapter {
  * @param context PR command context
  * @param prMetadata PR metadata to persist
  */
-export async function persistPRData(
-  context: PRContext,
-  prMetadata: PRMetadata
-): Promise<void> {
+export async function persistPRData(context: PRContext, prMetadata: PRMetadata): Promise<void> {
   const { runDir, logger } = context;
   const prJsonPath = path.join(runDir, 'pr.json');
   const prJsonTempPath = `${prJsonPath}.tmp`;
@@ -248,7 +251,9 @@ export async function persistPRData(
     logger.error('Failed to persist PR metadata', {
       error: error instanceof Error ? error.message : String(error),
     });
-    throw new Error(`Failed to persist PR metadata: ${error instanceof Error ? error.message : String(error)}`);
+    throw new Error(
+      `Failed to persist PR metadata: ${error instanceof Error ? error.message : String(error)}`
+    );
   }
 }
 
@@ -320,11 +325,7 @@ export function renderPROutput(data: Record<string, unknown>, jsonMode: boolean)
         continue;
       }
       const icon =
-        check.conclusion === 'success'
-          ? '✓'
-          : check.conclusion === 'failure'
-            ? '✗'
-            : '○';
+        check.conclusion === 'success' ? '✓' : check.conclusion === 'failure' ? '✗' : '○';
       lines.push(`  ${icon} ${check.context} (${check.state})`);
     }
   }
