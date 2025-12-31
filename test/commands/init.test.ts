@@ -326,8 +326,4 @@ describe('init command', () => {
     });
   });
 
-  test('placeholder test passes', () => {
-    // Basic smoke test to ensure Jest is working
-    expect(true).toBe(true);
-  });
 });

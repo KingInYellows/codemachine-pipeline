@@ -896,7 +896,7 @@ export async function generateHashManifest(runDir: string, filePaths?: string[])
     ? filePaths.map((p) => path.resolve(runDir, p))
     : await collectArtifactPaths(runDir);
 
-  const hashManifest = await createHashManifest(absolutePaths);
+  const { manifest: hashManifest } = await createHashManifest(absolutePaths);
   const hashManifestPath = path.join(runDir, HASH_MANIFEST_FILE_NAME);
 
   await saveHashManifest(hashManifest, hashManifestPath);

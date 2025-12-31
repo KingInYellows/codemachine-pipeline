@@ -366,8 +366,4 @@ describe('doctor command', () => {
       expect(output).toContain('--verbose');
     });
   });
-
-  test('placeholder test passes', () => {
-    expect(true).toBe(true);
-  });
 });

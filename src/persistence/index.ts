@@ -48,4 +48,6 @@ export {
   type FileHashRecord,
   type HashManifest,
   type VerificationResult,
+  type HashManifestResult,
+  type FileHashResult,
 } from './hashManifest.js';

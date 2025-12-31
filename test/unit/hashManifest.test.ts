@@ -118,8 +118,9 @@ describe('Hash Manifest Utilities', () => {
       await fs.writeFile(file1, 'Content 1', 'utf-8');
       await fs.writeFile(file2, 'Content 2', 'utf-8');
 
-      const manifest = await createHashManifest([file1, file2]);
+      const { manifest, skipped } = await createHashManifest([file1, file2]);
 
+      expect(skipped).toEqual([]);
       expect(manifest.schema_version).toBe('1.0.0');
       expect(manifest.created_at).toBeDefined();
       expect(manifest.updated_at).toBeDefined();
@@ -132,28 +133,32 @@ describe('Hash Manifest Utilities', () => {
       const file1 = path.join(testDir, 'file1.txt');
       await fs.writeFile(file1, 'Content', 'utf-8');
 
-      const manifest = await createHashManifest([file1], { project: 'test' });
+      const { manifest } = await createHashManifest([file1], { project: 'test' });
 
       expect(manifest.metadata?.project).toBe('test');
     });
 
-    it('should skip files that cannot be read', async () => {
+    it('should skip files that cannot be read and report them', async () => {
       const file1 = path.join(testDir, 'file1.txt');
       const file2 = path.join(testDir, 'missing.txt'); // Does not exist
 
       await fs.writeFile(file1, 'Content', 'utf-8');
 
-      // Should not throw, just skip the missing file
-      const manifest = await createHashManifest([file1, file2]);
+      // Should not throw, just skip the missing file and report it
+      const { manifest, skipped } = await createHashManifest([file1, file2]);
 
       expect(Object.keys(manifest.files).length).toBe(1);
       expect(manifest.files[file1]).toBeDefined();
       expect(manifest.files[file2]).toBeUndefined();
+      expect(skipped.length).toBe(1);
+      expect(skipped[0].path).toBe(file2);
+      expect(skipped[0].reason).toContain('Failed to compute hash');
     });
 
     it('should handle empty file list', async () => {
-      const manifest = await createHashManifest([]);
+      const { manifest, skipped } = await createHashManifest([]);
 
+      expect(skipped).toEqual([]);
       expect(manifest.schema_version).toBe('1.0.0');
       expect(Object.keys(manifest.files).length).toBe(0);
     });
@@ -171,15 +176,17 @@ describe('Hash Manifest Utilities', () => {
       await fs.writeFile(file1, 'Content 1', 'utf-8');
       await fs.writeFile(file2, 'Content 2', 'utf-8');
 
-      manifest = await createHashManifest([file1]);
+      const result = await createHashManifest([file1]);
+      manifest = result.manifest;
     });
 
     it('should update manifest with new files', async () => {
       // Wait a tiny bit to ensure different timestamps
       await new Promise((resolve) => setTimeout(resolve, 10));
 
-      const updated = await updateHashManifest(manifest, [file2]);
+      const { manifest: updated, skipped } = await updateHashManifest(manifest, [file2]);
 
+      expect(skipped).toEqual([]);
       expect(Object.keys(updated.files).length).toBe(2);
       expect(updated.files[file1]).toBeDefined();
       expect(updated.files[file2]).toBeDefined();
@@ -195,7 +202,7 @@ describe('Hash Manifest Utilities', () => {
       // Modify file
       await fs.writeFile(file1, 'Modified Content', 'utf-8');
 
-      const updated = await updateHashManifest(manifest, [file1]);
+      const { manifest: updated } = await updateHashManifest(manifest, [file1]);
 
       expect(updated.files[file1].hash).not.toBe(originalHash);
     });
@@ -203,13 +210,14 @@ describe('Hash Manifest Utilities', () => {
     it('should preserve manifest metadata on update', async () => {
       manifest.metadata = { project: 'test' };
 
-      const updated = await updateHashManifest(manifest, [file2]);
+      const { manifest: updated } = await updateHashManifest(manifest, [file2]);
 
       expect(updated.metadata?.project).toBe('test');
     });
 
     it('should remove files from manifest', async () => {
-      manifest = await createHashManifest([file1, file2]);
+      const result = await createHashManifest([file1, file2]);
+      manifest = result.manifest;
       expect(Object.keys(manifest.files).length).toBe(2);
 
       const updated = removeFromHashManifest(manifest, [file1]);
@@ -239,7 +247,8 @@ describe('Hash Manifest Utilities', () => {
       await fs.writeFile(file1, 'Content 1', 'utf-8');
       await fs.writeFile(file2, 'Content 2', 'utf-8');
 
-      manifest = await createHashManifest([file1, file2]);
+      const result = await createHashManifest([file1, file2]);
+      manifest = result.manifest;
     });
 
     it('should verify unchanged files', async () => {
@@ -279,14 +288,31 @@ describe('Hash Manifest Utilities', () => {
     it('should verify single file hash', async () => {
       const hash = manifest.files[file1].hash;
 
-      let isValid = await verifyFileHash(file1, hash);
-      expect(isValid).toBe(true);
+      let result = await verifyFileHash(file1, hash);
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.matches).toBe(true);
+      }
 
       // Modify file
       await fs.writeFile(file1, 'Modified', 'utf-8');
 
-      isValid = await verifyFileHash(file1, hash);
-      expect(isValid).toBe(false);
+      result = await verifyFileHash(file1, hash);
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.matches).toBe(false);
+      }
+    });
+
+    it('should return specific error for missing file', async () => {
+      const missingFile = path.join(testDir, 'missing.txt');
+      const result = await verifyFileHash(missingFile, 'somehash');
+
+      expect(result.success).toBe(false);
+      if (!result.success) {
+        expect(result.error).toBe('ENOENT');
+        expect(result.message).toBe('File not found');
+      }
     });
 
     it('should handle verification with base path', async () => {
@@ -313,7 +339,7 @@ describe('Hash Manifest Utilities', () => {
       const file1 = path.join(testDir, 'file1.txt');
       await fs.writeFile(file1, 'Content', 'utf-8');
 
-      const manifest = await createHashManifest([file1], { project: 'test' });
+      const { manifest } = await createHashManifest([file1], { project: 'test' });
       const manifestPath = path.join(testDir, 'manifest.json');
 
       await saveHashManifest(manifest, manifestPath);
@@ -330,7 +356,7 @@ describe('Hash Manifest Utilities', () => {
       const file1 = path.join(testDir, 'file1.txt');
       await fs.writeFile(file1, 'Content', 'utf-8');
 
-      const manifest = await createHashManifest([file1]);
+      const { manifest } = await createHashManifest([file1]);
       const nestedPath = path.join(testDir, 'nested', 'dir', 'manifest.json');
 
       await saveHashManifest(manifest, nestedPath);
@@ -379,7 +405,8 @@ describe('Hash Manifest Utilities', () => {
       await fs.writeFile(file2, 'b'.repeat(200), 'utf-8');
       await fs.writeFile(file3, 'c'.repeat(300), 'utf-8');
 
-      manifest = await createHashManifest([file1, file2, file3]);
+      const result = await createHashManifest([file1, file2, file3]);
+      manifest = result.manifest;
     });
 
     it('should get all file paths from manifest', () => {

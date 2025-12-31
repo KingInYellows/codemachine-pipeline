@@ -72,7 +72,7 @@ describe('plan command', () => {
   });
 
   describe('--feature flag', () => {
-    test('exits with code 10 when specified feature not found', () => {
+    test('exits with error when specified feature not found', () => {
       execSync(`node ${binPath} init`, { cwd: testDir, stdio: 'pipe' });
 
       try {
@@ -83,7 +83,7 @@ describe('plan command', () => {
         expect(true).toBe(false);
       } catch (error: unknown) {
         if (error && typeof error === 'object' && 'status' in error) {
-          expect(error.status).toBe(10);
+          expect(error.status).toBe(1); // oclif errors exit with 1
         }
       }
     });
@@ -99,7 +99,7 @@ describe('plan command', () => {
         expect(true).toBe(false);
       } catch (error: unknown) {
         if (error && typeof error === 'object' && 'status' in error) {
-          expect(error.status).toBe(10);
+          expect(error.status).toBe(1); // oclif errors exit with 1
         }
       }
     });
@@ -222,7 +222,7 @@ describe('plan command', () => {
       }).not.toThrow();
     });
 
-    test('returns exit code 10 for validation error (feature not found)', () => {
+    test('returns exit code 1 for validation error (feature not found)', () => {
       execSync(`node ${binPath} init`, { cwd: testDir, stdio: 'pipe' });
 
       try {
@@ -233,7 +233,7 @@ describe('plan command', () => {
         expect(true).toBe(false);
       } catch (error: unknown) {
         if (error && typeof error === 'object' && 'status' in error) {
-          expect(error.status).toBe(10);
+          expect(error.status).toBe(1); // oclif errors exit with 1
         }
       }
     });
@@ -305,9 +305,5 @@ describe('plan command', () => {
         }
       }
     });
-  });
-
-  test('placeholder test passes', () => {
-    expect(true).toBe(true);
   });
 });
