@@ -11,11 +11,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 First alpha release of the AI Feature Pipeline CLI (`ai-feature`). This release provides core pipeline orchestration capabilities for PRD authoring, task planning, research, and PR automation with resumable execution.
 
-**Status**: Alpha - Production-ready core features, comprehensive documentation, 94% test coverage on CLI commands.
+**Status**: Alpha - Production-ready core features, comprehensive documentation, 6/16 CLI commands have integration tests (core workflows covered).
 
 ### Added
 
-#### Core CLI Commands (13 total)
+#### Core CLI Commands (8 total)
 
 - `ai-feature init` - Initialize repository configuration
 - `ai-feature start` - Start new feature pipeline (supports --prompt, --linear, --spec)
@@ -39,10 +39,9 @@ First alpha release of the AI Feature Pipeline CLI (`ai-feature`). This release 
 - `ai-feature research list` - List research tasks
 - `ai-feature context summarize` - Summarize context with chunking
 
-#### Utilities (2 total)
+#### Utilities (1 total)
 
 - `ai-feature rate-limits` - Rate limit monitoring and management
-- Additional utilities integrated across commands
 
 #### Infrastructure
 
@@ -134,7 +133,7 @@ Not applicable (first release).
 
 ### Links
 
-- **Repository**: https://github.com/kinginyellow/codemachine-pipeline (update with actual URL)
+- **Repository**: https://github.com/KingInYellows/codemachine-pipeline
 - **Documentation**: See `docs/` directory
 - **Issues**: GitHub Issues
 - **License**: See LICENSE file
@@ -168,7 +167,7 @@ npm install -g ai-feature-pipeline  # (update with actual package name when publ
 Or from source:
 
 ```bash
-git clone <repository-url>
+git clone https://github.com/KingInYellows/codemachine-pipeline.git
 cd codemachine-pipeline
 npm install
 npm run build
