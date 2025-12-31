@@ -187,10 +187,7 @@ export interface RecordApprovalOptions {
 /**
  * Default template path
  */
-const DEFAULT_TEMPLATE_PATH = path.join(
-  __dirname,
-  '../../docs/templates/prd_template.md'
-);
+const DEFAULT_TEMPLATE_PATH = path.join(__dirname, '../../docs/templates/prd_template.md');
 
 /**
  * Load PRD template from disk
@@ -211,10 +208,7 @@ async function loadTemplate(customPath?: string): Promise<string> {
 /**
  * Substitute template variables with values
  */
-function substituteVariables(
-  template: string,
-  variables: Record<string, string>
-): string {
+function substituteVariables(template: string, variables: Record<string, string>): string {
   let result = template;
 
   for (const [key, value] of Object.entries(variables)) {
@@ -241,7 +235,9 @@ function formatContextCitations(contextDoc: ContextDocument): string {
     .slice(0, 10);
 
   for (const file of topFiles) {
-    lines.push(`- \`${file.path}\` (${file.token_count ?? 0} tokens, hash: \`${file.hash.substring(0, 8)}\`)`);
+    lines.push(
+      `- \`${file.path}\` (${file.token_count ?? 0} tokens, hash: \`${file.hash.substring(0, 8)}\`)`
+    );
   }
 
   if (fileEntries.length > 10) {
@@ -260,7 +256,7 @@ function formatResearchCitations(tasks: ResearchTask[]): string {
   }
 
   const lines: string[] = [];
-  const completedTasks = tasks.filter(t => t.status === 'completed');
+  const completedTasks = tasks.filter((t) => t.status === 'completed');
 
   for (const task of completedTasks) {
     const confidence = task.results?.confidence_score ?? 0;
@@ -414,7 +410,7 @@ export async function draftPRD(
     sections,
     metadata: {
       contextDocumentHash: config.contextDocument.metadata?.manifest_hash,
-      researchTaskIds: config.researchTasks.map(t => t.task_id),
+      researchTaskIds: config.researchTasks.map((t) => t.task_id),
     },
   };
 
@@ -486,7 +482,7 @@ export async function draftPRD(
     );
   }
 
-  if (config.researchTasks.some(t => t.status !== 'completed')) {
+  if (config.researchTasks.some((t) => t.status !== 'completed')) {
     warnings.push('Some research tasks are not yet completed');
   }
 
@@ -532,7 +528,9 @@ export async function recordPRDApproval(
       const parsedMetadata = JSON.parse(metadataContent) as unknown;
       metadata = parsedMetadata as PRDMetadata;
     } catch (error) {
-      throw new Error(`Failed to load PRD metadata: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      throw new Error(
+        `Failed to load PRD metadata: ${error instanceof Error ? error.message : 'Unknown error'}`
+      );
     }
 
     // Step 2: Verify PRD hash matches
@@ -540,8 +538,8 @@ export async function recordPRDApproval(
     if (currentHash !== metadata.prdHash) {
       throw new Error(
         `PRD content has changed since metadata was last updated. ` +
-        `Expected hash: ${metadata.prdHash}, Current hash: ${currentHash}. ` +
-        `Please regenerate PRD or update metadata.`
+          `Expected hash: ${metadata.prdHash}, Current hash: ${currentHash}. ` +
+          `Please regenerate PRD or update metadata.`
       );
     }
 

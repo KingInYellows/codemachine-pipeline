@@ -532,13 +532,7 @@ export class CostTracker {
       const content = await fs.readFile(costsFilePath, 'utf-8');
       const state = JSON.parse(content) as CostTrackerState;
 
-      const tracker = new CostTracker(
-        state.feature_id,
-        runDir,
-        logger,
-        metrics,
-        state.budget
-      );
+      const tracker = new CostTracker(state.feature_id, runDir, logger, metrics, state.budget);
       tracker.state = state;
 
       logger.info('Loaded existing cost tracker state', {

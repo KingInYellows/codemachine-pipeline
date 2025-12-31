@@ -39,33 +39,42 @@ export type ConfigHistoryEntry = z.infer<typeof ConfigHistoryEntrySchema>;
 
 const GovernanceSchema = z.object({
   // Approval workflow configuration (ADR-5)
-  approval_workflow: z.object({
-    require_approval_for_prd: z.boolean().default(true),
-    require_approval_for_spec: z.boolean().default(true),
-    require_approval_for_plan: z.boolean().default(true),
-    require_approval_for_code: z.boolean().default(true),
-    require_approval_for_pr: z.boolean().default(true),
-    require_approval_for_deploy: z.boolean().default(true),
-  }).describe('Gate-by-gate approval requirements per ADR-5'),
+  approval_workflow: z
+    .object({
+      require_approval_for_prd: z.boolean().default(true),
+      require_approval_for_spec: z.boolean().default(true),
+      require_approval_for_plan: z.boolean().default(true),
+      require_approval_for_code: z.boolean().default(true),
+      require_approval_for_pr: z.boolean().default(true),
+      require_approval_for_deploy: z.boolean().default(true),
+    })
+    .describe('Gate-by-gate approval requirements per ADR-5'),
 
   // Accountability tracking
-  accountability: z.object({
-    record_approver_identity: z.boolean().default(true),
-    require_approval_reason: z.boolean().default(false),
-    audit_log_retention_days: z.number().int().min(1).max(3650).default(365),
-  }).describe('Accountability settings for approval tracking'),
+  accountability: z
+    .object({
+      record_approver_identity: z.boolean().default(true),
+      require_approval_reason: z.boolean().default(false),
+      audit_log_retention_days: z.number().int().min(1).max(3650).default(365),
+    })
+    .describe('Accountability settings for approval tracking'),
 
   // Risk containment settings
-  risk_controls: z.object({
-    prevent_auto_merge: z.boolean().default(true),
-    prevent_force_push: z.boolean().default(true),
-    require_branch_protection: z.boolean().default(true),
-    max_files_per_pr: z.number().int().min(1).max(1000).default(100),
-    max_lines_changed_per_pr: z.number().int().min(1).max(50000).default(5000),
-  }).describe('Risk containment controls to limit blast radius'),
+  risk_controls: z
+    .object({
+      prevent_auto_merge: z.boolean().default(true),
+      prevent_force_push: z.boolean().default(true),
+      require_branch_protection: z.boolean().default(true),
+      max_files_per_pr: z.number().int().min(1).max(1000).default(100),
+      max_lines_changed_per_pr: z.number().int().min(1).max(50000).default(5000),
+    })
+    .describe('Risk containment controls to limit blast radius'),
 
   // Compliance and notes
-  compliance_tags: z.array(z.string()).default([]).describe('Tags for compliance tracking (e.g., SOC2, GDPR)'),
+  compliance_tags: z
+    .array(z.string())
+    .default([])
+    .describe('Tags for compliance tracking (e.g., SOC2, GDPR)'),
   governance_notes: z.string().optional().describe('Free-form governance documentation'),
 });
 
@@ -93,12 +102,16 @@ const GitHubSchema = z.object({
   enabled: z.boolean(),
   token_env_var: z.string().default('GITHUB_TOKEN'),
   api_base_url: z.string().url().default('https://api.github.com'),
-  required_scopes: z.array(z.enum(['repo', 'workflow', 'read:org', 'write:org'])).default(['repo', 'workflow']),
+  required_scopes: z
+    .array(z.enum(['repo', 'workflow', 'read:org', 'write:org']))
+    .default(['repo', 'workflow']),
   default_reviewers: z.array(z.string()).default([]),
-  branch_protection: z.object({
-    respect_required_reviews: z.boolean().default(true),
-    respect_status_checks: z.boolean().default(true),
-  }).optional(),
+  branch_protection: z
+    .object({
+      respect_required_reviews: z.boolean().default(true),
+      respect_status_checks: z.boolean().default(true),
+    })
+    .optional(),
 });
 
 export type GitHub = z.infer<typeof GitHubSchema>;
@@ -127,7 +140,11 @@ const RuntimeSchema = z.object({
   max_concurrent_tasks: z.number().int().min(1).max(10).default(3),
   timeout_minutes: z.number().int().min(5).max(120).default(30),
   context_token_budget: z.number().int().min(1000).max(100000).default(32000),
-  context_cost_budget_usd: z.number().nonnegative().default(5).describe('Maximum USD spend for context summarization'),
+  context_cost_budget_usd: z
+    .number()
+    .nonnegative()
+    .default(5)
+    .describe('Maximum USD spend for context summarization'),
   logs_format: z.enum(['ndjson', 'json', 'text']).default('ndjson'),
   run_directory: z.string().default('.ai-feature-pipeline/runs'),
 });
@@ -140,12 +157,28 @@ export type Runtime = z.infer<typeof RuntimeSchema>;
 
 const SafetySchema = z.object({
   redact_secrets: z.boolean().default(true),
-  require_approval_for_prd: z.boolean().default(true).describe('DEPRECATED: Use governance.approval_workflow instead'),
-  require_approval_for_plan: z.boolean().default(true).describe('DEPRECATED: Use governance.approval_workflow instead'),
-  require_approval_for_pr: z.boolean().default(true).describe('DEPRECATED: Use governance.approval_workflow instead'),
-  prevent_force_push: z.boolean().default(true).describe('DEPRECATED: Use governance.risk_controls instead'),
-  allowed_file_patterns: z.array(z.string()).default(['**/*.ts', '**/*.js', '**/*.md', '**/*.json']),
-  blocked_file_patterns: z.array(z.string()).default(['.env', '**/*.key', '**/*.pem', '**/credentials.*']),
+  require_approval_for_prd: z
+    .boolean()
+    .default(true)
+    .describe('DEPRECATED: Use governance.approval_workflow instead'),
+  require_approval_for_plan: z
+    .boolean()
+    .default(true)
+    .describe('DEPRECATED: Use governance.approval_workflow instead'),
+  require_approval_for_pr: z
+    .boolean()
+    .default(true)
+    .describe('DEPRECATED: Use governance.approval_workflow instead'),
+  prevent_force_push: z
+    .boolean()
+    .default(true)
+    .describe('DEPRECATED: Use governance.risk_controls instead'),
+  allowed_file_patterns: z
+    .array(z.string())
+    .default(['**/*.ts', '**/*.js', '**/*.md', '**/*.json']),
+  blocked_file_patterns: z
+    .array(z.string())
+    .default(['.env', '**/*.key', '**/*.pem', '**/credentials.*']),
 });
 
 export type Safety = z.infer<typeof SafetySchema>;
@@ -183,11 +216,13 @@ export type ValidationSettings = z.infer<typeof ValidationSettingsSchema>;
 const ConstraintsSchema = z.object({
   max_file_size_kb: z.number().int().min(100).max(10000).default(1000),
   max_context_files: z.number().int().min(10).max(1000).default(100),
-  rate_limits: z.object({
-    github_requests_per_hour: z.number().int().default(5000),
-    linear_requests_per_minute: z.number().int().default(60),
-    agent_requests_per_hour: z.number().int().default(100),
-  }).optional(),
+  rate_limits: z
+    .object({
+      github_requests_per_hour: z.number().int().default(5000),
+      linear_requests_per_minute: z.number().int().default(60),
+      agent_requests_per_hour: z.number().int().default(100),
+    })
+    .optional(),
 });
 
 export type Constraints = z.infer<typeof ConstraintsSchema>;
@@ -197,7 +232,9 @@ export type Constraints = z.infer<typeof ConstraintsSchema>;
 // ============================================================================
 
 export const RepoConfigSchema = z.object({
-  schema_version: z.string().regex(/^[0-9]+\.[0-9]+\.[0-9]+$/, 'Invalid schema version format (must be semver)'),
+  schema_version: z
+    .string()
+    .regex(/^[0-9]+\.[0-9]+\.[0-9]+$/, 'Invalid schema version format (must be semver)'),
   project: ProjectSchema,
   github: GitHubSchema,
   linear: LinearSchema,
@@ -208,13 +245,21 @@ export const RepoConfigSchema = z.object({
   constraints: ConstraintsSchema.optional(),
 
   // Enhanced governance controls (ADR-5)
-  governance: GovernanceSchema.optional().describe('Governance controls for approval workflows and accountability'),
+  governance: GovernanceSchema.optional().describe(
+    'Governance controls for approval workflows and accountability'
+  ),
 
   // Config history tracking for deterministic migrations
-  config_history: z.array(ConfigHistoryEntrySchema).default([]).describe('Migration history for schema version tracking'),
+  config_history: z
+    .array(ConfigHistoryEntrySchema)
+    .default([])
+    .describe('Migration history for schema version tracking'),
 
   // Deprecated: kept for backward compatibility
-  governance_notes: z.string().optional().describe('DEPRECATED: Use governance.governance_notes instead'),
+  governance_notes: z
+    .string()
+    .optional()
+    .describe('DEPRECATED: Use governance.governance_notes instead'),
 });
 
 export type RepoConfig = z.infer<typeof RepoConfigSchema>;
@@ -251,11 +296,13 @@ export function loadRepoConfig(configPath: string): ValidationResult {
     if (!fs.existsSync(configPath)) {
       return {
         success: false,
-        errors: [{
-          path: 'file',
-          message: `Config file not found: ${configPath}`,
-          suggestion: 'Run "ai-feature init" to create the configuration file',
-        }],
+        errors: [
+          {
+            path: 'file',
+            message: `Config file not found: ${configPath}`,
+            suggestion: 'Run "ai-feature init" to create the configuration file',
+          },
+        ],
       };
     }
 
@@ -268,11 +315,13 @@ export function loadRepoConfig(configPath: string): ValidationResult {
     } catch (parseError) {
       return {
         success: false,
-        errors: [{
-          path: 'json',
-          message: `Invalid JSON: ${parseError instanceof Error ? parseError.message : 'Unknown parse error'}`,
-          suggestion: 'Check for syntax errors (missing commas, quotes, brackets)',
-        }],
+        errors: [
+          {
+            path: 'json',
+            message: `Invalid JSON: ${parseError instanceof Error ? parseError.message : 'Unknown parse error'}`,
+            suggestion: 'Check for syntax errors (missing commas, quotes, brackets)',
+          },
+        ],
       };
     }
 
@@ -280,7 +329,7 @@ export function loadRepoConfig(configPath: string): ValidationResult {
     const parseResult = RepoConfigSchema.safeParse(rawConfig);
 
     if (!parseResult.success) {
-      const errors: ValidationError[] = parseResult.error.errors.map(err => {
+      const errors: ValidationError[] = parseResult.error.errors.map((err) => {
         const path = err.path.join('.');
         const suggestion = generateSuggestion(path, err.message);
 
@@ -308,7 +357,7 @@ export function loadRepoConfig(configPath: string): ValidationResult {
       if (!githubToken) {
         warnings.push(
           `GitHub integration enabled but ${config.github.token_env_var} not set. ` +
-          `Set ${config.github.token_env_var} with scopes: ${config.github.required_scopes.join(', ')}`
+            `Set ${config.github.token_env_var} with scopes: ${config.github.required_scopes.join(', ')}`
         );
       }
     }
@@ -316,9 +365,7 @@ export function loadRepoConfig(configPath: string): ValidationResult {
     if (config.linear.enabled) {
       const linearKey = process.env[config.linear.api_key_env_var];
       if (!linearKey) {
-        warnings.push(
-          `Linear integration enabled but ${config.linear.api_key_env_var} not set`
-        );
+        warnings.push(`Linear integration enabled but ${config.linear.api_key_env_var} not set`);
       }
     }
 
@@ -353,10 +400,12 @@ export function loadRepoConfig(configPath: string): ValidationResult {
   } catch (error) {
     return {
       success: false,
-      errors: [{
-        path: 'system',
-        message: `Unexpected error: ${error instanceof Error ? error.message : 'Unknown error'}`,
-      }],
+      errors: [
+        {
+          path: 'system',
+          message: `Unexpected error: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        },
+      ],
     };
   }
 }
@@ -570,7 +619,8 @@ export function createDefaultConfig(
         max_lines_changed_per_pr: 5000,
       },
       compliance_tags: [],
-      governance_notes: 'Configure integrations and adjust governance settings according to your organization requirements. See docs/requirements/RepoConfig_schema.md for details.',
+      governance_notes:
+        'Configure integrations and adjust governance settings according to your organization requirements. See docs/requirements/RepoConfig_schema.md for details.',
     };
   }
 

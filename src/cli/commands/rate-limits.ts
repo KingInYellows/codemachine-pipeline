@@ -95,7 +95,9 @@ export default class RateLimits extends Command {
 
       // Require feature ID
       if (!featureId) {
-        this.error('No feature run directory found. Use --feature to specify a feature ID.', { exit: 10 });
+        this.error('No feature run directory found. Use --feature to specify a feature ID.', {
+          exit: 10,
+        });
       }
 
       if (typedFlags.feature && featureId !== typedFlags.feature) {
@@ -125,18 +127,18 @@ export default class RateLimits extends Command {
 
       // Handle clear operation
       if (typedFlags.clear) {
-        await this.handleClearCooldown(
-          runDirPath,
-          typedFlags.clear,
-          logger,
-          typedFlags.json
-        );
+        await this.handleClearCooldown(runDirPath, typedFlags.clear, logger, typedFlags.json);
 
         // Record success
         if (metrics) {
           const duration = Date.now() - startTime;
-          metrics.observe(StandardMetrics.COMMAND_EXECUTION_DURATION_MS, duration, { command: 'rate-limits' });
-          metrics.increment(StandardMetrics.COMMAND_INVOCATIONS_TOTAL, { command: 'rate-limits', exit_code: '0' });
+          metrics.observe(StandardMetrics.COMMAND_EXECUTION_DURATION_MS, duration, {
+            command: 'rate-limits',
+          });
+          metrics.increment(StandardMetrics.COMMAND_INVOCATIONS_TOTAL, {
+            command: 'rate-limits',
+            exit_code: '0',
+          });
           await metrics.flush();
         }
 
@@ -155,7 +157,9 @@ export default class RateLimits extends Command {
         }
 
         if (logger) {
-          logger.info('Rate-limits command completed (clear operation)', { duration_ms: Date.now() - startTime });
+          logger.info('Rate-limits command completed (clear operation)', {
+            duration_ms: Date.now() - startTime,
+          });
           await logger.flush();
         }
 
@@ -190,8 +194,13 @@ export default class RateLimits extends Command {
       // Record success
       if (metrics) {
         const duration = Date.now() - startTime;
-        metrics.observe(StandardMetrics.COMMAND_EXECUTION_DURATION_MS, duration, { command: 'rate-limits' });
-        metrics.increment(StandardMetrics.COMMAND_INVOCATIONS_TOTAL, { command: 'rate-limits', exit_code: '0' });
+        metrics.observe(StandardMetrics.COMMAND_EXECUTION_DURATION_MS, duration, {
+          command: 'rate-limits',
+        });
+        metrics.increment(StandardMetrics.COMMAND_INVOCATIONS_TOTAL, {
+          command: 'rate-limits',
+          exit_code: '0',
+        });
         await metrics.flush();
       }
 
@@ -217,8 +226,13 @@ export default class RateLimits extends Command {
       // Record error
       if (metrics) {
         const duration = Date.now() - startTime;
-        metrics.observe(StandardMetrics.COMMAND_EXECUTION_DURATION_MS, duration, { command: 'rate-limits' });
-        metrics.increment(StandardMetrics.COMMAND_INVOCATIONS_TOTAL, { command: 'rate-limits', exit_code: '1' });
+        metrics.observe(StandardMetrics.COMMAND_EXECUTION_DURATION_MS, duration, {
+          command: 'rate-limits',
+        });
+        metrics.increment(StandardMetrics.COMMAND_INVOCATIONS_TOTAL, {
+          command: 'rate-limits',
+          exit_code: '1',
+        });
         await metrics.flush();
       }
 
@@ -283,11 +297,17 @@ export default class RateLimits extends Command {
 
     if (!isInCooldown) {
       if (jsonMode) {
-        this.log(JSON.stringify({
-          success: false,
-          provider,
-          message: 'Provider is not in cooldown',
-        }, null, 2));
+        this.log(
+          JSON.stringify(
+            {
+              success: false,
+              provider,
+              message: 'Provider is not in cooldown',
+            },
+            null,
+            2
+          )
+        );
       } else {
         this.warn(`Provider ${provider} is not in cooldown. No action taken.`);
       }
@@ -298,11 +318,17 @@ export default class RateLimits extends Command {
     await ledger.clearCooldown(provider);
 
     if (jsonMode) {
-      this.log(JSON.stringify({
-        success: true,
-        provider,
-        message: 'Cooldown cleared successfully',
-      }, null, 2));
+      this.log(
+        JSON.stringify(
+          {
+            success: true,
+            provider,
+            message: 'Cooldown cleared successfully',
+          },
+          null,
+          2
+        )
+      );
     } else {
       this.log('');
       this.log(`✓ Cooldown cleared for provider: ${provider}`);
@@ -318,7 +344,7 @@ export default class RateLimits extends Command {
    * Filter report to show only specified provider
    */
   private filterReportByProvider(report: RateLimitReport, provider: string): RateLimitReport {
-    const filteredProviders: Record<string, typeof report.providers[string]> = {};
+    const filteredProviders: Record<string, (typeof report.providers)[string]> = {};
 
     if (report.providers[provider]) {
       filteredProviders[provider] = report.providers[provider];

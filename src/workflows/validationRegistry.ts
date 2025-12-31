@@ -12,7 +12,10 @@ import {
 import type { StructuredLogger } from '../telemetry/logger';
 import { withLock, readManifest } from '../persistence/runDirectoryManager';
 
-export type { ValidationCommandType, ValidationCommandConfig } from '../core/validation/validationCommandConfig';
+export type {
+  ValidationCommandType,
+  ValidationCommandConfig,
+} from '../core/validation/validationCommandConfig';
 
 /**
  * Validation Command Registry
@@ -202,7 +205,9 @@ export async function initializeValidationRegistry(
  * @param runDir - Run directory path
  * @returns Validation registry or undefined if not initialized
  */
-export async function loadValidationRegistry(runDir: string): Promise<ValidationRegistry | undefined> {
+export async function loadValidationRegistry(
+  runDir: string
+): Promise<ValidationRegistry | undefined> {
   const registryPath = path.join(runDir, VALIDATION_DIR_NAME, REGISTRY_FILE_NAME);
 
   try {
@@ -284,7 +289,8 @@ export async function recordValidationAttempt(
       total_attempts: ledger.attempts.length,
       successful_attempts: ledger.attempts.filter((a) => a.exit_code === 0).length,
       failed_attempts: ledger.attempts.filter((a) => a.exit_code !== 0).length,
-      auto_fix_successes: ledger.attempts.filter((a) => a.auto_fix_attempted && a.exit_code === 0).length,
+      auto_fix_successes: ledger.attempts.filter((a) => a.auto_fix_attempted && a.exit_code === 0)
+        .length,
       last_updated: new Date().toISOString(),
     };
 
@@ -327,7 +333,10 @@ export async function getValidationAttempts(
  * @param commandType - Command type
  * @returns Number of attempts
  */
-export async function getAttemptCount(runDir: string, commandType: ValidationCommandType): Promise<number> {
+export async function getAttemptCount(
+  runDir: string,
+  commandType: ValidationCommandType
+): Promise<number> {
   const attempts = await getValidationAttempts(runDir, commandType);
   return attempts.length;
 }
@@ -339,7 +348,10 @@ export async function getAttemptCount(runDir: string, commandType: ValidationCom
  * @param commandType - Command type
  * @returns Whether retry limit has been exceeded
  */
-export async function hasExceededRetryLimit(runDir: string, commandType: ValidationCommandType): Promise<boolean> {
+export async function hasExceededRetryLimit(
+  runDir: string,
+  commandType: ValidationCommandType
+): Promise<boolean> {
   const command = await getValidationCommand(runDir, commandType);
   if (!command) {
     return false;
@@ -551,7 +563,8 @@ export function summarizeError(stderr: string, maxLines = 20): string {
     return relevantLines.join('\n');
   }
 
-  return [...relevantLines.slice(0, maxLines - 1), `... (${relevantLines.length - maxLines + 1} more lines)`].join(
-    '\n'
-  );
+  return [
+    ...relevantLines.slice(0, maxLines - 1),
+    `... (${relevantLines.length - maxLines + 1} more lines)`,
+  ].join('\n');
 }

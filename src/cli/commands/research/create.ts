@@ -3,7 +3,10 @@ import { getRunDirectoryPath } from '../../../persistence/runDirectoryManager';
 import { resolveRunDirectorySettings, selectFeatureId } from '../../utils/runDirectory';
 import { createCliLogger } from '../../../telemetry/logger';
 import { createRunMetricsCollector, StandardMetrics } from '../../../telemetry/metrics';
-import { createResearchCoordinator, type CreateResearchTaskOptions } from '../../../workflows/researchCoordinator';
+import {
+  createResearchCoordinator,
+  type CreateResearchTaskOptions,
+} from '../../../workflows/researchCoordinator';
 import type { FreshnessRequirement, ResearchSource } from '../../../core/models/ResearchTask';
 
 type CreateFlags = {
@@ -107,8 +110,11 @@ export default class ResearchCreate extends Command {
       metrics
     );
 
-    const sources = (typedFlags.source ?? []).map(value => this.parseSourceFlag(value));
-    const freshness = this.buildFreshnessRequirement(typedFlags['max-age'], typedFlags['force-fresh']);
+    const sources = (typedFlags.source ?? []).map((value) => this.parseSourceFlag(value));
+    const freshness = this.buildFreshnessRequirement(
+      typedFlags['max-age'],
+      typedFlags['force-fresh']
+    );
 
     try {
       const queueOptions: CreateResearchTaskOptions = {
@@ -145,11 +151,19 @@ export default class ResearchCreate extends Command {
       );
 
       const duration = Date.now() - startTime;
-      metrics.observe(StandardMetrics.COMMAND_EXECUTION_DURATION_MS, duration, { command: 'research:create' });
-      metrics.increment(StandardMetrics.COMMAND_INVOCATIONS_TOTAL, { command: 'research:create', exit_code: '0' });
+      metrics.observe(StandardMetrics.COMMAND_EXECUTION_DURATION_MS, duration, {
+        command: 'research:create',
+      });
+      metrics.increment(StandardMetrics.COMMAND_INVOCATIONS_TOTAL, {
+        command: 'research:create',
+        exit_code: '0',
+      });
       await metrics.flush();
     } catch (error) {
-      metrics.increment(StandardMetrics.COMMAND_INVOCATIONS_TOTAL, { command: 'research:create', exit_code: '1' });
+      metrics.increment(StandardMetrics.COMMAND_INVOCATIONS_TOTAL, {
+        command: 'research:create',
+        exit_code: '1',
+      });
       await metrics.flush();
 
       logger.error('Failed to create research task', {
@@ -167,10 +181,9 @@ export default class ResearchCreate extends Command {
 
     const normalizedType = typePart.trim() as ResearchSource['type'];
     if (!SOURCE_TYPES.includes(normalizedType)) {
-      this.error(
-        `Invalid source type "${typePart}". Allowed values: ${SOURCE_TYPES.join(', ')}`,
-        { exit: 2 }
-      );
+      this.error(`Invalid source type "${typePart}". Allowed values: ${SOURCE_TYPES.join(', ')}`, {
+        exit: 2,
+      });
     }
 
     const identifierRaw = rest.join(':').trim();
@@ -178,7 +191,7 @@ export default class ResearchCreate extends Command {
       this.error(`Invalid --source value "${value}". Identifier cannot be empty.`, { exit: 2 });
     }
 
-    const [identifier, description] = identifierRaw.split('|').map(part => part.trim());
+    const [identifier, description] = identifierRaw.split('|').map((part) => part.trim());
     const source: ResearchSource = {
       type: normalizedType,
       identifier,

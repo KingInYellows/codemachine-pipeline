@@ -412,7 +412,7 @@ async function isLockStale(lockPath: string): Promise<boolean> {
     }
 
     return false;
-  } catch (readError) {
+  } catch {
     // Unreadable or malformed lock file should be treated as stale
     return true;
   }
@@ -644,7 +644,7 @@ export async function writeManifest(runDir: string, manifest: RunManifest): Prom
     // Clean up temp file on error
     try {
       await fs.unlink(tempPath);
-    } catch (_cleanupError) {
+    } catch {
       // Ignore cleanup errors - don't mask the original error
     }
     throw wrapError(error, `write manifest to ${runDir}`);
@@ -896,7 +896,7 @@ export async function generateHashManifest(runDir: string, filePaths?: string[])
     ? filePaths.map((p) => path.resolve(runDir, p))
     : await collectArtifactPaths(runDir);
 
-  const hashManifest = await createHashManifest(absolutePaths);
+  const { manifest: hashManifest } = await createHashManifest(absolutePaths);
   const hashManifestPath = path.join(runDir, HASH_MANIFEST_FILE_NAME);
 
   await saveHashManifest(hashManifest, hashManifestPath);

@@ -13,8 +13,17 @@ import {
   type RunDirectorySettings,
 } from '../../utils/runDirectory';
 import { createCliLogger, LogLevel, RedactionEngine } from '../../../telemetry/logger';
-import { createRunMetricsCollector, StandardMetrics, type MetricsCollector } from '../../../telemetry/metrics';
-import { createRunTraceManager, SpanStatusCode, type TraceManager, type ActiveSpan } from '../../../telemetry/traces';
+import {
+  createRunMetricsCollector,
+  StandardMetrics,
+  type MetricsCollector,
+} from '../../../telemetry/metrics';
+import {
+  createRunTraceManager,
+  SpanStatusCode,
+  type TraceManager,
+  type ActiveSpan,
+} from '../../../telemetry/traces';
 import type { StructuredLogger } from '../../../telemetry/logger';
 import {
   summarizeDocument,
@@ -25,7 +34,11 @@ import {
 } from '../../../workflows/contextSummarizer';
 import { LocalSummarizerClient } from '../../../workflows/summarizerClients/localSummarizerClient';
 import { loadOrCreateCostTracker } from '../../../telemetry/costTracker';
-import { parseContextDocument, serializeContextDocument, type ContextDocument } from '../../../core/models/ContextDocument';
+import {
+  parseContextDocument,
+  serializeContextDocument,
+  type ContextDocument,
+} from '../../../core/models/ContextDocument';
 
 type SummarizeFlags = {
   feature?: string;
@@ -120,7 +133,9 @@ export default class ContextSummarize extends Command {
 
       const featureId = await selectFeatureId(settings.baseDir, typedFlags.feature);
       if (!featureId) {
-        this.error('Feature run directory not found. Use --feature to select a specific run.', { exit: 10 });
+        this.error('Feature run directory not found. Use --feature to select a specific run.', {
+          exit: 10,
+        });
       }
 
       const runDir = getRunDirectoryPath(settings.baseDir, featureId);
@@ -156,21 +171,19 @@ export default class ContextSummarize extends Command {
         tokenBudget: repoConfig.runtime.context_token_budget,
         enableSummarization: true,
         forceFresh: typedFlags.force,
-        ...(typedFlags['max-chunk-tokens'] !== undefined && { maxTokensPerChunk: typedFlags['max-chunk-tokens'] }),
-        ...(typedFlags['chunk-overlap'] !== undefined && { chunkOverlapPercent: typedFlags['chunk-overlap'] }),
+        ...(typedFlags['max-chunk-tokens'] !== undefined && {
+          maxTokensPerChunk: typedFlags['max-chunk-tokens'],
+        }),
+        ...(typedFlags['chunk-overlap'] !== undefined && {
+          chunkOverlapPercent: typedFlags['chunk-overlap'],
+        }),
       };
 
-      const costTracker = await loadOrCreateCostTracker(
-        featureId,
-        runDir,
-        logger,
-        metrics,
-        {
-          maxCostUsd: repoConfig.runtime.context_cost_budget_usd,
-          maxTokens: repoConfig.runtime.context_token_budget,
-          warningThreshold: 80,
-        }
-      );
+      const costTracker = await loadOrCreateCostTracker(featureId, runDir, logger, metrics, {
+        maxCostUsd: repoConfig.runtime.context_cost_budget_usd,
+        maxTokens: repoConfig.runtime.context_token_budget,
+        warningThreshold: 80,
+      });
 
       const patterns = typedFlags.path ?? [];
       const stats: SummarizationStats = {
@@ -203,7 +216,7 @@ export default class ContextSummarize extends Command {
       });
 
       await costTracker.flush();
-      const budgetWarnings = costTracker.getBudgetWarnings().map(warning => warning.message);
+      const budgetWarnings = costTracker.getBudgetWarnings().map((warning) => warning.message);
 
       await ensureTelemetryReferences(runDir);
 
@@ -228,9 +241,7 @@ export default class ContextSummarize extends Command {
         this.log(`Feature: ${featureId}`);
         this.log(`Run dir: ${runDir}`);
         this.log(`Summaries: ${output.summaries} (files=${output.files})`);
-        this.log(
-          `Chunks: generated=${output.chunks_generated} cached=${output.chunks_cached}`
-        );
+        this.log(`Chunks: generated=${output.chunks_generated} cached=${output.chunks_cached}`);
         this.log(
           `Tokens used: prompt=${output.tokens_used.prompt} completion=${output.tokens_used.completion} total=${output.tokens_used.total}`
         );
@@ -248,8 +259,13 @@ export default class ContextSummarize extends Command {
 
       const duration = Date.now() - startTime;
       if (metrics) {
-        metrics.observe(StandardMetrics.COMMAND_EXECUTION_DURATION_MS, duration, { command: 'context:summarize' });
-        metrics.increment(StandardMetrics.COMMAND_INVOCATIONS_TOTAL, { command: 'context:summarize', exit_code: '0' });
+        metrics.observe(StandardMetrics.COMMAND_EXECUTION_DURATION_MS, duration, {
+          command: 'context:summarize',
+        });
+        metrics.increment(StandardMetrics.COMMAND_INVOCATIONS_TOTAL, {
+          command: 'context:summarize',
+          exit_code: '0',
+        });
         await metrics.flush();
       }
 
@@ -268,7 +284,10 @@ export default class ContextSummarize extends Command {
       }
     } catch (error) {
       if (metrics) {
-        metrics.increment(StandardMetrics.COMMAND_INVOCATIONS_TOTAL, { command: 'context:summarize', exit_code: '1' });
+        metrics.increment(StandardMetrics.COMMAND_INVOCATIONS_TOTAL, {
+          command: 'context:summarize',
+          exit_code: '1',
+        });
         await metrics.flush();
       }
       if (commandSpan) {
@@ -276,7 +295,10 @@ export default class ContextSummarize extends Command {
         if (error instanceof Error) {
           commandSpan.setAttribute('error.message', error.message);
         }
-        commandSpan.end({ code: SpanStatusCode.ERROR, message: error instanceof Error ? error.message : 'unknown error' });
+        commandSpan.end({
+          code: SpanStatusCode.ERROR,
+          message: error instanceof Error ? error.message : 'unknown error',
+        });
       }
       if (traceManager) {
         await traceManager.flush();
@@ -302,9 +324,10 @@ export default class ContextSummarize extends Command {
 
   private ensureConfigReady(settings: RunDirectorySettings): void {
     if (settings.errors.length > 0 || !settings.config) {
-      const errorMessage = settings.errors.length > 0
-        ? settings.errors.join('; ')
-        : 'Repository configuration missing.';
+      const errorMessage =
+        settings.errors.length > 0
+          ? settings.errors.join('; ')
+          : 'Repository configuration missing.';
       this.error(`Invalid repo configuration: ${errorMessage}`, { exit: 10 });
     }
   }
@@ -316,14 +339,16 @@ export default class ContextSummarize extends Command {
       raw = await fs.readFile(summaryPath, 'utf-8');
     } catch (error) {
       if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
-        this.error('Context summary missing. Run the context aggregator before summarizing.', { exit: 30 });
+        this.error('Context summary missing. Run the context aggregator before summarizing.', {
+          exit: 30,
+        });
       }
       throw error;
     }
 
     const parsed = parseContextDocument(JSON.parse(raw));
     if (!parsed.success) {
-      const message = parsed.errors.map(err => `${err.path}: ${err.message}`).join('; ');
+      const message = parsed.errors.map((err) => `${err.path}: ${err.message}`).join('; ');
       this.error(`Context summary validation failed: ${message}`, { exit: 30 });
     }
 

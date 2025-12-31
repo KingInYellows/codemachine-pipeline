@@ -256,7 +256,7 @@ describe('Run Directory Manager', () => {
       await markApprovalRequired(runDir, 'prd'); // Duplicate
 
       const manifest = await readManifest(runDir);
-      expect(manifest.approvals.pending.filter(a => a === 'prd').length).toBe(1);
+      expect(manifest.approvals.pending.filter((a) => a === 'prd').length).toBe(1);
     });
 
     it('should not duplicate completed approvals', async () => {
@@ -265,7 +265,7 @@ describe('Run Directory Manager', () => {
       await markApprovalCompleted(runDir, 'spec');
 
       const manifest = await readManifest(runDir);
-      expect(manifest.approvals.completed.filter(a => a === 'spec').length).toBe(1);
+      expect(manifest.approvals.completed.filter((a) => a === 'spec').length).toBe(1);
     });
   });
 
@@ -292,9 +292,7 @@ describe('Run Directory Manager', () => {
     it('should fail to acquire lock when already locked', async () => {
       await acquireLock(runDir);
 
-      await expect(
-        acquireLock(runDir, { timeout: 500 })
-      ).rejects.toThrow(/Failed to acquire lock/);
+      await expect(acquireLock(runDir, { timeout: 500 })).rejects.toThrow(/Failed to acquire lock/);
 
       await releaseLock(runDir);
     });
@@ -327,13 +325,13 @@ describe('Run Directory Manager', () => {
       // First process acquires lock
       const process1 = (async () => {
         await acquireLock(runDir);
-        await new Promise(resolve => setTimeout(resolve, 200));
+        await new Promise((resolve) => setTimeout(resolve, 200));
         await releaseLock(runDir);
         results.push(true);
       })();
 
       // Wait a bit to ensure process1 acquires first
-      await new Promise(resolve => setTimeout(resolve, 50));
+      await new Promise((resolve) => setTimeout(resolve, 50));
 
       // Second process attempts to acquire
       const process2 = (async () => {
@@ -404,7 +402,7 @@ describe('Run Directory Manager', () => {
     });
 
     it('should not clobber execution counters when updating last step', async () => {
-      await updateManifest(runDir, manifest => ({
+      await updateManifest(runDir, (manifest) => ({
         execution: {
           ...manifest.execution,
           completed_steps: 5,
@@ -413,7 +411,7 @@ describe('Run Directory Manager', () => {
 
       await Promise.all([
         setLastStep(runDir, 'plan_generation'),
-        updateManifest(runDir, manifest => ({
+        updateManifest(runDir, (manifest) => ({
           execution: {
             ...manifest.execution,
             completed_steps: manifest.execution.completed_steps + 1,

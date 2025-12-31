@@ -3,7 +3,11 @@ import { getRunDirectoryPath } from '../../../persistence/runDirectoryManager';
 import { resolveRunDirectorySettings, selectFeatureId } from '../../utils/runDirectory';
 import { createCliLogger } from '../../../telemetry/logger';
 import { createRunMetricsCollector, StandardMetrics } from '../../../telemetry/metrics';
-import { createResearchCoordinator, type ResearchDiagnostics, type ResearchTaskFilters } from '../../../workflows/researchCoordinator';
+import {
+  createResearchCoordinator,
+  type ResearchDiagnostics,
+  type ResearchTaskFilters,
+} from '../../../workflows/researchCoordinator';
 import type { ResearchTask } from '../../../core/models/ResearchTask';
 
 type ListFlags = {
@@ -90,11 +94,12 @@ export default class ResearchList extends Command {
     );
 
     try {
-      const statusFilter = typedFlags.status && typedFlags.status.length > 0
-        ? (typedFlags.status.length === 1
-          ? typedFlags.status[0]
-          : typedFlags.status)
-        : undefined;
+      const statusFilter =
+        typedFlags.status && typedFlags.status.length > 0
+          ? typedFlags.status.length === 1
+            ? typedFlags.status[0]
+            : typedFlags.status
+          : undefined;
 
       const filters: ResearchTaskFilters = {};
       if (statusFilter !== undefined) {
@@ -123,11 +128,19 @@ export default class ResearchList extends Command {
       }
 
       const duration = Date.now() - startTime;
-      metrics.observe(StandardMetrics.COMMAND_EXECUTION_DURATION_MS, duration, { command: 'research:list' });
-      metrics.increment(StandardMetrics.COMMAND_INVOCATIONS_TOTAL, { command: 'research:list', exit_code: '0' });
+      metrics.observe(StandardMetrics.COMMAND_EXECUTION_DURATION_MS, duration, {
+        command: 'research:list',
+      });
+      metrics.increment(StandardMetrics.COMMAND_INVOCATIONS_TOTAL, {
+        command: 'research:list',
+        exit_code: '0',
+      });
       await metrics.flush();
     } catch (error) {
-      metrics?.increment(StandardMetrics.COMMAND_INVOCATIONS_TOTAL, { command: 'research:list', exit_code: '1' });
+      metrics?.increment(StandardMetrics.COMMAND_INVOCATIONS_TOTAL, {
+        command: 'research:list',
+        exit_code: '1',
+      });
       await metrics?.flush();
 
       logger.error('Failed to list research tasks', {

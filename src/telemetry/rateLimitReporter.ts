@@ -1,7 +1,4 @@
-import {
-  readRateLimitLedger,
-  type ProviderRateLimitState,
-} from './rateLimitLedger';
+import { readRateLimitLedger, type ProviderRateLimitState } from './rateLimitLedger';
 import type { MetricsCollector } from './metrics';
 import { StandardMetrics } from './metrics';
 
@@ -195,7 +192,9 @@ export class RateLimitReporter {
       lines.push(`⚠ Providers in cooldown: ${report.summary.providersInCooldown}`);
     }
     if (report.summary.providersRequiringAck > 0) {
-      lines.push(`⚠ Providers requiring manual acknowledgement: ${report.summary.providersRequiringAck}`);
+      lines.push(
+        `⚠ Providers requiring manual acknowledgement: ${report.summary.providersRequiringAck}`
+      );
     }
     lines.push('');
 
@@ -209,11 +208,15 @@ export class RateLimitReporter {
     for (const [providerName, providerReport] of Object.entries(report.providers)) {
       lines.push(`Provider: ${providerName}`);
       lines.push(`  Remaining: ${providerReport.remaining}`);
-      lines.push(`  Reset: ${providerReport.resetAt} (${this.formatDuration(providerReport.secondsUntilReset)})`);
+      lines.push(
+        `  Reset: ${providerReport.resetAt} (${this.formatDuration(providerReport.secondsUntilReset)})`
+      );
 
       if (providerReport.inCooldown) {
         if (providerReport.cooldownUntil && providerReport.secondsUntilCooldownEnd !== undefined) {
-          lines.push(`  ⚠ Cooldown: Active until ${providerReport.cooldownUntil} (${this.formatDuration(providerReport.secondsUntilCooldownEnd)})`);
+          lines.push(
+            `  ⚠ Cooldown: Active until ${providerReport.cooldownUntil} (${this.formatDuration(providerReport.secondsUntilCooldownEnd)})`
+          );
         } else {
           lines.push(`  ⚠ Cooldown: Active`);
         }
@@ -222,16 +225,22 @@ export class RateLimitReporter {
       }
 
       if (providerReport.manualAckRequired) {
-        lines.push(`  ⚠ Manual Acknowledgement Required: ${providerReport.recentHitCount} consecutive rate limit hits`);
+        lines.push(
+          `  ⚠ Manual Acknowledgement Required: ${providerReport.recentHitCount} consecutive rate limit hits`
+        );
         if (showWarnings) {
-          lines.push(`     Action: Review rate limit strategy and clear cooldown manually when ready`);
+          lines.push(
+            `     Action: Review rate limit strategy and clear cooldown manually when ready`
+          );
         }
       }
 
       if (verbose) {
         lines.push(`  Recent hits: ${providerReport.recentHitCount}`);
         if (providerReport.lastError) {
-          lines.push(`  Last error: ${providerReport.lastError.message} (${providerReport.lastError.timestamp})`);
+          lines.push(
+            `  Last error: ${providerReport.lastError.message} (${providerReport.lastError.timestamp})`
+          );
           lines.push(`  Request ID: ${providerReport.lastError.requestId}`);
         }
         lines.push(`  Last updated: ${providerReport.lastUpdated}`);
@@ -244,11 +253,17 @@ export class RateLimitReporter {
     if (showWarnings && (report.summary.anyInCooldown || report.summary.anyRequiresAck)) {
       lines.push('Warnings:');
       if (report.summary.anyInCooldown) {
-        lines.push('  • One or more providers are in cooldown. Consider throttling requests or waiting for reset.');
+        lines.push(
+          '  • One or more providers are in cooldown. Consider throttling requests or waiting for reset.'
+        );
       }
       if (report.summary.anyRequiresAck) {
-        lines.push('  • One or more providers require manual acknowledgement due to repeated rate limit hits.');
-        lines.push('    Review your rate limit strategy and use `ai-feature rate-limits clear <provider>` when ready.');
+        lines.push(
+          '  • One or more providers require manual acknowledgement due to repeated rate limit hits.'
+        );
+        lines.push(
+          '    Review your rate limit strategy and use `ai-feature rate-limits clear <provider>` when ready.'
+        );
       }
       lines.push('');
     }
@@ -353,7 +368,7 @@ export class RateLimitReporter {
    * Count total 429 responses in recent envelopes
    */
   private static countRecentHits(providerState: ProviderRateLimitState): number {
-    return providerState.recentEnvelopes.filter(e => e.statusCode === 429).length;
+    return providerState.recentEnvelopes.filter((e) => e.statusCode === 429).length;
   }
 
   /**

@@ -251,7 +251,11 @@ export class TraceManager {
   /**
    * Start a new root span (new trace)
    */
-  startSpan(name: string, kind = SpanKind.INTERNAL, attributes: Record<string, string | number | boolean> = {}): ActiveSpan {
+  startSpan(
+    name: string,
+    kind = SpanKind.INTERNAL,
+    attributes: Record<string, string | number | boolean> = {}
+  ): ActiveSpan {
     const context: TraceContext = {
       traceId: generateTraceId(),
       spanId: generateSpanId(),
@@ -392,7 +396,10 @@ export async function withSpan<T>(
       }
     }
 
-    span.end({ code: SpanStatusCode.ERROR, message: error instanceof Error ? error.message : 'Unknown error' });
+    span.end({
+      code: SpanStatusCode.ERROR,
+      message: error instanceof Error ? error.message : 'Unknown error',
+    });
     throw error;
   }
 }
@@ -428,7 +435,10 @@ export function withSpanSync<T>(
       }
     }
 
-    span.end({ code: SpanStatusCode.ERROR, message: error instanceof Error ? error.message : 'Unknown error' });
+    span.end({
+      code: SpanStatusCode.ERROR,
+      message: error instanceof Error ? error.message : 'Unknown error',
+    });
     throw error;
   }
 }

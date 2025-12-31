@@ -320,11 +320,7 @@ export class WriteActionQueue {
     this.backoffMaxMs = config.backoffMaxMs ?? DEFAULT_BACKOFF_MAX_MS;
 
     // Initialize rate limit ledger
-    this.rateLimitLedger = new RateLimitLedger(
-      this.runDir,
-      this.provider,
-      this.logger
-    );
+    this.rateLimitLedger = new RateLimitLedger(this.runDir, this.provider, this.logger);
   }
 
   /**
@@ -372,72 +368,76 @@ export class WriteActionQueue {
     repo: string,
     payload: WriteActionPayload
   ): Promise<WriteAction> {
-    return withLock(this.runDir, async () => {
-      // Generate idempotency key
-      const idempotencyKey = generateIdempotencyKey(actionType, owner, repo, payload);
+    return withLock(
+      this.runDir,
+      async () => {
+        // Generate idempotency key
+        const idempotencyKey = generateIdempotencyKey(actionType, owner, repo, payload);
 
-      // Check for existing action with same idempotency key
-      const existingAction = await this.findByIdempotencyKey(idempotencyKey);
-      if (existingAction) {
-        this.logger.info('Action already exists, skipping enqueue', {
-          action_id: existingAction.action_id,
+        // Check for existing action with same idempotency key
+        const existingAction = await this.findByIdempotencyKey(idempotencyKey);
+        if (existingAction) {
+          this.logger.info('Action already exists, skipping enqueue', {
+            action_id: existingAction.action_id,
+            idempotency_key: idempotencyKey,
+          });
+
+          // Update metrics
+          this.metrics?.increment(
+            'write_action_queue_deduped',
+            { provider: this.provider, action_type: actionType },
+            1,
+            'Write actions deduped by idempotency key'
+          );
+
+          return existingAction;
+        }
+
+        // Create new action
+        const action: WriteAction = {
+          action_id: generateActionId(),
+          action_type: actionType,
+          provider: this.provider,
+          owner,
+          repo,
+          payload,
+          idempotency_key: idempotencyKey,
+          status: WriteActionStatus.PENDING,
+          retry_count: 0,
+          max_retries: this.maxRetries,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        };
+
+        // Append to queue file
+        const line = JSON.stringify(action) + '\n';
+        await fs.appendFile(this.queuePath, line, 'utf-8');
+
+        this.logger.info('Action enqueued', {
+          action_id: action.action_id,
+          action_type: actionType,
           idempotency_key: idempotencyKey,
         });
 
+        // Update manifest
+        await this.updateManifestCounts(1, 0, 0, 0, 0);
+
         // Update metrics
-        this.metrics?.increment(
-          'write_action_queue_deduped',
-          { provider: this.provider, action_type: actionType },
-          1,
-          'Write actions deduped by idempotency key'
-        );
+        if (this.metrics) {
+          this.metrics.increment(
+            'write_action_queue_enqueued',
+            { provider: this.provider, action_type: actionType },
+            1,
+            'Write actions enqueued'
+          );
 
-        return existingAction;
-      }
+          await this.updateQueueDepthMetrics();
+        }
 
-      // Create new action
-      const action: WriteAction = {
-        action_id: generateActionId(),
-        action_type: actionType,
-        provider: this.provider,
-        owner,
-        repo,
-        payload,
-        idempotency_key: idempotencyKey,
-        status: WriteActionStatus.PENDING,
-        retry_count: 0,
-        max_retries: this.maxRetries,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      };
-
-      // Append to queue file
-      const line = JSON.stringify(action) + '\n';
-      await fs.appendFile(this.queuePath, line, 'utf-8');
-
-      this.logger.info('Action enqueued', {
-        action_id: action.action_id,
-        action_type: actionType,
-        idempotency_key: idempotencyKey,
-      });
-
-      // Update manifest
-      await this.updateManifestCounts(1, 0, 0, 0, 0);
-
-      // Update metrics
-      if (this.metrics) {
-        this.metrics.increment(
-          'write_action_queue_enqueued',
-          { provider: this.provider, action_type: actionType },
-          1,
-          'Write actions enqueued'
-        );
-
-        await this.updateQueueDepthMetrics();
-      }
-
-      return action;
-    }, { operation: 'enqueue_write_action' });
+        return action;
+      },
+      { operation: 'enqueue_write_action' }
+    );
   }
 
   /**
@@ -459,7 +459,8 @@ export class WriteActionQueue {
 
           return {
             success: false,
-            message: 'Queue draining paused: manual acknowledgement required due to repeated rate limits',
+            message:
+              'Queue draining paused: manual acknowledgement required due to repeated rate limits',
             actionsAffected: 0,
           };
         }
@@ -480,7 +481,7 @@ export class WriteActionQueue {
 
       // Get pending actions
       const pendingActions = Array.from(actions.values())
-        .filter(a => a.status === WriteActionStatus.PENDING)
+        .filter((a) => a.status === WriteActionStatus.PENDING)
         .sort((a, b) => a.created_at.localeCompare(b.created_at));
 
       if (pendingActions.length === 0) {
@@ -493,8 +494,9 @@ export class WriteActionQueue {
       }
 
       // Get current in-progress count
-      const inProgressCount = Array.from(actions.values())
-        .filter(a => a.status === WriteActionStatus.IN_PROGRESS).length;
+      const inProgressCount = Array.from(actions.values()).filter(
+        (a) => a.status === WriteActionStatus.IN_PROGRESS
+      ).length;
 
       // Calculate how many actions we can execute
       const availableSlots = Math.max(0, this.concurrencyLimit - inProgressCount);
@@ -551,112 +553,106 @@ export class WriteActionQueue {
   /**
    * Execute a single action with retry logic
    */
-  private async executeAction(
-    action: WriteAction,
-    executor: ActionExecutor
-  ): Promise<void> {
-    return withLock(this.runDir, async () => {
-      try {
-        // Mark as in-progress
-        await this.updateActionStatus(
-          action.action_id,
-          WriteActionStatus.IN_PROGRESS
-        );
+  private async executeAction(action: WriteAction, executor: ActionExecutor): Promise<void> {
+    return withLock(
+      this.runDir,
+      async () => {
+        try {
+          // Mark as in-progress
+          await this.updateActionStatus(action.action_id, WriteActionStatus.IN_PROGRESS);
 
-        this.logger.info('Executing action', {
-          action_id: action.action_id,
-          action_type: action.action_type,
-          retry_count: action.retry_count,
-        });
-
-        // Execute the action
-        await executor(action);
-
-        // Mark as completed
-        await this.updateActionStatus(
-          action.action_id,
-          WriteActionStatus.COMPLETED,
-          undefined,
-          new Date().toISOString()
-        );
-
-        this.logger.info('Action completed successfully', {
-          action_id: action.action_id,
-        });
-
-        // Update metrics
-        this.metrics?.increment(
-          'write_action_queue_completed',
-          { provider: this.provider, action_type: action.action_type },
-          1,
-          'Write actions completed successfully'
-        );
-      } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : String(error);
-
-        this.logger.error('Action execution failed', {
-          action_id: action.action_id,
-          error: errorMessage,
-          retry_count: action.retry_count,
-        });
-
-        // Check if we should retry
-        if (action.retry_count < action.max_retries) {
-          // Calculate backoff delay
-          const backoffDelay = Math.min(
-            this.backoffBaseMs * Math.pow(2, action.retry_count),
-            this.backoffMaxMs
-          );
-
-          this.logger.info('Scheduling action retry', {
+          this.logger.info('Executing action', {
             action_id: action.action_id,
-            retry_count: action.retry_count + 1,
-            backoff_ms: backoffDelay,
+            action_type: action.action_type,
+            retry_count: action.retry_count,
           });
 
-          // Wait for backoff
-          await new Promise(resolve => setTimeout(resolve, backoffDelay));
+          // Execute the action
+          await executor(action);
 
-          // Update retry count and mark as pending again
-          await this.updateActionRetry(action.action_id, errorMessage);
-
-          // Update metrics
-          this.metrics?.increment(
-            'write_action_queue_retried',
-            { provider: this.provider, action_type: action.action_type },
-            1,
-            'Write actions retried after failure'
-          );
-        } else {
-          // Max retries exceeded, mark as failed
+          // Mark as completed
           await this.updateActionStatus(
             action.action_id,
-            WriteActionStatus.FAILED,
-            errorMessage
+            WriteActionStatus.COMPLETED,
+            undefined,
+            new Date().toISOString()
           );
 
-          this.logger.error('Action failed after max retries', {
+          this.logger.info('Action completed successfully', {
             action_id: action.action_id,
-            max_retries: action.max_retries,
           });
 
           // Update metrics
           this.metrics?.increment(
-            'write_action_queue_failed',
+            'write_action_queue_completed',
             { provider: this.provider, action_type: action.action_type },
             1,
-            'Write actions failed after retries'
+            'Write actions completed successfully'
           );
+        } catch (error) {
+          const errorMessage = error instanceof Error ? error.message : String(error);
 
-          throw error;
+          this.logger.error('Action execution failed', {
+            action_id: action.action_id,
+            error: errorMessage,
+            retry_count: action.retry_count,
+          });
+
+          // Check if we should retry
+          if (action.retry_count < action.max_retries) {
+            // Calculate backoff delay
+            const backoffDelay = Math.min(
+              this.backoffBaseMs * Math.pow(2, action.retry_count),
+              this.backoffMaxMs
+            );
+
+            this.logger.info('Scheduling action retry', {
+              action_id: action.action_id,
+              retry_count: action.retry_count + 1,
+              backoff_ms: backoffDelay,
+            });
+
+            // Wait for backoff
+            await new Promise((resolve) => setTimeout(resolve, backoffDelay));
+
+            // Update retry count and mark as pending again
+            await this.updateActionRetry(action.action_id, errorMessage);
+
+            // Update metrics
+            this.metrics?.increment(
+              'write_action_queue_retried',
+              { provider: this.provider, action_type: action.action_type },
+              1,
+              'Write actions retried after failure'
+            );
+          } else {
+            // Max retries exceeded, mark as failed
+            await this.updateActionStatus(action.action_id, WriteActionStatus.FAILED, errorMessage);
+
+            this.logger.error('Action failed after max retries', {
+              action_id: action.action_id,
+              max_retries: action.max_retries,
+            });
+
+            // Update metrics
+            this.metrics?.increment(
+              'write_action_queue_failed',
+              { provider: this.provider, action_type: action.action_type },
+              1,
+              'Write actions failed after retries'
+            );
+
+            throw error;
+          }
+        } finally {
+          // Update queue depth metrics
+          if (this.metrics) {
+            await this.updateQueueDepthMetrics();
+          }
         }
-      } finally {
-        // Update queue depth metrics
-        if (this.metrics) {
-          await this.updateQueueDepthMetrics();
-        }
-      }
-    }, { operation: 'execute_write_action' });
+      },
+      { operation: 'execute_write_action' }
+    );
   }
 
   /**
@@ -690,11 +686,24 @@ export class WriteActionQueue {
     await this.saveQueue(actions);
 
     // Update manifest counts
-    const pendingDelta = status === WriteActionStatus.PENDING ? 1 : oldStatus === WriteActionStatus.PENDING ? -1 : 0;
-    const inProgressDelta = status === WriteActionStatus.IN_PROGRESS ? 1 : oldStatus === WriteActionStatus.IN_PROGRESS ? -1 : 0;
-    const completedDelta = status === WriteActionStatus.COMPLETED ? 1 : oldStatus === WriteActionStatus.COMPLETED ? -1 : 0;
-    const failedDelta = status === WriteActionStatus.FAILED ? 1 : oldStatus === WriteActionStatus.FAILED ? -1 : 0;
-    const skippedDelta = status === WriteActionStatus.SKIPPED ? 1 : oldStatus === WriteActionStatus.SKIPPED ? -1 : 0;
+    const pendingDelta =
+      status === WriteActionStatus.PENDING ? 1 : oldStatus === WriteActionStatus.PENDING ? -1 : 0;
+    const inProgressDelta =
+      status === WriteActionStatus.IN_PROGRESS
+        ? 1
+        : oldStatus === WriteActionStatus.IN_PROGRESS
+          ? -1
+          : 0;
+    const completedDelta =
+      status === WriteActionStatus.COMPLETED
+        ? 1
+        : oldStatus === WriteActionStatus.COMPLETED
+          ? -1
+          : 0;
+    const failedDelta =
+      status === WriteActionStatus.FAILED ? 1 : oldStatus === WriteActionStatus.FAILED ? -1 : 0;
+    const skippedDelta =
+      status === WriteActionStatus.SKIPPED ? 1 : oldStatus === WriteActionStatus.SKIPPED ? -1 : 0;
 
     await this.updateManifestCounts(
       0,
@@ -709,10 +718,7 @@ export class WriteActionQueue {
   /**
    * Update action retry count
    */
-  private async updateActionRetry(
-    actionId: string,
-    lastError: string
-  ): Promise<void> {
+  private async updateActionRetry(actionId: string, lastError: string): Promise<void> {
     const actions = await this.loadQueue();
     const action = actions.get(actionId);
 
@@ -737,7 +743,10 @@ export class WriteActionQueue {
 
     try {
       const content = await fs.readFile(this.queuePath, 'utf-8');
-      const lines = content.trim().split('\n').filter(line => line.length > 0);
+      const lines = content
+        .trim()
+        .split('\n')
+        .filter((line) => line.length > 0);
 
       for (const line of lines) {
         try {
@@ -760,9 +769,10 @@ export class WriteActionQueue {
    * Save queue to disk
    */
   private async saveQueue(actions: Map<string, WriteAction>): Promise<void> {
-    const lines = Array.from(actions.values())
-      .map(action => JSON.stringify(action))
-      .join('\n') + '\n';
+    const lines =
+      Array.from(actions.values())
+        .map((action) => JSON.stringify(action))
+        .join('\n') + '\n';
 
     await fs.writeFile(this.queuePath, lines, 'utf-8');
 
@@ -777,9 +787,7 @@ export class WriteActionQueue {
   /**
    * Find action by idempotency key
    */
-  private async findByIdempotencyKey(
-    idempotencyKey: string
-  ): Promise<WriteAction | undefined> {
+  private async findByIdempotencyKey(idempotencyKey: string): Promise<WriteAction | undefined> {
     const actions = await this.loadQueue();
 
     for (const action of actions.values()) {
@@ -902,41 +910,45 @@ export class WriteActionQueue {
    * Clear completed and failed actions
    */
   async clearCompleted(): Promise<QueueOperationResult> {
-    return withLock(this.runDir, async () => {
-      try {
-        const actions = await this.loadQueue();
+    return withLock(
+      this.runDir,
+      async () => {
+        try {
+          const actions = await this.loadQueue();
 
-        let removedCount = 0;
-        for (const [actionId, action] of actions) {
-          if (
-            action.status === WriteActionStatus.COMPLETED ||
-            action.status === WriteActionStatus.FAILED ||
-            action.status === WriteActionStatus.SKIPPED
-          ) {
-            actions.delete(actionId);
-            removedCount++;
+          let removedCount = 0;
+          for (const [actionId, action] of actions) {
+            if (
+              action.status === WriteActionStatus.COMPLETED ||
+              action.status === WriteActionStatus.FAILED ||
+              action.status === WriteActionStatus.SKIPPED
+            ) {
+              actions.delete(actionId);
+              removedCount++;
+            }
           }
+
+          await this.saveQueue(actions);
+
+          this.logger.info('Cleared completed actions', {
+            removed_count: removedCount,
+          });
+
+          return {
+            success: true,
+            message: `Cleared ${removedCount} completed/failed/skipped action(s)`,
+            actionsAffected: removedCount,
+          };
+        } catch (error) {
+          return {
+            success: false,
+            message: error instanceof Error ? error.message : 'Unknown error',
+            errors: [error instanceof Error ? error.stack || error.message : String(error)],
+          };
         }
-
-        await this.saveQueue(actions);
-
-        this.logger.info('Cleared completed actions', {
-          removed_count: removedCount,
-        });
-
-        return {
-          success: true,
-          message: `Cleared ${removedCount} completed/failed/skipped action(s)`,
-          actionsAffected: removedCount,
-        };
-      } catch (error) {
-        return {
-          success: false,
-          message: error instanceof Error ? error.message : 'Unknown error',
-          errors: [error instanceof Error ? error.stack || error.message : String(error)],
-        };
-      }
-    }, { operation: 'clear_completed_write_actions' });
+      },
+      { operation: 'clear_completed_write_actions' }
+    );
   }
 }
 
@@ -947,8 +959,6 @@ export class WriteActionQueue {
 /**
  * Create write action queue instance
  */
-export function createWriteActionQueue(
-  config: WriteActionQueueConfig
-): WriteActionQueue {
+export function createWriteActionQueue(config: WriteActionQueueConfig): WriteActionQueue {
   return new WriteActionQueue(config);
 }

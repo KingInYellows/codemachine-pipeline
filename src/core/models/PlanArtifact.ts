@@ -71,24 +71,29 @@ export type DAGMetadata = z.infer<typeof DAGMetadataSchema>;
 // PlanArtifact Schema
 // ============================================================================
 
-export const PlanArtifactSchema = z.object({
-  /** Schema version for future migrations (semver) */
-  schema_version: z.string().regex(/^[0-9]+\.[0-9]+\.[0-9]+$/, 'Invalid semver format'),
-  /** Feature ID this plan belongs to */
-  feature_id: z.string().min(1),
-  /** ISO 8601 timestamp when plan was created */
-  created_at: z.string().datetime(),
-  /** ISO 8601 timestamp when plan was last updated */
-  updated_at: z.string().datetime(),
-  /** DAG task nodes defining the execution plan */
-  tasks: z.array(TaskNodeSchema),
-  /** DAG metadata and statistics */
-  dag_metadata: DAGMetadataSchema,
-  /** SHA-256 checksum of plan content for idempotence */
-  checksum: z.string().regex(/^[a-f0-9]{64}$/, 'Invalid SHA-256 hash format').optional(),
-  /** Optional plan-level metadata */
-  metadata: z.record(z.unknown()).optional(),
-}).strict();
+export const PlanArtifactSchema = z
+  .object({
+    /** Schema version for future migrations (semver) */
+    schema_version: z.string().regex(/^[0-9]+\.[0-9]+\.[0-9]+$/, 'Invalid semver format'),
+    /** Feature ID this plan belongs to */
+    feature_id: z.string().min(1),
+    /** ISO 8601 timestamp when plan was created */
+    created_at: z.string().datetime(),
+    /** ISO 8601 timestamp when plan was last updated */
+    updated_at: z.string().datetime(),
+    /** DAG task nodes defining the execution plan */
+    tasks: z.array(TaskNodeSchema),
+    /** DAG metadata and statistics */
+    dag_metadata: DAGMetadataSchema,
+    /** SHA-256 checksum of plan content for idempotence */
+    checksum: z
+      .string()
+      .regex(/^[a-f0-9]{64}$/, 'Invalid SHA-256 hash format')
+      .optional(),
+    /** Optional plan-level metadata */
+    metadata: z.record(z.unknown()).optional(),
+  })
+  .strict();
 
 export type PlanArtifact = Readonly<z.infer<typeof PlanArtifactSchema>>;
 
@@ -102,13 +107,15 @@ export type PlanArtifact = Readonly<z.infer<typeof PlanArtifactSchema>>;
  * @param json - Raw JSON object or string
  * @returns Parsed PlanArtifact or error details
  */
-export function parsePlanArtifact(json: unknown): {
-  success: true;
-  data: PlanArtifact;
-} | {
-  success: false;
-  errors: Array<{ path: string; message: string }>;
-} {
+export function parsePlanArtifact(json: unknown):
+  | {
+      success: true;
+      data: PlanArtifact;
+    }
+  | {
+      success: false;
+      errors: Array<{ path: string; message: string }>;
+    } {
   const result = PlanArtifactSchema.safeParse(json);
 
   if (result.success) {
@@ -120,7 +127,7 @@ export function parsePlanArtifact(json: unknown): {
 
   return {
     success: false,
-    errors: result.error.errors.map(err => ({
+    errors: result.error.errors.map((err) => ({
       path: err.path.join('.') || 'root',
       message: err.message,
     })),
@@ -182,11 +189,11 @@ export function validateDAG(planArtifact: PlanArtifact): {
   errors: string[];
 } {
   const errors: string[] = [];
-  const taskIds = new Set(planArtifact.tasks.map(t => t.task_id));
+  const taskIds = new Set(planArtifact.tasks.map((t) => t.task_id));
 
   // Check for duplicate task IDs
   const duplicates = planArtifact.tasks
-    .map(t => t.task_id)
+    .map((t) => t.task_id)
     .filter((id, index, arr) => arr.indexOf(id) !== index);
 
   if (duplicates.length > 0) {
@@ -218,7 +225,7 @@ export function validateDAG(planArtifact: PlanArtifact): {
     visited.add(taskId);
     recursionStack.add(taskId);
 
-    const task = planArtifact.tasks.find(t => t.task_id === taskId);
+    const task = planArtifact.tasks.find((t) => t.task_id === taskId);
     if (task) {
       for (const dep of task.dependencies) {
         if (hasCycle(dep.task_id)) {
@@ -253,8 +260,8 @@ export function validateDAG(planArtifact: PlanArtifact): {
  */
 export function getEntryTasks(planArtifact: PlanArtifact): string[] {
   return planArtifact.tasks
-    .filter(task => task.dependencies.length === 0)
-    .map(task => task.task_id);
+    .filter((task) => task.dependencies.length === 0)
+    .map((task) => task.task_id);
 }
 
 /**
@@ -264,13 +271,10 @@ export function getEntryTasks(planArtifact: PlanArtifact): string[] {
  * @param taskId - Task ID to find dependents for
  * @returns Array of task IDs that depend on the specified task
  */
-export function getDependentTasks(
-  planArtifact: PlanArtifact,
-  taskId: string
-): string[] {
+export function getDependentTasks(planArtifact: PlanArtifact, taskId: string): string[] {
   return planArtifact.tasks
-    .filter(task => task.dependencies.some(dep => dep.task_id === taskId))
-    .map(task => task.task_id);
+    .filter((task) => task.dependencies.some((dep) => dep.task_id === taskId))
+    .map((task) => task.task_id);
 }
 
 /**

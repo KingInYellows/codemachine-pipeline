@@ -154,7 +154,7 @@ async function extractPRDGoals(
   const goalsText = goalsMatch[1].trim();
   const goalLines = goalsText
     .split('\n')
-    .filter(line => line.trim().startsWith('-') || line.trim().startsWith('*'));
+    .filter((line) => line.trim().startsWith('-') || line.trim().startsWith('*'));
 
   const goals: Array<{ goalId: string; content: string }> = [];
 
@@ -193,7 +193,7 @@ async function extractSpecRequirements(
   // Extract test plan items as requirements
   const spec = specJson as { test_plan?: Array<{ test_id: string; description: string }> };
   if (spec.test_plan && Array.isArray(spec.test_plan)) {
-    spec.test_plan.forEach(test => {
+    spec.test_plan.forEach((test) => {
       requirements.push({
         requirementId: test.test_id,
         content: test.description,
@@ -207,9 +207,7 @@ async function extractSpecRequirements(
 /**
  * Extract execution tasks from plan.json
  */
-async function extractExecutionTasks(
-  runDir: string
-): Promise<{
+async function extractExecutionTasks(runDir: string): Promise<{
   tasks: Array<{ taskId: string; description: string }>;
   hash?: string;
 }> {
@@ -228,7 +226,7 @@ async function extractExecutionTasks(
 
   const plan = planJson as { tasks?: Array<{ task_id: string; description: string }> };
   if (plan.tasks && Array.isArray(plan.tasks)) {
-    plan.tasks.forEach(task => {
+    plan.tasks.forEach((task) => {
       tasks.push({
         taskId: task.task_id,
         description: task.description,
@@ -267,8 +265,8 @@ function generatePRDToSpecLinks(
 
   // For each PRD goal, create a derived_from link to all spec requirements
   // (simplified heuristic - in production, you'd use semantic analysis)
-  prdGoals.forEach(goal => {
-    specRequirements.forEach(req => {
+  prdGoals.forEach((goal) => {
+    specRequirements.forEach((req) => {
       const linkId = `LINK-PRD-SPEC-${goal.goalId}-${req.requirementId}`;
 
       links.push({
@@ -306,8 +304,8 @@ function generateSpecToTaskLinks(
   const now = new Date().toISOString();
 
   // For each spec requirement, create an implements link to execution tasks
-  specRequirements.forEach(req => {
-    executionTasks.forEach(task => {
+  specRequirements.forEach((req) => {
+    executionTasks.forEach((task) => {
       const linkId = `LINK-SPEC-TASK-${req.requirementId}-${task.taskId}`;
 
       links.push({
@@ -356,9 +354,10 @@ function deduplicateLinks(links: TraceLink[]): { unique: TraceLink[]; duplicates
 /**
  * Validate trace links using TraceLink schema
  */
-function validateLinks(
-  links: TraceLink[]
-): { valid: TraceLink[]; errors: Array<{ linkId: string; errors: string }> } {
+function validateLinks(links: TraceLink[]): {
+  valid: TraceLink[];
+  errors: Array<{ linkId: string; errors: string }>;
+} {
   const valid: TraceLink[] = [];
   const errors: Array<{ linkId: string; errors: string }> = [];
 
@@ -370,7 +369,7 @@ function validateLinks(
     } else {
       errors.push({
         linkId: link.link_id,
-        errors: result.errors.map(e => `${e.path}: ${e.message}`).join(', '),
+        errors: result.errors.map((e) => `${e.path}: ${e.message}`).join(', '),
       });
     }
   }
@@ -413,10 +412,10 @@ export async function generateTraceMap(
         statistics: {
           totalLinks: existingDoc.links.length,
           prdToSpecLinks: existingDoc.links.filter(
-            l => l.source_type === 'prd_goal' && l.target_type === 'spec_requirement'
+            (l) => l.source_type === 'prd_goal' && l.target_type === 'spec_requirement'
           ).length,
           specToTaskLinks: existingDoc.links.filter(
-            l => l.source_type === 'execution_task' && l.target_type === 'spec_requirement'
+            (l) => l.source_type === 'execution_task' && l.target_type === 'spec_requirement'
           ).length,
           duplicatesPrevented: 0,
           validationErrors: 0,
@@ -583,10 +582,10 @@ export async function generateTraceMap(
   });
 
   const finalPrdToSpecCount = validLinks.filter(
-    link => link.source_type === 'prd_goal' && link.target_type === 'spec_requirement'
+    (link) => link.source_type === 'prd_goal' && link.target_type === 'spec_requirement'
   ).length;
   const finalSpecToTaskCount = validLinks.filter(
-    link => link.source_type === 'execution_task' && link.target_type === 'spec_requirement'
+    (link) => link.source_type === 'execution_task' && link.target_type === 'spec_requirement'
   ).length;
 
   return {
@@ -645,11 +644,7 @@ export async function loadTraceSummary(runDir: string): Promise<TraceSummary | n
     }
 
     const documentedGaps = doc.diagnostics?.gaps?.length ?? 0;
-    const outstandingGaps = documentedGaps > 0
-      ? documentedGaps
-      : executionTasks.size === 0
-        ? 1
-        : 0;
+    const outstandingGaps = documentedGaps > 0 ? documentedGaps : executionTasks.size === 0 ? 1 : 0;
 
     return {
       tracePath,

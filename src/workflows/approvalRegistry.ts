@@ -186,7 +186,7 @@ export async function grantApproval(
     if (existingRecord && existingRecord.artifact_hash !== artifactHash) {
       throw new Error(
         `Artifact hash mismatch: expected ${existingRecord.artifact_hash} but got ${artifactHash}. ` +
-        `The artifact may have been modified since approval was requested.`
+          `The artifact may have been modified since approval was requested.`
       );
     }
 
@@ -353,15 +353,17 @@ export async function validateApprovalForTransition(
     if (latestApproval.artifact_hash && latestApproval.artifact_hash !== currentArtifactHash) {
       errors.push(
         `Artifact hash mismatch for ${gateType}: approval hash ${latestApproval.artifact_hash} ` +
-        `does not match current artifact hash ${currentArtifactHash}. ` +
-        `Artifact may have been modified after approval.`
+          `does not match current artifact hash ${currentArtifactHash}. ` +
+          `Artifact may have been modified after approval.`
       );
       return { valid: false, approval: latestApproval, errors };
     }
 
     return { valid: true, approval: latestApproval, errors: [] };
   } catch (error) {
-    errors.push(`Failed to validate approval: ${error instanceof Error ? error.message : 'unknown error'}`);
+    errors.push(
+      `Failed to validate approval: ${error instanceof Error ? error.message : 'unknown error'}`
+    );
     return { valid: false, errors };
   }
 }
@@ -469,7 +471,7 @@ async function appendApprovalRecord(
   const parseResult = parseApprovalRecord(record);
   if (!parseResult.success) {
     throw new Error(
-      `Invalid approval record: ${parseResult.errors.map(e => `${e.path}: ${e.message}`).join(', ')}`
+      `Invalid approval record: ${parseResult.errors.map((e) => `${e.path}: ${e.message}`).join(', ')}`
     );
   }
 
@@ -493,7 +495,7 @@ function findLatestApprovalForGate(
   approvals: ApprovalRecord[],
   gateType: ApprovalGateType
 ): ApprovalRecord | undefined {
-  const gateApprovals = approvals.filter(a => a.gate_type === gateType);
+  const gateApprovals = approvals.filter((a) => a.gate_type === gateType);
   if (gateApprovals.length === 0) {
     return undefined;
   }
@@ -512,7 +514,7 @@ function findLatestApprovedForGate(
   gateType: ApprovalGateType
 ): ApprovalRecord | undefined {
   const approvedRecords = approvals.filter(
-    a => a.gate_type === gateType && a.verdict === 'approved'
+    (a) => a.gate_type === gateType && a.verdict === 'approved'
   );
 
   if (approvedRecords.length === 0) {

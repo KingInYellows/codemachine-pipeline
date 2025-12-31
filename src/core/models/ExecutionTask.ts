@@ -105,50 +105,52 @@ export type RateLimitBudget = z.infer<typeof RateLimitBudgetSchema>;
 // ExecutionTask Schema
 // ============================================================================
 
-export const ExecutionTaskSchema = z.object({
-  /** Schema version for future migrations (semver) */
-  schema_version: z.string().regex(/^[0-9]+\.[0-9]+\.[0-9]+$/, 'Invalid semver format'),
-  /** Unique execution task identifier */
-  task_id: z.string().min(1),
-  /** Feature ID this task belongs to */
-  feature_id: z.string().min(1),
-  /** Task title or description */
-  title: z.string().min(1),
-  /** Task type classification */
-  task_type: ExecutionTaskTypeSchema,
-  /** Current task status */
-  status: ExecutionTaskStatusSchema,
-  /** Task-specific configuration or parameters */
-  config: z.record(z.unknown()).optional(),
-  /** Assigned agent or executor identifier */
-  assigned_agent: z.string().optional(),
-  /** Task dependency IDs (must complete before this task starts) */
-  dependency_ids: z.array(z.string()).default([]),
-  /** Number of retry attempts made */
-  retry_count: z.number().int().nonnegative().default(0),
-  /** Maximum retry attempts allowed */
-  max_retries: z.number().int().nonnegative().default(3),
-  /** Last error encountered (if any) */
-  last_error: TaskErrorSchema.optional(),
-  /** Path to task execution logs (relative to run directory) */
-  logs_path: z.string().optional(),
-  /** Cost tracking for this task */
-  cost: CostTrackingSchema.optional(),
-  /** Rate limit budget tracking */
-  rate_limit_budget: RateLimitBudgetSchema.optional(),
-  /** Trace ID for distributed tracing */
-  trace_id: z.string().optional(),
-  /** ISO 8601 timestamp when task was created */
-  created_at: z.string().datetime(),
-  /** ISO 8601 timestamp when task was last updated */
-  updated_at: z.string().datetime(),
-  /** ISO 8601 timestamp when task started */
-  started_at: z.string().datetime().nullable().optional(),
-  /** ISO 8601 timestamp when task completed */
-  completed_at: z.string().datetime().nullable().optional(),
-  /** Optional task metadata */
-  metadata: z.record(z.unknown()).optional(),
-}).strict();
+export const ExecutionTaskSchema = z
+  .object({
+    /** Schema version for future migrations (semver) */
+    schema_version: z.string().regex(/^[0-9]+\.[0-9]+\.[0-9]+$/, 'Invalid semver format'),
+    /** Unique execution task identifier */
+    task_id: z.string().min(1),
+    /** Feature ID this task belongs to */
+    feature_id: z.string().min(1),
+    /** Task title or description */
+    title: z.string().min(1),
+    /** Task type classification */
+    task_type: ExecutionTaskTypeSchema,
+    /** Current task status */
+    status: ExecutionTaskStatusSchema,
+    /** Task-specific configuration or parameters */
+    config: z.record(z.unknown()).optional(),
+    /** Assigned agent or executor identifier */
+    assigned_agent: z.string().optional(),
+    /** Task dependency IDs (must complete before this task starts) */
+    dependency_ids: z.array(z.string()).default([]),
+    /** Number of retry attempts made */
+    retry_count: z.number().int().nonnegative().default(0),
+    /** Maximum retry attempts allowed */
+    max_retries: z.number().int().nonnegative().default(3),
+    /** Last error encountered (if any) */
+    last_error: TaskErrorSchema.optional(),
+    /** Path to task execution logs (relative to run directory) */
+    logs_path: z.string().optional(),
+    /** Cost tracking for this task */
+    cost: CostTrackingSchema.optional(),
+    /** Rate limit budget tracking */
+    rate_limit_budget: RateLimitBudgetSchema.optional(),
+    /** Trace ID for distributed tracing */
+    trace_id: z.string().optional(),
+    /** ISO 8601 timestamp when task was created */
+    created_at: z.string().datetime(),
+    /** ISO 8601 timestamp when task was last updated */
+    updated_at: z.string().datetime(),
+    /** ISO 8601 timestamp when task started */
+    started_at: z.string().datetime().nullable().optional(),
+    /** ISO 8601 timestamp when task completed */
+    completed_at: z.string().datetime().nullable().optional(),
+    /** Optional task metadata */
+    metadata: z.record(z.unknown()).optional(),
+  })
+  .strict();
 
 export type ExecutionTask = Readonly<z.infer<typeof ExecutionTaskSchema>>;
 
@@ -162,13 +164,15 @@ export type ExecutionTask = Readonly<z.infer<typeof ExecutionTaskSchema>>;
  * @param json - Raw JSON object or string
  * @returns Parsed ExecutionTask or error details
  */
-export function parseExecutionTask(json: unknown): {
-  success: true;
-  data: ExecutionTask;
-} | {
-  success: false;
-  errors: Array<{ path: string; message: string }>;
-} {
+export function parseExecutionTask(json: unknown):
+  | {
+      success: true;
+      data: ExecutionTask;
+    }
+  | {
+      success: false;
+      errors: Array<{ path: string; message: string }>;
+    } {
   const result = ExecutionTaskSchema.safeParse(json);
 
   if (result.success) {
@@ -180,7 +184,7 @@ export function parseExecutionTask(json: unknown): {
 
   return {
     success: false,
-    errors: result.error.errors.map(err => ({
+    errors: result.error.errors.map((err) => ({
       path: err.path.join('.') || 'root',
       message: err.message,
     })),

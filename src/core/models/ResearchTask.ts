@@ -81,38 +81,40 @@ export type FreshnessRequirement = z.infer<typeof FreshnessRequirementSchema>;
 // ResearchTask Schema
 // ============================================================================
 
-export const ResearchTaskSchema = z.object({
-  /** Schema version for future migrations (semver) */
-  schema_version: z.string().regex(/^[0-9]+\.[0-9]+\.[0-9]+$/, 'Invalid semver format'),
-  /** Unique research task identifier */
-  task_id: z.string().min(1),
-  /** Feature ID this research task belongs to */
-  feature_id: z.string().min(1),
-  /** Research task title */
-  title: z.string().min(1),
-  /** Research objectives (array of questions or goals) */
-  objectives: z.array(z.string().min(1)).min(1),
-  /** Sources to consult during research */
-  sources: z.array(ResearchSourceSchema).default([]),
-  /** Cache key for result reuse */
-  cache_key: z.string().optional(),
-  /** Freshness requirements for cached results */
-  freshness_requirements: FreshnessRequirementSchema.optional(),
-  /** Current research status */
-  status: ResearchStatusSchema,
-  /** Research results (populated when completed) */
-  results: ResearchResultSchema.optional(),
-  /** ISO 8601 timestamp when task was created */
-  created_at: z.string().datetime(),
-  /** ISO 8601 timestamp when task was last updated */
-  updated_at: z.string().datetime(),
-  /** ISO 8601 timestamp when task started */
-  started_at: z.string().datetime().nullable().optional(),
-  /** ISO 8601 timestamp when task completed */
-  completed_at: z.string().datetime().nullable().optional(),
-  /** Optional task metadata */
-  metadata: z.record(z.unknown()).optional(),
-}).strict();
+export const ResearchTaskSchema = z
+  .object({
+    /** Schema version for future migrations (semver) */
+    schema_version: z.string().regex(/^[0-9]+\.[0-9]+\.[0-9]+$/, 'Invalid semver format'),
+    /** Unique research task identifier */
+    task_id: z.string().min(1),
+    /** Feature ID this research task belongs to */
+    feature_id: z.string().min(1),
+    /** Research task title */
+    title: z.string().min(1),
+    /** Research objectives (array of questions or goals) */
+    objectives: z.array(z.string().min(1)).min(1),
+    /** Sources to consult during research */
+    sources: z.array(ResearchSourceSchema).default([]),
+    /** Cache key for result reuse */
+    cache_key: z.string().optional(),
+    /** Freshness requirements for cached results */
+    freshness_requirements: FreshnessRequirementSchema.optional(),
+    /** Current research status */
+    status: ResearchStatusSchema,
+    /** Research results (populated when completed) */
+    results: ResearchResultSchema.optional(),
+    /** ISO 8601 timestamp when task was created */
+    created_at: z.string().datetime(),
+    /** ISO 8601 timestamp when task was last updated */
+    updated_at: z.string().datetime(),
+    /** ISO 8601 timestamp when task started */
+    started_at: z.string().datetime().nullable().optional(),
+    /** ISO 8601 timestamp when task completed */
+    completed_at: z.string().datetime().nullable().optional(),
+    /** Optional task metadata */
+    metadata: z.record(z.unknown()).optional(),
+  })
+  .strict();
 
 export type ResearchTask = Readonly<z.infer<typeof ResearchTaskSchema>>;
 
@@ -126,13 +128,15 @@ export type ResearchTask = Readonly<z.infer<typeof ResearchTaskSchema>>;
  * @param json - Raw JSON object or string
  * @returns Parsed ResearchTask or error details
  */
-export function parseResearchTask(json: unknown): {
-  success: true;
-  data: ResearchTask;
-} | {
-  success: false;
-  errors: Array<{ path: string; message: string }>;
-} {
+export function parseResearchTask(json: unknown):
+  | {
+      success: true;
+      data: ResearchTask;
+    }
+  | {
+      success: false;
+      errors: Array<{ path: string; message: string }>;
+    } {
   const result = ResearchTaskSchema.safeParse(json);
 
   if (result.success) {
@@ -144,7 +148,7 @@ export function parseResearchTask(json: unknown): {
 
   return {
     success: false,
-    errors: result.error.errors.map(err => ({
+    errors: result.error.errors.map((err) => ({
       path: err.path.join('.') || 'root',
       message: err.message,
     })),
@@ -209,10 +213,7 @@ export function createResearchTask(
  * @param sources - Research sources
  * @returns SHA-256 hash cache key
  */
-export function generateCacheKey(
-  objectives: string[],
-  sources: ResearchSource[]
-): string {
+export function generateCacheKey(objectives: string[], sources: ResearchSource[]): string {
   const content = JSON.stringify({ objectives, sources });
   return createHash('sha256').update(content).digest('hex');
 }

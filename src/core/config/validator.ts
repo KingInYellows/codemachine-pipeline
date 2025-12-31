@@ -248,7 +248,8 @@ function validateGovernance(config: RepoConfig): ValidationError[] {
     errors.push({
       path: 'governance',
       message: 'Governance controls are not configured',
-      suggestion: 'Add "governance" section to enable approval workflows and accountability tracking',
+      suggestion:
+        'Add "governance" section to enable approval workflows and accountability tracking',
     });
     return errors;
   }
@@ -256,11 +257,12 @@ function validateGovernance(config: RepoConfig): ValidationError[] {
   const { approval_workflow, accountability, risk_controls } = config.governance;
 
   // Validate approval workflow is not completely disabled
-  const anyApprovalEnabled = Object.values(approval_workflow).some(v => v === true);
+  const anyApprovalEnabled = Object.values(approval_workflow).some((v) => v === true);
   if (!anyApprovalEnabled) {
     errors.push({
       path: 'governance.approval_workflow',
-      message: 'All approval gates are disabled - this violates ADR-5 human-in-the-loop requirements',
+      message:
+        'All approval gates are disabled - this violates ADR-5 human-in-the-loop requirements',
       suggestion: 'Enable at least one approval gate (recommended: require_approval_for_pr)',
     });
   }
@@ -306,7 +308,10 @@ function validateGovernance(config: RepoConfig): ValidationError[] {
 export function validateEnvironmentVariables(
   config: RepoConfig
 ): Record<string, { required: boolean; present: boolean; value?: string | undefined }> {
-  const result: Record<string, { required: boolean; present: boolean; value?: string | undefined }> = {};
+  const result: Record<
+    string,
+    { required: boolean; present: boolean; value?: string | undefined }
+  > = {};
 
   // GitHub credentials
   if (config.github.enabled) {

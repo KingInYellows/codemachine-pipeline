@@ -16,32 +16,34 @@ import { z } from 'zod';
 // RateLimitEnvelope Schema
 // ============================================================================
 
-export const RateLimitEnvelopeSchema = z.object({
-  /** Schema version for future migrations (semver) */
-  schema_version: z.string().regex(/^[0-9]+\.[0-9]+\.[0-9]+$/, 'Invalid semver format'),
-  /** Provider identifier (e.g., 'openai', 'anthropic', 'github', 'linear') */
-  provider: z.string().min(1),
-  /** Remaining request quota */
-  remaining_requests: z.number().int().nonnegative(),
-  /** Total request quota */
-  total_requests: z.number().int().nonnegative(),
-  /** Remaining token quota (if applicable) */
-  remaining_tokens: z.number().int().nonnegative().optional(),
-  /** Total token quota (if applicable) */
-  total_tokens: z.number().int().nonnegative().optional(),
-  /** ISO 8601 timestamp when quota resets */
-  reset_at: z.string().datetime().nullable().optional(),
-  /** Retry-after seconds if currently rate limited */
-  retry_after_seconds: z.number().int().nonnegative().optional(),
-  /** Last rate limit error message */
-  last_error: z.string().optional(),
-  /** ISO 8601 timestamp when last error occurred */
-  last_error_at: z.string().datetime().optional(),
-  /** ISO 8601 timestamp when envelope was last updated */
-  updated_at: z.string().datetime(),
-  /** Optional envelope metadata */
-  metadata: z.record(z.unknown()).optional(),
-}).strict();
+export const RateLimitEnvelopeSchema = z
+  .object({
+    /** Schema version for future migrations (semver) */
+    schema_version: z.string().regex(/^[0-9]+\.[0-9]+\.[0-9]+$/, 'Invalid semver format'),
+    /** Provider identifier (e.g., 'openai', 'anthropic', 'github', 'linear') */
+    provider: z.string().min(1),
+    /** Remaining request quota */
+    remaining_requests: z.number().int().nonnegative(),
+    /** Total request quota */
+    total_requests: z.number().int().nonnegative(),
+    /** Remaining token quota (if applicable) */
+    remaining_tokens: z.number().int().nonnegative().optional(),
+    /** Total token quota (if applicable) */
+    total_tokens: z.number().int().nonnegative().optional(),
+    /** ISO 8601 timestamp when quota resets */
+    reset_at: z.string().datetime().nullable().optional(),
+    /** Retry-after seconds if currently rate limited */
+    retry_after_seconds: z.number().int().nonnegative().optional(),
+    /** Last rate limit error message */
+    last_error: z.string().optional(),
+    /** ISO 8601 timestamp when last error occurred */
+    last_error_at: z.string().datetime().optional(),
+    /** ISO 8601 timestamp when envelope was last updated */
+    updated_at: z.string().datetime(),
+    /** Optional envelope metadata */
+    metadata: z.record(z.unknown()).optional(),
+  })
+  .strict();
 
 export type RateLimitEnvelope = Readonly<z.infer<typeof RateLimitEnvelopeSchema>>;
 
@@ -52,13 +54,15 @@ export type RateLimitEnvelope = Readonly<z.infer<typeof RateLimitEnvelopeSchema>
 /**
  * Parse and validate RateLimitEnvelope from JSON
  */
-export function parseRateLimitEnvelope(json: unknown): {
-  success: true;
-  data: RateLimitEnvelope;
-} | {
-  success: false;
-  errors: Array<{ path: string; message: string }>;
-} {
+export function parseRateLimitEnvelope(json: unknown):
+  | {
+      success: true;
+      data: RateLimitEnvelope;
+    }
+  | {
+      success: false;
+      errors: Array<{ path: string; message: string }>;
+    } {
   const result = RateLimitEnvelopeSchema.safeParse(json);
 
   if (result.success) {
@@ -70,7 +74,7 @@ export function parseRateLimitEnvelope(json: unknown): {
 
   return {
     success: false,
-    errors: result.error.errors.map(err => ({
+    errors: result.error.errors.map((err) => ({
       path: err.path.join('.') || 'root',
       message: err.message,
     })),
@@ -113,7 +117,10 @@ export function createRateLimitEnvelope(
  * Check if rate limit budget is exhausted
  */
 export function isRateLimited(envelope: RateLimitEnvelope): boolean {
-  return envelope.remaining_requests <= 0 || (envelope.remaining_tokens !== undefined && envelope.remaining_tokens <= 0);
+  return (
+    envelope.remaining_requests <= 0 ||
+    (envelope.remaining_tokens !== undefined && envelope.remaining_tokens <= 0)
+  );
 }
 
 /**

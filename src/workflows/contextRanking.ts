@@ -168,11 +168,7 @@ export function scoreByFileType(relativePath: string): number {
   }
 
   // Documentation
-  if (
-    pathLower.includes('/docs/') ||
-    pathLower.startsWith('docs/') ||
-    fileName.endsWith('.md')
-  ) {
+  if (pathLower.includes('/docs/') || pathLower.startsWith('docs/') || fileName.endsWith('.md')) {
     return 0.8;
   }
 
@@ -353,7 +349,7 @@ export function rankAndBudgetFiles(
   const { maxFiles, weights, now = new Date() } = options;
 
   // Step 1: Calculate scores for all files
-  const scoredFiles: FileMetadata[] = files.map(file => ({
+  const scoredFiles: FileMetadata[] = files.map((file) => ({
     ...file,
     score: calculateCompositeScore(file, weights, now),
   }));
@@ -362,9 +358,7 @@ export function rankAndBudgetFiles(
   scoredFiles.sort((a, b) => b.score - a.score);
 
   // Step 3: Apply max_files limit
-  const candidateFiles = maxFiles
-    ? scoredFiles.slice(0, maxFiles)
-    : scoredFiles;
+  const candidateFiles = maxFiles ? scoredFiles.slice(0, maxFiles) : scoredFiles;
 
   // Step 4: Accumulate files until budget exhausted
   const included: FileMetadata[] = [];
@@ -434,9 +428,7 @@ export function getExclusionSummary(
 
   // Simple heuristic: if we have maxFiles, assume the first
   // (totalExcluded - maxFiles) were excluded by max files limit
-  const excludedByMaxFiles = maxFiles
-    ? Math.max(0, totalExcluded - maxFiles)
-    : 0;
+  const excludedByMaxFiles = maxFiles ? Math.max(0, totalExcluded - maxFiles) : 0;
 
   const excludedByBudget = totalExcluded - excludedByMaxFiles;
 

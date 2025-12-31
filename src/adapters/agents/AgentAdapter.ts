@@ -43,9 +43,9 @@ import type { ExecutionTaskType } from '../../core/models/ExecutionTask';
  * Per acceptance criteria: error taxonomy alignment for orchestration
  */
 export const AgentErrorCategorySchema = z.enum([
-  'transient',      // Retry automatically (network, rate-limit, timeout)
-  'permanent',      // Do not retry (invalid input, unsupported feature, auth failure)
-  'humanAction',    // Requires human intervention (ambiguous requirements, policy violation)
+  'transient', // Retry automatically (network, rate-limit, timeout)
+  'permanent', // Do not retry (invalid input, unsupported feature, auth failure)
+  'humanAction', // Requires human intervention (ambiguous requirements, policy violation)
 ]);
 
 export type AgentErrorCategory = z.infer<typeof AgentErrorCategorySchema>;
@@ -53,16 +53,18 @@ export type AgentErrorCategory = z.infer<typeof AgentErrorCategorySchema>;
 /**
  * Structured agent error with taxonomy classification
  */
-export const AgentErrorSchema = z.object({
-  category: AgentErrorCategorySchema,
-  message: z.string().min(1),
-  code: z.string().optional(),
-  details: z.string().optional(),
-  providerId: z.string().optional(),
-  retryAfterSeconds: z.number().int().nonnegative().optional(),
-  fallbackAttempts: z.number().int().nonnegative().optional(),
-  timestamp: z.string().datetime(),
-}).strict();
+export const AgentErrorSchema = z
+  .object({
+    category: AgentErrorCategorySchema,
+    message: z.string().min(1),
+    code: z.string().optional(),
+    details: z.string().optional(),
+    providerId: z.string().optional(),
+    retryAfterSeconds: z.number().int().nonnegative().optional(),
+    fallbackAttempts: z.number().int().nonnegative().optional(),
+    timestamp: z.string().datetime(),
+  })
+  .strict();
 
 export type AgentError = z.infer<typeof AgentErrorSchema>;
 
@@ -140,7 +142,7 @@ export const CONTEXT_REQUIREMENTS: Record<ExecutionContext, ContextCapabilityReq
     minContextWindow: 16000,
     requiredFeatures: { codeReview: true },
     requiredTools: { jsonMode: true },
-    maxCostPer1kTokens: 0.10,
+    maxCostPer1kTokens: 0.1,
   },
   test_generation: {
     minContextWindow: 8000,
@@ -163,7 +165,7 @@ export const CONTEXT_REQUIREMENTS: Record<ExecutionContext, ContextCapabilityReq
     minContextWindow: 10000,
     requiredFeatures: { prdGeneration: true },
     requiredTools: { jsonMode: true },
-    maxCostPer1kTokens: 0.10,
+    maxCostPer1kTokens: 0.1,
   },
   spec_generation: {
     minContextWindow: 12000,
@@ -190,8 +192,8 @@ export function mapTaskTypeToContext(taskType: ExecutionTaskType): ExecutionCont
     refactoring: 'refactoring',
     documentation: 'documentation',
     pr_creation: 'summarization', // PR descriptions use summarization
-    deployment: 'documentation',  // Deployment docs use documentation context
-    other: 'summarization',       // Generic fallback
+    deployment: 'documentation', // Deployment docs use documentation context
+    other: 'summarization', // Generic fallback
   };
 
   return mapping[taskType];
@@ -263,24 +265,26 @@ export type ProviderInvoker = (
 /**
  * Session telemetry record for audit trails
  */
-export const SessionTelemetrySchema = z.object({
-  sessionId: z.string().min(1),
-  taskId: z.string().min(1),
-  featureId: z.string().min(1),
-  context: ExecutionContextSchema,
-  providerId: z.string().min(1),
-  modelId: z.string().min(1),
-  manifestHash: z.string().length(64), // SHA-256 hex
-  promptHash: z.string().length(64),   // SHA-256 hex for context redaction
-  tokensConsumed: z.number().int().nonnegative(),
-  costUsd: z.number().nonnegative(),
-  durationMs: z.number().nonnegative(),
-  usedFallback: z.boolean(),
-  fallbackAttempts: z.number().int().nonnegative().default(0),
-  errorCategory: AgentErrorCategorySchema.optional(),
-  timestamp: z.string().datetime(),
-  metadata: z.record(z.unknown()).optional(),
-}).strict();
+export const SessionTelemetrySchema = z
+  .object({
+    sessionId: z.string().min(1),
+    taskId: z.string().min(1),
+    featureId: z.string().min(1),
+    context: ExecutionContextSchema,
+    providerId: z.string().min(1),
+    modelId: z.string().min(1),
+    manifestHash: z.string().length(64), // SHA-256 hex
+    promptHash: z.string().length(64), // SHA-256 hex for context redaction
+    tokensConsumed: z.number().int().nonnegative(),
+    costUsd: z.number().nonnegative(),
+    durationMs: z.number().nonnegative(),
+    usedFallback: z.boolean(),
+    fallbackAttempts: z.number().int().nonnegative().default(0),
+    errorCategory: AgentErrorCategorySchema.optional(),
+    timestamp: z.string().datetime(),
+    metadata: z.record(z.unknown()).optional(),
+  })
+  .strict();
 
 export type SessionTelemetry = z.infer<typeof SessionTelemetrySchema>;
 
@@ -342,7 +346,8 @@ export class AgentAdapter {
     this.enableFallback = config.enableFallback ?? true;
     this.maxFallbackAttempts = config.maxFallbackAttempts ?? 2;
     this.telemetryDir = config.telemetryDir;
-    this.providerInvoker = config.providerInvoker ??
+    this.providerInvoker =
+      config.providerInvoker ??
       ((manifest, request, sessionId, startTime, fallbackAttempts) =>
         this.invokeProviderInternal(manifest, request, sessionId, startTime, fallbackAttempts));
 
@@ -403,12 +408,7 @@ export class AgentAdapter {
       });
 
       // 3. Execute with primary provider (with fallback retry)
-      const response = await this.executeWithFallback(
-        manifest,
-        request,
-        sessionId,
-        startTime
-      );
+      const response = await this.executeWithFallback(manifest, request, sessionId, startTime);
 
       // 4. Record success telemetry
       await this.recordTelemetry({
@@ -430,7 +430,6 @@ export class AgentAdapter {
       });
 
       return response;
-
     } catch (error) {
       const agentError = this.normalizeError(error);
 
@@ -552,14 +551,17 @@ export class AgentAdapter {
       }
     }
 
-    throw lastError ?? this.createError(
-      'permanent',
-      'Agent session failed with unknown fallback error',
-      'UNEXPECTED_FALLBACK_FAILURE',
-      undefined,
-      undefined,
-      undefined,
-      fallbackAttempts
+    throw (
+      lastError ??
+      this.createError(
+        'permanent',
+        'Agent session failed with unknown fallback error',
+        'UNEXPECTED_FALLBACK_FAILURE',
+        undefined,
+        undefined,
+        undefined,
+        fallbackAttempts
+      )
     );
   }
 
@@ -579,7 +581,7 @@ export class AgentAdapter {
 
     const manifestHash = this.getManifestHash(manifest);
     const modelId = request.modelId || manifest.costConfig.models[0].modelId;
-    const model = manifest.costConfig.models.find(m => m.modelId === modelId);
+    const model = manifest.costConfig.models.find((m) => m.modelId === modelId);
 
     if (!model) {
       throw this.createError(
@@ -596,8 +598,8 @@ export class AgentAdapter {
     // Simulate API call
     const tokensConsumed = 1000; // Mock value
     const durationMs = Date.now() - startTime;
-    const costUsd = (tokensConsumed / 1000) *
-      (model.inputCostPer1kTokens + model.outputCostPer1kTokens) / 2;
+    const costUsd =
+      ((tokensConsumed / 1000) * (model.inputCostPer1kTokens + model.outputCostPer1kTokens)) / 2;
 
     // Record cost
     if (this.costTracker) {
@@ -638,10 +640,7 @@ export class AgentAdapter {
       return cachedHash;
     }
 
-    return crypto
-      .createHash('sha256')
-      .update(JSON.stringify(manifest))
-      .digest('hex');
+    return crypto.createHash('sha256').update(JSON.stringify(manifest)).digest('hex');
   }
 
   /**
@@ -804,7 +803,7 @@ export class AgentAdapter {
    * Sleep utility for rate limit backoff
    */
   private sleep(ms: number): Promise<void> {
-    return new Promise(resolve => setTimeout(resolve, ms));
+    return new Promise((resolve) => setTimeout(resolve, ms));
   }
 
   /**
@@ -825,9 +824,9 @@ export class AgentAdapter {
     totalCostUsd: number;
     totalTokens: number;
   } {
-    const successful = this.sessionHistory.filter(s => !s.errorCategory);
-    const failed = this.sessionHistory.filter(s => s.errorCategory);
-    const withFallback = this.sessionHistory.filter(s => s.usedFallback);
+    const successful = this.sessionHistory.filter((s) => !s.errorCategory);
+    const failed = this.sessionHistory.filter((s) => s.errorCategory);
+    const withFallback = this.sessionHistory.filter((s) => s.usedFallback);
 
     return {
       totalSessions: this.sessionHistory.length,
