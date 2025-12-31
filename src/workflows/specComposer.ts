@@ -179,32 +179,49 @@ function extractPRDSections(prdMarkdown: string): {
 
   const goalsMatch = prdMarkdown.match(/## Goals\s+([\s\S]*?)(?=##|$)/i);
   if (goalsMatch) {
-    const goalsList = goalsMatch[1].trim().split('\n').filter(line => line.trim().startsWith('-'));
-    sections.goals = goalsList.map(g => g.replace(/^-\s*/, '').trim());
+    const goalsList = goalsMatch[1]
+      .trim()
+      .split('\n')
+      .filter((line) => line.trim().startsWith('-'));
+    sections.goals = goalsList.map((g) => g.replace(/^-\s*/, '').trim());
   }
 
   const nonGoalsMatch = prdMarkdown.match(/## Non-Goals\s+([\s\S]*?)(?=##|$)/i);
   if (nonGoalsMatch) {
-    const nonGoalsList = nonGoalsMatch[1].trim().split('\n').filter(line => line.trim().startsWith('-'));
-    sections.nonGoals = nonGoalsList.map(g => g.replace(/^-\s*/, '').trim());
+    const nonGoalsList = nonGoalsMatch[1]
+      .trim()
+      .split('\n')
+      .filter((line) => line.trim().startsWith('-'));
+    sections.nonGoals = nonGoalsList.map((g) => g.replace(/^-\s*/, '').trim());
   }
 
-  const acceptanceMatch = prdMarkdown.match(/## Success Criteria & Acceptance Criteria\s+([\s\S]*?)(?=##|$)/i);
+  const acceptanceMatch = prdMarkdown.match(
+    /## Success Criteria & Acceptance Criteria\s+([\s\S]*?)(?=##|$)/i
+  );
   if (acceptanceMatch) {
-    const acceptanceList = acceptanceMatch[1].trim().split('\n').filter(line => line.trim().startsWith('-'));
-    sections.acceptanceCriteria = acceptanceList.map(a => a.replace(/^-\s*/, '').trim());
+    const acceptanceList = acceptanceMatch[1]
+      .trim()
+      .split('\n')
+      .filter((line) => line.trim().startsWith('-'));
+    sections.acceptanceCriteria = acceptanceList.map((a) => a.replace(/^-\s*/, '').trim());
   }
 
   const risksMatch = prdMarkdown.match(/## Risks & Mitigations\s+([\s\S]*?)(?=##|$)/i);
   if (risksMatch) {
-    const risksList = risksMatch[1].trim().split('\n').filter(line => line.trim().startsWith('-'));
-    sections.risks = risksList.map(r => r.replace(/^-\s*/, '').trim());
+    const risksList = risksMatch[1]
+      .trim()
+      .split('\n')
+      .filter((line) => line.trim().startsWith('-'));
+    sections.risks = risksList.map((r) => r.replace(/^-\s*/, '').trim());
   }
 
   const questionsMatch = prdMarkdown.match(/## Open Questions\s+([\s\S]*?)(?=##|$)/i);
   if (questionsMatch) {
-    const questionsList = questionsMatch[1].trim().split('\n').filter(line => line.trim().startsWith('-'));
-    sections.openQuestions = questionsList.map(q => q.replace(/^-\s*/, '').trim());
+    const questionsList = questionsMatch[1]
+      .trim()
+      .split('\n')
+      .filter((line) => line.trim().startsWith('-'));
+    sections.openQuestions = questionsList.map((q) => q.replace(/^-\s*/, '').trim());
   }
 
   return sections;
@@ -276,10 +293,7 @@ function generateRiskAssessments(
 /**
  * Generate test plan from acceptance criteria and constraints
  */
-function generateTestPlan(
-  acceptanceCriteria: string[],
-  constraints: string[]
-): TestPlanItem[] {
+function generateTestPlan(acceptanceCriteria: string[], constraints: string[]): TestPlanItem[] {
   const testPlan: TestPlanItem[] = [];
 
   // Generate unit tests for each constraint
@@ -327,7 +341,7 @@ function generateTestPlan(
  * Generate rollout plan based on risks and constraints
  */
 function generateRolloutPlan(risks: RiskAssessment[]): RolloutPlan {
-  const hasHighRisks = risks.some(r => r.severity === 'high' || r.severity === 'critical');
+  const hasHighRisks = risks.some((r) => r.severity === 'high' || r.severity === 'critical');
 
   const strategy = hasHighRisks ? 'canary' : 'gradual';
 
@@ -408,20 +422,18 @@ function extractConstraints(
   }
 
   if (repoConfig.safety?.allowed_file_patterns?.length) {
-    constraints.push(
-      `Allowed file globs: ${repoConfig.safety.allowed_file_patterns.join(', ')}`
-    );
+    constraints.push(`Allowed file globs: ${repoConfig.safety.allowed_file_patterns.join(', ')}`);
   }
 
   if (repoConfig.safety?.blocked_file_patterns?.length) {
-    constraints.push(
-      `Blocked file globs: ${repoConfig.safety.blocked_file_patterns.join(', ')}`
-    );
+    constraints.push(`Blocked file globs: ${repoConfig.safety.blocked_file_patterns.join(', ')}`);
   }
 
   // Extract constraints from problem statement
   if (prdSections.problemStatement) {
-    const performanceMatches = prdSections.problemStatement.match(/performance|latency|speed|fast/gi);
+    const performanceMatches = prdSections.problemStatement.match(
+      /performance|latency|speed|fast/gi
+    );
     if (performanceMatches && performanceMatches.length > 0) {
       constraints.push('Performance: Response time must be < 500ms for P95');
     }
@@ -450,14 +462,11 @@ function extractConstraints(
 /**
  * Derive referenced file globs from context and repo configuration
  */
-function deriveReferencedFileGlobs(
-  contextDoc: ContextDocument,
-  repoConfig: RepoConfig
-): string[] {
+function deriveReferencedFileGlobs(contextDoc: ContextDocument, repoConfig: RepoConfig): string[] {
   const globs = new Set<string>();
 
   if (Array.isArray(repoConfig.project?.context_paths)) {
-    repoConfig.project.context_paths.forEach(contextPath => {
+    repoConfig.project.context_paths.forEach((contextPath) => {
       const normalized = contextPath.replace(/\/+$/, '');
       if (normalized.length > 0) {
         globs.add(`${normalized}/**/*`);
@@ -466,11 +475,11 @@ function deriveReferencedFileGlobs(
   }
 
   if (Array.isArray(repoConfig.safety?.allowed_file_patterns)) {
-    repoConfig.safety.allowed_file_patterns.forEach(pattern => globs.add(pattern));
+    repoConfig.safety.allowed_file_patterns.forEach((pattern) => globs.add(pattern));
   }
 
   const filePaths = Object.keys(contextDoc.files);
-  filePaths.forEach(filePath => {
+  filePaths.forEach((filePath) => {
     if (!filePath) {
       return;
     }
@@ -507,7 +516,7 @@ function detectUnknowns(
   for (const source of sources) {
     const todoMatches = source.match(/TODO:?\s*(.+)/gi);
     if (todoMatches) {
-      todoMatches.forEach(match => {
+      todoMatches.forEach((match) => {
         const description = match.replace(/TODO:?/i, '').trim();
         unknowns.push({
           section: 'content',
@@ -520,7 +529,7 @@ function detectUnknowns(
     // Check for TBD markers
     const tbdMatches = source.match(/TBD:?\s*(.+)/gi);
     if (tbdMatches) {
-      tbdMatches.forEach(match => {
+      tbdMatches.forEach((match) => {
         const description = match.replace(/TBD:?/i, '').trim();
         unknowns.push({
           section: 'content',
@@ -533,7 +542,7 @@ function detectUnknowns(
 
   // Check if open questions remain from PRD
   if (prdSections.openQuestions.length > 0) {
-    prdSections.openQuestions.forEach(question => {
+    prdSections.openQuestions.forEach((question) => {
       if (!question.includes('TODO')) {
         unknowns.push({
           section: 'open_questions',
@@ -604,12 +613,12 @@ function generateSpecMarkdown(
   lines.push('## Test Plan');
   lines.push('');
   if (specification.test_plan.length > 0) {
-    specification.test_plan.forEach(test => {
+    specification.test_plan.forEach((test) => {
       lines.push(`### ${test.test_id}: ${test.description}`);
       lines.push('');
       lines.push(`- **Type:** ${test.test_type}`);
       lines.push(`- **Acceptance Criteria:**`);
-      test.acceptance_criteria.forEach(criterion => {
+      test.acceptance_criteria.forEach((criterion) => {
         lines.push(`  - ${criterion}`);
       });
       lines.push('');
@@ -628,7 +637,7 @@ function generateSpecMarkdown(
     lines.push('');
     lines.push('**Phases:**');
     lines.push('');
-    rollout.phases.forEach(phase => {
+    rollout.phases.forEach((phase) => {
       lines.push(`- **${phase.phase_id}:** ${phase.description}`);
       if (phase.percentage !== undefined) {
         lines.push(`  - Coverage: ${phase.percentage}%`);
@@ -672,7 +681,7 @@ function generateSpecMarkdown(
   lines.push('## Referenced File Globs');
   lines.push('');
   if (referencedFileGlobs.length > 0) {
-    referencedFileGlobs.forEach(glob => {
+    referencedFileGlobs.forEach((glob) => {
       lines.push(`- \`${glob}\``);
     });
   } else {
@@ -684,7 +693,7 @@ function generateSpecMarkdown(
   lines.push('## Referenced Files');
   lines.push('');
   if (referencedFiles.length > 0) {
-    referencedFiles.forEach(file => {
+    referencedFiles.forEach((file) => {
       lines.push(`- \`${file}\``);
     });
   } else {
@@ -696,7 +705,7 @@ function generateSpecMarkdown(
   lines.push('## Change Log');
   lines.push('');
   if (specification.change_log.length > 0) {
-    specification.change_log.forEach(entry => {
+    specification.change_log.forEach((entry) => {
       lines.push(`### ${entry.version || 'Unversioned'} - ${entry.timestamp}`);
       lines.push('');
       lines.push(`**Author:** ${entry.author}`);
@@ -742,7 +751,7 @@ export async function composeSpecification(
   if (!prdApproved) {
     throw new Error(
       'PRD must be approved before generating specification. ' +
-      'Use `ai-feature approve prd` to approve the PRD first. (Exit code: 30)'
+        'Use `ai-feature approve prd` to approve the PRD first. (Exit code: 30)'
     );
   }
 
@@ -774,15 +783,15 @@ export async function composeSpecification(
     '',
     '## Goals',
     '',
-    ...prdSections.goals.map(g => `- ${g}`),
+    ...prdSections.goals.map((g) => `- ${g}`),
     '',
     '## Non-Goals',
     '',
-    ...prdSections.nonGoals.map(g => `- ${g}`),
+    ...prdSections.nonGoals.map((g) => `- ${g}`),
     '',
     '## Acceptance Criteria',
     '',
-    ...prdSections.acceptanceCriteria.map(a => `- ${a}`),
+    ...prdSections.acceptanceCriteria.map((a) => `- ${a}`),
     '',
   ].join('\n');
 
@@ -882,7 +891,9 @@ export async function composeSpecification(
     warnings.push(`${unknowns.length} unknown(s) detected requiring research`);
   }
   if (incompleteSections.length > 0) {
-    warnings.push(`${incompleteSections.length} section(s) incomplete: ${incompleteSections.join(', ')}`);
+    warnings.push(
+      `${incompleteSections.length} section(s) incomplete: ${incompleteSections.join(', ')}`
+    );
   }
 
   logger.info('Specification composition completed', {
@@ -907,7 +918,8 @@ export async function composeSpecification(
       usedAgent: Boolean(config.useAgent),
       incompleteSections,
       unknowns,
-      totalCitations: config.researchTasks.length + Object.keys(config.contextDocument.files).length,
+      totalCitations:
+        config.researchTasks.length + Object.keys(config.contextDocument.files).length,
       warnings,
     },
   };
@@ -944,7 +956,9 @@ export async function recordSpecApproval(
       const metadataContent = await fs.readFile(metadataPath, 'utf-8');
       metadata = JSON.parse(metadataContent) as SpecMetadata;
     } catch (error) {
-      throw new Error(`Failed to load spec metadata: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      throw new Error(
+        `Failed to load spec metadata: ${error instanceof Error ? error.message : 'Unknown error'}`
+      );
     }
 
     // Step 2: Verify spec hash matches
@@ -952,8 +966,8 @@ export async function recordSpecApproval(
     if (currentHash !== metadata.specHash) {
       throw new Error(
         `Spec content has changed since metadata was last updated. ` +
-        `Expected hash: ${metadata.specHash}, Current hash: ${currentHash}. ` +
-        `Please regenerate spec or update metadata.`
+          `Expected hash: ${metadata.specHash}, Current hash: ${currentHash}. ` +
+          `Please regenerate spec or update metadata.`
       );
     }
 

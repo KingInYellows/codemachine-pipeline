@@ -293,11 +293,13 @@ function isLikelyTextFile(relativePath: string): boolean {
   const ext = path.extname(relativePath).toLowerCase();
   if (!ext) {
     const normalized = relativePath.toLowerCase();
-    return normalized.includes('readme') ||
+    return (
+      normalized.includes('readme') ||
       normalized.includes('license') ||
       normalized.includes('changelog') ||
       normalized.endsWith('spec') ||
-      normalized.endsWith('plan');
+      normalized.endsWith('plan')
+    );
   }
   return TEXT_FILE_EXTENSIONS.has(ext);
 }
@@ -375,10 +377,7 @@ function resolveRepoPath(repoRoot: string, relativePath: string): string | null 
   const normalizedRoot = path.resolve(repoRoot);
   const absolutePath = path.resolve(normalizedRoot, relativePath);
 
-  if (
-    absolutePath === normalizedRoot ||
-    absolutePath.startsWith(`${normalizedRoot}${path.sep}`)
-  ) {
+  if (absolutePath === normalizedRoot || absolutePath.startsWith(`${normalizedRoot}${path.sep}`)) {
     return absolutePath;
   }
 
@@ -449,18 +448,13 @@ function extractUnknownsFromMetadata(
 
     if (entry && typeof entry === 'object') {
       const candidate = entry as Record<string, unknown>;
-      const objective = typeof candidate.objective === 'string'
-        ? candidate.objective
-        : undefined;
+      const objective = typeof candidate.objective === 'string' ? candidate.objective : undefined;
       const objectives = Array.isArray(candidate.objectives)
         ? candidate.objectives.filter((item): item is string => typeof item === 'string')
         : undefined;
 
-      const resolvedObjectives = objectives && objectives.length > 0
-        ? objectives
-        : objective
-          ? [objective]
-          : undefined;
+      const resolvedObjectives =
+        objectives && objectives.length > 0 ? objectives : objective ? [objective] : undefined;
 
       if (!resolvedObjectives || resolvedObjectives.length === 0) {
         return;
@@ -468,9 +462,10 @@ function extractUnknownsFromMetadata(
 
       const origin: UnknownOrigin = {
         type: 'metadata',
-        label: candidate.label && typeof candidate.label === 'string'
-          ? candidate.label
-          : `metadata[${index}]`,
+        label:
+          candidate.label && typeof candidate.label === 'string'
+            ? candidate.label
+            : `metadata[${index}]`,
         source: {
           type: 'documentation',
           identifier: 'context-metadata',
@@ -483,13 +478,12 @@ function extractUnknownsFromMetadata(
         : undefined;
 
       hints.push({
-        title: typeof candidate.title === 'string'
-          ? candidate.title
-          : buildDetectionTitle(origin, resolvedObjectives[0]),
+        title:
+          typeof candidate.title === 'string'
+            ? candidate.title
+            : buildDetectionTitle(origin, resolvedObjectives[0]),
         objectives: resolvedObjectives,
-        sources: providedSources && providedSources.length > 0
-          ? providedSources
-          : [origin.source],
+        sources: providedSources && providedSources.length > 0 ? providedSources : [origin.source],
         metadata: {
           detection: {
             origin: 'metadata',
@@ -546,9 +540,7 @@ function manualUnknownsToHints(manual?: ManualUnknownInput[]): UnknownDetectionH
     }
 
     if (isManualUnknownObject(entry)) {
-      const objective = typeof entry.objective === 'string'
-        ? entry.objective.trim()
-        : '';
+      const objective = typeof entry.objective === 'string' ? entry.objective.trim() : '';
 
       if (!objective) {
         return;
@@ -564,18 +556,18 @@ function manualUnknownsToHints(manual?: ManualUnknownInput[]): UnknownDetectionH
       };
 
       hints.push({
-        title: entry.title ?? buildDetectionTitle(
-          {
-            type: 'manual',
-            label: `manual[${index}]`,
-            source: fallbackSource,
-          },
-          objective
-        ),
+        title:
+          entry.title ??
+          buildDetectionTitle(
+            {
+              type: 'manual',
+              label: `manual[${index}]`,
+              source: fallbackSource,
+            },
+            objective
+          ),
         objectives: [objective],
-        sources: providedSources && providedSources.length > 0
-          ? providedSources
-          : [fallbackSource],
+        sources: providedSources && providedSources.length > 0 ? providedSources : [fallbackSource],
         metadata: entry.metadata ?? {
           detection: {
             origin: 'manual',
@@ -609,15 +601,13 @@ function extractUnknownsFromText(
       continue;
     }
 
-    const pattern = DETECTION_PATTERNS.find(candidate => candidate.regex.test(trimmed));
+    const pattern = DETECTION_PATTERNS.find((candidate) => candidate.regex.test(trimmed));
     if (!pattern) {
       continue;
     }
 
     const snippet = normalizeUnknownSnippet(trimmed);
-    const objective = snippet.endsWith('?')
-      ? snippet
-      : `Clarify requirement: ${snippet}`;
+    const objective = snippet.endsWith('?') ? snippet : `Clarify requirement: ${snippet}`;
     const dedupeKey = `${origin.type}:${origin.source.identifier}:${objective.toLowerCase()}`;
 
     if (dedupe.has(dedupeKey)) {
@@ -665,10 +655,10 @@ async function collectContextFileHints(
   }
 
   const sorted = fileEntries
-    .filter(record => isLikelyTextFile(record.path))
+    .filter((record) => isLikelyTextFile(record.path))
     .sort((a, b) => {
-      const aWeight = (a.token_count ?? a.size ?? 0);
-      const bWeight = (b.token_count ?? b.size ?? 0);
+      const aWeight = a.token_count ?? a.size ?? 0;
+      const bWeight = b.token_count ?? b.size ?? 0;
       return bWeight - aWeight;
     })
     .slice(0, Math.max(1, maxFiles));
@@ -691,11 +681,7 @@ async function collectContextFileHints(
       },
     };
 
-    const extracted = extractUnknownsFromText(
-      content,
-      origin,
-      DEFAULT_MAX_UNKNOWN_PER_FILE
-    );
+    const extracted = extractUnknownsFromText(content, origin, DEFAULT_MAX_UNKNOWN_PER_FILE);
     hints.push(...extracted);
   }
 
@@ -768,8 +754,8 @@ async function listTaskIds(runDir: string): Promise<string[]> {
   try {
     const entries = await fs.readdir(tasksDir);
     return entries
-      .filter(name => name.endsWith('.json'))
-      .map(name => name.replace('.json', ''));
+      .filter((name) => name.endsWith('.json'))
+      .map((name) => name.replace('.json', ''));
   } catch {
     return [];
   }
@@ -782,10 +768,7 @@ async function listTaskIds(runDir: string): Promise<string[]> {
 /**
  * Find existing task with matching cache key
  */
-async function findCachedTask(
-  runDir: string,
-  cacheKey: string
-): Promise<ResearchTask | null> {
+async function findCachedTask(runDir: string, cacheKey: string): Promise<ResearchTask | null> {
   const taskIds = await listTaskIds(runDir);
 
   for (const taskId of taskIds) {
@@ -802,10 +785,7 @@ async function findCachedTask(
 /**
  * Check if cached task result is still fresh
  */
-function isCachedTaskFresh(
-  task: ResearchTask,
-  requirements: FreshnessRequirement
-): boolean {
+function isCachedTaskFresh(task: ResearchTask, requirements: FreshnessRequirement): boolean {
   if (!task.results) {
     return false;
   }
@@ -857,10 +837,11 @@ export class ResearchCoordinator {
       const cachedTask = await findCachedTask(this.config.runDir, cacheKey);
 
       if (cachedTask) {
-        const freshnessReq = options.freshnessRequirements ?? this.config.defaultFreshness ?? {
-          max_age_hours: 24,
-          force_fresh: false,
-        };
+        const freshnessReq = options.freshnessRequirements ??
+          this.config.defaultFreshness ?? {
+            max_age_hours: 24,
+            force_fresh: false,
+          };
 
         const isFresh = isCachedTaskFresh(cachedTask, freshnessReq);
 
@@ -1027,10 +1008,7 @@ export class ResearchCoordinator {
   /**
    * Complete a research task with results
    */
-  async completeTask(
-    taskId: string,
-    results: ResearchResult
-  ): Promise<CompleteTaskResult> {
+  async completeTask(taskId: string, results: ResearchResult): Promise<CompleteTaskResult> {
     return withLock(this.config.runDir, async () => {
       const task = await loadTask(this.config.runDir, taskId);
 
@@ -1137,9 +1115,7 @@ export class ResearchCoordinator {
 
       // Apply status filter
       if (filters.status) {
-        const statusFilter = Array.isArray(filters.status)
-          ? filters.status
-          : [filters.status];
+        const statusFilter = Array.isArray(filters.status) ? filters.status : [filters.status];
 
         if (!statusFilter.includes(task.status)) {
           continue;
@@ -1265,11 +1241,7 @@ export class ResearchCoordinator {
         },
       };
       hints.push(
-        ...extractUnknownsFromText(
-          options.promptText,
-          origin,
-          DEFAULT_MAX_UNKNOWN_PER_SOURCE
-        )
+        ...extractUnknownsFromText(options.promptText, origin, DEFAULT_MAX_UNKNOWN_PER_SOURCE)
       );
     }
 
@@ -1285,11 +1257,7 @@ export class ResearchCoordinator {
         },
       };
       hints.push(
-        ...extractUnknownsFromText(
-          options.specText,
-          origin,
-          DEFAULT_MAX_UNKNOWN_PER_SOURCE
-        )
+        ...extractUnknownsFromText(options.specText, origin, DEFAULT_MAX_UNKNOWN_PER_SOURCE)
       );
     }
 
@@ -1308,7 +1276,10 @@ export class ResearchCoordinator {
       const key = [
         hint.title.toLowerCase(),
         hint.objectives.join('|').toLowerCase(),
-        hint.sources.map(source => source.identifier).sort().join('|'),
+        hint.sources
+          .map((source) => source.identifier)
+          .sort()
+          .join('|'),
       ].join('::');
 
       if (seen.has(key)) {
@@ -1329,9 +1300,13 @@ export class ResearchCoordinator {
       detected: deduped.length,
     });
 
-    this.metrics.increment('research_unknowns_detected_total', {
-      feature_id: this.config.featureId,
-    }, deduped.length);
+    this.metrics.increment(
+      'research_unknowns_detected_total',
+      {
+        feature_id: this.config.featureId,
+      },
+      deduped.length
+    );
 
     const tasks: ResearchTask[] = [];
     let createdCount = 0;

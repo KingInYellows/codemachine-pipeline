@@ -134,9 +134,9 @@ export default class Doctor extends Command {
       // Compute summary
       const summary = {
         total: checks.length,
-        passed: checks.filter(c => c.status === 'pass').length,
-        warnings: checks.filter(c => c.status === 'warn').length,
-        failed: checks.filter(c => c.status === 'fail').length,
+        passed: checks.filter((c) => c.status === 'pass').length,
+        warnings: checks.filter((c) => c.status === 'warn').length,
+        failed: checks.filter((c) => c.status === 'fail').length,
       };
 
       // Determine exit code and status
@@ -145,14 +145,23 @@ export default class Doctor extends Command {
 
       if (summary.failed > 0) {
         // Determine exit code based on failure types
-        const hasCredentialFailure = checks.some(c =>
-          c.status === 'fail' && (c.name.includes('Token') || c.name.includes('API Key') || c.name.includes('Credential'))
+        const hasCredentialFailure = checks.some(
+          (c) =>
+            c.status === 'fail' &&
+            (c.name.includes('Token') ||
+              c.name.includes('API Key') ||
+              c.name.includes('Credential'))
         );
-        const hasEnvironmentFailure = checks.some(c =>
-          c.status === 'fail' && (c.name.includes('Node') || c.name.includes('Git') || c.name.includes('Docker') || c.name.includes('Filesystem'))
+        const hasEnvironmentFailure = checks.some(
+          (c) =>
+            c.status === 'fail' &&
+            (c.name.includes('Node') ||
+              c.name.includes('Git') ||
+              c.name.includes('Docker') ||
+              c.name.includes('Filesystem'))
         );
-        const hasConfigFailure = checks.some(c =>
-          c.status === 'fail' && c.name.includes('Config')
+        const hasConfigFailure = checks.some(
+          (c) => c.status === 'fail' && c.name.includes('Config')
         );
 
         if (hasCredentialFailure) {
@@ -192,8 +201,13 @@ export default class Doctor extends Command {
       // Record success metrics
       if (metrics) {
         const duration = Date.now() - startTime;
-        metrics.observe(StandardMetrics.COMMAND_EXECUTION_DURATION_MS, duration, { command: 'doctor' });
-        metrics.increment(StandardMetrics.COMMAND_INVOCATIONS_TOTAL, { command: 'doctor', exit_code: String(exitCode) });
+        metrics.observe(StandardMetrics.COMMAND_EXECUTION_DURATION_MS, duration, {
+          command: 'doctor',
+        });
+        metrics.increment(StandardMetrics.COMMAND_INVOCATIONS_TOTAL, {
+          command: 'doctor',
+          exit_code: String(exitCode),
+        });
         await metrics.flush();
       }
 
@@ -227,8 +241,13 @@ export default class Doctor extends Command {
       // Record error metrics
       if (metrics) {
         const duration = Date.now() - startTime;
-        metrics.observe(StandardMetrics.COMMAND_EXECUTION_DURATION_MS, duration, { command: 'doctor' });
-        metrics.increment(StandardMetrics.COMMAND_INVOCATIONS_TOTAL, { command: 'doctor', exit_code: '1' });
+        metrics.observe(StandardMetrics.COMMAND_EXECUTION_DURATION_MS, duration, {
+          command: 'doctor',
+        });
+        metrics.increment(StandardMetrics.COMMAND_INVOCATIONS_TOTAL, {
+          command: 'doctor',
+          exit_code: '1',
+        });
         await metrics.flush();
       }
 
@@ -491,10 +510,14 @@ export default class Doctor extends Command {
   private checkOutboundConnectivity(): DiagnosticCheck {
     try {
       // Use curl or wget to check connectivity
-      const curlResult = spawnSync('curl', ['-Is', '--connect-timeout', '5', 'https://api.github.com'], {
-        encoding: 'utf-8',
-        timeout: 10000,
-      });
+      const curlResult = spawnSync(
+        'curl',
+        ['-Is', '--connect-timeout', '5', 'https://api.github.com'],
+        {
+          encoding: 'utf-8',
+          timeout: 10000,
+        }
+      );
 
       if (curlResult.status === 0) {
         return {
@@ -662,7 +685,8 @@ export default class Doctor extends Command {
     }
 
     // Check agent endpoint
-    const agentEndpoint = config.runtime.agent_endpoint || process.env[config.runtime.agent_endpoint_env_var];
+    const agentEndpoint =
+      config.runtime.agent_endpoint || process.env[config.runtime.agent_endpoint_env_var];
     if (!agentEndpoint) {
       checks.push({
         name: `${config.runtime.agent_endpoint_env_var} (Agent)`,
@@ -692,9 +716,9 @@ export default class Doctor extends Command {
     this.log('');
 
     // Group checks by status
-    const passed = payload.checks.filter(c => c.status === 'pass');
-    const warnings = payload.checks.filter(c => c.status === 'warn');
-    const failed = payload.checks.filter(c => c.status === 'fail');
+    const passed = payload.checks.filter((c) => c.status === 'pass');
+    const warnings = payload.checks.filter((c) => c.status === 'warn');
+    const failed = payload.checks.filter((c) => c.status === 'fail');
 
     // Display passed checks
     if (passed.length > 0) {

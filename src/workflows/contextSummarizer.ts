@@ -234,7 +234,7 @@ function chunkByFixedWidth(content: string, maxChars: number): FileChunk[] {
   }
 
   const total = chunks.length;
-  chunks.forEach(chunk => {
+  chunks.forEach((chunk) => {
     chunk.total = total;
   });
 
@@ -273,8 +273,10 @@ export function chunkFile(
     const lineWithNewline = i < lines.length - 1 ? `${line}\n` : line;
 
     // Check if adding this line would exceed chunk size
-    if (currentChunk.length > 0 &&
-        currentChunk.length + lineWithNewline.length > maxCharsPerChunk) {
+    if (
+      currentChunk.length > 0 &&
+      currentChunk.length + lineWithNewline.length > maxCharsPerChunk
+    ) {
       // Finalize current chunk
       const tokenCount = estimateTokens(Buffer.byteLength(currentChunk, 'utf-8'));
       chunks.push({
@@ -292,10 +294,8 @@ export function chunkFile(
       if (overlapStartIndex < i) {
         currentChunk += '\n';
       }
-      currentStartOffset = lineOffset - Buffer.byteLength(
-        lines.slice(overlapStartIndex, i).join('\n'),
-        'utf-8'
-      );
+      currentStartOffset =
+        lineOffset - Buffer.byteLength(lines.slice(overlapStartIndex, i).join('\n'), 'utf-8');
     } else {
       currentChunk += lineWithNewline;
     }
@@ -318,7 +318,7 @@ export function chunkFile(
 
   // Update total count for all chunks
   const totalChunks = chunks.length;
-  chunks.forEach(chunk => {
+  chunks.forEach((chunk) => {
     chunk.total = totalChunks;
   });
 
@@ -337,11 +337,7 @@ export function chunkFile(
  * @param chunkIndex - Chunk index
  * @returns Chunk ID
  */
-export function generateChunkId(
-  path: string,
-  fileSha: string,
-  chunkIndex: number
-): string {
+export function generateChunkId(path: string, fileSha: string, chunkIndex: number): string {
   const input = `${path}:${fileSha}:${chunkIndex}`;
   return crypto.createHash('sha256').update(input).digest('hex').substring(0, 16);
 }
@@ -353,10 +349,7 @@ export function generateChunkId(
  * @param chunkId - Chunk ID
  * @returns Chunk metadata or null if not found
  */
-async function loadCachedChunk(
-  contextDir: string,
-  chunkId: string
-): Promise<ChunkMetadata | null> {
+async function loadCachedChunk(contextDir: string, chunkId: string): Promise<ChunkMetadata | null> {
   const chunkPath = path.join(contextDir, 'docs', `${chunkId}.json`);
 
   try {
@@ -373,10 +366,7 @@ async function loadCachedChunk(
  * @param contextDir - Context directory path
  * @param metadata - Chunk metadata
  */
-async function saveCachedChunk(
-  contextDir: string,
-  metadata: ChunkMetadata
-): Promise<void> {
+async function saveCachedChunk(contextDir: string, metadata: ChunkMetadata): Promise<void> {
   const docsDir = path.join(contextDir, 'docs');
   await fs.mkdir(docsDir, { recursive: true });
 
@@ -465,10 +455,9 @@ export async function summarizeDocument(
 
           // Redact summary
           const redactionResult = redactor.redactWithReport(response.summary);
-          const redactionFlags = Array.from(new Set([
-            ...(response.redactionFlags ?? []),
-            ...redactionResult.flags,
-          ]));
+          const redactionFlags = Array.from(
+            new Set([...(response.redactionFlags ?? []), ...redactionResult.flags])
+          );
           const generatedAt = new Date().toISOString();
           const providerId = response.model ?? client.getProviderId();
 
@@ -556,10 +545,9 @@ export async function summarizeDocument(
 
             // Redact summary
             const redactionResult = redactor.redactWithReport(response.summary);
-            const redactionFlags = Array.from(new Set([
-              ...(response.redactionFlags ?? []),
-              ...redactionResult.flags,
-            ]));
+            const redactionFlags = Array.from(
+              new Set([...(response.redactionFlags ?? []), ...redactionResult.flags])
+            );
             const generatedAt = new Date().toISOString();
             const providerId = response.model ?? client.getProviderId();
 
@@ -600,7 +588,9 @@ export async function summarizeDocument(
               }
             );
           } catch (error) {
-            warnings.push(`Failed to summarize chunk ${chunk.index} of ${relativePath}: ${String(error)}`);
+            warnings.push(
+              `Failed to summarize chunk ${chunk.index} of ${relativePath}: ${String(error)}`
+            );
           }
         }
       }
@@ -682,11 +672,10 @@ export async function summarizeMultiple(
       warnings.push(...result.warnings);
 
       // Record metrics
-      metrics.recordTokenUsage(
-        result.tokensUsed.prompt,
-        result.tokensUsed.completion,
-        { provider: client.getProviderId(), operation: 'summarize' }
-      );
+      metrics.recordTokenUsage(result.tokensUsed.prompt, result.tokensUsed.completion, {
+        provider: client.getProviderId(),
+        operation: 'summarize',
+      });
     } catch (error) {
       errors.push(`Failed to summarize document ${contextDoc.feature_id}: ${String(error)}`);
       logger.error('Document summarization failed', {
@@ -745,11 +734,11 @@ export async function resynchronizeFiles(
 ): Promise<SummarizationResult> {
   // Filter files matching patterns
   const picomatch = (await import('picomatch')).default;
-  const matchers = patterns.map(pattern => picomatch(pattern, { dot: true }));
+  const matchers = patterns.map((pattern) => picomatch(pattern, { dot: true }));
 
   const filteredFiles: typeof contextDoc.files = {};
   for (const [filePath, fileRecord] of Object.entries(contextDoc.files)) {
-    if (matchers.some(matcher => matcher(filePath))) {
+    if (matchers.some((matcher) => matcher(filePath))) {
       filteredFiles[filePath] = fileRecord;
     }
   }
@@ -772,12 +761,5 @@ export async function resynchronizeFiles(
     forceFresh: true,
   };
 
-  return summarizeDocument(
-    filteredDoc,
-    client,
-    forceFreshConfig,
-    logger,
-    redactor,
-    costTracker
-  );
+  return summarizeDocument(filteredDoc, client, forceFreshConfig, logger, redactor, costTracker);
 }

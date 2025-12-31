@@ -73,7 +73,7 @@ describe('validateRepoConfig', () => {
 
     expect(result.success).toBe(false);
     expect(result.errors).toBeDefined();
-    expect(result.errors!.some(e => e.path.includes('run_directory'))).toBe(true);
+    expect(result.errors!.some((e) => e.path.includes('run_directory'))).toBe(true);
   });
 
   it('should pass directory checks when directory exists', () => {
@@ -102,7 +102,7 @@ describe('validateRepoConfig', () => {
 
     expect(result.success).toBe(false);
     expect(result.errors).toBeDefined();
-    expect(result.errors!.some(e => e.path === 'governance')).toBe(true);
+    expect(result.errors!.some((e) => e.path === 'governance')).toBe(true);
   });
 
   it('should pass governance checks with valid governance', () => {
@@ -113,6 +113,8 @@ describe('validateRepoConfig', () => {
 
     const result = validateRepoConfig(configPath, {
       enforceGovernance: true,
+      checkCredentials: false,
+      checkDirectories: false,
     });
 
     expect(result.success).toBe(true);
@@ -138,7 +140,9 @@ describe('validateRepoConfig', () => {
     });
 
     expect(result.success).toBe(false);
-    expect(result.errors!.some(e => e.message.includes('All approval gates are disabled'))).toBe(true);
+    expect(result.errors!.some((e) => e.message.includes('All approval gates are disabled'))).toBe(
+      true
+    );
   });
 
   it('should warn about disabled security controls', () => {
@@ -179,6 +183,8 @@ describe('validateRepoConfig', () => {
 
     const result = validateRepoConfig(configPath, {
       strictMode: false,
+      checkCredentials: false,
+      checkDirectories: false,
     });
 
     expect(result.success).toBe(true);
@@ -315,27 +321,21 @@ describe('checkSchemaCompatibility', () => {
     config.governance_notes = 'Old governance notes'; // Add deprecated field
     const result = checkSchemaCompatibility(config, '1.1.0');
 
-    expect(result.migration_notes.some(note =>
-      note.includes('governance_notes')
-    )).toBe(true);
+    expect(result.migration_notes.some((note) => note.includes('governance_notes'))).toBe(true);
   });
 
   it('should include migration documentation reference', () => {
     const config = createDefaultConfig('https://github.com/org/repo.git');
     const result = checkSchemaCompatibility(config, '2.0.0');
 
-    expect(result.migration_notes.some(note =>
-      note.includes('config_migrations.md')
-    )).toBe(true);
+    expect(result.migration_notes.some((note) => note.includes('config_migrations.md'))).toBe(true);
   });
 
   it('should recommend backup for major upgrades', () => {
     const config = createDefaultConfig('https://github.com/org/repo.git');
     const result = checkSchemaCompatibility(config, '2.0.0');
 
-    expect(result.migration_notes.some(note =>
-      note.includes('backup')
-    )).toBe(true);
+    expect(result.migration_notes.some((note) => note.includes('backup'))).toBe(true);
   });
 });
 
@@ -490,7 +490,7 @@ describe('Integration Tests', () => {
     expect(result.success).toBe(false);
     expect(result.errors).toBeDefined();
 
-    const dirError = result.errors!.find(e => e.path.includes('run_directory'));
+    const dirError = result.errors!.find((e) => e.path.includes('run_directory'));
     expect(dirError).toBeDefined();
     expect(dirError!.suggestion).toContain('mkdir');
   });

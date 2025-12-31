@@ -74,7 +74,10 @@ const ProvenanceDataSchema = z.object({
   /** ISO 8601 timestamp when context was captured */
   captured_at: z.string().datetime(),
   /** Git commit SHA if applicable */
-  commit_sha: z.string().regex(/^[a-f0-9]{40}$/, 'Invalid Git SHA format').optional(),
+  commit_sha: z
+    .string()
+    .regex(/^[a-f0-9]{40}$/, 'Invalid Git SHA format')
+    .optional(),
   /** Branch name if applicable */
   branch: z.string().optional(),
   /** Additional provenance metadata */
@@ -87,26 +90,28 @@ export type ProvenanceData = z.infer<typeof ProvenanceDataSchema>;
 // ContextDocument Schema
 // ============================================================================
 
-export const ContextDocumentSchema = z.object({
-  /** Schema version for future migrations (semver) */
-  schema_version: z.string().regex(/^[0-9]+\.[0-9]+\.[0-9]+$/, 'Invalid semver format'),
-  /** Feature ID this context belongs to */
-  feature_id: z.string().min(1),
-  /** ISO 8601 timestamp when context was created */
-  created_at: z.string().datetime(),
-  /** ISO 8601 timestamp when context was last updated */
-  updated_at: z.string().datetime(),
-  /** Map of file paths to context file records */
-  files: z.record(ContextFileRecordSchema),
-  /** Context summaries */
-  summaries: z.array(ContextSummarySchema).default([]),
-  /** Total token cost for all context */
-  total_token_count: z.number().int().nonnegative().default(0),
-  /** Provenance information */
-  provenance: ProvenanceDataSchema,
-  /** Optional context-level metadata */
-  metadata: z.record(z.unknown()).optional(),
-}).strict();
+export const ContextDocumentSchema = z
+  .object({
+    /** Schema version for future migrations (semver) */
+    schema_version: z.string().regex(/^[0-9]+\.[0-9]+\.[0-9]+$/, 'Invalid semver format'),
+    /** Feature ID this context belongs to */
+    feature_id: z.string().min(1),
+    /** ISO 8601 timestamp when context was created */
+    created_at: z.string().datetime(),
+    /** ISO 8601 timestamp when context was last updated */
+    updated_at: z.string().datetime(),
+    /** Map of file paths to context file records */
+    files: z.record(ContextFileRecordSchema),
+    /** Context summaries */
+    summaries: z.array(ContextSummarySchema).default([]),
+    /** Total token cost for all context */
+    total_token_count: z.number().int().nonnegative().default(0),
+    /** Provenance information */
+    provenance: ProvenanceDataSchema,
+    /** Optional context-level metadata */
+    metadata: z.record(z.unknown()).optional(),
+  })
+  .strict();
 
 export type ContextDocument = Readonly<z.infer<typeof ContextDocumentSchema>>;
 
@@ -117,13 +122,15 @@ export type ContextDocument = Readonly<z.infer<typeof ContextDocumentSchema>>;
 /**
  * Parse and validate ContextDocument from JSON
  */
-export function parseContextDocument(json: unknown): {
-  success: true;
-  data: ContextDocument;
-} | {
-  success: false;
-  errors: Array<{ path: string; message: string }>;
-} {
+export function parseContextDocument(json: unknown):
+  | {
+      success: true;
+      data: ContextDocument;
+    }
+  | {
+      success: false;
+      errors: Array<{ path: string; message: string }>;
+    } {
   const result = ContextDocumentSchema.safeParse(json);
 
   if (result.success) {
@@ -135,7 +142,7 @@ export function parseContextDocument(json: unknown): {
 
   return {
     success: false,
-    errors: result.error.errors.map(err => ({
+    errors: result.error.errors.map((err) => ({
       path: err.path.join('.') || 'root',
       message: err.message,
     })),

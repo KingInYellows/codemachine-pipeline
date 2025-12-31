@@ -32,131 +32,167 @@ import type { StructuredLogger } from '../../telemetry/logger';
  * Rate limit configuration schema
  * REQUIRED per acceptance criteria - manifests missing this will be rejected
  */
-const RateLimitsSchema = z.object({
-  requestsPerMinute: z.number().int().positive(),
-  tokensPerMinute: z.number().int().nonnegative().optional(),
-  burstCapacity: z.number().int().nonnegative().optional(),
-  concurrentRequests: z.number().int().positive().optional(),
-}).strict();
+const RateLimitsSchema = z
+  .object({
+    requestsPerMinute: z.number().int().positive(),
+    tokensPerMinute: z.number().int().nonnegative().optional(),
+    burstCapacity: z.number().int().nonnegative().optional(),
+    concurrentRequests: z.number().int().positive().optional(),
+  })
+  .strict();
 
 /**
  * Model-specific cost configuration schema
  */
-const ModelCostConfigSchema = z.object({
-  modelId: z.string().min(1),
-  inputCostPer1kTokens: z.number().nonnegative(),
-  outputCostPer1kTokens: z.number().nonnegative(),
-  contextWindow: z.number().int().positive().optional(),
-  maxOutputTokens: z.number().int().positive().optional(),
-}).strict();
+const ModelCostConfigSchema = z
+  .object({
+    modelId: z.string().min(1),
+    inputCostPer1kTokens: z.number().nonnegative(),
+    outputCostPer1kTokens: z.number().nonnegative(),
+    contextWindow: z.number().int().positive().optional(),
+    maxOutputTokens: z.number().int().positive().optional(),
+  })
+  .strict();
 
 /**
  * Cost configuration schema
  * REQUIRED per acceptance criteria - manifests missing pricing will be rejected
  */
-const CostConfigSchema = z.object({
-  currency: z.string().regex(/^[A-Z]{3}$/).default('USD'),
-  models: z.array(ModelCostConfigSchema).min(1),
-}).strict();
+const CostConfigSchema = z
+  .object({
+    currency: z
+      .string()
+      .regex(/^[A-Z]{3}$/)
+      .default('USD'),
+    models: z.array(ModelCostConfigSchema).min(1),
+  })
+  .strict();
 
 /**
  * Tool support flags schema
  */
-const ToolsSchema = z.object({
-  streaming: z.boolean().default(false),
-  functionCalling: z.boolean().default(false),
-  vision: z.boolean().default(false),
-  jsonMode: z.boolean().default(false),
-  embeddings: z.boolean().default(false),
-}).strict().optional();
+const ToolsSchema = z
+  .object({
+    streaming: z.boolean().default(false),
+    functionCalling: z.boolean().default(false),
+    vision: z.boolean().default(false),
+    jsonMode: z.boolean().default(false),
+    embeddings: z.boolean().default(false),
+  })
+  .strict()
+  .optional();
 
 /**
  * Pipeline feature capability flags schema (ADR-1 capability set)
  */
-const FeaturesSchema = z.object({
-  prdGeneration: z.boolean().default(true),
-  specGeneration: z.boolean().default(true),
-  codeGeneration: z.boolean().default(true),
-  codeReview: z.boolean().default(true),
-  testGeneration: z.boolean().default(true),
-  summarization: z.boolean().default(true),
-}).strict().optional();
+const FeaturesSchema = z
+  .object({
+    prdGeneration: z.boolean().default(true),
+    specGeneration: z.boolean().default(true),
+    codeGeneration: z.boolean().default(true),
+    codeReview: z.boolean().default(true),
+    testGeneration: z.boolean().default(true),
+    summarization: z.boolean().default(true),
+  })
+  .strict()
+  .optional();
 
 /**
  * API endpoint configuration schema
  */
-const EndpointSchema = z.object({
-  baseUrl: z.string().url().optional(),
-  authMethod: z.enum(['bearer', 'api-key', 'oauth', 'none']).default('bearer'),
-  timeout: z.number().int().min(1000).default(30000),
-}).strict().optional();
+const EndpointSchema = z
+  .object({
+    baseUrl: z.string().url().optional(),
+    authMethod: z.enum(['bearer', 'api-key', 'oauth', 'none']).default('bearer'),
+    timeout: z.number().int().min(1000).default(30000),
+  })
+  .strict()
+  .optional();
 
 /**
  * Retry policy schema for transient error handling
  */
-const RetryPolicySchema = z.object({
-  maxAttempts: z.number().int().nonnegative().default(3),
-  baseDelayMs: z.number().int().nonnegative().default(1000),
-  maxDelayMs: z.number().int().nonnegative().default(60000),
-  backoffMultiplier: z.number().min(1).default(2),
-}).strict();
+const RetryPolicySchema = z
+  .object({
+    maxAttempts: z.number().int().nonnegative().default(3),
+    baseDelayMs: z.number().int().nonnegative().default(1000),
+    maxDelayMs: z.number().int().nonnegative().default(60000),
+    backoffMultiplier: z.number().min(1).default(2),
+  })
+  .strict();
 
 /**
  * Error taxonomy schema for deterministic failure classification
  */
-const ErrorTaxonomySchema = z.object({
-  transientErrorCodes: z.array(z.string()).optional(),
-  permanentErrorCodes: z.array(z.string()).optional(),
-  humanActionErrorCodes: z.array(z.string()).optional(),
-  retryPolicy: RetryPolicySchema.optional(),
-}).strict().optional();
+const ErrorTaxonomySchema = z
+  .object({
+    transientErrorCodes: z.array(z.string()).optional(),
+    permanentErrorCodes: z.array(z.string()).optional(),
+    humanActionErrorCodes: z.array(z.string()).optional(),
+    retryPolicy: RetryPolicySchema.optional(),
+  })
+  .strict()
+  .optional();
 
 /**
  * Execution context override schema
  */
-const ContextConfigSchema = z.object({
-  preferredModelId: z.string().optional(),
-  maxTokensOverride: z.number().int().positive().optional(),
-  temperatureOverride: z.number().min(0).max(2).optional(),
-  timeoutOverride: z.number().int().min(1000).optional(),
-}).strict();
+const ContextConfigSchema = z
+  .object({
+    preferredModelId: z.string().optional(),
+    maxTokensOverride: z.number().int().positive().optional(),
+    temperatureOverride: z.number().min(0).max(2).optional(),
+    timeoutOverride: z.number().int().min(1000).optional(),
+  })
+  .strict();
 
-const ExecutionContextsSchema = z.object({
-  code_generation: ContextConfigSchema.optional(),
-  code_review: ContextConfigSchema.optional(),
-  test_generation: ContextConfigSchema.optional(),
-  refactoring: ContextConfigSchema.optional(),
-  documentation: ContextConfigSchema.optional(),
-  prd_generation: ContextConfigSchema.optional(),
-  spec_generation: ContextConfigSchema.optional(),
-  summarization: ContextConfigSchema.optional(),
-}).strict().optional();
+const ExecutionContextsSchema = z
+  .object({
+    code_generation: ContextConfigSchema.optional(),
+    code_review: ContextConfigSchema.optional(),
+    test_generation: ContextConfigSchema.optional(),
+    refactoring: ContextConfigSchema.optional(),
+    documentation: ContextConfigSchema.optional(),
+    prd_generation: ContextConfigSchema.optional(),
+    spec_generation: ContextConfigSchema.optional(),
+    summarization: ContextConfigSchema.optional(),
+  })
+  .strict()
+  .optional();
 
 /**
  * Complete agent manifest schema
  */
-export const AgentManifestSchema = z.object({
-  schema_version: z.string().regex(/^[0-9]+\.[0-9]+\.[0-9]+$/, {
-    message: 'schema_version must be valid semver (e.g., "1.0.0")',
-  }),
-  providerId: z.string().regex(/^[a-z0-9_-]+$/, {
-    message: 'providerId must be lowercase alphanumeric with hyphens/underscores',
-  }).min(1),
-  name: z.string().min(1),
-  version: z.string().regex(/^[0-9]+\.[0-9]+\.[0-9]+$/, {
-    message: 'version must be valid semver (e.g., "1.0.0")',
-  }),
-  description: z.string().optional(),
-  rateLimits: RateLimitsSchema,
-  costConfig: CostConfigSchema,
-  tools: ToolsSchema,
-  features: FeaturesSchema,
-  endpoint: EndpointSchema,
-  fallbackProvider: z.string().regex(/^[a-z0-9_-]+$/).optional(),
-  errorTaxonomy: ErrorTaxonomySchema,
-  executionContexts: ExecutionContextsSchema,
-  metadata: z.record(z.unknown()).optional(),
-}).strict();
+export const AgentManifestSchema = z
+  .object({
+    schema_version: z.string().regex(/^[0-9]+\.[0-9]+\.[0-9]+$/, {
+      message: 'schema_version must be valid semver (e.g., "1.0.0")',
+    }),
+    providerId: z
+      .string()
+      .regex(/^[a-z0-9_-]+$/, {
+        message: 'providerId must be lowercase alphanumeric with hyphens/underscores',
+      })
+      .min(1),
+    name: z.string().min(1),
+    version: z.string().regex(/^[0-9]+\.[0-9]+\.[0-9]+$/, {
+      message: 'version must be valid semver (e.g., "1.0.0")',
+    }),
+    description: z.string().optional(),
+    rateLimits: RateLimitsSchema,
+    costConfig: CostConfigSchema,
+    tools: ToolsSchema,
+    features: FeaturesSchema,
+    endpoint: EndpointSchema,
+    fallbackProvider: z
+      .string()
+      .regex(/^[a-z0-9_-]+$/)
+      .optional(),
+    errorTaxonomy: ErrorTaxonomySchema,
+    executionContexts: ExecutionContextsSchema,
+    metadata: z.record(z.unknown()).optional(),
+  })
+  .strict();
 
 export type AgentManifest = z.infer<typeof AgentManifestSchema>;
 export type RateLimits = z.infer<typeof RateLimitsSchema>;
@@ -201,7 +237,7 @@ export function parseAgentManifest(json: unknown): ManifestValidationResult {
 
   return {
     success: false,
-    errors: result.error.errors.map(err => ({
+    errors: result.error.errors.map((err) => ({
       path: err.path.join('.') || 'root',
       message: err.message,
     })),
@@ -274,7 +310,7 @@ export function matchesRequirements(
   // Check context window (across all models)
   if (requirements.minContextWindow !== undefined) {
     const hasModelWithSufficientContext = manifest.costConfig.models.some(
-      model => (model.contextWindow ?? 0) >= requirements.minContextWindow!
+      (model) => (model.contextWindow ?? 0) >= requirements.minContextWindow!
     );
     if (!hasModelWithSufficientContext) {
       return false;
@@ -303,10 +339,11 @@ export function matchesRequirements(
 
   // Check cost constraints (compare average cost across models)
   if (requirements.maxCostPer1kTokens !== undefined) {
-    const avgCost = manifest.costConfig.models.reduce(
-      (sum, model) => sum + model.inputCostPer1kTokens + model.outputCostPer1kTokens,
-      0
-    ) / manifest.costConfig.models.length;
+    const avgCost =
+      manifest.costConfig.models.reduce(
+        (sum, model) => sum + model.inputCostPer1kTokens + model.outputCostPer1kTokens,
+        0
+      ) / manifest.costConfig.models.length;
 
     if (avgCost > requirements.maxCostPer1kTokens) {
       return false;
@@ -324,15 +361,17 @@ export function matchesRequirements(
  */
 export function rankByPrice(manifests: AgentManifest[]): AgentManifest[] {
   return [...manifests].sort((a, b) => {
-    const avgCostA = a.costConfig.models.reduce(
-      (sum, m) => sum + m.inputCostPer1kTokens + m.outputCostPer1kTokens,
-      0
-    ) / a.costConfig.models.length;
+    const avgCostA =
+      a.costConfig.models.reduce(
+        (sum, m) => sum + m.inputCostPer1kTokens + m.outputCostPer1kTokens,
+        0
+      ) / a.costConfig.models.length;
 
-    const avgCostB = b.costConfig.models.reduce(
-      (sum, m) => sum + m.inputCostPer1kTokens + m.outputCostPer1kTokens,
-      0
-    ) / b.costConfig.models.length;
+    const avgCostB =
+      b.costConfig.models.reduce(
+        (sum, m) => sum + m.inputCostPer1kTokens + m.outputCostPer1kTokens,
+        0
+      ) / b.costConfig.models.length;
 
     return avgCostA - avgCostB;
   });
@@ -406,8 +445,8 @@ export class ManifestLoader {
     const validationResult = parseAgentManifest(json);
 
     if (!validationResult.success) {
-      const errorMsg = validationResult.errors!
-        .map(err => `  - ${err.path}: ${err.message}`)
+      const errorMsg = validationResult
+        .errors!.map((err) => `  - ${err.path}: ${err.message}`)
         .join('\n');
 
       this.logger.error('Manifest validation failed', {
@@ -417,8 +456,8 @@ export class ManifestLoader {
 
       throw new Error(
         `Invalid agent manifest at ${manifestPath}:\n${errorMsg}\n\n` +
-        'Manifests MUST include "rateLimits" and "costConfig" per acceptance criteria. ' +
-        'See docs/requirements/agent_manifest_schema.json for the complete schema.'
+          'Manifests MUST include "rateLimits" and "costConfig" per acceptance criteria. ' +
+          'See docs/requirements/agent_manifest_schema.json for the complete schema.'
       );
     }
 
@@ -442,7 +481,7 @@ export class ManifestLoader {
     this.logger.info('Manifest loaded and registered', {
       providerId: manifest.providerId,
       version: manifest.version,
-      models: manifest.costConfig.models.map(m => m.modelId),
+      models: manifest.costConfig.models.map((m) => m.modelId),
       rateLimits: manifest.rateLimits,
     });
 
@@ -497,9 +536,7 @@ export class ManifestLoader {
    * @param manifestDir - Directory containing .json manifest files
    * @returns Array of loaded manifests and validation errors
    */
-  async loadManifestsFromDirectory(
-    manifestDir: string
-  ): Promise<{
+  async loadManifestsFromDirectory(manifestDir: string): Promise<{
     loaded: AgentManifest[];
     errors: Array<{ path: string; error: string }>;
   }> {
@@ -509,8 +546,8 @@ export class ManifestLoader {
     try {
       const entries = await fs.readdir(manifestDir, { withFileTypes: true });
       const manifestFiles = entries
-        .filter(entry => entry.isFile() && entry.name.endsWith('.json'))
-        .map(entry => path.join(manifestDir, entry.name));
+        .filter((entry) => entry.isFile() && entry.name.endsWith('.json'))
+        .map((entry) => path.join(manifestDir, entry.name));
 
       this.logger.info('Scanning manifest directory', {
         dir: manifestDir,
@@ -581,8 +618,8 @@ export class ManifestLoader {
     }
 
     // Filter manifests matching requirements
-    const allManifests = Array.from(this.registry.values()).map(c => c.manifest);
-    const matching = allManifests.filter(m => matchesRequirements(m, requirements));
+    const allManifests = Array.from(this.registry.values()).map((c) => c.manifest);
+    const matching = allManifests.filter((m) => matchesRequirements(m, requirements));
 
     if (matching.length === 0) {
       this.logger.warn('No providers match requirements', { requirements });
@@ -618,7 +655,7 @@ export class ManifestLoader {
     loadedAt: string;
     sourcePath: string;
   }> {
-    return Array.from(this.registry.values()).map(cached => ({
+    return Array.from(this.registry.values()).map((cached) => ({
       providerId: cached.manifest.providerId,
       version: cached.manifest.version,
       hash: cached.hash,

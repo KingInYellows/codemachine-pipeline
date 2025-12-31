@@ -144,10 +144,7 @@ async function loadLedgerFile(ledgerPath: string): Promise<RateLimitLedgerData> 
   }
 }
 
-async function saveLedgerFile(
-  ledgerPath: string,
-  ledger: RateLimitLedgerData
-): Promise<void> {
+async function saveLedgerFile(ledgerPath: string, ledger: RateLimitLedgerData): Promise<void> {
   const content = JSON.stringify(ledger, null, 2);
   await fs.writeFile(ledgerPath, content, 'utf-8');
 }
@@ -173,11 +170,7 @@ export class RateLimitLedger {
   private readonly ledgerPath: string;
   private readonly logger: LoggerInterface;
 
-  constructor(
-    runDir: string,
-    provider: Provider | string,
-    logger?: LoggerInterface
-  ) {
+  constructor(runDir: string, provider: Provider | string, logger?: LoggerInterface) {
     this.provider = provider;
     this.ledgerPath = getLedgerPath(runDir);
     this.logger = logger ?? createConsoleLogger();
@@ -273,9 +266,7 @@ export class RateLimitLedger {
   /**
    * Get current rate limit state for a provider
    */
-  async getProviderState(
-    provider: Provider | string
-  ): Promise<ProviderRateLimitState | undefined> {
+  async getProviderState(provider: Provider | string): Promise<ProviderRateLimitState | undefined> {
     try {
       const ledger = await loadLedgerFile(this.ledgerPath);
       return ledger.providers[provider];
@@ -396,10 +387,7 @@ export class RateLimitLedger {
     }
 
     // Enter cooldown when remaining requests are low
-    if (
-      envelope.remaining !== undefined &&
-      envelope.remaining <= COOLDOWN_THRESHOLD_REMAINING
-    ) {
+    if (envelope.remaining !== undefined && envelope.remaining <= COOLDOWN_THRESHOLD_REMAINING) {
       return true;
     }
 
@@ -431,9 +419,7 @@ export class RateLimitLedger {
 // File helpers
 // ============================================================================
 
-export async function readRateLimitLedger(
-  runDir: string
-): Promise<RateLimitLedgerData> {
+export async function readRateLimitLedger(runDir: string): Promise<RateLimitLedgerData> {
   const ledgerPath = getLedgerPath(runDir);
   return loadLedgerFile(ledgerPath);
 }

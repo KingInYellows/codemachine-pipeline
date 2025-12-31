@@ -32,11 +32,7 @@ export type ApprovalGateType = z.infer<typeof ApprovalGateTypeSchema>;
 // Approval Verdict Enum
 // ============================================================================
 
-export const ApprovalVerdictSchema = z.enum([
-  'approved',
-  'rejected',
-  'requested_changes',
-]);
+export const ApprovalVerdictSchema = z.enum(['approved', 'rejected', 'requested_changes']);
 
 export type ApprovalVerdict = z.infer<typeof ApprovalVerdictSchema>;
 
@@ -44,32 +40,37 @@ export type ApprovalVerdict = z.infer<typeof ApprovalVerdictSchema>;
 // ApprovalRecord Schema
 // ============================================================================
 
-export const ApprovalRecordSchema = z.object({
-  /** Schema version for future migrations (semver) */
-  schema_version: z.string().regex(/^[0-9]+\.[0-9]+\.[0-9]+$/, 'Invalid semver format'),
-  /** Unique approval record identifier */
-  approval_id: z.string().min(1),
-  /** Feature ID this approval belongs to */
-  feature_id: z.string().min(1),
-  /** Approval gate type */
-  gate_type: ApprovalGateTypeSchema,
-  /** Approval verdict */
-  verdict: ApprovalVerdictSchema,
-  /** Signer identifier (username, email, or ID) */
-  signer: z.string().min(1),
-  /** Signer display name */
-  signer_name: z.string().optional(),
-  /** ISO 8601 timestamp when approval was granted */
-  approved_at: z.string().datetime(),
-  /** SHA-256 hash of artifact being approved */
-  artifact_hash: z.string().regex(/^[a-f0-9]{64}$/, 'Invalid SHA-256 hash format').optional(),
-  /** Path to approved artifact (relative to run directory) */
-  artifact_path: z.string().optional(),
-  /** Rationale or comments for approval decision */
-  rationale: z.string().optional(),
-  /** Optional approval metadata */
-  metadata: z.record(z.unknown()).optional(),
-}).strict();
+export const ApprovalRecordSchema = z
+  .object({
+    /** Schema version for future migrations (semver) */
+    schema_version: z.string().regex(/^[0-9]+\.[0-9]+\.[0-9]+$/, 'Invalid semver format'),
+    /** Unique approval record identifier */
+    approval_id: z.string().min(1),
+    /** Feature ID this approval belongs to */
+    feature_id: z.string().min(1),
+    /** Approval gate type */
+    gate_type: ApprovalGateTypeSchema,
+    /** Approval verdict */
+    verdict: ApprovalVerdictSchema,
+    /** Signer identifier (username, email, or ID) */
+    signer: z.string().min(1),
+    /** Signer display name */
+    signer_name: z.string().optional(),
+    /** ISO 8601 timestamp when approval was granted */
+    approved_at: z.string().datetime(),
+    /** SHA-256 hash of artifact being approved */
+    artifact_hash: z
+      .string()
+      .regex(/^[a-f0-9]{64}$/, 'Invalid SHA-256 hash format')
+      .optional(),
+    /** Path to approved artifact (relative to run directory) */
+    artifact_path: z.string().optional(),
+    /** Rationale or comments for approval decision */
+    rationale: z.string().optional(),
+    /** Optional approval metadata */
+    metadata: z.record(z.unknown()).optional(),
+  })
+  .strict();
 
 export type ApprovalRecord = Readonly<z.infer<typeof ApprovalRecordSchema>>;
 
@@ -80,13 +81,15 @@ export type ApprovalRecord = Readonly<z.infer<typeof ApprovalRecordSchema>>;
 /**
  * Parse and validate ApprovalRecord from JSON
  */
-export function parseApprovalRecord(json: unknown): {
-  success: true;
-  data: ApprovalRecord;
-} | {
-  success: false;
-  errors: Array<{ path: string; message: string }>;
-} {
+export function parseApprovalRecord(json: unknown):
+  | {
+      success: true;
+      data: ApprovalRecord;
+    }
+  | {
+      success: false;
+      errors: Array<{ path: string; message: string }>;
+    } {
   const result = ApprovalRecordSchema.safeParse(json);
 
   if (result.success) {
@@ -98,7 +101,7 @@ export function parseApprovalRecord(json: unknown): {
 
   return {
     success: false,
-    errors: result.error.errors.map(err => ({
+    errors: result.error.errors.map((err) => ({
       path: err.path.join('.') || 'root',
       message: err.message,
     })),

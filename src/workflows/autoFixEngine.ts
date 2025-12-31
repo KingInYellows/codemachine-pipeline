@@ -11,7 +11,10 @@ import {
 } from '../telemetry/executionMetrics';
 import type { ExecutionTelemetry } from '../telemetry/executionTelemetry';
 import { endExecutionSpan, startExecutionSpan } from '../telemetry/executionTelemetry';
-import type { ValidationCommandConfig, ValidationCommandType } from '../core/validation/validationCommandConfig';
+import type {
+  ValidationCommandConfig,
+  ValidationCommandType,
+} from '../core/validation/validationCommandConfig';
 import {
   type ValidationAttempt,
   type ValidationResult,
@@ -108,7 +111,11 @@ export async function executeValidationWithAutoFix(
     command_type: commandType,
     auto_fix_enabled: options.enableAutoFix,
   });
-  telemetry?.metrics?.recordTaskLifecycle(taskId, ExecutionTaskType.VALIDATION, ExecutionTaskStatus.STARTED);
+  telemetry?.metrics?.recordTaskLifecycle(
+    taskId,
+    ExecutionTaskType.VALIDATION,
+    ExecutionTaskStatus.STARTED
+  );
   const span = startExecutionSpan(telemetry, `validation.${commandType}`, {
     task_id: taskId,
     command_type: commandType,
@@ -150,7 +157,8 @@ export async function executeValidationWithAutoFix(
   while (attemptNumber < maxAttempts) {
     attemptNumber++;
 
-    const isAutoFixAttempt = attemptNumber > 1 && options.enableAutoFix && command.supports_auto_fix;
+    const isAutoFixAttempt =
+      attemptNumber > 1 && options.enableAutoFix && command.supports_auto_fix;
 
     logger?.info('Executing validation attempt', {
       command_type: commandType,
@@ -242,7 +250,9 @@ export async function executeValidationWithAutoFix(
     attempts: attemptNumber.toString(),
   });
 
-  const failureError = new Error(lastResult?.errorSummary ?? `Validation command "${commandType}" failed`);
+  const failureError = new Error(
+    lastResult?.errorSummary ?? `Validation command "${commandType}" failed`
+  );
   const totalDuration = Date.now() - startTime;
   telemetry?.metrics?.recordTaskLifecycle(
     taskId,
@@ -343,7 +353,12 @@ export async function executeAllValidations(
   });
 
   // Build summary message
-  const summary = buildValidationSummary(results, exceededRetryLimits, totalAttempts, autoFixSuccesses);
+  const summary = buildValidationSummary(
+    results,
+    exceededRetryLimits,
+    totalAttempts,
+    autoFixSuccesses
+  );
 
   logger?.info('Validation suite execution completed', {
     success,
@@ -391,7 +406,12 @@ async function executeValidationCommand(
   const cwd = resolveWorkingDirectory(repoRoot, command.cwd, options.cwdOverride);
 
   // Render command with template context
-  const templateContext = buildCommandTemplateContext(runDir, repoRoot, cwd, command.template_context);
+  const templateContext = buildCommandTemplateContext(
+    runDir,
+    repoRoot,
+    cwd,
+    command.template_context
+  );
   const renderedCommand = applyCommandTemplate(commandTemplate, templateContext);
 
   // Merge environment variables
@@ -428,12 +448,21 @@ async function executeValidationCommand(
     execOptions.logger = logger;
   }
 
-  const { exitCode, stdout, stderr, durationMs } = await executeShellCommand(renderedCommand, execOptions);
+  const { exitCode, stdout, stderr, durationMs } = await executeShellCommand(
+    renderedCommand,
+    execOptions
+  );
 
   const completedAt = new Date().toISOString();
 
   // Save stdout/stderr to files
-  const { stdoutPath, stderrPath } = await saveCommandOutput(runDir, command.type, attemptId, stdout, stderr);
+  const { stdoutPath, stderrPath } = await saveCommandOutput(
+    runDir,
+    command.type,
+    attemptId,
+    stdout,
+    stderr
+  );
 
   // Summarize errors
   const errorSummary = exitCode !== 0 ? summarizeError(stderr) : undefined;
@@ -553,7 +582,7 @@ async function executeShellCommand(
       const stderr = Buffer.concat(stderrChunks).toString('utf-8');
       const durationMs = Date.now() - startTime;
 
-      const exitCode = timedOut ? 124 : code ?? 1; // 124 = timeout exit code (convention)
+      const exitCode = timedOut ? 124 : (code ?? 1); // 124 = timeout exit code (convention)
 
       if (timedOut) {
         options.logger?.warn('Command timed out', {
@@ -609,7 +638,10 @@ async function saveCommandOutput(
   const stdoutAbsPath = path.join(runDir, stdoutPath);
   const stderrAbsPath = path.join(runDir, stderrPath);
 
-  await Promise.all([fs.writeFile(stdoutAbsPath, stdout, 'utf-8'), fs.writeFile(stderrAbsPath, stderr, 'utf-8')]);
+  await Promise.all([
+    fs.writeFile(stdoutAbsPath, stdout, 'utf-8'),
+    fs.writeFile(stderrAbsPath, stderr, 'utf-8'),
+  ]);
 
   return { stdoutPath, stderrPath };
 }
@@ -666,7 +698,8 @@ function buildValidationSummary(
   // Results by command
   for (const [commandType, result] of results.entries()) {
     const status = result.success ? '✓ PASS' : '✗ FAIL';
-    const attempts = result.attempt.attempt_number > 1 ? ` (${result.attempt.attempt_number} attempts)` : '';
+    const attempts =
+      result.attempt.attempt_number > 1 ? ` (${result.attempt.attempt_number} attempts)` : '';
     const autoFix = result.attempt.auto_fix_attempted && result.success ? ' [auto-fixed]' : '';
 
     lines.push(`  ${status} ${commandType}${attempts}${autoFix}`);

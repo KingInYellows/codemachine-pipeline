@@ -183,7 +183,10 @@ export class ExecutionMetricsHelper {
       );
 
       // Record duration for completed/failed tasks
-      if (durationMs !== undefined && (status === ExecutionTaskStatus.COMPLETED || status === ExecutionTaskStatus.FAILED)) {
+      if (
+        durationMs !== undefined &&
+        (status === ExecutionTaskStatus.COMPLETED || status === ExecutionTaskStatus.FAILED)
+      ) {
         this.metrics.observe(
           ExecutionMetrics.EXECUTION_TASK_DURATION_MS,
           durationMs,

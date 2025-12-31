@@ -29,7 +29,7 @@ export class LocalSummarizerClient implements SummarizerClient {
     const normalized = text
       .replace(/\r\n/g, '\n')
       .split('\n')
-      .map(line => line.trim())
+      .map((line) => line.trim())
       .filter(Boolean)
       .join(' ');
 

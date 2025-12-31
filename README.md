@@ -226,21 +226,209 @@ ai-feature status --verbose --show-costs
 - `1`: General error
 - `10`: Validation error (feature not found)
 
-### `ai-feature resume` (Planned)
+### `ai-feature doctor`
 
-Resume a paused or failed feature pipeline.
+Run environment diagnostics and readiness checks.
 
-### `ai-feature pr create` (Planned)
+**Options:**
+- `--json`: Output results in JSON format
+- `-v, --verbose`: Show detailed diagnostic information
 
-Create a pull request for a completed feature.
+**Examples:**
+```bash
+# Run environment checks
+ai-feature doctor
 
-### `ai-feature deploy` (Planned)
+# JSON output for automation
+ai-feature doctor --json
 
-Trigger deployment for a merged feature.
+# Verbose diagnostics
+ai-feature doctor --verbose
+```
 
-### `ai-feature export` (Planned)
+**Exit Codes:**
+- `0`: All checks passed (warnings allowed)
+- `10`: Validation error (config issues)
+- `20`: Environment issue (missing tools, version mismatches)
+- `30`: Credential issue (missing tokens, invalid scopes)
 
-Export feature artifacts in JSON or Markdown format.
+**Checks Performed:**
+- Node.js version (v20+ required, v24 preferred)
+- Git installation and repository detection
+- npm installation
+- Docker availability (optional)
+- Filesystem permissions
+- Outbound HTTPS connectivity
+- RepoConfig validation
+- Environment variable verification
+
+---
+
+### `ai-feature approve`
+
+Grant or deny approval for feature pipeline gates (PRD, Spec, Plan, Code, PR, Deploy).
+
+**Options:**
+- `-f, --feature <id>`: Feature ID (defaults to current/latest)
+- `-a, --approve`: Grant approval
+- `-d, --deny`: Deny approval
+- `-s, --signer <email>`: Signer identity (required)
+- `--signer-name <name>`: Signer display name
+- `-c, --comment <text>`: Approval or denial rationale
+- `--json`: Output results in JSON format
+- `--skip-hash-check`: Skip artifact hash validation (use with caution)
+
+**Examples:**
+```bash
+# Approve PRD gate
+ai-feature approve prd --approve --signer "user@example.com"
+
+# Deny spec gate with rationale
+ai-feature approve spec --deny --signer "reviewer@example.com" --comment "Missing acceptance criteria"
+
+# Approve specific feature
+ai-feature approve prd --approve --signer "user@example.com" --feature FEAT-abc123
+```
+
+**Exit Codes:**
+- `0`: Success
+- `10`: Validation error (invalid gate type, feature not found)
+- `30`: Human action required (artifact modified, missing artifact)
+
+---
+
+### `ai-feature plan`
+
+Display the execution plan DAG, task summaries, and dependency graph.
+
+**Options:**
+- `-f, --feature <id>`: Feature ID to query (defaults to current/latest)
+- `--json`: Output results in JSON format
+- `-v, --verbose`: Show detailed task breakdown and dependency chains
+- `--show-diff`: Compare plan against spec hash to detect changes
+
+**Examples:**
+```bash
+# Show plan for current feature
+ai-feature plan
+
+# Check specific feature
+ai-feature plan --feature feature-auth-123
+
+# Verbose output with diff
+ai-feature plan --verbose --show-diff
+```
+
+---
+
+### `ai-feature resume`
+
+Resume a failed or paused feature pipeline execution with safety checks.
+
+**Options:**
+- `-f, --feature <id>`: Feature ID to resume (defaults to current/latest)
+- `-d, --dry-run`: Analyze resume eligibility without executing
+- `--force`: Override blockers (use with caution)
+- `--skip-hash-verification`: Skip artifact integrity checks (dangerous)
+- `--validate-queue`: Validate queue files before resuming (default: true)
+- `--json`: Output results in JSON format
+- `-v, --verbose`: Show detailed diagnostics
+
+**Examples:**
+```bash
+# Resume current feature
+ai-feature resume
+
+# Dry-run analysis
+ai-feature resume --dry-run
+
+# Force resume past blockers
+ai-feature resume --force
+
+# Resume specific feature with verbose output
+ai-feature resume --feature feature-auth-123 --verbose
+```
+
+**Exit Codes:**
+- `0`: Resume successful or dry-run completed
+- `10`: Resume blocked (blockers present)
+- `20`: Integrity check failed (without --force)
+- `30`: Queue validation failed
+
+---
+
+### `ai-feature validate`
+
+Execute validation commands (lint, test, typecheck, build) with auto-fix retry loops.
+
+**Options:**
+- `-f, --feature <id>`: Feature ID to validate (defaults to current/latest)
+- `-c, --command <type>`: Specific validation command (lint, test, typecheck, build)
+- `--auto-fix / --no-auto-fix`: Enable/disable auto-fix for supported commands (default: enabled)
+- `--max-retries <n>`: Override maximum retry attempts (0-20)
+- `--timeout <seconds>`: Override command timeout (10-600)
+- `--json`: Output results in JSON format
+- `-v, --verbose`: Show detailed execution logs
+- `--init`: Initialize validation registry from config
+
+**Examples:**
+```bash
+# Run all validations
+ai-feature validate
+
+# Initialize validation registry
+ai-feature validate --init
+
+# Run only lint with auto-fix disabled
+ai-feature validate --command lint --no-auto-fix
+
+# Validate specific feature
+ai-feature validate --feature feature-auth-123
+```
+
+**Exit Codes:**
+- `0`: All validations passed
+- `1`: General error (config/setup issues)
+- `10`: Validation failed
+- `11`: Retry limit exceeded
+
+---
+
+### `ai-feature rate-limits`
+
+Display rate limit status and telemetry for API providers.
+
+**Options:**
+- `-f, --feature <id>`: Feature ID to query (defaults to current/latest)
+- `--json`: Output results in JSON format
+- `-v, --verbose`: Show detailed rate limit history
+- `-p, --provider <name>`: Filter output to specific provider (github, linear)
+- `--clear <provider>`: Clear cooldown for specified provider
+
+**Examples:**
+```bash
+# Show rate limit status
+ai-feature rate-limits
+
+# Filter to GitHub only
+ai-feature rate-limits --provider github
+
+# Clear cooldown for a provider
+ai-feature rate-limits --clear github --feature feature-auth-123
+
+# JSON output for monitoring
+ai-feature rate-limits --json
+```
+
+---
+
+### Planned Commands
+
+The following commands are planned for future releases:
+
+- `ai-feature pr create`: Create a pull request for a completed feature
+- `ai-feature deploy`: Trigger deployment for a merged feature
+- `ai-feature export`: Export feature artifacts in JSON or Markdown format
 
 ## Development
 
@@ -368,28 +556,51 @@ ai-feature-pipeline/
 ├── src/
 │   ├── cli/               # CLI presentation layer
 │   │   ├── commands/      # oclif command implementations
-│   │   │   ├── init.ts
-│   │   │   ├── start.ts
-│   │   │   └── status.ts
+│   │   │   ├── init.ts       # Repository initialization
+│   │   │   ├── start.ts      # Start feature pipeline
+│   │   │   ├── status.ts     # Show pipeline status
+│   │   │   ├── doctor.ts     # Environment diagnostics
+│   │   │   ├── approve.ts    # Approval gate management
+│   │   │   ├── plan.ts       # Execution plan display
+│   │   │   ├── resume.ts     # Pipeline resumption
+│   │   │   ├── validate.ts   # Validation commands
+│   │   │   └── rate-limits.ts # Rate limit monitoring
+│   │   ├── utils/         # CLI utilities
 │   │   └── index.ts       # CLI bootstrap + version banner
 │   ├── core/
-│   │   └── config/        # Configuration management
-│   │       └── repo_config.ts  # Schema validation & loaders
+│   │   ├── config/        # Configuration management
+│   │   └── models/        # Domain models
+│   ├── adapters/          # External service adapters
+│   │   ├── github/        # GitHub API integration
+│   │   ├── linear/        # Linear API integration
+│   │   └── http/          # HTTP client with rate limiting
+│   ├── workflows/         # Business logic workflows
+│   ├── persistence/       # Run directory and state management
+│   ├── telemetry/         # Logging, metrics, and tracing
 │   └── index.ts           # Re-exports CLI run() for bin/dev + bin/run
 ├── config/
 │   └── schemas/           # JSON Schema definitions
 │       └── repo_config.schema.json
+├── docs/
+│   ├── architecture/      # Architecture documentation
+│   ├── requirements/      # Technical specifications
+│   ├── ops/               # Operational guides
+│   ├── diagrams/          # PlantUML and Mermaid diagrams
+│   ├── templates/         # Document templates
+│   └── ui/                # CLI pattern guidelines
 ├── examples/
 │   └── sample_repo_config/
 │       ├── config.json    # Sample configuration
 │       └── README.md      # Configuration guide
-├── test/
-│   └── commands/          # Command tests
-│       └── init.test.ts
+├── tests/
+│   ├── unit/              # Unit tests
+│   ├── integration/       # Integration tests
+│   └── fixtures/          # Test fixtures
+├── scripts/               # Build and utility scripts
+├── docker/                # Docker configuration
 ├── .github/
 │   └── workflows/
 │       └── ci.yml         # CI/CD pipeline
-├── Dockerfile             # Container build
 ├── package.json
 ├── tsconfig.json
 └── README.md
@@ -537,4 +748,4 @@ For issues and questions:
 
 ---
 
-**Note**: This is a scaffold release (v0.1.0). Additional commands and features are under development. See `specification.md` for the complete roadmap.
+**Note**: This project implements the core pipeline commands (`init`, `start`, `status`, `doctor`, `approve`, `plan`, `resume`, `validate`, `rate-limits`). Additional commands for PR creation and deployment are under development. See `specification.md` for the complete roadmap and [docs/README.md](docs/README.md) for detailed documentation.

@@ -22,7 +22,11 @@
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 import { z } from 'zod';
-import type { GitHubAdapter, MergeResult, MergePullRequestParams } from '../adapters/github/GitHubAdapter';
+import type {
+  GitHubAdapter,
+  MergeResult,
+  MergePullRequestParams,
+} from '../adapters/github/GitHubAdapter';
 import type { BranchProtectionReport } from './branchProtectionReporter';
 import { loadReport as loadBranchProtectionReport } from './branchProtectionReporter';
 import type { RepoConfig } from '../core/config/RepoConfig';
@@ -54,7 +58,16 @@ export enum DeploymentStrategy {
  */
 export interface Blocker {
   /** Blocker type for categorization */
-  type: 'status_checks' | 'reviews' | 'branch_stale' | 'conflicts' | 'draft' | 'closed' | 'config' | 'protection' | 'approvals';
+  type:
+    | 'status_checks'
+    | 'reviews'
+    | 'branch_stale'
+    | 'conflicts'
+    | 'draft'
+    | 'closed'
+    | 'config'
+    | 'protection'
+    | 'approvals';
   /** Human-readable blocker message */
   message: string;
   /** Recommended action to resolve blocker */
@@ -172,12 +185,14 @@ export const DeploymentOutcomeSchema = z.object({
   workflow_run_id: z.string().optional(),
   workflow_url: z.string().optional(),
   github_response: z.record(z.unknown()).optional(),
-  blockers: z.array(z.object({
-    type: z.string(),
-    message: z.string(),
-    recommended_action: z.string(),
-    metadata: z.record(z.unknown()).optional(),
-  })),
+  blockers: z.array(
+    z.object({
+      type: z.string(),
+      message: z.string(),
+      recommended_action: z.string(),
+      metadata: z.record(z.unknown()).optional(),
+    })
+  ),
   metadata: z.object({
     approvals_hash: z.string().optional(),
     protection_report_hash: z.string().optional(),
@@ -189,11 +204,13 @@ export const DeploymentOutcomeSchema = z.object({
     deploy_approval_granted: z.boolean().optional(),
     deploy_approval_required: z.boolean().optional(),
   }),
-  error: z.object({
-    message: z.string(),
-    type: z.string(),
-    stack: z.string().optional(),
-  }).optional(),
+  error: z
+    .object({
+      message: z.string(),
+      type: z.string(),
+      stack: z.string().optional(),
+    })
+    .optional(),
 });
 
 export type DeploymentOutcome = z.infer<typeof DeploymentOutcomeSchema>;
@@ -315,18 +332,21 @@ export async function loadDeploymentContext(
     : undefined;
 
   // Extract deployment configuration from RepoConfig
-  const deploymentSection = (config as RepoConfig & {
-    deployment?: {
-      workflow_dispatch?: WorkflowDispatchConfig;
-    };
-  }).deployment;
+  const deploymentSection = (
+    config as RepoConfig & {
+      deployment?: {
+        workflow_dispatch?: WorkflowDispatchConfig;
+      };
+    }
+  ).deployment;
   const deploymentConfig: DeploymentConfig = {
     enable_auto_merge: config.feature_flags?.enable_auto_merge ?? false,
     enable_deployment_triggers: config.feature_flags?.enable_deployment_triggers ?? false,
     merge_method: 'merge', // Default, can be overridden
     respect_branch_protection: config.github.branch_protection?.respect_status_checks ?? true,
     prevent_auto_merge: config.governance?.risk_controls?.prevent_auto_merge ?? true,
-    require_deploy_approval: config.governance?.approval_workflow?.require_approval_for_deploy ?? true,
+    require_deploy_approval:
+      config.governance?.approval_workflow?.require_approval_for_deploy ?? true,
   };
   if (deploymentSection?.workflow_dispatch) {
     deploymentConfig.workflow_dispatch = deploymentSection.workflow_dispatch;
@@ -334,9 +354,13 @@ export async function loadDeploymentContext(
 
   const approvalsHash = await computeApprovalsHash(runDirectory, logger);
   const deployApprovalRequired = deploymentConfig.require_deploy_approval;
-  const deployApprovalGranted = !deployApprovalRequired || manifest.approvals.completed.includes('deploy');
+  const deployApprovalGranted =
+    !deployApprovalRequired || manifest.approvals.completed.includes('deploy');
 
-  logger.debug('Deployment configuration loaded', deploymentConfig as unknown as Record<string, unknown>);
+  logger.debug(
+    'Deployment configuration loaded',
+    deploymentConfig as unknown as Record<string, unknown>
+  );
 
   const approvalsState: ApprovalState = {
     pending: manifest.approvals.pending,
@@ -514,7 +538,8 @@ export async function assessMergeReadiness(
     blockers.push({
       type: 'approvals',
       message: `${pendingList.length} approval(s) pending: ${pendingList.join(', ')}`,
-      recommended_action: 'Collect required approvals with "ai-feature approve <gate>" or rerun with --force when authorized',
+      recommended_action:
+        'Collect required approvals with "ai-feature approve <gate>" or rerun with --force when authorized',
       metadata: {
         pending_approvals: pendingList,
       },
@@ -633,7 +658,10 @@ export function selectDeploymentStrategy(
 // Execution Handlers
 // ============================================================================
 
-function buildMetadata(context: DeploymentContext, readiness: MergeReadiness): DeploymentOutcome['metadata'] {
+function buildMetadata(
+  context: DeploymentContext,
+  readiness: MergeReadiness
+): DeploymentOutcome['metadata'] {
   return {
     pr_url: context.pr.url,
     checks_passing: readiness.context.checks_passing,
@@ -912,16 +940,13 @@ async function executeWorkflowDispatch(
  * @param readiness Merge readiness assessment
  * @returns Deployment outcome
  */
-function handleBlocked(
-  context: DeploymentContext,
-  readiness: MergeReadiness
-): DeploymentOutcome {
+function handleBlocked(context: DeploymentContext, readiness: MergeReadiness): DeploymentOutcome {
   const { pr, logger, featureId } = context;
 
   logger.warn('Deployment blocked', {
     pr_number: pr.pr_number,
     blockers_count: readiness.blockers.length,
-    blockers: readiness.blockers.map(b => b.message),
+    blockers: readiness.blockers.map((b) => b.message),
   });
 
   return {
@@ -1108,11 +1133,13 @@ export async function triggerDeployment(
       action: 'none',
       success: false,
       pr_number: 0, // Unknown PR number
-      blockers: [{
-        type: 'config',
-        message: error instanceof Error ? error.message : String(error),
-        recommended_action: 'Check logs and verify run directory artifacts',
-      }],
+      blockers: [
+        {
+          type: 'config',
+          message: error instanceof Error ? error.message : String(error),
+          recommended_action: 'Check logs and verify run directory artifacts',
+        },
+      ],
       metadata: {
         checks_passing: false,
         reviews_satisfied: false,

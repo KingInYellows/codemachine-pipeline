@@ -89,7 +89,11 @@ export class ExecutionLogWriter {
   /**
    * Log task started event
    */
-  taskStarted(taskId: string, taskType: ExecutionTaskType, additionalContext?: Record<string, unknown>): void {
+  taskStarted(
+    taskId: string,
+    taskType: ExecutionTaskType,
+    additionalContext?: Record<string, unknown>
+  ): void {
     const context: TaskContext = {
       task_id: taskId,
       execution_task_type: taskType,
@@ -141,7 +145,12 @@ export class ExecutionLogWriter {
   /**
    * Log task skipped event
    */
-  taskSkipped(taskId: string, taskType: ExecutionTaskType, reason: string, additionalContext?: Record<string, unknown>): void {
+  taskSkipped(
+    taskId: string,
+    taskType: ExecutionTaskType,
+    reason: string,
+    additionalContext?: Record<string, unknown>
+  ): void {
     const context: TaskContext = {
       task_id: taskId,
       execution_task_type: taskType,
@@ -195,7 +204,12 @@ export class ExecutionLogWriter {
   /**
    * Log validation error details
    */
-  validationError(taskId: string, errorType: string, errorMessage: string, additionalContext?: Record<string, unknown>): void {
+  validationError(
+    taskId: string,
+    errorType: string,
+    errorMessage: string,
+    additionalContext?: Record<string, unknown>
+  ): void {
     const context: TaskContext = {
       task_id: taskId,
       execution_task_type: 'validation',
@@ -217,7 +231,10 @@ export class ExecutionLogWriter {
       failed_count: failed,
     };
 
-    this.logger.debug(`Queue state: ${pending} pending, ${completed} completed, ${failed} failed`, context);
+    this.logger.debug(
+      `Queue state: ${pending} pending, ${completed} completed, ${failed} failed`,
+      context
+    );
   }
 
   /**
@@ -252,7 +269,13 @@ export class ExecutionLogWriter {
   /**
    * Log agent invocation event
    */
-  agentInvoked(taskId: string, agentType: string, model: string, promptTokens?: number, completionTokens?: number): void {
+  agentInvoked(
+    taskId: string,
+    agentType: string,
+    model: string,
+    promptTokens?: number,
+    completionTokens?: number
+  ): void {
     const context: TaskContext = {
       task_id: taskId,
       execution_task_type: 'code_generation',
@@ -293,6 +316,9 @@ export class ExecutionLogWriter {
 /**
  * Create execution log writer
  */
-export function createExecutionLogWriter(logger: StructuredLogger, options: ExecutionLogWriterOptions): ExecutionLogWriter {
+export function createExecutionLogWriter(
+  logger: StructuredLogger,
+  options: ExecutionLogWriterOptions
+): ExecutionLogWriter {
   return new ExecutionLogWriter(logger, options);
 }

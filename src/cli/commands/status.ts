@@ -21,7 +21,10 @@ import {
 import { parseContextDocument } from '../../core/models/ContextDocument';
 import { loadTraceSummary } from '../../workflows/traceabilityMapper';
 import { loadPlanSummary } from '../../workflows/taskPlanner';
-import { createBranchProtectionAdapter, type BranchProtectionConfig } from '../../adapters/github/branchProtection';
+import {
+  createBranchProtectionAdapter,
+  type BranchProtectionConfig,
+} from '../../adapters/github/branchProtection';
 import {
   loadReport as loadBranchProtectionReport,
   generateSummary as generateBranchProtectionSummary,
@@ -195,13 +198,16 @@ interface StatusIntegrationsPayload {
 }
 
 interface StatusRateLimitsPayload {
-  providers: Record<string, {
-    remaining: number;
-    reset_at: string;
-    in_cooldown: boolean;
-    manual_ack_required: boolean;
-    recent_hit_count: number;
-  }>;
+  providers: Record<
+    string,
+    {
+      remaining: number;
+      reset_at: string;
+      in_cooldown: boolean;
+      manual_ack_required: boolean;
+      recent_hit_count: number;
+    }
+  >;
   summary: {
     any_in_cooldown: boolean;
     any_requires_ack: boolean;
@@ -381,8 +387,13 @@ export default class Status extends Command {
       // Record success metrics
       if (metrics) {
         const duration = Date.now() - startTime;
-        metrics.observe(StandardMetrics.COMMAND_EXECUTION_DURATION_MS, duration, { command: 'status' });
-        metrics.increment(StandardMetrics.COMMAND_INVOCATIONS_TOTAL, { command: 'status', exit_code: '0' });
+        metrics.observe(StandardMetrics.COMMAND_EXECUTION_DURATION_MS, duration, {
+          command: 'status',
+        });
+        metrics.increment(StandardMetrics.COMMAND_INVOCATIONS_TOTAL, {
+          command: 'status',
+          exit_code: '0',
+        });
         await metrics.flush();
       }
 
@@ -407,8 +418,13 @@ export default class Status extends Command {
       // Record error metrics
       if (metrics) {
         const duration = Date.now() - startTime;
-        metrics.observe(StandardMetrics.COMMAND_EXECUTION_DURATION_MS, duration, { command: 'status' });
-        metrics.increment(StandardMetrics.COMMAND_INVOCATIONS_TOTAL, { command: 'status', exit_code: '1' });
+        metrics.observe(StandardMetrics.COMMAND_EXECUTION_DURATION_MS, duration, {
+          command: 'status',
+        });
+        metrics.increment(StandardMetrics.COMMAND_INVOCATIONS_TOTAL, {
+          command: 'status',
+          exit_code: '1',
+        });
         await metrics.flush();
       }
 
@@ -497,7 +513,8 @@ export default class Status extends Command {
     researchInfo?: StatusResearchPayload
   ): StatusPayload {
     const manifest = manifestInfo?.manifest;
-    const manifestPath = manifestInfo?.manifestPath ?? this.deriveManifestPath(settings.baseDir, featureId);
+    const manifestPath =
+      manifestInfo?.manifestPath ?? this.deriveManifestPath(settings.baseDir, featureId);
 
     const payload: StatusPayload = {
       feature_id: featureId ?? null,
@@ -538,11 +555,15 @@ export default class Status extends Command {
 
     if (manifestInfo?.error) {
       payload.manifest_error = manifestInfo.error;
-      payload.notes.push('Manifest could not be read; inspect manifest_error for remediation guidance.');
+      payload.notes.push(
+        'Manifest could not be read; inspect manifest_error for remediation guidance.'
+      );
     }
 
     if (!manifest) {
-      payload.notes.push('No manifest found. Run "ai-feature start" to provision a new feature run directory.');
+      payload.notes.push(
+        'No manifest found. Run "ai-feature start" to provision a new feature run directory.'
+      );
     }
 
     return payload;
@@ -577,8 +598,12 @@ export default class Status extends Command {
 
       if (planSummary.dag) {
         result.dag_metadata = {
-          ...(planSummary.dag.parallelPaths !== undefined && { parallel_paths: planSummary.dag.parallelPaths }),
-          ...(planSummary.dag.criticalPathDepth !== undefined && { critical_path_depth: planSummary.dag.criticalPathDepth }),
+          ...(planSummary.dag.parallelPaths !== undefined && {
+            parallel_paths: planSummary.dag.parallelPaths,
+          }),
+          ...(planSummary.dag.criticalPathDepth !== undefined && {
+            critical_path_depth: planSummary.dag.criticalPathDepth,
+          }),
           generated_at: planSummary.dag.generatedAt,
         };
       }
@@ -772,7 +797,10 @@ export default class Status extends Command {
 
       if (report.required_checks.length > 0) {
         try {
-          report.validation_mismatch = await detectValidationMismatch(runDir, report.required_checks);
+          report.validation_mismatch = await detectValidationMismatch(
+            runDir,
+            report.required_checks
+          );
         } catch (error) {
           logger?.warn('Failed to compare ExecutionTask validations with required checks', {
             error: error instanceof Error ? error.message : 'unknown error',
@@ -795,7 +823,7 @@ export default class Status extends Command {
         await withSpan(
           traceManager,
           'status.refresh_branch_protection',
-          async span => {
+          async (span) => {
             span.setAttribute('feature_id', featureId);
             span.setAttribute('branch', branch);
             span.setAttribute('base_branch', baseBranch);
@@ -860,7 +888,9 @@ export default class Status extends Command {
             githubWarnings.push(`GitHub API is in cooldown until ${githubProvider.resetAt}`);
           }
           if (githubProvider.manualAckRequired) {
-            githubWarnings.push(`GitHub rate limit requires manual acknowledgement (${githubProvider.recentHitCount} consecutive hits)`);
+            githubWarnings.push(
+              `GitHub rate limit requires manual acknowledgement (${githubProvider.recentHitCount} consecutive hits)`
+            );
           }
         }
 
@@ -879,7 +909,9 @@ export default class Status extends Command {
       } catch (error) {
         integrations.github = {
           enabled: true,
-          warnings: [`Failed to load GitHub integration data: ${error instanceof Error ? error.message : 'unknown error'}`],
+          warnings: [
+            `Failed to load GitHub integration data: ${error instanceof Error ? error.message : 'unknown error'}`,
+          ],
         };
       }
     }
@@ -908,7 +940,9 @@ export default class Status extends Command {
             linearWarnings.push(`Linear API is in cooldown until ${linearProvider.resetAt}`);
           }
           if (linearProvider.manualAckRequired) {
-            linearWarnings.push(`Linear rate limit requires manual acknowledgement (${linearProvider.recentHitCount} consecutive hits)`);
+            linearWarnings.push(
+              `Linear rate limit requires manual acknowledgement (${linearProvider.recentHitCount} consecutive hits)`
+            );
           }
         }
 
@@ -932,7 +966,9 @@ export default class Status extends Command {
       } catch (error) {
         integrations.linear = {
           enabled: true,
-          warnings: [`Failed to load Linear integration data: ${error instanceof Error ? error.message : 'unknown error'}`],
+          warnings: [
+            `Failed to load Linear integration data: ${error instanceof Error ? error.message : 'unknown error'}`,
+          ],
         };
       }
     }
@@ -969,7 +1005,9 @@ export default class Status extends Command {
           warnings.push(`${providerName}: In cooldown until ${providerReport.resetAt}`);
         }
         if (providerReport.manualAckRequired) {
-          warnings.push(`${providerName}: Manual acknowledgement required (${providerReport.recentHitCount} consecutive rate limit hits)`);
+          warnings.push(
+            `${providerName}: Manual acknowledgement required (${providerReport.recentHitCount} consecutive rate limit hits)`
+          );
         }
       }
 
@@ -1043,9 +1081,12 @@ export default class Status extends Command {
       // Count stale tasks
       const allTasks = await coordinator.listTasks({});
       const { isCachedResultFresh } = await import('../../core/models/ResearchTask.js');
-      const staleTasks = allTasks.filter(task => {
+      const staleTasks = allTasks.filter((task) => {
         if (task.status !== 'completed' || !task.results) return false;
-        const freshnessReq = task.freshness_requirements ?? { max_age_hours: 24, force_fresh: false };
+        const freshnessReq = task.freshness_requirements ?? {
+          max_age_hours: 24,
+          force_fresh: false,
+        };
         return !isCachedResultFresh(task.results, freshnessReq);
       });
 
@@ -1072,7 +1113,9 @@ export default class Status extends Command {
         stale_tasks: 0,
         research_dir: researchDir,
         tasks_file: tasksFile,
-        warnings: [`Failed to load research status: ${error instanceof Error ? error.message : 'unknown error'}`],
+        warnings: [
+          `Failed to load research status: ${error instanceof Error ? error.message : 'unknown error'}`,
+        ],
       };
     }
   }
@@ -1130,7 +1173,7 @@ export default class Status extends Command {
       const parsed = parseContextDocument(JSON.parse(content));
       if (!parsed.success) {
         return {
-          error: parsed.errors.map(err => `${err.path}: ${err.message}`).join('; '),
+          error: parsed.errors.map((err) => `${err.path}: ${err.message}`).join('; '),
         };
       }
 
@@ -1139,7 +1182,7 @@ export default class Status extends Command {
         files: Object.keys(contextDoc.files).length,
         total_tokens: contextDoc.total_token_count,
         summaries: contextDoc.summaries.length,
-        summaries_preview: contextDoc.summaries.slice(0, 5).map(entry => ({
+        summaries_preview: contextDoc.summaries.slice(0, 5).map((entry) => ({
           file_path: entry.file_path,
           chunk_id: entry.chunk_id,
           generated_at: entry.generated_at,
@@ -1177,8 +1220,12 @@ export default class Status extends Command {
       payload.summarization = {
         ...(payload.summarization ?? {}),
         ...(metadata.updated_at && { updated_at: metadata.updated_at }),
-        ...(typeof metadata.chunks_generated === 'number' && { chunks_generated: metadata.chunks_generated }),
-        ...(typeof metadata.chunks_cached === 'number' && { chunks_cached: metadata.chunks_cached }),
+        ...(typeof metadata.chunks_generated === 'number' && {
+          chunks_generated: metadata.chunks_generated,
+        }),
+        ...(typeof metadata.chunks_cached === 'number' && {
+          chunks_cached: metadata.chunks_cached,
+        }),
         ...(metadata.tokens_used && { tokens_used: metadata.tokens_used }),
       };
 
@@ -1193,16 +1240,18 @@ export default class Status extends Command {
     }
   }
 
-  private async attachCostTelemetry(
-    payload: StatusContextPayload,
-    runDir: string
-  ): Promise<void> {
+  private async attachCostTelemetry(payload: StatusContextPayload, runDir: string): Promise<void> {
     const costsPath = path.join(runDir, 'telemetry', 'costs.json');
 
     try {
       const content = await fs.readFile(costsPath, 'utf-8');
       const costs = JSON.parse(content) as {
-        totals?: { promptTokens?: number; completionTokens?: number; totalTokens?: number; totalCostUsd?: number };
+        totals?: {
+          promptTokens?: number;
+          completionTokens?: number;
+          totalTokens?: number;
+          totalCostUsd?: number;
+        };
         warnings?: string[];
       };
 
@@ -1221,7 +1270,9 @@ export default class Status extends Command {
         payload.summarization = {
           ...(payload.summarization ?? {}),
           ...(Object.keys(tokensUsed).length > 0 && { tokens_used: tokensUsed }),
-          ...(typeof costs.totals.totalCostUsd === 'number' && { cost_usd: costs.totals.totalCostUsd }),
+          ...(typeof costs.totals.totalCostUsd === 'number' && {
+            cost_usd: costs.totals.totalCostUsd,
+          }),
         };
       }
 
@@ -1304,15 +1355,17 @@ export default class Status extends Command {
       if (payload.approvals.pending.length > 0) {
         this.log('');
         this.warn('⚠ Pending approvals required:');
-        payload.approvals.pending.forEach(gate => {
-          this.warn(`  • ${gate.toUpperCase()} - Review artifact and run: ai-feature approve ${gate} --signer "<your-email>"`);
+        payload.approvals.pending.forEach((gate) => {
+          this.warn(
+            `  • ${gate.toUpperCase()} - Review artifact and run: ai-feature approve ${gate} --signer "<your-email>"`
+          );
         });
       }
 
       // Show completed approvals in verbose mode
       if (flags.verbose && payload.approvals.completed.length > 0) {
         this.log('Completed approvals:');
-        payload.approvals.completed.forEach(gate => {
+        payload.approvals.completed.forEach((gate) => {
           this.log(`  • ${gate.toUpperCase()}`);
         });
       }
@@ -1331,7 +1384,11 @@ export default class Status extends Command {
         if (payload.context.warnings && payload.context.warnings.length > 0) {
           this.warn(`Context summarization warnings: ${payload.context.warnings.join(' | ')}`);
         }
-        if (flags.verbose && payload.context.summaries_preview && payload.context.summaries_preview.length > 0) {
+        if (
+          flags.verbose &&
+          payload.context.summaries_preview &&
+          payload.context.summaries_preview.length > 0
+        ) {
           this.log('Context summary preview:');
           for (const preview of payload.context.summaries_preview) {
             this.log(`  - ${preview.file_path} (${preview.chunk_id}): ${preview.summary}`);
@@ -1375,9 +1432,12 @@ export default class Status extends Command {
       if (validationParts.length > 0) {
         this.log(`Validation: ${validationParts.join(' ')}`);
       }
-      if (payload.validation.integrity_warnings && payload.validation.integrity_warnings.length > 0) {
+      if (
+        payload.validation.integrity_warnings &&
+        payload.validation.integrity_warnings.length > 0
+      ) {
         this.warn('Integrity warnings:');
-        payload.validation.integrity_warnings.forEach(warning => {
+        payload.validation.integrity_warnings.forEach((warning) => {
           this.warn(`  • ${warning}`);
         });
       }
@@ -1407,19 +1467,21 @@ export default class Status extends Command {
 
       if (bp.blockers_count > 0) {
         this.warn(`  Blockers (${bp.blockers_count}):`);
-        bp.blockers.forEach(blocker => {
+        bp.blockers.forEach((blocker) => {
           this.warn(`    • ${blocker}`);
         });
       }
 
       if (bp.missing_checks.length > 0) {
         this.log(`  Missing Checks:`);
-        bp.missing_checks.forEach(check => {
+        bp.missing_checks.forEach((check) => {
           this.log(`    - ${check}`);
         });
       }
 
-      this.log(`  Reviews: ${bp.reviews_status.completed}/${bp.reviews_status.required} (${bp.reviews_status.satisfied ? 'satisfied' : 'not satisfied'})`);
+      this.log(
+        `  Reviews: ${bp.reviews_status.completed}/${bp.reviews_status.required} (${bp.reviews_status.satisfied ? 'satisfied' : 'not satisfied'})`
+      );
       this.log(`  Branch Up-to-date: ${bp.branch_status.up_to_date ? 'Yes' : 'No'}`);
       this.log(`  Auto-merge Allowed: ${bp.auto_merge.allowed ? 'Yes' : 'No'}`);
 
@@ -1430,14 +1492,18 @@ export default class Status extends Command {
         } else {
           this.log('  Validation Alignment:');
           if (missing_in_registry.length > 0) {
-            this.warn(`    Missing ExecutionTask validations for: ${missing_in_registry.join(', ')}`);
+            this.warn(
+              `    Missing ExecutionTask validations for: ${missing_in_registry.join(', ')}`
+            );
           }
           if (extra_in_registry.length > 0) {
-            this.log(`    Extra validations not required by branch protection: ${extra_in_registry.join(', ')}`);
+            this.log(
+              `    Extra validations not required by branch protection: ${extra_in_registry.join(', ')}`
+            );
           }
           if (flags.verbose && recommendations.length > 0) {
             this.log('    Recommendations:');
-            recommendations.forEach(rec => this.log(`      • ${rec}`));
+            recommendations.forEach((rec) => this.log(`      • ${rec}`));
           }
         }
       }
@@ -1465,7 +1531,9 @@ export default class Status extends Command {
           this.log(`  In Cooldown: ${providerData.in_cooldown ? 'Yes' : 'No'}`);
 
           if (providerData.manual_ack_required) {
-            this.warn(`  ⚠ Manual Acknowledgement Required (${providerData.recent_hit_count} consecutive hits)`);
+            this.warn(
+              `  ⚠ Manual Acknowledgement Required (${providerData.recent_hit_count} consecutive hits)`
+            );
           }
 
           if (flags.verbose) {
@@ -1476,7 +1544,7 @@ export default class Status extends Command {
 
       if (rl.warnings.length > 0) {
         this.log('\nRate Limit Warnings:');
-        rl.warnings.forEach(warning => {
+        rl.warnings.forEach((warning) => {
           this.warn(`  ⚠ ${warning}`);
         });
       }
@@ -1502,15 +1570,19 @@ export default class Status extends Command {
         }
 
         if (integrations.github.pr_status) {
-          this.log(`    PR #${integrations.github.pr_status.number}: ${integrations.github.pr_status.state}`);
-          this.log(`    Mergeable: ${integrations.github.pr_status.mergeable === null ? 'Unknown' : integrations.github.pr_status.mergeable ? 'Yes' : 'No'}`);
+          this.log(
+            `    PR #${integrations.github.pr_status.number}: ${integrations.github.pr_status.state}`
+          );
+          this.log(
+            `    Mergeable: ${integrations.github.pr_status.mergeable === null ? 'Unknown' : integrations.github.pr_status.mergeable ? 'Yes' : 'No'}`
+          );
           if (flags.verbose && integrations.github.pr_status.url) {
             this.log(`    URL: ${integrations.github.pr_status.url}`);
           }
         }
 
         if (integrations.github.warnings.length > 0) {
-          integrations.github.warnings.forEach(warning => {
+          integrations.github.warnings.forEach((warning) => {
             this.warn(`    ⚠ ${warning}`);
           });
         }
@@ -1528,14 +1600,16 @@ export default class Status extends Command {
         }
 
         if (integrations.linear.issue_status) {
-          this.log(`    Issue: ${integrations.linear.issue_status.identifier} (${integrations.linear.issue_status.state})`);
+          this.log(
+            `    Issue: ${integrations.linear.issue_status.identifier} (${integrations.linear.issue_status.state})`
+          );
           if (flags.verbose && integrations.linear.issue_status.url) {
             this.log(`    URL: ${integrations.linear.issue_status.url}`);
           }
         }
 
         if (integrations.linear.warnings.length > 0) {
-          integrations.linear.warnings.forEach(warning => {
+          integrations.linear.warnings.forEach((warning) => {
             this.warn(`    ⚠ ${warning}`);
           });
         }
@@ -1555,7 +1629,7 @@ export default class Status extends Command {
       this.log(`  Snapshot: ${research.tasks_file}`);
 
       if (research.warnings.length > 0) {
-        research.warnings.forEach(warning => {
+        research.warnings.forEach((warning) => {
           this.warn(`  ⚠ ${warning}`);
         });
       }
@@ -1575,11 +1649,13 @@ export default class Status extends Command {
 
     if (flags.verbose) {
       if (payload.timestamps) {
-        const start = payload.timestamps.started_at ? ` started=${payload.timestamps.started_at}` : '';
-        const complete = payload.timestamps.completed_at ? ` completed=${payload.timestamps.completed_at}` : '';
-        this.log(
-          `Timestamps: created=${payload.timestamps.created_at}${start}${complete}`
-        );
+        const start = payload.timestamps.started_at
+          ? ` started=${payload.timestamps.started_at}`
+          : '';
+        const complete = payload.timestamps.completed_at
+          ? ` completed=${payload.timestamps.completed_at}`
+          : '';
+        this.log(`Timestamps: created=${payload.timestamps.created_at}${start}${complete}`);
       }
 
       if (payload.config_errors.length > 0) {

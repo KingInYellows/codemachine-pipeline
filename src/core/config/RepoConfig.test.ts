@@ -14,7 +14,6 @@ import {
   applyEnvironmentOverrides,
   formatValidationErrors,
   addConfigHistoryEntry,
-  
   type ValidationError,
 } from './RepoConfig';
 
@@ -264,7 +263,7 @@ describe('loadRepoConfig', () => {
     const result = loadRepoConfig(configPath);
     expect(result.success).toBe(true);
     expect(result.warnings).toBeDefined();
-    expect(result.warnings!.some(w => w.includes('GITHUB_TOKEN'))).toBe(true);
+    expect(result.warnings!.some((w) => w.includes('GITHUB_TOKEN'))).toBe(true);
   });
 
   it('should apply environment overrides', () => {
@@ -305,10 +304,10 @@ describe('loadRepoConfig', () => {
     expect(result.success).toBe(false);
     expect(result.errors).toBeDefined();
 
-    const schemaVersionError = result.errors!.find(e => e.path.includes('schema_version'));
+    const schemaVersionError = result.errors!.find((e) => e.path.includes('schema_version'));
     expect(schemaVersionError?.suggestion).toContain('semver');
 
-    const repoUrlError = result.errors!.find(e => e.path.includes('repo_url'));
+    const repoUrlError = result.errors!.find((e) => e.path.includes('repo_url'));
     expect(repoUrlError?.suggestion).toBeDefined();
   });
 });

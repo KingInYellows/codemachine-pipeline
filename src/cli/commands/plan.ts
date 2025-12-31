@@ -1,8 +1,6 @@
 import { Command, Flags } from '@oclif/core';
 import * as path from 'node:path';
-import {
-  getRunDirectoryPath,
-} from '../../persistence/runDirectoryManager';
+import { getRunDirectoryPath } from '../../persistence/runDirectoryManager';
 import { createCliLogger, LogLevel } from '../../telemetry/logger';
 import { createRunMetricsCollector, StandardMetrics } from '../../telemetry/metrics';
 import { createRunTraceManager, SpanStatusCode, withSpan } from '../../telemetry/traces';
@@ -150,11 +148,18 @@ export default class Plan extends Command {
         ? await loadSpecMetadata(getRunDirectoryPath(settings.baseDir, featureId))
         : undefined;
 
-      const planDiff = featureId && typedFlags['show-diff']
-        ? await this.computePlanDiff(settings.baseDir, featureId, logger)
-        : undefined;
+      const planDiff =
+        featureId && typedFlags['show-diff']
+          ? await this.computePlanDiff(settings.baseDir, featureId, logger)
+          : undefined;
 
-      const payload = this.buildPlanPayload(featureId, settings, planSummary, specMetadata, planDiff);
+      const payload = this.buildPlanPayload(
+        featureId,
+        settings,
+        planSummary,
+        specMetadata,
+        planDiff
+      );
 
       if (typedFlags.json) {
         this.log(JSON.stringify(payload, null, 2));
@@ -165,8 +170,13 @@ export default class Plan extends Command {
       // Record success metrics
       if (metrics) {
         const duration = Date.now() - startTime;
-        metrics.observe(StandardMetrics.COMMAND_EXECUTION_DURATION_MS, duration, { command: 'plan' });
-        metrics.increment(StandardMetrics.COMMAND_INVOCATIONS_TOTAL, { command: 'plan', exit_code: '0' });
+        metrics.observe(StandardMetrics.COMMAND_EXECUTION_DURATION_MS, duration, {
+          command: 'plan',
+        });
+        metrics.increment(StandardMetrics.COMMAND_INVOCATIONS_TOTAL, {
+          command: 'plan',
+          exit_code: '0',
+        });
         await metrics.flush();
       }
 
@@ -191,8 +201,13 @@ export default class Plan extends Command {
       // Record error metrics
       if (metrics) {
         const duration = Date.now() - startTime;
-        metrics.observe(StandardMetrics.COMMAND_EXECUTION_DURATION_MS, duration, { command: 'plan' });
-        metrics.increment(StandardMetrics.COMMAND_INVOCATIONS_TOTAL, { command: 'plan', exit_code: '1' });
+        metrics.observe(StandardMetrics.COMMAND_EXECUTION_DURATION_MS, duration, {
+          command: 'plan',
+        });
+        metrics.increment(StandardMetrics.COMMAND_INVOCATIONS_TOTAL, {
+          command: 'plan',
+          exit_code: '1',
+        });
         await metrics.flush();
       }
 
@@ -320,14 +335,22 @@ export default class Plan extends Command {
 
       if (planSummary.dag) {
         payload.plan_summary.dag_metadata = {
-          ...(planSummary.dag.parallelPaths !== undefined && { parallel_paths: planSummary.dag.parallelPaths }),
-          ...(planSummary.dag.criticalPathDepth !== undefined && { critical_path_depth: planSummary.dag.criticalPathDepth }),
+          ...(planSummary.dag.parallelPaths !== undefined && {
+            parallel_paths: planSummary.dag.parallelPaths,
+          }),
+          ...(planSummary.dag.criticalPathDepth !== undefined && {
+            critical_path_depth: planSummary.dag.criticalPathDepth,
+          }),
           generated_at: planSummary.dag.generatedAt,
         };
       }
 
-      payload.notes.push(`Plan DAG contains ${planSummary.totalTasks} tasks with ${planSummary.entryTasks.length} entry points`);
-      payload.notes.push(`See docs/requirements/execution_flow.md for DAG semantics and resume behavior`);
+      payload.notes.push(
+        `Plan DAG contains ${planSummary.totalTasks} tasks with ${planSummary.entryTasks.length} entry points`
+      );
+      payload.notes.push(
+        `See docs/requirements/execution_flow.md for DAG semantics and resume behavior`
+      );
     } else {
       payload.notes.push('No plan.json found. Ensure spec is approved and run plan generation.');
       payload.notes.push('Plan generation is covered by FR-12, FR-13, FR-14');
@@ -343,7 +366,9 @@ export default class Plan extends Command {
     if (planDiff) {
       payload.plan_diff = planDiff;
       if (planDiff.has_changes) {
-        payload.notes.push('⚠ Specification hash changed—plan may be stale. Re-run plan generation if needed.');
+        payload.notes.push(
+          '⚠ Specification hash changed—plan may be stale. Re-run plan generation if needed.'
+        );
       }
     }
 
@@ -384,7 +409,7 @@ export default class Plan extends Command {
 
       if (flags.verbose) {
         this.log('Entry Tasks (can start immediately):');
-        summary.entry_tasks.forEach(taskId => {
+        summary.entry_tasks.forEach((taskId) => {
           this.log(`  • ${taskId}`);
         });
         this.log('');
@@ -414,7 +439,7 @@ export default class Plan extends Command {
         this.warn('⚠ Changes detected between current spec and plan');
         this.log('');
         this.log('Changed fields:');
-        payload.plan_diff.changed_fields.forEach(field => {
+        payload.plan_diff.changed_fields.forEach((field) => {
           this.log(`  • ${field}`);
         });
         this.log('');

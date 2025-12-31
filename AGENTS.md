@@ -176,6 +176,73 @@ docker run --rm -v $(pwd):/workspace ai-feature-pipeline init
 | `ai-feature research create`   | Create research task          |
 | `ai-feature context summarize` | Summarize context             |
 
+## BRANCHING STRATEGY (GitHub Flow + Graphite)
+
+**Strategy**: GitHub Flow with Graphite for stacked PRs
+
+### Workflow
+
+1. **All changes go through PRs** - Never push directly to `main`
+2. **Use Graphite CLI (`gt`)** for branch/PR management
+3. **Stack related changes** - Keep PRs small, focused, reviewable
+
+### Graphite Commands
+
+```bash
+# Core workflow
+gt create -m "feat: description"   # Create branch + commit (replaces git commit)
+gt submit --no-interactive         # Push + create PR (replaces git push)
+gt sync --force                    # Pull trunk, delete merged branches
+gt modify                          # Amend current branch, rebase upstack
+
+# Navigation
+gt checkout                        # Interactive branch selection
+gt up / gt down                    # Navigate stack
+gt state                           # Show repository state
+
+# Stacking
+gt submit --stack                  # Submit entire stack as linked PRs
+gt restack                         # Rebase all PRs on latest changes
+```
+
+### Rules
+
+| Rule                    | Rationale                                |
+| ----------------------- | ---------------------------------------- |
+| Never `git commit`      | Use `gt create -m "message"` instead     |
+| Never `git push`        | Use `gt submit --no-interactive` instead |
+| Keep PRs < 400 lines    | Easier review, faster merge              |
+| Stack related changes   | PR #2 depends on #1? Stack them          |
+| Run `gt sync` regularly | Cleans merged branches, updates trunk    |
+
+### Branch Naming
+
+Graphite auto-generates branch names from commit messages:
+
+- `12-30-feat_add_user_authentication`
+- `12-30-fix_validation_bug`
+
+### PR Workflow
+
+```bash
+# Single PR
+gt create -m "feat: add feature"
+gt submit --no-interactive
+
+# Stacked PRs (3 related changes)
+gt create -m "refactor: extract types"
+gt create -m "feat: add new module"
+gt create -m "test: add integration tests"
+gt submit --stack --no-interactive
+```
+
+### After PR Merge
+
+```bash
+gt sync --force    # Deletes merged branches, updates main
+gt checkout main   # Switch to updated trunk
+```
+
 ## CI/CD INFRASTRUCTURE
 
 - **Self-hosted runners**: All GitHub Actions run on self-hosted runners, NOT GitHub-hosted
