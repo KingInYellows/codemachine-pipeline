@@ -228,6 +228,71 @@ const ConstraintsSchema = z.object({
 export type Constraints = z.infer<typeof ConstraintsSchema>;
 
 // ============================================================================
+// Execution Config Schema - CodeMachine CLI integration
+// ============================================================================
+
+export const ExecutionEngineType = z.enum([
+  'claude',
+  'codex',
+  'opencode',
+  'cursor',
+  'auggie',
+  'ccr',
+]);
+
+export type ExecutionEngineType = z.infer<typeof ExecutionEngineType>;
+
+const ExecutionConfigSchema = z.object({
+  codemachine_cli_path: z
+    .string()
+    .default('codemachine')
+    .describe('Path to CodeMachine CLI binary'),
+
+  default_engine: ExecutionEngineType.default('claude').describe(
+    'Default AI engine for task execution'
+  ),
+
+  workspace_dir: z.string().default('.').describe('Working directory for CodeMachine execution'),
+
+  task_timeout_ms: z
+    .number()
+    .int()
+    .min(60000)
+    .max(7200000)
+    .default(1800000)
+    .describe('Task execution timeout in milliseconds (default 30 min)'),
+
+  max_retries: z
+    .number()
+    .int()
+    .min(0)
+    .max(10)
+    .default(3)
+    .describe('Maximum retry attempts for recoverable failures'),
+
+  retry_backoff_ms: z
+    .number()
+    .int()
+    .min(1000)
+    .max(60000)
+    .default(5000)
+    .describe('Delay between retry attempts in milliseconds'),
+
+  // SECURITY: Only allowlisted env vars passed to prevent credential leakage
+  env_allowlist: z
+    .array(z.string())
+    .default(['NODE_ENV', 'DEBUG', 'LOG_LEVEL', 'CODEMACHINE_PLAIN_LOGS'])
+    .describe('Environment variables allowed to pass to CodeMachine CLI'),
+
+  spec_path: z
+    .string()
+    .default('.codemachine/inputs/specifications.md')
+    .describe('Path to specification file for CodeMachine'),
+});
+
+export type ExecutionConfig = z.infer<typeof ExecutionConfigSchema>;
+
+// ============================================================================
 // Main RepoConfig Schema
 // ============================================================================
 
@@ -243,8 +308,8 @@ export const RepoConfigSchema = z.object({
   feature_flags: FeatureFlagsSchema,
   validation: ValidationSettingsSchema.optional(),
   constraints: ConstraintsSchema.optional(),
+  execution: ExecutionConfigSchema.optional().describe('CodeMachine CLI execution configuration'),
 
-  // Enhanced governance controls (ADR-5)
   governance: GovernanceSchema.optional().describe(
     'Governance controls for approval workflows and accountability'
   ),
@@ -495,6 +560,22 @@ export function applyEnvironmentOverrides(config: RepoConfig): RepoConfig {
     }
   }
 
+  const codemachineCliPath = process.env.AI_FEATURE_EXECUTION_CLI_PATH;
+  if (codemachineCliPath && overridden.execution) {
+    overridden.execution = { ...overridden.execution, codemachine_cli_path: codemachineCliPath };
+  }
+
+  const defaultEngine = process.env.AI_FEATURE_EXECUTION_DEFAULT_ENGINE;
+  if (defaultEngine && overridden.execution) {
+    const validEngines = ['claude', 'codex', 'opencode', 'cursor', 'auggie', 'ccr'] as const;
+    if (validEngines.includes(defaultEngine as (typeof validEngines)[number])) {
+      overridden.execution = {
+        ...overridden.execution,
+        default_engine: defaultEngine as (typeof validEngines)[number],
+      };
+    }
+  }
+
   return overridden;
 }
 
@@ -583,6 +664,16 @@ export function createDefaultConfig(
         linear_requests_per_minute: 60,
         agent_requests_per_hour: 100,
       },
+    },
+    execution: {
+      codemachine_cli_path: 'codemachine',
+      default_engine: 'claude',
+      workspace_dir: '.',
+      task_timeout_ms: 1800000,
+      max_retries: 3,
+      retry_backoff_ms: 5000,
+      env_allowlist: ['NODE_ENV', 'DEBUG', 'LOG_LEVEL', 'CODEMACHINE_PLAIN_LOGS'],
+      spec_path: '.codemachine/inputs/specifications.md',
     },
     config_history: [
       {
