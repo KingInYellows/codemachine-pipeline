@@ -2,6 +2,7 @@ import * as path from 'node:path';
 import type { ExecutionTask, ExecutionTaskType } from '../core/models/ExecutionTask.js';
 import type { ExecutionEngineType } from '../core/config/RepoConfig.js';
 import type { RunnerResult } from './codeMachineRunner.js';
+import { extractArtifactPaths } from './resultNormalizer.js';
 
 export interface CodeMachineCommand {
   command: 'run' | 'start';
@@ -73,9 +74,7 @@ export function mapTaskToCommand(
     agentSpec = `${agentId}[${modifiers.join(',')}]`;
   }
 
-  const script = `${agentSpec} '${escapePrompt(prompt)}'`;
-
-  const args = ['run', script];
+  const args = ['run', agentSpec, prompt];
 
   if (options.workingDir) {
     args.push('--dir', options.workingDir);
@@ -213,66 +212,6 @@ function classifyError(result: RunnerResult): ErrorClassification {
   };
 }
 
-function extractArtifactPaths(stdout: string): string[] {
-  const artifacts: string[] = [];
-
-  const patterns = [
-    /created:\s*([^\s\n]+)/gi,
-    /wrote:\s*([^\s\n]+)/gi,
-    /generated:\s*([^\s\n]+)/gi,
-    /output:\s*([^\s\n]+)/gi,
-    /file:\s*([^\s\n]+)/gi,
-  ];
-
-  for (const pattern of patterns) {
-    let match;
-    while ((match = pattern.exec(stdout)) !== null) {
-      const filePath = match[1];
-      if (filePath && isValidArtifactPath(filePath)) {
-        artifacts.push(filePath);
-      }
-    }
-  }
-
-  return [...new Set(artifacts)];
-}
-
-function isValidArtifactPath(filePath: string): boolean {
-  if (filePath.includes('..')) return false;
-  if (filePath.startsWith('/')) return false;
-  if (filePath.includes('\0')) return false;
-
-  const validExtensions = [
-    '.ts',
-    '.tsx',
-    '.js',
-    '.jsx',
-    '.json',
-    '.md',
-    '.yaml',
-    '.yml',
-    '.css',
-    '.scss',
-    '.html',
-    '.vue',
-    '.svelte',
-    '.py',
-    '.rb',
-    '.go',
-    '.rs',
-    '.java',
-    '.kt',
-    '.swift',
-    '.c',
-    '.cpp',
-    '.h',
-    '.hpp',
-  ];
-
-  const ext = path.extname(filePath).toLowerCase();
-  return validExtensions.includes(ext) || filePath.includes('/');
-}
-
 function sanitizeFilePath(filePath: string, workingDir: string): string | null {
   if (filePath.includes('..')) return null;
   if (filePath.includes('\0')) return null;
@@ -283,15 +222,6 @@ function sanitizeFilePath(filePath: string, workingDir: string): string | null {
   }
 
   return filePath;
-}
-
-function escapePrompt(prompt: string): string {
-  return prompt
-    .replace(/\\/g, '\\\\')
-    .replace(/'/g, "\\'")
-    .replace(/\n/g, '\\n')
-    .replace(/\r/g, '\\r')
-    .replace(/\t/g, '\\t');
 }
 
 export function buildSequentialScript(

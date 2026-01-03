@@ -160,10 +160,10 @@ This repo already contains robust planning, queue persistence, resume logic, and
 
 ```ts
 // Pseudocode: CLI runner using existing patterns
-const childProcess = spawn(command, {
+const childProcess = spawn(command, args, {
   cwd: workspaceDir,
   env: { ...process.env, CODEMACHINE_PLAIN_LOGS: '1' },
-  shell: true,
+  shell: false, // CRITICAL: Set to false to prevent command injection
   timeout: options.timeout,
 });
 ```

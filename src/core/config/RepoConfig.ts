@@ -567,11 +567,10 @@ export function applyEnvironmentOverrides(config: RepoConfig): RepoConfig {
 
   const defaultEngine = process.env.AI_FEATURE_EXECUTION_DEFAULT_ENGINE;
   if (defaultEngine && overridden.execution) {
-    const validEngines = ['claude', 'codex', 'opencode', 'cursor', 'auggie', 'ccr'] as const;
-    if (validEngines.includes(defaultEngine as (typeof validEngines)[number])) {
+    if (ExecutionEngineType.safeParse(defaultEngine).success) {
       overridden.execution = {
         ...overridden.execution,
-        default_engine: defaultEngine as (typeof validEngines)[number],
+        default_engine: defaultEngine as ExecutionEngineType,
       };
     }
   }

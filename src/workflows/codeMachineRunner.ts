@@ -73,8 +73,9 @@ function buildArgs(options: RunnerOptions, engine: ExecutionEngineType): string[
     args.push('--spec', options.specPath);
   }
 
-  const agentSpec = `${engine} '${options.prompt.replace(/'/g, "\\'")}'`;
-  args.push(agentSpec);
+  // The engine and prompt should be separate arguments.
+  // No need for manual quoting or escaping when shell: false is used.
+  args.push(engine, options.prompt);
 
   return args;
 }
