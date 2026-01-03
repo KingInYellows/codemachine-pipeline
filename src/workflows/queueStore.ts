@@ -153,9 +153,68 @@ export async function initializeQueue(runDir: string, featureId: string): Promis
   return queueDir;
 }
 
-/**
- * Compute checksum for empty queue
- */
+export interface PlanTask {
+  id: string;
+  title: string;
+  task_type: ExecutionTask['task_type'];
+  dependency_ids?: string[];
+  config?: Record<string, unknown>;
+  metadata?: Record<string, unknown>;
+}
+
+export async function initializeQueueFromPlan(
+  runDir: string,
+  featureId: string,
+  planTasks: PlanTask[]
+): Promise<QueueOperationResult> {
+  try {
+    await initializeQueue(runDir, featureId);
+
+    if (planTasks.length === 0) {
+      return {
+        success: true,
+        message: 'Queue initialized with no tasks',
+        tasksAffected: 0,
+      };
+    }
+
+    const now = new Date().toISOString();
+    const executionTasks: ExecutionTask[] = planTasks.map((planTask) => ({
+      schema_version: '1.0.0',
+      task_id: planTask.id,
+      feature_id: featureId,
+      title: planTask.title,
+      task_type: planTask.task_type,
+      status: 'pending' as const,
+      dependency_ids: planTask.dependency_ids ?? [],
+      retry_count: 0,
+      max_retries: 3,
+      created_at: now,
+      updated_at: now,
+      ...(planTask.config !== undefined ? { config: planTask.config } : {}),
+      ...(planTask.metadata !== undefined ? { metadata: planTask.metadata } : {}),
+    }));
+
+    const result = await appendToQueue(runDir, executionTasks);
+
+    if (!result.success) {
+      return result;
+    }
+
+    return {
+      success: true,
+      message: `Queue initialized from plan with ${executionTasks.length} task(s)`,
+      tasksAffected: executionTasks.length,
+    };
+  } catch (error) {
+    return {
+      success: false,
+      message: error instanceof Error ? error.message : 'Failed to initialize queue from plan',
+      errors: [error instanceof Error ? (error.stack ?? error.message) : 'Unknown error'],
+    };
+  }
+}
+
 function computeEmptyQueueChecksum(): string {
   return crypto.createHash('sha256').update('').digest('hex');
 }
