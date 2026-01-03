@@ -5,6 +5,30 @@ All notable changes to the AI Feature Pipeline CLI will be documented in this fi
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- **CodeMachine CLI Integration**: Multi-engine execution support via CodeMachine CLI adapter
+  - Supported engines: `claude`, `codex`, `opencode`, `cursor`, `auggie`, `ccr`
+  - Configurable CLI path, timeouts, and retry settings
+  - See [docs/ops/codemachine_adapter_guide.md](docs/ops/codemachine_adapter_guide.md)
+
+- **Doctor CLI Check**: `ai-feature doctor` now validates CodeMachine CLI availability
+  - Shows version when installed
+  - Warns (non-blocking) when not installed with installation instructions
+  - Respects custom `execution.codemachine_cli_path` configuration
+
+- **Smoke Tests CI Integration**: Execution smoke tests integrated into CI pipeline
+  - CodeMachine CLI availability check (graceful skip if not installed)
+  - Dry-run execution test
+  - Queue initialization test
+
+### Documentation
+
+- **CodeMachine Adapter Guide** (`docs/ops/codemachine_adapter_guide.md`): Comprehensive guide covering prerequisites, configuration, engine selection, and troubleshooting
+- **README Execution Engine Section**: Quick start guide for execution engine setup
+
 ## [0.1.0-alpha.1] - 2025-12-31
 
 ### Overview
