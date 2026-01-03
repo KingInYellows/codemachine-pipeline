@@ -139,10 +139,12 @@ ai-feature start --spec ./specs/new-feature.md
 Initialize the pipeline in the current git repository with schema-validated configuration.
 
 **Options:**
+
 - `-f, --force`: Force re-initialization even if config already exists
 - `--validate-only`: Validate existing config without creating new files
 
 **Examples:**
+
 ```bash
 # Initialize new configuration
 ai-feature init
@@ -155,6 +157,7 @@ ai-feature init --validate-only
 ```
 
 **Exit Codes:**
+
 - `0`: Success
 - `1`: General error (not a git repository, etc.)
 - `10`: Configuration validation error
@@ -164,6 +167,7 @@ ai-feature init --validate-only
 Start a new feature development pipeline from a prompt, Linear issue, or specification file.
 
 **Options:**
+
 - `-p, --prompt <text>`: Feature description prompt
 - `-l, --linear <id>`: Linear issue ID to import as specification
 - `-s, --spec <path>`: Path to existing specification file
@@ -171,6 +175,7 @@ Start a new feature development pipeline from a prompt, Linear issue, or specifi
 - `--dry-run`: Simulate execution without making changes
 
 **Examples:**
+
 ```bash
 # Start from a text prompt
 ai-feature start --prompt "Add user authentication with OAuth"
@@ -186,6 +191,7 @@ ai-feature start --prompt "Add feature" --json
 ```
 
 **Exit Codes:**
+
 - `0`: Success
 - `1`: General error
 - `10`: Validation error
@@ -201,12 +207,14 @@ ai-feature start --prompt "Add feature" --json
 Show the current state of a feature development pipeline.
 
 **Options:**
+
 - `-f, --feature <id>`: Feature ID to query (defaults to current/latest)
 - `--json`: Output results in JSON format
 - `-v, --verbose`: Show detailed execution logs and task breakdown
 - `--show-costs`: Include token usage and cost estimates
 
 **Examples:**
+
 ```bash
 # Show status of current feature
 ai-feature status
@@ -222,6 +230,7 @@ ai-feature status --verbose --show-costs
 ```
 
 **Exit Codes:**
+
 - `0`: Success
 - `1`: General error
 - `10`: Validation error (feature not found)
@@ -231,10 +240,12 @@ ai-feature status --verbose --show-costs
 Run environment diagnostics and readiness checks.
 
 **Options:**
+
 - `--json`: Output results in JSON format
 - `-v, --verbose`: Show detailed diagnostic information
 
 **Examples:**
+
 ```bash
 # Run environment checks
 ai-feature doctor
@@ -247,12 +258,14 @@ ai-feature doctor --verbose
 ```
 
 **Exit Codes:**
+
 - `0`: All checks passed (warnings allowed)
 - `10`: Validation error (config issues)
 - `20`: Environment issue (missing tools, version mismatches)
 - `30`: Credential issue (missing tokens, invalid scopes)
 
 **Checks Performed:**
+
 - Node.js version (v20+ required, v24 preferred)
 - Git installation and repository detection
 - npm installation
@@ -269,6 +282,7 @@ ai-feature doctor --verbose
 Grant or deny approval for feature pipeline gates (PRD, Spec, Plan, Code, PR, Deploy).
 
 **Options:**
+
 - `-f, --feature <id>`: Feature ID (defaults to current/latest)
 - `-a, --approve`: Grant approval
 - `-d, --deny`: Deny approval
@@ -279,6 +293,7 @@ Grant or deny approval for feature pipeline gates (PRD, Spec, Plan, Code, PR, De
 - `--skip-hash-check`: Skip artifact hash validation (use with caution)
 
 **Examples:**
+
 ```bash
 # Approve PRD gate
 ai-feature approve prd --approve --signer "user@example.com"
@@ -291,6 +306,7 @@ ai-feature approve prd --approve --signer "user@example.com" --feature FEAT-abc1
 ```
 
 **Exit Codes:**
+
 - `0`: Success
 - `10`: Validation error (invalid gate type, feature not found)
 - `30`: Human action required (artifact modified, missing artifact)
@@ -302,12 +318,14 @@ ai-feature approve prd --approve --signer "user@example.com" --feature FEAT-abc1
 Display the execution plan DAG, task summaries, and dependency graph.
 
 **Options:**
+
 - `-f, --feature <id>`: Feature ID to query (defaults to current/latest)
 - `--json`: Output results in JSON format
 - `-v, --verbose`: Show detailed task breakdown and dependency chains
 - `--show-diff`: Compare plan against spec hash to detect changes
 
 **Examples:**
+
 ```bash
 # Show plan for current feature
 ai-feature plan
@@ -326,6 +344,7 @@ ai-feature plan --verbose --show-diff
 Resume a failed or paused feature pipeline execution with safety checks.
 
 **Options:**
+
 - `-f, --feature <id>`: Feature ID to resume (defaults to current/latest)
 - `-d, --dry-run`: Analyze resume eligibility without executing
 - `--force`: Override blockers (use with caution)
@@ -335,6 +354,7 @@ Resume a failed or paused feature pipeline execution with safety checks.
 - `-v, --verbose`: Show detailed diagnostics
 
 **Examples:**
+
 ```bash
 # Resume current feature
 ai-feature resume
@@ -350,6 +370,7 @@ ai-feature resume --feature feature-auth-123 --verbose
 ```
 
 **Exit Codes:**
+
 - `0`: Resume successful or dry-run completed
 - `10`: Resume blocked (blockers present)
 - `20`: Integrity check failed (without --force)
@@ -362,6 +383,7 @@ ai-feature resume --feature feature-auth-123 --verbose
 Execute validation commands (lint, test, typecheck, build) with auto-fix retry loops.
 
 **Options:**
+
 - `-f, --feature <id>`: Feature ID to validate (defaults to current/latest)
 - `-c, --command <type>`: Specific validation command (lint, test, typecheck, build)
 - `--auto-fix / --no-auto-fix`: Enable/disable auto-fix for supported commands (default: enabled)
@@ -372,6 +394,7 @@ Execute validation commands (lint, test, typecheck, build) with auto-fix retry l
 - `--init`: Initialize validation registry from config
 
 **Examples:**
+
 ```bash
 # Run all validations
 ai-feature validate
@@ -387,6 +410,7 @@ ai-feature validate --feature feature-auth-123
 ```
 
 **Exit Codes:**
+
 - `0`: All validations passed
 - `1`: General error (config/setup issues)
 - `10`: Validation failed
@@ -399,6 +423,7 @@ ai-feature validate --feature feature-auth-123
 Display rate limit status and telemetry for API providers.
 
 **Options:**
+
 - `-f, --feature <id>`: Feature ID to query (defaults to current/latest)
 - `--json`: Output results in JSON format
 - `-v, --verbose`: Show detailed rate limit history
@@ -406,6 +431,7 @@ Display rate limit status and telemetry for API providers.
 - `--clear <provider>`: Clear cooldown for specified provider
 
 **Examples:**
+
 ```bash
 # Show rate limit status
 ai-feature rate-limits
@@ -640,6 +666,62 @@ The pipeline operates on a state machine model with the following phases:
 
 Each phase is idempotent and resumable. Artifacts are stored in `.ai-feature-pipeline/runs/<feature-id>/`.
 
+## Execution Engine
+
+The pipeline supports multiple AI execution engines for task processing via the CodeMachine CLI adapter.
+
+### Supported Engines
+
+| Engine     | Description                |
+| ---------- | -------------------------- |
+| `claude`   | Anthropic Claude (default) |
+| `codex`    | OpenAI Codex               |
+| `opencode` | OpenCode CLI               |
+| `cursor`   | Cursor IDE                 |
+| `auggie`   | Auggie AI                  |
+| `ccr`      | Claude Code Runner         |
+
+### Setup
+
+1. **Install CodeMachine CLI** (optional but recommended):
+
+   ```bash
+   npm install -g codemachine-cli
+   ```
+
+2. **Configure execution settings** in `.ai-feature-pipeline/config.json`:
+
+   ```json
+   {
+     "execution": {
+       "default_engine": "claude",
+       "codemachine_cli_path": "codemachine-cli",
+       "task_timeout_ms": 300000,
+       "max_retries": 3
+     }
+   }
+   ```
+
+3. **Verify installation**:
+   ```bash
+   ai-feature doctor
+   ```
+   The doctor command will show CodeMachine CLI status (warning if not installed, pass if available).
+
+### Engine Selection
+
+Engines can be specified per-task or use the default:
+
+```bash
+# Use default engine from config
+ai-feature start --prompt "Add feature"
+
+# Specify engine explicitly (when supported)
+ai-feature start --prompt "Add feature" --engine codex
+```
+
+For detailed configuration options, see [docs/ops/codemachine_adapter_guide.md](docs/ops/codemachine_adapter_guide.md).
+
 ## Configuration
 
 Configuration is stored in `.ai-feature-pipeline/config.json` and validated against a JSON Schema.
@@ -716,11 +798,13 @@ The CLI validates that these are set when integrations are enabled.
 ### Configuration Override Pattern
 
 Environment variables can override config values using the pattern:
+
 ```
 AI_FEATURE_<SECTION>_<FIELD>
 ```
 
 Examples:
+
 ```bash
 export AI_FEATURE_GITHUB_TOKEN=ghp_override
 export AI_FEATURE_RUNTIME_AGENT_ENDPOINT=https://override.com
@@ -743,6 +827,7 @@ Contributions are welcome! Please open an issue or submit a pull request.
 ## Support
 
 For issues and questions:
+
 - GitHub Issues: https://github.com/codemachine/ai-feature-pipeline/issues
 - Documentation: See `specification.md` for detailed requirements
 

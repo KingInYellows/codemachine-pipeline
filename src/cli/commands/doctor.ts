@@ -129,6 +129,7 @@ export default class Doctor extends Command {
       checks.push(this.checkFilesystemPermissions());
       checks.push(this.checkOutboundConnectivity());
       checks.push(this.checkRepoConfig());
+      checks.push(this.checkCodeMachineCli());
       checks.push(...this.checkEnvironmentVariables());
 
       // Compute summary
@@ -609,9 +610,53 @@ export default class Doctor extends Command {
     };
   }
 
-  /**
-   * Check required environment variables
-   */
+  private checkCodeMachineCli(): DiagnosticCheck {
+    const configPath = path.resolve(process.cwd(), CONFIG_RELATIVE_PATH);
+    let cliPath = 'codemachine-cli';
+
+    if (fs.existsSync(configPath)) {
+      const result = loadRepoConfig(configPath);
+      if (result.success && result.config?.execution?.codemachine_cli_path) {
+        cliPath = result.config.execution.codemachine_cli_path;
+      }
+    }
+
+    try {
+      const result = spawnSync(cliPath, ['--version'], {
+        encoding: 'utf-8',
+        timeout: 5000,
+      });
+
+      if (result.status === 0) {
+        const version = result.stdout.trim();
+        return {
+          name: 'CodeMachine CLI (Execution)',
+          status: 'pass',
+          message: `${cliPath} ${version}`,
+          details: { version, cli_path: cliPath },
+        };
+      }
+
+      return {
+        name: 'CodeMachine CLI (Execution)',
+        status: 'warn',
+        message: `${cliPath} command failed`,
+        remediation:
+          'Install codemachine-cli: npm install -g codemachine-cli (optional for execution engine)',
+        details: { cli_path: cliPath },
+      };
+    } catch {
+      return {
+        name: 'CodeMachine CLI (Execution)',
+        status: 'warn',
+        message: 'CodeMachine CLI not found',
+        remediation:
+          'Install codemachine-cli: npm install -g codemachine-cli (optional for execution engine)',
+        details: { cli_path: cliPath },
+      };
+    }
+  }
+
   private checkEnvironmentVariables(): DiagnosticCheck[] {
     const configPath = path.resolve(process.cwd(), CONFIG_RELATIVE_PATH);
     const checks: DiagnosticCheck[] = [];

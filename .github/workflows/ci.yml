@@ -36,6 +36,10 @@ jobs:
       - name: Build project
         run: npm run build
 
+      - name: Run smoke tests
+        run: ./scripts/tooling/smoke_execution.sh
+        continue-on-error: true
+
       - name: Upload coverage reports
         uses: codecov/codecov-action@v4
         if: success()
