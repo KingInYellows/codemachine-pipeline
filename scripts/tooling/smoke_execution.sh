@@ -66,7 +66,46 @@ cleanup() {
 
 trap cleanup EXIT
 
-# Main execution
+check_codemachine_cli() {
+  local cli_path="${CODEMACHINE_CLI_PATH:-codemachine-cli}"
+  
+  if command -v "${cli_path}" &> /dev/null; then
+    local version
+    version=$("${cli_path}" --version 2>/dev/null || echo "unknown")
+    log_success "CodeMachine CLI found: ${version}"
+    CODEMACHINE_CLI_AVAILABLE=true
+  else
+    log_warning "CodeMachine CLI not found at '${cli_path}' - execution tests will be skipped"
+    log_info "Install: npm install -g codemachine-cli"
+    CODEMACHINE_CLI_AVAILABLE=false
+  fi
+}
+
+run_codemachine_tests() {
+  if [ "${CODEMACHINE_CLI_AVAILABLE:-false}" != "true" ]; then
+    log_warning "Skipping CodeMachine CLI tests (CLI not available)"
+    return 0
+  fi
+
+  local cli_path="${CODEMACHINE_CLI_PATH:-codemachine-cli}"
+  
+  log_info "Running CodeMachine CLI dry-run test..."
+  if "${cli_path}" --dry-run --engine claude "Test prompt" &> "${RUN_DIR}/codemachine_dryrun.log"; then
+    log_success "CodeMachine CLI dry-run passed"
+  else
+    log_warning "CodeMachine CLI dry-run failed (non-blocking)"
+  fi
+
+  log_info "Testing queue initialization..."
+  local queue_test_dir="${RUN_DIR}/queue_test"
+  mkdir -p "${queue_test_dir}"
+  if "${cli_path}" queue init --dir "${queue_test_dir}" &> "${RUN_DIR}/queue_init.log"; then
+    log_success "Queue initialization passed"
+  else
+    log_warning "Queue initialization failed (non-blocking)"
+  fi
+}
+
 main() {
   log_section "AI Feature Pipeline - Smoke Test Suite"
   log_info "Timestamp: ${TIMESTAMP}"
@@ -84,6 +123,10 @@ main() {
   # Step 3: Run smoke tests
   log_section "Step 3: Execute Smoke Test Suite"
   run_smoke_tests
+
+  # Step 3b: Run CodeMachine CLI tests (optional)
+  log_section "Step 3b: CodeMachine CLI Tests"
+  run_codemachine_tests
 
   # Step 4: Collect results
   log_section "Step 4: Collect and Verify Results"
@@ -123,6 +166,9 @@ setup_environment() {
 
 preflight_checks() {
   log_info "Checking repository structure..."
+
+  # Check CodeMachine CLI availability (optional)
+  check_codemachine_cli
 
   local required_dirs=(
     "src"
