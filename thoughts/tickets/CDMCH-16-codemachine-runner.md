@@ -1,5 +1,7 @@
 # CDMCH-16: CodeMachineRunner utility
 
+**Status:** Implemented (2026-01-03)
+
 ## Summary
 
 Implement CLI spawn utility with timeout, log streaming, validation, and safe env handling.

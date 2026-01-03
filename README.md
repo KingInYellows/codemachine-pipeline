@@ -13,6 +13,7 @@ Autonomous AI-powered feature development pipeline CLI
 - **Resumable Execution**: Idempotent pipeline steps with automatic state management
 - **Integration Ready**: Supports GitHub and Linear integrations
 - **Deterministic Builds**: Node v24 LTS, containerized execution
+- **CodeMachine CLI Adapter**: External execution engine integration with retry logic and artifact capture
 
 ## Installation
 

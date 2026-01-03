@@ -9,223 +9,76 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- **CodeMachine CLI Integration**: Multi-engine execution support via CodeMachine CLI adapter
-  - Supported engines: `claude`, `codex`, `opencode`, `cursor`, `auggie`, `ccr`
-  - Configurable CLI path, timeouts, and retry settings
-  - See [docs/ops/codemachine_adapter_guide.md](docs/ops/codemachine_adapter_guide.md)
+#### CodeMachine CLI Adapter Integration
 
-- **Doctor CLI Check**: `ai-feature doctor` now validates CodeMachine CLI availability
+- **CLIExecutionEngine**: Queue-based task execution with retry logic and backoff
+  - Strategy pattern for pluggable execution backends
+  - Artifact capture with path traversal prevention
+  - Telemetry integration (ExecutionLogWriter events)
+  - Graceful stop mechanism for interrupted pipelines
+
+- **CodeMachineRunner**: Enhanced CLI wrapper with security hardening
+  - Path validation (traversal/injection prevention)
+  - CLI availability checking
+  - Log file streaming with configurable buffer limit
+  - Structured result parsing
+
+- **TaskMapper**: Workflow routing for task types
+  - Maps task types to execution strategies
+  - Engine capability detection
+  - Native vs CodeMachine execution decisions
+
+- **ResultNormalizer**: Enhanced credential redaction
+  - 18 sensitive data patterns (JWT, private keys, connection strings, GitHub tokens)
+  - Error categorization (transient/permanent/human-action-required)
+
+- **ExecutionStrategy Interface**: Pluggable execution backends
+  - CodeMachineStrategy for external CLI execution
+  - Extensible for future native strategies
+
+#### Doctor Command Enhancement
+
+- Added CodeMachine CLI availability check to `ai-feature doctor`
   - Shows version when installed
   - Warns (non-blocking) when not installed with installation instructions
   - Respects custom `execution.codemachine_cli_path` configuration
 
-- **Smoke Tests CI Integration**: Execution smoke tests integrated into CI pipeline
-  - CodeMachine CLI availability check (graceful skip if not installed)
-  - Dry-run execution test
-  - Queue initialization test
+#### Documentation
 
-### Documentation
+- `docs/architecture/execution_flow.md` - Execution engine architecture
+- `docs/ops/codemachine_adapter_guide.md` - Operator guide for CodeMachine integration
 
-- **CodeMachine Adapter Guide** (`docs/ops/codemachine_adapter_guide.md`): Comprehensive guide covering prerequisites, configuration, engine selection, and troubleshooting
-- **README Execution Engine Section**: Quick start guide for execution engine setup
+#### Testing
 
-## [0.1.0-alpha.1] - 2025-12-31
+- Integration tests for CLIExecutionEngine
+- Unit tests for CodeMachineRunner, TaskMapper, ResultNormalizer
+- Smoke test updates for execution engine validation
 
-### Overview
+### Changed
 
-First alpha release of the AI Feature Pipeline CLI (`ai-feature`). This release provides core pipeline orchestration capabilities for PRD authoring, task planning, research, and PR automation with resumable execution.
+- Extended `ExecutionTaskType` enum to include all task types
+- `max_log_buffer_size` now configurable via `RepoConfig.execution`
 
-**Status**: Alpha - Production-ready core features, comprehensive documentation, 6/16 CLI commands have integration tests (core workflows covered).
+### Known Deviations
+
+- Phase 2.3 (start command wiring) deferred until plan generation is implemented
+
+## [0.1.0-alpha.1] - 2025-12-30
 
 ### Added
 
-#### Core CLI Commands (8 total)
-
-- `ai-feature init` - Initialize repository configuration
-- `ai-feature start` - Start new feature pipeline (supports --prompt, --linear, --spec)
-- `ai-feature plan` - Generate/view execution plan
-- `ai-feature status` - Pipeline status with comprehensive reporting
-- `ai-feature resume` - Resume interrupted features
-- `ai-feature approve` - Approval gate management
-- `ai-feature doctor` - Diagnostics and health checks
-- `ai-feature validate` - Configuration validation with auto-fix
-
-#### PR Workflow Commands (4 total)
-
-- `ai-feature pr create` - Create pull request with reviewers
-- `ai-feature pr status` - PR merge readiness checks
-- `ai-feature pr reviewers` - Manage PR reviewers
-- `ai-feature pr disable-auto-merge` - Disable auto-merge
-
-#### Research & Context Commands (3 total)
-
-- `ai-feature research create` - Create research tasks with caching
-- `ai-feature research list` - List research tasks
-- `ai-feature context summarize` - Summarize context with chunking
-
-#### Utilities (1 total)
-
-- `ai-feature rate-limits` - Rate limit monitoring and management
-
-#### Infrastructure
-
-- **Stateful Execution**: Run directory persistence for resumable workflows
-- **Rate Limiting**: Built-in exponential backoff, retry-after headers, cost tracking
-- **Telemetry**: Comprehensive logging, metrics (Prometheus format), distributed traces
-- **Hash Verification**: SHA-256 manifests for deterministic artifact integrity
-- **Approval Workflows**: Configurable approval gates for PRD, plan, code, PR stages
-- **Branch Protection Awareness**: Detects GitHub branch protection, prevents force push
-- **Multi-Provider Agents**: OpenAI-compatible agent endpoints (BYOA - Bring Your Own Agent)
-
-#### Integrations
-
-- **GitHub**: REST API v2022-11-28, PR automation, branch protection detection
-- **Linear**: Developer Preview API, issue synchronization, agent integration
-- **Agent Adapters**: HTTP-based agent communication with retry logic
+- Initial alpha release of AI Feature Pipeline CLI
+- Core CLI commands: `init`, `start`, `plan`, `status`, `resume`, `approve`, `doctor`, `validate`
+- GitHub adapter for PR creation and status
+- Linear adapter for issue tracking
+- Structured logging and telemetry
+- Rate limit handling with exponential backoff
+- Configuration validation with JSON Schema
+- Hash manifest for artifact integrity
+- Run directory management for resumable workflows
 
 ### Documentation
 
-#### Requirements (20+ documents)
-
-- Complete API specifications for all adapters and workflows
-- Data model dictionary with schema definitions
-- Playbooks for all major operations (PRD, plan, PR, research, approval)
-- Configuration migration guides
-
-#### Operations Guides
-
-- Init, doctor, smoke test guides
-- Approval workflow playbook
-- Rate limit reference
-- Execution telemetry guide
-- Integration testing guide
-
-#### Architecture
-
-- Component index with PlantUML diagrams
-- Deployment state diagrams
-- Execution flow diagrams
-- PR automation sequence diagrams
-
-### Testing
-
-- **CLI Integration Tests**: 6/16 commands (init, start, plan, status, doctor, validate)
-- **Test Coverage**: 92 passing tests (100% pass rate)
-- **Smoke Tests**: Full pipeline smoke test suite passing
-- **Integration Tests**: GitHub/Linear adapter regression tests with SHA-256 fixtures
-- **Unit Tests**: Core workflows, rate limiting, telemetry, hash verification
-
-### Configuration
-
-- **Schema Version**: 1.0.0
-- **Node.js Requirement**: >=24.0.0 (bleeding edge, most projects use LTS 18/20)
-- **Package Manager**: npm (tested with npm 10+)
-- **TypeScript**: ES2022 target, Node16 modules, strict type checking
-
-### CI/CD
-
-- **Self-Hosted Runners**: All GitHub Actions run on self-hosted infrastructure
-- **Build Pipeline**: TypeScript compilation, oclif manifest generation, test suites
-- **Code Quality**: ESLint, Prettier, dual test frameworks (Jest + Vitest)
-
-### Known Limitations
-
-#### Unimplemented Features (Documented but Not Built)
-
-- `ai-feature deploy` - Deployment automation (206 documentation references)
-- `ai-feature export` - Telemetry bundling (50+ documentation references)
-
-These commands are extensively documented in playbooks but not yet implemented. Planned for beta release.
-
-#### Test Coverage Gaps
-
-- 10/16 commands lack CLI integration tests (not blocking - core workflows tested)
-- Workflow integration tests deferred to beta
-- 84-item readiness checklist not fully automated
-
-### Breaking Changes
-
-None (first release).
-
-### Migration Guide
-
-Not applicable (first release).
-
-### Contributors
-
-- YeonGyu Kim (@code-yeongyu) - Project author and maintainer
-
-### Links
-
-- **Repository**: https://github.com/KingInYellows/codemachine-pipeline
-- **Documentation**: See `docs/` directory
-- **Issues**: GitHub Issues
-- **License**: See LICENSE file
-
----
-
-## Release Notes
-
-### What's Working
-
-✅ **Core Pipeline**: PRD authoring → Plan generation → Research → PR creation → Approval gates
-✅ **Resumability**: Interrupted pipelines resume from exact state with hash verification
-✅ **Rate Limiting**: Comprehensive tracking across GitHub (5000/hr), Linear (1500/hr), Agent endpoints
-✅ **Telemetry**: Metrics (Prometheus), traces (NDJSON), cost tracking, execution logs
-✅ **CI/CD**: Self-hosted runners, automated builds, comprehensive test suites
-
-### What's Next (Beta)
-
-🔄 Implement `deploy` and `export` commands
-🔄 Complete test coverage (remaining 10 commands)
-🔄 Automate 84-item readiness checklist
-🔄 Workflow integration tests
-🔄 Documentation drift cleanup
-
-### Installation
-
-```bash
-npm install -g ai-feature-pipeline  # (update with actual package name when published)
-```
-
-Or from source:
-
-```bash
-git clone https://github.com/KingInYellows/codemachine-pipeline.git
-cd codemachine-pipeline
-npm install
-npm run build
-npm link  # Makes `ai-feature` available globally
-```
-
-### Quick Start
-
-```bash
-# Initialize configuration
-ai-feature init
-
-# Start a feature pipeline
-ai-feature start --prompt "Add user authentication"
-
-# Check status
-ai-feature status
-
-# Get help
-ai-feature --help
-ai-feature <command> --help
-```
-
-### System Requirements
-
-- **Node.js**: 24.0.0 or higher
-- **Git**: Required for repository operations
-- **npm**: 10.0.0 or higher
-- **Docker** (optional): For containerized deployments
-- **Environment Variables**:
-  - `GITHUB_TOKEN` (required for GitHub integration)
-  - `LINEAR_API_KEY` (optional, for Linear integration)
-  - `AGENT_ENDPOINT` (optional, for custom agent endpoints)
-
----
-
-**Full Changelog**: Initial alpha release
+- Architecture documentation
+- CLI patterns guide
+- Operator playbooks

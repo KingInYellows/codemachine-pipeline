@@ -1,261 +1,269 @@
-# CodeMachine Adapter Guide
+# CodeMachine CLI Adapter Guide
 
-This guide covers the setup, configuration, and troubleshooting of the CodeMachine CLI integration with the AI Feature Pipeline.
+**Version:** 1.0.0
+**Last Updated:** 2026-01-03
 
-## Prerequisites
+This document describes how the AI Feature Pipeline integrates with the CodeMachine CLI for task execution, including configuration, troubleshooting, and operational best practices.
 
-- Node.js 24.0.0 or higher
-- CodeMachine CLI installed globally: `npm install -g codemachine-cli`
-- Valid agent endpoint configured
+## Overview
 
-## Quick Start
+The CodeMachine CLI adapter enables the pipeline to delegate task execution to the external `codemachine` CLI tool. This integration provides:
 
-### 1. Install CodeMachine CLI
+- Unified execution interface for all task types
+- Log streaming with configurable buffer limits
+- Credential redaction in outputs
+- Artifact capture with path traversal prevention
+- Retry logic with exponential backoff
 
-```bash
-npm install -g codemachine-cli
+## Architecture
 
-# Verify installation
-codemachine-cli --version
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    CLIExecutionEngine                        │
+│  ┌─────────────────┐  ┌─────────────────┐  ┌─────────────┐  │
+│  │ ExecutionQueue  │→ │ StrategyRouter  │→ │ TaskMapper  │  │
+│  └─────────────────┘  └─────────────────┘  └─────────────┘  │
+│           │                    │                   │         │
+│           ▼                    ▼                   ▼         │
+│  ┌─────────────────────────────────────────────────────────┐│
+│  │              CodeMachineStrategy                         ││
+│  │  ┌─────────────────┐  ┌─────────────────────────────┐   ││
+│  │  │ CodeMachineRunner│→ │ ResultNormalizer            │   ││
+│  │  │ (CLI Spawning)  │  │ (Output Processing)         │   ││
+│  │  └─────────────────┘  └─────────────────────────────┘   ││
+│  └─────────────────────────────────────────────────────────┘│
+└─────────────────────────────────────────────────────────────┘
 ```
 
-### 2. Configure the Pipeline
+## Configuration
 
-Add execution settings to `.ai-feature-pipeline/config.json`:
+### Repository Configuration
+
+Add CodeMachine settings to your `config.json`:
 
 ```json
 {
   "execution": {
-    "engine": "claude",
-    "codemachine_cli_path": "codemachine-cli",
-    "timeout_seconds": 300,
-    "max_retries": 3
+    "default_engine": "claude",
+    "codemachine_cli_path": "codemachine",
+    "task_timeout_ms": 300000,
+    "max_retries": 3,
+    "max_log_buffer_size": 10485760
   }
 }
 ```
 
-### 3. Verify Setup
+### Configuration Fields
+
+| Field                  | Type   | Default       | Description                                     |
+| ---------------------- | ------ | ------------- | ----------------------------------------------- |
+| `codemachine_cli_path` | string | `codemachine` | Path to CodeMachine CLI binary                  |
+| `task_timeout_ms`      | number | 300000        | Task execution timeout (5 min default)          |
+| `max_retries`          | number | 3             | Maximum retry attempts for recoverable failures |
+| `max_log_buffer_size`  | number | 10485760      | Max log buffer size (10MB default)              |
+
+### Environment Variables
+
+| Variable                | Description                                      |
+| ----------------------- | ------------------------------------------------ |
+| `CODEMACHINE_CLI_PATH`  | Override CLI path from config                    |
+| `CODEMACHINE_TIMEOUT`   | Override timeout in milliseconds                 |
+| `CODEMACHINE_LOG_LEVEL` | Set CLI log verbosity (debug, info, warn, error) |
+
+## CLI Availability Check
+
+The `doctor` command validates CodeMachine CLI availability:
 
 ```bash
 ai-feature doctor
 ```
 
-The doctor command will check CodeMachine CLI availability and report status.
+Output includes:
 
-## Configuration Reference
+```
+CodeMachine CLI:
+  ✓ CLI found at /usr/local/bin/codemachine
+  ✓ Version: 2.1.0
+```
 
-### Execution Settings
+If the CLI is not found:
 
-| Field                       | Type    | Default             | Description                |
-| --------------------------- | ------- | ------------------- | -------------------------- |
-| `execution.engine`          | string  | `"claude"`          | Execution engine type      |
-| `execution.cli_path`        | string  | `"codemachine-cli"` | Path to CLI binary         |
-| `execution.timeout_seconds` | number  | `300`               | Command timeout            |
-| `execution.max_retries`     | number  | `3`                 | Retry attempts on failure  |
-| `execution.dry_run`         | boolean | `false`             | Simulate without executing |
+```
+CodeMachine CLI:
+  ⚠ CLI not found
+  → Install CodeMachine CLI or set execution.codemachine_cli_path in config
+```
 
-### Environment Variables
+## Task Execution Flow
 
-| Variable               | Description                |
-| ---------------------- | -------------------------- |
-| `CODEMACHINE_CLI_PATH` | Override CLI path          |
-| `CODEMACHINE_API_KEY`  | API key for agent service  |
-| `CODEMACHINE_TIMEOUT`  | Override timeout (seconds) |
+### 1. Task Reception
 
-## Engine Selection
+Tasks are received from the execution queue with metadata:
 
-The pipeline supports multiple execution engines:
-
-### Claude (Default)
-
-```json
-{
-  "execution": {
-    "engine": "claude"
-  }
+```typescript
+interface Task {
+  task_id: string;
+  task_type: 'code_generation' | 'testing' | 'pr_creation' | ...;
+  title: string;
+  description: string;
+  acceptance_criteria: string[];
+  context_references: string[];
 }
 ```
 
-Best for: Complex reasoning, code generation, multi-step tasks.
+### 2. Strategy Selection
 
-### Codex
+The `TaskMapper` determines execution strategy:
 
-```json
-{
-  "execution": {
-    "engine": "codex"
-  }
-}
+```typescript
+const mapping = mapTaskToWorkflow(task.task_type);
+// Returns: { engine: 'codemachine', workflow: 'generate-code', ... }
 ```
 
-Best for: Code completion, simple transformations.
+### 3. CLI Invocation
 
-### OpenAI
+The `CodeMachineRunner` spawns the CLI process:
 
-```json
-{
-  "execution": {
-    "engine": "openai"
-  }
-}
+```bash
+codemachine execute \
+  --task-id "task_001" \
+  --task-type "code_generation" \
+  --workspace "/path/to/workspace" \
+  --output-format json \
+  --log-file "/path/to/logs/task_001.log"
 ```
 
-Best for: General-purpose tasks, GPT-4 compatibility.
+### 4. Output Processing
+
+The `ResultNormalizer` processes CLI output:
+
+- Parses JSON result from stdout
+- Categorizes errors (transient vs permanent)
+- Redacts credentials from logs
+- Captures artifacts
+
+## Error Handling
+
+### Error Categories
+
+| Category                | Recoverable | Action                       |
+| ----------------------- | ----------- | ---------------------------- |
+| `transient`             | Yes         | Retry with backoff           |
+| `permanent`             | No          | Mark task failed             |
+| `timeout`               | Yes         | Retry with extended timeout  |
+| `human_action_required` | No          | Pause queue, notify operator |
+
+### Retry Backoff Schedule
+
+| Attempt | Delay     |
+| ------- | --------- |
+| 1       | 1 second  |
+| 2       | 2 seconds |
+| 3       | 4 seconds |
+
+After max retries, task is marked failed with `recoverable: false`.
+
+### Common Error Scenarios
+
+#### CLI Not Found
+
+```
+Error: CodeMachine CLI not found
+Category: permanent
+Resolution: Install CLI or set CODEMACHINE_CLI_PATH
+```
+
+#### Execution Timeout
+
+```
+Error: Task execution timed out after 300000ms
+Category: timeout
+Resolution: Increase timeout_ms or optimize task scope
+```
+
+## Security
+
+### Path Validation
+
+All paths are validated to prevent traversal attacks:
+
+```typescript
+// Rejected: ../../../etc/passwd
+// Rejected: task_id_with_../_traversal
+// Accepted: task_001, feature-auth-flow
+```
+
+### Credential Redaction
+
+The following patterns are automatically redacted from logs:
+
+| Pattern            | Example                      | Redacted            |
+| ------------------ | ---------------------------- | ------------------- |
+| Bearer tokens      | `Bearer eyJ...`              | `Bearer [REDACTED]` |
+| API keys           | `sk-abc123...`               | `[REDACTED]`        |
+| GitHub tokens      | `ghp_xxxxx`                  | `[REDACTED]`        |
+| Private keys       | `-----BEGIN...`              | `[REDACTED]`        |
+| Connection strings | `postgresql://user:pass@...` | `[REDACTED]`        |
+| AWS keys           | `AKIA...`                    | `[REDACTED]`        |
+
+### Log Buffer Limits
+
+Logs are buffered up to the configured limit (default 10MB). If exceeded:
+
+1. Older content is truncated
+2. Warning is logged
+3. Execution continues
+
+## Artifact Capture
+
+### Captured Artifacts
+
+After task completion, artifacts are captured from the workspace:
+
+| File                | Description            |
+| ------------------- | ---------------------- |
+| `summary.md`        | Task execution summary |
+| `changes.patch`     | Git diff of changes    |
+| `test-results.json` | Test execution results |
+
+### Artifact Storage
+
+Artifacts are stored in the run directory:
+
+```
+.ai-feature-pipeline/runs/<feature_id>/artifacts/<task_id>/
+├── summary.md
+├── changes.patch
+└── test-results.json
+```
 
 ## Troubleshooting
 
-### CLI Not Found
+### Task Stuck in Running State
 
-**Symptom**: `codemachine-cli: command not found`
+1. Check CLI process: `ps aux | grep codemachine`
+2. Review logs: `.ai-feature-pipeline/runs/<feature>/logs/`
+3. Kill orphaned process if needed
+4. Resume with: `ai-feature resume --feature <id>`
 
-**Solutions**:
+### High Failure Rate
 
-1. Verify installation:
+1. Run diagnostics: `ai-feature doctor`
+2. Check rate limits: `ai-feature rate-limits`
+3. Review recent failures in telemetry
+4. Consider reducing concurrency
 
-   ```bash
-   npm list -g codemachine-cli
-   ```
+### Log Buffer Overflow
 
-2. Check PATH includes npm global bin:
+If logs are truncated:
 
-   ```bash
-   npm bin -g
-   # Add to PATH if needed
-   export PATH="$(npm bin -g):$PATH"
-   ```
-
-3. Use explicit path in config:
-   ```json
-   {
-     "execution": {
-       "cli_path": "/usr/local/bin/codemachine-cli"
-     }
-   }
-   ```
-
-### Timeout Errors
-
-**Symptom**: `Error: Command timed out after 300 seconds`
-
-**Solutions**:
-
-1. Increase timeout:
-
-   ```json
-   {
-     "execution": {
-       "timeout_seconds": 600
-     }
-   }
-   ```
-
-2. Check agent endpoint health:
-
-   ```bash
-   curl -I $AGENT_ENDPOINT/health
-   ```
-
-3. Reduce task complexity or break into smaller steps.
-
-### Permanent Failure
-
-**Symptom**: `PermanentError: Task failed after 3 retries`
-
-**Causes**:
-
-- Invalid API credentials
-- Malformed request payload
-- Agent service unavailable
-
-**Solutions**:
-
-1. Verify credentials:
-
-   ```bash
-   echo $CODEMACHINE_API_KEY | head -c 10
-   ```
-
-2. Test with dry-run:
-
-   ```bash
-   codemachine-cli --dry-run --engine claude "Test prompt"
-   ```
-
-3. Check agent service logs.
-
-### Queue Issues
-
-**Symptom**: Tasks stuck in queue
-
-**Solutions**:
-
-1. Check queue status:
-
-   ```bash
-   ai-feature status --verbose
-   ```
-
-2. Validate queue files:
-
-   ```bash
-   ai-feature resume --validate-queue --dry-run
-   ```
-
-3. Force resume if safe:
-   ```bash
-   ai-feature resume --force
-   ```
-
-## Monitoring
-
-### Health Checks
-
-The `ai-feature doctor` command includes CodeMachine CLI checks:
-
-```bash
-ai-feature doctor --verbose
-```
-
-Output:
-
-```
-✓ CodeMachine CLI: codemachine-cli 1.2.3
-  Path: /usr/local/bin/codemachine-cli
-```
-
-### Execution Metrics
-
-Monitor execution via telemetry:
-
-```bash
-ai-feature status --show-costs
-```
-
-Metrics tracked:
-
-- `execution_duration_ms` - Task execution time
-- `execution_retries` - Retry count
-- `execution_failures` - Failure count
-
-### Logs
-
-Execution logs are stored in:
-
-```
-.ai-feature-pipeline/runs/<feature-id>/logs/execution.ndjson
-```
-
-## Best Practices
-
-1. **Always run doctor first**: Verify setup before starting features
-2. **Use dry-run for testing**: Test commands without side effects
-3. **Monitor rate limits**: Check `ai-feature rate-limits` regularly
-4. **Keep CLI updated**: `npm update -g codemachine-cli`
-5. **Set reasonable timeouts**: Balance between reliability and efficiency
+1. Check `max_log_buffer_size` setting
+2. Increase limit or reduce task verbosity
+3. Enable log file streaming for full capture
 
 ## Related Documentation
 
-- [Execution Flow](../requirements/execution_flow.md)
-- [Agent Manifest Guide](./agent_manifest_guide.md)
+- [Execution Telemetry](./execution_telemetry.md)
 - [Rate Limit Reference](./rate_limit_reference.md)
 - [Doctor Reference](./doctor_reference.md)
+- [Architecture: Execution Flow](../architecture/execution_flow.md)

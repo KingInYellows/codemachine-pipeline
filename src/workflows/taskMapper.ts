@@ -27,16 +27,51 @@ export interface TaskExecutionResult {
   artifacts?: string[];
 }
 
-const TASK_TYPE_TO_AGENT: Record<ExecutionTaskType, string> = {
-  code_generation: 'code-generator',
-  testing: 'test-runner',
-  pr_creation: 'pr-creator',
-  deployment: 'deployer',
-  review: 'code-reviewer',
-  refactoring: 'refactorer',
-  documentation: 'doc-writer',
-  other: 'general',
+export interface WorkflowMapping {
+  agentId: string;
+  command: 'run' | 'start';
+  useNativeEngine: boolean;
+}
+
+const TASK_TYPE_TO_WORKFLOW: Record<ExecutionTaskType, WorkflowMapping> = {
+  code_generation: { agentId: 'code-generator', command: 'run', useNativeEngine: false },
+  testing: { agentId: 'test-runner', command: 'run', useNativeEngine: true },
+  pr_creation: { agentId: 'pr-creator', command: 'run', useNativeEngine: false },
+  deployment: { agentId: 'deployer', command: 'run', useNativeEngine: true },
+  review: { agentId: 'code-reviewer', command: 'run', useNativeEngine: false },
+  refactoring: { agentId: 'refactorer', command: 'run', useNativeEngine: false },
+  documentation: { agentId: 'doc-writer', command: 'run', useNativeEngine: false },
+  other: { agentId: 'general', command: 'run', useNativeEngine: false },
 };
+
+const TASK_TYPE_TO_AGENT: Record<ExecutionTaskType, string> = Object.fromEntries(
+  Object.entries(TASK_TYPE_TO_WORKFLOW).map(([k, v]) => [k, v.agentId])
+) as Record<ExecutionTaskType, string>;
+
+export function mapTaskToWorkflow(taskType: ExecutionTaskType): WorkflowMapping {
+  return TASK_TYPE_TO_WORKFLOW[taskType];
+}
+
+export function shouldUseNativeEngine(taskType: ExecutionTaskType): boolean {
+  return TASK_TYPE_TO_WORKFLOW[taskType].useNativeEngine;
+}
+
+const SUPPORTED_ENGINES: readonly ExecutionEngineType[] = [
+  'claude',
+  'codex',
+  'opencode',
+  'cursor',
+  'auggie',
+  'ccr',
+] as const;
+
+export function getSupportedEngines(): readonly ExecutionEngineType[] {
+  return SUPPORTED_ENGINES;
+}
+
+export function isEngineSupported(engine: string): engine is ExecutionEngineType {
+  return SUPPORTED_ENGINES.includes(engine as ExecutionEngineType);
+}
 
 export function mapTaskToCommand(
   task: ExecutionTask,

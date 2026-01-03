@@ -125,6 +125,7 @@ export default class Doctor extends Command {
       checks.push(this.checkGitInstalled());
       checks.push(this.checkNpmInstalled());
       checks.push(this.checkDockerInstalled());
+      checks.push(this.checkCodeMachineCli());
       checks.push(this.checkGitRepository());
       checks.push(this.checkFilesystemPermissions());
       checks.push(this.checkOutboundConnectivity());
