@@ -27,7 +27,7 @@ Add execution settings to `.ai-feature-pipeline/config.json`:
 {
   "execution": {
     "engine": "claude",
-    "cli_path": "codemachine-cli",
+    "codemachine_cli_path": "codemachine-cli",
     "timeout_seconds": 300,
     "max_retries": 3
   }
