@@ -172,8 +172,10 @@ preflight_checks() {
 
   local required_dirs=(
     "src"
+    "src/workflows"
     "tests"
     "tests/integration"
+    "tests/unit"
     "tests/fixtures"
     "bin"
   )
@@ -191,6 +193,10 @@ preflight_checks() {
     "tsconfig.json"
     "bin/run.js"
     "tests/integration/smoke_execution.spec.ts"
+    "tests/integration/cliExecutionEngine.spec.ts"
+    "src/workflows/cliExecutionEngine.ts"
+    "src/workflows/codeMachineRunner.ts"
+    "src/workflows/codeMachineStrategy.ts"
   )
 
   for file in "${required_files[@]}"; do

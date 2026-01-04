@@ -37,6 +37,13 @@ export enum ExecutionTaskStatus {
  */
 export enum ExecutionTaskType {
   CODE_GENERATION = 'code_generation',
+  TESTING = 'testing',
+  PR_CREATION = 'pr_creation',
+  DEPLOYMENT = 'deployment',
+  REVIEW = 'review',
+  REFACTORING = 'refactoring',
+  DOCUMENTATION = 'documentation',
+  OTHER = 'other',
   VALIDATION = 'validation',
   PATCH_APPLICATION = 'patch_application',
   GIT_OPERATION = 'git_operation',
