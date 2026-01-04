@@ -288,6 +288,14 @@ const ExecutionConfigSchema = z.object({
     .string()
     .default('.codemachine/inputs/specifications.md')
     .describe('Path to specification file for CodeMachine'),
+
+  max_log_buffer_size: z
+    .number()
+    .int()
+    .min(1024 * 1024)
+    .max(100 * 1024 * 1024)
+    .default(10 * 1024 * 1024)
+    .describe('Maximum log buffer size in bytes (default 10MB)'),
 });
 
 export type ExecutionConfig = z.infer<typeof ExecutionConfigSchema>;
@@ -673,6 +681,7 @@ export function createDefaultConfig(
       retry_backoff_ms: 5000,
       env_allowlist: ['NODE_ENV', 'DEBUG', 'LOG_LEVEL', 'CODEMACHINE_PLAIN_LOGS'],
       spec_path: '.codemachine/inputs/specifications.md',
+      max_log_buffer_size: 10 * 1024 * 1024,
     },
     config_history: [
       {

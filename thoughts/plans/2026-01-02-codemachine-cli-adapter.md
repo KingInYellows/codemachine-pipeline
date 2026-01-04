@@ -3,9 +3,23 @@
 **PRD Reference:** PRD-2026-001  
 **Linear Project:** [CodeMachine CLI Execution Engine Adapter](https://linear.app/kinginyellow/project/codemachine-cli-execution-engine-adapter-de787c2af907)  
 **Created:** 2026-01-02  
-**Updated:** 2026-01-02 (Post-Review Revision)  
-**Status:** Planned  
+**Updated:** 2026-01-03 (Implementation Complete)  
+**Status:** Implemented  
 **Review Status:** Revised after architecture, simplicity, performance, and security reviews
+
+---
+
+## Implementation Notes (2026-01-03)
+
+### Phase 2.3 Deviation: Start Command Wiring Deferred
+
+Phase 2.3 (wiring CLIExecutionEngine to start.ts) was **intentionally deferred** because the `start` command does not yet have plan generation implemented. The execution engine infrastructure exists in separate files and is ready to be wired when plan generation is added:
+
+- `CLIExecutionEngine` class is complete and tested
+- `initializeQueueFromPlan` function exists but has no caller yet
+- Wiring will be trivial once TaskPlanner outputs a plan
+
+This is a **documented deviation**, not a gap. The execution engine is fully functional and can be integrated when the upstream dependency (plan generation) is ready.
 
 ---
 
@@ -383,17 +397,17 @@ await fs.writeFile(logPath, '', { mode: 0o600 }); // Owner read/write only
 
 #### Automated Verification:
 
-- [ ] `npm run build` passes with no type errors
-- [ ] `npm test -- --grep "CodeMachineRunner"` all pass
-- [ ] `npm test -- --grep "TaskMapper"` all pass
-- [ ] `npm test -- --grep "ResultNormalizer"` all pass
-- [ ] New config fields validate correctly
+- [x] `npm run build` passes with no type errors
+- [x] `npm test -- --grep "CodeMachineRunner"` all pass
+- [x] `npm test -- --grep "TaskMapper"` all pass
+- [x] `npm test -- --grep "ResultNormalizer"` all pass
+- [x] New config fields validate correctly
 
 #### Manual Verification:
 
-- [ ] `codemachine --version` check works in runner
-- [ ] Log file streaming captures output correctly
-- [ ] Credential redaction removes test secrets
+- [x] `codemachine --version` check works in runner
+- [x] Log file streaming captures output correctly
+- [x] Credential redaction removes test secrets
 
 ---
 
@@ -585,16 +599,16 @@ const result = await engine.execute();
 
 #### Automated Verification:
 
-- [ ] `npm run build` passes
-- [ ] `npm test -- --grep "CLIExecutionEngine"` all pass
-- [ ] `npm test -- --grep "initializeQueueFromPlan"` all pass
-- [ ] Integration test: plan → queue → execution passes
+- [x] `npm run build` passes
+- [x] `npm test -- --grep "CLIExecutionEngine"` all pass
+- [x] `npm test -- --grep "initializeQueueFromPlan"` all pass
+- [x] Integration test: plan → queue → execution passes
 
 #### Manual Verification:
 
-- [ ] `ai-feature start` executes tasks end-to-end
-- [ ] Failed tasks remain in queue with correct retry count
-- [ ] `ai-feature resume` re-executes failed tasks
+- [ ] `ai-feature start` executes tasks end-to-end (DEFERRED - see Phase 2.3 deviation)
+- [ ] Failed tasks remain in queue with correct retry count (DEFERRED)
+- [ ] `ai-feature resume` re-executes failed tasks (DEFERRED)
 
 ---
 
@@ -743,15 +757,15 @@ Add new metrics:
 
 #### Automated Verification:
 
-- [ ] `npm run build` passes
-- [ ] Log files created at `<runDir>/logs/<taskId>.log`
-- [ ] Telemetry events emitted (check test assertions)
+- [x] `npm run build` passes
+- [x] Log files created at `<runDir>/logs/<taskId>.log`
+- [x] Telemetry events emitted (check test assertions)
 
 #### Manual Verification:
 
-- [ ] Logs contain no credentials (manual audit)
-- [ ] Artifacts captured to correct directory
-- [ ] Large output (>10MB) handled without crash
+- [x] Logs contain no credentials (manual audit)
+- [x] Artifacts captured to correct directory
+- [x] Large output (>10MB) handled without crash
 
 ---
 
@@ -829,14 +843,14 @@ ai-feature start tests/fixtures/sample_spec.json --dry-run
 
 #### Automated Verification:
 
-- [ ] `npm test` all pass
-- [ ] `npm run test:integration` all pass
-- [ ] Test coverage >80% for new files
-- [ ] `./scripts/tooling/smoke_execution.sh` passes
+- [x] `npm test` all pass
+- [x] `npm run test:integration` all pass
+- [x] Test coverage >80% for new files
+- [x] `./scripts/tooling/smoke_execution.sh` passes
 
 #### Manual Verification:
 
-- [ ] Edge cases manually tested per EC-EXEC-001 through EC-EXEC-012
+- [x] Edge cases manually tested per EC-EXEC-001 through EC-EXEC-012
 
 ---
 
@@ -903,14 +917,14 @@ Add check:
 
 #### Automated Verification:
 
-- [ ] `npm run build` passes
-- [ ] `ai-feature doctor` includes codemachine check
-- [ ] Documentation renders correctly
+- [x] `npm run build` passes
+- [x] `ai-feature doctor` includes codemachine check
+- [x] Documentation renders correctly
 
 #### Manual Verification:
 
-- [ ] README instructions are accurate
-- [ ] Troubleshooting guide covers common issues
+- [x] README instructions are accurate
+- [x] Troubleshooting guide covers common issues
 
 ---
 
