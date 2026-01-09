@@ -231,15 +231,15 @@ export type Constraints = z.infer<typeof ConstraintsSchema>;
 // Execution Config Schema - CodeMachine CLI integration
 // ============================================================================
 
-const ExecutionEngineType = z.enum(['claude', 'codex', 'openai']);
+export const ExecutionEngineType = z.enum(['claude', 'codex', 'openai']);
 
 export type ExecutionEngineType = z.infer<typeof ExecutionEngineType>;
 
 const ExecutionConfigSchema = z.object({
   codemachine_cli_path: z.string().default('codemachine'),
-  default_engine: z.enum(['claude', 'codex', 'openai']).default('claude'),
+  default_engine: ExecutionEngineType.default('claude'),
   workspace_dir: z.string().optional(),
-  task_timeout_ms: z.number().int().min(60000).default(1800000), // 30 min
+  task_timeout_ms: z.number().int().min(60000).max(7200000).default(1800000), // 30 min, max 2h
   max_retries: z.number().int().min(0).max(10).default(3),
   retry_backoff_ms: z.number().int().min(1000).default(5000),
 });
@@ -535,7 +535,7 @@ export function applyEnvironmentOverrides(config: RepoConfig): RepoConfig {
   const taskTimeoutMs = process.env.AI_FEATURE_EXECUTION_TIMEOUT_MS;
   if (taskTimeoutMs && overridden.execution) {
     const parsed = parseInt(taskTimeoutMs, 10);
-    if (!isNaN(parsed)) {
+    if (!isNaN(parsed) && parsed >= 60000) {
       overridden.execution = { ...overridden.execution, task_timeout_ms: parsed };
     }
   }
