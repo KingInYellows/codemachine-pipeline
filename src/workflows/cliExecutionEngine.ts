@@ -143,9 +143,7 @@ const DEFAULT_EXECUTION_CONFIG = {
   retry_backoff_ms: 5000,
   codemachine_cli_path: 'codemachine',
   default_engine: 'claude' as const,
-  workspace_dir: '',
-  env_allowlist: [] as string[],
-  spec_path: '',
+  workspace_dir: undefined,
 };
 
 export class CLIExecutionEngine {
@@ -310,7 +308,6 @@ export class CLIExecutionEngine {
       workspaceDir: executionConfig.workspace_dir || this.runDir,
       logPath: path.join(this.runDir, 'logs', `${task.task_id}.log`),
       timeoutMs: executionConfig.task_timeout_ms,
-      envAllowlist: executionConfig.env_allowlist,
     };
 
     await fs.mkdir(path.dirname(context.logPath), { recursive: true });

@@ -5,7 +5,6 @@ export interface ExecutionContext {
   workspaceDir: string;
   logPath: string;
   timeoutMs: number;
-  envAllowlist: string[];
 }
 
 export interface ExecutionStrategyResult {
