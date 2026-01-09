@@ -231,71 +231,17 @@ export type Constraints = z.infer<typeof ConstraintsSchema>;
 // Execution Config Schema - CodeMachine CLI integration
 // ============================================================================
 
-export const ExecutionEngineType = z.enum([
-  'claude',
-  'codex',
-  'opencode',
-  'cursor',
-  'auggie',
-  'ccr',
-]);
+export const ExecutionEngineType = z.enum(['claude', 'codex', 'openai']);
 
 export type ExecutionEngineType = z.infer<typeof ExecutionEngineType>;
 
 const ExecutionConfigSchema = z.object({
-  codemachine_cli_path: z
-    .string()
-    .default('codemachine')
-    .describe('Path to CodeMachine CLI binary'),
-
-  default_engine: ExecutionEngineType.default('claude').describe(
-    'Default AI engine for task execution'
-  ),
-
-  workspace_dir: z.string().default('.').describe('Working directory for CodeMachine execution'),
-
-  task_timeout_ms: z
-    .number()
-    .int()
-    .min(60000)
-    .max(7200000)
-    .default(1800000)
-    .describe('Task execution timeout in milliseconds (default 30 min)'),
-
-  max_retries: z
-    .number()
-    .int()
-    .min(0)
-    .max(10)
-    .default(3)
-    .describe('Maximum retry attempts for recoverable failures'),
-
-  retry_backoff_ms: z
-    .number()
-    .int()
-    .min(1000)
-    .max(60000)
-    .default(5000)
-    .describe('Delay between retry attempts in milliseconds'),
-
-  // SECURITY: Only allowlisted env vars passed to prevent credential leakage
-  env_allowlist: z
-    .array(z.string())
-    .default(['NODE_ENV', 'DEBUG', 'LOG_LEVEL', 'CODEMACHINE_PLAIN_LOGS'])
-    .describe('Environment variables allowed to pass to CodeMachine CLI'),
-
-  spec_path: z
-    .string()
-    .default('.codemachine/inputs/specifications.md')
-    .describe('Path to specification file for CodeMachine'),
-
-  max_log_buffer_size: z
-    .number()
-    .int()
-    .min(1024 * 1024)
-    .max(100 * 1024 * 1024)
-    .default(10 * 1024 * 1024)
-    .describe('Maximum log buffer size in bytes (default 10MB)'),
+  codemachine_cli_path: z.string().default('codemachine'),
+  default_engine: ExecutionEngineType.default('claude'),
+  workspace_dir: z.string().optional(),
+  task_timeout_ms: z.number().int().min(60000).max(7200000).default(1800000), // 30 min, max 2h
+  max_retries: z.number().int().min(0).max(10).default(3),
+  retry_backoff_ms: z.number().int().min(1000).default(5000),
 });
 
 export type ExecutionConfig = z.infer<typeof ExecutionConfigSchema>;
@@ -527,6 +473,9 @@ function generateSuggestion(path: string, message: string): string | undefined {
  * - AI_FEATURE_RUNTIME_AGENT_ENDPOINT -> runtime.agent_endpoint
  * - AI_FEATURE_RUNTIME_MAX_CONCURRENT_TASKS -> runtime.max_concurrent_tasks
  * - AI_FEATURE_RUNTIME_TIMEOUT_MINUTES -> runtime.timeout_minutes
+ * - AI_FEATURE_EXECUTION_CLI_PATH -> execution.codemachine_cli_path
+ * - AI_FEATURE_EXECUTION_DEFAULT_ENGINE -> execution.default_engine
+ * - AI_FEATURE_EXECUTION_TIMEOUT_MS -> execution.task_timeout_ms
  *
  * @param config Base configuration
  * @returns Config with environment overrides applied
@@ -580,6 +529,14 @@ export function applyEnvironmentOverrides(config: RepoConfig): RepoConfig {
         ...overridden.execution,
         default_engine: defaultEngine as ExecutionEngineType,
       };
+    }
+  }
+
+  const taskTimeoutMs = process.env.AI_FEATURE_EXECUTION_TIMEOUT_MS;
+  if (taskTimeoutMs && overridden.execution) {
+    const parsed = parseInt(taskTimeoutMs, 10);
+    if (!isNaN(parsed) && parsed >= 60000) {
+      overridden.execution = { ...overridden.execution, task_timeout_ms: parsed };
     }
   }
 
@@ -675,13 +632,9 @@ export function createDefaultConfig(
     execution: {
       codemachine_cli_path: 'codemachine',
       default_engine: 'claude',
-      workspace_dir: '.',
       task_timeout_ms: 1800000,
       max_retries: 3,
       retry_backoff_ms: 5000,
-      env_allowlist: ['NODE_ENV', 'DEBUG', 'LOG_LEVEL', 'CODEMACHINE_PLAIN_LOGS'],
-      spec_path: '.codemachine/inputs/specifications.md',
-      max_log_buffer_size: 10 * 1024 * 1024,
     },
     config_history: [
       {

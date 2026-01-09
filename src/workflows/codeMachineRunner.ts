@@ -21,7 +21,6 @@ export interface RunnerOptions {
   workspaceDir: string;
   specPath?: string;
   timeoutMs: number;
-  envAllowlist: string[];
   logger?: StructuredLogger;
   logPath?: string;
 }
@@ -125,13 +124,12 @@ export async function validateCliAvailability(
   });
 }
 
-function filterEnvironment(allowlist: string[]): Record<string, string> {
+function filterEnvironment(): Record<string, string> {
   const filtered: Record<string, string> = {};
 
-  const alwaysAllowed = ['PATH', 'HOME', 'USER', 'SHELL', 'TERM', 'LANG', 'LC_ALL'];
-  const allAllowed = new Set([...alwaysAllowed, ...allowlist]);
+  const alwaysAllowed = ['PATH', 'HOME', 'USER', 'SHELL', 'TERM', 'LANG', 'LC_ALL', 'NODE_ENV', 'DEBUG', 'LOG_LEVEL'];
 
-  for (const key of allAllowed) {
+  for (const key of alwaysAllowed) {
     const value = process.env[key];
     if (value !== undefined) {
       filtered[key] = value;
@@ -180,7 +178,7 @@ export async function runCodeMachine(
   }
 
   const args = buildArgs(options, engine);
-  const env = filterEnvironment(options.envAllowlist);
+  const env = filterEnvironment();
 
   options.logger?.info('Starting CodeMachine execution', {
     task_id: options.taskId,
@@ -250,7 +248,7 @@ export async function runCodeMachine(
       logStream?.write(chunk);
       if (!bufferLimitReached) {
         totalBufferSize += chunk.length;
-        const maxBuffer = config.max_log_buffer_size ?? DEFAULT_MAX_BUFFER_SIZE;
+        const maxBuffer = DEFAULT_MAX_BUFFER_SIZE;
         if (totalBufferSize > maxBuffer) {
           bufferLimitReached = true;
           options.logger?.warn('Large output detected, streaming to file only', {
@@ -267,7 +265,7 @@ export async function runCodeMachine(
       logStream?.write(chunk);
       if (!bufferLimitReached) {
         totalBufferSize += chunk.length;
-        const maxBuffer = config.max_log_buffer_size ?? DEFAULT_MAX_BUFFER_SIZE;
+        const maxBuffer = DEFAULT_MAX_BUFFER_SIZE;
         if (totalBufferSize > maxBuffer) {
           bufferLimitReached = true;
           options.logger?.warn('Large output detected, streaming to file only', {

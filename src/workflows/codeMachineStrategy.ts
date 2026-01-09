@@ -53,7 +53,6 @@ export class CodeMachineStrategy implements ExecutionStrategy {
       workspaceDir: context.workspaceDir,
       specPath,
       timeoutMs: context.timeoutMs,
-      envAllowlist: this.config.env_allowlist,
     };
 
     if (this.logger) {
