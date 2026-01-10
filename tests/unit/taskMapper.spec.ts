@@ -32,6 +32,7 @@ describe('taskMapper', () => {
     it('maps deployment to native engine', () => {
       const mapping = mapTaskToWorkflow('deployment');
       expect(mapping.workflow).toBe('native-deployment');
+      expect(mapping.command).toBe('run');
       expect(mapping.useNativeEngine).toBe(true);
     });
 
@@ -79,7 +80,7 @@ describe('taskMapper', () => {
         const mapping = mapTaskToWorkflow(taskType);
         expect(mapping).toBeDefined();
         expect(mapping.workflow).toBeTruthy();
-        expect(['run', 'start', 'step']).toContain(mapping.command);
+        expect(['run', 'start']).toContain(mapping.command);
       }
     });
   });
@@ -139,12 +140,6 @@ describe('taskMapper', () => {
       expect(isEngineSupported('gpt4')).toBe(false);
       expect(isEngineSupported('invalid')).toBe(false);
       expect(isEngineSupported('')).toBe(false);
-    });
-
-    it('throws clear error for unsupported engine', () => {
-      // isEngineSupported returns boolean, doesn't throw
-      // This test verifies the API contract
-      expect(isEngineSupported('unsupported-engine')).toBe(false);
     });
   });
 });

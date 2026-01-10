@@ -29,7 +29,7 @@ export interface TaskExecutionResult {
 
 export interface WorkflowMapping {
   workflow: string;
-  command: 'start' | 'run' | 'step';
+  command: 'start' | 'run';
   useNativeEngine: boolean;
 }
 
