@@ -28,25 +28,33 @@ export interface TaskExecutionResult {
 }
 
 export interface WorkflowMapping {
-  agentId: string;
-  command: 'run' | 'start';
+  workflow: string;
+  command: 'start' | 'run' | 'step';
   useNativeEngine: boolean;
 }
 
 const TASK_TYPE_TO_WORKFLOW: Record<ExecutionTaskType, WorkflowMapping> = {
-  code_generation: { agentId: 'code-generator', command: 'run', useNativeEngine: false },
-  testing: { agentId: 'test-runner', command: 'run', useNativeEngine: true },
-  pr_creation: { agentId: 'pr-creator', command: 'run', useNativeEngine: false },
-  deployment: { agentId: 'deployer', command: 'run', useNativeEngine: true },
-  review: { agentId: 'code-reviewer', command: 'run', useNativeEngine: false },
-  refactoring: { agentId: 'refactorer', command: 'run', useNativeEngine: false },
-  documentation: { agentId: 'doc-writer', command: 'run', useNativeEngine: false },
-  other: { agentId: 'general', command: 'run', useNativeEngine: false },
+  code_generation: { workflow: 'codemachine start', command: 'start', useNativeEngine: false },
+  testing: { workflow: 'native-autofix', command: 'run', useNativeEngine: true },
+  pr_creation: { workflow: 'codemachine run pr', command: 'run', useNativeEngine: false },
+  deployment: { workflow: 'native-deployment', command: 'run', useNativeEngine: true },
+  review: { workflow: 'codemachine run review', command: 'run', useNativeEngine: false },
+  refactoring: { workflow: 'codemachine start', command: 'start', useNativeEngine: false },
+  documentation: { workflow: 'codemachine run docs', command: 'run', useNativeEngine: false },
+  other: { workflow: 'codemachine start', command: 'start', useNativeEngine: false },
 };
 
-const TASK_TYPE_TO_AGENT: Record<ExecutionTaskType, string> = Object.fromEntries(
-  Object.entries(TASK_TYPE_TO_WORKFLOW).map(([k, v]) => [k, v.agentId])
-) as Record<ExecutionTaskType, string>;
+// Helper to extract agent ID for backward compatibility
+const TASK_TYPE_TO_AGENT: Record<ExecutionTaskType, string> = {
+  code_generation: 'code-generator',
+  testing: 'test-runner',
+  pr_creation: 'pr-creator',
+  deployment: 'deployer',
+  review: 'code-reviewer',
+  refactoring: 'refactorer',
+  documentation: 'doc-writer',
+  other: 'general',
+};
 
 export function mapTaskToWorkflow(taskType: ExecutionTaskType): WorkflowMapping {
   return TASK_TYPE_TO_WORKFLOW[taskType];
