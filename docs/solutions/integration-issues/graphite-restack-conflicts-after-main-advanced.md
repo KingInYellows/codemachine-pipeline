@@ -6,7 +6,7 @@ symptoms:
   - Conflicts in CHANGELOG.md and shared documentation files
   - Duplicate functions appeared after resolving conflicts
   - PR could not merge due to conflicts
-root_cause: PR branch was based on outdated main; main advanced with new commits, causing restack to introduce conflicts
+root_cause: PR branch was based on outdated main; main has advanced with new commits, causing restack to introduce conflicts
 components:
   - Graphite (gt)
   - Git rebase
@@ -59,7 +59,7 @@ main:     A---B (3b49794)---C (cce41e0)
 branch:          D---E (our changes)
 ```
 
-The branch needed to be rebased onto C, but files modified in both B→C and B→E conflicted.
+The branch needed to be rebased onto C, but files modified in both B→C and D→E conflicted.
 
 ## Solution
 
@@ -129,9 +129,9 @@ gt submit --no-interactive
 
 ```bash
 # ALWAYS run before gt submit
-gt sync --force
-gt restack
-npm run build && npm test
+gt sync --force && \
+gt restack && \
+npm run build && npm test && \
 gt submit --no-interactive
 ```
 
@@ -155,6 +155,6 @@ git diff main...HEAD  # Review final changes
 
 ## Related
 
-- [AGENTS.md - Graphite Workflow](../../../AGENTS.md#branching-strategy-github-flow--graphite)
+- [AGENTS.md - Graphite Workflow](../../../AGENTS.md#branching-strategy-github-flow-graphite)
 - [PR Playbook](../../requirements/pr_playbook.md)
 - [Branch Protection Playbook](../../requirements/branch_protection_playbook.md)
