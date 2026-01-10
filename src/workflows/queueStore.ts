@@ -162,15 +162,27 @@ export interface PlanTask {
   metadata?: Record<string, unknown>;
 }
 
+/**
+ * TaskPlan interface for queue initialization
+ *
+ * Represents a plan with a feature ID and associated tasks.
+ * This is a queue-specific DTO, distinct from PlanArtifact.
+ */
+export interface TaskPlan {
+  /** Feature identifier for queue initialization */
+  feature_id: string;
+  /** Array of plan tasks to transform to ExecutionTasks */
+  tasks: PlanTask[];
+}
+
 export async function initializeQueueFromPlan(
   runDir: string,
-  featureId: string,
-  planTasks: PlanTask[]
+  plan: TaskPlan,
 ): Promise<QueueOperationResult> {
   try {
-    await initializeQueue(runDir, featureId);
+    await initializeQueue(runDir, plan.feature_id);
 
-    if (planTasks.length === 0) {
+    if (plan.tasks.length === 0) {
       return {
         success: true,
         message: 'Queue initialized with no tasks',
@@ -179,10 +191,10 @@ export async function initializeQueueFromPlan(
     }
 
     const now = new Date().toISOString();
-    const executionTasks: ExecutionTask[] = planTasks.map((planTask) => ({
+    const executionTasks: ExecutionTask[] = plan.tasks.map((planTask) => ({
       schema_version: '1.0.0',
       task_id: planTask.id,
-      feature_id: featureId,
+      feature_id: plan.feature_id,
       title: planTask.title,
       task_type: planTask.task_type,
       status: 'pending' as const,
