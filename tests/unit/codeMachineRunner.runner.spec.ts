@@ -584,6 +584,8 @@ describe('CodeMachineRunner', () => {
       expect(args).toContain('codex');
     });
 
+    // Verifies that prompts with special characters (quotes, etc.) are passed safely
+    // to the CLI without requiring escaping, because shell:false prevents shell interpretation
     it('should not escape prompt (shell: false)', async () => {
       const config: ExecutionConfig = {
         codemachine_cli_path: 'codemachine',
