@@ -41,7 +41,7 @@ export class CodeMachineStrategy implements ExecutionStrategy {
     this.logger?.debug('Executing task via CodeMachine', {
       taskId: task.task_id,
       taskType: task.task_type,
-      agent: mapping.agentId,
+      workflow: mapping.workflow,
       command: mapping.command,
     });
 

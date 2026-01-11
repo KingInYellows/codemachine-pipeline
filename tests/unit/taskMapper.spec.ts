@@ -10,26 +10,58 @@ describe('taskMapper', () => {
   describe('mapTaskToWorkflow', () => {
     it('maps code_generation to correct workflow', () => {
       const mapping = mapTaskToWorkflow('code_generation');
-      expect(mapping.agentId).toBe('code-generator');
-      expect(mapping.command).toBe('run');
+      expect(mapping.workflow).toBe('codemachine start');
+      expect(mapping.command).toBe('start');
       expect(mapping.useNativeEngine).toBe(false);
     });
 
     it('maps testing to native engine', () => {
       const mapping = mapTaskToWorkflow('testing');
-      expect(mapping.agentId).toBe('test-runner');
+      expect(mapping.workflow).toBe('native-autofix');
+      expect(mapping.command).toBe('run');
       expect(mapping.useNativeEngine).toBe(true);
     });
 
     it('maps pr_creation correctly', () => {
       const mapping = mapTaskToWorkflow('pr_creation');
-      expect(mapping.agentId).toBe('pr-creator');
+      expect(mapping.workflow).toBe('codemachine run pr');
+      expect(mapping.command).toBe('run');
       expect(mapping.useNativeEngine).toBe(false);
     });
 
     it('maps deployment to native engine', () => {
       const mapping = mapTaskToWorkflow('deployment');
+      expect(mapping.workflow).toBe('native-deployment');
+      expect(mapping.command).toBe('run');
       expect(mapping.useNativeEngine).toBe(true);
+    });
+
+    it('maps review correctly', () => {
+      const mapping = mapTaskToWorkflow('review');
+      expect(mapping.workflow).toBe('codemachine run review');
+      expect(mapping.command).toBe('run');
+      expect(mapping.useNativeEngine).toBe(false);
+    });
+
+    it('maps refactoring correctly', () => {
+      const mapping = mapTaskToWorkflow('refactoring');
+      expect(mapping.workflow).toBe('codemachine start');
+      expect(mapping.command).toBe('start');
+      expect(mapping.useNativeEngine).toBe(false);
+    });
+
+    it('maps documentation correctly', () => {
+      const mapping = mapTaskToWorkflow('documentation');
+      expect(mapping.workflow).toBe('codemachine run docs');
+      expect(mapping.command).toBe('run');
+      expect(mapping.useNativeEngine).toBe(false);
+    });
+
+    it('maps other correctly', () => {
+      const mapping = mapTaskToWorkflow('other');
+      expect(mapping.workflow).toBe('codemachine start');
+      expect(mapping.command).toBe('start');
+      expect(mapping.useNativeEngine).toBe(false);
     });
 
     it('maps all task types', () => {
@@ -47,7 +79,7 @@ describe('taskMapper', () => {
       for (const taskType of taskTypes) {
         const mapping = mapTaskToWorkflow(taskType);
         expect(mapping).toBeDefined();
-        expect(mapping.agentId).toBeTruthy();
+        expect(mapping.workflow).toBeTruthy();
         expect(['run', 'start']).toContain(mapping.command);
       }
     });
@@ -69,6 +101,22 @@ describe('taskMapper', () => {
     it('returns false for pr_creation', () => {
       expect(shouldUseNativeEngine('pr_creation')).toBe(false);
     });
+
+    it('returns false for review', () => {
+      expect(shouldUseNativeEngine('review')).toBe(false);
+    });
+
+    it('returns false for refactoring', () => {
+      expect(shouldUseNativeEngine('refactoring')).toBe(false);
+    });
+
+    it('returns false for documentation', () => {
+      expect(shouldUseNativeEngine('documentation')).toBe(false);
+    });
+
+    it('returns false for other', () => {
+      expect(shouldUseNativeEngine('other')).toBe(false);
+    });
   });
 
   describe('getSupportedEngines', () => {
@@ -76,11 +124,8 @@ describe('taskMapper', () => {
       const engines = getSupportedEngines();
       expect(engines).toContain('claude');
       expect(engines).toContain('codex');
-      expect(engines).toContain('opencode');
-      expect(engines).toContain('cursor');
-      expect(engines).toContain('auggie');
-      expect(engines).toContain('ccr');
-      expect(engines.length).toBe(6);
+      expect(engines).toContain('openai');
+      expect(engines.length).toBe(3);
     });
   });
 
@@ -88,7 +133,7 @@ describe('taskMapper', () => {
     it('returns true for supported engines', () => {
       expect(isEngineSupported('claude')).toBe(true);
       expect(isEngineSupported('codex')).toBe(true);
-      expect(isEngineSupported('opencode')).toBe(true);
+      expect(isEngineSupported('openai')).toBe(true);
     });
 
     it('returns false for unsupported engines', () => {
