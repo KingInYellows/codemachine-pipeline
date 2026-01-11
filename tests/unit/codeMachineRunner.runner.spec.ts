@@ -20,7 +20,7 @@ vi.mock('node:child_process', () => ({
   spawn: vi.fn(),
 }));
 vi.mock('node:fs/promises', async () => {
-  const actual = await vi.importActual<typeof import('node:fs/promises')>('node:fs/promises');
+  const actual = await vi.importActual('node:fs/promises');
   return {
     ...actual,
     access: vi.fn(),
@@ -967,7 +967,7 @@ describe('CodeMachineRunner', () => {
       await vi.advanceTimersByTimeAsync(1000);
 
       // Process exits before SIGKILL
-      (childProcess as any).killed = true;
+      Object.defineProperty(childProcess, 'killed', { value: true });
       childProcess.emit('close', 0);
 
       await promise;
@@ -1507,10 +1507,9 @@ describe('CodeMachineRunner', () => {
       await promise;
 
       // Check all log calls include task_id
-      const allCalls = [
-        ...vi.mocked(logger.info).mock.calls,
-        ...vi.mocked(logger.warn).mock.calls,
-      ];
+      const mockedInfo = vi.mocked(logger.info);
+      const mockedWarn = vi.mocked(logger.warn);
+      const allCalls = [...mockedInfo.mock.calls, ...mockedWarn.mock.calls];
 
       for (const call of allCalls) {
         const metadata = call[1];
