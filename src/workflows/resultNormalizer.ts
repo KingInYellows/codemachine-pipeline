@@ -136,18 +136,14 @@ export function categorizeError(
     }
   }
 
-  const category = 'unknown';
-
   // Log warning for unknown exit codes
-  if (category === 'unknown' && result.exitCode !== 0) {
-    logger?.warn('Unknown exit code encountered', {
-      exitCode: result.exitCode,
-      stdout: result.stdout.slice(0, 200),
-      stderr: result.stderr.slice(0, 200),
-    });
-  }
+  logger?.warn('Unknown exit code encountered', {
+    exitCode: result.exitCode,
+    stdout: result.stdout.slice(0, 200),
+    stderr: result.stderr.slice(0, 200),
+  });
 
-  return category;
+  return 'unknown';
 }
 
 // Overload: 5-parameter signature from issue spec
