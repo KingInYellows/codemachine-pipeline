@@ -1,4 +1,5 @@
 import type { RunnerResult } from './codeMachineRunner.js';
+import type { StructuredLogger } from '../telemetry/logger.js';
 
 export interface NormalizedResult {
   success: boolean;
@@ -12,6 +13,11 @@ export interface NormalizedResult {
   redactedStdout: string;
   redactedStderr: string;
   artifacts: string[];
+  // Additional fields from issue spec
+  status: 'completed' | 'failed' | 'timeout' | 'killed';
+  summary: string;
+  errorMessage?: string;
+  recoverable: boolean;
 }
 
 export type ErrorCategory =
@@ -77,7 +83,39 @@ export function redactCredentials(text: string): string {
   return result;
 }
 
-export function categorizeError(result: RunnerResult): ErrorCategory {
+/**
+ * Extract summary from stdout (first meaningful line, max 500 chars)
+ */
+export function extractSummary(stdout: string): string {
+  const lines = stdout.trim().split('\n').filter(line => line.trim());
+  if (lines.length === 0) return 'No output';
+
+  const summary = lines[0];
+  const maxLength = 500;
+
+  return summary.length > maxLength
+    ? summary.slice(0, maxLength) + '...'
+    : summary;
+}
+
+/**
+ * Derive status field from error category and flags
+ */
+function deriveStatus(
+  timedOut: boolean,
+  killed: boolean,
+  exitCode: number,
+): 'completed' | 'failed' | 'timeout' | 'killed' {
+  if (exitCode === 0) return 'completed';
+  if (timedOut) return 'timeout';
+  if (killed) return 'killed';
+  return 'failed';
+}
+
+export function categorizeError(
+  result: RunnerResult,
+  logger?: StructuredLogger,
+): ErrorCategory {
   if (result.exitCode === 0) {
     return 'none';
   }
@@ -98,15 +136,73 @@ export function categorizeError(result: RunnerResult): ErrorCategory {
     }
   }
 
+  // Log warning for unknown exit codes
+  logger?.warn('Unknown exit code encountered', {
+    exitCode: result.exitCode,
+    stdout: result.stdout.slice(0, 200),
+    stderr: result.stderr.slice(0, 200),
+  });
+
   return 'unknown';
 }
 
-export function normalizeResult(result: RunnerResult): NormalizedResult {
+// Overload: 5-parameter signature from issue spec
+export function normalizeResult(
+  exitCode: number,
+  stdout: string,
+  stderr: string,
+  timedOut: boolean,
+  killed: boolean,
+  logger?: StructuredLogger,
+): NormalizedResult;
+
+// Overload: existing RunnerResult signature
+export function normalizeResult(
+  result: RunnerResult,
+  logger?: StructuredLogger,
+): NormalizedResult;
+
+// Implementation
+export function normalizeResult(
+  resultOrExitCode: RunnerResult | number,
+  stdoutOrLogger?: string | StructuredLogger,
+  stderr?: string,
+  timedOut?: boolean,
+  killed?: boolean,
+  logger?: StructuredLogger,
+): NormalizedResult {
+  // Handle overload signatures - determine which overload was called
+  let result: RunnerResult;
+  let resolvedLogger: StructuredLogger | undefined;
+
+  if (typeof resultOrExitCode === 'number') {
+    // 5-parameter overload: (exitCode, stdout, stderr, timedOut, killed, logger?)
+    result = {
+      taskId: 'synthetic',
+      exitCode: resultOrExitCode,
+      stdout: stdoutOrLogger as string,
+      stderr: stderr!,
+      durationMs: 0,
+      timedOut: timedOut!,
+      killed: killed!,
+    };
+    resolvedLogger = logger;
+  } else {
+    // RunnerResult overload: (result, logger?)
+    result = resultOrExitCode;
+    resolvedLogger = stdoutOrLogger as StructuredLogger | undefined;
+  }
+
   const redactedStdout = redactCredentials(result.stdout);
   const redactedStderr = redactCredentials(result.stderr);
-  const errorCategory = categorizeError(result);
+  const errorCategory = categorizeError(result, resolvedLogger);
+  const status = deriveStatus(result.timedOut, result.killed, result.exitCode);
+  const summary = extractSummary(result.stdout);
+  const recoverable = isRecoverableError(errorCategory);
+  const artifacts = extractArtifactPaths(result.stdout);
 
-  return {
+  // Build result with conditional errorMessage
+  const normalized: NormalizedResult = {
     success: result.exitCode === 0,
     exitCode: result.exitCode,
     stdout: result.stdout,
@@ -117,8 +213,17 @@ export function normalizeResult(result: RunnerResult): NormalizedResult {
     errorCategory,
     redactedStdout,
     redactedStderr,
-    artifacts: extractArtifactPaths(result.stdout),
+    artifacts,
+    status,
+    summary,
+    recoverable,
   };
+
+  if (result.exitCode !== 0) {
+    normalized.errorMessage = formatErrorMessage(normalized);
+  }
+
+  return normalized;
 }
 
 export function extractArtifactPaths(stdout: string): string[] {
@@ -157,7 +262,7 @@ export function isValidArtifactPath(filePath: string): boolean {
 }
 
 export function isRecoverableError(category: ErrorCategory): boolean {
-  const recoverableCategories: ErrorCategory[] = ['timeout', 'rate_limit', 'network'];
+  const recoverableCategories: ErrorCategory[] = ['timeout', 'rate_limit', 'network', 'killed'];
   return recoverableCategories.includes(category);
 }
 
