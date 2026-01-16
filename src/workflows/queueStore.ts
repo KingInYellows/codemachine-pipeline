@@ -3,11 +3,14 @@ import * as crypto from 'node:crypto';
 import * as path from 'node:path';
 import {
   type ExecutionTask,
+  type ExecutionTaskType,
+  ExecutionTaskTypeSchema,
   parseExecutionTask,
   serializeExecutionTask,
   canRetry,
   areDependenciesCompleted,
 } from '../core/models/ExecutionTask';
+import { type PlanArtifact, type TaskNode } from '../core/models/PlanArtifact';
 import {
   readManifest,
   writeManifest,
@@ -754,4 +757,131 @@ function updateStatusCounts(
     case 'skipped': manifest.skipped_count++; break;
     case 'cancelled': manifest.cancelled_count++; break;
   }
+}
+
+// ============================================================================
+// Plan-Based Queue Initialization
+// ============================================================================
+
+/**
+ * Transform a TaskNode from PlanArtifact to an ExecutionTask
+ *
+ * @param taskNode - TaskNode from PlanArtifact
+ * @param featureId - Feature ID from the plan
+ * @param timestamp - ISO 8601 timestamp for created_at and updated_at
+ * @returns ExecutionTask ready for queue
+ */
+function transformTaskNodeToExecutionTask(
+  taskNode: TaskNode,
+  featureId: string,
+  timestamp: string
+): ExecutionTask {
+  // Flatten dependencies: extract task_id from each TaskDependency
+  const dependencyIds = taskNode.dependencies.map(dep => dep.task_id);
+
+  // Map task_type string to ExecutionTaskType using Zod schema (default to 'other' if not recognized)
+  const parseResult = ExecutionTaskTypeSchema.safeParse(taskNode.task_type);
+  const taskType: ExecutionTaskType = parseResult.success ? parseResult.data : 'other';
+
+  return {
+    schema_version: '1.0.0',
+    task_id: taskNode.task_id,
+    feature_id: featureId,
+    title: taskNode.title,
+    task_type: taskType,
+    status: 'pending',
+    config: taskNode.config,
+    dependency_ids: dependencyIds,
+    retry_count: 0,
+    max_retries: 3,
+    created_at: timestamp,
+    updated_at: timestamp,
+  };
+}
+
+/**
+ * Initialize queue from a PlanArtifact
+ *
+ * Transforms plan tasks (TaskNode[]) to ExecutionTask[] and initializes
+ * the queue with proper ordering and dependencies.
+ *
+ * Implements:
+ * - EC-EXEC-011: Empty plan handling (logs "No tasks to execute", returns success)
+ * - Task ordering preserved from plan.tasks
+ * - Atomic operation: no partial queue updates on failure
+ *
+ * @param runDir - Run directory path
+ * @param plan - PlanArtifact containing tasks to queue
+ * @returns QueueOperationResult indicating success or failure
+ */
+export async function initializeQueueFromPlan(
+  runDir: string,
+  plan: PlanArtifact
+): Promise<QueueOperationResult> {
+  console.log(`[initializeQueueFromPlan] Starting queue initialization from plan`);
+
+  // Validate feature_id is present
+  if (!plan.feature_id) {
+    return {
+      success: false,
+      message: 'Plan feature_id is required but was not provided',
+      tasksAffected: 0,
+      errors: ['Missing required field: feature_id'],
+    };
+  }
+
+  console.debug(`[initializeQueueFromPlan] Feature ID: ${plan.feature_id}`);
+
+  // Initialize the queue with the feature ID
+  try {
+    await initializeQueue(runDir, plan.feature_id);
+    console.log(`[initializeQueueFromPlan] Queue initialized for feature: ${plan.feature_id}`);
+  } catch (error) {
+    return {
+      success: false,
+      message: error instanceof Error ? error.message : 'Failed to initialize queue',
+      tasksAffected: 0,
+      errors: [error instanceof Error ? error.stack || error.message : 'Unknown error during queue initialization'],
+    };
+  }
+
+  // Handle empty plan per EC-EXEC-011
+  const planTasks = plan.tasks ?? [];
+  if (planTasks.length === 0) {
+    console.log('No tasks to execute');
+    return {
+      success: true,
+      message: 'Queue initialized successfully with no tasks',
+      tasksAffected: 0,
+    };
+  }
+
+  console.debug(`[initializeQueueFromPlan] Transforming ${planTasks.length} task(s)`);
+
+  // Transform all tasks before appending (atomic: fail fast if transformation fails)
+  const timestamp = new Date().toISOString();
+  let executionTasks: ExecutionTask[];
+
+  try {
+    executionTasks = planTasks.map(taskNode =>
+      transformTaskNodeToExecutionTask(taskNode, plan.feature_id, timestamp)
+    );
+    console.log(`[initializeQueueFromPlan] Transformed ${executionTasks.length} task(s)`);
+  } catch (error) {
+    return {
+      success: false,
+      message: error instanceof Error ? error.message : 'Failed to transform tasks',
+      tasksAffected: 0,
+      errors: [error instanceof Error ? error.stack || error.message : 'Unknown error during task transformation'],
+    };
+  }
+
+  // Append transformed tasks to queue
+  const appendResult = await appendToQueue(runDir, executionTasks);
+
+  if (appendResult.success) {
+    console.log(`[initializeQueueFromPlan] Appended ${executionTasks.length} task(s) to queue`);
+  }
+
+  return appendResult;
 }
