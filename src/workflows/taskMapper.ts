@@ -122,6 +122,11 @@ export const TASK_TYPE_TO_WORKFLOW: Record<ExecutionTaskType, WorkflowMapping> =
 // ============================================================================
 
 /**
+ * Supported execution engines constant
+ */
+const SUPPORTED_ENGINES: readonly SupportedEngine[] = ['codemachine', 'autofix'];
+
+/**
  * Map an ExecutionTaskType to its corresponding workflow configuration
  *
  * @param taskType - The execution task type to map
@@ -162,7 +167,7 @@ export function mapTaskToWorkflow(taskType: ExecutionTaskType): WorkflowMapping 
  * ```
  */
 export function getSupportedEngines(): SupportedEngine[] {
-  return ['codemachine', 'autofix'];
+  return [...SUPPORTED_ENGINES];
 }
 
 /**
@@ -179,8 +184,7 @@ export function getSupportedEngines(): SupportedEngine[] {
  * ```
  */
 export function isEngineSupported(engine: string): engine is SupportedEngine {
-  const supportedEngines = getSupportedEngines();
-  return supportedEngines.includes(engine as SupportedEngine);
+  return SUPPORTED_ENGINES.includes(engine as SupportedEngine);
 }
 
 /**
