@@ -9,7 +9,7 @@ import { spawn } from 'node:child_process';
  * with reliable timeout handling, log streaming to disk, and graceful termination.
  *
  * Implements:
- * - REQ-EXEC-001: Process execution with shell: true
+ * - REQ-EXEC-001: Secure process execution with shell: false to prevent command injection
  * - REQ-EXEC-013: Two-stage termination (SIGTERM -> 10s -> SIGKILL)
  * - Exit code mapping: 0 = success, 1 = failure, 124 = timeout
  * - Environment sanitization to prevent credential leakage
@@ -145,7 +145,7 @@ function ensureLogFile(logPath: string): void {
 }
 
 /**
- * Append data to the log file.
+ * Append data to the log file asynchronously.
  *
  * @param logPath - Path to the log file
  * @param data - Data to append
@@ -155,7 +155,11 @@ function appendToLog(logPath: string, data: string, stream: 'stdout' | 'stderr')
   const timestamp = new Date().toISOString();
   const prefix = `[${timestamp}] [${stream}] `;
   const lines = data.split('\n').map((line) => (line ? prefix + line : '')).join('\n');
-  fs.appendFileSync(logPath, lines, 'utf-8');
+  // Use async append to avoid blocking the event loop
+  fs.promises.appendFile(logPath, lines, 'utf-8').catch((err) => {
+    // Ignore log errors to avoid disrupting the process monitoring
+    console.error(`Failed to write to log file ${logPath}:`, err);
+  });
 }
 
 // ============================================================================
@@ -166,8 +170,8 @@ function appendToLog(logPath: string, data: string, stream: 'stdout' | 'stderr')
  * Run the CodeMachine CLI with the specified options.
  *
  * Features:
- * - Spawns CLI with shell: true for cross-platform compatibility
- * - Streams stdout/stderr to log file in real-time
+ * - Spawns CLI with shell: false to prevent command injection
+ * - Streams stdout/stderr to log file asynchronously in real-time
  * - Implements graceful termination: SIGTERM -> 10s grace -> SIGKILL
  * - Maps exit codes: 0 = success, 1 = failure, 124 = timeout
  * - Sanitizes environment to prevent credential leakage
@@ -187,9 +191,6 @@ export async function runCodeMachine(options: CodeMachineRunnerOptions): Promise
     '--spec', options.specPath,
   ];
 
-  // Build full command string for shell execution
-  const command = `"${options.cliPath}" ${args.map((arg) => `"${arg}"`).join(' ')}`;
-
   // Create sanitized environment
   const env = createSanitizedEnv(options.env);
 
@@ -200,11 +201,11 @@ export async function runCodeMachine(options: CodeMachineRunnerOptions): Promise
     let killed = false;
     let killHandle: NodeJS.Timeout | undefined;
 
-    // Spawn the process with shell: true
-    const childProcess = spawn(command, {
+    // Spawn the process with shell: false to prevent command injection
+    const childProcess = spawn(options.cliPath, args, {
       cwd: options.workspaceDir,
       env,
-      shell: true,
+      shell: false,
       stdio: ['ignore', 'pipe', 'pipe'],
     });
 
@@ -294,6 +295,7 @@ export async function runCodeMachine(options: CodeMachineRunnerOptions): Promise
       }
 
       const stdout = Buffer.concat(stdoutChunks).toString('utf-8');
+      const stderr = Buffer.concat(stderrChunks).toString('utf-8');
       const durationMs = Date.now() - startTime;
 
       // Log error
@@ -303,7 +305,7 @@ export async function runCodeMachine(options: CodeMachineRunnerOptions): Promise
       resolve({
         exitCode: 1,
         stdout,
-        stderr: errorMessage,
+        stderr: stderr ? `${stderr}\n${errorMessage}` : errorMessage,
         durationMs,
         timedOut: false,
         killed: false,
@@ -329,11 +331,10 @@ export async function runCodeMachine(options: CodeMachineRunnerOptions): Promise
  */
 export async function validateCliAvailability(cliPath: string): Promise<CliAvailabilityResult> {
   return new Promise((resolve) => {
-    const command = `"${cliPath}" --version`;
     const env = createSanitizedEnv();
 
-    const childProcess = spawn(command, {
-      shell: true,
+    const childProcess = spawn(cliPath, ['--version'], {
+      shell: false,
       env,
       stdio: ['ignore', 'pipe', 'pipe'],
     });
