@@ -9,7 +9,7 @@ on:
 jobs:
   test:
     name: Test and Lint
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, proxmox]
 
     strategy:
       matrix:
@@ -23,10 +23,9 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.node-version }}
-          cache: 'npm'
 
       - name: Install dependencies
-        run: npm ci --frozen-lockfile
+        run: npm install
 
       - name: Run linter
         run: npm run lint
@@ -50,23 +49,14 @@ jobs:
 
   docker:
     name: Docker Build
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, proxmox]
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
       - name: Build Docker image
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          push: false
-          tags: ai-feature-pipeline:test
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+        run: docker build -t ai-feature-pipeline:test .
 
       - name: Test Docker image
         run: |
