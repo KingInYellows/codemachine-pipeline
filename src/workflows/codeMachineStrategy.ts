@@ -127,8 +127,6 @@ export class CodeMachineStrategy {
   private readonly workingDirectory: string;
   private readonly environment: Record<string, string>;
   private readonly logger: StructuredLogger | undefined;
-  private readonly metrics: MetricsCollector | undefined;
-  private readonly telemetry: ExecutionTelemetry | undefined;
 
   constructor(config: CodeMachineStrategyConfig = {}) {
     this.cliPath = config.cliPath ?? 'codemachine';
@@ -136,8 +134,8 @@ export class CodeMachineStrategy {
     this.workingDirectory = config.workingDirectory ?? process.cwd();
     this.environment = config.environment ?? {};
     this.logger = config.logger;
-    this.metrics = config.metrics;
-    this.telemetry = config.telemetry;
+    // Note: metrics and telemetry are available in config for future use
+    // when real implementation replaces stub methods
 
     this.logger?.info('CodeMachineStrategy initialized', {
       cli_path: this.cliPath,
@@ -279,14 +277,14 @@ export class CodeMachineStrategy {
     });
 
     if (options.dryRun) {
-      return this.createDryRunResult(mapping, startTime, true);
+      return Promise.resolve(this.createDryRunResult(mapping, startTime, true));
     }
 
     // Stub implementation - in production, this would delegate to AutoFixEngine
     // The actual implementation would import and call executeValidationWithAutoFix
     // from autoFixEngine.ts for testing tasks
 
-    return {
+    return Promise.resolve({
       success: true,
       exitCode: 0,
       stdout: `Native engine execution for ${task.task_type} (stub)`,
@@ -299,7 +297,7 @@ export class CodeMachineStrategy {
         task_id: task.task_id,
         native_engine: 'autofix',
       },
-    };
+    });
   }
 
   /**
@@ -338,11 +336,11 @@ export class CodeMachineStrategy {
   ): Promise<{ exitCode: number; stdout: string; stderr: string }> {
     // Stub implementation - real implementation would use child_process.spawn
     // similar to the pattern in autoFixEngine.ts executeShellCommand
-    return {
+    return Promise.resolve({
       exitCode: 0,
       stdout: 'CodeMachine CLI execution (stub)',
       stderr: '',
-    };
+    });
   }
 
   /**
