@@ -345,7 +345,13 @@ describe('Task Mapper', () => {
     });
 
     it('should use run command for atomic one-shot tasks', () => {
-      const runTasks: ExecutionTaskType[] = ['pr_creation', 'review', 'documentation', 'testing', 'deployment'];
+      const runTasks: ExecutionTaskType[] = [
+        'pr_creation',
+        'review',
+        'documentation',
+        'testing',
+        'deployment',
+      ];
 
       for (const taskType of runTasks) {
         const mapping = mapTaskToWorkflow(taskType);

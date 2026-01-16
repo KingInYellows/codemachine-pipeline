@@ -306,9 +306,12 @@ export class CodeMachineStrategy {
   private buildCliArgs(task: ExecutionTask, mapping: WorkflowMapping): string[] {
     const args: string[] = [
       mapping.command,
-      '--workflow', mapping.workflow,
-      '--task-id', task.task_id,
-      '--feature-id', task.feature_id,
+      '--workflow',
+      mapping.workflow,
+      '--task-id',
+      task.task_id,
+      '--feature-id',
+      task.feature_id,
     ];
 
     // Add task title as prompt if available
@@ -396,6 +399,8 @@ export class CodeMachineStrategy {
  * @param config - Strategy configuration
  * @returns Configured CodeMachineStrategy instance
  */
-export function createCodeMachineStrategy(config: CodeMachineStrategyConfig = {}): CodeMachineStrategy {
+export function createCodeMachineStrategy(
+  config: CodeMachineStrategyConfig = {}
+): CodeMachineStrategy {
   return new CodeMachineStrategy(config);
 }
