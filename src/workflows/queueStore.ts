@@ -4,6 +4,7 @@ import * as path from 'node:path';
 import {
   type ExecutionTask,
   type ExecutionTaskType,
+  ExecutionTaskTypeSchema,
   parseExecutionTask,
   serializeExecutionTask,
   canRetry,
@@ -778,20 +779,9 @@ function transformTaskNodeToExecutionTask(
   // Flatten dependencies: extract task_id from each TaskDependency
   const dependencyIds = taskNode.dependencies.map(dep => dep.task_id);
 
-  // Map task_type string to ExecutionTaskType (default to 'other' if not recognized)
-  const validTaskTypes = [
-    'code_generation',
-    'testing',
-    'pr_creation',
-    'deployment',
-    'review',
-    'refactoring',
-    'documentation',
-    'other',
-  ] as const;
-  const taskType: ExecutionTaskType = validTaskTypes.includes(taskNode.task_type as ExecutionTaskType)
-    ? (taskNode.task_type as ExecutionTaskType)
-    : 'other';
+  // Map task_type string to ExecutionTaskType using Zod schema (default to 'other' if not recognized)
+  const parseResult = ExecutionTaskTypeSchema.safeParse(taskNode.task_type);
+  const taskType: ExecutionTaskType = parseResult.success ? parseResult.data : 'other';
 
   return {
     schema_version: '1.0.0',
@@ -870,13 +860,12 @@ export async function initializeQueueFromPlan(
 
   // Transform all tasks before appending (atomic: fail fast if transformation fails)
   const timestamp = new Date().toISOString();
-  const executionTasks: ExecutionTask[] = [];
+  let executionTasks: ExecutionTask[];
 
   try {
-    for (const taskNode of planTasks) {
-      const executionTask = transformTaskNodeToExecutionTask(taskNode, plan.feature_id, timestamp);
-      executionTasks.push(executionTask);
-    }
+    executionTasks = planTasks.map(taskNode =>
+      transformTaskNodeToExecutionTask(taskNode, plan.feature_id, timestamp)
+    );
     console.log(`[initializeQueueFromPlan] Transformed ${executionTasks.length} task(s)`);
   } catch (error) {
     return {
