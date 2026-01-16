@@ -15,7 +15,7 @@ COPY src ./src
 
 # Install all dependencies (including dev for build)
 # This will trigger prepare script which will build
-RUN npm ci
+RUN npm install
 
 # Production stage
 FROM node:24-alpine
@@ -26,7 +26,7 @@ WORKDIR /app
 COPY package*.json ./
 
 # Install production dependencies only (skip prepare script)
-RUN npm ci --omit=dev --ignore-scripts
+RUN npm install --omit=dev --ignore-scripts
 
 # Copy built artifacts from builder
 COPY --from=builder /app/dist ./dist
