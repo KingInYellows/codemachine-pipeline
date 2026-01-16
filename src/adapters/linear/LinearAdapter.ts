@@ -339,11 +339,7 @@ export class LinearAdapter {
 
     if (config.runDir) {
       clientConfig.runDir = config.runDir;
-      this.rateLimitLedger = new RateLimitLedger(
-        config.runDir,
-        Provider.LINEAR,
-        this.logger
-      );
+      this.rateLimitLedger = new RateLimitLedger(config.runDir, Provider.LINEAR, this.logger);
     }
 
     this.client = new HttpClient(clientConfig);
@@ -359,12 +355,15 @@ export class LinearAdapter {
    *
    * Implements offline mode: returns cached snapshot if available and API fails
    */
-  async fetchIssueSnapshot(issueId: string, options?: {
-    /** Force refresh from API even if cache is valid */
-    forceRefresh?: boolean;
-    /** Skip cache and only use API */
-    noCache?: boolean;
-  }): Promise<IssueSnapshot> {
+  async fetchIssueSnapshot(
+    issueId: string,
+    options?: {
+      /** Force refresh from API even if cache is valid */
+      forceRefresh?: boolean;
+      /** Skip cache and only use API */
+      noCache?: boolean;
+    }
+  ): Promise<IssueSnapshot> {
     this.logger.info('Fetching issue snapshot', {
       issueId,
       forceRefresh: options?.forceRefresh,
@@ -540,7 +539,7 @@ export class LinearAdapter {
 
     this.logger.info('Updating issue', {
       issueId: params.issueId,
-      updates: Object.keys(params).filter(k => k !== 'issueId'),
+      updates: Object.keys(params).filter((k) => k !== 'issueId'),
     });
 
     try {

@@ -124,7 +124,7 @@ export function generateReport(
     pull_number?: number;
   }
 ): BranchProtectionReport {
-  const approvedReviews = compliance.reviews.filter(r => r.state === 'APPROVED');
+  const approvedReviews = compliance.reviews.filter((r) => r.state === 'APPROVED');
 
   return {
     schema_version: SCHEMA_VERSION,
@@ -245,7 +245,7 @@ export async function detectValidationMismatch(
     // Map validation command types to GitHub check contexts
     // Convention: validation type maps to "validation/{type}" context
     if (commandsData.commands) {
-      registryContexts = commandsData.commands.map(cmd => `validation/${cmd.type}`);
+      registryContexts = commandsData.commands.map((cmd) => `validation/${cmd.type}`);
     }
   } catch (error) {
     // Validation registry not found or not readable
@@ -257,15 +257,13 @@ export async function detectValidationMismatch(
   const requiredSet = new Set(requiredChecks);
   const registrySet = new Set(registryContexts);
 
-  const missingInRegistry = requiredChecks.filter(check => !registrySet.has(check));
-  const extraInRegistry = registryContexts.filter(context => !requiredSet.has(context));
+  const missingInRegistry = requiredChecks.filter((check) => !registrySet.has(check));
+  const extraInRegistry = registryContexts.filter((context) => !requiredSet.has(context));
 
   const recommendations: string[] = [];
 
   if (missingInRegistry.length > 0) {
-    recommendations.push(
-      `Add validation commands for: ${missingInRegistry.join(', ')}`
-    );
+    recommendations.push(`Add validation commands for: ${missingInRegistry.join(', ')}`);
   }
 
   if (extraInRegistry.length > 0) {
@@ -317,7 +315,7 @@ export function formatSummary(summary: BranchProtectionSummary): string {
 
   if (summary.missing_checks.length > 0) {
     lines.push(`Missing or Failing Checks:`);
-    summary.missing_checks.forEach(check => {
+    summary.missing_checks.forEach((check) => {
       lines.push(`  - ${check}`);
     });
     lines.push('');

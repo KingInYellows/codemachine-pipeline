@@ -3,12 +3,13 @@ import * as path from 'node:path';
 import { execSync } from 'node:child_process';
 import * as os from 'node:os';
 import { createCliLogger, LogLevel, type StructuredLogger } from '../../telemetry/logger';
-import { createRunMetricsCollector, StandardMetrics, type MetricsCollector } from '../../telemetry/metrics';
-import { createRunTraceManager, SpanStatusCode } from '../../telemetry/traces';
 import {
-  getRunDirectoryPath,
-  readManifest,
-} from '../../persistence/runDirectoryManager';
+  createRunMetricsCollector,
+  StandardMetrics,
+  type MetricsCollector,
+} from '../../telemetry/metrics';
+import { createRunTraceManager, SpanStatusCode } from '../../telemetry/traces';
+import { getRunDirectoryPath, readManifest } from '../../persistence/runDirectoryManager';
 import {
   grantApproval,
   denyApproval,
@@ -141,9 +142,10 @@ export default class Approve extends Command {
     const settings = resolveRunDirectorySettings();
 
     if (settings.errors.length > 0 || !settings.config) {
-      const message = settings.errors.length > 0
-        ? settings.errors.join('\n')
-        : 'Repository not initialized. Run "ai-feature init" first.';
+      const message =
+        settings.errors.length > 0
+          ? settings.errors.join('\n')
+          : 'Repository not initialized. Run "ai-feature init" first.';
       this.error(message, { exit: 10 });
     }
 
@@ -180,14 +182,13 @@ export default class Approve extends Command {
       if (!pendingApprovals.includes(gateType)) {
         const history = await getApprovalHistory(runDir);
         const alreadyApproved = history.some(
-          a => a.gate_type === gateType && a.verdict === 'approved'
+          (a) => a.gate_type === gateType && a.verdict === 'approved'
         );
 
         if (alreadyApproved) {
-          this.error(
-            `Gate ${gateType} has already been approved. No pending approval required.`,
-            { exit: 10 }
-          );
+          this.error(`Gate ${gateType} has already been approved. No pending approval required.`, {
+            exit: 10,
+          });
         } else {
           this.error(
             `No pending approval for gate ${gateType}. Current pending approvals: ${pendingApprovals.join(', ') || 'none'}`,
@@ -309,7 +310,9 @@ export default class Approve extends Command {
       this.emitApprovalSummary(payload, typedFlags.json);
 
       const duration = Date.now() - startTime;
-      metrics.observe(StandardMetrics.COMMAND_EXECUTION_DURATION_MS, duration, { command: 'approve' });
+      metrics.observe(StandardMetrics.COMMAND_EXECUTION_DURATION_MS, duration, {
+        command: 'approve',
+      });
       metrics.increment(StandardMetrics.COMMAND_INVOCATIONS_TOTAL, {
         command: 'approve',
         exit_code: '0',
@@ -344,8 +347,8 @@ export default class Approve extends Command {
       if (error instanceof Error && error.message.includes('hash mismatch')) {
         this.error(
           `Artifact modified after approval request:\n${error.message}\n\n` +
-          `The artifact has been changed since the approval was requested. ` +
-          `Please review the updated artifact and request approval again.`,
+            `The artifact has been changed since the approval was requested. ` +
+            `Please review the updated artifact and request approval again.`,
           { exit: 30 }
         );
       }
@@ -357,9 +360,7 @@ export default class Approve extends Command {
   private validateGateType(gate: string): ApprovalGateType {
     const validGates: ApprovalGateType[] = ['prd', 'spec', 'plan', 'code', 'pr', 'deploy'];
     if (!validGates.includes(gate as ApprovalGateType)) {
-      throw new Error(
-        `Invalid gate type: ${gate}. Valid gates: ${validGates.join(', ')}`
-      );
+      throw new Error(`Invalid gate type: ${gate}. Valid gates: ${validGates.join(', ')}`);
     }
     return gate as ApprovalGateType;
   }
@@ -393,7 +394,7 @@ export default class Approve extends Command {
     if (!relativePath) {
       throw new Error(
         `No artifact found for gate type ${gateType}. ` +
-        `The artifact may not have been created yet.`
+          `The artifact may not have been created yet.`
       );
     }
 
@@ -420,13 +421,9 @@ export default class Approve extends Command {
             'Or resume the pipeline with: ai-feature resume',
           ];
         case 'code':
-          return [
-            'Code approved. Create pull request with: ai-feature pr',
-          ];
+          return ['Code approved. Create pull request with: ai-feature pr'];
         case 'pr':
-          return [
-            'PR approved. Deploy changes with: ai-feature deploy',
-          ];
+          return ['PR approved. Deploy changes with: ai-feature deploy'];
         case 'deploy':
           return [
             'Deployment approved. Feature pipeline completed!',
@@ -485,7 +482,7 @@ export default class Approve extends Command {
 
     this.log('');
     this.log('Next steps:');
-    payload.next_steps.forEach(step => this.log(`  • ${step}`));
+    payload.next_steps.forEach((step) => this.log(`  • ${step}`));
     this.log('');
   }
 

@@ -57,20 +57,22 @@ export type ArtifactRecord = z.infer<typeof ArtifactRecordSchema>;
 // RunArtifact Collection Schema
 // ============================================================================
 
-export const RunArtifactSchema = z.object({
-  /** Schema version for future migrations (semver) */
-  schema_version: z.string().regex(/^[0-9]+\.[0-9]+\.[0-9]+$/, 'Invalid semver format'),
-  /** Feature ID this artifact collection belongs to */
-  feature_id: z.string().min(1),
-  /** ISO 8601 timestamp when collection was created */
-  created_at: z.string().datetime(),
-  /** ISO 8601 timestamp when collection was last updated */
-  updated_at: z.string().datetime(),
-  /** Map of artifact IDs to artifact records */
-  artifacts: z.record(ArtifactRecordSchema),
-  /** Optional collection-level metadata */
-  metadata: z.record(z.unknown()).optional(),
-}).strict();
+export const RunArtifactSchema = z
+  .object({
+    /** Schema version for future migrations (semver) */
+    schema_version: z.string().regex(/^[0-9]+\.[0-9]+\.[0-9]+$/, 'Invalid semver format'),
+    /** Feature ID this artifact collection belongs to */
+    feature_id: z.string().min(1),
+    /** ISO 8601 timestamp when collection was created */
+    created_at: z.string().datetime(),
+    /** ISO 8601 timestamp when collection was last updated */
+    updated_at: z.string().datetime(),
+    /** Map of artifact IDs to artifact records */
+    artifacts: z.record(ArtifactRecordSchema),
+    /** Optional collection-level metadata */
+    metadata: z.record(z.unknown()).optional(),
+  })
+  .strict();
 
 export type RunArtifact = Readonly<z.infer<typeof RunArtifactSchema>>;
 
@@ -84,13 +86,15 @@ export type RunArtifact = Readonly<z.infer<typeof RunArtifactSchema>>;
  * @param json - Raw JSON object or string
  * @returns Parsed RunArtifact or error details
  */
-export function parseRunArtifact(json: unknown): {
-  success: true;
-  data: RunArtifact;
-} | {
-  success: false;
-  errors: Array<{ path: string; message: string }>;
-} {
+export function parseRunArtifact(json: unknown):
+  | {
+      success: true;
+      data: RunArtifact;
+    }
+  | {
+      success: false;
+      errors: Array<{ path: string; message: string }>;
+    } {
   const result = RunArtifactSchema.safeParse(json);
 
   if (result.success) {
@@ -102,7 +106,7 @@ export function parseRunArtifact(json: unknown): {
 
   return {
     success: false,
-    errors: result.error.errors.map(err => ({
+    errors: result.error.errors.map((err) => ({
       path: err.path.join('.') || 'root',
       message: err.message,
     })),
@@ -175,10 +179,7 @@ export function addArtifact(
  * @param artifactId - Artifact identifier to remove
  * @returns Updated RunArtifact
  */
-export function removeArtifact(
-  runArtifact: RunArtifact,
-  artifactId: string
-): RunArtifact {
+export function removeArtifact(runArtifact: RunArtifact, artifactId: string): RunArtifact {
   const remainingArtifacts = { ...runArtifact.artifacts };
   delete remainingArtifacts[artifactId];
 
@@ -212,10 +213,7 @@ export function getArtifactsByType(
  * @returns Total size in bytes
  */
 export function getTotalArtifactSize(runArtifact: RunArtifact): number {
-  return Object.values(runArtifact.artifacts).reduce(
-    (total, record) => total + record.size,
-    0
-  );
+  return Object.values(runArtifact.artifacts).reduce((total, record) => total + record.size, 0);
 }
 
 /**

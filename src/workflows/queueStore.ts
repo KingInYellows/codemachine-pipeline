@@ -11,11 +11,7 @@ import {
   areDependenciesCompleted,
 } from '../core/models/ExecutionTask';
 import { type PlanArtifact, type TaskNode } from '../core/models/PlanArtifact';
-import {
-  readManifest,
-  writeManifest,
-  withLock,
-} from '../persistence/runDirectoryManager';
+import { readManifest, writeManifest, withLock } from '../persistence/runDirectoryManager';
 
 /**
  * Queue Store
@@ -133,10 +129,7 @@ const QUEUE_SNAPSHOT_FILE = 'queue_snapshot.json';
  * @param featureId - Feature ID
  * @returns Queue directory path
  */
-export async function initializeQueue(
-  runDir: string,
-  featureId: string
-): Promise<string> {
+export async function initializeQueue(runDir: string, featureId: string): Promise<string> {
   const manifest = await readManifest(runDir);
   const queueDir = path.join(runDir, manifest.queue.queue_dir);
 
@@ -185,48 +178,52 @@ export async function appendToQueue(
   runDir: string,
   tasks: ExecutionTask[]
 ): Promise<QueueOperationResult> {
-  return withLock(runDir, async () => {
-    try {
-      const manifest = await readManifest(runDir);
-      const queueDir = path.join(runDir, manifest.queue.queue_dir);
-      const queuePath = path.join(queueDir, QUEUE_FILE);
+  return withLock(
+    runDir,
+    async () => {
+      try {
+        const manifest = await readManifest(runDir);
+        const queueDir = path.join(runDir, manifest.queue.queue_dir);
+        const queuePath = path.join(queueDir, QUEUE_FILE);
 
-      // Append tasks to JSONL file
-      const lines = tasks.map(task => serializeExecutionTask(task, false)).join('\n') + '\n';
-      await fs.appendFile(queuePath, lines, 'utf-8');
+        // Append tasks to JSONL file
+        const lines = tasks.map((task) => serializeExecutionTask(task, false)).join('\n') + '\n';
+        await fs.appendFile(queuePath, lines, 'utf-8');
 
-      // Update queue manifest
-      await updateQueueManifest(runDir, queueDir, tasks.length);
+        // Update queue manifest
+        await updateQueueManifest(runDir, queueDir, tasks.length);
 
-      // Update run manifest queue counts without acquiring nested locks
-      const updatedManifest = {
-        ...manifest,
-        queue: {
-          ...manifest.queue,
-          pending_count: manifest.queue.pending_count + tasks.length,
-        },
-        timestamps: {
-          ...manifest.timestamps,
-          updated_at: new Date().toISOString(),
-        },
-      };
+        // Update run manifest queue counts without acquiring nested locks
+        const updatedManifest = {
+          ...manifest,
+          queue: {
+            ...manifest.queue,
+            pending_count: manifest.queue.pending_count + tasks.length,
+          },
+          timestamps: {
+            ...manifest.timestamps,
+            updated_at: new Date().toISOString(),
+          },
+        };
 
-      await writeManifest(runDir, updatedManifest);
+        await writeManifest(runDir, updatedManifest);
 
-      return {
-        success: true,
-        message: `Successfully appended ${tasks.length} task(s) to queue`,
-        tasksAffected: tasks.length,
-      };
-    } catch (error) {
-      return {
-        success: false,
-        message: error instanceof Error ? error.message : 'Unknown error',
-        tasksAffected: 0,
-        errors: [error instanceof Error ? error.stack || error.message : 'Unknown error'],
-      };
-    }
-  }, { operation: 'append_to_queue' });
+        return {
+          success: true,
+          message: `Successfully appended ${tasks.length} task(s) to queue`,
+          tasksAffected: tasks.length,
+        };
+      } catch (error) {
+        return {
+          success: false,
+          message: error instanceof Error ? error.message : 'Unknown error',
+          tasksAffected: 0,
+          errors: [error instanceof Error ? error.stack || error.message : 'Unknown error'],
+        };
+      }
+    },
+    { operation: 'append_to_queue' }
+  );
 }
 
 /**
@@ -277,10 +274,7 @@ async function updateQueueManifest(
 /**
  * Write queue manifest to disk
  */
-async function writeQueueManifest(
-  queueDir: string,
-  manifest: QueueManifest
-): Promise<void> {
+async function writeQueueManifest(queueDir: string, manifest: QueueManifest): Promise<void> {
   const manifestPath = path.join(queueDir, QUEUE_MANIFEST_FILE);
   const content = JSON.stringify(manifest, null, 2);
   await fs.writeFile(manifestPath, content, 'utf-8');
@@ -320,7 +314,10 @@ export async function loadQueue(runDir: string): Promise<Map<string, ExecutionTa
 
   try {
     const content = await fs.readFile(queuePath, 'utf-8');
-    const lines = content.trim().split('\n').filter(line => line.length > 0);
+    const lines = content
+      .trim()
+      .split('\n')
+      .filter((line) => line.length > 0);
 
     for (const line of lines) {
       try {
@@ -389,68 +386,72 @@ export async function loadQueueSnapshot(runDir: string): Promise<QueueSnapshot |
  * @returns Operation result
  */
 export async function createQueueSnapshot(runDir: string): Promise<QueueOperationResult> {
-  return withLock(runDir, async () => {
-    try {
-      const manifest = await readManifest(runDir);
-      const queueDir = path.join(runDir, manifest.queue.queue_dir);
-      const snapshotPath = path.join(queueDir, QUEUE_SNAPSHOT_FILE);
+  return withLock(
+    runDir,
+    async () => {
+      try {
+        const manifest = await readManifest(runDir);
+        const queueDir = path.join(runDir, manifest.queue.queue_dir);
+        const snapshotPath = path.join(queueDir, QUEUE_SNAPSHOT_FILE);
 
-      // Load all tasks
-      const tasks = await loadQueue(runDir);
+        // Load all tasks
+        const tasks = await loadQueue(runDir);
 
-      // Build dependency graph
-      const dependencyGraph: Record<string, string[]> = {};
-      for (const [taskId, task] of tasks) {
-        if (task.dependency_ids.length > 0) {
-          dependencyGraph[taskId] = task.dependency_ids;
+        // Build dependency graph
+        const dependencyGraph: Record<string, string[]> = {};
+        for (const [taskId, task] of tasks) {
+          if (task.dependency_ids.length > 0) {
+            dependencyGraph[taskId] = task.dependency_ids;
+          }
         }
+
+        // Create snapshot
+        const tasksObject: Record<string, ExecutionTask> = {};
+        for (const [taskId, task] of tasks) {
+          tasksObject[taskId] = task;
+        }
+
+        const dataToHash = JSON.stringify({
+          tasks: tasksObject,
+          dependency_graph: dependencyGraph,
+        });
+        const checksum = crypto.createHash('sha256').update(dataToHash).digest('hex');
+
+        const snapshot: QueueSnapshot = {
+          schema_version: '1.0.0',
+          feature_id: manifest.feature_id,
+          tasks: tasksObject,
+          dependency_graph: dependencyGraph,
+          timestamp: new Date().toISOString(),
+          checksum,
+        };
+
+        // Write snapshot
+        const content = JSON.stringify(snapshot, null, 2);
+        await fs.writeFile(snapshotPath, content, 'utf-8');
+
+        // Update queue manifest
+        const queueManifestPath = path.join(queueDir, QUEUE_MANIFEST_FILE);
+        const queueManifestContent = await fs.readFile(queueManifestPath, 'utf-8');
+        const queueManifest = JSON.parse(queueManifestContent) as QueueManifest;
+        queueManifest.last_snapshot_at = snapshot.timestamp;
+        await writeQueueManifest(queueDir, queueManifest);
+
+        return {
+          success: true,
+          message: `Snapshot created with ${tasks.size} task(s)`,
+          tasksAffected: tasks.size,
+        };
+      } catch (error) {
+        return {
+          success: false,
+          message: error instanceof Error ? error.message : 'Unknown error',
+          errors: [error instanceof Error ? error.stack || error.message : 'Unknown error'],
+        };
       }
-
-      // Create snapshot
-      const tasksObject: Record<string, ExecutionTask> = {};
-      for (const [taskId, task] of tasks) {
-        tasksObject[taskId] = task;
-      }
-
-      const dataToHash = JSON.stringify({
-        tasks: tasksObject,
-        dependency_graph: dependencyGraph,
-      });
-      const checksum = crypto.createHash('sha256').update(dataToHash).digest('hex');
-
-      const snapshot: QueueSnapshot = {
-        schema_version: '1.0.0',
-        feature_id: manifest.feature_id,
-        tasks: tasksObject,
-        dependency_graph: dependencyGraph,
-        timestamp: new Date().toISOString(),
-        checksum,
-      };
-
-      // Write snapshot
-      const content = JSON.stringify(snapshot, null, 2);
-      await fs.writeFile(snapshotPath, content, 'utf-8');
-
-      // Update queue manifest
-      const queueManifestPath = path.join(queueDir, QUEUE_MANIFEST_FILE);
-      const queueManifestContent = await fs.readFile(queueManifestPath, 'utf-8');
-      const queueManifest = JSON.parse(queueManifestContent) as QueueManifest;
-      queueManifest.last_snapshot_at = snapshot.timestamp;
-      await writeQueueManifest(queueDir, queueManifest);
-
-      return {
-        success: true,
-        message: `Snapshot created with ${tasks.size} task(s)`,
-        tasksAffected: tasks.size,
-      };
-    } catch (error) {
-      return {
-        success: false,
-        message: error instanceof Error ? error.message : 'Unknown error',
-        errors: [error instanceof Error ? error.stack || error.message : 'Unknown error'],
-      };
-    }
-  }, { operation: 'create_queue_snapshot' });
+    },
+    { operation: 'create_queue_snapshot' }
+  );
 }
 
 // ============================================================================
@@ -478,7 +479,10 @@ export async function validateQueue(runDir: string): Promise<QueueValidationResu
 
   try {
     const content = await fs.readFile(queuePath, 'utf-8');
-    const lines = content.trim().split('\n').filter(line => line.length > 0);
+    const lines = content
+      .trim()
+      .split('\n')
+      .filter((line) => line.length > 0);
 
     result.totalTasks = lines.length;
 
@@ -489,12 +493,14 @@ export async function validateQueue(runDir: string): Promise<QueueValidationResu
       try {
         const parsed: unknown = JSON.parse(line);
         const parseResult = parseExecutionTask(parsed);
-        const parsedRecord = typeof parsed === 'object' && parsed !== null
-          ? parsed as Record<string, unknown>
-          : null;
-        const parsedTaskId = parsedRecord && typeof parsedRecord['task_id'] === 'string'
-          ? parsedRecord['task_id']
-          : `line_${lineNumber}`;
+        const parsedRecord =
+          typeof parsed === 'object' && parsed !== null
+            ? (parsed as Record<string, unknown>)
+            : null;
+        const parsedTaskId =
+          parsedRecord && typeof parsedRecord['task_id'] === 'string'
+            ? parsedRecord['task_id']
+            : `line_${lineNumber}`;
 
         if (!parseResult.success) {
           result.valid = false;
@@ -502,7 +508,7 @@ export async function validateQueue(runDir: string): Promise<QueueValidationResu
           result.errors.push({
             taskId: parsedTaskId,
             line: lineNumber,
-            message: `Validation failed: ${parseResult.errors.map(e => e.message).join(', ')}`,
+            message: `Validation failed: ${parseResult.errors.map((e) => e.message).join(', ')}`,
           });
         }
       } catch (error) {
@@ -604,7 +610,7 @@ export async function getNextTask(runDir: string): Promise<ExecutionTask | null>
  */
 export async function getPendingTasks(runDir: string): Promise<ExecutionTask[]> {
   const tasks = await loadQueue(runDir);
-  return Array.from(tasks.values()).filter(task => task.status === 'pending');
+  return Array.from(tasks.values()).filter((task) => task.status === 'pending');
 }
 
 /**
@@ -615,7 +621,7 @@ export async function getPendingTasks(runDir: string): Promise<ExecutionTask[]> 
  */
 export async function getFailedTasks(runDir: string): Promise<ExecutionTask[]> {
   const tasks = await loadQueue(runDir);
-  return Array.from(tasks.values()).filter(task => task.status === 'failed');
+  return Array.from(tasks.values()).filter((task) => task.status === 'failed');
 }
 
 /**
@@ -625,10 +631,7 @@ export async function getFailedTasks(runDir: string): Promise<ExecutionTask[]> {
  * @param taskId - Task ID
  * @returns Task or null if not found
  */
-export async function getTaskById(
-  runDir: string,
-  taskId: string
-): Promise<ExecutionTask | null> {
+export async function getTaskById(runDir: string, taskId: string): Promise<ExecutionTask | null> {
   const tasks = await loadQueue(runDir);
   return tasks.get(taskId) || null;
 }
@@ -649,113 +652,138 @@ export async function updateTaskInQueue(
   taskId: string,
   updates: Partial<ExecutionTask>
 ): Promise<QueueOperationResult> {
-  return withLock(runDir, async () => {
-    try {
-      const tasks = await loadQueue(runDir);
-      const task = tasks.get(taskId);
+  return withLock(
+    runDir,
+    async () => {
+      try {
+        const tasks = await loadQueue(runDir);
+        const task = tasks.get(taskId);
 
-      if (!task) {
+        if (!task) {
+          return {
+            success: false,
+            message: `Task ${taskId} not found in queue`,
+          };
+        }
+
+        // Create updated task
+        const updatedTask: ExecutionTask = {
+          ...task,
+          ...updates,
+          updated_at: new Date().toISOString(),
+        };
+
+        // Rebuild queue file with updated task
+        const manifest = await readManifest(runDir);
+        const queueDir = path.join(runDir, manifest.queue.queue_dir);
+        const queuePath = path.join(queueDir, QUEUE_FILE);
+
+        tasks.set(taskId, updatedTask);
+
+        const lines =
+          Array.from(tasks.values())
+            .map((t) => serializeExecutionTask(t, false))
+            .join('\n') + '\n';
+
+        await fs.writeFile(queuePath, lines, 'utf-8');
+
+        // Update checksums
+        const checksum = await computeFileChecksum(queuePath);
+        const queueManifestPath = path.join(queueDir, QUEUE_MANIFEST_FILE);
+        const queueManifestContent = await fs.readFile(queueManifestPath, 'utf-8');
+        const queueManifest = JSON.parse(queueManifestContent) as QueueManifest;
+        queueManifest.queue_checksum = checksum;
+        queueManifest.updated_at = new Date().toISOString();
+
+        // Update status counts
+        if (updates.status && updates.status !== task.status) {
+          updateStatusCounts(queueManifest, task.status, updates.status);
+        }
+
+        await writeQueueManifest(queueDir, queueManifest);
+
+        // Update run manifest if needed
+        if (updates.status) {
+          const updatedManifest = {
+            ...manifest,
+            queue: {
+              ...manifest.queue,
+              pending_count: queueManifest.pending_count,
+              completed_count: queueManifest.completed_count,
+              failed_count: queueManifest.failed_count,
+            },
+            timestamps: {
+              ...manifest.timestamps,
+              updated_at: new Date().toISOString(),
+            },
+          };
+
+          await writeManifest(runDir, updatedManifest);
+        }
+
+        return {
+          success: true,
+          message: `Task ${taskId} updated successfully`,
+          tasksAffected: 1,
+        };
+      } catch (error) {
         return {
           success: false,
-          message: `Task ${taskId} not found in queue`,
+          message: error instanceof Error ? error.message : 'Unknown error',
+          errors: [error instanceof Error ? error.stack || error.message : 'Unknown error'],
         };
       }
-
-      // Create updated task
-      const updatedTask: ExecutionTask = {
-        ...task,
-        ...updates,
-        updated_at: new Date().toISOString(),
-      };
-
-      // Rebuild queue file with updated task
-      const manifest = await readManifest(runDir);
-      const queueDir = path.join(runDir, manifest.queue.queue_dir);
-      const queuePath = path.join(queueDir, QUEUE_FILE);
-
-      tasks.set(taskId, updatedTask);
-
-      const lines = Array.from(tasks.values())
-        .map(t => serializeExecutionTask(t, false))
-        .join('\n') + '\n';
-
-      await fs.writeFile(queuePath, lines, 'utf-8');
-
-      // Update checksums
-      const checksum = await computeFileChecksum(queuePath);
-      const queueManifestPath = path.join(queueDir, QUEUE_MANIFEST_FILE);
-      const queueManifestContent = await fs.readFile(queueManifestPath, 'utf-8');
-      const queueManifest = JSON.parse(queueManifestContent) as QueueManifest;
-      queueManifest.queue_checksum = checksum;
-      queueManifest.updated_at = new Date().toISOString();
-
-      // Update status counts
-      if (updates.status && updates.status !== task.status) {
-        updateStatusCounts(queueManifest, task.status, updates.status);
-      }
-
-      await writeQueueManifest(queueDir, queueManifest);
-
-      // Update run manifest if needed
-      if (updates.status) {
-        const updatedManifest = {
-          ...manifest,
-          queue: {
-            ...manifest.queue,
-            pending_count: queueManifest.pending_count,
-            completed_count: queueManifest.completed_count,
-            failed_count: queueManifest.failed_count,
-          },
-          timestamps: {
-            ...manifest.timestamps,
-            updated_at: new Date().toISOString(),
-          },
-        };
-
-        await writeManifest(runDir, updatedManifest);
-      }
-
-      return {
-        success: true,
-        message: `Task ${taskId} updated successfully`,
-        tasksAffected: 1,
-      };
-    } catch (error) {
-      return {
-        success: false,
-        message: error instanceof Error ? error.message : 'Unknown error',
-        errors: [error instanceof Error ? error.stack || error.message : 'Unknown error'],
-      };
-    }
-  }, { operation: 'update_task_in_queue' });
+    },
+    { operation: 'update_task_in_queue' }
+  );
 }
 
 /**
  * Update status counts in queue manifest
  */
-function updateStatusCounts(
-  manifest: QueueManifest,
-  oldStatus: string,
-  newStatus: string
-): void {
+function updateStatusCounts(manifest: QueueManifest, oldStatus: string, newStatus: string): void {
   // Decrement old status count
   switch (oldStatus) {
-    case 'pending': manifest.pending_count = Math.max(0, manifest.pending_count - 1); break;
-    case 'running': manifest.running_count = Math.max(0, manifest.running_count - 1); break;
-    case 'completed': manifest.completed_count = Math.max(0, manifest.completed_count - 1); break;
-    case 'failed': manifest.failed_count = Math.max(0, manifest.failed_count - 1); break;
-    case 'skipped': manifest.skipped_count = Math.max(0, manifest.skipped_count - 1); break;
-    case 'cancelled': manifest.cancelled_count = Math.max(0, manifest.cancelled_count - 1); break;
+    case 'pending':
+      manifest.pending_count = Math.max(0, manifest.pending_count - 1);
+      break;
+    case 'running':
+      manifest.running_count = Math.max(0, manifest.running_count - 1);
+      break;
+    case 'completed':
+      manifest.completed_count = Math.max(0, manifest.completed_count - 1);
+      break;
+    case 'failed':
+      manifest.failed_count = Math.max(0, manifest.failed_count - 1);
+      break;
+    case 'skipped':
+      manifest.skipped_count = Math.max(0, manifest.skipped_count - 1);
+      break;
+    case 'cancelled':
+      manifest.cancelled_count = Math.max(0, manifest.cancelled_count - 1);
+      break;
   }
 
   // Increment new status count
   switch (newStatus) {
-    case 'pending': manifest.pending_count++; break;
-    case 'running': manifest.running_count++; break;
-    case 'completed': manifest.completed_count++; break;
-    case 'failed': manifest.failed_count++; break;
-    case 'skipped': manifest.skipped_count++; break;
-    case 'cancelled': manifest.cancelled_count++; break;
+    case 'pending':
+      manifest.pending_count++;
+      break;
+    case 'running':
+      manifest.running_count++;
+      break;
+    case 'completed':
+      manifest.completed_count++;
+      break;
+    case 'failed':
+      manifest.failed_count++;
+      break;
+    case 'skipped':
+      manifest.skipped_count++;
+      break;
+    case 'cancelled':
+      manifest.cancelled_count++;
+      break;
   }
 }
 
@@ -777,7 +805,7 @@ function transformTaskNodeToExecutionTask(
   timestamp: string
 ): ExecutionTask {
   // Flatten dependencies: extract task_id from each TaskDependency
-  const dependencyIds = taskNode.dependencies.map(dep => dep.task_id);
+  const dependencyIds = taskNode.dependencies.map((dep) => dep.task_id);
 
   // Map task_type string to ExecutionTaskType using Zod schema (default to 'other' if not recognized)
   const parseResult = ExecutionTaskTypeSchema.safeParse(taskNode.task_type);
@@ -841,7 +869,11 @@ export async function initializeQueueFromPlan(
       success: false,
       message: error instanceof Error ? error.message : 'Failed to initialize queue',
       tasksAffected: 0,
-      errors: [error instanceof Error ? error.stack || error.message : 'Unknown error during queue initialization'],
+      errors: [
+        error instanceof Error
+          ? error.stack || error.message
+          : 'Unknown error during queue initialization',
+      ],
     };
   }
 
@@ -863,7 +895,7 @@ export async function initializeQueueFromPlan(
   let executionTasks: ExecutionTask[];
 
   try {
-    executionTasks = planTasks.map(taskNode =>
+    executionTasks = planTasks.map((taskNode) =>
       transformTaskNodeToExecutionTask(taskNode, plan.feature_id, timestamp)
     );
     console.log(`[initializeQueueFromPlan] Transformed ${executionTasks.length} task(s)`);
@@ -872,7 +904,11 @@ export async function initializeQueueFromPlan(
       success: false,
       message: error instanceof Error ? error.message : 'Failed to transform tasks',
       tasksAffected: 0,
-      errors: [error instanceof Error ? error.stack || error.message : 'Unknown error during task transformation'],
+      errors: [
+        error instanceof Error
+          ? error.stack || error.message
+          : 'Unknown error during task transformation',
+      ],
     };
   }
 

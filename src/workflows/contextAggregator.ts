@@ -209,18 +209,15 @@ function normalizePattern(pattern: string): string {
  * Create glob matchers using picomatch
  */
 function createGlobMatchers(patterns: string[]): GlobMatcher[] {
-  return patterns.map(pattern => picomatch(normalizePattern(pattern), { dot: true }));
+  return patterns.map((pattern) => picomatch(normalizePattern(pattern), { dot: true }));
 }
 
 /**
  * Check if a file should be excluded
  */
-function shouldExclude(
-  relativePath: string,
-  exclusionMatchers: GlobMatcher[]
-): boolean {
+function shouldExclude(relativePath: string, exclusionMatchers: GlobMatcher[]): boolean {
   const normalizedPath = relativePath.replace(/\\/g, '/');
-  return exclusionMatchers.some(matcher => matcher(normalizedPath));
+  return exclusionMatchers.some((matcher) => matcher(normalizedPath));
 }
 
 /**
@@ -274,7 +271,7 @@ async function discoverFiles(
   const matchedFiles = new Set<string>();
   for (const fullPath of discovered) {
     const relativePath = path.relative(repoRoot, fullPath).replace(/\\/g, '/');
-    const matches = inclusionMatchers.some(matcher => matcher(relativePath));
+    const matches = inclusionMatchers.some((matcher) => matcher(relativePath));
     if (matches) {
       matchedFiles.add(fullPath);
     }
@@ -293,20 +290,17 @@ async function discoverFiles(
  * @param repoRoot - Repository root directory
  * @returns Git metadata (commit SHA, branch, file dates)
  */
-export async function getGitMetadata(
-  repoRoot: string
-): Promise<GitMetadata> {
+export async function getGitMetadata(repoRoot: string): Promise<GitMetadata> {
   const metadata: GitMetadata = {
     fileCommitDates: new Map(),
   };
 
   try {
     // Get current commit SHA
-    const { stdout: shaOutput } = await execFileAsync(
-      'git',
-      ['rev-parse', 'HEAD'],
-      { cwd: repoRoot, timeout: 5000 }
-    );
+    const { stdout: shaOutput } = await execFileAsync('git', ['rev-parse', 'HEAD'], {
+      cwd: repoRoot,
+      timeout: 5000,
+    });
     metadata.commitSha = shaOutput.trim();
   } catch {
     // Not a git repository or git not available
@@ -371,9 +365,7 @@ export async function getGitMetadata(
  * @param contextDir - Context directory path
  * @returns Previous hash manifest or null if not found
  */
-async function loadPreviousHashes(
-  contextDir: string
-): Promise<HashManifest | null> {
+async function loadPreviousHashes(contextDir: string): Promise<HashManifest | null> {
   const hashManifestPath = path.join(contextDir, 'file_hashes.json');
 
   try {
@@ -404,10 +396,7 @@ async function hashDiscoveredFiles(
   const newFiles: string[] = [];
 
   const previousHashes = new Map(
-    Object.entries(previousManifest?.files || {}).map(([path, record]) => [
-      path,
-      record.hash,
-    ])
+    Object.entries(previousManifest?.files || {}).map(([path, record]) => [path, record.hash])
   );
 
   // Hash files with concurrency control
@@ -526,9 +515,7 @@ async function collectFileMetadata(
  * @param config - Aggregator configuration
  * @returns Aggregation result
  */
-export async function aggregateContext(
-  config: AggregatorConfig
-): Promise<AggregationResult> {
+export async function aggregateContext(config: AggregatorConfig): Promise<AggregationResult> {
   const warnings: string[] = [];
   const errors: string[] = [];
 
@@ -539,18 +526,11 @@ export async function aggregateContext(
   const gitMetadata = await getGitMetadata(config.repoRoot);
 
   // Step 3: Discover files
-  const exclusions = [
-    ...DEFAULT_EXCLUSIONS,
-    ...(config.excludeOverrides || []),
-  ];
+  const exclusions = [...DEFAULT_EXCLUSIONS, ...(config.excludeOverrides || [])];
 
   let discoveredFiles: string[];
   try {
-    discoveredFiles = await discoverFiles(
-      config.repoRoot,
-      config.contextPaths,
-      exclusions
-    );
+    discoveredFiles = await discoverFiles(config.repoRoot, config.contextPaths, exclusions);
   } catch (error) {
     errors.push(`File discovery failed: ${formatError(error)}`);
     discoveredFiles = [];
@@ -567,11 +547,7 @@ export async function aggregateContext(
   const hashResult = await hashDiscoveredFiles(discoveredFiles, previousManifest);
 
   // Step 6: Collect metadata
-  const fileMetadata = await collectFileMetadata(
-    discoveredFiles,
-    config.repoRoot,
-    gitMetadata
-  );
+  const fileMetadata = await collectFileMetadata(discoveredFiles, config.repoRoot, gitMetadata);
 
   // Step 7: Rank and budget files
   const rankingOptions: {
@@ -598,12 +574,7 @@ export async function aggregateContext(
   );
 
   // Step 9: Persist artifacts
-  await persistContextArtifacts(
-    contextDir,
-    config.runDir,
-    contextDocument,
-    hashResult.manifest
-  );
+  await persistContextArtifacts(contextDir, config.runDir, contextDocument, hashResult.manifest);
 
   // Build diagnostics
   const diagnostics = {

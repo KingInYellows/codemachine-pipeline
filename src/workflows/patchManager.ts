@@ -183,7 +183,7 @@ export function validateFileConstraints(
 
     // If not blocked, check if it matches allowed patterns
     if (violations.length === 0 || violations[violations.length - 1].file !== file) {
-      const matchesAllowed = allowedPatterns.some(pattern => {
+      const matchesAllowed = allowedPatterns.some((pattern) => {
         const isMatch = picomatch(pattern);
         return isMatch(file);
       });
@@ -268,7 +268,9 @@ function summarizeLineChanges(patchContent: string): { insertions: number; delet
  */
 export async function isWorkingTreeClean(workingDir: string): Promise<boolean> {
   try {
-    const { stdout } = normalizeExecResult(await execAsync('git status --porcelain', { cwd: workingDir }));
+    const { stdout } = normalizeExecResult(
+      await execAsync('git status --porcelain', { cwd: workingDir })
+    );
     return stdout.trim().length === 0;
   } catch (error) {
     throw new Error(
@@ -280,16 +282,16 @@ export async function isWorkingTreeClean(workingDir: string): Promise<boolean> {
 /**
  * Get current git HEAD reference and SHA
  */
-export async function getCurrentGitRef(
-  workingDir: string
-): Promise<{ ref: string; sha: string }> {
+export async function getCurrentGitRef(workingDir: string): Promise<{ ref: string; sha: string }> {
   try {
     const { stdout: ref } = normalizeExecResult(
       await execAsync('git symbolic-ref -q HEAD || git rev-parse HEAD', {
         cwd: workingDir,
       })
     );
-    const { stdout: sha } = normalizeExecResult(await execAsync('git rev-parse HEAD', { cwd: workingDir }));
+    const { stdout: sha } = normalizeExecResult(
+      await execAsync('git rev-parse HEAD', { cwd: workingDir })
+    );
 
     return {
       ref: ref.trim(),
@@ -331,7 +333,7 @@ export async function validatePatchDryRun(
   // Step 2: Validate file constraints
   const constraintValidation = validateFileConstraints(affectedFiles, repoConfig, logger);
   result.violations = constraintValidation.violations;
-  result.blockedFiles = constraintValidation.violations.map(v => v.file);
+  result.blockedFiles = constraintValidation.violations.map((v) => v.file);
 
   if (!constraintValidation.valid) {
     result.errors.push(
@@ -346,7 +348,9 @@ export async function validatePatchDryRun(
   // Step 3: Verify working tree is clean
   const isClean = await isWorkingTreeClean(workingDir);
   if (!isClean) {
-    result.errors.push('Working tree is not clean. Commit or stash changes before applying patches.');
+    result.errors.push(
+      'Working tree is not clean. Commit or stash changes before applying patches.'
+    );
     return result;
   }
 
@@ -492,7 +496,12 @@ export async function applyPatch(
   try {
     // Step 1: Dry-run validation
     logger.debug('Running dry-run validation');
-    const dryRunResult = await validatePatchDryRun(patch, config.workingDir, config.repoConfig, logger);
+    const dryRunResult = await validatePatchDryRun(
+      patch,
+      config.workingDir,
+      config.repoConfig,
+      logger
+    );
 
     if (!dryRunResult.success) {
       result.error = `Dry-run validation failed:\n${dryRunResult.errors.join('\n')}`;
@@ -515,94 +524,98 @@ export async function applyPatch(
     result.modifiedFiles = dryRunResult.affectedFiles;
 
     // Step 2: Create rollback snapshot (within lock)
-    await withLock(config.runDir, async () => {
-      logger.debug('Creating rollback snapshot');
-      const snapshotPath = await createRollbackSnapshot(config, patch, logger);
-      result.snapshotPath = snapshotPath;
+    await withLock(
+      config.runDir,
+      async () => {
+        logger.debug('Creating rollback snapshot');
+        const snapshotPath = await createRollbackSnapshot(config, patch, logger);
+        result.snapshotPath = snapshotPath;
 
-      // Step 3: Apply the patch
-      const patchFile = path.join('/tmp', `patch-${patch.patchId}-${Date.now()}.diff`);
-      try {
-        await fs.writeFile(patchFile, patch.content, 'utf-8');
+        // Step 3: Apply the patch
+        const patchFile = path.join('/tmp', `patch-${patch.patchId}-${Date.now()}.diff`);
+        try {
+          await fs.writeFile(patchFile, patch.content, 'utf-8');
 
-        logger.debug('Applying patch with git apply');
-        await execAsync(`git apply "${patchFile}"`, { cwd: config.workingDir });
+          logger.debug('Applying patch with git apply');
+          await execAsync(`git apply "${patchFile}"`, { cwd: config.workingDir });
 
-        logger.info('Patch applied successfully', {
-          patchId: patch.patchId,
-          modifiedFiles: result.modifiedFiles,
-        });
+          logger.info('Patch applied successfully', {
+            patchId: patch.patchId,
+            modifiedFiles: result.modifiedFiles,
+          });
 
-        // Step 4: Generate diff summary
-        logger.debug('Generating diff summary');
-        const diffSummaryPath = await generateDiffSummary(patch, config, result.modifiedFiles);
-        result.diffSummaryPath = diffSummaryPath;
-        const { insertions, deletions } = summarizeLineChanges(patch.content);
-        const diffStats: DiffStats = {
-          filesChanged: result.modifiedFiles.length,
-          insertions,
-          deletions,
-          patchId: patch.patchId,
-        };
-        telemetry?.metrics?.recordDiffStats(diffStats);
-        telemetry?.logs?.diffGenerated(config.taskId ?? patch.patchId, patch.patchId, diffStats);
+          // Step 4: Generate diff summary
+          logger.debug('Generating diff summary');
+          const diffSummaryPath = await generateDiffSummary(patch, config, result.modifiedFiles);
+          result.diffSummaryPath = diffSummaryPath;
+          const { insertions, deletions } = summarizeLineChanges(patch.content);
+          const diffStats: DiffStats = {
+            filesChanged: result.modifiedFiles.length,
+            insertions,
+            deletions,
+            patchId: patch.patchId,
+          };
+          telemetry?.metrics?.recordDiffStats(diffStats);
+          telemetry?.logs?.diffGenerated(config.taskId ?? patch.patchId, patch.patchId, diffStats);
 
-        // Step 5: Update run manifest
-        await updateManifest(config.runDir, manifest => ({
-          artifacts: {
-            ...manifest.artifacts,
-            [`patch_${patch.patchId}`]: diffSummaryPath,
-          },
-          metadata: {
-            ...(manifest.metadata ?? {}),
-            last_applied_patch: patch.patchId,
-            last_applied_at: new Date().toISOString(),
-          },
-        }));
+          // Step 5: Update run manifest
+          await updateManifest(config.runDir, (manifest) => ({
+            artifacts: {
+              ...manifest.artifacts,
+              [`patch_${patch.patchId}`]: diffSummaryPath,
+            },
+            metadata: {
+              ...(manifest.metadata ?? {}),
+              last_applied_patch: patch.patchId,
+              last_applied_at: new Date().toISOString(),
+            },
+          }));
 
-        result.success = true;
-        if (telemetry?.logs) {
+          result.success = true;
+          if (telemetry?.logs) {
+            try {
+              const gitRef = await getCurrentGitRef(config.workingDir);
+              telemetry.logs.patchApplied(
+                config.taskId ?? patch.patchId,
+                patch.patchId,
+                gitRef.ref,
+                gitRef.sha
+              );
+            } catch (error) {
+              logger.debug('Failed to record patch application telemetry', {
+                patchId: patch.patchId,
+                error: error instanceof Error ? error.message : String(error),
+              });
+            }
+          }
+
+          metrics.increment('patch_application_success_total', {
+            feature_id: config.featureId,
+          });
+        } catch (error) {
+          result.error = `git apply failed: ${error instanceof Error ? error.message : 'Unknown error'}`;
+          result.recoverable = true; // Git apply failures may be recoverable after conflict resolution
+
+          logger.error('Patch application failed', {
+            patchId: patch.patchId,
+            error: error instanceof Error ? error.message : 'Unknown error',
+          });
+
+          metrics.increment('patch_application_failed_total', {
+            feature_id: config.featureId,
+            reason: 'git_apply_failed',
+          });
+        } finally {
+          // Clean up temporary patch file
           try {
-            const gitRef = await getCurrentGitRef(config.workingDir);
-            telemetry.logs.patchApplied(
-              config.taskId ?? patch.patchId,
-              patch.patchId,
-              gitRef.ref,
-              gitRef.sha
-            );
-          } catch (error) {
-            logger.debug('Failed to record patch application telemetry', {
-              patchId: patch.patchId,
-              error: error instanceof Error ? error.message : String(error),
-            });
+            await fs.unlink(patchFile);
+          } catch {
+            // Ignore cleanup errors
           }
         }
-
-        metrics.increment('patch_application_success_total', {
-          feature_id: config.featureId,
-        });
-      } catch (error) {
-        result.error = `git apply failed: ${error instanceof Error ? error.message : 'Unknown error'}`;
-        result.recoverable = true; // Git apply failures may be recoverable after conflict resolution
-
-        logger.error('Patch application failed', {
-          patchId: patch.patchId,
-          error: error instanceof Error ? error.message : 'Unknown error',
-        });
-
-        metrics.increment('patch_application_failed_total', {
-          feature_id: config.featureId,
-          reason: 'git_apply_failed',
-        });
-      } finally {
-        // Clean up temporary patch file
-        try {
-          await fs.unlink(patchFile);
-        } catch {
-          // Ignore cleanup errors
-        }
-      }
-    }, { operation: 'apply_patch' });
+      },
+      { operation: 'apply_patch' }
+    );
   } catch (error) {
     result.error = `Unexpected error: ${error instanceof Error ? error.message : 'Unknown error'}`;
     result.recoverable = false;
@@ -640,7 +653,7 @@ export async function applyPatchWithStateManagement(
       taskId: config.taskId,
     });
 
-    await updateManifest(config.runDir, manifest => ({
+    await updateManifest(config.runDir, (manifest) => ({
       status: 'paused',
       execution: {
         ...manifest.execution,

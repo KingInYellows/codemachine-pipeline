@@ -27,9 +27,7 @@ import type { MetricsCollector } from '../telemetry/metrics';
  * This function wraps the GitHub adapter to execute queued write actions.
  * It handles all supported action types and provides proper error handling.
  */
-export function createGitHubActionExecutor(
-  adapter: GitHubAdapter
-): ActionExecutor {
+export function createGitHubActionExecutor(adapter: GitHubAdapter): ActionExecutor {
   return async (action: WriteAction): Promise<void> => {
     const { action_type, owner, repo, payload } = action;
 
@@ -141,11 +139,9 @@ async function updatePR(
   updates: { title?: string; body?: string; state?: 'open' | 'closed' }
 ): Promise<void> {
   const client = getAdapterHttpClient(adapter);
-  await client.patch(
-    `/repos/${owner}/${repo}/pulls/${prNumber}`,
-    updates,
-    { metadata: { operation: 'updatePR', pr_number: prNumber } }
-  );
+  await client.patch(`/repos/${owner}/${repo}/pulls/${prNumber}`, updates, {
+    metadata: { operation: 'updatePR', pr_number: prNumber },
+  });
 }
 
 /**

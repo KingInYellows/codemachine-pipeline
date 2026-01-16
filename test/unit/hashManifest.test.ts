@@ -176,7 +176,7 @@ describe('Hash Manifest Utilities', () => {
 
     it('should update manifest with new files', async () => {
       // Wait a tiny bit to ensure different timestamps
-      await new Promise(resolve => setTimeout(resolve, 10));
+      await new Promise((resolve) => setTimeout(resolve, 10));
 
       const updated = await updateHashManifest(manifest, [file2]);
 
@@ -402,7 +402,7 @@ describe('Hash Manifest Utilities', () => {
 
       const paths = getManifestFilePaths(filtered);
       expect(paths.length).toBe(2);
-      expect(paths.every(p => p.endsWith('.ts'))).toBe(true);
+      expect(paths.every((p) => p.endsWith('.ts'))).toBe(true);
     });
 
     it('should filter manifest by string pattern', () => {
@@ -410,7 +410,7 @@ describe('Hash Manifest Utilities', () => {
 
       const paths = getManifestFilePaths(filtered);
       expect(paths.length).toBe(2);
-      expect(paths.every(p => p.includes('src'))).toBe(true);
+      expect(paths.every((p) => p.includes('src'))).toBe(true);
     });
 
     it('should handle empty manifest', () => {

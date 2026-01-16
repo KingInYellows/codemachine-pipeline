@@ -144,9 +144,11 @@ function isLockFilePayload(value: unknown): value is LockFile {
   }
 
   const candidate = value as Record<string, unknown>;
-  return typeof candidate.pid === 'number' &&
+  return (
+    typeof candidate.pid === 'number' &&
     typeof candidate.hostname === 'string' &&
-    typeof candidate.acquired_at === 'string';
+    typeof candidate.acquired_at === 'string'
+  );
 }
 
 /**
@@ -231,7 +233,7 @@ export function getRunDirectoryPath(baseDir: string, featureId: string): string 
  */
 export function getSubdirectoryPath(
   runDir: string,
-  subdir: typeof STANDARD_SUBDIRS[number]
+  subdir: (typeof STANDARD_SUBDIRS)[number]
 ): string {
   return path.join(runDir, subdir);
 }
@@ -250,10 +252,7 @@ export function getSubdirectoryPath(
  * @param options - Lock acquisition options
  * @throws Error if lock cannot be acquired within timeout
  */
-export async function acquireLock(
-  runDir: string,
-  options: LockOptions = {}
-): Promise<void> {
+export async function acquireLock(runDir: string, options: LockOptions = {}): Promise<void> {
   const {
     timeout = DEFAULT_LOCK_TIMEOUT,
     pollInterval = DEFAULT_POLL_INTERVAL,
@@ -309,7 +308,7 @@ export async function acquireLock(
 
   throw new Error(
     `Failed to acquire lock for ${runDir} within ${timeout}ms. ` +
-    `Another process may be modifying this run directory.`
+      `Another process may be modifying this run directory.`
   );
 }
 
@@ -514,10 +513,7 @@ async function seedSqliteIndexes(runDir: string): Promise<SqliteIndexReference> 
  * @param featureId - Feature identifier
  * @returns True if directory exists
  */
-export async function runDirectoryExists(
-  baseDir: string,
-  featureId: string
-): Promise<boolean> {
+export async function runDirectoryExists(baseDir: string, featureId: string): Promise<boolean> {
   const runDir = getRunDirectoryPath(baseDir, featureId);
 
   try {
@@ -537,9 +533,7 @@ export async function runDirectoryExists(
 export async function listRunDirectories(baseDir: string): Promise<string[]> {
   try {
     const entries = await fs.readdir(baseDir, { withFileTypes: true });
-    return entries
-      .filter(entry => entry.isDirectory())
-      .map(entry => entry.name);
+    return entries.filter((entry) => entry.isDirectory()).map((entry) => entry.name);
   } catch (error) {
     if (error && typeof error === 'object' && 'code' in error && error.code === 'ENOENT') {
       return [];
@@ -555,10 +549,7 @@ export async function listRunDirectories(baseDir: string): Promise<string[]> {
 /**
  * Create initial run manifest
  */
-function createInitialManifest(
-  featureId: string,
-  options: CreateRunDirectoryOptions
-): RunManifest {
+function createInitialManifest(featureId: string, options: CreateRunDirectoryOptions): RunManifest {
   const now = new Date().toISOString();
 
   const manifest: RunManifest = {
@@ -616,10 +607,7 @@ function createInitialManifest(
  * @param runDir - Run directory path
  * @param manifest - Manifest to write
  */
-export async function writeManifest(
-  runDir: string,
-  manifest: RunManifest
-): Promise<void> {
+export async function writeManifest(runDir: string, manifest: RunManifest): Promise<void> {
   const manifestPath = path.join(runDir, MANIFEST_FILE_NAME);
   const tempPath = `${manifestPath}.tmp.${crypto.randomBytes(8).toString('hex')}`;
 
@@ -675,10 +663,7 @@ export async function readManifest(runDir: string): Promise<RunManifest> {
  * @param runDir - Run directory path
  * @param updates - Partial manifest updates
  */
-export async function updateManifest(
-  runDir: string,
-  updates: ManifestUpdate
-): Promise<void> {
+export async function updateManifest(runDir: string, updates: ManifestUpdate): Promise<void> {
   return withLock(runDir, async () => {
     const manifest = await readManifest(runDir);
     const patchCandidate = typeof updates === 'function' ? updates(manifest) : updates;
@@ -714,7 +699,7 @@ export async function updateManifest(
  * @param step - Step identifier
  */
 export async function setLastStep(runDir: string, step: string): Promise<void> {
-  await updateManifest(runDir, manifest => {
+  await updateManifest(runDir, (manifest) => {
     const updatedExecution = { ...manifest.execution, last_step: step };
     delete updatedExecution.current_step;
 
@@ -729,7 +714,7 @@ export async function setLastStep(runDir: string, step: string): Promise<void> {
  * @param step - Step identifier
  */
 export async function setCurrentStep(runDir: string, step: string): Promise<void> {
-  await updateManifest(runDir, manifest => ({
+  await updateManifest(runDir, (manifest) => ({
     execution: {
       ...manifest.execution,
       current_step: step,
@@ -751,7 +736,7 @@ export async function setLastError(
   message: string,
   recoverable = true
 ): Promise<void> {
-  await updateManifest(runDir, manifest => ({
+  await updateManifest(runDir, (manifest) => ({
     status: recoverable ? 'paused' : 'failed',
     execution: {
       ...manifest.execution,
@@ -771,7 +756,7 @@ export async function setLastError(
  * @param runDir - Run directory path
  */
 export async function clearLastError(runDir: string): Promise<void> {
-  await updateManifest(runDir, manifest => {
+  await updateManifest(runDir, (manifest) => {
     const updatedExecution = { ...manifest.execution };
     delete updatedExecution.last_error;
 
@@ -832,11 +817,8 @@ export async function getRunState(runDir: string): Promise<{
  * @param runDir - Run directory path
  * @param approvalType - Type of approval needed
  */
-export async function markApprovalRequired(
-  runDir: string,
-  approvalType: string
-): Promise<void> {
-  await updateManifest(runDir, manifest => {
+export async function markApprovalRequired(runDir: string, approvalType: string): Promise<void> {
+  await updateManifest(runDir, (manifest) => {
     if (manifest.approvals.pending.includes(approvalType)) {
       return null;
     }
@@ -856,12 +838,9 @@ export async function markApprovalRequired(
  * @param runDir - Run directory path
  * @param approvalType - Type of approval completed
  */
-export async function markApprovalCompleted(
-  runDir: string,
-  approvalType: string
-): Promise<void> {
-  await updateManifest(runDir, manifest => {
-    const pending = manifest.approvals.pending.filter(a => a !== approvalType);
+export async function markApprovalCompleted(runDir: string, approvalType: string): Promise<void> {
+  await updateManifest(runDir, (manifest) => {
+    const pending = manifest.approvals.pending.filter((a) => a !== approvalType);
     const completedSet = new Set(manifest.approvals.completed);
     completedSet.add(approvalType);
     const completed = Array.from(completedSet);
@@ -893,12 +872,9 @@ export async function markApprovalCompleted(
  * @param runDir - Run directory path
  * @param filePaths - Specific files to include (relative to runDir)
  */
-export async function generateHashManifest(
-  runDir: string,
-  filePaths?: string[]
-): Promise<void> {
+export async function generateHashManifest(runDir: string, filePaths?: string[]): Promise<void> {
   const absolutePaths = filePaths
-    ? filePaths.map(p => path.resolve(runDir, p))
+    ? filePaths.map((p) => path.resolve(runDir, p))
     : await collectArtifactPaths(runDir);
 
   const hashManifest = await createHashManifest(absolutePaths);
@@ -907,7 +883,7 @@ export async function generateHashManifest(
   await saveHashManifest(hashManifest, hashManifestPath);
 
   // Update run manifest to reference hash manifest
-  await updateManifest(runDir, manifest => ({
+  await updateManifest(runDir, (manifest) => ({
     artifacts: {
       ...manifest.artifacts,
       hash_manifest: HASH_MANIFEST_FILE_NAME,
@@ -921,9 +897,7 @@ export async function generateHashManifest(
  * @param runDir - Run directory path
  * @returns Verification result
  */
-export async function verifyRunDirectoryIntegrity(
-  runDir: string
-): Promise<VerificationResult> {
+export async function verifyRunDirectoryIntegrity(runDir: string): Promise<VerificationResult> {
   const hashManifestPath = path.join(runDir, HASH_MANIFEST_FILE_NAME);
   const hashManifest = await loadHashManifest(hashManifestPath);
 
@@ -998,11 +972,8 @@ export interface CleanupHook {
  * @param runDir - Run directory path
  * @param hook - Cleanup hook configuration
  */
-export async function registerCleanupHook(
-  runDir: string,
-  hook: CleanupHook
-): Promise<void> {
-  await updateManifest(runDir, manifest => ({
+export async function registerCleanupHook(runDir: string, hook: CleanupHook): Promise<void> {
+  await updateManifest(runDir, (manifest) => ({
     metadata: {
       ...(manifest.metadata ?? {}),
       cleanup_hook: hook,
@@ -1053,5 +1024,5 @@ export async function isEligibleForCleanup(runDir: string): Promise<boolean> {
  * Sleep for a specified duration
  */
 function sleep(ms: number): Promise<void> {
-  return new Promise(resolve => setTimeout(resolve, ms));
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }

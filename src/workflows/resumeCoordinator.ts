@@ -201,7 +201,7 @@ export async function analyzeResumeState(
 
   // Determine final resume eligibility
   const canResumeBeforeBlockers = analysis.canResume;
-  const hasBlockers = analysis.diagnostics.some(d => d.severity === 'blocker');
+  const hasBlockers = analysis.diagnostics.some((d) => d.severity === 'blocker');
   if (hasBlockers) {
     analysis.canResume = options.force === true ? canResumeBeforeBlockers : false;
   } else {
@@ -217,10 +217,7 @@ export async function analyzeResumeState(
 /**
  * Check run status and add diagnostics
  */
-function checkRunStatus(
-  analysis: ResumeAnalysis,
-  manifest: RunManifest
-): void {
+function checkRunStatus(analysis: ResumeAnalysis, manifest: RunManifest): void {
   switch (manifest.status) {
     case 'completed':
       analysis.diagnostics.push({
@@ -277,10 +274,7 @@ function checkRunStatus(
 /**
  * Check for pending approvals
  */
-function checkPendingApprovals(
-  analysis: ResumeAnalysis,
-  manifest: RunManifest
-): void {
+function checkPendingApprovals(analysis: ResumeAnalysis, manifest: RunManifest): void {
   if (manifest.approvals.pending.length > 0) {
     analysis.diagnostics.push({
       severity: 'blocker',
@@ -312,7 +306,7 @@ async function checkIntegrity(
           message: `${integrityResult.failed.length} artifact(s) failed integrity check`,
           code: 'INTEGRITY_HASH_MISMATCH',
           context: {
-            failed: integrityResult.failed.map(f => ({
+            failed: integrityResult.failed.map((f) => ({
               path: f.path,
               reason: f.reason,
             })),
@@ -404,10 +398,7 @@ function classifyErrorMessage(message: string): string {
 /**
  * Check queue state for anomalies
  */
-function checkQueueState(
-  analysis: ResumeAnalysis,
-  manifest: RunManifest
-): void {
+function checkQueueState(analysis: ResumeAnalysis, manifest: RunManifest): void {
   const { pending_count, completed_count, failed_count } = manifest.queue;
 
   if (pending_count === 0 && failed_count === 0 && completed_count > 0) {
@@ -493,9 +484,9 @@ async function checkQueueFiles(
  * Generate actionable recommendations based on diagnostics
  */
 function generateRecommendations(analysis: ResumeAnalysis): void {
-  const blockers = analysis.diagnostics.filter(d => d.severity === 'blocker');
-  const errors = analysis.diagnostics.filter(d => d.severity === 'error');
-  const warnings = analysis.diagnostics.filter(d => d.severity === 'warning');
+  const blockers = analysis.diagnostics.filter((d) => d.severity === 'blocker');
+  const errors = analysis.diagnostics.filter((d) => d.severity === 'error');
+  const warnings = analysis.diagnostics.filter((d) => d.severity === 'warning');
 
   if (blockers.length > 0) {
     analysis.recommendations.push('🚫 Resume is blocked. Address the following issues:');
@@ -503,7 +494,7 @@ function generateRecommendations(analysis: ResumeAnalysis): void {
     for (const blocker of blockers) {
       if (blocker.code === 'APPROVALS_PENDING') {
         analysis.recommendations.push(
-          `   • Complete pending approvals: ${(blocker.context?.approvals as string[] || []).join(', ')}`
+          `   • Complete pending approvals: ${((blocker.context?.approvals as string[]) || []).join(', ')}`
         );
       } else if (blocker.code === 'INTEGRITY_HASH_MISMATCH') {
         analysis.recommendations.push(
@@ -555,13 +546,17 @@ function generateRecommendations(analysis: ResumeAnalysis): void {
     }
 
     if (analysis.queueState.pending > 0) {
-      analysis.recommendations.push(`   • ${analysis.queueState.pending} task(s) remaining in queue`);
+      analysis.recommendations.push(
+        `   • ${analysis.queueState.pending} task(s) remaining in queue`
+      );
     }
   }
 
   // Always add playbook reference
   analysis.recommendations.push('');
-  analysis.recommendations.push('📚 For detailed recovery guidance, see: docs/requirements/resume_playbook.md');
+  analysis.recommendations.push(
+    '📚 For detailed recovery guidance, see: docs/requirements/resume_playbook.md'
+  );
 }
 
 // ============================================================================
@@ -586,50 +581,54 @@ export async function prepareResume(
   options: ResumeOptions = {},
   telemetry?: ExecutionTelemetry
 ): Promise<ResumeAnalysis> {
-  return withLock(runDir, async () => {
-    const analysis = await analyzeResumeState(runDir, options, telemetry);
+  return withLock(
+    runDir,
+    async () => {
+      const analysis = await analyzeResumeState(runDir, options, telemetry);
 
-    if (!analysis.canResume) {
-      const blockerMessages = analysis.diagnostics
-        .filter(d => d.severity === 'blocker')
-        .map(d => `  - ${d.message}`)
-        .join('\n');
+      if (!analysis.canResume) {
+        const blockerMessages = analysis.diagnostics
+          .filter((d) => d.severity === 'blocker')
+          .map((d) => `  - ${d.message}`)
+          .join('\n');
 
-      throw new Error(
-        `Cannot resume run ${analysis.featureId}:\n${blockerMessages}\n\n` +
-        `See diagnostics for details. Use --force to override (not recommended).`
-      );
-    }
+        throw new Error(
+          `Cannot resume run ${analysis.featureId}:\n${blockerMessages}\n\n` +
+            `See diagnostics for details. Use --force to override (not recommended).`
+        );
+      }
 
-    const manifest = await readManifest(runDir);
-    let manifestChanged = false;
-    const updatedExecution = { ...manifest.execution };
+      const manifest = await readManifest(runDir);
+      let manifestChanged = false;
+      const updatedExecution = { ...manifest.execution };
 
-    // Clear last_error if it was recoverable
-    if (analysis.lastError?.recoverable && updatedExecution.last_error) {
-      delete updatedExecution.last_error;
-      manifestChanged = true;
-    }
+      // Clear last_error if it was recoverable
+      if (analysis.lastError?.recoverable && updatedExecution.last_error) {
+        delete updatedExecution.last_error;
+        manifestChanged = true;
+      }
 
-    // Update current_step if we have a resumption point
-    if (analysis.lastStep && updatedExecution.current_step !== analysis.lastStep) {
-      updatedExecution.current_step = analysis.lastStep;
-      manifestChanged = true;
-    }
+      // Update current_step if we have a resumption point
+      if (analysis.lastStep && updatedExecution.current_step !== analysis.lastStep) {
+        updatedExecution.current_step = analysis.lastStep;
+        manifestChanged = true;
+      }
 
-    if (manifestChanged) {
-      await writeManifest(runDir, {
-        ...manifest,
-        execution: updatedExecution,
-        timestamps: {
-          ...manifest.timestamps,
-          updated_at: new Date().toISOString(),
-        },
-      });
-    }
+      if (manifestChanged) {
+        await writeManifest(runDir, {
+          ...manifest,
+          execution: updatedExecution,
+          timestamps: {
+            ...manifest.timestamps,
+            updated_at: new Date().toISOString(),
+          },
+        });
+      }
 
-    return analysis;
-  }, { operation: 'prepare_resume' });
+      return analysis;
+    },
+    { operation: 'prepare_resume' }
+  );
 }
 
 /**
@@ -704,10 +703,14 @@ export function formatResumeAnalysis(analysis: ResumeAnalysis): string {
  */
 function getSeverityIcon(severity: DiagnosticSeverity): string {
   switch (severity) {
-    case 'blocker': return '🚫';
-    case 'error': return '❌';
-    case 'warning': return '⚠️ ';
-    case 'info': return 'ℹ️ ';
+    case 'blocker':
+      return '🚫';
+    case 'error':
+      return '❌';
+    case 'warning':
+      return '⚠️ ';
+    case 'info':
+      return 'ℹ️ ';
   }
 }
 
@@ -739,10 +742,15 @@ export async function validateQueueSnapshot(
       return false;
     }
 
-    const computedHash = crypto.createHash('sha256').update(JSON.stringify({
-      tasks: storedSnapshot.tasks,
-      dependency_graph: storedSnapshot.dependency_graph,
-    })).digest('hex');
+    const computedHash = crypto
+      .createHash('sha256')
+      .update(
+        JSON.stringify({
+          tasks: storedSnapshot.tasks,
+          dependency_graph: storedSnapshot.dependency_graph,
+        })
+      )
+      .digest('hex');
 
     const taskCount = Object.keys(storedSnapshot.tasks).length;
     const timestampsMatch = new Date(storedSnapshot.timestamp).toISOString() === snapshot.timestamp;

@@ -198,10 +198,7 @@ export class HttpClient {
   /**
    * Perform a GET request
    */
-  async get<T = unknown>(
-    path: string,
-    options?: HttpRequestOptions
-  ): Promise<HttpResponse<T>> {
+  async get<T = unknown>(path: string, options?: HttpRequestOptions): Promise<HttpResponse<T>> {
     return this.request<T>('GET', path, options);
   }
 
@@ -253,10 +250,7 @@ export class HttpClient {
   /**
    * Perform a DELETE request
    */
-  async delete<T = unknown>(
-    path: string,
-    options?: HttpRequestOptions
-  ): Promise<HttpResponse<T>> {
+  async delete<T = unknown>(path: string, options?: HttpRequestOptions): Promise<HttpResponse<T>> {
     return this.request<T>('DELETE', path, {
       ...options,
       idempotent: true,
@@ -319,11 +313,7 @@ export class HttpClient {
 
         // Handle error responses
         if (!response.ok) {
-          const error = await this.handleErrorResponse(
-            response,
-            requestId,
-            rateLimitEnvelope
-          );
+          const error = await this.handleErrorResponse(response, requestId, rateLimitEnvelope);
 
           // Check if error is retryable
           if (error.retryable && attempt < maxAttempts - 1) {
@@ -391,14 +381,17 @@ export class HttpClient {
     }
 
     // Should never reach here, but TypeScript doesn't know that
-    throw lastError ?? new HttpError(
-      'Request failed after all retry attempts',
-      ErrorType.TRANSIENT,
-      undefined,
-      undefined,
-      undefined,
-      requestId,
-      false
+    throw (
+      lastError ??
+      new HttpError(
+        'Request failed after all retry attempts',
+        ErrorType.TRANSIENT,
+        undefined,
+        undefined,
+        undefined,
+        requestId,
+        false
+      )
     );
   }
 
@@ -522,9 +515,10 @@ export class HttpClient {
 
     if (status === 401 || status === 403) {
       // Authentication/authorization failure - human action required
-      const message = status === 401
-        ? 'Authentication failed - token may be missing or invalid'
-        : 'Authorization failed - insufficient permissions';
+      const message =
+        status === 401
+          ? 'Authentication failed - token may be missing or invalid'
+          : 'Authorization failed - insufficient permissions';
 
       return new HttpError(
         message,
@@ -639,10 +633,7 @@ export class HttpClient {
   /**
    * Calculate exponential backoff with jitter
    */
-  private calculateBackoff(
-    attempt: number,
-    rateLimitEnvelope?: RateLimitEnvelope
-  ): number {
+  private calculateBackoff(attempt: number, rateLimitEnvelope?: RateLimitEnvelope): number {
     // If retry-after header is present, use it
     if (rateLimitEnvelope?.retryAfter) {
       return rateLimitEnvelope.retryAfter * 1000; // Convert to milliseconds
@@ -779,7 +770,7 @@ function truncate(str: string, maxLength: number): string {
  * Sleep for specified milliseconds
  */
 function sleep(ms: number): Promise<void> {
-  return new Promise(resolve => setTimeout(resolve, ms));
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 /**

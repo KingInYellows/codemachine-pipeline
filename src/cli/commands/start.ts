@@ -20,7 +20,10 @@ import { resolveRunDirectorySettings, ensureTelemetryReferences } from '../utils
 import type { RepoConfig } from '../../core/config/RepoConfig';
 import { createFeature } from '../../core/models/Feature';
 import { aggregateContext, type AggregatorConfig } from '../../workflows/contextAggregator';
-import { createResearchCoordinator, type UnknownDetectionOptions } from '../../workflows/researchCoordinator';
+import {
+  createResearchCoordinator,
+  type UnknownDetectionOptions,
+} from '../../workflows/researchCoordinator';
 import type { ResearchTask } from '../../core/models/ResearchTask';
 import { draftPRD } from '../../workflows/prdAuthoringEngine';
 import { createLinearAdapter, type IssueSnapshot } from '../../adapters/linear/LinearAdapter';
@@ -137,9 +140,10 @@ export default class Start extends Command {
     const settings = resolveRunDirectorySettings();
 
     if (settings.errors.length > 0 || !settings.config) {
-      const message = settings.errors.length > 0
-        ? settings.errors.join('\n')
-        : 'Repository not initialized. Run "ai-feature init" first.';
+      const message =
+        settings.errors.length > 0
+          ? settings.errors.join('\n')
+          : 'Repository not initialized. Run "ai-feature init" first.';
       this.error(message, { exit: 10 });
     }
 
@@ -184,7 +188,7 @@ export default class Start extends Command {
     commandSpan.setAttribute('input_source', featureSource);
 
     try {
-      await updateManifest(runDir, manifest => ({
+      await updateManifest(runDir, (manifest) => ({
         status: 'in_progress',
         execution: {
           ...manifest.execution,
@@ -195,9 +199,7 @@ export default class Start extends Command {
 
       currentStepLabel = 'initializing';
 
-      const specText = resolvedSpecPath
-        ? await fs.readFile(resolvedSpecPath, 'utf-8')
-        : undefined;
+      const specText = resolvedSpecPath ? await fs.readFile(resolvedSpecPath, 'utf-8') : undefined;
 
       // Fetch Linear issue snapshot if --linear flag is provided
       let linearSnapshot: IssueSnapshot | undefined;
@@ -235,9 +237,7 @@ export default class Start extends Command {
       // Include Linear issue data in research context
       if (linearSnapshot) {
         const linearContext = this.formatLinearContext(linearSnapshot);
-        researchOptions.specText = specText
-          ? `${specText}\n\n${linearContext}`
-          : linearContext;
+        researchOptions.specText = specText ? `${specText}\n\n${linearContext}` : linearContext;
       }
 
       const researchTasks = await this.runResearchDetection(researchOptions);
@@ -258,7 +258,7 @@ export default class Start extends Command {
 
       const approvalRequired = this.prdApprovalRequired(repoConfig);
 
-      await updateManifest(runDir, manifest => ({
+      await updateManifest(runDir, (manifest) => ({
         artifacts: {
           ...manifest.artifacts,
           prd: 'artifacts/prd.md',
@@ -278,7 +278,7 @@ export default class Start extends Command {
         },
         research: {
           tasks_detected: researchTasks.length,
-          pending: researchTasks.filter(task => task.status !== 'completed').length,
+          pending: researchTasks.filter((task) => task.status !== 'completed').length,
         },
         prd: {
           path: path.relative(process.cwd(), prdResult.prdPath),
@@ -302,7 +302,9 @@ export default class Start extends Command {
 
       const exitCode = payload.approvals.required ? 30 : 0;
       const duration = Date.now() - startTime;
-      metrics.observe(StandardMetrics.COMMAND_EXECUTION_DURATION_MS, duration, { command: 'start' });
+      metrics.observe(StandardMetrics.COMMAND_EXECUTION_DURATION_MS, duration, {
+        command: 'start',
+      });
       metrics.increment(StandardMetrics.COMMAND_INVOCATIONS_TOTAL, {
         command: 'start',
         exit_code: exitCode.toString(),
@@ -362,16 +364,8 @@ export default class Start extends Command {
   }
 
   private async runResearchDetection(options: ResearchDetectionOptions): Promise<ResearchTask[]> {
-    const {
-      repoRoot,
-      runDir,
-      featureId,
-      promptText,
-      specText,
-      logger,
-      metrics,
-      contextDocument,
-    } = options;
+    const { repoRoot, runDir, featureId, promptText, specText, logger, metrics, contextDocument } =
+      options;
 
     await setCurrentStep(runDir, EXECUTION_STEPS.Research);
 
@@ -437,7 +431,8 @@ export default class Start extends Command {
       source: featureSource,
       defaultBranch: repoConfig.project.default_branch,
       metadata: {
-        approvals_required: repoConfig.governance?.approval_workflow.require_approval_for_prd ?? true,
+        approvals_required:
+          repoConfig.governance?.approval_workflow.require_approval_for_prd ?? true,
       },
     });
 
@@ -514,12 +509,12 @@ export default class Start extends Command {
 
     if (payload.context.warnings.length > 0) {
       this.log('\nContext warnings:');
-      payload.context.warnings.forEach(w => this.log(`  • ${w}`));
+      payload.context.warnings.forEach((w) => this.log(`  • ${w}`));
     }
 
     if (payload.prd.diagnostics.warnings.length > 0) {
       this.log('\nPRD warnings:');
-      payload.prd.diagnostics.warnings.forEach(w => this.log(`  • ${w}`));
+      payload.prd.diagnostics.warnings.forEach((w) => this.log(`  • ${w}`));
     }
 
     if (payload.approvals.required) {
@@ -556,7 +551,7 @@ export default class Start extends Command {
       this.log(JSON.stringify(plan, null, 2));
     } else {
       this.log('\nℹ️  Dry-run preview (no files written):\n');
-      plan.planned_steps.forEach(step => this.log(`  • ${step}`));
+      plan.planned_steps.forEach((step) => this.log(`  • ${step}`));
       this.log('');
     }
   }
@@ -604,9 +599,7 @@ export default class Start extends Command {
 
     const apiKey = process.env.LINEAR_API_KEY;
     if (!apiKey) {
-      throw new Error(
-        'LINEAR_API_KEY environment variable is required when using --linear flag'
-      );
+      throw new Error('LINEAR_API_KEY environment variable is required when using --linear flag');
     }
 
     const adapter = createLinearAdapter({
@@ -660,7 +653,7 @@ export default class Start extends Command {
     }
 
     if (issue.labels.length > 0) {
-      parts.push(`**Labels**: ${issue.labels.map(l => l.name).join(', ')}`);
+      parts.push(`**Labels**: ${issue.labels.map((l) => l.name).join(', ')}`);
     }
 
     parts.push('');
@@ -674,7 +667,9 @@ export default class Start extends Command {
       parts.push('');
 
       for (const comment of comments) {
-        parts.push(`### ${comment.user.name} - ${new Date(comment.createdAt).toLocaleDateString()}`);
+        parts.push(
+          `### ${comment.user.name} - ${new Date(comment.createdAt).toLocaleDateString()}`
+        );
         parts.push('');
         parts.push(comment.body);
         parts.push('');
@@ -702,11 +697,10 @@ export default class Start extends Command {
     };
     return priorityMap[priority] || `Priority ${priority}`;
   }
-
 }
 
 async function updateExecutionProgress(runDir: string, completedSteps: number): Promise<void> {
-  await updateManifest(runDir, manifest => ({
+  await updateManifest(runDir, (manifest) => ({
     execution: {
       ...manifest.execution,
       completed_steps: Math.max(manifest.execution.completed_steps, completedSteps),

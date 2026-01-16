@@ -6,9 +6,7 @@ import {
   formatResumeAnalysis,
   type ResumeOptions,
 } from '../../workflows/resumeCoordinator';
-import {
-  getRunDirectoryPath,
-} from '../../persistence/runDirectoryManager';
+import { getRunDirectoryPath } from '../../persistence/runDirectoryManager';
 import type { QueueValidationResult } from '../../workflows/queueStore';
 import { createCliLogger, LogLevel } from '../../telemetry/logger';
 import { createRunMetricsCollector, StandardMetrics } from '../../telemetry/metrics';
@@ -245,7 +243,13 @@ export default class Resume extends Command {
       }
 
       // Build output payload
-      const payload = await this.buildResumePayload(analysis, queueValidation, planSummary, typedFlags['dry-run'], runDirPath);
+      const payload = await this.buildResumePayload(
+        analysis,
+        queueValidation,
+        planSummary,
+        typedFlags['dry-run'],
+        runDirPath
+      );
 
       if (typedFlags.json) {
         this.log(JSON.stringify(payload, null, 2));
@@ -269,7 +273,7 @@ export default class Resume extends Command {
       if (!analysis.canResume) {
         const exitCode = this.determineExitCode(analysis);
         logger.error('Resume blocked', {
-          blockers: analysis.diagnostics.filter(d => d.severity === 'blocker').map(d => d.code),
+          blockers: analysis.diagnostics.filter((d) => d.severity === 'blocker').map((d) => d.code),
         });
 
         metrics.increment(StandardMetrics.COMMAND_INVOCATIONS_TOTAL, {
@@ -310,8 +314,13 @@ export default class Resume extends Command {
 
       if (metrics) {
         const duration = Date.now() - startTime;
-        metrics.observe(StandardMetrics.COMMAND_EXECUTION_DURATION_MS, duration, { command: 'resume' });
-        metrics.increment(StandardMetrics.COMMAND_INVOCATIONS_TOTAL, { command: 'resume', exit_code: '1' });
+        metrics.observe(StandardMetrics.COMMAND_EXECUTION_DURATION_MS, duration, {
+          command: 'resume',
+        });
+        metrics.increment(StandardMetrics.COMMAND_INVOCATIONS_TOTAL, {
+          command: 'resume',
+          exit_code: '1',
+        });
       }
 
       if (commandSpan) {
@@ -362,7 +371,7 @@ export default class Resume extends Command {
       status: analysis.status,
       queue_state: analysis.queueState,
       pending_approvals: analysis.pendingApprovals,
-      diagnostics: analysis.diagnostics.map(d => {
+      diagnostics: analysis.diagnostics.map((d) => {
         const diag: { severity: string; message: string; code?: string } = {
           severity: d.severity,
           message: d.message,
@@ -439,10 +448,7 @@ export default class Resume extends Command {
     return payload;
   }
 
-  private async attachRateLimitWarnings(
-    payload: ResumePayload,
-    runDir: string
-  ): Promise<void> {
+  private async attachRateLimitWarnings(payload: ResumePayload, runDir: string): Promise<void> {
     try {
       const rateLimitReport = await RateLimitReporter.generateReport(runDir);
 
@@ -450,11 +456,11 @@ export default class Resume extends Command {
       const integrationBlockers: ResumePayload['integration_blockers'] = {};
 
       for (const [providerName, providerData] of Object.entries(rateLimitReport.providers)) {
-      if (providerData.inCooldown || providerData.manualAckRequired) {
-        rateLimitWarnings.push({
-          provider: providerName,
-          in_cooldown: providerData.inCooldown,
-          manual_ack_required: providerData.manualAckRequired,
+        if (providerData.inCooldown || providerData.manualAckRequired) {
+          rateLimitWarnings.push({
+            provider: providerName,
+            in_cooldown: providerData.inCooldown,
+            manual_ack_required: providerData.manualAckRequired,
             reset_at: providerData.resetAt,
           });
 
@@ -467,7 +473,9 @@ export default class Resume extends Command {
               integrationBlockers.github.push(`Rate limit cooldown until ${providerData.resetAt}`);
             }
             if (providerData.manualAckRequired) {
-              integrationBlockers.github.push(`Manual acknowledgement required (${providerData.recentHitCount} consecutive hits)`);
+              integrationBlockers.github.push(
+                `Manual acknowledgement required (${providerData.recentHitCount} consecutive hits)`
+              );
             }
           }
 
@@ -479,7 +487,9 @@ export default class Resume extends Command {
               integrationBlockers.linear.push(`Rate limit cooldown until ${providerData.resetAt}`);
             }
             if (providerData.manualAckRequired) {
-              integrationBlockers.linear.push(`Manual acknowledgement required (${providerData.recentHitCount} consecutive hits)`);
+              integrationBlockers.linear.push(
+                `Manual acknowledgement required (${providerData.recentHitCount} consecutive hits)`
+              );
             }
           }
         }
@@ -538,7 +548,7 @@ export default class Resume extends Command {
       }
       if (analysis.pendingApprovals.length > 0) {
         this.log('  Pending approvals:');
-        analysis.pendingApprovals.forEach(gate => {
+        analysis.pendingApprovals.forEach((gate) => {
           this.log(`    • ${gate.toUpperCase()} - Run: ai-feature approve ${gate}`);
         });
       }
@@ -585,20 +595,23 @@ export default class Resume extends Command {
     // Integration blockers
     if (payload?.integration_blockers) {
       const blockers = payload.integration_blockers;
-      if ((blockers.github && blockers.github.length > 0) || (blockers.linear && blockers.linear.length > 0)) {
+      if (
+        (blockers.github && blockers.github.length > 0) ||
+        (blockers.linear && blockers.linear.length > 0)
+      ) {
         this.log('');
         this.log('Integration Blockers:');
 
         if (blockers.github && blockers.github.length > 0) {
           this.log('  GitHub:');
-          blockers.github.forEach(blocker => {
+          blockers.github.forEach((blocker) => {
             this.warn(`    ⚠ ${blocker}`);
           });
         }
 
         if (blockers.linear && blockers.linear.length > 0) {
           this.log('  Linear:');
-          blockers.linear.forEach(blocker => {
+          blockers.linear.forEach((blocker) => {
             this.warn(`    ⚠ ${blocker}`);
           });
         }
@@ -608,7 +621,7 @@ export default class Resume extends Command {
     if (payload?.branch_protection_blockers && payload.branch_protection_blockers.length > 0) {
       this.log('');
       this.log('Branch Protection Blockers:');
-      payload.branch_protection_blockers.forEach(blocker => {
+      payload.branch_protection_blockers.forEach((blocker) => {
         this.warn(`  ⚠ ${blocker}`);
       });
     }
@@ -637,12 +650,10 @@ export default class Resume extends Command {
     }
   }
 
-  private determineExitCode(
-    analysis: Awaited<ReturnType<typeof analyzeResumeState>>
-  ): number {
+  private determineExitCode(analysis: Awaited<ReturnType<typeof analyzeResumeState>>): number {
     // Check for integrity failures
     const hasIntegrityFailure = analysis.diagnostics.some(
-      d => d.code === 'INTEGRITY_HASH_MISMATCH' || d.code === 'INTEGRITY_MISSING_FILES'
+      (d) => d.code === 'INTEGRITY_HASH_MISMATCH' || d.code === 'INTEGRITY_MISSING_FILES'
     );
     if (hasIntegrityFailure) {
       return 20;

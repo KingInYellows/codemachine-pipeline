@@ -288,12 +288,9 @@ export class GitHubAdapter {
     });
 
     try {
-      const response = await this.client.get<RepositoryInfo>(
-        `/repos/${this.owner}/${this.repo}`,
-        {
-          metadata: { operation: 'getRepository' },
-        }
-      );
+      const response = await this.client.get<RepositoryInfo>(`/repos/${this.owner}/${this.repo}`, {
+        metadata: { operation: 'getRepository' },
+      });
 
       this.logger.debug('Repository metadata fetched', {
         repo: response.data.full_name,
@@ -550,7 +547,7 @@ export class GitHubAdapter {
       // Check status checks
       const statusChecks = await this.getStatusChecks(pr.head.sha);
       const failedChecks = statusChecks.filter(
-        check => check.conclusion === 'failure' || check.conclusion === 'cancelled'
+        (check) => check.conclusion === 'failure' || check.conclusion === 'cancelled'
       );
 
       if (failedChecks.length > 0) {
@@ -632,7 +629,10 @@ export class GitHubAdapter {
    *
    * Note: This uses the GraphQL API wrapped in REST-like envelope
    */
-  async enableAutoMerge(pull_number: number, merge_method?: 'MERGE' | 'SQUASH' | 'REBASE'): Promise<void> {
+  async enableAutoMerge(
+    pull_number: number,
+    merge_method?: 'MERGE' | 'SQUASH' | 'REBASE'
+  ): Promise<void> {
     this.logger.info('Enabling auto-merge', {
       pull_number,
       merge_method,

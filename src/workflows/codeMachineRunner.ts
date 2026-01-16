@@ -154,7 +154,10 @@ function ensureLogFile(logPath: string): void {
 function appendToLog(logPath: string, data: string, stream: 'stdout' | 'stderr'): void {
   const timestamp = new Date().toISOString();
   const prefix = `[${timestamp}] [${stream}] `;
-  const lines = data.split('\n').map((line) => (line ? prefix + line : '')).join('\n');
+  const lines = data
+    .split('\n')
+    .map((line) => (line ? prefix + line : ''))
+    .join('\n');
   // Use async append to avoid blocking the event loop
   fs.promises.appendFile(logPath, lines, 'utf-8').catch((err) => {
     // Ignore log errors to avoid disrupting the process monitoring
@@ -179,17 +182,16 @@ function appendToLog(logPath: string, data: string, stream: 'stdout' | 'stderr')
  * @param options - Runner options
  * @returns Promise resolving to execution result
  */
-export async function runCodeMachine(options: CodeMachineRunnerOptions): Promise<CodeMachineResult> {
+export async function runCodeMachine(
+  options: CodeMachineRunnerOptions
+): Promise<CodeMachineResult> {
   const startTime = Date.now();
 
   // Ensure log file exists
   ensureLogFile(options.logPath);
 
   // Build command arguments
-  const args = [
-    '--engine', options.engine,
-    '--spec', options.specPath,
-  ];
+  const args = ['--engine', options.engine, '--spec', options.specPath];
 
   // Create sanitized environment
   const env = createSanitizedEnv(options.env);
