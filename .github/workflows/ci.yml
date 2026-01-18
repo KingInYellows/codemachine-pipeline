@@ -24,6 +24,9 @@ jobs:
       - name: Install dependencies
         run: npm ci --frozen-lockfile
 
+      - name: Run security advisory guard
+        run: npm run security:glob-guard
+
       - name: Run linter
         run: npm run lint
 
