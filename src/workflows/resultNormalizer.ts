@@ -62,10 +62,10 @@ const CREDENTIAL_PATTERNS: ReadonlyArray<{ pattern: RegExp; replacement: string 
   // Generic patterns MUST come after specific patterns and exclude already-redacted values
   { pattern: /Bearer\s+[a-zA-Z0-9._-]{20,}/gi, replacement: 'Bearer [TOKEN_REDACTED]' },
   { pattern: /Authorization:\s*(?!\[)[^\s]+/gi, replacement: 'Authorization: [REDACTED]' },
-  { pattern: /api[_-]?key[=:]\s*(?!\[)[^\s&"'\[]+/gi, replacement: 'api_key=[REDACTED]' },
-  { pattern: /token[=:]\s*(?!\[)[^\s&"'\[]+/gi, replacement: 'token=[REDACTED]' },
-  { pattern: /password[=:]\s*(?!\[)[^\s&"'\[]+/gi, replacement: 'password=[REDACTED]' },
-  { pattern: /secret[=:]\s*(?!\[)[^\s&"'\[]+/gi, replacement: 'secret=[REDACTED]' },
+  { pattern: /api[_-]?key[=:]\s*(?!\[)[^\s&"']+/gi, replacement: 'api_key=[REDACTED]' },
+  { pattern: /token[=:]\s*(?!\[)[^\s&"']+/gi, replacement: 'token=[REDACTED]' },
+  { pattern: /password[=:]\s*(?!\[)[^\s&"']+/gi, replacement: 'password=[REDACTED]' },
+  { pattern: /secret[=:]\s*(?!\[)[^\s&"']+/gi, replacement: 'secret=[REDACTED]' },
 ];
 
 const ERROR_PATTERNS: ReadonlyArray<{ pattern: RegExp; category: ErrorCategory }> = [
