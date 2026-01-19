@@ -185,6 +185,44 @@ describe('ExecutionMetricsHelper', () => {
     });
   });
 
+  describe('CodeMachine Execution Recording', () => {
+    it('should record CodeMachine execution metrics', async () => {
+      const metrics = createRunMetricsCollector(tempDir, 'test-run-123');
+      const executionMetrics = createExecutionMetrics(metrics, {
+        runDir: tempDir,
+        runId: 'test-run-123',
+      });
+
+      executionMetrics.recordCodeMachineExecution('claude', 'success', 1234);
+      await executionMetrics.flush();
+
+      const metricsPath = path.join(tempDir, 'metrics', 'prometheus.txt');
+      const content = await readPrometheusFile(metricsPath);
+
+      expect(content).toContain('codemachine_execution_total');
+      expect(content).toContain('engine="claude"');
+      expect(content).toContain('status="success"');
+      expect(content).toContain('codemachine_execution_duration_ms');
+    });
+
+    it('should record CodeMachine retries', async () => {
+      const metrics = createRunMetricsCollector(tempDir, 'test-run-123');
+      const executionMetrics = createExecutionMetrics(metrics, {
+        runDir: tempDir,
+        runId: 'test-run-123',
+      });
+
+      executionMetrics.recordCodeMachineRetry('codex');
+      await executionMetrics.flush();
+
+      const metricsPath = path.join(tempDir, 'metrics', 'prometheus.txt');
+      const content = await readPrometheusFile(metricsPath);
+
+      expect(content).toContain('codemachine_retry_total');
+      expect(content).toContain('engine="codex"');
+    });
+  });
+
   describe('Validation Run Recording', () => {
     it('should record successful validation', async () => {
       const metrics = createRunMetricsCollector(tempDir, 'test-run-123');

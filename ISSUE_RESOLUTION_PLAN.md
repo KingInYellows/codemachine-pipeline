@@ -75,10 +75,14 @@ Implements: NFR-OBS-001, success metrics from PRD
 
 ## Progress
 - [x] Phase 1: Stack planning complete
-- [ ] Phase 2: Stack implementation in progress
-- [ ] Phase 3: Submission complete
-- [ ] Phase 4: Final verification complete
+- [x] Phase 2: Stack implementation complete
+- [x] Phase 3: Submission complete
+- [x] Phase 4: Final verification complete
 
 ## Stack Execution
 - [x] Layer 1: codemachine-metrics
-- [ ] Layer 2: codemachine-metrics-tests
+- [x] Layer 2: codemachine-metrics-tests
+
+## Submission
+- PR 1: https://app.graphite.com/github/pr/KingInYellows/codemachine-pipeline/82
+- PR 2: https://app.graphite.com/github/pr/KingInYellows/codemachine-pipeline/83
