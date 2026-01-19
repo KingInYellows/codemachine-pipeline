@@ -4,6 +4,7 @@ import {
   shouldUseNativeEngine,
   getSupportedEngines,
   isEngineSupported,
+  assertEngineSupported,
 } from '../../src/workflows/taskMapper';
 
 describe('taskMapper', () => {
@@ -140,6 +141,25 @@ describe('taskMapper', () => {
       expect(isEngineSupported('gpt4')).toBe(false);
       expect(isEngineSupported('invalid')).toBe(false);
       expect(isEngineSupported('')).toBe(false);
+    });
+  });
+
+  describe('assertEngineSupported', () => {
+    it('does not throw for supported engines', () => {
+      expect(() => assertEngineSupported('claude')).not.toThrow();
+      expect(() => assertEngineSupported('codex')).not.toThrow();
+      expect(() => assertEngineSupported('openai')).not.toThrow();
+    });
+
+    it('throws EC-EXEC-007 for unsupported engines', () => {
+      try {
+        assertEngineSupported('unsupported-engine');
+        expect(false).toBe(true);
+      } catch (error) {
+        const err = error as Error & { code?: string };
+        expect(err.message).toContain('Engine');
+        expect(err.code).toBe('EC-EXEC-007');
+      }
     });
   });
 });
