@@ -337,12 +337,13 @@ export async function runCodeMachine(
         : DEFAULT_MAX_BUFFER_SIZE;
 
     if (options.logPath) {
+      const logPath = options.logPath;
       const attachLogStream = (): WriteStream => {
-        const stream = createWriteStream(options.logPath!, { flags: 'a', mode: 0o600 });
+        const stream = createWriteStream(logPath, { flags: 'a', mode: 0o600 });
         stream.on('error', (err) => {
           options.logger?.warn('Log stream error, disabling file logging', {
             task_id: options.taskId,
-            logPath: options.logPath,
+            logPath,
             error: err.message,
           });
           logStream = undefined;
@@ -353,7 +354,7 @@ export async function runCodeMachine(
       logStream = attachLogStream();
 
       enqueueLogWrite = (chunk: Buffer): void => {
-        if (!options.logPath || !logStream) {
+        if (!logPath || !logStream) {
           return;
         }
 
@@ -376,7 +377,7 @@ export async function runCodeMachine(
             });
 
             await rotateLogFiles(
-              options.logPath!,
+              logPath,
               logRotationKeep,
               logRotationCompress,
               options.logger,

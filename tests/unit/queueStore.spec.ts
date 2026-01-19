@@ -3,6 +3,7 @@ import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 import * as os from 'node:os';
 import {
+  createQueueSnapshot,
   initializeQueueFromPlan,
   type TaskPlan,
   loadQueue,
@@ -379,5 +380,49 @@ describe('queueStore - initializeQueueFromPlan', () => {
       expect(tasks.get('T4')?.task_type).toBe('documentation');
       expect(tasks.get('T5')?.task_type).toBe('refactoring');
     });
+  });
+});
+
+describe('queueStore - snapshots', () => {
+  let tempDir: string;
+  let runDir: string;
+
+  beforeEach(async () => {
+    tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'queuestore-snap-test-'));
+    runDir = await createRunDirectory(tempDir, 'FEATURE-SNAP', {
+      title: 'Snapshot Feature',
+      repo: {
+        url: 'https://github.com/test/repo',
+        default_branch: 'main',
+      },
+    });
+  });
+
+  afterEach(async () => {
+    await fs.rm(tempDir, { recursive: true, force: true });
+  });
+
+  it('should write queue_snapshot.json in the queue directory', async () => {
+    const plan: TaskPlan = {
+      feature_id: 'FEATURE-SNAP',
+      tasks: [
+        {
+          id: 'TASK-1',
+          title: 'Snapshot Task',
+          task_type: 'code_generation',
+        },
+      ],
+    };
+
+    await initializeQueueFromPlan(runDir, plan);
+
+    const result = await createQueueSnapshot(runDir);
+    expect(result.success).toBe(true);
+
+    const snapshotPath = path.join(runDir, 'queue', 'queue_snapshot.json');
+    const snapshotContent = await fs.readFile(snapshotPath, 'utf-8');
+    const snapshot = JSON.parse(snapshotContent) as { feature_id: string };
+
+    expect(snapshot.feature_id).toBe('FEATURE-SNAP');
   });
 });
