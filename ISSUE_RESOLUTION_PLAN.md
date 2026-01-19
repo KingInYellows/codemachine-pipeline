@@ -1,46 +1,39 @@
 # Issue Resolution Plan
 
 ## Selected Issue
-- ID: 31
-- Title: Phase 3.4: Add CodeMachine execution metrics to telemetry
+- ID: 43
+- Title: [v2] Log file rotation (100MB threshold, retention, gzip)
 - Labels: Backend, Feature
 
 ## Source
 ```
 ## Overview
 
-Add CodeMachine-specific metrics to ExecutionMetricsHelper.
+Implement log file rotation to prevent disk exhaustion.
 
-## Implementation
+## Background
 
-**File:** `src/telemetry/executionMetrics.ts`
+v1 streams logs to a single file without rotation. This issue adds rotation when log files exceed 100MB.
 
-Add new metrics:
+## Requirements
 
-* `codemachine_execution_total{engine, status}` - Counter
-* `codemachine_execution_duration_ms{engine}` - Histogram
-* `codemachine_retry_total{engine}` - Counter
-
-```typescript
-recordCodeMachineExecution(
-  engine: string,
-  status: 'success' | 'failure' | 'timeout',
-  durationMs: number,
-): void;
-
-recordCodeMachineRetry(engine: string): void;
-```
-
-## PRD Requirements
-
-Implements: NFR-OBS-001, success metrics from PRD
+* Rotate log files when they exceed 100MB
+* Keep last N rotated files (configurable, default 3)
+* Compress rotated files with gzip
+* Warn user when rotation occurs
 
 ## Acceptance Criteria
 
-- [ ] Metrics emitted for each execution
-- [ ] Duration histogram populated
-- [ ] Retry counter incremented
-- [ ] Metrics exposed via existing telemetry system
+- [ ] Log files rotate at 100MB threshold
+- [ ] Rotated files named `<taskId>.log.1`, `<taskId>.log.2`, etc.
+- [ ] Optional gzip compression for rotated files
+- [ ] Config option: `execution.log_rotation_mb` (default 100)
+- [ ] Config option: `execution.log_rotation_keep` (default 3)
+- [ ] Warning logged when rotation occurs
+
+## Dependencies
+
+Requires v1 execution engine (CDMCH-15 through CDMCH-21)
 ```
 
 ## Stack Plan
@@ -48,26 +41,37 @@ Implements: NFR-OBS-001, success metrics from PRD
 - Stack Strategy:
 ```json
 {
-  "issue_id": 31,
-  "estimated_complexity": "LOW",
+  "issue_id": 43,
+  "estimated_complexity": "MEDIUM",
   "stack_strategy": [
     {
       "order": 1,
-      "branch": "codemachine-metrics",
-      "intent": "feat: add codemachine execution metrics instrumentation",
+      "branch": "log-rotation-config",
+      "intent": "feat: add execution log rotation config defaults",
       "changes": [
-        "Add CodeMachine metric names to ExecutionMetrics",
-        "Add recordCodeMachineExecution and recordCodeMachineRetry helpers"
+        "Add execution.log_rotation_mb and execution.log_rotation_keep to RepoConfig schema",
+        "Add defaults in repo config initialization"
       ]
     },
     {
       "order": 2,
-      "branch": "codemachine-metrics-tests",
-      "intent": "test: cover codemachine metrics emission",
+      "branch": "log-rotation-impl",
+      "intent": "feat: rotate task log files on size threshold",
       "changes": [
-        "Add unit tests for new CodeMachine metrics in executionMetrics.spec.ts"
+        "Add rotation handling to CodeMachineRunner log streaming",
+        "Emit warning when rotation occurs",
+        "Support optional gzip compression for rotated logs"
       ],
-      "depends_on": "codemachine-metrics"
+      "depends_on": "log-rotation-config"
+    },
+    {
+      "order": 3,
+      "branch": "log-rotation-tests",
+      "intent": "test: cover log rotation behavior",
+      "changes": [
+        "Add unit tests for log rotation threshold and retention"
+      ],
+      "depends_on": "log-rotation-impl"
     }
   ]
 }
@@ -75,14 +79,11 @@ Implements: NFR-OBS-001, success metrics from PRD
 
 ## Progress
 - [x] Phase 1: Stack planning complete
-- [x] Phase 2: Stack implementation complete
-- [x] Phase 3: Submission complete
-- [x] Phase 4: Final verification complete
+- [ ] Phase 2: Stack implementation in progress
+- [ ] Phase 3: Submission complete
+- [ ] Phase 4: Final verification complete
 
 ## Stack Execution
-- [x] Layer 1: codemachine-metrics
-- [x] Layer 2: codemachine-metrics-tests
-
-## Submission
-- PR 1: https://app.graphite.com/github/pr/KingInYellows/codemachine-pipeline/82
-- PR 2: https://app.graphite.com/github/pr/KingInYellows/codemachine-pipeline/83
+- [x] Layer 1: log-rotation-config
+- [ ] Layer 2: log-rotation-impl
+- [ ] Layer 3: log-rotation-tests
