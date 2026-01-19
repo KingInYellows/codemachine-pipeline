@@ -144,6 +144,9 @@ const DEFAULT_EXECUTION_CONFIG = {
   codemachine_cli_path: 'codemachine',
   default_engine: 'claude' as const,
   workspace_dir: undefined,
+  log_rotation_mb: 100,
+  log_rotation_keep: 3,
+  log_rotation_compress: false,
 };
 
 export class CLIExecutionEngine {
