@@ -10,9 +10,13 @@
 ## Status
 - Phase 0: Selected issue
 - Phase 1: Stack plan created
-- Phase 2: Pending implementation
-- Phase 3: Pending submission
-- Phase 4: Pending verification
+- Phase 2: Complete
+- Phase 3: Complete
+- Phase 4: Complete
+
+## Stack Progress
+- Layer 1 (chore/glob-guard-script): Complete
+- Layer 2 (docs/glob-advisory-note): Complete
 
 ## Discovery Notes
 - @oclif/plugin-plugins not present in package.json or package-lock.json.
