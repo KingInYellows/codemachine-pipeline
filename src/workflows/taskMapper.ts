@@ -64,11 +64,7 @@ export function shouldUseNativeEngine(taskType: ExecutionTaskType): boolean {
   return TASK_TYPE_TO_WORKFLOW[taskType].useNativeEngine;
 }
 
-const SUPPORTED_ENGINES: readonly ExecutionEngineType[] = [
-  'claude',
-  'codex',
-  'openai',
-] as const;
+const SUPPORTED_ENGINES: readonly ExecutionEngineType[] = ['claude', 'codex', 'openai'] as const;
 
 export function getSupportedEngines(): readonly ExecutionEngineType[] {
   return SUPPORTED_ENGINES;

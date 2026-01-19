@@ -17,6 +17,7 @@ module.exports = [
       '**/*.js',
       '**/*.cjs',
       'test',
+      'test/**',
       'vitest.config.ts',
       '.codemachine/**',
     ],
@@ -45,7 +46,7 @@ module.exports = [
     },
   },
   {
-    files: ['tests/**/*.ts', 'test/**/*.ts'],
+    files: ['tests/**/*.ts'],
     rules: {
       '@typescript-eslint/require-await': 'off',
       '@typescript-eslint/unbound-method': 'off',

@@ -87,15 +87,16 @@ export function redactCredentials(text: string): string {
  * Extract summary from stdout (first meaningful line, max 500 chars)
  */
 export function extractSummary(stdout: string): string {
-  const lines = stdout.trim().split('\n').filter(line => line.trim());
+  const lines = stdout
+    .trim()
+    .split('\n')
+    .filter((line) => line.trim());
   if (lines.length === 0) return 'No output';
 
   const summary = lines[0];
   const maxLength = 500;
 
-  return summary.length > maxLength
-    ? summary.slice(0, maxLength) + '...'
-    : summary;
+  return summary.length > maxLength ? summary.slice(0, maxLength) + '...' : summary;
 }
 
 /**
@@ -104,7 +105,7 @@ export function extractSummary(stdout: string): string {
 function deriveStatus(
   timedOut: boolean,
   killed: boolean,
-  exitCode: number,
+  exitCode: number
 ): 'completed' | 'failed' | 'timeout' | 'killed' {
   if (exitCode === 0) return 'completed';
   if (timedOut) return 'timeout';
@@ -112,10 +113,7 @@ function deriveStatus(
   return 'failed';
 }
 
-export function categorizeError(
-  result: RunnerResult,
-  logger?: StructuredLogger,
-): ErrorCategory {
+export function categorizeError(result: RunnerResult, logger?: StructuredLogger): ErrorCategory {
   if (result.exitCode === 0) {
     return 'none';
   }
@@ -153,14 +151,11 @@ export function normalizeResult(
   stderr: string,
   timedOut: boolean,
   killed: boolean,
-  logger?: StructuredLogger,
+  logger?: StructuredLogger
 ): NormalizedResult;
 
 // Overload: existing RunnerResult signature
-export function normalizeResult(
-  result: RunnerResult,
-  logger?: StructuredLogger,
-): NormalizedResult;
+export function normalizeResult(result: RunnerResult, logger?: StructuredLogger): NormalizedResult;
 
 // Implementation
 export function normalizeResult(
@@ -169,7 +164,7 @@ export function normalizeResult(
   stderr?: string,
   timedOut?: boolean,
   killed?: boolean,
-  logger?: StructuredLogger,
+  logger?: StructuredLogger
 ): NormalizedResult {
   // Handle overload signatures - determine which overload was called
   let result: RunnerResult;

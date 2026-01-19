@@ -177,7 +177,7 @@ export interface TaskPlan {
 
 export async function initializeQueueFromPlan(
   runDir: string,
-  plan: TaskPlan,
+  plan: TaskPlan
 ): Promise<QueueOperationResult> {
   try {
     await initializeQueue(runDir, plan.feature_id);

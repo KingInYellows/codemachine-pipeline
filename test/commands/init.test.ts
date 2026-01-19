@@ -325,5 +325,4 @@ describe('init command', () => {
       }
     });
   });
-
 });
