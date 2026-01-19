@@ -197,6 +197,115 @@ export function validateCommandStructure(structure: CommandStructure): void {
   }
 }
 
+/**
+ * Get the command structure for a task type
+ *
+ * Returns the base command structure without additional arguments.
+ * Use buildCommandArgs() to get the complete argument list.
+ *
+ * @param taskType - The execution task type
+ * @returns Command structure with executable, command, and optional subcommand
+ */
+export function getCommandStructure(taskType: ExecutionTaskType): CommandStructure {
+  const mapping = TASK_TYPE_TO_WORKFLOW[taskType];
+
+  const structure: CommandStructure = {
+    executable: 'codemachine',
+    command: mapping.command,
+    args: [],
+  };
+
+  if (mapping.subcommand) {
+    structure.subcommand = mapping.subcommand;
+  }
+
+  return structure;
+}
+
+/**
+ * Options for building command arguments
+ */
+export interface BuildCommandArgsOptions {
+  /** Task prompt or description */
+  prompt: string;
+  /** Workspace directory path (absolute) */
+  workspaceDir: string;
+  /** Optional specification file path */
+  specPath?: string;
+  /** Execution engine (required for 'start' command, defaults to 'claude') */
+  engine?: ExecutionEngineType;
+}
+
+/**
+ * Build complete command arguments for CodeMachine CLI execution
+ *
+ * Constructs the full argument array based on task type and options.
+ * Arguments are ordered correctly for subprocess execution.
+ *
+ * @param taskType - The execution task type
+ * @param options - Execution options with prompt, workspace, etc.
+ * @returns Array of command arguments ready for spawn()
+ *
+ * @example
+ * // For code_generation task
+ * buildCommandArgs('code_generation', {
+ *   prompt: 'Implement auth',
+ *   workspaceDir: '/workspace',
+ *   specPath: '/spec.md',
+ *   engine: 'claude'
+ * })
+ * // Returns: ['start', '-d', '/workspace', '--spec', '/spec.md', 'claude', 'Implement auth']
+ *
+ * @example
+ * // For pr_creation task
+ * buildCommandArgs('pr_creation', {
+ *   prompt: 'Create PR',
+ *   workspaceDir: '/workspace'
+ * })
+ * // Returns: ['run', 'pr', '-d', '/workspace', 'Create PR']
+ */
+export function buildCommandArgs(
+  taskType: ExecutionTaskType,
+  options: BuildCommandArgsOptions
+): string[] {
+  const mapping = TASK_TYPE_TO_WORKFLOW[taskType];
+  const args: string[] = [];
+
+  // Add primary command
+  args.push(mapping.command);
+
+  // Add subcommand if present (for 'run' command)
+  if (mapping.subcommand) {
+    args.push(mapping.subcommand);
+  }
+
+  // Add workspace directory flag
+  if (options.workspaceDir) {
+    args.push('-d', options.workspaceDir);
+  }
+
+  // Add spec file flag if provided
+  if (options.specPath) {
+    args.push('--spec', options.specPath);
+  }
+
+  // Add engine for 'start' command (required)
+  if (mapping.command === 'start') {
+    const engine = options.engine ?? 'claude';
+    assertEngineSupported(engine);
+    args.push(engine);
+  }
+
+  // Add prompt as final positional argument
+  args.push(options.prompt);
+
+  return args;
+}
+
+/**
+ * @deprecated Use buildCommandArgs() instead.
+ * This function is maintained for backward compatibility.
+ */
 export function mapTaskToCommand(
   task: ExecutionTask,
   options: {
