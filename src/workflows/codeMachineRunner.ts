@@ -22,6 +22,7 @@ export interface RunnerOptions {
   workspaceDir: string;
   specPath?: string;
   timeoutMs: number;
+  envAllowlist?: string[];
   logger?: StructuredLogger;
   logPath?: string;
 }
@@ -189,7 +190,7 @@ export async function validateCliAvailability(
   });
 }
 
-function filterEnvironment(): Record<string, string> {
+function filterEnvironment(allowlist: string[]): Record<string, string> {
   const filtered: Record<string, string> = {};
 
   const alwaysAllowed = [
@@ -205,7 +206,9 @@ function filterEnvironment(): Record<string, string> {
     'LOG_LEVEL',
   ];
 
-  for (const key of alwaysAllowed) {
+  const allowlistSet = new Set([...alwaysAllowed, ...allowlist]);
+
+  for (const key of allowlistSet) {
     const value = process.env[key];
     if (value !== undefined) {
       filtered[key] = value;
@@ -258,7 +261,11 @@ export async function runCodeMachine(
   }
 
   const args = buildArgs(options, engine);
-  const env = filterEnvironment();
+  const envAllowlist = [
+    ...(config.env_allowlist ?? []),
+    ...(options.envAllowlist ?? []),
+  ].filter((value) => value.length > 0);
+  const env = filterEnvironment(envAllowlist);
 
   options.logger?.info('Starting CodeMachine execution', {
     task_id: options.taskId,
@@ -324,6 +331,10 @@ export async function runCodeMachine(
     let enqueueLogWrite: (chunk: Buffer) => void = () => undefined;
     let totalBufferSize = 0;
     let bufferLimitReached = false;
+    const maxBuffer =
+      config.max_log_buffer_size && config.max_log_buffer_size > 0
+        ? config.max_log_buffer_size
+        : DEFAULT_MAX_BUFFER_SIZE;
 
     if (options.logPath) {
       const attachLogStream = (): WriteStream => {
@@ -385,7 +396,6 @@ export async function runCodeMachine(
       enqueueLogWrite(chunk);
       if (!bufferLimitReached) {
         totalBufferSize += chunk.length;
-        const maxBuffer = DEFAULT_MAX_BUFFER_SIZE;
         if (totalBufferSize > maxBuffer) {
           bufferLimitReached = true;
           options.logger?.warn('Large output detected, streaming to file only', {
@@ -402,7 +412,6 @@ export async function runCodeMachine(
       enqueueLogWrite(chunk);
       if (!bufferLimitReached) {
         totalBufferSize += chunk.length;
-        const maxBuffer = DEFAULT_MAX_BUFFER_SIZE;
         if (totalBufferSize > maxBuffer) {
           bufferLimitReached = true;
           options.logger?.warn('Large output detected, streaming to file only', {
