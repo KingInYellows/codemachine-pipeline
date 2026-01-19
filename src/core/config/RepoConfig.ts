@@ -242,6 +242,9 @@ const ExecutionConfigSchema = z.object({
   task_timeout_ms: z.number().int().min(60000).max(7200000).default(1800000), // 30 min, max 2h
   max_retries: z.number().int().min(0).max(10).default(3),
   retry_backoff_ms: z.number().int().min(1000).default(5000),
+  log_rotation_mb: z.number().int().min(1).max(10240).default(100),
+  log_rotation_keep: z.number().int().min(1).max(20).default(3),
+  log_rotation_compress: z.boolean().default(false),
 });
 
 export type ExecutionConfig = z.infer<typeof ExecutionConfigSchema>;
@@ -635,6 +638,9 @@ export function createDefaultConfig(
       task_timeout_ms: 1800000,
       max_retries: 3,
       retry_backoff_ms: 5000,
+      log_rotation_mb: 100,
+      log_rotation_keep: 3,
+      log_rotation_compress: false,
     },
     config_history: [
       {

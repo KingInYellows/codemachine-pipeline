@@ -1,67 +1,89 @@
 # Issue Resolution Plan
 
 ## Selected Issue
-- ID: 6
-- Title: Update outdated major dependencies
-- Labels: maintenance
-- Selected via: Priority 3 (oldest open issue; skipping #3 fixed-pending-review)
-- Source: gh issue list --search "sort:created-asc"
+- ID: 43
+- Title: [v2] Log file rotation (100MB threshold, retention, gzip)
+- Labels: Backend, Feature
 
-## Status
-- Phase 0: Selected issue
-- Phase 1: Stack plan created
-- Phase 2: Complete
-- Phase 3: Complete
-- Phase 4: Complete
+## Source
+```
+## Overview
 
-## Stack Progress
-- Layer 1 (chore/eslint-9-migration): Complete
-- Layer 2 (chore/zod-4-upgrade): Complete
-- Layer 3 (chore/jest-30-upgrade): Complete
+Implement log file rotation to prevent disk exhaustion.
 
-## Discovery Notes
-- Issue requires sequencing: ESLint 9 migration, then Zod 4, then Jest 30.
-- Current ESLint config uses .eslintrc.json with @typescript-eslint parser/plugin.
+## Background
 
-<stack_plan>
+v1 streams logs to a single file without rotation. This issue adds rotation when log files exceed 100MB.
+
+## Requirements
+
+* Rotate log files when they exceed 100MB
+* Keep last N rotated files (configurable, default 3)
+* Compress rotated files with gzip
+* Warn user when rotation occurs
+
+## Acceptance Criteria
+
+- [ ] Log files rotate at 100MB threshold
+- [ ] Rotated files named `<taskId>.log.1`, `<taskId>.log.2`, etc.
+- [ ] Optional gzip compression for rotated files
+- [ ] Config option: `execution.log_rotation_mb` (default 100)
+- [ ] Config option: `execution.log_rotation_keep` (default 3)
+- [ ] Warning logged when rotation occurs
+
+## Dependencies
+
+Requires v1 execution engine (CDMCH-15 through CDMCH-21)
+```
+
+## Stack Plan
+- Status: PLANNED
+- Stack Strategy:
+```json
 {
-  "issue_id": 6,
+  "issue_id": 43,
   "estimated_complexity": "MEDIUM",
   "stack_strategy": [
     {
       "order": 1,
-      "branch": "chore/eslint-9-migration",
-      "intent": "Upgrade ESLint 9 and related tooling (eslint-config-prettier, @typescript-eslint, @types/node) and adjust lint config.",
-      "files": [
-        "package.json",
-        "package-lock.json",
-        ".eslintrc.json",
-        "tsconfig.eslint.json"
+      "branch": "log-rotation-config",
+      "intent": "feat: add execution log rotation config defaults",
+      "changes": [
+        "Add execution.log_rotation_mb and execution.log_rotation_keep to RepoConfig schema",
+        "Add defaults in repo config initialization"
       ]
     },
     {
       "order": 2,
-      "branch": "chore/zod-4-upgrade",
-      "intent": "Upgrade zod to 4.x and adapt schema usage/tests.",
-      "files": [
-        "package.json",
-        "package-lock.json",
-        "src/**",
-        "tests/**"
-      ]
+      "branch": "log-rotation-impl",
+      "intent": "feat: rotate task log files on size threshold",
+      "changes": [
+        "Add rotation handling to CodeMachineRunner log streaming",
+        "Emit warning when rotation occurs",
+        "Support optional gzip compression for rotated logs"
+      ],
+      "depends_on": "log-rotation-config"
     },
     {
       "order": 3,
-      "branch": "chore/jest-30-upgrade",
-      "intent": "Upgrade jest/ts-jest/@types/jest and adjust Jest config/tests.",
-      "files": [
-        "package.json",
-        "package-lock.json",
-        "jest.config.js",
-        "test/**",
-        "tests/**"
-      ]
+      "branch": "log-rotation-tests",
+      "intent": "test: cover log rotation behavior",
+      "changes": [
+        "Add unit tests for log rotation threshold and retention"
+      ],
+      "depends_on": "log-rotation-impl"
     }
   ]
 }
-</stack_plan>
+```
+
+## Progress
+- [x] Phase 1: Stack planning complete
+- [ ] Phase 2: Stack implementation in progress
+- [ ] Phase 3: Submission complete
+- [ ] Phase 4: Final verification complete
+
+## Stack Execution
+- [x] Layer 1: log-rotation-config
+- [ ] Layer 2: log-rotation-impl
+- [ ] Layer 3: log-rotation-tests
