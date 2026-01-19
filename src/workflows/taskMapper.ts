@@ -74,6 +74,15 @@ export function isEngineSupported(engine: string): engine is ExecutionEngineType
   return SUPPORTED_ENGINES.includes(engine as ExecutionEngineType);
 }
 
+export function assertEngineSupported(engine: string): asserts engine is ExecutionEngineType {
+  if (!isEngineSupported(engine)) {
+    const supportedList = SUPPORTED_ENGINES.join(', ');
+    const error = new Error(`Engine '${engine}' not supported. Supported: ${supportedList}`);
+    (error as { code?: string }).code = 'EC-EXEC-007';
+    throw error;
+  }
+}
+
 export function mapTaskToCommand(
   task: ExecutionTask,
   options: {
@@ -84,6 +93,8 @@ export function mapTaskToCommand(
     tailLines?: number;
   }
 ): CodeMachineCommand {
+  assertEngineSupported(options.engine);
+
   const agentId =
     (task.config?.agent_id as string | undefined) ?? TASK_TYPE_TO_AGENT[task.task_type];
 
