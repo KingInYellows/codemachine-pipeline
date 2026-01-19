@@ -237,7 +237,7 @@ export class ExecutionMetricsHelper {
       this.metrics.observe(
         ExecutionMetrics.CODEMACHINE_EXECUTION_DURATION_MS,
         durationMs,
-        { ...this.defaultLabels, engine },
+        { ...this.defaultLabels, engine, status },
         LATENCY_BUCKETS,
         'CodeMachine execution duration distribution in milliseconds'
       );
