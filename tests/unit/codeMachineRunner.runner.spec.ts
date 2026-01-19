@@ -1274,7 +1274,6 @@ describe('CodeMachineRunner', () => {
         retry_backoff_ms: 1000,
         env_allowlist: [],
         spec_path: 'spec.md',
-        max_log_buffer_size: maxBufferSize,
       };
 
       const logger = createMockLogger();
