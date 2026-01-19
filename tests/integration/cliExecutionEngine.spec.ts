@@ -674,47 +674,72 @@ describe('CLIExecutionEngine E2E with Mock CLI', () => {
     });
   });
 
+  /**
+   * Helper function to create a configured CLIExecutionEngine for testing
+   */
+  interface CreateEngineOptions {
+    cliPath?: string;
+    maxRetries?: number;
+    envAllowlist?: string[];
+    tasks?: ReturnType<typeof createExecutionTask>[];
+  }
+
+  async function createTestEngine(options: CreateEngineOptions = {}) {
+    const {
+      cliPath = MOCK_CLI_PATH,
+      maxRetries = 3,
+      envAllowlist = [
+        'MOCK_BEHAVIOR',
+        'MOCK_EXIT_CODE',
+        'MOCK_STDOUT',
+        'MOCK_STDERR',
+        'MOCK_DELAY_MS',
+      ],
+      tasks = [createExecutionTask('T1', featureId, 'Test Task', 'code_generation')],
+    } = options;
+
+    const config = {
+      codemachine_cli_path: cliPath,
+      default_engine: 'claude' as const,
+      workspace_dir: workspaceDir,
+      task_timeout_ms: 30000,
+      max_retries: maxRetries,
+      retry_backoff_ms: 10,
+      env_allowlist: envAllowlist,
+    };
+
+    const strategy = new CodeMachineStrategy({ config });
+
+    await appendToQueue(runDir, tasks);
+
+    const baseConfig: RepoConfig = {
+      schema_version: '1.0',
+      platform: 'github',
+      provider: {
+        type: 'github',
+        base_url: 'https://api.github.com',
+      },
+      repository: {
+        owner: 'test',
+        repo: 'mock-cli-repo',
+        default_branch: 'main',
+        visibility: 'private',
+      },
+      execution: config,
+    };
+
+    return new CLIExecutionEngine({
+      runDir,
+      config: baseConfig,
+      strategies: [strategy],
+    });
+  }
+
   describe('CodeMachineStrategy with Mock CLI', () => {
     it('should execute task successfully with mock CLI (success behavior)', async () => {
       process.env.MOCK_BEHAVIOR = 'success';
 
-      const config = {
-        codemachine_cli_path: MOCK_CLI_PATH,
-        default_engine: 'claude' as const,
-        workspace_dir: workspaceDir,
-        task_timeout_ms: 30000,
-        max_retries: 3,
-        retry_backoff_ms: 10,
-        env_allowlist: ['MOCK_BEHAVIOR', 'MOCK_EXIT_CODE', 'MOCK_STDOUT', 'MOCK_STDERR'],
-      };
-
-      const strategy = new CodeMachineStrategy({ config });
-
-      const tasks = [createExecutionTask('T1', featureId, 'Test Task', 'code_generation')];
-      await appendToQueue(runDir, tasks);
-
-      const baseConfig: RepoConfig = {
-        schema_version: '1.0',
-        platform: 'github',
-        provider: {
-          type: 'github',
-          base_url: 'https://api.github.com',
-        },
-        repository: {
-          owner: 'test',
-          repo: 'mock-cli-repo',
-          default_branch: 'main',
-          visibility: 'private',
-        },
-        execution: config,
-      };
-
-      const engine = new CLIExecutionEngine({
-        runDir,
-        config: baseConfig,
-        strategies: [strategy],
-      });
-
+      const engine = await createTestEngine();
       const result = await engine.execute();
 
       expect(result.totalTasks).toBe(1);
@@ -725,43 +750,13 @@ describe('CLIExecutionEngine E2E with Mock CLI', () => {
     it('should handle task failure with mock CLI (failure behavior)', async () => {
       process.env.MOCK_BEHAVIOR = 'failure';
 
-      const config = {
-        codemachine_cli_path: MOCK_CLI_PATH,
-        default_engine: 'claude' as const,
-        workspace_dir: workspaceDir,
-        task_timeout_ms: 30000,
-        max_retries: 1,
-        retry_backoff_ms: 10,
-        env_allowlist: ['MOCK_BEHAVIOR', 'MOCK_EXIT_CODE', 'MOCK_STDOUT', 'MOCK_STDERR'],
-      };
-
-      const strategy = new CodeMachineStrategy({ config });
-
-      const tasks = [
-        createExecutionTask('T1', featureId, 'Failing Task', 'code_generation', { maxRetries: 1 }),
-      ];
-      await appendToQueue(runDir, tasks);
-
-      const baseConfig: RepoConfig = {
-        schema_version: '1.0',
-        platform: 'github',
-        provider: {
-          type: 'github',
-          base_url: 'https://api.github.com',
-        },
-        repository: {
-          owner: 'test',
-          repo: 'mock-cli-repo',
-          default_branch: 'main',
-          visibility: 'private',
-        },
-        execution: config,
-      };
-
-      const engine = new CLIExecutionEngine({
-        runDir,
-        config: baseConfig,
-        strategies: [strategy],
+      const engine = await createTestEngine({
+        maxRetries: 1,
+        tasks: [
+          createExecutionTask('T1', featureId, 'Failing Task', 'code_generation', {
+            maxRetries: 1,
+          }),
+        ],
       });
 
       const result = await engine.execute();
@@ -776,45 +771,13 @@ describe('CLIExecutionEngine E2E with Mock CLI', () => {
     it('should detect rate limit errors from mock CLI', async () => {
       process.env.MOCK_BEHAVIOR = 'rate_limit';
 
-      const config = {
-        codemachine_cli_path: MOCK_CLI_PATH,
-        default_engine: 'claude' as const,
-        workspace_dir: workspaceDir,
-        task_timeout_ms: 30000,
-        max_retries: 1,
-        retry_backoff_ms: 10,
-        env_allowlist: ['MOCK_BEHAVIOR', 'MOCK_EXIT_CODE', 'MOCK_STDOUT', 'MOCK_STDERR'],
-      };
-
-      const strategy = new CodeMachineStrategy({ config });
-
-      const tasks = [
-        createExecutionTask('T1', featureId, 'Rate Limited Task', 'code_generation', {
-          maxRetries: 1,
-        }),
-      ];
-      await appendToQueue(runDir, tasks);
-
-      const baseConfig: RepoConfig = {
-        schema_version: '1.0',
-        platform: 'github',
-        provider: {
-          type: 'github',
-          base_url: 'https://api.github.com',
-        },
-        repository: {
-          owner: 'test',
-          repo: 'mock-cli-repo',
-          default_branch: 'main',
-          visibility: 'private',
-        },
-        execution: config,
-      };
-
-      const engine = new CLIExecutionEngine({
-        runDir,
-        config: baseConfig,
-        strategies: [strategy],
+      const engine = await createTestEngine({
+        maxRetries: 1,
+        tasks: [
+          createExecutionTask('T1', featureId, 'Rate Limited Task', 'code_generation', {
+            maxRetries: 1,
+          }),
+        ],
       });
 
       await engine.execute();
@@ -827,43 +790,7 @@ describe('CLIExecutionEngine E2E with Mock CLI', () => {
 
   describe('validatePrerequisites with Mock CLI', () => {
     it('should pass validation with available mock CLI', async () => {
-      const config = {
-        codemachine_cli_path: MOCK_CLI_PATH,
-        default_engine: 'claude' as const,
-        workspace_dir: workspaceDir,
-        task_timeout_ms: 30000,
-        max_retries: 3,
-        retry_backoff_ms: 10,
-        env_allowlist: ['MOCK_BEHAVIOR'],
-      };
-
-      const strategy = new CodeMachineStrategy({ config });
-
-      const tasks = [createExecutionTask('T1', featureId, 'Test', 'code_generation')];
-      await appendToQueue(runDir, tasks);
-
-      const baseConfig: RepoConfig = {
-        schema_version: '1.0',
-        platform: 'github',
-        provider: {
-          type: 'github',
-          base_url: 'https://api.github.com',
-        },
-        repository: {
-          owner: 'test',
-          repo: 'mock-cli-repo',
-          default_branch: 'main',
-          visibility: 'private',
-        },
-        execution: config,
-      };
-
-      const engine = new CLIExecutionEngine({
-        runDir,
-        config: baseConfig,
-        strategies: [strategy],
-      });
-
+      const engine = await createTestEngine();
       const validation = await engine.validatePrerequisites();
 
       expect(validation.valid).toBe(true);
@@ -871,37 +798,8 @@ describe('CLIExecutionEngine E2E with Mock CLI', () => {
     });
 
     it('should fail validation with missing CLI (EC-EXEC-001)', async () => {
-      const config = {
-        codemachine_cli_path: '/nonexistent/codemachine',
-        default_engine: 'claude' as const,
-        workspace_dir: workspaceDir,
-        task_timeout_ms: 30000,
-        max_retries: 3,
-        retry_backoff_ms: 10,
-      };
-
-      const strategy = new CodeMachineStrategy({ config });
-
-      const baseConfig: RepoConfig = {
-        schema_version: '1.0',
-        platform: 'github',
-        provider: {
-          type: 'github',
-          base_url: 'https://api.github.com',
-        },
-        repository: {
-          owner: 'test',
-          repo: 'mock-cli-repo',
-          default_branch: 'main',
-          visibility: 'private',
-        },
-        execution: config,
-      };
-
-      const engine = new CLIExecutionEngine({
-        runDir,
-        config: baseConfig,
-        strategies: [strategy],
+      const engine = await createTestEngine({
+        cliPath: '/nonexistent/codemachine',
       });
 
       const validation = await engine.validatePrerequisites();
