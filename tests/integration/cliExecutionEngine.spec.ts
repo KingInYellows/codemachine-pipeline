@@ -1081,9 +1081,7 @@ describe('CLIExecutionEngine E2E with Mock CLI', () => {
       const result = await engine.execute();
 
       // T1 and T2 should execute (independent), T3 should NOT (dependency on T1 failed)
-      expect(executedTasks).toContain('T1');
-      expect(executedTasks).toContain('T2');
-      expect(executedTasks).not.toContain('T3');
+      expect(executedTasks.sort()).toEqual(['T1', 'T2']);
 
       expect(result.permanentlyFailedTasks).toBe(1);
       expect(result.completedTasks).toBe(1);
