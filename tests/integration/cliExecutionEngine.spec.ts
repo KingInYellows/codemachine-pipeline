@@ -1099,16 +1099,45 @@ describe('CLIExecutionEngine E2E with Mock CLI', () => {
   });
 
   describe('Telemetry Event Assertions', () => {
-    it('should emit taskStarted and taskCompleted events on successful execution', async () => {
-      // Create mock logger with spy methods
-      const mockLogger = {
+    const createMockLogger = () => {
+      const logger = {
         info: vi.fn(),
         warn: vi.fn(),
         error: vi.fn(),
         debug: vi.fn(),
         setContext: vi.fn(),
-        child: vi.fn(() => mockLogger),
+        child: vi.fn(),
       };
+      logger.child.mockImplementation(() => logger);
+      return logger;
+    };
+
+    const createTestConfig = (overrides?: Partial<RepoConfig['execution']>) => ({
+      codemachine_cli_path: MOCK_CLI_PATH,
+      default_engine: 'claude' as const,
+      workspace_dir: workspaceDir,
+      task_timeout_ms: 30000,
+      max_retries: 3,
+      retry_backoff_ms: 10,
+      env_allowlist: ['MOCK_BEHAVIOR'],
+      ...overrides,
+    });
+
+    const createTestBaseConfig = (repoName: string, executionConfig?: Partial<RepoConfig['execution']>): RepoConfig => ({
+      schema_version: '1.0',
+      platform: 'github',
+      provider: { type: 'github', base_url: 'https://api.github.com' },
+      repository: {
+        owner: 'test',
+        repo: repoName,
+        default_branch: 'main',
+        visibility: 'private',
+      },
+      execution: createTestConfig(executionConfig),
+    });
+
+    it('should emit taskStarted and taskCompleted events on successful execution', async () => {
+      const mockLogger = createMockLogger();
 
       // Create log writer with mock
       const logWriter = new ExecutionLogWriter(mockLogger as never, {
@@ -1122,33 +1151,13 @@ describe('CLIExecutionEngine E2E with Mock CLI', () => {
 
       process.env.MOCK_BEHAVIOR = 'success';
 
-      const config = {
-        codemachine_cli_path: MOCK_CLI_PATH,
-        default_engine: 'claude' as const,
-        workspace_dir: workspaceDir,
-        task_timeout_ms: 30000,
-        max_retries: 3,
-        retry_backoff_ms: 10,
-        env_allowlist: ['MOCK_BEHAVIOR'],
-      };
-
+      const config = createTestConfig();
       const strategy = new CodeMachineStrategy({ config });
 
       const tasks = [createExecutionTask('T1', featureId, 'Telemetry Test', 'code_generation')];
       await appendToQueue(runDir, tasks);
 
-      const baseConfig: RepoConfig = {
-        schema_version: '1.0',
-        platform: 'github',
-        provider: { type: 'github', base_url: 'https://api.github.com' },
-        repository: {
-          owner: 'test',
-          repo: 'telemetry-test',
-          default_branch: 'main',
-          visibility: 'private',
-        },
-        execution: config,
-      };
+      const baseConfig = createTestBaseConfig('telemetry-test');
 
       const engine = new CLIExecutionEngine({
         runDir,
@@ -1179,14 +1188,7 @@ describe('CLIExecutionEngine E2E with Mock CLI', () => {
     });
 
     it('should log error on permanent task failure', async () => {
-      const mockLogger = {
-        info: vi.fn(),
-        warn: vi.fn(),
-        error: vi.fn(),
-        debug: vi.fn(),
-        setContext: vi.fn(),
-        child: vi.fn(() => mockLogger),
-      };
+      const mockLogger = createMockLogger();
 
       // Create a strategy that fails
       const failingStrategy: ExecutionStrategy = {
@@ -1208,25 +1210,7 @@ describe('CLIExecutionEngine E2E with Mock CLI', () => {
       ];
       await appendToQueue(runDir, tasks);
 
-      const baseConfig: RepoConfig = {
-        schema_version: '1.0',
-        platform: 'github',
-        provider: { type: 'github', base_url: 'https://api.github.com' },
-        repository: {
-          owner: 'test',
-          repo: 'failure-telemetry',
-          default_branch: 'main',
-          visibility: 'private',
-        },
-        execution: {
-          codemachine_cli_path: MOCK_CLI_PATH,
-          default_engine: 'claude' as const,
-          workspace_dir: workspaceDir,
-          task_timeout_ms: 30000,
-          max_retries: 0,
-          retry_backoff_ms: 10,
-        },
-      };
+      const baseConfig = createTestBaseConfig('failure-telemetry', { max_retries: 0 });
 
       const engine = new CLIExecutionEngine({
         runDir,
@@ -1245,14 +1229,7 @@ describe('CLIExecutionEngine E2E with Mock CLI', () => {
     });
 
     it('should log execution metrics summary', async () => {
-      const mockLogger = {
-        info: vi.fn(),
-        warn: vi.fn(),
-        error: vi.fn(),
-        debug: vi.fn(),
-        setContext: vi.fn(),
-        child: vi.fn(() => mockLogger),
-      };
+      const mockLogger = createMockLogger();
 
       const successStrategy: ExecutionStrategy = {
         name: 'success-metrics',
@@ -1273,25 +1250,7 @@ describe('CLIExecutionEngine E2E with Mock CLI', () => {
       ];
       await appendToQueue(runDir, tasks);
 
-      const baseConfig: RepoConfig = {
-        schema_version: '1.0',
-        platform: 'github',
-        provider: { type: 'github', base_url: 'https://api.github.com' },
-        repository: {
-          owner: 'test',
-          repo: 'metrics-test',
-          default_branch: 'main',
-          visibility: 'private',
-        },
-        execution: {
-          codemachine_cli_path: MOCK_CLI_PATH,
-          default_engine: 'claude' as const,
-          workspace_dir: workspaceDir,
-          task_timeout_ms: 30000,
-          max_retries: 3,
-          retry_backoff_ms: 10,
-        },
-      };
+      const baseConfig = createTestBaseConfig('metrics-test');
 
       const engine = new CLIExecutionEngine({
         runDir,
