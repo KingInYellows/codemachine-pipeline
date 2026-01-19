@@ -199,10 +199,13 @@ describe('ExecutionMetricsHelper', () => {
       const metricsPath = path.join(tempDir, 'metrics', 'prometheus.txt');
       const content = await readPrometheusFile(metricsPath);
 
-      expect(content).toContain('codemachine_execution_total');
-      expect(content).toContain('engine="claude"');
-      expect(content).toContain('status="success"');
-      expect(content).toContain('codemachine_execution_duration_ms');
+      const expectedTotalMetric = 'ai_feature_pipeline_codemachine_execution_total{component="execution",engine="claude",run_id="test-run-123",status="success"} 1';
+      const expectedDurationCountMetric = 'ai_feature_pipeline_codemachine_execution_duration_ms_count{component="execution",engine="claude",run_id="test-run-123"} 1';
+      const expectedDurationSumMetric = 'ai_feature_pipeline_codemachine_execution_duration_ms_sum{component="execution",engine="claude",run_id="test-run-123"} 1234';
+
+      expect(content).toContain(expectedTotalMetric);
+      expect(content).toContain(expectedDurationCountMetric);
+      expect(content).toContain(expectedDurationSumMetric);
     });
 
     it('should record CodeMachine retries', async () => {
@@ -218,8 +221,8 @@ describe('ExecutionMetricsHelper', () => {
       const metricsPath = path.join(tempDir, 'metrics', 'prometheus.txt');
       const content = await readPrometheusFile(metricsPath);
 
-      expect(content).toContain('codemachine_retry_total');
-      expect(content).toContain('engine="codex"');
+      const expectedMetric = 'ai_feature_pipeline_codemachine_retry_total{component="execution",engine="codex",run_id="test-run-123"} 1';
+      expect(content).toContain(expectedMetric);
     });
   });
 
