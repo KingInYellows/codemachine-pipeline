@@ -1,9 +1,9 @@
 import * as path from 'node:path';
 import * as fs from 'node:fs/promises';
-import { ExecutionTask, canRetry } from '../core/models/ExecutionTask.js';
+import { ExecutionTask, canRetry, areDependenciesCompleted } from '../core/models/ExecutionTask.js';
 import { RepoConfig } from '../core/config/RepoConfig.js';
 import { ExecutionStrategy, ExecutionContext } from './executionStrategy.js';
-import { getNextTask, updateTaskInQueue, loadQueue } from './queueStore.js';
+import { updateTaskInQueue, loadQueue } from './queueStore.js';
 import { validateCliAvailability } from './codeMachineRunner.js';
 import { StructuredLogger } from '../telemetry/logger.js';
 import { ExecutionLogWriter } from '../telemetry/logWriters.js';
@@ -139,6 +139,7 @@ export interface PrerequisiteResult {
 
 const DEFAULT_EXECUTION_CONFIG = {
   task_timeout_ms: 1800000,
+  max_parallel_tasks: 1,
   max_retries: 3,
   retry_backoff_ms: 5000,
   codemachine_cli_path: 'codemachine',
@@ -227,37 +228,82 @@ export class CLIExecutionEngine {
       return result;
     }
 
-    this.logger?.info('Starting execution', { totalTasks: result.totalTasks });
+    const executionConfig = this.config.execution ?? DEFAULT_EXECUTION_CONFIG;
+    const maxParallelTasks = Math.max(1, executionConfig.max_parallel_tasks ?? 1);
 
-    while (!this.stopped) {
-      const task = await getNextTask(this.runDir);
-      if (!task) {
-        this.logger?.info('No more pending tasks');
-        break;
-      }
+    this.logger?.info('Starting execution', {
+      totalTasks: result.totalTasks,
+      maxParallelTasks,
+    });
 
+    type TaskOutcome = {
+      taskId: string;
+      success: boolean;
+      permanentlyFailed: boolean;
+      task: ExecutionTask;
+    };
+
+    const inFlight = new Map<string, Promise<TaskOutcome>>();
+
+    const runTask = async (task: ExecutionTask): Promise<TaskOutcome> => {
       try {
         const taskResult = await this.executeTask(task);
-
-        if (taskResult.success) {
-          result.completedTasks++;
-        } else if (taskResult.permanentlyFailed) {
-          result.permanentlyFailedTasks++;
-          this.logger?.error('Task permanently failed', {
-            taskId: task.task_id,
-            retryCount: task.retry_count,
-          });
-        } else {
-          result.failedTasks++;
-        }
+        return {
+          taskId: task.task_id,
+          success: taskResult.success,
+          permanentlyFailed: taskResult.permanentlyFailed,
+          task,
+        };
       } catch (error) {
-        result.failedTasks++;
+        await this.handleTaskError(task, error);
         this.logger?.error('Unexpected error executing task', {
           taskId: task.task_id,
           error: error instanceof Error ? error.message : String(error),
         });
+        return {
+          taskId: task.task_id,
+          success: false,
+          permanentlyFailed: false,
+          task,
+        };
+      }
+    };
 
-        await this.handleTaskError(task, error);
+    while (true) {
+      if (!this.stopped) {
+        const capacity = maxParallelTasks - inFlight.size;
+        if (capacity > 0) {
+          const readyTasks = await this.getReadyTasks(new Set(inFlight.keys()), capacity);
+          for (const task of readyTasks) {
+            inFlight.set(task.task_id, runTask(task));
+          }
+
+          if (readyTasks.length === 0 && inFlight.size === 0) {
+            this.logger?.info('No more pending tasks');
+            break;
+          }
+        }
+      } else if (inFlight.size === 0) {
+        break;
+      }
+
+      if (inFlight.size === 0) {
+        continue;
+      }
+
+      const completed = await Promise.race(inFlight.values());
+      inFlight.delete(completed.taskId);
+
+      if (completed.success) {
+        result.completedTasks++;
+      } else if (completed.permanentlyFailed) {
+        result.permanentlyFailedTasks++;
+        this.logger?.error('Task permanently failed', {
+          taskId: completed.taskId,
+          retryCount: completed.task.retry_count,
+        });
+      } else {
+        result.failedTasks++;
       }
     }
 
@@ -377,6 +423,49 @@ export class CLIExecutionEngine {
   stop(): void {
     this.stopped = true;
     this.logger?.info('Execution stop requested');
+  }
+
+  private async getReadyTasks(
+    inFlight: Set<string>,
+    limit: number
+  ): Promise<ExecutionTask[]> {
+    const tasks = await loadQueue(this.runDir);
+    const ready: ExecutionTask[] = [];
+    const seen = new Set<string>();
+
+    const consider = (task: ExecutionTask): void => {
+      if (ready.length >= limit) {
+        return;
+      }
+      if (inFlight.has(task.task_id) || seen.has(task.task_id)) {
+        return;
+      }
+      if (!areDependenciesCompleted(task, tasks)) {
+        return;
+      }
+      ready.push(task);
+      seen.add(task.task_id);
+    };
+
+    for (const task of tasks.values()) {
+      if (task.status === 'running') {
+        consider(task);
+      }
+    }
+
+    for (const task of tasks.values()) {
+      if (task.status === 'pending') {
+        consider(task);
+      }
+    }
+
+    for (const task of tasks.values()) {
+      if (canRetry(task)) {
+        consider(task);
+      }
+    }
+
+    return ready;
   }
 
   private findStrategy(task: ExecutionTask): ExecutionStrategy | undefined {
