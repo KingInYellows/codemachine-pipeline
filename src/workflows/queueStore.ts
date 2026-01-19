@@ -434,9 +434,9 @@ async function applyQueueUpdates(cache: QueueCache): Promise<void> {
   }
 
   const length = stats.size - cache.updatesOffset;
+  const buffer = Buffer.alloc(length);
   const handle = await fs.open(cache.updatesPath, 'r');
   try {
-    const buffer = Buffer.alloc(length);
     await handle.read(buffer, 0, length, cache.updatesOffset);
   } finally {
     await handle.close();
@@ -829,8 +829,7 @@ export async function createQueueSnapshot(runDir: string): Promise<QueueOperatio
         // Load all tasks
         const tasks = await loadQueue(runDir);
         const snapshot = buildQueueSnapshot(manifest.feature_id, tasks);
-        const snapshotPath = path.join(queueDir, QUEUE_SNAPSHOT_FILE);
-        await writeQueueSnapshot(snapshotPath, snapshot);
+        await writeQueueSnapshot(queueDir, snapshot);
 
         // Update queue manifest
         const queueManifestPath = path.join(queueDir, QUEUE_MANIFEST_FILE);
