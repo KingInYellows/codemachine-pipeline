@@ -185,6 +185,47 @@ describe('ExecutionMetricsHelper', () => {
     });
   });
 
+  describe('CodeMachine Execution Recording', () => {
+    it('should record CodeMachine execution metrics', async () => {
+      const metrics = createRunMetricsCollector(tempDir, 'test-run-123');
+      const executionMetrics = createExecutionMetrics(metrics, {
+        runDir: tempDir,
+        runId: 'test-run-123',
+      });
+
+      executionMetrics.recordCodeMachineExecution('claude', 'success', 1234);
+      await executionMetrics.flush();
+
+      const metricsPath = path.join(tempDir, 'metrics', 'prometheus.txt');
+      const content = await readPrometheusFile(metricsPath);
+
+      const expectedTotalMetric = 'ai_feature_pipeline_codemachine_execution_total{component="execution",engine="claude",run_id="test-run-123",status="success"} 1';
+      const expectedDurationCountMetric = 'ai_feature_pipeline_codemachine_execution_duration_ms_count{component="execution",engine="claude",run_id="test-run-123"} 1';
+      const expectedDurationSumMetric = 'ai_feature_pipeline_codemachine_execution_duration_ms_sum{component="execution",engine="claude",run_id="test-run-123"} 1234';
+
+      expect(content).toContain(expectedTotalMetric);
+      expect(content).toContain(expectedDurationCountMetric);
+      expect(content).toContain(expectedDurationSumMetric);
+    });
+
+    it('should record CodeMachine retries', async () => {
+      const metrics = createRunMetricsCollector(tempDir, 'test-run-123');
+      const executionMetrics = createExecutionMetrics(metrics, {
+        runDir: tempDir,
+        runId: 'test-run-123',
+      });
+
+      executionMetrics.recordCodeMachineRetry('codex');
+      await executionMetrics.flush();
+
+      const metricsPath = path.join(tempDir, 'metrics', 'prometheus.txt');
+      const content = await readPrometheusFile(metricsPath);
+
+      const expectedMetric = 'ai_feature_pipeline_codemachine_retry_total{component="execution",engine="codex",run_id="test-run-123"} 1';
+      expect(content).toContain(expectedMetric);
+    });
+  });
+
   describe('Validation Run Recording', () => {
     it('should record successful validation', async () => {
       const metrics = createRunMetricsCollector(tempDir, 'test-run-123');
