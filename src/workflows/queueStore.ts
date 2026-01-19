@@ -115,6 +115,8 @@ const QUEUE_FILE = 'queue.jsonl';
 const QUEUE_UPDATES_FILE = 'queue_updates.jsonl';
 const QUEUE_MANIFEST_FILE = 'queue_manifest.json';
 const QUEUE_SNAPSHOT_FILE = 'queue_snapshot.json';
+const QUEUE_COMPACTION_MAX_UPDATES = 1000;
+const QUEUE_COMPACTION_MAX_BYTES = 5 * 1024 * 1024;
 
 interface QueueCounts {
   total: number;
@@ -133,6 +135,7 @@ interface QueueCache {
   queueSize: number;
   queueMtimeMs: number;
   updatesOffset: number;
+  updatesCount: number;
   counts: QueueCounts;
 }
 
@@ -296,6 +299,34 @@ function countTasks(tasks: Map<string, ExecutionTask>): QueueCounts {
   return counts;
 }
 
+async function loadQueueCounts(
+  queueDir: string,
+  tasks: Map<string, ExecutionTask>
+): Promise<QueueCounts> {
+  const manifestPath = path.join(queueDir, QUEUE_MANIFEST_FILE);
+  try {
+    const manifestContent = await fs.readFile(manifestPath, 'utf-8');
+    const manifest = JSON.parse(manifestContent) as QueueManifest;
+    const counts: QueueCounts = {
+      total: manifest.total_tasks,
+      pending: manifest.pending_count,
+      running: manifest.running_count,
+      completed: manifest.completed_count,
+      failed: manifest.failed_count,
+      skipped: manifest.skipped_count,
+      cancelled: manifest.cancelled_count,
+    };
+    const values = Object.values(counts);
+    if (values.every((value) => Number.isFinite(value) && value >= 0)) {
+      return counts;
+    }
+  } catch {
+    // Fall back to computing counts from queue data
+  }
+
+  return countTasks(tasks);
+}
+
 function applyTaskUpdate(cache: QueueCache, updatedTask: ExecutionTask): void {
   const previous = cache.tasks.get(updatedTask.task_id);
 
@@ -394,6 +425,7 @@ async function applyQueueUpdates(cache: QueueCache): Promise<void> {
 
   if (stats.size < cache.updatesOffset) {
     cache.updatesOffset = 0;
+    cache.updatesCount = 0;
   }
 
   if (stats.size === cache.updatesOffset) {
@@ -418,6 +450,7 @@ async function applyQueueUpdates(cache: QueueCache): Promise<void> {
       const result = parseExecutionTask(parsed);
       if (result.success) {
         applyTaskUpdate(cache, result.data);
+        cache.updatesCount += 1;
       }
     } catch {
       // Ignore malformed updates
@@ -440,6 +473,7 @@ async function getQueueCache(runDir: string): Promise<QueueCache> {
   const existing = queueCache.get(runDir);
   if (!existing || existing.queueSize !== queueSize || existing.queueMtimeMs !== queueMtimeMs) {
     const tasks = await loadQueueFromFile(queuePath);
+    const counts = await loadQueueCounts(queueDir, tasks);
     const cache: QueueCache = {
       tasks,
       queuePath,
@@ -447,7 +481,8 @@ async function getQueueCache(runDir: string): Promise<QueueCache> {
       queueSize,
       queueMtimeMs,
       updatesOffset: 0,
-      counts: countTasks(tasks),
+      updatesCount: 0,
+      counts,
     };
     queueCache.set(runDir, cache);
   }
@@ -457,7 +492,11 @@ async function getQueueCache(runDir: string): Promise<QueueCache> {
   return cache;
 }
 
-async function updateQueueManifestFromCache(queueDir: string, cache: QueueCache): Promise<void> {
+async function updateQueueManifestFromCache(
+  queueDir: string,
+  cache: QueueCache,
+  options?: { queueChecksum?: string; lastSnapshotAt?: string }
+): Promise<void> {
   const manifestPath = path.join(queueDir, QUEUE_MANIFEST_FILE);
   const manifestContent = await fs.readFile(manifestPath, 'utf-8');
   const manifest = JSON.parse(manifestContent) as QueueManifest;
@@ -469,9 +508,123 @@ async function updateQueueManifestFromCache(queueDir: string, cache: QueueCache)
   manifest.failed_count = cache.counts.failed;
   manifest.skipped_count = cache.counts.skipped;
   manifest.cancelled_count = cache.counts.cancelled;
+  if (options?.queueChecksum) {
+    manifest.queue_checksum = options.queueChecksum;
+  }
+  if (options?.lastSnapshotAt) {
+    manifest.last_snapshot_at = options.lastSnapshotAt;
+  }
   manifest.updated_at = new Date().toISOString();
 
   await writeQueueManifest(queueDir, manifest);
+}
+
+function getCompactionTasks(tasks: Map<string, ExecutionTask>): Map<string, ExecutionTask> {
+  const requiredDependencies = new Set<string>();
+
+  for (const task of tasks.values()) {
+    if (task.status !== 'completed') {
+      for (const dependencyId of task.dependency_ids) {
+        requiredDependencies.add(dependencyId);
+      }
+    }
+  }
+
+  const compacted = new Map<string, ExecutionTask>();
+  for (const [taskId, task] of tasks) {
+    if (task.status !== 'completed' || requiredDependencies.has(taskId)) {
+      compacted.set(taskId, task);
+    }
+  }
+
+  return compacted;
+}
+
+function serializeTasksToJsonl(tasks: Iterable<ExecutionTask>): string {
+  const lines: string[] = [];
+  for (const task of tasks) {
+    lines.push(serializeExecutionTask(task, false));
+  }
+
+  return lines.length > 0 ? `${lines.join('\n')}\n` : '';
+}
+
+function buildQueueSnapshot(featureId: string, tasks: Map<string, ExecutionTask>): QueueSnapshot {
+  const dependencyGraph: Record<string, string[]> = {};
+  const tasksObject: Record<string, ExecutionTask> = {};
+
+  for (const [taskId, task] of tasks) {
+    tasksObject[taskId] = task;
+    if (task.dependency_ids.length > 0) {
+      dependencyGraph[taskId] = task.dependency_ids;
+    }
+  }
+
+  const dataToHash = JSON.stringify({
+    tasks: tasksObject,
+    dependency_graph: dependencyGraph,
+  });
+  const checksum = crypto.createHash('sha256').update(dataToHash).digest('hex');
+
+  return {
+    schema_version: '1.0.0',
+    feature_id: featureId,
+    tasks: tasksObject,
+    dependency_graph: dependencyGraph,
+    timestamp: new Date().toISOString(),
+    checksum,
+  };
+}
+
+async function writeQueueSnapshot(queueDir: string, snapshot: QueueSnapshot): Promise<void> {
+  const snapshotPath = path.join(queueDir, QUEUE_SNAPSHOT_FILE);
+  const content = JSON.stringify(snapshot, null, 2);
+  await fs.writeFile(snapshotPath, content, 'utf-8');
+}
+
+async function compactQueue(
+  queueDir: string,
+  featureId: string,
+  cache: QueueCache
+): Promise<void> {
+  const compactedTasks = getCompactionTasks(cache.tasks);
+  const content = serializeTasksToJsonl(compactedTasks.values());
+  const checksum = crypto.createHash('sha256').update(content).digest('hex');
+
+  await fs.writeFile(cache.queuePath, content, 'utf-8');
+
+  const snapshot = buildQueueSnapshot(featureId, compactedTasks);
+  await writeQueueSnapshot(queueDir, snapshot);
+
+  await fs.writeFile(cache.updatesPath, '', 'utf-8');
+
+  const stats = await fs.stat(cache.queuePath);
+  cache.tasks = compactedTasks;
+  cache.queueSize = stats.size;
+  cache.queueMtimeMs = stats.mtimeMs;
+  cache.updatesOffset = 0;
+  cache.updatesCount = 0;
+
+  await updateQueueManifestFromCache(queueDir, cache, {
+    queueChecksum: checksum,
+    lastSnapshotAt: snapshot.timestamp,
+  });
+}
+
+async function maybeCompactQueue(
+  queueDir: string,
+  featureId: string,
+  cache: QueueCache
+): Promise<boolean> {
+  if (
+    cache.updatesCount < QUEUE_COMPACTION_MAX_UPDATES &&
+    cache.updatesOffset < QUEUE_COMPACTION_MAX_BYTES
+  ) {
+    return false;
+  }
+
+  await compactQueue(queueDir, featureId, cache);
+  return true;
 }
 
 // ============================================================================
@@ -671,43 +824,11 @@ export async function createQueueSnapshot(runDir: string): Promise<QueueOperatio
       try {
         const manifest = await readManifest(runDir);
         const queueDir = path.join(runDir, manifest.queue.queue_dir);
-        const snapshotPath = path.join(queueDir, QUEUE_SNAPSHOT_FILE);
 
         // Load all tasks
         const tasks = await loadQueue(runDir);
-
-        // Build dependency graph
-        const dependencyGraph: Record<string, string[]> = {};
-        for (const [taskId, task] of tasks) {
-          if (task.dependency_ids.length > 0) {
-            dependencyGraph[taskId] = task.dependency_ids;
-          }
-        }
-
-        // Create snapshot
-        const tasksObject: Record<string, ExecutionTask> = {};
-        for (const [taskId, task] of tasks) {
-          tasksObject[taskId] = task;
-        }
-
-        const dataToHash = JSON.stringify({
-          tasks: tasksObject,
-          dependency_graph: dependencyGraph,
-        });
-        const checksum = crypto.createHash('sha256').update(dataToHash).digest('hex');
-
-        const snapshot: QueueSnapshot = {
-          schema_version: '1.0.0',
-          feature_id: manifest.feature_id,
-          tasks: tasksObject,
-          dependency_graph: dependencyGraph,
-          timestamp: new Date().toISOString(),
-          checksum,
-        };
-
-        // Write snapshot
-        const content = JSON.stringify(snapshot, null, 2);
-        await fs.writeFile(snapshotPath, content, 'utf-8');
+        const snapshot = buildQueueSnapshot(manifest.feature_id, tasks);
+        await writeQueueSnapshot(queueDir, snapshot);
 
         // Update queue manifest
         const queueManifestPath = path.join(queueDir, QUEUE_MANIFEST_FILE);
@@ -958,9 +1079,13 @@ export async function updateTaskInQueue(
 
         await fs.appendFile(cache.updatesPath, updateLine, 'utf-8');
         cache.updatesOffset += Buffer.byteLength(updateLine);
+        cache.updatesCount += 1;
         applyTaskUpdate(cache, updatedTask);
 
-        await updateQueueManifestFromCache(queueDir, cache);
+        const compacted = await maybeCompactQueue(queueDir, manifest.feature_id, cache);
+        if (!compacted) {
+          await updateQueueManifestFromCache(queueDir, cache);
+        }
 
         // Update run manifest if needed
         if (updates.status) {
