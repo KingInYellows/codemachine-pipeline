@@ -2,6 +2,7 @@ import { spawn, type ChildProcess } from 'node:child_process';
 import * as fs from 'node:fs/promises';
 import { createWriteStream, type WriteStream } from 'node:fs';
 import * as path from 'node:path';
+import * as zlib from 'node:zlib';
 import type { ExecutionConfig, ExecutionEngineType } from '../core/config/RepoConfig.js';
 import type { StructuredLogger } from '../telemetry/logger.js';
 
@@ -26,6 +27,8 @@ export interface RunnerOptions {
 }
 
 const DEFAULT_MAX_BUFFER_SIZE = 10 * 1024 * 1024;
+const DEFAULT_LOG_ROTATION_MB = 100;
+const DEFAULT_LOG_ROTATION_KEEP = 3;
 
 export interface RunnerResult {
   taskId: string;
@@ -35,6 +38,68 @@ export interface RunnerResult {
   durationMs: number;
   timedOut: boolean;
   killed: boolean;
+}
+
+async function gzipFileInPlace(filePath: string): Promise<void> {
+  const content = await fs.readFile(filePath);
+  const compressed = await new Promise<Buffer>((resolve, reject) => {
+    zlib.gzip(content, (error, result) => {
+      if (error) {
+        reject(error);
+        return;
+      }
+      resolve(result);
+    });
+  });
+  await fs.writeFile(filePath, compressed);
+}
+
+async function rotateLogFiles(
+  logPath: string,
+  keep: number,
+  compress: boolean,
+  logger?: StructuredLogger,
+  taskId?: string
+): Promise<void> {
+  if (keep <= 0) {
+    return;
+  }
+
+  const oldest = `${logPath}.${keep}`;
+  await fs.rm(oldest, { force: true }).catch(() => undefined);
+
+  for (let index = keep - 1; index >= 1; index -= 1) {
+    const source = `${logPath}.${index}`;
+    const destination = `${logPath}.${index + 1}`;
+    await fs.rename(source, destination).catch(() => undefined);
+  }
+
+  const rotatedPath = `${logPath}.1`;
+  const rotated = await fs.rename(logPath, rotatedPath).then(
+    () => true,
+    () => false
+  );
+
+  if (!rotated) {
+    return;
+  }
+
+  if (compress) {
+    await gzipFileInPlace(rotatedPath).catch((error) => {
+      logger?.warn('Log rotation compression failed', {
+        task_id: taskId,
+        log_path: rotatedPath,
+        error: error instanceof Error ? error.message : String(error),
+      });
+    });
+  }
+
+  logger?.warn('Log rotation occurred', {
+    task_id: taskId,
+    log_path: logPath,
+    rotated_path: rotatedPath,
+    compressed: compress,
+  });
 }
 
 /**
@@ -174,6 +239,10 @@ export async function runCodeMachine(
 ): Promise<RunnerResult> {
   const startTime = Date.now();
   const engine = options.engine ?? config.default_engine;
+  const logRotationMb = config.log_rotation_mb ?? DEFAULT_LOG_ROTATION_MB;
+  const logRotationKeep = config.log_rotation_keep ?? DEFAULT_LOG_ROTATION_KEEP;
+  const logRotationCompress = config.log_rotation_compress ?? false;
+  const logRotationBytes = logRotationMb * 1024 * 1024;
 
   const pathValidation = validateCliPath(config.codemachine_cli_path);
   if (!pathValidation.valid) {
@@ -198,6 +267,16 @@ export async function runCodeMachine(
     workspace: options.workspaceDir,
     timeout_ms: options.timeoutMs,
   });
+
+  let initialLogSize = 0;
+  if (options.logPath) {
+    try {
+      const stats = await fs.stat(options.logPath);
+      initialLogSize = stats.size;
+    } catch {
+      initialLogSize = 0;
+    }
+  }
 
   return new Promise((resolve) => {
     const stdoutChunks: Buffer[] = [];
@@ -240,23 +319,70 @@ export async function runCodeMachine(
     }, options.timeoutMs);
 
     let logStream: WriteStream | undefined;
+    let logSize = initialLogSize;
+    let logQueue: Promise<void> = Promise.resolve();
+    let enqueueLogWrite: (chunk: Buffer) => void = () => undefined;
     let totalBufferSize = 0;
     let bufferLimitReached = false;
 
     if (options.logPath) {
-      logStream = createWriteStream(options.logPath, { flags: 'a', mode: 0o600 });
-      logStream.on('error', (err) => {
-        options.logger?.warn('Log stream error, disabling file logging', {
-          task_id: options.taskId,
-          logPath: options.logPath,
-          error: err.message,
+      const attachLogStream = (): WriteStream => {
+        const stream = createWriteStream(options.logPath!, { flags: 'a', mode: 0o600 });
+        stream.on('error', (err) => {
+          options.logger?.warn('Log stream error, disabling file logging', {
+            task_id: options.taskId,
+            logPath: options.logPath,
+            error: err.message,
+          });
+          logStream = undefined;
         });
-        logStream = undefined;
-      });
+        return stream;
+      };
+
+      logStream = attachLogStream();
+
+      enqueueLogWrite = (chunk: Buffer): void => {
+        if (!options.logPath || !logStream) {
+          return;
+        }
+
+        logQueue = logQueue.then(async () => {
+          if (!logStream) {
+            return;
+          }
+
+          if (logSize + chunk.length > logRotationBytes) {
+            const streamToClose = logStream;
+            logStream = undefined;
+            logSize = 0;
+
+            await new Promise<void>((resolve) => {
+              if (!streamToClose) {
+                resolve();
+                return;
+              }
+              streamToClose.end(() => resolve());
+            });
+
+            await rotateLogFiles(
+              options.logPath,
+              logRotationKeep,
+              logRotationCompress,
+              options.logger,
+              options.taskId
+            );
+
+            logStream = attachLogStream();
+          }
+
+          logStream?.write(chunk);
+          logSize += chunk.length;
+        });
+      };
     }
 
     childProcess.stdout?.on('data', (chunk: Buffer) => {
-      logStream?.write(chunk);
+      enqueueLogWrite(chunk);
       if (!bufferLimitReached) {
         totalBufferSize += chunk.length;
         const maxBuffer = DEFAULT_MAX_BUFFER_SIZE;
@@ -273,7 +399,7 @@ export async function runCodeMachine(
     });
 
     childProcess.stderr?.on('data', (chunk: Buffer) => {
-      logStream?.write(chunk);
+      enqueueLogWrite(chunk);
       if (!bufferLimitReached) {
         totalBufferSize += chunk.length;
         const maxBuffer = DEFAULT_MAX_BUFFER_SIZE;
@@ -292,6 +418,7 @@ export async function runCodeMachine(
     childProcess.on('close', (code, signal) => {
       clearTimeout(timeoutHandle);
       logStream?.end();
+      logQueue.catch(() => undefined);
 
       const stdout = Buffer.concat(stdoutChunks).toString('utf-8');
       const stderr = Buffer.concat(stderrChunks).toString('utf-8');
