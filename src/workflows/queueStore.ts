@@ -320,8 +320,9 @@ async function loadQueueCounts(
     if (values.every((value) => Number.isFinite(value) && value >= 0)) {
       return counts;
     }
-  } catch {
+  } catch (error) {
     // Fall back to computing counts from queue data
+    console.warn(`Failed to load queue counts from manifest, falling back to re-counting. Error: ${error instanceof Error ? error.message : String(error)}`);
   }
 
   return countTasks(tasks);
@@ -828,7 +829,8 @@ export async function createQueueSnapshot(runDir: string): Promise<QueueOperatio
         // Load all tasks
         const tasks = await loadQueue(runDir);
         const snapshot = buildQueueSnapshot(manifest.feature_id, tasks);
-        await writeQueueSnapshot(queueDir, snapshot);
+        const snapshotPath = path.join(queueDir, QUEUE_SNAPSHOT_FILE);
+        await writeQueueSnapshot(snapshotPath, snapshot);
 
         // Update queue manifest
         const queueManifestPath = path.join(queueDir, QUEUE_MANIFEST_FILE);
