@@ -85,5 +85,5 @@ Requires v1 execution engine (CDMCH-15 through CDMCH-21)
 
 ## Stack Execution
 - [x] Layer 1: log-rotation-config
-- [ ] Layer 2: log-rotation-impl
+- [x] Layer 2: log-rotation-impl
 - [ ] Layer 3: log-rotation-tests
