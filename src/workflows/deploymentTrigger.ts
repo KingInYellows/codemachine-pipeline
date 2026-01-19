@@ -184,13 +184,13 @@ export const DeploymentOutcomeSchema = z.object({
   merge_sha: z.string().optional(),
   workflow_run_id: z.string().optional(),
   workflow_url: z.string().optional(),
-  github_response: z.record(z.unknown()).optional(),
+  github_response: z.record(z.string(), z.unknown()).optional(),
   blockers: z.array(
     z.object({
       type: z.string(),
       message: z.string(),
       recommended_action: z.string(),
-      metadata: z.record(z.unknown()).optional(),
+      metadata: z.record(z.string(), z.unknown()).optional(),
     })
   ),
   metadata: z.object({

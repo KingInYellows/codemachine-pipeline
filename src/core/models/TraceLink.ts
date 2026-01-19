@@ -20,7 +20,7 @@ export const TraceLinkSchema = z
     target_id: z.string().min(1),
     relationship: z.enum(['implements', 'tests', 'depends_on', 'derived_from', 'validates']),
     created_at: z.string().datetime(),
-    metadata: z.record(z.unknown()).optional(),
+    metadata: z.record(z.string(), z.unknown()).optional(),
   })
   .strict();
 
@@ -33,7 +33,7 @@ export function parseTraceLink(json: unknown) {
   }
   return {
     success: false as const,
-    errors: result.error.errors.map((err) => ({
+    errors: result.error.issues.map((err) => ({
       path: err.path.join('.') || 'root',
       message: err.message,
     })),

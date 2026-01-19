@@ -103,7 +103,7 @@ export const DeploymentRecordSchema = z
     /** ISO 8601 timestamp when deployment completed */
     completed_at: z.string().datetime().nullable().optional(),
     /** Optional deployment metadata */
-    metadata: z.record(z.unknown()).optional(),
+    metadata: z.record(z.string(), z.unknown()).optional(),
   })
   .strict();
 
@@ -136,7 +136,7 @@ export function parseDeploymentRecord(json: unknown):
 
   return {
     success: false,
-    errors: result.error.errors.map((err) => ({
+    errors: result.error.issues.map((err) => ({
       path: err.path.join('.') || 'root',
       message: err.message,
     })),

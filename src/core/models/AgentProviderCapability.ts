@@ -29,7 +29,7 @@ export const AgentProviderCapabilitySchema = z
         output_cost_per_1k_tokens: z.number().nonnegative(),
       })
       .optional(),
-    metadata: z.record(z.unknown()).optional(),
+    metadata: z.record(z.string(), z.unknown()).optional(),
   })
   .strict();
 
@@ -42,7 +42,7 @@ export function parseAgentProviderCapability(json: unknown) {
   }
   return {
     success: false as const,
-    errors: result.error.errors.map((err) => ({
+    errors: result.error.issues.map((err) => ({
       path: err.path.join('.') || 'root',
       message: err.message,
     })),

@@ -282,7 +282,7 @@ export const SessionTelemetrySchema = z
     fallbackAttempts: z.number().int().nonnegative().default(0),
     errorCategory: AgentErrorCategorySchema.optional(),
     timestamp: z.string().datetime(),
-    metadata: z.record(z.unknown()).optional(),
+    metadata: z.record(z.string(), z.unknown()).optional(),
   })
   .strict();
 
