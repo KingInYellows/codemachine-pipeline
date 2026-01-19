@@ -20,6 +20,7 @@
     "lint:fix": "eslint . --ext .ts --fix",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
     "format:check": "prettier --check \"src/**/*.ts\" \"test/**/*.ts\"",
+    "security:glob-guard": "node scripts/tooling/check_glob_cli_advisory.js",
     "pretest": "npm run build",
     "test": "npm run test:config && npm run test:http && npm run test:integration && npm run test:jest",
     "test:config": "vitest run src/core/config",
