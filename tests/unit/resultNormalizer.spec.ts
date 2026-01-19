@@ -37,6 +37,13 @@ describe('resultNormalizer', () => {
       expect(redacted).toContain('[TOKEN_REDACTED]');
     });
 
+    it('redacts generic api_key patterns', () => {
+      const text = 'api_key=abcdefghijklmnopqrstuvwxyz0123456789ABCDEFGH';
+      const redacted = redactCredentials(text);
+      expect(redacted).toContain('api_key=[REDACTED]');
+      expect(redacted).not.toContain('abcdefghijklmnopqrstuvwxyz');
+    });
+
     it('redacts AWS access keys', () => {
       const text = 'AWS key: AKIAIOSFODNN7EXAMPLE';
       const redacted = redactCredentials(text);
@@ -224,6 +231,14 @@ describe('resultNormalizer', () => {
       expect(result.errorMessage).toBeDefined();
     });
 
+    it('marks exit code 1 as recoverable for rate limit errors', () => {
+      const result = normalizeResult(1, '', 'Rate limit exceeded', false, false);
+      expect(result.success).toBe(false);
+      expect(result.status).toBe('failed');
+      expect(result.exitCode).toBe(1);
+      expect(result.recoverable).toBe(true);
+    });
+
     it('maps exit code 124 to timeout and recoverable', () => {
       const result = normalizeResult(124, '', 'Timeout', true, false);
       expect(result.success).toBe(false);
@@ -240,6 +255,22 @@ describe('resultNormalizer', () => {
       expect(result.exitCode).toBe(137);
       expect(result.killed).toBe(true);
       expect(result.recoverable).toBe(true);
+    });
+
+    it('marks unknown exit codes as failed and logs warning', () => {
+      const mockLogger: StructuredLogger = {
+        warn: vi.fn(),
+      } as unknown as StructuredLogger;
+
+      const result = normalizeResult(99, 'some output', 'some error', false, false, mockLogger);
+
+      expect(result.success).toBe(false);
+      expect(result.status).toBe('failed');
+      expect(result.errorCategory).toBe('unknown');
+      expect(mockLogger.warn).toHaveBeenCalledWith(
+        'Unknown exit code encountered',
+        expect.objectContaining({ exitCode: 99 })
+      );
     });
 
     // AC6: Interface compliance
