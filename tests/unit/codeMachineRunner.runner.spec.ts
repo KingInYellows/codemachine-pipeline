@@ -360,7 +360,7 @@ describe('CodeMachineRunner', () => {
       expect(spawnEnv).toHaveProperty('LC_ALL', 'en_US.UTF-8');
     });
 
-    it('should include custom allowlisted keys', async () => {
+    it('should exclude non-allowlisted keys', async () => {
       const config: ExecutionConfig = {
         codemachine_cli_path: 'codemachine',
         default_engine: 'claude',
@@ -368,7 +368,6 @@ describe('CodeMachineRunner', () => {
         task_timeout_ms: 60000,
         max_retries: 1,
         retry_backoff_ms: 1000,
-        env_allowlist: ['CUSTOM_VAR'],
         spec_path: 'spec.md',
         max_log_buffer_size: 1024 * 1024,
       };
@@ -378,7 +377,6 @@ describe('CodeMachineRunner', () => {
         prompt: 'test prompt',
         workspaceDir: '/tmp/workspace',
         timeoutMs: 60000,
-        envAllowlist: ['CUSTOM_VAR'],
       };
 
       const childProcess = createMockChildProcess();
@@ -393,7 +391,7 @@ describe('CodeMachineRunner', () => {
       await promise;
 
       const spawnEnv = mockSpawn.mock.calls[0][2]?.env;
-      expect(spawnEnv).toHaveProperty('CUSTOM_VAR', 'custom_value');
+      expect(spawnEnv).not.toHaveProperty('CUSTOM_VAR');
     });
 
     it('should exclude credential keys by default', async () => {
@@ -1265,7 +1263,8 @@ describe('CodeMachineRunner', () => {
       expect(result.stdout).toBe('a'.repeat(50) + 'b'.repeat(50));
     });
 
-    it('should stop buffering after exceeding max_log_buffer_size', async () => {
+    it('should stop buffering after exceeding the default buffer size', async () => {
+      const maxBufferSize = 10 * 1024 * 1024;
       const config: ExecutionConfig = {
         codemachine_cli_path: 'codemachine',
         default_engine: 'claude',
@@ -1275,7 +1274,6 @@ describe('CodeMachineRunner', () => {
         retry_backoff_ms: 1000,
         env_allowlist: [],
         spec_path: 'spec.md',
-        max_log_buffer_size: 100,
       };
 
       const logger = createMockLogger();
@@ -1295,22 +1293,20 @@ describe('CodeMachineRunner', () => {
       const promise = runCodeMachine(config, options);
 
       setTimeout(() => {
-        childProcess.stdout?.emit('data', Buffer.from('a'.repeat(80)));
-        childProcess.stdout?.emit('data', Buffer.from('b'.repeat(80))); // Exceeds limit
-        childProcess.stdout?.emit('data', Buffer.from('c'.repeat(80))); // Should not be buffered
+        const largeChunk = Buffer.alloc(maxBufferSize + 1, 'a');
+        childProcess.stdout?.emit('data', largeChunk);
+        childProcess.stdout?.emit('data', Buffer.from('b'));
         childProcess.emit('close', 0);
       }, 10);
 
       const result = await promise;
 
-      // Buffer limit reached after first chunk (80 bytes), second chunk would exceed
-      // so only first chunk is buffered
-      expect(result.stdout.length).toBe(80);
+      expect(result.stdout).toBe('');
       expect(logger.warn).toHaveBeenCalledWith(
         'Large output detected, streaming to file only',
         expect.objectContaining({
           task_id: 'test-task',
-          buffer_size: 160,
+          buffer_size: maxBufferSize + 1,
         })
       );
     });
