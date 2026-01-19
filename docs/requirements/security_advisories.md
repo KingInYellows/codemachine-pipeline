@@ -36,7 +36,8 @@ Security advisories affecting build-time or CLI tooling must be detected early a
 ### Guard Script
 
 The guard lives at `scripts/tooling/check_glob_cli_advisory.js` and checks for:
-- Direct dependency on `@oclif/plugin-plugins` in `package.json`.
+- Direct dependency on @oclif/plugin-plugins in `package.json`.
+- Presence of @oclif/plugin-plugins in `package-lock.json`.
 - Any `glob` package entries in `package-lock.json` that fall into the vulnerable ranges.
 
 **Run locally:**
