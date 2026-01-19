@@ -17,6 +17,7 @@
 ## Stack Progress
 - Layer 1 (chore/glob-guard-script): Complete
 - Layer 2 (docs/glob-advisory-note): Complete
+- Layer 3 (ci/security-glob-guard): Complete
 
 ## Discovery Notes
 - @oclif/plugin-plugins not present in package.json or package-lock.json.
@@ -43,6 +44,14 @@
       "intent": "Document the mitigation and how to run the guard script.",
       "files": [
         "docs/requirements/security_advisories.md"
+      ]
+    },
+    {
+      "order": 3,
+      "branch": "ci/security-glob-guard",
+      "intent": "Add CI step to run the glob advisory guard.",
+      "files": [
+        ".github/workflows/ci.yml"
       ]
     }
   ]
