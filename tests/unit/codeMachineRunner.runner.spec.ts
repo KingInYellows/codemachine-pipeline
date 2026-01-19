@@ -1163,6 +1163,69 @@ describe('CodeMachineRunner', () => {
     });
   });
 
+  describe('G.1 Log Rotation', () => {
+    it('should rotate logs when size exceeds threshold', async () => {
+      const renameSpy = vi.spyOn(fs, 'rename').mockResolvedValue();
+      const rmSpy = vi.spyOn(fs, 'rm').mockResolvedValue();
+
+      const config: ExecutionConfig = {
+        codemachine_cli_path: 'codemachine',
+        default_engine: 'claude',
+        workspace_dir: '/tmp/workspace',
+        task_timeout_ms: 60000,
+        max_retries: 1,
+        retry_backoff_ms: 1000,
+        env_allowlist: [],
+        spec_path: 'spec.md',
+        max_log_buffer_size: 1024 * 1024,
+        log_rotation_mb: 1,
+        log_rotation_keep: 2,
+        log_rotation_compress: false,
+      };
+
+      const logger = createMockLogger();
+
+      const options: RunnerOptions = {
+        taskId: 'test-task',
+        prompt: 'test',
+        workspaceDir: '/tmp/workspace',
+        timeoutMs: 60000,
+        envAllowlist: [],
+        logPath: '/tmp/test.log',
+        logger,
+      };
+
+      mockCreateWriteStream.mockImplementation(() => createMockWriteStream());
+
+      const childProcess = createMockChildProcess();
+      mockSpawn.mockReturnValue(childProcess);
+
+      const promise = runCodeMachine(config, options);
+
+      setTimeout(() => {
+        const largeChunk = Buffer.alloc(1024 * 1024 + 1, 'a');
+        childProcess.stdout?.emit('data', largeChunk);
+        childProcess.emit('close', 0);
+      }, 10);
+
+      await promise;
+      await new Promise((resolve) => setTimeout(resolve, 0));
+
+      expect(mockCreateWriteStream).toHaveBeenCalledTimes(2);
+      expect(renameSpy).toHaveBeenCalledWith('/tmp/test.log', '/tmp/test.log.1');
+      expect(rmSpy).toHaveBeenCalledWith('/tmp/test.log.2', { force: true });
+      expect(logger.warn).toHaveBeenCalledWith(
+        'Log rotation occurred',
+        expect.objectContaining({
+          task_id: 'test-task',
+          log_path: '/tmp/test.log',
+          rotated_path: '/tmp/test.log.1',
+          compressed: false,
+        })
+      );
+    });
+  });
+
   describe('H. Buffer Management', () => {
     it('should capture stdout/stderr up to max_log_buffer_size', async () => {
       const config: ExecutionConfig = {
