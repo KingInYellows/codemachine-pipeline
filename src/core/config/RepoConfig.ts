@@ -239,8 +239,16 @@ const ExecutionConfigSchema = z.object({
   codemachine_cli_path: z.string().default('codemachine'),
   default_engine: ExecutionEngineType.default('claude'),
   workspace_dir: z.string().optional(),
+  spec_path: z.string().optional(),
   task_timeout_ms: z.number().int().min(60000).max(7200000).default(1800000), // 30 min, max 2h
   max_parallel_tasks: z.number().int().min(1).max(10).default(1),
+  max_log_buffer_size: z
+    .number()
+    .int()
+    .min(1024)
+    .max(100 * 1024 * 1024)
+    .default(10 * 1024 * 1024),
+  env_allowlist: z.array(z.string()).default([]),
   max_retries: z.number().int().min(0).max(10).default(3),
   retry_backoff_ms: z.number().int().min(1000).default(5000),
   log_rotation_mb: z.number().int().min(1).max(10240).default(100),
@@ -638,6 +646,8 @@ export function createDefaultConfig(
       default_engine: 'claude',
       task_timeout_ms: 1800000,
       max_parallel_tasks: 1,
+      max_log_buffer_size: 10 * 1024 * 1024,
+      env_allowlist: [],
       max_retries: 3,
       retry_backoff_ms: 5000,
       log_rotation_mb: 100,

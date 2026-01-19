@@ -112,8 +112,31 @@ export interface QueueValidationResult {
 // ============================================================================
 
 const QUEUE_FILE = 'queue.jsonl';
+const QUEUE_UPDATES_FILE = 'queue_updates.jsonl';
 const QUEUE_MANIFEST_FILE = 'queue_manifest.json';
 const QUEUE_SNAPSHOT_FILE = 'queue_snapshot.json';
+
+interface QueueCounts {
+  total: number;
+  pending: number;
+  running: number;
+  completed: number;
+  failed: number;
+  skipped: number;
+  cancelled: number;
+}
+
+interface QueueCache {
+  tasks: Map<string, ExecutionTask>;
+  queuePath: string;
+  updatesPath: string;
+  queueSize: number;
+  queueMtimeMs: number;
+  updatesOffset: number;
+  counts: QueueCounts;
+}
+
+const queueCache = new Map<string, QueueCache>();
 
 // ============================================================================
 // Queue Initialization
@@ -229,6 +252,226 @@ export async function initializeQueueFromPlan(
 
 function computeEmptyQueueChecksum(): string {
   return crypto.createHash('sha256').update('').digest('hex');
+}
+
+function createEmptyCounts(): QueueCounts {
+  return {
+    total: 0,
+    pending: 0,
+    running: 0,
+    completed: 0,
+    failed: 0,
+    skipped: 0,
+    cancelled: 0,
+  };
+}
+
+function countTasks(tasks: Map<string, ExecutionTask>): QueueCounts {
+  const counts = createEmptyCounts();
+  for (const task of tasks.values()) {
+    counts.total += 1;
+    switch (task.status) {
+      case 'pending':
+        counts.pending += 1;
+        break;
+      case 'running':
+        counts.running += 1;
+        break;
+      case 'completed':
+        counts.completed += 1;
+        break;
+      case 'failed':
+        counts.failed += 1;
+        break;
+      case 'skipped':
+        counts.skipped += 1;
+        break;
+      case 'cancelled':
+        counts.cancelled += 1;
+        break;
+      default:
+        break;
+    }
+  }
+  return counts;
+}
+
+function applyTaskUpdate(cache: QueueCache, updatedTask: ExecutionTask): void {
+  const previous = cache.tasks.get(updatedTask.task_id);
+
+  if (previous) {
+    cache.counts.total -= 1;
+    switch (previous.status) {
+      case 'pending':
+        cache.counts.pending -= 1;
+        break;
+      case 'running':
+        cache.counts.running -= 1;
+        break;
+      case 'completed':
+        cache.counts.completed -= 1;
+        break;
+      case 'failed':
+        cache.counts.failed -= 1;
+        break;
+      case 'skipped':
+        cache.counts.skipped -= 1;
+        break;
+      case 'cancelled':
+        cache.counts.cancelled -= 1;
+        break;
+      default:
+        break;
+    }
+  }
+
+  cache.tasks.set(updatedTask.task_id, updatedTask);
+  cache.counts.total += 1;
+  switch (updatedTask.status) {
+    case 'pending':
+      cache.counts.pending += 1;
+      break;
+    case 'running':
+      cache.counts.running += 1;
+      break;
+    case 'completed':
+      cache.counts.completed += 1;
+      break;
+    case 'failed':
+      cache.counts.failed += 1;
+      break;
+    case 'skipped':
+      cache.counts.skipped += 1;
+      break;
+    case 'cancelled':
+      cache.counts.cancelled += 1;
+      break;
+    default:
+      break;
+  }
+}
+
+async function loadQueueFromFile(queuePath: string): Promise<Map<string, ExecutionTask>> {
+  const tasks = new Map<string, ExecutionTask>();
+
+  try {
+    const content = await fs.readFile(queuePath, 'utf-8');
+    const lines = content
+      .trim()
+      .split('\n')
+      .filter((line) => line.length > 0);
+
+    for (const line of lines) {
+      try {
+        const parsed: unknown = JSON.parse(line);
+        const result = parseExecutionTask(parsed);
+
+        if (result.success) {
+          tasks.set(result.data.task_id, result.data);
+        }
+      } catch {
+        // Skip corrupted lines (will be caught by validation)
+      }
+    }
+  } catch (error) {
+    if (error && typeof error === 'object' && 'code' in error && error.code === 'ENOENT') {
+      return tasks;
+    }
+    throw error;
+  }
+
+  return tasks;
+}
+
+async function applyQueueUpdates(cache: QueueCache): Promise<void> {
+  let stats: { size: number } | null = null;
+  try {
+    stats = await fs.stat(cache.updatesPath);
+  } catch {
+    cache.updatesOffset = 0;
+    return;
+  }
+
+  if (stats.size < cache.updatesOffset) {
+    cache.updatesOffset = 0;
+  }
+
+  if (stats.size === cache.updatesOffset) {
+    return;
+  }
+
+  const length = stats.size - cache.updatesOffset;
+  const handle = await fs.open(cache.updatesPath, 'r');
+  try {
+    const buffer = Buffer.alloc(length);
+    await handle.read(buffer, 0, length, cache.updatesOffset);
+  } finally {
+    await handle.close();
+  }
+
+  const content = buffer.toString('utf-8');
+  const lines = content.split('\n').filter((line) => line.length > 0);
+
+  for (const line of lines) {
+    try {
+      const parsed: unknown = JSON.parse(line);
+      const result = parseExecutionTask(parsed);
+      if (result.success) {
+        applyTaskUpdate(cache, result.data);
+      }
+    } catch {
+      // Ignore malformed updates
+    }
+  }
+
+  cache.updatesOffset = stats.size;
+}
+
+async function getQueueCache(runDir: string): Promise<QueueCache> {
+  const manifest = await readManifest(runDir);
+  const queueDir = path.join(runDir, manifest.queue.queue_dir);
+  const queuePath = path.join(queueDir, QUEUE_FILE);
+  const updatesPath = path.join(queueDir, QUEUE_UPDATES_FILE);
+
+  const stats = await fs.stat(queuePath).catch(() => null);
+  const queueSize = stats?.size ?? 0;
+  const queueMtimeMs = stats?.mtimeMs ?? 0;
+
+  const existing = queueCache.get(runDir);
+  if (!existing || existing.queueSize !== queueSize || existing.queueMtimeMs !== queueMtimeMs) {
+    const tasks = await loadQueueFromFile(queuePath);
+    const cache: QueueCache = {
+      tasks,
+      queuePath,
+      updatesPath,
+      queueSize,
+      queueMtimeMs,
+      updatesOffset: 0,
+      counts: countTasks(tasks),
+    };
+    queueCache.set(runDir, cache);
+  }
+
+  const cache = queueCache.get(runDir)!;
+  await applyQueueUpdates(cache);
+  return cache;
+}
+
+async function updateQueueManifestFromCache(queueDir: string, cache: QueueCache): Promise<void> {
+  const manifestPath = path.join(queueDir, QUEUE_MANIFEST_FILE);
+  const manifestContent = await fs.readFile(manifestPath, 'utf-8');
+  const manifest = JSON.parse(manifestContent) as QueueManifest;
+
+  manifest.total_tasks = cache.counts.total;
+  manifest.pending_count = cache.counts.pending;
+  manifest.running_count = cache.counts.running;
+  manifest.completed_count = cache.counts.completed;
+  manifest.failed_count = cache.counts.failed;
+  manifest.skipped_count = cache.counts.skipped;
+  manifest.cancelled_count = cache.counts.cancelled;
+  manifest.updated_at = new Date().toISOString();
+
+  await writeQueueManifest(queueDir, manifest);
 }
 
 // ============================================================================
@@ -374,40 +617,8 @@ async function computeFileChecksum(filePath: string): Promise<string> {
  * @returns Map of task_id to ExecutionTask
  */
 export async function loadQueue(runDir: string): Promise<Map<string, ExecutionTask>> {
-  const manifest = await readManifest(runDir);
-  const queueDir = path.join(runDir, manifest.queue.queue_dir);
-  const queuePath = path.join(queueDir, QUEUE_FILE);
-
-  const tasks = new Map<string, ExecutionTask>();
-
-  try {
-    const content = await fs.readFile(queuePath, 'utf-8');
-    const lines = content
-      .trim()
-      .split('\n')
-      .filter((line) => line.length > 0);
-
-    for (const line of lines) {
-      try {
-        const parsed: unknown = JSON.parse(line);
-        const result = parseExecutionTask(parsed);
-
-        if (result.success) {
-          tasks.set(result.data.task_id, result.data);
-        }
-      } catch {
-        // Skip corrupted lines (will be caught by validation)
-      }
-    }
-  } catch (error) {
-    if (error && typeof error === 'object' && 'code' in error && error.code === 'ENOENT') {
-      // Queue file doesn't exist yet
-      return tasks;
-    }
-    throw error;
-  }
-
-  return tasks;
+  const cache = await getQueueCache(runDir);
+  return cache.tasks;
 }
 
 /**
@@ -724,8 +935,8 @@ export async function updateTaskInQueue(
     runDir,
     async () => {
       try {
-        const tasks = await loadQueue(runDir);
-        const task = tasks.get(taskId);
+        const cache = await getQueueCache(runDir);
+        const task = cache.tasks.get(taskId);
 
         if (!task) {
           return {
@@ -741,34 +952,15 @@ export async function updateTaskInQueue(
           updated_at: new Date().toISOString(),
         };
 
-        // Rebuild queue file with updated task
         const manifest = await readManifest(runDir);
         const queueDir = path.join(runDir, manifest.queue.queue_dir);
-        const queuePath = path.join(queueDir, QUEUE_FILE);
+        const updateLine = `${serializeExecutionTask(updatedTask, false)}\n`;
 
-        tasks.set(taskId, updatedTask);
+        await fs.appendFile(cache.updatesPath, updateLine, 'utf-8');
+        cache.updatesOffset += Buffer.byteLength(updateLine);
+        applyTaskUpdate(cache, updatedTask);
 
-        const lines =
-          Array.from(tasks.values())
-            .map((t) => serializeExecutionTask(t, false))
-            .join('\n') + '\n';
-
-        await fs.writeFile(queuePath, lines, 'utf-8');
-
-        // Update checksums
-        const checksum = await computeFileChecksum(queuePath);
-        const queueManifestPath = path.join(queueDir, QUEUE_MANIFEST_FILE);
-        const queueManifestContent = await fs.readFile(queueManifestPath, 'utf-8');
-        const queueManifest = JSON.parse(queueManifestContent) as QueueManifest;
-        queueManifest.queue_checksum = checksum;
-        queueManifest.updated_at = new Date().toISOString();
-
-        // Update status counts
-        if (updates.status && updates.status !== task.status) {
-          updateStatusCounts(queueManifest, task.status, updates.status);
-        }
-
-        await writeQueueManifest(queueDir, queueManifest);
+        await updateQueueManifestFromCache(queueDir, cache);
 
         // Update run manifest if needed
         if (updates.status) {
@@ -776,9 +968,9 @@ export async function updateTaskInQueue(
             ...manifest,
             queue: {
               ...manifest.queue,
-              pending_count: queueManifest.pending_count,
-              completed_count: queueManifest.completed_count,
-              failed_count: queueManifest.failed_count,
+              pending_count: cache.counts.pending,
+              completed_count: cache.counts.completed,
+              failed_count: cache.counts.failed,
             },
             timestamps: {
               ...manifest.timestamps,
@@ -804,53 +996,4 @@ export async function updateTaskInQueue(
     },
     { operation: 'update_task_in_queue' }
   );
-}
-
-/**
- * Update status counts in queue manifest
- */
-function updateStatusCounts(manifest: QueueManifest, oldStatus: string, newStatus: string): void {
-  // Decrement old status count
-  switch (oldStatus) {
-    case 'pending':
-      manifest.pending_count = Math.max(0, manifest.pending_count - 1);
-      break;
-    case 'running':
-      manifest.running_count = Math.max(0, manifest.running_count - 1);
-      break;
-    case 'completed':
-      manifest.completed_count = Math.max(0, manifest.completed_count - 1);
-      break;
-    case 'failed':
-      manifest.failed_count = Math.max(0, manifest.failed_count - 1);
-      break;
-    case 'skipped':
-      manifest.skipped_count = Math.max(0, manifest.skipped_count - 1);
-      break;
-    case 'cancelled':
-      manifest.cancelled_count = Math.max(0, manifest.cancelled_count - 1);
-      break;
-  }
-
-  // Increment new status count
-  switch (newStatus) {
-    case 'pending':
-      manifest.pending_count++;
-      break;
-    case 'running':
-      manifest.running_count++;
-      break;
-    case 'completed':
-      manifest.completed_count++;
-      break;
-    case 'failed':
-      manifest.failed_count++;
-      break;
-    case 'skipped':
-      manifest.skipped_count++;
-      break;
-    case 'cancelled':
-      manifest.cancelled_count++;
-      break;
-  }
 }
