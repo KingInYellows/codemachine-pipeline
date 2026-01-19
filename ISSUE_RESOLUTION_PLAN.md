@@ -79,11 +79,16 @@ Requires v1 execution engine (CDMCH-15 through CDMCH-21)
 
 ## Progress
 - [x] Phase 1: Stack planning complete
-- [ ] Phase 2: Stack implementation in progress
-- [ ] Phase 3: Submission complete
-- [ ] Phase 4: Final verification complete
+- [x] Phase 2: Stack implementation complete
+- [x] Phase 3: Submission complete
+- [x] Phase 4: Final verification complete
 
 ## Stack Execution
 - [x] Layer 1: log-rotation-config
 - [x] Layer 2: log-rotation-impl
-- [ ] Layer 3: log-rotation-tests
+- [x] Layer 3: log-rotation-tests
+
+## Submission
+- PR 1: https://app.graphite.com/github/pr/KingInYellows/codemachine-pipeline/88
+- PR 2: https://app.graphite.com/github/pr/KingInYellows/codemachine-pipeline/89
+- PR 3: https://app.graphite.com/github/pr/KingInYellows/codemachine-pipeline/90
