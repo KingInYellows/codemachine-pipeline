@@ -641,7 +641,7 @@ describe('CLIExecutionEngine E2E with Mock CLI', () => {
     delete process.env.MOCK_STDERR;
     delete process.env.MOCK_DELAY_MS;
 
-    await fs.rm(workspaceDir, { recursive: true, force: true });
+    if (workspaceDir) await fs.rm(workspaceDir, { recursive: true, force: true });
   });
 
   describe('CLI Availability Detection (EC-EXEC-001)', () => {
