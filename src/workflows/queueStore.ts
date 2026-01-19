@@ -829,8 +829,7 @@ export async function createQueueSnapshot(runDir: string): Promise<QueueOperatio
         // Load all tasks
         const tasks = await loadQueue(runDir);
         const snapshot = buildQueueSnapshot(manifest.feature_id, tasks);
-        const snapshotPath = path.join(queueDir, QUEUE_SNAPSHOT_FILE);
-        await writeQueueSnapshot(snapshotPath, snapshot);
+        await writeQueueSnapshot(queueDir, snapshot);
 
         // Update queue manifest
         const queueManifestPath = path.join(queueDir, QUEUE_MANIFEST_FILE);
