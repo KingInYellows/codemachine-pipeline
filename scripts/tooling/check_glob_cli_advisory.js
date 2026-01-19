@@ -80,13 +80,15 @@ function main() {
   }
 
   const lockPackages = collectLockPackages(lockData);
-  const pluginEntries = lockPackages.filter(([key]) => key.endsWith('/node_modules/@oclif/plugin-plugins'));
+  const pluginEntries = lockPackages.filter(([key]) => 
+    key === 'node_modules/@oclif/plugin-plugins' || key.endsWith('/node_modules/@oclif/plugin-plugins')
+  );
   if (pluginEntries.length > 0) {
     issues.push('package-lock.json includes @oclif/plugin-plugins (remove from dependency tree).');
   }
 
   const globEntries = lockPackages.filter(([key, value]) => {
-    if (!key.endsWith('/node_modules/glob')) {
+    if (!(key === 'node_modules/glob' || key.endsWith('/node_modules/glob'))) {
       return false;
     }
     return value && typeof value.version === 'string' && isVulnerableGlob(value.version);
