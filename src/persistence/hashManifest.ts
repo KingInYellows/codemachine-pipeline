@@ -321,7 +321,10 @@ export async function verifyHashManifest(
  * @param expectedHash - Expected SHA-256 hash
  * @returns FileHashResult indicating success/match status or specific error type
  */
-export async function verifyFileHash(filePath: string, expectedHash: string): Promise<FileHashResult> {
+export async function verifyFileHash(
+  filePath: string,
+  expectedHash: string
+): Promise<FileHashResult> {
   // Check file access first to preserve specific error codes
   // (computeFileHash wraps errors and loses the code property)
   try {

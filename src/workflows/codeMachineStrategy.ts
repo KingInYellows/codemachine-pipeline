@@ -93,7 +93,7 @@ export class CodeMachineStrategy implements ExecutionStrategy {
   }
 
   private buildSpecPath(task: ExecutionTask, context: ExecutionContext): string {
-    const taskConfig = task.config as Record<string, unknown> | undefined;
+    const taskConfig = task.config;
     if (taskConfig && typeof taskConfig['spec_path'] === 'string') {
       return path.resolve(context.workspaceDir, taskConfig['spec_path']);
     }
