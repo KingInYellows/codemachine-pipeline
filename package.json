@@ -30,7 +30,7 @@
     "test:integration": "vitest run tests/integration/resume_flow.spec.ts tests/integration/cli_status_plan.spec.ts",
     "test:smoke": "vitest run tests/integration/smoke_execution.spec.ts",
     "test:telemetry": "vitest run tests/unit/logger.spec.ts",
-    "test:jest": "jest",
+    "test:jest": "jest --runInBand",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
     "smoke": "npm run smoke:version && npm run smoke:help && npm run smoke:init",
