@@ -912,31 +912,30 @@ describe('CLIExecutionEngine E2E with Mock CLI', () => {
   });
 
   describe('Dependency Cascade Failure', () => {
-    it('should not execute dependent tasks when dependency permanently fails', async () => {
-      // Track which tasks were actually executed
+    const createFailingStrategy = (
+      name: string,
+      failingTaskId: string,
+      errorMessage: string
+    ): { strategy: ExecutionStrategy; executedTasks: string[] } => {
       const executedTasks: string[] = [];
-
-      // Create a strategy that tracks execution and fails for specific tasks
-      const trackingStrategy: ExecutionStrategy = {
-        name: 'tracking-cascade',
+      const strategy: ExecutionStrategy = {
+        name,
         canHandle: () => true,
         execute: async (task) => {
           executedTasks.push(task.task_id);
 
-          // T1 permanently fails
-          if (task.task_id === 'T1') {
+          if (task.task_id === failingTaskId) {
             return {
               success: false,
               status: 'failed',
               summary: '',
-              errorMessage: 'Permanent failure',
+              errorMessage,
               recoverable: false,
               durationMs: 50,
               artifacts: [],
             };
           }
 
-          // All other tasks succeed
           return {
             success: true,
             status: 'completed',
@@ -947,6 +946,35 @@ describe('CLIExecutionEngine E2E with Mock CLI', () => {
           };
         },
       };
+      return { strategy, executedTasks };
+    };
+
+    const createTestConfig = (repoName: string): RepoConfig => ({
+      schema_version: '1.0',
+      platform: 'github',
+      provider: { type: 'github', base_url: 'https://api.github.com' },
+      repository: {
+        owner: 'test',
+        repo: repoName,
+        default_branch: 'main',
+        visibility: 'private',
+      },
+      execution: {
+        codemachine_cli_path: MOCK_CLI_PATH,
+        default_engine: 'claude' as const,
+        workspace_dir: workspaceDir,
+        task_timeout_ms: 30000,
+        max_retries: 0,
+        retry_backoff_ms: 10,
+      },
+    });
+
+    it('should not execute dependent tasks when dependency permanently fails', async () => {
+      const { strategy: trackingStrategy, executedTasks } = createFailingStrategy(
+        'tracking-cascade',
+        'T1',
+        'Permanent failure'
+      );
 
       // Create task chain: T1 -> T2 -> T3
       const tasks = [
@@ -962,25 +990,7 @@ describe('CLIExecutionEngine E2E with Mock CLI', () => {
       ];
       await appendToQueue(runDir, tasks);
 
-      const config: RepoConfig = {
-        schema_version: '1.0',
-        platform: 'github',
-        provider: { type: 'github', base_url: 'https://api.github.com' },
-        repository: {
-          owner: 'test',
-          repo: 'cascade-test',
-          default_branch: 'main',
-          visibility: 'private',
-        },
-        execution: {
-          codemachine_cli_path: MOCK_CLI_PATH,
-          default_engine: 'claude' as const,
-          workspace_dir: workspaceDir,
-          task_timeout_ms: 30000,
-          max_retries: 0,
-          retry_backoff_ms: 10,
-        },
-      };
+      const config = createTestConfig('cascade-test');
 
       const engine = new CLIExecutionEngine({
         runDir,
@@ -1005,37 +1015,11 @@ describe('CLIExecutionEngine E2E with Mock CLI', () => {
     });
 
     it('should execute independent tasks even when one branch fails', async () => {
-      const executedTasks: string[] = [];
-
-      const trackingStrategy: ExecutionStrategy = {
-        name: 'tracking-independent',
-        canHandle: () => true,
-        execute: async (task) => {
-          executedTasks.push(task.task_id);
-
-          // T1 permanently fails
-          if (task.task_id === 'T1') {
-            return {
-              success: false,
-              status: 'failed',
-              summary: '',
-              errorMessage: 'T1 failed',
-              recoverable: false,
-              durationMs: 50,
-              artifacts: [],
-            };
-          }
-
-          return {
-            success: true,
-            status: 'completed',
-            summary: 'Done',
-            recoverable: false,
-            durationMs: 50,
-            artifacts: [],
-          };
-        },
-      };
+      const { strategy: trackingStrategy, executedTasks } = createFailingStrategy(
+        'tracking-independent',
+        'T1',
+        'T1 failed'
+      );
 
       // Create diamond DAG:
       //   T1 (fails) -> T3
@@ -1052,25 +1036,7 @@ describe('CLIExecutionEngine E2E with Mock CLI', () => {
       ];
       await appendToQueue(runDir, tasks);
 
-      const config: RepoConfig = {
-        schema_version: '1.0',
-        platform: 'github',
-        provider: { type: 'github', base_url: 'https://api.github.com' },
-        repository: {
-          owner: 'test',
-          repo: 'diamond-test',
-          default_branch: 'main',
-          visibility: 'private',
-        },
-        execution: {
-          codemachine_cli_path: MOCK_CLI_PATH,
-          default_engine: 'claude' as const,
-          workspace_dir: workspaceDir,
-          task_timeout_ms: 30000,
-          max_retries: 0,
-          retry_backoff_ms: 10,
-        },
-      };
+      const config = createTestConfig('diamond-test');
 
       const engine = new CLIExecutionEngine({
         runDir,
