@@ -910,4 +910,188 @@ describe('CLIExecutionEngine E2E with Mock CLI', () => {
       expect(validation.errors.some((e) => e.includes('CLI not available'))).toBe(true);
     });
   });
+
+  describe('Dependency Cascade Failure', () => {
+    it('should not execute dependent tasks when dependency permanently fails', async () => {
+      // Track which tasks were actually executed
+      const executedTasks: string[] = [];
+
+      // Create a strategy that tracks execution and fails for specific tasks
+      const trackingStrategy: ExecutionStrategy = {
+        name: 'tracking-cascade',
+        canHandle: () => true,
+        execute: async (task) => {
+          executedTasks.push(task.task_id);
+
+          // T1 permanently fails
+          if (task.task_id === 'T1') {
+            return {
+              success: false,
+              status: 'failed',
+              summary: '',
+              errorMessage: 'Permanent failure',
+              recoverable: false,
+              durationMs: 50,
+              artifacts: [],
+            };
+          }
+
+          // All other tasks succeed
+          return {
+            success: true,
+            status: 'completed',
+            summary: 'Completed',
+            recoverable: false,
+            durationMs: 50,
+            artifacts: [],
+          };
+        },
+      };
+
+      // Create task chain: T1 -> T2 -> T3
+      const tasks = [
+        createExecutionTask('T1', featureId, 'Base Task', 'code_generation', { maxRetries: 0 }),
+        createExecutionTask('T2', featureId, 'Depends on T1', 'code_generation', {
+          dependencyIds: ['T1'],
+          maxRetries: 0,
+        }),
+        createExecutionTask('T3', featureId, 'Depends on T2', 'code_generation', {
+          dependencyIds: ['T2'],
+          maxRetries: 0,
+        }),
+      ];
+      await appendToQueue(runDir, tasks);
+
+      const config: RepoConfig = {
+        schema_version: '1.0',
+        platform: 'github',
+        provider: { type: 'github', base_url: 'https://api.github.com' },
+        repository: {
+          owner: 'test',
+          repo: 'cascade-test',
+          default_branch: 'main',
+          visibility: 'private',
+        },
+        execution: {
+          codemachine_cli_path: MOCK_CLI_PATH,
+          default_engine: 'claude' as const,
+          workspace_dir: workspaceDir,
+          task_timeout_ms: 30000,
+          max_retries: 0,
+          retry_backoff_ms: 10,
+        },
+      };
+
+      const engine = new CLIExecutionEngine({
+        runDir,
+        config,
+        strategies: [trackingStrategy],
+      });
+
+      const result = await engine.execute();
+
+      // Only T1 should have been executed
+      expect(executedTasks).toEqual(['T1']);
+
+      // T1 permanently failed, T2 and T3 never executed
+      expect(result.permanentlyFailedTasks).toBe(1);
+      expect(result.completedTasks).toBe(0);
+
+      // Verify queue state
+      const queue = await loadQueue(runDir);
+      expect(queue.get('T1')?.status).toBe('failed');
+      expect(queue.get('T2')?.status).toBe('pending'); // Never started
+      expect(queue.get('T3')?.status).toBe('pending'); // Never started
+    });
+
+    it('should execute independent tasks even when one branch fails', async () => {
+      const executedTasks: string[] = [];
+
+      const trackingStrategy: ExecutionStrategy = {
+        name: 'tracking-independent',
+        canHandle: () => true,
+        execute: async (task) => {
+          executedTasks.push(task.task_id);
+
+          // T1 permanently fails
+          if (task.task_id === 'T1') {
+            return {
+              success: false,
+              status: 'failed',
+              summary: '',
+              errorMessage: 'T1 failed',
+              recoverable: false,
+              durationMs: 50,
+              artifacts: [],
+            };
+          }
+
+          return {
+            success: true,
+            status: 'completed',
+            summary: 'Done',
+            recoverable: false,
+            durationMs: 50,
+            artifacts: [],
+          };
+        },
+      };
+
+      // Create diamond DAG:
+      //   T1 (fails) -> T3
+      //   T2 (succeeds) -> T3
+      // T3 depends on both, so it should NOT execute
+      // T2 should execute because it has no dependencies
+      const tasks = [
+        createExecutionTask('T1', featureId, 'Fails', 'code_generation', { maxRetries: 0 }),
+        createExecutionTask('T2', featureId, 'Succeeds', 'code_generation', { maxRetries: 0 }),
+        createExecutionTask('T3', featureId, 'Depends on both', 'code_generation', {
+          dependencyIds: ['T1', 'T2'],
+          maxRetries: 0,
+        }),
+      ];
+      await appendToQueue(runDir, tasks);
+
+      const config: RepoConfig = {
+        schema_version: '1.0',
+        platform: 'github',
+        provider: { type: 'github', base_url: 'https://api.github.com' },
+        repository: {
+          owner: 'test',
+          repo: 'diamond-test',
+          default_branch: 'main',
+          visibility: 'private',
+        },
+        execution: {
+          codemachine_cli_path: MOCK_CLI_PATH,
+          default_engine: 'claude' as const,
+          workspace_dir: workspaceDir,
+          task_timeout_ms: 30000,
+          max_retries: 0,
+          retry_backoff_ms: 10,
+        },
+      };
+
+      const engine = new CLIExecutionEngine({
+        runDir,
+        config,
+        strategies: [trackingStrategy],
+      });
+
+      const result = await engine.execute();
+
+      // T1 and T2 should execute (independent), T3 should NOT (dependency on T1 failed)
+      expect(executedTasks).toContain('T1');
+      expect(executedTasks).toContain('T2');
+      expect(executedTasks).not.toContain('T3');
+
+      expect(result.permanentlyFailedTasks).toBe(1);
+      expect(result.completedTasks).toBe(1);
+
+      const queue = await loadQueue(runDir);
+      expect(queue.get('T1')?.status).toBe('failed');
+      expect(queue.get('T2')?.status).toBe('completed');
+      expect(queue.get('T3')?.status).toBe('pending'); // Blocked by T1
+    });
+  });
 });
