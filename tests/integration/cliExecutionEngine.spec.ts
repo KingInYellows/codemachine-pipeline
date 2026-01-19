@@ -1178,7 +1178,7 @@ describe('CLIExecutionEngine E2E with Mock CLI', () => {
       );
     });
 
-    it('should log warning on task failure', async () => {
+    it('should log error on permanent task failure', async () => {
       const mockLogger = {
         info: vi.fn(),
         warn: vi.fn(),
