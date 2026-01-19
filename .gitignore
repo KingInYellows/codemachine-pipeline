@@ -52,3 +52,4 @@ oclif.manifest.json
 # AI Feature Pipeline runtime
 .ai-feature-pipeline/runs/
 .ai-feature-pipeline/logs/
+ISSUE_RESOLUTION_PLAN.md
