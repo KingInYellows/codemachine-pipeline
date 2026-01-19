@@ -9,7 +9,7 @@ export type ValidationCommandType = z.infer<typeof ValidationCommandTypeSchema>;
 /**
  * Optional template context applied when rendering validation commands.
  */
-const TemplateContextSchema = z.record(z.string());
+const TemplateContextSchema = z.record(z.string(), z.string());
 export type ValidationTemplateContext = z.infer<typeof TemplateContextSchema>;
 
 /**
@@ -19,7 +19,7 @@ export const ValidationCommandConfigSchema = z.object({
   type: ValidationCommandTypeSchema,
   command: z.string().min(1),
   cwd: z.string().default('.'),
-  env: z.record(z.string()).optional(),
+  env: z.record(z.string(), z.string()).optional(),
   required: z.boolean().default(true),
   timeout_ms: z.number().int().min(1000).max(600000).default(120000),
   max_retries: z.number().int().min(0).max(10).default(3),

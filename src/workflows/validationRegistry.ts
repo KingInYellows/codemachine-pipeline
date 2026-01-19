@@ -85,7 +85,7 @@ export const ValidationAttemptSchema = z.object({
   /** Error summary (extracted from stderr) */
   error_summary: z.string().optional(),
   /** Additional metadata */
-  metadata: z.record(z.unknown()).optional(),
+  metadata: z.record(z.string(), z.unknown()).optional(),
 });
 
 export type ValidationAttempt = z.infer<typeof ValidationAttemptSchema>;
@@ -217,7 +217,7 @@ export async function loadValidationRegistry(
 
     if (!result.success) {
       throw new Error(
-        `Invalid registry schema: ${result.error.errors.map((e) => `${e.path.join('.')}: ${e.message}`).join('; ')}`
+        `Invalid registry schema: ${result.error.issues.map((e) => `${e.path.join('.')}: ${e.message}`).join('; ')}`
       );
     }
 
@@ -472,7 +472,7 @@ async function loadValidationLedger(runDir: string): Promise<ValidationLedger> {
 
     if (!result.success) {
       throw new Error(
-        `Invalid ledger schema: ${result.error.errors.map((e) => `${e.path.join('.')}: ${e.message}`).join('; ')}`
+        `Invalid ledger schema: ${result.error.issues.map((e) => `${e.path.join('.')}: ${e.message}`).join('; ')}`
       );
     }
 

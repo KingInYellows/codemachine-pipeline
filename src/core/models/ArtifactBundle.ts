@@ -26,7 +26,7 @@ export const ArtifactBundleSchema = z
     delivery_target: z.string().optional(),
     cli_version: z.string().regex(/^[0-9]+\.[0-9]+\.[0-9]+$/, 'Invalid semver format'),
     created_at: z.string().datetime(),
-    metadata: z.record(z.unknown()).optional(),
+    metadata: z.record(z.string(), z.unknown()).optional(),
   })
   .strict();
 
@@ -39,7 +39,7 @@ export function parseArtifactBundle(json: unknown) {
   }
   return {
     success: false as const,
-    errors: result.error.errors.map((err) => ({
+    errors: result.error.issues.map((err) => ({
       path: err.path.join('.') || 'root',
       message: err.message,
     })),

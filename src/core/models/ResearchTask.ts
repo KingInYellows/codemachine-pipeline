@@ -59,7 +59,7 @@ const ResearchResultSchema = z.object({
   /** Sources consulted for this result */
   sources_consulted: z.array(ResearchSourceSchema).default([]),
   /** Optional result metadata */
-  metadata: z.record(z.unknown()).optional(),
+  metadata: z.record(z.string(), z.unknown()).optional(),
 });
 
 export type ResearchResult = z.infer<typeof ResearchResultSchema>;
@@ -112,7 +112,7 @@ export const ResearchTaskSchema = z
     /** ISO 8601 timestamp when task completed */
     completed_at: z.string().datetime().nullable().optional(),
     /** Optional task metadata */
-    metadata: z.record(z.unknown()).optional(),
+    metadata: z.record(z.string(), z.unknown()).optional(),
   })
   .strict();
 
@@ -148,7 +148,7 @@ export function parseResearchTask(json: unknown):
 
   return {
     success: false,
-    errors: result.error.errors.map((err) => ({
+    errors: result.error.issues.map((err) => ({
       path: err.path.join('.') || 'root',
       message: err.message,
     })),

@@ -43,7 +43,7 @@ const TaskNodeSchema = z.object({
   /** Estimated execution time in minutes */
   estimated_duration_minutes: z.number().int().nonnegative().optional(),
   /** Task-specific configuration */
-  config: z.record(z.unknown()).optional(),
+  config: z.record(z.string(), z.unknown()).optional(),
 });
 
 export type TaskNode = z.infer<typeof TaskNodeSchema>;
@@ -91,7 +91,7 @@ export const PlanArtifactSchema = z
       .regex(/^[a-f0-9]{64}$/, 'Invalid SHA-256 hash format')
       .optional(),
     /** Optional plan-level metadata */
-    metadata: z.record(z.unknown()).optional(),
+    metadata: z.record(z.string(), z.unknown()).optional(),
   })
   .strict();
 
@@ -127,7 +127,7 @@ export function parsePlanArtifact(json: unknown):
 
   return {
     success: false,
-    errors: result.error.errors.map((err) => ({
+    errors: result.error.issues.map((err) => ({
       path: err.path.join('.') || 'root',
       message: err.message,
     })),

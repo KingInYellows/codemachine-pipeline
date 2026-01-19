@@ -190,7 +190,7 @@ export const AgentManifestSchema = z
       .optional(),
     errorTaxonomy: ErrorTaxonomySchema,
     executionContexts: ExecutionContextsSchema,
-    metadata: z.record(z.unknown()).optional(),
+    metadata: z.record(z.string(), z.unknown()).optional(),
   })
   .strict();
 
@@ -237,7 +237,7 @@ export function parseAgentManifest(json: unknown): ManifestValidationResult {
 
   return {
     success: false,
-    errors: result.error.errors.map((err) => ({
+    errors: result.error.issues.map((err) => ({
       path: err.path.join('.') || 'root',
       message: err.message,
     })),

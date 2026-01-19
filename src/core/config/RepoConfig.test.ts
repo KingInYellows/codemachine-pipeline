@@ -60,7 +60,7 @@ describe('RepoConfigSchema', () => {
     const result = RepoConfigSchema.safeParse(config);
     expect(result.success).toBe(false);
     if (!result.success) {
-      expect(result.error.errors[0].path).toContain('schema_version');
+      expect(result.error.issues[0].path).toContain('schema_version');
     }
   });
 

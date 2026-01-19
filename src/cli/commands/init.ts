@@ -609,7 +609,7 @@ export default class Init extends Command {
     const parseResult = RepoConfigSchema.safeParse(config);
 
     if (!parseResult.success) {
-      const errors: ValidationError[] = parseResult.error.errors.map((issue: ZodIssue) => ({
+      const errors: ValidationError[] = parseResult.error.issues.map((issue: ZodIssue) => ({
         path: issue.path.join('.') || 'root',
         message: issue.message,
       }));
