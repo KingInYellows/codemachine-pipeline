@@ -417,66 +417,93 @@ export async function runCodeMachine(
 
     childProcess.on('close', (code, signal) => {
       clearTimeout(timeoutHandle);
-      logStream?.end();
-      logQueue.catch(() => undefined);
+      const finalize = async (): Promise<void> => {
+        try {
+          await logQueue;
+        } catch {
+          // Ignore log queue errors on shutdown
+        }
 
-      const stdout = Buffer.concat(stdoutChunks).toString('utf-8');
-      const stderr = Buffer.concat(stderrChunks).toString('utf-8');
-      const durationMs = Date.now() - startTime;
+        if (logStream) {
+          await new Promise<void>((flushResolve) => {
+            logStream?.end(() => flushResolve());
+          });
+        }
 
-      let exitCode: number;
-      if (timedOut) {
-        exitCode = EXIT_CODES.TIMEOUT;
-      } else if (signal === 'SIGKILL') {
-        exitCode = EXIT_CODES.SIGKILL;
-      } else {
-        exitCode = code ?? EXIT_CODES.FAILURE;
-      }
+        const stdout = Buffer.concat(stdoutChunks).toString('utf-8');
+        const stderr = Buffer.concat(stderrChunks).toString('utf-8');
+        const durationMs = Date.now() - startTime;
 
-      if (timedOut) {
-        options.logger?.warn('CodeMachine execution timed out', {
-          task_id: options.taskId,
-          timeout_ms: options.timeoutMs,
-          duration_ms: durationMs,
+        let exitCode: number;
+        if (timedOut) {
+          exitCode = EXIT_CODES.TIMEOUT;
+        } else if (signal === 'SIGKILL') {
+          exitCode = EXIT_CODES.SIGKILL;
+        } else {
+          exitCode = code ?? EXIT_CODES.FAILURE;
+        }
+
+        if (timedOut) {
+          options.logger?.warn('CodeMachine execution timed out', {
+            task_id: options.taskId,
+            timeout_ms: options.timeoutMs,
+            duration_ms: durationMs,
+            killed,
+          });
+        } else {
+          options.logger?.info('CodeMachine execution completed', {
+            task_id: options.taskId,
+            exit_code: exitCode,
+            duration_ms: durationMs,
+          });
+        }
+
+        resolve({
+          taskId: options.taskId,
+          exitCode,
+          stdout,
+          stderr: timedOut ? `${stderr}\n\nExecution timed out after ${options.timeoutMs}ms` : stderr,
+          durationMs,
+          timedOut,
           killed,
         });
-      } else {
-        options.logger?.info('CodeMachine execution completed', {
-          task_id: options.taskId,
-          exit_code: exitCode,
-          duration_ms: durationMs,
-        });
-      }
+      };
 
-      resolve({
-        taskId: options.taskId,
-        exitCode,
-        stdout,
-        stderr: timedOut ? `${stderr}\n\nExecution timed out after ${options.timeoutMs}ms` : stderr,
-        durationMs,
-        timedOut,
-        killed,
-      });
+      void finalize();
     });
 
     childProcess.on('error', (error) => {
       clearTimeout(timeoutHandle);
-      logStream?.end();
+      const finalize = async (): Promise<void> => {
+        try {
+          await logQueue;
+        } catch {
+          // Ignore log queue errors on shutdown
+        }
 
-      options.logger?.error('CodeMachine execution error', {
-        task_id: options.taskId,
-        error: error.message,
-      });
+        if (logStream) {
+          await new Promise<void>((flushResolve) => {
+            logStream?.end(() => flushResolve());
+          });
+        }
 
-      resolve({
-        taskId: options.taskId,
-        exitCode: EXIT_CODES.FAILURE,
-        stdout: Buffer.concat(stdoutChunks).toString('utf-8'),
-        stderr: `Execution error: ${error.message}`,
-        durationMs: Date.now() - startTime,
-        timedOut: false,
-        killed: false,
-      });
+        options.logger?.error('CodeMachine execution error', {
+          task_id: options.taskId,
+          error: error.message,
+        });
+
+        resolve({
+          taskId: options.taskId,
+          exitCode: EXIT_CODES.FAILURE,
+          stdout: Buffer.concat(stdoutChunks).toString('utf-8'),
+          stderr: `Execution error: ${error.message}`,
+          durationMs: Date.now() - startTime,
+          timedOut: false,
+          killed: false,
+        });
+      };
+
+      void finalize();
     });
   });
 }
