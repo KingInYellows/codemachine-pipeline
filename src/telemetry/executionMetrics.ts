@@ -51,6 +51,11 @@ export enum ExecutionTaskType {
 }
 
 /**
+ * CodeMachine execution status
+ */
+export type CodeMachineExecutionStatus = 'success' | 'failure' | 'timeout';
+
+/**
  * Diff statistics summary
  */
 export interface DiffStats {
@@ -121,6 +126,11 @@ export const ExecutionMetrics = {
   // Agent cost tracking
   AGENT_COST_TOKENS_TOTAL: 'agent_cost_tokens_total',
   AGENT_COST_USD_TOTAL: 'agent_cost_usd_total',
+
+  // CodeMachine execution metrics
+  CODEMACHINE_EXECUTION_TOTAL: 'codemachine_execution_total',
+  CODEMACHINE_EXECUTION_DURATION_MS: 'codemachine_execution_duration_ms',
+  CODEMACHINE_RETRY_TOTAL: 'codemachine_retry_total',
 } as const;
 
 /**
@@ -205,6 +215,50 @@ export class ExecutionMetricsHelper {
     } catch (error) {
       // Never throw from instrumentation code
       console.error('[ExecutionMetrics] Failed to record task lifecycle:', error);
+    }
+  }
+
+  /**
+   * Record CodeMachine execution metrics
+   */
+  recordCodeMachineExecution(
+    engine: string,
+    status: CodeMachineExecutionStatus,
+    durationMs: number
+  ): void {
+    try {
+      this.metrics.increment(
+        ExecutionMetrics.CODEMACHINE_EXECUTION_TOTAL,
+        { ...this.defaultLabels, engine, status },
+        1,
+        'Total CodeMachine executions by engine and status'
+      );
+
+      this.metrics.observe(
+        ExecutionMetrics.CODEMACHINE_EXECUTION_DURATION_MS,
+        durationMs,
+        { ...this.defaultLabels, engine },
+        LATENCY_BUCKETS,
+        'CodeMachine execution duration distribution in milliseconds'
+      );
+    } catch (error) {
+      console.error('[ExecutionMetrics] Failed to record CodeMachine execution:', error);
+    }
+  }
+
+  /**
+   * Record CodeMachine retry count
+   */
+  recordCodeMachineRetry(engine: string): void {
+    try {
+      this.metrics.increment(
+        ExecutionMetrics.CODEMACHINE_RETRY_TOTAL,
+        { ...this.defaultLabels, engine },
+        1,
+        'Total CodeMachine retries by engine'
+      );
+    } catch (error) {
+      console.error('[ExecutionMetrics] Failed to record CodeMachine retry:', error);
     }
   }
 

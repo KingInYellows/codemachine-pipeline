@@ -1,67 +1,84 @@
 # Issue Resolution Plan
 
 ## Selected Issue
-- ID: 6
-- Title: Update outdated major dependencies
-- Labels: maintenance
-- Selected via: Priority 3 (oldest open issue; skipping #3 fixed-pending-review)
-- Source: gh issue list --search "sort:created-asc"
+- ID: 31
+- Title: Phase 3.4: Add CodeMachine execution metrics to telemetry
+- Labels: Backend, Feature
 
-## Status
-- Phase 0: Selected issue
-- Phase 1: Stack plan created
-- Phase 2: Complete
-- Phase 3: Complete
-- Phase 4: Complete
+## Source
+```
+## Overview
 
-## Stack Progress
-- Layer 1 (chore/eslint-9-migration): Complete
-- Layer 2 (chore/zod-4-upgrade): Complete
-- Layer 3 (chore/jest-30-upgrade): Complete
+Add CodeMachine-specific metrics to ExecutionMetricsHelper.
 
-## Discovery Notes
-- Issue requires sequencing: ESLint 9 migration, then Zod 4, then Jest 30.
-- Current ESLint config uses .eslintrc.json with @typescript-eslint parser/plugin.
+## Implementation
 
-<stack_plan>
+**File:** `src/telemetry/executionMetrics.ts`
+
+Add new metrics:
+
+* `codemachine_execution_total{engine, status}` - Counter
+* `codemachine_execution_duration_ms{engine}` - Histogram
+* `codemachine_retry_total{engine}` - Counter
+
+```typescript
+recordCodeMachineExecution(
+  engine: string,
+  status: 'success' | 'failure' | 'timeout',
+  durationMs: number,
+): void;
+
+recordCodeMachineRetry(engine: string): void;
+```
+
+## PRD Requirements
+
+Implements: NFR-OBS-001, success metrics from PRD
+
+## Acceptance Criteria
+
+- [ ] Metrics emitted for each execution
+- [ ] Duration histogram populated
+- [ ] Retry counter incremented
+- [ ] Metrics exposed via existing telemetry system
+```
+
+## Stack Plan
+- Status: PLANNED
+- Stack Strategy:
+```json
 {
-  "issue_id": 6,
-  "estimated_complexity": "MEDIUM",
+  "issue_id": 31,
+  "estimated_complexity": "LOW",
   "stack_strategy": [
     {
       "order": 1,
-      "branch": "chore/eslint-9-migration",
-      "intent": "Upgrade ESLint 9 and related tooling (eslint-config-prettier, @typescript-eslint, @types/node) and adjust lint config.",
-      "files": [
-        "package.json",
-        "package-lock.json",
-        ".eslintrc.json",
-        "tsconfig.eslint.json"
+      "branch": "codemachine-metrics",
+      "intent": "feat: add codemachine execution metrics instrumentation",
+      "changes": [
+        "Add CodeMachine metric names to ExecutionMetrics",
+        "Add recordCodeMachineExecution and recordCodeMachineRetry helpers"
       ]
     },
     {
       "order": 2,
-      "branch": "chore/zod-4-upgrade",
-      "intent": "Upgrade zod to 4.x and adapt schema usage/tests.",
-      "files": [
-        "package.json",
-        "package-lock.json",
-        "src/**",
-        "tests/**"
-      ]
-    },
-    {
-      "order": 3,
-      "branch": "chore/jest-30-upgrade",
-      "intent": "Upgrade jest/ts-jest/@types/jest and adjust Jest config/tests.",
-      "files": [
-        "package.json",
-        "package-lock.json",
-        "jest.config.js",
-        "test/**",
-        "tests/**"
-      ]
+      "branch": "codemachine-metrics-tests",
+      "intent": "test: cover codemachine metrics emission",
+      "changes": [
+        "Add unit tests for new CodeMachine metrics in executionMetrics.spec.ts"
+      ],
+      "depends_on": "codemachine-metrics"
     }
   ]
 }
-</stack_plan>
+```
+
+## Progress
+- [x] Phase 1: Stack planning complete
+- [ ] Phase 2: Stack implementation in progress
+- [ ] Phase 3: Submission complete
+- [ ] Phase 4: Final verification complete
+
+## Stack Execution
+- [x] Layer 1: codemachine-metrics
+- [ ] Layer 2: codemachine-metrics-tests
