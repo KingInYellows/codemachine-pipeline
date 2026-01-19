@@ -71,7 +71,7 @@ const behaviors = {
 
 async function run() {
   // Apply predefined behavior if specified
-  const config = behaviors[behavior] || {
+  const config = Object.hasOwn(behaviors, behavior) ? behaviors[behavior] : {
     exitCode,
     stdout: mockStdout,
     stderr: mockStderr,
