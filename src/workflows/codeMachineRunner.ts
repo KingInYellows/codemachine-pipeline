@@ -127,7 +127,18 @@ export async function validateCliAvailability(
 function filterEnvironment(): Record<string, string> {
   const filtered: Record<string, string> = {};
 
-  const alwaysAllowed = ['PATH', 'HOME', 'USER', 'SHELL', 'TERM', 'LANG', 'LC_ALL', 'NODE_ENV', 'DEBUG', 'LOG_LEVEL'];
+  const alwaysAllowed = [
+    'PATH',
+    'HOME',
+    'USER',
+    'SHELL',
+    'TERM',
+    'LANG',
+    'LC_ALL',
+    'NODE_ENV',
+    'DEBUG',
+    'LOG_LEVEL',
+  ];
 
   for (const key of alwaysAllowed) {
     const value = process.env[key];

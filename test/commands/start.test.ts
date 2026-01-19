@@ -329,5 +329,4 @@ describe('start command', () => {
       expect(output).toContain('--dry-run');
     });
   });
-
 });

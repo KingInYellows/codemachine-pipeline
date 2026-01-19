@@ -11,7 +11,7 @@ import { ExecutionTaskType } from '../telemetry/executionMetrics.js';
 
 type TaskTypeString = ExecutionTask['task_type'];
 
-const TASK_TYPE_TO_ENUM: Record<TaskTypeString | string, ExecutionTaskType> = {
+const TASK_TYPE_TO_ENUM: Record<string, ExecutionTaskType> = {
   code_generation: ExecutionTaskType.CODE_GENERATION,
   testing: ExecutionTaskType.TESTING,
   pr_creation: ExecutionTaskType.PR_CREATION,
