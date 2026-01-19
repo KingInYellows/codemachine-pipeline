@@ -334,6 +334,111 @@ describe('CLIExecutionEngine Integration', () => {
       expect(queue.get('T1')?.status).toBe('failed');
       expect(queue.get('T1')?.retry_count).toBeGreaterThanOrEqual(2);
     });
+
+    it('should execute independent tasks in parallel when enabled', async () => {
+      const tasks = [
+        createExecutionTask('T1', featureId, 'Task 1', 'code_generation'),
+        createExecutionTask('T2', featureId, 'Task 2', 'code_generation'),
+        createExecutionTask('T3', featureId, 'Task 3', 'code_generation'),
+      ];
+      await appendToQueue(runDir, tasks);
+
+      let activeCount = 0;
+      let sawParallel = false;
+
+      const parallelStrategy: ExecutionStrategy = {
+        name: 'parallel',
+        canHandle: () => true,
+        execute: async () => {
+          activeCount += 1;
+          if (activeCount > 1) {
+            sawParallel = true;
+          }
+          await new Promise((resolve) => setTimeout(resolve, 200));
+          activeCount -= 1;
+          return createSuccessResult();
+        },
+      };
+
+      const configWithParallel: RepoConfig = {
+        ...baseConfig,
+        execution: {
+          codemachine_cli_path: 'codemachine',
+          default_engine: 'claude',
+          workspace_dir: runDir,
+          task_timeout_ms: 30000,
+          max_parallel_tasks: 2,
+          max_retries: 3,
+          retry_backoff_ms: 10,
+        },
+      };
+
+      const engine = new CLIExecutionEngine({
+        runDir,
+        config: configWithParallel,
+        strategies: [parallelStrategy],
+      });
+
+      const result = await engine.execute();
+
+      expect(result.completedTasks).toBe(3);
+      expect(sawParallel).toBe(true);
+    });
+
+    it('should wait for dependencies even with parallel execution', async () => {
+      const tasks = [
+        createExecutionTask('T1', featureId, 'Task 1', 'code_generation'),
+        createExecutionTask('T2', featureId, 'Task 2', 'code_generation'),
+        createExecutionTask('T3', featureId, 'Task 3', 'code_generation', {
+          dependencyIds: ['T1'],
+        }),
+      ];
+      await appendToQueue(runDir, tasks);
+
+      const startTimes = new Map<string, number>();
+      const endTimes = new Map<string, number>();
+
+      const trackingStrategy: ExecutionStrategy = {
+        name: 'tracking-parallel',
+        canHandle: () => true,
+        execute: async (task) => {
+          startTimes.set(task.task_id, Date.now());
+          await new Promise((resolve) => setTimeout(resolve, 15));
+          endTimes.set(task.task_id, Date.now());
+          return createSuccessResult();
+        },
+      };
+
+      const configWithParallel: RepoConfig = {
+        ...baseConfig,
+        execution: {
+          codemachine_cli_path: 'codemachine',
+          default_engine: 'claude',
+          workspace_dir: runDir,
+          task_timeout_ms: 30000,
+          max_parallel_tasks: 2,
+          max_retries: 3,
+          retry_backoff_ms: 10,
+        },
+      };
+
+      const engine = new CLIExecutionEngine({
+        runDir,
+        config: configWithParallel,
+        strategies: [trackingStrategy],
+      });
+
+      const result = await engine.execute();
+
+      expect(result.completedTasks).toBe(3);
+      const t1End = endTimes.get('T1');
+      const t3Start = startTimes.get('T3');
+      expect(t1End).toBeDefined();
+      expect(t3Start).toBeDefined();
+      if (t1End && t3Start) {
+        expect(t3Start).toBeGreaterThanOrEqual(t1End);
+      }
+    });
   });
 
   describe('executeTask', () => {
