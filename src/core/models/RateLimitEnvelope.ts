@@ -41,7 +41,7 @@ export const RateLimitEnvelopeSchema = z
     /** ISO 8601 timestamp when envelope was last updated */
     updated_at: z.string().datetime(),
     /** Optional envelope metadata */
-    metadata: z.record(z.unknown()).optional(),
+    metadata: z.record(z.string(), z.unknown()).optional(),
   })
   .strict();
 
@@ -74,7 +74,7 @@ export function parseRateLimitEnvelope(json: unknown):
 
   return {
     success: false,
-    errors: result.error.errors.map((err) => ({
+    errors: result.error.issues.map((err) => ({
       path: err.path.join('.') || 'root',
       message: err.message,
     })),

@@ -81,7 +81,7 @@ const ProvenanceDataSchema = z.object({
   /** Branch name if applicable */
   branch: z.string().optional(),
   /** Additional provenance metadata */
-  metadata: z.record(z.unknown()).optional(),
+  metadata: z.record(z.string(), z.unknown()).optional(),
 });
 
 export type ProvenanceData = z.infer<typeof ProvenanceDataSchema>;
@@ -101,7 +101,7 @@ export const ContextDocumentSchema = z
     /** ISO 8601 timestamp when context was last updated */
     updated_at: z.string().datetime(),
     /** Map of file paths to context file records */
-    files: z.record(ContextFileRecordSchema),
+    files: z.record(z.string(), ContextFileRecordSchema),
     /** Context summaries */
     summaries: z.array(ContextSummarySchema).default([]),
     /** Total token cost for all context */
@@ -109,7 +109,7 @@ export const ContextDocumentSchema = z
     /** Provenance information */
     provenance: ProvenanceDataSchema,
     /** Optional context-level metadata */
-    metadata: z.record(z.unknown()).optional(),
+    metadata: z.record(z.string(), z.unknown()).optional(),
   })
   .strict();
 
@@ -142,7 +142,7 @@ export function parseContextDocument(json: unknown):
 
   return {
     success: false,
-    errors: result.error.errors.map((err) => ({
+    errors: result.error.issues.map((err) => ({
       path: err.path.join('.') || 'root',
       message: err.message,
     })),

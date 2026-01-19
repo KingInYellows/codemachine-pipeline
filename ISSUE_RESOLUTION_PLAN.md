@@ -10,13 +10,13 @@
 ## Status
 - Phase 0: Selected issue
 - Phase 1: Stack plan created
-- Phase 2: In progress (layer 2)
+- Phase 2: In progress (layer 3)
 - Phase 3: Pending submission
 - Phase 4: Pending verification
 
 ## Stack Progress
 - Layer 1 (chore/eslint-9-migration): Complete
-- Layer 2 (chore/zod-4-upgrade): Pending
+- Layer 2 (chore/zod-4-upgrade): Complete
 - Layer 3 (chore/jest-30-upgrade): Pending
 
 ## Discovery Notes

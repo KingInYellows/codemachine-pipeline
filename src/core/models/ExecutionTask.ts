@@ -73,7 +73,7 @@ const CostTrackingSchema = z.object({
   /** Total cost in USD */
   total_usd: z.number().nonnegative().default(0),
   /** Provider-specific cost breakdown */
-  breakdown: z.record(z.number().nonnegative()).optional(),
+  breakdown: z.record(z.string(), z.number().nonnegative()).optional(),
   /** Number of API calls made */
   api_calls: z.number().int().nonnegative().default(0),
   /** Tokens consumed (input + output) */
@@ -120,7 +120,7 @@ export const ExecutionTaskSchema = z
     /** Current task status */
     status: ExecutionTaskStatusSchema,
     /** Task-specific configuration or parameters */
-    config: z.record(z.unknown()).optional(),
+    config: z.record(z.string(), z.unknown()).optional(),
     /** Assigned agent or executor identifier */
     assigned_agent: z.string().optional(),
     /** Task dependency IDs (must complete before this task starts) */
@@ -148,7 +148,7 @@ export const ExecutionTaskSchema = z
     /** ISO 8601 timestamp when task completed */
     completed_at: z.string().datetime().nullable().optional(),
     /** Optional task metadata */
-    metadata: z.record(z.unknown()).optional(),
+    metadata: z.record(z.string(), z.unknown()).optional(),
   })
   .strict();
 
@@ -184,7 +184,7 @@ export function parseExecutionTask(json: unknown):
 
   return {
     success: false,
-    errors: result.error.errors.map((err) => ({
+    errors: result.error.issues.map((err) => ({
       path: err.path.join('.') || 'root',
       message: err.message,
     })),

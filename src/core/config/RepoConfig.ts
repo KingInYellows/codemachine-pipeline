@@ -204,7 +204,7 @@ export type FeatureFlags = z.infer<typeof FeatureFlagsSchema>;
 
 const ValidationSettingsSchema = z.object({
   commands: z.array(ValidationCommandConfigSchema).min(1),
-  template_context: z.record(z.string()).optional(),
+  template_context: z.record(z.string(), z.string()).optional(),
 });
 
 export type ValidationSettings = z.infer<typeof ValidationSettingsSchema>;
@@ -348,7 +348,7 @@ export function loadRepoConfig(configPath: string): ValidationResult {
     const parseResult = RepoConfigSchema.safeParse(rawConfig);
 
     if (!parseResult.success) {
-      const errors: ValidationError[] = parseResult.error.errors.map((err) => {
+      const errors: ValidationError[] = parseResult.error.issues.map((err) => {
         const path = err.path.join('.');
         const suggestion = generateSuggestion(path, err.message);
 

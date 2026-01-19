@@ -48,7 +48,7 @@ const ArtifactRecordSchema = z.object({
   /** ISO 8601 timestamp when artifact was created */
   timestamp: z.string().datetime(),
   /** Optional artifact-specific metadata */
-  metadata: z.record(z.unknown()).optional(),
+  metadata: z.record(z.string(), z.unknown()).optional(),
 });
 
 export type ArtifactRecord = z.infer<typeof ArtifactRecordSchema>;
@@ -68,9 +68,9 @@ export const RunArtifactSchema = z
     /** ISO 8601 timestamp when collection was last updated */
     updated_at: z.string().datetime(),
     /** Map of artifact IDs to artifact records */
-    artifacts: z.record(ArtifactRecordSchema),
+    artifacts: z.record(z.string(), ArtifactRecordSchema),
     /** Optional collection-level metadata */
-    metadata: z.record(z.unknown()).optional(),
+    metadata: z.record(z.string(), z.unknown()).optional(),
   })
   .strict();
 
@@ -106,7 +106,7 @@ export function parseRunArtifact(json: unknown):
 
   return {
     success: false,
-    errors: result.error.errors.map((err) => ({
+    errors: result.error.issues.map((err) => ({
       path: err.path.join('.') || 'root',
       message: err.message,
     })),

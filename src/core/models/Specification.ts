@@ -163,7 +163,7 @@ export const SpecificationSchema = z
     /** ISO 8601 timestamp when specification was approved */
     approved_at: z.string().datetime().nullable().optional(),
     /** Optional specification metadata */
-    metadata: z.record(z.unknown()).optional(),
+    metadata: z.record(z.string(), z.unknown()).optional(),
   })
   .strict();
 
@@ -199,7 +199,7 @@ export function parseSpecification(json: unknown):
 
   return {
     success: false,
-    errors: result.error.errors.map((err) => ({
+    errors: result.error.issues.map((err) => ({
       path: err.path.join('.') || 'root',
       message: err.message,
     })),

@@ -184,7 +184,7 @@ export const FeatureSchema = z
     /** Rate limit tracking references */
     rate_limits: RateLimitReferencesSchema.optional(),
     /** Extensible metadata for custom fields */
-    metadata: z.record(z.unknown()).optional(),
+    metadata: z.record(z.string(), z.unknown()).optional(),
   })
   .strict();
 
@@ -220,7 +220,7 @@ export function parseFeature(json: unknown):
 
   return {
     success: false,
-    errors: result.error.errors.map((err) => ({
+    errors: result.error.issues.map((err) => ({
       path: err.path.join('.') || 'root',
       message: err.message,
     })),

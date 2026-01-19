@@ -68,7 +68,7 @@ export const ApprovalRecordSchema = z
     /** Rationale or comments for approval decision */
     rationale: z.string().optional(),
     /** Optional approval metadata */
-    metadata: z.record(z.unknown()).optional(),
+    metadata: z.record(z.string(), z.unknown()).optional(),
   })
   .strict();
 
@@ -101,7 +101,7 @@ export function parseApprovalRecord(json: unknown):
 
   return {
     success: false,
-    errors: result.error.errors.map((err) => ({
+    errors: result.error.issues.map((err) => ({
       path: err.path.join('.') || 'root',
       message: err.message,
     })),

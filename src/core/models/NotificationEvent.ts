@@ -22,7 +22,7 @@ export const NotificationEventSchema = z
     delivered_at: z.string().datetime().nullable().optional(),
     error_message: z.string().optional(),
     created_at: z.string().datetime(),
-    metadata: z.record(z.unknown()).optional(),
+    metadata: z.record(z.string(), z.unknown()).optional(),
   })
   .strict();
 
@@ -35,7 +35,7 @@ export function parseNotificationEvent(json: unknown) {
   }
   return {
     success: false as const,
-    errors: result.error.errors.map((err) => ({
+    errors: result.error.issues.map((err) => ({
       path: err.path.join('.') || 'root',
       message: err.message,
     })),
