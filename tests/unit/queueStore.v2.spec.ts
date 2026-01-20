@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 import * as os from 'node:os';
@@ -96,6 +96,21 @@ describe('queueStore V2 Integration', () => {
   // ==========================================================================
 
   describe('WAL Integration', () => {
+    it('should append created tasks to legacy queue.jsonl for validators/tools', async () => {
+      const plan = createPlan([{ id: 'task-1' }, { id: 'task-2' }]);
+      await initializeQueueFromPlan(runDir, plan);
+
+      const queueDir = path.join(runDir, 'queue');
+      const queuePath = path.join(queueDir, 'queue.jsonl');
+      const content = await fs.readFile(queuePath, 'utf-8');
+      const lines = content.trim().split('\n').filter((line) => line.length > 0);
+
+      expect(lines.length).toBeGreaterThanOrEqual(2);
+      const ids = lines.map((line) => (JSON.parse(line) as { task_id?: string }).task_id);
+      expect(ids).toContain('task-1');
+      expect(ids).toContain('task-2');
+    });
+
     it('should append updates to WAL file (queue_operations.log)', async () => {
       const plan = createPlan([{ id: 'task-1' }]);
       await initializeQueueFromPlan(runDir, plan);
