@@ -7,8 +7,21 @@ on:
     branches: [main, master]
 
 jobs:
+  optimize_ci:
+    runs-on: self-hosted
+    outputs:
+      skip: ${{ steps.check_skip.outputs.skip }}
+    steps:
+      - name: Optimize CI
+        id: check_skip
+        uses: withgraphite/graphite-ci-action@main
+        with:
+          graphite_token: ${{ secrets.GRAPHITE_TOKEN }}
+
   test:
     name: Test and Lint
+    needs: optimize_ci
+    if: needs.optimize_ci.outputs.skip == 'false'
     runs-on: self-hosted
 
     steps:
@@ -53,6 +66,8 @@ jobs:
 
   docker:
     name: Docker Build
+    needs: optimize_ci
+    if: needs.optimize_ci.outputs.skip == 'false'
     runs-on: self-hosted
 
     steps:
