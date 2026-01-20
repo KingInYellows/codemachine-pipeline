@@ -1,6 +1,7 @@
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
-import { spawn } from 'node:child_process';
+import { execFile } from 'node:child_process';
+import { promisify } from 'node:util';
 import type { StructuredLogger } from '../telemetry/logger';
 import type { MetricsCollector } from '../telemetry/metrics';
 import { StandardMetrics } from '../telemetry/metrics';
@@ -525,7 +526,91 @@ async function executeValidationCommand(
 }
 
 /**
- * Execute shell command with timeout
+ * Shell metacharacters that indicate shell interpretation is required.
+ * These characters can enable command injection if user input contains them.
+ */
+const SHELL_METACHARACTERS = /[|&;`$<>(){}[\]!*?~#]/;
+
+/**
+ * Parse command string into executable and arguments array.
+ * Handles quoted arguments (single and double quotes) properly.
+ *
+ * Security: This parser extracts arguments without shell interpretation,
+ * preventing command injection via metacharacters.
+ *
+ * @param command - Command string to parse (e.g., "npm run lint -- --fix")
+ * @returns Tuple of [executable, args[]]
+ */
+function parseCommandString(command: string): [string, string[]] {
+  const parts: string[] = [];
+  let current = '';
+  let inSingleQuote = false;
+  let inDoubleQuote = false;
+  let escaped = false;
+
+  for (let i = 0; i < command.length; i++) {
+    const char = command[i];
+
+    if (escaped) {
+      current += char;
+      escaped = false;
+      continue;
+    }
+
+    if (char === '\\' && (inSingleQuote || inDoubleQuote)) {
+      escaped = true;
+      continue;
+    }
+
+    if (char === "'" && !inDoubleQuote) {
+      inSingleQuote = !inSingleQuote;
+      continue;
+    }
+
+    if (char === '"' && !inSingleQuote) {
+      inDoubleQuote = !inDoubleQuote;
+      continue;
+    }
+
+    if (char === ' ' && !inSingleQuote && !inDoubleQuote) {
+      if (current) {
+        parts.push(current);
+        current = '';
+      }
+      continue;
+    }
+
+    current += char;
+  }
+
+  if (current) {
+    parts.push(current);
+  }
+
+  if (parts.length === 0) {
+    throw new Error('Empty command string');
+  }
+
+  return [parts[0], parts.slice(1)];
+}
+
+/**
+ * Execute shell command with timeout.
+ *
+ * SECURITY: This function prevents command injection by:
+ * 1. Using execFile instead of spawn with shell:true
+ * 2. Parsing commands into executable + args without shell interpretation
+ * 3. Detecting shell metacharacters and logging warnings
+ * 4. Never passing user input directly to a shell
+ *
+ * Limitations:
+ * - Shell features (pipes, redirects, variable expansion) are NOT supported
+ * - Commands requiring shell features will fail
+ * - Use multiple validation commands instead of shell pipelines
+ *
+ * @param command - Command string to execute
+ * @param options - Execution options (cwd, env, timeout, logger)
+ * @returns Promise resolving to exit code, stdout, stderr, and duration
  */
 async function executeShellCommand(
   command: string,
@@ -538,85 +623,98 @@ async function executeShellCommand(
 ): Promise<{ exitCode: number; stdout: string; stderr: string; durationMs: number }> {
   const startTime = Date.now();
 
-  return new Promise((resolve) => {
-    const stdoutChunks: Buffer[] = [];
-    const stderrChunks: Buffer[] = [];
-    let timedOut = false;
+  // Security check: Detect shell metacharacters
+  if (SHELL_METACHARACTERS.test(command)) {
+    options.logger?.warn('Command contains shell metacharacters - potential security risk', {
+      command,
+      metacharacters_detected: true,
+    });
+  }
 
-    // Parse command into shell and args
-    const childProcess = spawn(command, {
+  // Parse command into executable and arguments (without shell interpretation)
+  let executable: string;
+  let args: string[];
+
+  try {
+    [executable, args] = parseCommandString(command);
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    return {
+      exitCode: 1,
+      stdout: '',
+      stderr: `Command parsing error: ${errorMessage}`,
+      durationMs: Date.now() - startTime,
+    };
+  }
+
+  // Create promisified execFile for timeout support
+  const execFileAsync = promisify(execFile);
+
+  try {
+    // Execute command without shell (security: no shell interpretation)
+    const { stdout, stderr } = await execFileAsync(executable, args, {
       cwd: options.cwd,
       env: options.env as Record<string, string>,
-      shell: true,
       timeout: options.timeout,
+      maxBuffer: 10 * 1024 * 1024, // 10MB buffer
+      // CRITICAL: shell is NOT set (defaults to false), preventing command injection
     });
 
-    // Set timeout handler
-    const timeoutHandle = setTimeout(() => {
-      timedOut = true;
-      childProcess.kill('SIGTERM');
+    const durationMs = Date.now() - startTime;
 
-      // Force kill after 5 seconds
-      setTimeout(() => {
-        if (!childProcess.killed) {
-          childProcess.kill('SIGKILL');
-        }
-      }, 5000);
-    }, options.timeout);
+    return {
+      exitCode: 0,
+      stdout,
+      stderr,
+      durationMs,
+    };
+  } catch (error: unknown) {
+    const durationMs = Date.now() - startTime;
 
-    // Capture stdout
-    childProcess.stdout?.on('data', (chunk: Buffer) => {
-      stdoutChunks.push(chunk);
-    });
+    // Handle timeout (signal: 'SIGTERM')
+    if (error && typeof error === 'object' && 'killed' in error && error.killed) {
+      options.logger?.warn('Command timed out', {
+        command,
+        timeout_ms: options.timeout,
+        duration_ms: durationMs,
+      });
 
-    // Capture stderr
-    childProcess.stderr?.on('data', (chunk: Buffer) => {
-      stderrChunks.push(chunk);
-    });
+      return {
+        exitCode: 124, // 124 = timeout exit code (convention)
+        stdout: 'stdout' in error && typeof error.stdout === 'string' ? error.stdout : '',
+        stderr: `Command timed out after ${options.timeout}ms`,
+        durationMs,
+      };
+    }
 
-    // Handle exit
-    childProcess.on('close', (code) => {
-      clearTimeout(timeoutHandle);
+    // Handle command execution errors
+    if (error && typeof error === 'object' && 'code' in error) {
+      const exitCode = typeof error.code === 'number' ? error.code : 1;
+      const stdout = 'stdout' in error && typeof error.stdout === 'string' ? error.stdout : '';
+      const stderr = 'stderr' in error && typeof error.stderr === 'string' ? error.stderr : '';
 
-      const stdout = Buffer.concat(stdoutChunks).toString('utf-8');
-      const stderr = Buffer.concat(stderrChunks).toString('utf-8');
-      const durationMs = Date.now() - startTime;
-
-      const exitCode = timedOut ? 124 : (code ?? 1); // 124 = timeout exit code (convention)
-
-      if (timedOut) {
-        options.logger?.warn('Command timed out', {
-          command,
-          timeout_ms: options.timeout,
-          duration_ms: durationMs,
-        });
-      }
-
-      resolve({
+      return {
         exitCode,
         stdout,
-        stderr: timedOut ? `${stderr}\n\nCommand timed out after ${options.timeout}ms` : stderr,
+        stderr,
         durationMs,
-      });
+      };
+    }
+
+    // Handle other errors
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    options.logger?.error('Command execution error', {
+      command,
+      error: errorMessage,
     });
 
-    // Handle errors
-    childProcess.on('error', (error) => {
-      clearTimeout(timeoutHandle);
-
-      options.logger?.error('Command execution error', {
-        command,
-        error: error.message,
-      });
-
-      resolve({
-        exitCode: 1,
-        stdout: Buffer.concat(stdoutChunks).toString('utf-8'),
-        stderr: `Command execution error: ${error.message}`,
-        durationMs: Date.now() - startTime,
-      });
-    });
-  });
+    return {
+      exitCode: 1,
+      stdout: '',
+      stderr: `Command execution error: ${errorMessage}`,
+      durationMs,
+    };
+  }
 }
 
 /**
