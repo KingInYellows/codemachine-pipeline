@@ -333,6 +333,25 @@ export async function truncateOperationsLog(queueDir: string): Promise<void> {
 }
 
 /**
+ * Truncate the WAL while preserving a specific sequence watermark.
+ *
+ * Used after snapshot creation to keep sequence numbers monotonic.
+ *
+ * @param queueDir - Queue directory path
+ * @param snapshotSeq - Sequence number to persist after truncation
+ */
+export async function truncateOperationsLogToSeq(
+  queueDir: string,
+  snapshotSeq: number
+): Promise<void> {
+  const logPath = getOperationsLogPath(queueDir);
+  const counterPath = getSequenceCounterPath(queueDir);
+
+  await fs.writeFile(logPath, '', 'utf-8');
+  await fs.writeFile(counterPath, `${snapshotSeq}`, 'utf-8');
+}
+
+/**
  * Truncate WAL with file locking.
  *
  * @param runDir - Run directory path (for lock coordination)
