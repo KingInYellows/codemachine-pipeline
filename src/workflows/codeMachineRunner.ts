@@ -376,7 +376,7 @@ export async function runCodeMachine(
             });
 
             await rotateLogFiles(
-              options.logPath,
+              options.logPath!,
               logRotationKeep,
               logRotationCompress,
               options.logger,

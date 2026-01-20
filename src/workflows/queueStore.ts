@@ -434,16 +434,16 @@ async function applyQueueUpdates(cache: QueueCache): Promise<void> {
   }
 
   const length = stats.size - cache.updatesOffset;
+  const buffer = Buffer.alloc(length);
   const handle = await fs.open(cache.updatesPath, 'r');
   try {
-    const buffer = Buffer.alloc(length);
     await handle.read(buffer, 0, length, cache.updatesOffset);
   } finally {
     await handle.close();
   }
 
   const content = buffer.toString('utf-8');
-  const lines = content.split('\n').filter((line) => line.length > 0);
+  const lines = content.split('\n').filter((line: string) => line.length > 0);
 
   for (const line of lines) {
     try {
