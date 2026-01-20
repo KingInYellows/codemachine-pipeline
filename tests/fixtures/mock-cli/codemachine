@@ -1,0 +1,135 @@
+#!/usr/bin/env node
+/**
+ * Mock CodeMachine CLI for integration testing
+ *
+ * Controlled via environment variables:
+ * - MOCK_EXIT_CODE: Exit code to return (default: 0)
+ * - MOCK_STDOUT: Content to write to stdout
+ * - MOCK_STDERR: Content to write to stderr
+ * - MOCK_DELAY_MS: Delay before exiting (for timeout tests)
+ * - MOCK_BEHAVIOR: Predefined behaviors (success, failure, timeout, crash)
+ *
+ * Supports commands:
+ * - --version: Print version
+ * - run [options] <engine> <prompt>: Simulate task execution
+ */
+
+const args = process.argv.slice(2);
+
+// Handle --version
+if (args.includes('--version')) {
+  console.log('codemachine-mock 1.0.0');
+  process.exit(0);
+}
+
+// Parse environment controls
+const exitCode = parseInt(process.env.MOCK_EXIT_CODE || '0', 10);
+const mockStdout = process.env.MOCK_STDOUT || '';
+const mockStderr = process.env.MOCK_STDERR || '';
+const delayMs = parseInt(process.env.MOCK_DELAY_MS || '0', 10);
+const behavior = process.env.MOCK_BEHAVIOR || 'default';
+
+// Predefined behaviors
+const behaviors = {
+  success: {
+    exitCode: 0,
+    stdout: 'Task completed successfully\nGenerated: output.txt',
+    stderr: '',
+    delay: 50,
+  },
+  failure: {
+    exitCode: 1,
+    stdout: '',
+    stderr: 'Error: Task execution failed\nStack trace: ...',
+    delay: 50,
+  },
+  timeout: {
+    exitCode: 124,
+    stdout: 'Starting execution...',
+    stderr: '',
+    delay: 120000, // 2 minutes - will trigger timeout
+  },
+  crash: {
+    exitCode: 137,
+    stdout: '',
+    stderr: 'Killed',
+    delay: 0,
+  },
+  rate_limit: {
+    exitCode: 1,
+    stdout: '',
+    stderr: 'Error: Rate limit exceeded (429)\nRetry-After: 60',
+    delay: 50,
+  },
+  network_error: {
+    exitCode: 1,
+    stdout: '',
+    stderr: 'Error: Network connection failed\nECONNREFUSED',
+    delay: 50,
+  },
+};
+
+async function run() {
+  // Apply predefined behavior if specified
+  const config = Object.hasOwn(behaviors, behavior) ? behaviors[behavior] : {
+    exitCode,
+    stdout: mockStdout,
+    stderr: mockStderr,
+    delay: delayMs,
+  };
+
+  // Output command info for debugging
+  if (process.env.MOCK_DEBUG) {
+    console.error(`[mock-cli] args: ${JSON.stringify(args)}`);
+    console.error(`[mock-cli] behavior: ${behavior}`);
+    console.error(`[mock-cli] config: ${JSON.stringify(config)}`);
+  }
+
+  // Parse run command arguments
+  if (args[0] === 'run') {
+    let workspaceDir = null;
+    let specPath = null;
+    let engine = null;
+    let prompt = null;
+
+    for (let i = 1; i < args.length; i++) {
+      if (args[i] === '-d' && args[i + 1]) {
+        workspaceDir = args[++i];
+      } else if (args[i] === '--spec' && args[i + 1]) {
+        specPath = args[++i];
+      } else if (!engine) {
+        engine = args[i];
+      } else {
+        prompt = args[i];
+      }
+    }
+
+    // Simulate processing
+    if (process.env.MOCK_DEBUG) {
+      console.error(`[mock-cli] workspace: ${workspaceDir}`);
+      console.error(`[mock-cli] spec: ${specPath}`);
+      console.error(`[mock-cli] engine: ${engine}`);
+      console.error(`[mock-cli] prompt: ${prompt}`);
+    }
+  }
+
+  // Apply delay if configured
+  if (config.delay > 0) {
+    await new Promise((resolve) => setTimeout(resolve, config.delay));
+  }
+
+  // Write output
+  if (config.stdout) {
+    console.log(config.stdout);
+  }
+  if (config.stderr) {
+    console.error(config.stderr);
+  }
+
+  process.exit(config.exitCode);
+}
+
+run().catch((err) => {
+  console.error(`Mock CLI error: ${err.message}`);
+  process.exit(1);
+});
