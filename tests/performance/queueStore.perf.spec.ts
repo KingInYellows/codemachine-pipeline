@@ -27,6 +27,18 @@ import { createRunDirectory } from '../../src/persistence/runDirectoryManager.js
 import type { TaskPlan } from '../../src/workflows/queueStore.js';
 
 // ============================================================================
+// Performance Thresholds
+// ============================================================================
+
+const COLD_LOAD_MAX_MS = 1000;
+const WARM_LOAD_MAX_MS = 5;
+const UPDATE_MAX_MS = 100;
+const GET_NEXT_TASK_MAX_MS = 50;
+const JITTER_ALLOWANCE_FACTOR = 5;
+const JITTER_ALLOWANCE_MS = 50;
+const SCALING_TOLERANCE_FACTOR = 3;
+
+// ============================================================================
 // Test Fixtures
 // ============================================================================
 
@@ -35,7 +47,7 @@ function createPlan(taskCount: number): TaskPlan {
   const tasks = Array.from({ length: taskCount }, (_, i) => ({
     id: `task-${i.toString().padStart(5, '0')}`,
     title: `Task ${i}`,
-    task_type: 'code_generation' as const,
+    task_type: 'code_generation',
     dependency_ids: i > 0 ? [`task-${(i - 1).toString().padStart(5, '0')}`] : [],
   }));
 
@@ -102,7 +114,7 @@ describe('Queue V2 Performance', () => {
 
       expect(tasks.size).toBe(500);
       // Cold load should complete in reasonable time (with I/O and migration)
-      expect(durationMs).toBeLessThan(1000);
+      expect(durationMs).toBeLessThan(COLD_LOAD_MAX_MS);
     });
 
     it('should load 500 tasks very quickly (warm cache)', async () => {
@@ -119,7 +131,7 @@ describe('Queue V2 Performance', () => {
       console.log(`Warm load (500 tasks): ${avgTime.toFixed(2)}ms avg`);
 
       // Warm loads should be <5ms (cached)
-      expect(avgTime).toBeLessThan(5);
+      expect(avgTime).toBeLessThan(WARM_LOAD_MAX_MS);
     });
   });
 
@@ -143,7 +155,7 @@ describe('Queue V2 Performance', () => {
       console.log(`Update times (10 ops): avg=${avgUpdate.toFixed(2)}ms, max=${maxUpdate.toFixed(2)}ms`);
 
       // Average update should be <100ms (including I/O)
-      expect(avgUpdate).toBeLessThan(100);
+      expect(avgUpdate).toBeLessThan(UPDATE_MAX_MS);
     });
 
     it('should have consistent update times regardless of position', async () => {
@@ -169,7 +181,7 @@ describe('Queue V2 Performance', () => {
       const times = [beginTime, middleTime, endTime];
       const minTime = Math.min(...times);
       const maxTime = Math.max(...times);
-      expect(maxTime).toBeLessThan(minTime * 5 + 50);
+      expect(maxTime).toBeLessThan(minTime * JITTER_ALLOWANCE_FACTOR + JITTER_ALLOWANCE_MS);
     });
   });
 
@@ -186,7 +198,7 @@ describe('Queue V2 Performance', () => {
       console.log(`getNextTask (500 tasks): ${avgTime.toFixed(2)}ms avg`);
 
       // Should be <50ms
-      expect(avgTime).toBeLessThan(50);
+      expect(avgTime).toBeLessThan(GET_NEXT_TASK_MAX_MS);
     });
   });
 });
@@ -195,7 +207,7 @@ describe('Queue V2 Scaling', () => {
   it('should scale linearly with queue size', async () => {
     // Test with small queue
     const small = await setupBenchmark(100);
-
+    let avgSmall: number;
     try {
       // Measure 5 updates on small queue
       let smallTime = 0;
@@ -207,13 +219,15 @@ describe('Queue V2 Scaling', () => {
         );
         smallTime += durationMs;
       }
-      const avgSmall = smallTime / 5;
-
+      avgSmall = smallTime / 5;
+    } finally {
       await teardownBenchmark(small.runDir, small.tempDir);
+    }
 
-      // Test with larger queue
-      const large = await setupBenchmark(500);
-
+    // Test with larger queue
+    const large = await setupBenchmark(500);
+    let avgLarge: number;
+    try {
       // Measure 5 updates on larger queue
       let largeTime = 0;
       for (let i = 0; i < 5; i++) {
@@ -224,33 +238,16 @@ describe('Queue V2 Scaling', () => {
         );
         largeTime += durationMs;
       }
-      const avgLarge = largeTime / 5;
-
+      avgLarge = largeTime / 5;
+    } finally {
       await teardownBenchmark(large.runDir, large.tempDir);
-
-      console.log(`Scaling test: 100 tasks=${avgSmall.toFixed(2)}ms, 500 tasks=${avgLarge.toFixed(2)}ms`);
-
-      // 5x more tasks should NOT result in 25x more time (O(n²))
-      // O(1) means it should be similar; allow 3x for variance
-      expect(avgLarge).toBeLessThan(avgSmall * 3 + 50);
-    } catch {
-      await teardownBenchmark(small.runDir, small.tempDir).catch(() => undefined);
-      throw new Error('Scaling test failed during setup');
     }
+
+    console.log(`Scaling test: 100 tasks=${avgSmall.toFixed(2)}ms, 500 tasks=${avgLarge.toFixed(2)}ms`);
+
+    // 5x more tasks should NOT result in 25x more time (O(n²))
+    // O(1) means it should be similar; allow 3x for variance
+    expect(avgLarge).toBeLessThan(avgSmall * SCALING_TOLERANCE_FACTOR + JITTER_ALLOWANCE_MS);
   }, 60000);
 });
 
-describe('Performance Summary', () => {
-  it('validates queue V2 performance targets', async () => {
-    console.log('\n========================================');
-    console.log('Queue Store V2 Performance Validation');
-    console.log('========================================');
-    console.log('✓ O(1) load from cache (<5ms)');
-    console.log('✓ O(1) update operations');
-    console.log('✓ Consistent update times by position');
-    console.log('✓ Fast getNextTask (<50ms)');
-    console.log('✓ Linear scaling (not quadratic)');
-    console.log('========================================\n');
-    expect(true).toBe(true);
-  });
-});
