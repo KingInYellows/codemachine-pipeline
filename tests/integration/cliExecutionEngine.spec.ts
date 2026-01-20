@@ -808,4 +808,152 @@ describe('CLIExecutionEngine E2E with Mock CLI', () => {
       expect(validation.errors.some((e) => e.includes('CLI not available'))).toBe(true);
     });
   });
+
+  describe('Dependency Cascade Failure', () => {
+    const createFailingStrategy = (
+      name: string,
+      failingTaskId: string,
+      errorMessage: string
+    ): { strategy: ExecutionStrategy; executedTasks: string[] } => {
+      const executedTasks: string[] = [];
+      const strategy: ExecutionStrategy = {
+        name,
+        canHandle: () => true,
+        execute: async (task) => {
+          executedTasks.push(task.task_id);
+
+          if (task.task_id === failingTaskId) {
+            return {
+              success: false,
+              status: 'failed',
+              summary: '',
+              errorMessage,
+              recoverable: false,
+              durationMs: 50,
+              artifacts: [],
+            };
+          }
+
+          return {
+            success: true,
+            status: 'completed',
+            summary: 'Completed',
+            recoverable: false,
+            durationMs: 50,
+            artifacts: [],
+          };
+        },
+      };
+      return { strategy, executedTasks };
+    };
+
+    const createTestConfig = (repoName: string): RepoConfig => ({
+      schema_version: '1.0',
+      platform: 'github',
+      provider: { type: 'github', base_url: 'https://api.github.com' },
+      repository: {
+        owner: 'test',
+        repo: repoName,
+        default_branch: 'main',
+        visibility: 'private',
+      },
+      execution: {
+        codemachine_cli_path: MOCK_CLI_PATH,
+        default_engine: 'claude' as const,
+        workspace_dir: workspaceDir,
+        task_timeout_ms: 30000,
+        max_retries: 0,
+        retry_backoff_ms: 10,
+      },
+    });
+
+    it('should not execute dependent tasks when dependency permanently fails', async () => {
+      const { strategy: trackingStrategy, executedTasks } = createFailingStrategy(
+        'tracking-cascade',
+        'T1',
+        'Permanent failure'
+      );
+
+      // Create task chain: T1 -> T2 -> T3
+      const tasks = [
+        createExecutionTask('T1', featureId, 'Base Task', 'code_generation', { maxRetries: 0 }),
+        createExecutionTask('T2', featureId, 'Depends on T1', 'code_generation', {
+          dependencyIds: ['T1'],
+          maxRetries: 0,
+        }),
+        createExecutionTask('T3', featureId, 'Depends on T2', 'code_generation', {
+          dependencyIds: ['T2'],
+          maxRetries: 0,
+        }),
+      ];
+      await appendToQueue(runDir, tasks);
+
+      const config = createTestConfig('cascade-test');
+
+      const engine = new CLIExecutionEngine({
+        runDir,
+        config,
+        strategies: [trackingStrategy],
+      });
+
+      const result = await engine.execute();
+
+      // Only T1 should have been executed
+      expect(executedTasks).toEqual(['T1']);
+
+      // T1 permanently failed, T2 and T3 never executed
+      expect(result.permanentlyFailedTasks).toBe(1);
+      expect(result.completedTasks).toBe(0);
+
+      // Verify queue state
+      const queue = await loadQueue(runDir);
+      expect(queue.get('T1')?.status).toBe('failed');
+      expect(queue.get('T2')?.status).toBe('pending'); // Never started
+      expect(queue.get('T3')?.status).toBe('pending'); // Never started
+    });
+
+    it('should execute independent tasks even when one branch fails', async () => {
+      const { strategy: trackingStrategy, executedTasks } = createFailingStrategy(
+        'tracking-independent',
+        'T1',
+        'T1 failed'
+      );
+
+      // Create diamond DAG:
+      //   T1 (fails) -> T3
+      //   T2 (succeeds) -> T3
+      // T3 depends on both, so it should NOT execute
+      // T2 should execute because it has no dependencies
+      const tasks = [
+        createExecutionTask('T1', featureId, 'Fails', 'code_generation', { maxRetries: 0 }),
+        createExecutionTask('T2', featureId, 'Succeeds', 'code_generation', { maxRetries: 0 }),
+        createExecutionTask('T3', featureId, 'Depends on both', 'code_generation', {
+          dependencyIds: ['T1', 'T2'],
+          maxRetries: 0,
+        }),
+      ];
+      await appendToQueue(runDir, tasks);
+
+      const config = createTestConfig('diamond-test');
+
+      const engine = new CLIExecutionEngine({
+        runDir,
+        config,
+        strategies: [trackingStrategy],
+      });
+
+      const result = await engine.execute();
+
+      // T1 and T2 should execute (independent), T3 should NOT (dependency on T1 failed)
+      expect(executedTasks.sort()).toEqual(['T1', 'T2']);
+
+      expect(result.permanentlyFailedTasks).toBe(1);
+      expect(result.completedTasks).toBe(1);
+
+      const queue = await loadQueue(runDir);
+      expect(queue.get('T1')?.status).toBe('failed');
+      expect(queue.get('T2')?.status).toBe('completed');
+      expect(queue.get('T3')?.status).toBe('pending'); // Blocked by T1
+    });
+  });
 });
