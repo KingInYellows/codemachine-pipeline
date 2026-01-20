@@ -14,6 +14,9 @@ import { createExecutionTask } from '../../src/core/models/ExecutionTask';
 import { RepoConfig } from '../../src/core/config/RepoConfig';
 import { CodeMachineStrategy } from '../../src/workflows/codeMachineStrategy';
 import { validateCliAvailability } from '../../src/workflows/codeMachineRunner';
+import { ExecutionLogWriter } from '../../src/telemetry/logWriters';
+import { ExecutionTaskType } from '../../src/telemetry/executionMetrics';
+import { vi } from 'vitest';
 
 const FIXTURE_REPO = path.resolve(__dirname, '../fixtures/sample_repo');
 
@@ -954,6 +957,182 @@ describe('CLIExecutionEngine E2E with Mock CLI', () => {
       expect(queue.get('T1')?.status).toBe('failed');
       expect(queue.get('T2')?.status).toBe('completed');
       expect(queue.get('T3')?.status).toBe('pending'); // Blocked by T1
+    });
+  });
+
+  describe('Telemetry Event Assertions', () => {
+    const createMockLogger = () => {
+      const logger = {
+        info: vi.fn(),
+        warn: vi.fn(),
+        error: vi.fn(),
+        debug: vi.fn(),
+        setContext: vi.fn(),
+        child: vi.fn(),
+      };
+      logger.child.mockImplementation(() => logger);
+      return logger;
+    };
+
+    const createTestConfig = (overrides?: Partial<RepoConfig['execution']>) => ({
+      codemachine_cli_path: MOCK_CLI_PATH,
+      default_engine: 'claude' as const,
+      workspace_dir: workspaceDir,
+      task_timeout_ms: 30000,
+      max_retries: 3,
+      retry_backoff_ms: 10,
+      env_allowlist: ['MOCK_BEHAVIOR'],
+      ...overrides,
+    });
+
+    const createTestBaseConfig = (repoName: string, executionConfig?: Partial<RepoConfig['execution']>): RepoConfig => ({
+      schema_version: '1.0',
+      platform: 'github',
+      provider: { type: 'github', base_url: 'https://api.github.com' },
+      repository: {
+        owner: 'test',
+        repo: repoName,
+        default_branch: 'main',
+        visibility: 'private',
+      },
+      execution: createTestConfig(executionConfig),
+    });
+
+    it('should emit taskStarted and taskCompleted events on successful execution', async () => {
+      const mockLogger = createMockLogger();
+
+      // Create log writer with mock
+      const logWriter = new ExecutionLogWriter(mockLogger as never, {
+        runDir,
+        runId: featureId,
+      });
+
+      // Spy on logWriter methods
+      const taskStartedSpy = vi.spyOn(logWriter, 'taskStarted');
+      const taskCompletedSpy = vi.spyOn(logWriter, 'taskCompleted');
+
+      process.env.MOCK_BEHAVIOR = 'success';
+
+      const config = createTestConfig();
+      const strategy = new CodeMachineStrategy({ config });
+
+      const tasks = [createExecutionTask('T1', featureId, 'Telemetry Test', 'code_generation')];
+      await appendToQueue(runDir, tasks);
+
+      const baseConfig = createTestBaseConfig('telemetry-test');
+
+      const engine = new CLIExecutionEngine({
+        runDir,
+        config: baseConfig,
+        strategies: [strategy],
+        logWriter,
+      });
+
+      await engine.execute();
+
+      // Verify taskStarted was called
+      expect(taskStartedSpy).toHaveBeenCalledWith(
+        'T1',
+        ExecutionTaskType.CODE_GENERATION,
+        expect.objectContaining({ strategy: 'codemachine' })
+      );
+
+      // Verify taskCompleted was called
+      expect(taskCompletedSpy).toHaveBeenCalledWith(
+        'T1',
+        ExecutionTaskType.CODE_GENERATION,
+        expect.any(Number), // durationMs
+        expect.objectContaining({
+          strategy: 'codemachine',
+          artifactsCaptured: expect.any(Number),
+        })
+      );
+    });
+
+    it('should log error on permanent task failure', async () => {
+      const mockLogger = createMockLogger();
+
+      // Create a strategy that fails
+      const failingStrategy: ExecutionStrategy = {
+        name: 'failing-telemetry',
+        canHandle: () => true,
+        execute: async () => ({
+          success: false,
+          status: 'failed',
+          summary: '',
+          errorMessage: 'Task failed for telemetry test',
+          recoverable: false,
+          durationMs: 50,
+          artifacts: [],
+        }),
+      };
+
+      const tasks = [
+        createExecutionTask('T1', featureId, 'Failing Task', 'code_generation', { maxRetries: 0 }),
+      ];
+      await appendToQueue(runDir, tasks);
+
+      const baseConfig = createTestBaseConfig('failure-telemetry', { max_retries: 0 });
+
+      const engine = new CLIExecutionEngine({
+        runDir,
+        config: baseConfig,
+        strategies: [failingStrategy],
+        logger: mockLogger as never,
+      });
+
+      await engine.execute();
+
+      // Verify error was logged for permanent failure
+      expect(mockLogger.error).toHaveBeenCalledWith(
+        expect.stringContaining('permanently failed'),
+        expect.objectContaining({ taskId: 'T1' })
+      );
+    });
+
+    it('should log execution metrics summary', async () => {
+      const mockLogger = createMockLogger();
+
+      const successStrategy: ExecutionStrategy = {
+        name: 'success-metrics',
+        canHandle: () => true,
+        execute: async () => ({
+          success: true,
+          status: 'completed',
+          summary: 'Done',
+          recoverable: false,
+          durationMs: 100,
+          artifacts: [],
+        }),
+      };
+
+      const tasks = [
+        createExecutionTask('T1', featureId, 'Task 1', 'code_generation'),
+        createExecutionTask('T2', featureId, 'Task 2', 'code_generation'),
+      ];
+      await appendToQueue(runDir, tasks);
+
+      const baseConfig = createTestBaseConfig('metrics-test');
+
+      const engine = new CLIExecutionEngine({
+        runDir,
+        config: baseConfig,
+        strategies: [successStrategy],
+        logger: mockLogger as never,
+      });
+
+      await engine.execute();
+
+      // Verify execution summary was logged
+      expect(mockLogger.info).toHaveBeenCalledWith(
+        'Execution complete',
+        expect.objectContaining({
+          totalTasks: 2,
+          completedTasks: 2,
+          failedTasks: 0,
+          permanentlyFailedTasks: 0,
+        })
+      );
     });
   });
 });
