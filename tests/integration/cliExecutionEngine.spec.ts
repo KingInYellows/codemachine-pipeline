@@ -12,6 +12,8 @@ import { createRunDirectory } from '../../src/persistence/runDirectoryManager';
 import { initializeQueue, appendToQueue, loadQueue } from '../../src/workflows/queueStore';
 import { createExecutionTask } from '../../src/core/models/ExecutionTask';
 import { RepoConfig } from '../../src/core/config/RepoConfig';
+import { CodeMachineStrategy } from '../../src/workflows/codeMachineStrategy';
+import { validateCliAvailability } from '../../src/workflows/codeMachineRunner';
 
 const FIXTURE_REPO = path.resolve(__dirname, '../fixtures/sample_repo');
 
@@ -598,6 +600,212 @@ describe('CLIExecutionEngine Integration', () => {
 
       const result = await engine.execute();
       expect(result.completedTasks).toBe(1);
+    });
+  });
+});
+
+/**
+ * E2E Tests with Mock CodeMachine CLI
+ *
+ * These tests use the actual CodeMachineStrategy with a mock CLI
+ * script that returns controlled exit codes for deterministic testing.
+ */
+describe('CLIExecutionEngine E2E with Mock CLI', () => {
+  const MOCK_CLI_PATH = path.resolve(__dirname, '../fixtures/mock-cli/codemachine');
+  let workspaceDir: string;
+  let pipelineDir: string;
+  let runsDir: string;
+  let runDir: string;
+  let featureId: string;
+
+  beforeEach(async () => {
+    featureId = `mock-cli-test-${Date.now()}`;
+    workspaceDir = await fs.mkdtemp(path.join(os.tmpdir(), 'mock-cli-'));
+    pipelineDir = path.join(workspaceDir, '.ai-feature-pipeline');
+    runsDir = path.join(pipelineDir, 'runs');
+    await fs.mkdir(runsDir, { recursive: true });
+
+    runDir = await createRunDirectory(runsDir, featureId, {
+      repoUrl: 'https://github.com/test/mock-cli-repo.git',
+      defaultBranch: 'main',
+      title: 'Mock CLI E2E Test',
+    });
+    await initializeQueue(runDir, featureId);
+  });
+
+  afterEach(async () => {
+    // Clean up environment variables
+    delete process.env.MOCK_BEHAVIOR;
+    delete process.env.MOCK_EXIT_CODE;
+    delete process.env.MOCK_STDOUT;
+    delete process.env.MOCK_STDERR;
+    delete process.env.MOCK_DELAY_MS;
+
+    if (workspaceDir) await fs.rm(workspaceDir, { recursive: true, force: true });
+  });
+
+  describe('CLI Availability Detection (EC-EXEC-001)', () => {
+    it('should detect mock CLI as available', async () => {
+      const result = await validateCliAvailability(MOCK_CLI_PATH);
+
+      expect(result.available).toBe(true);
+      expect(result.version).toBe('codemachine-mock 1.0.0');
+    });
+
+    it('should detect missing CLI as unavailable', async () => {
+      const result = await validateCliAvailability('/nonexistent/path/codemachine');
+
+      expect(result.available).toBe(false);
+      expect(result.error).toContain('CLI not accessible');
+    });
+
+    it('should reject CLI path with shell metacharacters', async () => {
+      const result = await validateCliAvailability('/path/to/cli; rm -rf /');
+
+      expect(result.available).toBe(false);
+      expect(result.error).toContain('shell metacharacters');
+    });
+
+    it('should reject CLI path with path traversal', async () => {
+      const result = await validateCliAvailability('/path/../../../etc/passwd');
+
+      expect(result.available).toBe(false);
+      expect(result.error).toContain('path traversal');
+    });
+  });
+
+  /**
+   * Helper function to create a configured CLIExecutionEngine for testing
+   */
+  interface CreateEngineOptions {
+    cliPath?: string;
+    maxRetries?: number;
+    envAllowlist?: string[];
+    tasks?: ReturnType<typeof createExecutionTask>[];
+  }
+
+  async function createTestEngine(options: CreateEngineOptions = {}) {
+    const {
+      cliPath = MOCK_CLI_PATH,
+      maxRetries = 3,
+      envAllowlist = [
+        'MOCK_BEHAVIOR',
+        'MOCK_EXIT_CODE',
+        'MOCK_STDOUT',
+        'MOCK_STDERR',
+        'MOCK_DELAY_MS',
+      ],
+      tasks = [createExecutionTask('T1', featureId, 'Test Task', 'code_generation')],
+    } = options;
+
+    const config = {
+      codemachine_cli_path: cliPath,
+      default_engine: 'claude' as const,
+      workspace_dir: workspaceDir,
+      task_timeout_ms: 30000,
+      max_retries: maxRetries,
+      retry_backoff_ms: 10,
+      env_allowlist: envAllowlist,
+    };
+
+    const strategy = new CodeMachineStrategy({ config });
+
+    await appendToQueue(runDir, tasks);
+
+    const baseConfig: RepoConfig = {
+      schema_version: '1.0',
+      platform: 'github',
+      provider: {
+        type: 'github',
+        base_url: 'https://api.github.com',
+      },
+      repository: {
+        owner: 'test',
+        repo: 'mock-cli-repo',
+        default_branch: 'main',
+        visibility: 'private',
+      },
+      execution: config,
+    };
+
+    return new CLIExecutionEngine({
+      runDir,
+      config: baseConfig,
+      strategies: [strategy],
+    });
+  }
+
+  describe('CodeMachineStrategy with Mock CLI', () => {
+    it('should execute task successfully with mock CLI (success behavior)', async () => {
+      process.env.MOCK_BEHAVIOR = 'success';
+
+      const engine = await createTestEngine();
+      const result = await engine.execute();
+
+      expect(result.totalTasks).toBe(1);
+      expect(result.completedTasks).toBe(1);
+      expect(result.failedTasks).toBe(0);
+    });
+
+    it('should handle task failure with mock CLI (failure behavior)', async () => {
+      process.env.MOCK_BEHAVIOR = 'failure';
+
+      const engine = await createTestEngine({
+        maxRetries: 1,
+        tasks: [
+          createExecutionTask('T1', featureId, 'Failing Task', 'code_generation', {
+            maxRetries: 1,
+          }),
+        ],
+      });
+
+      const result = await engine.execute();
+
+      expect(result.totalTasks).toBe(1);
+      expect(result.permanentlyFailedTasks).toBe(1);
+
+      const queue = await loadQueue(runDir);
+      expect(queue.get('T1')?.status).toBe('failed');
+    });
+
+    it('should detect rate limit errors from mock CLI', async () => {
+      process.env.MOCK_BEHAVIOR = 'rate_limit';
+
+      const engine = await createTestEngine({
+        maxRetries: 1,
+        tasks: [
+          createExecutionTask('T1', featureId, 'Rate Limited Task', 'code_generation', {
+            maxRetries: 1,
+          }),
+        ],
+      });
+
+      await engine.execute();
+
+      const queue = await loadQueue(runDir);
+      const task = queue.get('T1');
+      expect(task?.last_error?.message).toContain('429');
+    });
+  });
+
+  describe('validatePrerequisites with Mock CLI', () => {
+    it('should pass validation with available mock CLI', async () => {
+      const engine = await createTestEngine();
+      const validation = await engine.validatePrerequisites();
+
+      expect(validation.valid).toBe(true);
+      expect(validation.errors).toHaveLength(0);
+    });
+
+    it('should fail validation with missing CLI (EC-EXEC-001)', async () => {
+      const engine = await createTestEngine({
+        cliPath: '/nonexistent/codemachine',
+      });
+
+      const validation = await engine.validatePrerequisites();
+
+      expect(validation.valid).toBe(false);
+      expect(validation.errors.some((e) => e.includes('CLI not available'))).toBe(true);
     });
   });
 });
