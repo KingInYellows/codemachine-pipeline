@@ -8,8 +8,8 @@ import {
   type TaskPlan,
   loadQueue,
 } from '../../src/workflows/queueStore.js';
-import { createRunDirectory } from '../../src/persistence/runDirectoryManager.js';
-import type { ExecutionTask } from '../../src/core/models/ExecutionTask.js';
+import { createRunDirectory, readManifest } from '../../src/persistence/runDirectoryManager.js';
+import { serializeExecutionTask, type ExecutionTask } from '../../src/core/models/ExecutionTask.js';
 
 describe('queueStore - initializeQueueFromPlan', () => {
   let tempDir: string;
@@ -379,6 +379,39 @@ describe('queueStore - initializeQueueFromPlan', () => {
       expect(tasks.get('T3')?.task_type).toBe('testing');
       expect(tasks.get('T4')?.task_type).toBe('documentation');
       expect(tasks.get('T5')?.task_type).toBe('refactoring');
+    });
+  });
+
+  describe('Queue Updates', () => {
+    it('should apply updates from queue_updates.jsonl on subsequent load', async () => {
+      const plan: TaskPlan = {
+        feature_id: 'FEATURE-UPDATES',
+        tasks: [{ id: 'TASK-1', title: 'Update Task', task_type: 'code_generation' }],
+      };
+
+      await initializeQueueFromPlan(runDir, plan);
+
+      const initialTasks = await loadQueue(runDir);
+      const task = initialTasks.get('TASK-1');
+      expect(task).toBeDefined();
+      if (!task) {
+        throw new Error('Expected task to exist');
+      }
+
+      const manifest = await readManifest(runDir);
+      const queueDir = path.join(runDir, manifest.queue.queue_dir);
+      const updatesPath = path.join(queueDir, 'queue_updates.jsonl');
+
+      const updatedTask: ExecutionTask = {
+        ...task,
+        status: 'completed',
+        updated_at: new Date().toISOString(),
+      };
+      const updateLine = `${serializeExecutionTask(updatedTask, false)}\n`;
+      await fs.appendFile(updatesPath, updateLine, 'utf-8');
+
+      const updatedTasks = await loadQueue(runDir);
+      expect(updatedTasks.get('TASK-1')?.status).toBe('completed');
     });
   });
 });
