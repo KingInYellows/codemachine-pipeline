@@ -208,6 +208,7 @@ export function isQueueSnapshotV2(value: unknown): value is QueueSnapshotV2 {
     typeof obj.featureId === 'string' &&
     typeof obj.snapshotSeq === 'number' &&
     Number.isInteger(obj.snapshotSeq) &&
+    obj.snapshotSeq >= 0 &&
     typeof obj.tasks === 'object' &&
     obj.tasks !== null &&
     typeof obj.counts === 'object' &&
