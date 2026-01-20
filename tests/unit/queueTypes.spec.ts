@@ -22,8 +22,7 @@ describe('queueTypes', () => {
     priority: 1,
     dependencies: [],
     created_at: new Date().toISOString(),
-    created_at: MOCK_ISO_TIMESTAMP,
-    updated_at: MOCK_ISO_TIMESTAMP,
+    updated_at: new Date().toISOString(),
   });
 
   describe('isQueueOperation', () => {
