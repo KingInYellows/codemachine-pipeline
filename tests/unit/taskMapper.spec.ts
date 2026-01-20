@@ -5,6 +5,10 @@ import {
   getSupportedEngines,
   isEngineSupported,
   assertEngineSupported,
+  isValidCommand,
+  isValidSubcommand,
+  validateCommandStructure,
+  type CommandStructure,
 } from '../../src/workflows/taskMapper';
 
 describe('taskMapper', () => {
@@ -159,6 +163,71 @@ describe('taskMapper', () => {
         const err = error as Error & { code?: string };
         expect(err.message).toContain('Engine');
         expect(err.code).toBe('EC-EXEC-007');
+      }
+    });
+  });
+
+  describe('command validation', () => {
+    it('accepts valid commands', () => {
+      expect(isValidCommand('start')).toBe(true);
+      expect(isValidCommand('run')).toBe(true);
+    });
+
+    it('rejects invalid commands', () => {
+      expect(isValidCommand('build')).toBe(false);
+      expect(isValidCommand('')).toBe(false);
+    });
+
+    it('accepts valid subcommands', () => {
+      expect(isValidSubcommand('pr')).toBe(true);
+      expect(isValidSubcommand('review')).toBe(true);
+      expect(isValidSubcommand('docs')).toBe(true);
+    });
+
+    it('rejects invalid subcommands', () => {
+      expect(isValidSubcommand('deploy')).toBe(false);
+      expect(isValidSubcommand('')).toBe(false);
+    });
+
+    it('validates command structures and error codes', () => {
+      const validStart: CommandStructure = {
+        executable: 'codemachine',
+        command: 'start',
+        args: [],
+      };
+
+      const validRun: CommandStructure = {
+        executable: 'codemachine',
+        command: 'run',
+        subcommand: 'pr',
+        args: [],
+      };
+
+      expect(() => validateCommandStructure(validStart)).not.toThrow();
+      expect(() => validateCommandStructure(validRun)).not.toThrow();
+
+      try {
+        validateCommandStructure({ ...validStart, command: 'build' });
+        expect(false).toBe(true);
+      } catch (error) {
+        const err = error as Error & { code?: string };
+        expect(err.code).toBe('EC-EXEC-008');
+      }
+
+      try {
+        validateCommandStructure({ ...validRun, subcommand: 'deploy' });
+        expect(false).toBe(true);
+      } catch (error) {
+        const err = error as Error & { code?: string };
+        expect(err.code).toBe('EC-EXEC-009');
+      }
+
+      try {
+        validateCommandStructure({ ...validStart, subcommand: 'pr' });
+        expect(false).toBe(true);
+      } catch (error) {
+        const err = error as Error & { code?: string };
+        expect(err.code).toBe('EC-EXEC-010');
       }
     });
   });

@@ -27,21 +27,92 @@ export interface TaskExecutionResult {
   artifacts?: string[];
 }
 
+/**
+ * Valid primary commands for CodeMachine CLI
+ * Used for security validation to prevent command injection
+ */
+export const ALLOWED_COMMANDS = ['start', 'run'] as const;
+export type AllowedCommand = (typeof ALLOWED_COMMANDS)[number];
+
+/**
+ * Valid subcommands for 'run' command
+ * Used for security validation to prevent command injection
+ */
+export const ALLOWED_SUBCOMMANDS = ['pr', 'review', 'docs'] as const;
+export type AllowedSubcommand = (typeof ALLOWED_SUBCOMMANDS)[number];
+
+/**
+ * Mapping from task type to workflow execution configuration
+ */
 export interface WorkflowMapping {
+  /** Full workflow name for display/logging (e.g., "codemachine run pr") */
   workflow: string;
-  command: 'start' | 'run';
+  /** Primary command to execute ('start' or 'run') */
+  command: AllowedCommand;
+  /** Optional subcommand for 'run' command (pr, review, docs) */
+  subcommand?: AllowedSubcommand;
+  /** Whether to use native engine instead of CodeMachine CLI */
   useNativeEngine: boolean;
 }
 
+/**
+ * Complete command structure for CodeMachine CLI execution
+ */
+export interface CommandStructure {
+  /** CLI executable name */
+  executable: string;
+  /** Primary command ('start' or 'run') */
+  command: string;
+  /** Optional subcommand for 'run' command */
+  subcommand?: string;
+  /** Additional command arguments (flags, options, positional args) */
+  args: string[];
+}
+
 const TASK_TYPE_TO_WORKFLOW: Record<ExecutionTaskType, WorkflowMapping> = {
-  code_generation: { workflow: 'codemachine start', command: 'start', useNativeEngine: false },
-  testing: { workflow: 'native-autofix', command: 'run', useNativeEngine: true },
-  pr_creation: { workflow: 'codemachine run pr', command: 'run', useNativeEngine: false },
-  deployment: { workflow: 'native-deployment', command: 'run', useNativeEngine: true },
-  review: { workflow: 'codemachine run review', command: 'run', useNativeEngine: false },
-  refactoring: { workflow: 'codemachine start', command: 'start', useNativeEngine: false },
-  documentation: { workflow: 'codemachine run docs', command: 'run', useNativeEngine: false },
-  other: { workflow: 'codemachine start', command: 'start', useNativeEngine: false },
+  code_generation: {
+    workflow: 'codemachine start',
+    command: 'start',
+    useNativeEngine: false,
+  },
+  testing: {
+    workflow: 'native-autofix',
+    command: 'run',
+    useNativeEngine: true,
+  },
+  pr_creation: {
+    workflow: 'codemachine run pr',
+    command: 'run',
+    subcommand: 'pr',
+    useNativeEngine: false,
+  },
+  deployment: {
+    workflow: 'native-deployment',
+    command: 'run',
+    useNativeEngine: true,
+  },
+  review: {
+    workflow: 'codemachine run review',
+    command: 'run',
+    subcommand: 'review',
+    useNativeEngine: false,
+  },
+  refactoring: {
+    workflow: 'codemachine start',
+    command: 'start',
+    useNativeEngine: false,
+  },
+  documentation: {
+    workflow: 'codemachine run docs',
+    command: 'run',
+    subcommand: 'docs',
+    useNativeEngine: false,
+  },
+  other: {
+    workflow: 'codemachine start',
+    command: 'start',
+    useNativeEngine: false,
+  },
 };
 
 // Helper to extract agent ID for backward compatibility
@@ -79,6 +150,49 @@ export function assertEngineSupported(engine: string): asserts engine is Executi
     const supportedList = SUPPORTED_ENGINES.join(', ');
     const error = new Error(`Engine '${engine}' not supported. Supported: ${supportedList}`);
     (error as { code?: string }).code = 'EC-EXEC-007';
+    throw error;
+  }
+}
+
+/**
+ * Type guard to check if a string is a valid command
+ */
+export function isValidCommand(command: string): command is AllowedCommand {
+  return ALLOWED_COMMANDS.includes(command as AllowedCommand);
+}
+
+/**
+ * Type guard to check if a string is a valid subcommand
+ */
+export function isValidSubcommand(subcommand: string): subcommand is AllowedSubcommand {
+  return ALLOWED_SUBCOMMANDS.includes(subcommand as AllowedSubcommand);
+}
+
+/**
+ * Validate command structure for security
+ * @throws Error if command or subcommand is invalid
+ */
+export function validateCommandStructure(structure: CommandStructure): void {
+  if (!isValidCommand(structure.command)) {
+    const error = new Error(
+      `Invalid command: '${structure.command}'. Allowed: ${ALLOWED_COMMANDS.join(', ')}`
+    );
+    (error as { code?: string }).code = 'EC-EXEC-008';
+    throw error;
+  }
+
+  if (structure.subcommand !== undefined && !isValidSubcommand(structure.subcommand)) {
+    const error = new Error(
+      `Invalid subcommand: '${structure.subcommand}'. Allowed: ${ALLOWED_SUBCOMMANDS.join(', ')}`
+    );
+    (error as { code?: string }).code = 'EC-EXEC-009';
+    throw error;
+  }
+
+  // Validate that 'start' command doesn't have a subcommand
+  if (structure.command === 'start' && structure.subcommand !== undefined) {
+    const error = new Error(`Command 'start' does not support subcommands`);
+    (error as { code?: string }).code = 'EC-EXEC-010';
     throw error;
   }
 }
