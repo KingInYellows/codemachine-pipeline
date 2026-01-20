@@ -16,6 +16,7 @@ module.exports = [
       'node_modules',
       '**/*.js',
       '**/*.cjs',
+      '.claude/**',
       'test',
       'test/**',
       'vitest.config.ts',
