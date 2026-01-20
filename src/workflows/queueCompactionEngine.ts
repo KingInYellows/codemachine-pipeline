@@ -21,12 +21,30 @@
  * - maxBytes: 5MB WAL size
  */
 
-import type { CompactionConfig, QueueIndexState } from './queueTypes';
+import type { CompactionConfig, QueueIndexState, QueueCounts } from './queueTypes';
 import { createDefaultCompactionConfig } from './queueTypes';
-import { loadSnapshot, saveSnapshot } from './queueSnapshotManager';
+import { getSnapshotMetadata, saveSnapshot } from './queueSnapshotManager';
 import { getOperationsLogStats, truncateOperationsLogToSeq } from './queueOperationsLog';
 import { hydrateIndex, exportIndexState, markClean } from './queueMemoryIndex';
 import { withLock } from '../persistence/runDirectoryManager';
+import type { ExecutionTaskStatus } from '../core/models/ExecutionTask';
+
+// ============================================================================
+// Status to Count Field Mapping
+// ============================================================================
+
+/**
+ * Maps task status to the corresponding count field.
+ * Used for maintaining accurate counts during pruning.
+ */
+const STATUS_TO_COUNT_FIELD: Record<ExecutionTaskStatus, keyof Omit<QueueCounts, 'total'>> = {
+  pending: 'pending',
+  running: 'running',
+  completed: 'completed',
+  failed: 'failed',
+  skipped: 'skipped',
+  cancelled: 'cancelled',
+};
 
 // ============================================================================
 // Threshold Checking
@@ -108,7 +126,7 @@ export function pruneCompletedTasks(
       if (!dependents.has(depId)) {
         dependents.set(depId, new Set());
       }
-      dependents.get(depId)!.add(taskId);
+      dependents.get(depId)?.add(taskId);
     }
   }
 
@@ -131,14 +149,10 @@ export function pruneCompletedTasks(
     }
 
     // Check if all dependents are also terminal
-    let hasActiveDependents = false;
-    for (const dependentId of taskDependents) {
+    const hasActiveDependents = [...taskDependents].some((dependentId) => {
       const dependentTask = state.tasks.get(dependentId);
-      if (dependentTask && !terminalStatuses.has(dependentTask.status)) {
-        hasActiveDependents = true;
-        break;
-      }
-    }
+      return dependentTask && !terminalStatuses.has(dependentTask.status);
+    });
 
     if (!hasActiveDependents) {
       toPrune.push(taskId);
@@ -151,10 +165,8 @@ export function pruneCompletedTasks(
     if (task) {
       // Update counts
       state.counts.total -= 1;
-      const statusField = task.status as keyof typeof state.counts;
-      if (statusField in state.counts && statusField !== 'total') {
-        (state.counts[statusField] as number) -= 1;
-      }
+      const statusField = STATUS_TO_COUNT_FIELD[task.status];
+      state.counts[statusField] -= 1;
       // Remove from index
       state.tasks.delete(taskId);
     }
@@ -305,10 +317,10 @@ export async function maybeCompact(
 
   if (!check.needed) {
     // Get current snapshot seq without compacting
-    const snapshot = await loadSnapshot(queueDir);
+    const metadata = await getSnapshotMetadata(queueDir);
     return {
       compacted: false,
-      snapshotSeq: snapshot?.snapshotSeq ?? 0,
+      snapshotSeq: metadata?.snapshotSeq ?? 0,
     };
   }
 

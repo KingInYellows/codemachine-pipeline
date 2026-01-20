@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 import * as os from 'node:os';
@@ -9,16 +9,13 @@ import {
   pruneCompletedTasks,
   compactWithState,
 } from '../../src/workflows/queueCompactionEngine.js';
-import { saveSnapshot, loadSnapshot } from '../../src/workflows/queueSnapshotManager.js';
+import { loadSnapshot } from '../../src/workflows/queueSnapshotManager.js';
 import {
   appendOperation,
   initializeOperationsLog,
   readOperations,
-  getOperationsLogStats,
 } from '../../src/workflows/queueOperationsLog.js';
-import { hydrateIndex, exportIndexState } from '../../src/workflows/queueMemoryIndex.js';
 import type { ExecutionTaskData, QueueIndexState } from '../../src/workflows/queueTypes.js';
-import { createEmptyQueueCounts, createEmptyIndexState } from '../../src/workflows/queueTypes.js';
 
 describe('queueCompactionEngine', () => {
   let testDir: string;
