@@ -258,7 +258,7 @@
 **Scope**: Issues #6, #43, #44, #46
 **Findings**: 2 issues complete, 1 needs npm update, 1 partial implementation
 
-#### Issue #6: Dependencies ✅ COMPLETE (needs npm update)
+#### Issue #6: Dependencies ⚠️ NEEDS UPDATE
 - **Outdated Packages** (6 total):
   - `@typescript-eslint/eslint-plugin`: 8.53.0 → 8.53.1
   - `@typescript-eslint/parser`: 8.53.0 → 8.53.1
@@ -403,7 +403,7 @@
 
 | Issue # | Title | Status | Work Required |
 |---------|-------|--------|---------------|
-| #6 | Dependency updates | ⚠️ NEEDS UPDATE | Run `npm update` for 6 packages |
+| #6 | Dependencies | ⚠️ NEEDS UPDATE | Run `npm update` for 6 packages |
 | #24 | ResultNormalizer tests | ⚠️ NEEDS EXPANSION | Add 30-40 tests (200-250 lines) |
 | #46 | Multi-workflow support | ⚠️ PARTIAL | Implement `step` and `status` commands |
 
