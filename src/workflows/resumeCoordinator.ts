@@ -734,8 +734,13 @@ export async function validateQueueSnapshot(
     const queueDir = path.join(runDir, manifest.queue.queue_dir);
     const queueFilePath = path.join(queueDir, snapshot.queueFile);
 
-    // Ensure queue file exists
-    await fs.access(queueFilePath);
+    // Ensure queue file exists (V1) or WAL file exists (V2)
+    try {
+      await fs.access(queueFilePath);
+    } catch {
+      const walPath = path.join(queueDir, 'queue_operations.log');
+      await fs.access(walPath);
+    }
 
     const storedSnapshot: QueueStoreSnapshot | null = await loadQueueSnapshot(runDir);
     if (!storedSnapshot) {
