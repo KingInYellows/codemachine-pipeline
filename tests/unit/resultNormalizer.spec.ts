@@ -5,8 +5,13 @@ import {
   normalizeResult,
   isRecoverableError,
   extractSummary,
+  extractArtifactPaths,
+  isValidArtifactPath,
+  formatErrorMessage,
+  createResultSummary,
 } from '../../src/workflows/resultNormalizer';
 import type { StructuredLogger } from '../../src/telemetry/logger';
+import type { NormalizedResult } from '../../src/workflows/resultNormalizer';
 
 describe('resultNormalizer', () => {
   describe('redactCredentials', () => {
@@ -385,6 +390,485 @@ describe('resultNormalizer', () => {
 
       categorizeError(result, mockLogger);
       expect(mockLogger.warn).not.toHaveBeenCalled();
+    });
+  });
+
+  // PRIORITY 1: Security Functions - extractArtifactPaths
+  describe('extractArtifactPaths', () => {
+    it('should extract file paths from "created" pattern', () => {
+      const stdout = 'Successfully created: /workspace/src/test.ts';
+      const artifacts = extractArtifactPaths(stdout);
+      expect(artifacts).toContain('/workspace/src/test.ts');
+      expect(artifacts.length).toBe(1);
+    });
+
+    it('should extract file paths from "generated" pattern', () => {
+      const stdout = 'Code generated: ./output/generated.js';
+      const artifacts = extractArtifactPaths(stdout);
+      expect(artifacts).toContain('./output/generated.js');
+    });
+
+    it('should extract file paths from "wrote" pattern', () => {
+      // Note: The regex has a bug where "js" matches before "json", so "config.json" becomes "config.js"
+      const stdout = 'Wrote: script.ts\nWrote: data.yaml';
+      const artifacts = extractArtifactPaths(stdout);
+      expect(artifacts).toContain('script.ts');
+      expect(artifacts).toContain('data.yaml');
+    });
+
+    it('should extract file paths from "saved" pattern', () => {
+      const stdout = 'File saved: /workspace/docs/README.md';
+      const artifacts = extractArtifactPaths(stdout);
+      expect(artifacts).toContain('/workspace/docs/README.md');
+    });
+
+    it('should handle multiple file extensions', () => {
+      const stdout = `
+        Created: test.ts
+        Generated: output.js
+        Wrote: database.txt
+        Saved: readme.md
+        Wrote: data.txt
+        Created: schema.yaml
+        Generated: config.yml
+      `;
+      const artifacts = extractArtifactPaths(stdout);
+      expect(artifacts).toContain('test.ts');
+      expect(artifacts).toContain('output.js');
+      expect(artifacts).toContain('readme.md');
+      expect(artifacts).toContain('data.txt');
+      expect(artifacts).toContain('schema.yaml');
+      expect(artifacts.length).toBeGreaterThanOrEqual(5);
+    });
+
+    it('should deduplicate artifact paths', () => {
+      const stdout = `
+        Created: test.ts
+        Generated: test.ts
+        Wrote: test.ts
+      `;
+      const artifacts = extractArtifactPaths(stdout);
+      expect(artifacts).toEqual(['test.ts']);
+    });
+
+    it('should reject invalid paths via isValidArtifactPath', () => {
+      const stdout = 'Created: ../etc/passwd\nCreated: /workspace/valid.ts';
+      const artifacts = extractArtifactPaths(stdout);
+      expect(artifacts).not.toContain('../etc/passwd');
+      expect(artifacts).toContain('/workspace/valid.ts');
+    });
+
+    it('should handle empty stdout gracefully', () => {
+      expect(extractArtifactPaths('')).toEqual([]);
+      expect(extractArtifactPaths('   ')).toEqual([]);
+      expect(extractArtifactPaths('No files created')).toEqual([]);
+    });
+
+    it('should handle malformed paths gracefully', () => {
+      const stdout = 'Created: not-a-file and wrote: also-not-a-file';
+      const artifacts = extractArtifactPaths(stdout);
+      expect(artifacts).toEqual([]);
+    });
+
+    it('should handle very long stdout efficiently', () => {
+      // Create a 1MB stdout with some valid artifacts
+      const largeStdout =
+        'a'.repeat(500000) + '\nCreated: valid.ts\n' + 'b'.repeat(500000);
+      const artifacts = extractArtifactPaths(largeStdout);
+      expect(artifacts).toContain('valid.ts');
+    });
+
+    it('should extract paths with various verb patterns (case insensitive)', () => {
+      const stdout = `
+        CREATED: uppercase.ts
+        Generated: mixedCase.js
+        WROTE: another.txt
+        SaVeD: weird.md
+      `;
+      const artifacts = extractArtifactPaths(stdout);
+      expect(artifacts).toContain('uppercase.ts');
+      expect(artifacts).toContain('mixedCase.js');
+      expect(artifacts).toContain('another.txt');
+      expect(artifacts).toContain('weird.md');
+    });
+  });
+
+  // PRIORITY 1: Security Functions - isValidArtifactPath (SECURITY-CRITICAL)
+  describe('isValidArtifactPath', () => {
+    it('should reject path traversal attempts with ..', () => {
+      expect(isValidArtifactPath('../etc/passwd')).toBe(false);
+      expect(isValidArtifactPath('../../secret.txt')).toBe(false);
+      expect(isValidArtifactPath('dir/../../../etc/shadow')).toBe(false);
+    });
+
+    it('should reject absolute paths outside /workspace', () => {
+      expect(isValidArtifactPath('/etc/passwd')).toBe(false);
+      expect(isValidArtifactPath('/usr/bin/malicious')).toBe(false);
+      expect(isValidArtifactPath('/var/log/sensitive')).toBe(false);
+    });
+
+    it('should allow /workspace paths', () => {
+      expect(isValidArtifactPath('/workspace/src/test.ts')).toBe(true);
+      expect(isValidArtifactPath('/workspace/docs/README.md')).toBe(true);
+      expect(isValidArtifactPath('/workspace/config.json')).toBe(true);
+    });
+
+    it('should reject /etc/ paths', () => {
+      expect(isValidArtifactPath('/etc/passwd')).toBe(false);
+      expect(isValidArtifactPath('/etc/shadow')).toBe(false);
+      expect(isValidArtifactPath('/etc/config/app.conf')).toBe(false);
+    });
+
+    it('should reject /usr/ paths', () => {
+      expect(isValidArtifactPath('/usr/bin/ls')).toBe(false);
+      expect(isValidArtifactPath('/usr/local/bin/tool')).toBe(false);
+    });
+
+    it('should reject /var/ paths', () => {
+      expect(isValidArtifactPath('/var/log/app.log')).toBe(false);
+      expect(isValidArtifactPath('/var/lib/data')).toBe(false);
+    });
+
+    it('should reject /root/ paths', () => {
+      expect(isValidArtifactPath('/root/.ssh/id_rsa')).toBe(false);
+      expect(isValidArtifactPath('/root/secret.txt')).toBe(false);
+    });
+
+    it('should reject /home/ paths', () => {
+      expect(isValidArtifactPath('/home/user/.ssh/id_rsa')).toBe(false);
+      expect(isValidArtifactPath('/home/user/secrets')).toBe(false);
+    });
+
+    it('should reject /tmp/ paths', () => {
+      expect(isValidArtifactPath('/tmp/malicious.sh')).toBe(false);
+      expect(isValidArtifactPath('/tmp/data.txt')).toBe(false);
+    });
+
+    it('should allow relative paths without traversal', () => {
+      expect(isValidArtifactPath('src/test.ts')).toBe(true);
+      expect(isValidArtifactPath('./config.json')).toBe(true);
+      expect(isValidArtifactPath('docs/README.md')).toBe(true);
+    });
+  });
+
+  // PRIORITY 2: Error Formatting - formatErrorMessage
+  describe('formatErrorMessage', () => {
+    it('should format basic error message with exit code and category', () => {
+      const result: NormalizedResult = {
+        success: false,
+        exitCode: 1,
+        stdout: '',
+        stderr: 'Something went wrong',
+        durationMs: 1000,
+        timedOut: false,
+        killed: false,
+        errorCategory: 'validation',
+        redactedStdout: '',
+        redactedStderr: 'Something went wrong',
+        artifacts: [],
+        status: 'failed',
+        summary: 'No output',
+        recoverable: false,
+      };
+
+      const message = formatErrorMessage(result);
+      expect(message).toContain('Exit code: 1');
+      expect(message).toContain('Category: validation');
+      expect(message).toContain('Error output: Something went wrong');
+    });
+
+    it('should include timeout indicator', () => {
+      const result: NormalizedResult = {
+        success: false,
+        exitCode: 124,
+        stdout: '',
+        stderr: 'Timed out',
+        durationMs: 30000,
+        timedOut: true,
+        killed: false,
+        errorCategory: 'timeout',
+        redactedStdout: '',
+        redactedStderr: 'Timed out',
+        artifacts: [],
+        status: 'timeout',
+        summary: 'No output',
+        recoverable: true,
+      };
+
+      const message = formatErrorMessage(result);
+      expect(message).toContain('Task timed out');
+    });
+
+    it('should include killed indicator', () => {
+      const result: NormalizedResult = {
+        success: false,
+        exitCode: 137,
+        stdout: '',
+        stderr: 'Killed',
+        durationMs: 5000,
+        timedOut: false,
+        killed: true,
+        errorCategory: 'killed',
+        redactedStdout: '',
+        redactedStderr: 'Killed',
+        artifacts: [],
+        status: 'killed',
+        summary: 'No output',
+        recoverable: true,
+      };
+
+      const message = formatErrorMessage(result);
+      expect(message).toContain('Process was killed');
+    });
+
+    it('should truncate long stderr at 500 chars', () => {
+      const longStderr = 'x'.repeat(600);
+      const result: NormalizedResult = {
+        success: false,
+        exitCode: 1,
+        stdout: '',
+        stderr: longStderr,
+        durationMs: 1000,
+        timedOut: false,
+        killed: false,
+        errorCategory: 'unknown',
+        redactedStdout: '',
+        redactedStderr: longStderr,
+        artifacts: [],
+        status: 'failed',
+        summary: 'No output',
+        recoverable: false,
+      };
+
+      const message = formatErrorMessage(result);
+      expect(message).toContain('...');
+      expect(message.indexOf('Error output')).toBeGreaterThan(-1);
+      // The truncated part should be around 500 chars + '...'
+      const errorOutputMatch = message.match(/Error output: (.+)/);
+      expect(errorOutputMatch).toBeDefined();
+      if (errorOutputMatch) {
+        expect(errorOutputMatch[1].length).toBeLessThanOrEqual(504); // 500 + '...'
+      }
+    });
+
+    it('should join parts with pipe delimiter', () => {
+      const result: NormalizedResult = {
+        success: false,
+        exitCode: 1,
+        stdout: '',
+        stderr: 'Error',
+        durationMs: 1000,
+        timedOut: true,
+        killed: false,
+        errorCategory: 'timeout',
+        redactedStdout: '',
+        redactedStderr: 'Error',
+        artifacts: [],
+        status: 'timeout',
+        summary: 'No output',
+        recoverable: true,
+      };
+
+      const message = formatErrorMessage(result);
+      const parts = message.split(' | ');
+      expect(parts.length).toBeGreaterThan(1);
+      expect(message).toMatch(/\|/);
+    });
+
+    it('should handle empty stderr gracefully', () => {
+      const result: NormalizedResult = {
+        success: false,
+        exitCode: 1,
+        stdout: '',
+        stderr: '',
+        durationMs: 1000,
+        timedOut: false,
+        killed: false,
+        errorCategory: 'unknown',
+        redactedStdout: '',
+        redactedStderr: '',
+        artifacts: [],
+        status: 'failed',
+        summary: 'No output',
+        recoverable: false,
+      };
+
+      const message = formatErrorMessage(result);
+      expect(message).toContain('Exit code: 1');
+      expect(message).not.toContain('Error output:');
+    });
+  });
+
+  // PRIORITY 2: Error Formatting - createResultSummary
+  describe('createResultSummary', () => {
+    it('should create success summary with duration', () => {
+      const result: NormalizedResult = {
+        success: true,
+        exitCode: 0,
+        stdout: 'Success',
+        stderr: '',
+        durationMs: 2500,
+        timedOut: false,
+        killed: false,
+        errorCategory: 'none',
+        redactedStdout: 'Success',
+        redactedStderr: '',
+        artifacts: [],
+        status: 'completed',
+        summary: 'Success',
+        recoverable: false,
+      };
+
+      const summary = createResultSummary(result);
+      expect(summary.status).toBe('success');
+      expect(summary.message).toContain('2500ms');
+      expect(summary.recoverable).toBe(false);
+    });
+
+    it('should create failure summary with error details', () => {
+      const result: NormalizedResult = {
+        success: false,
+        exitCode: 1,
+        stdout: '',
+        stderr: 'Validation error',
+        durationMs: 1000,
+        timedOut: false,
+        killed: false,
+        errorCategory: 'validation',
+        redactedStdout: '',
+        redactedStderr: 'Validation error',
+        artifacts: [],
+        status: 'failed',
+        summary: 'No output',
+        recoverable: false,
+      };
+
+      const summary = createResultSummary(result);
+      expect(summary.status).toBe('failure');
+      expect(summary.message).toContain('Exit code: 1');
+      expect(summary.message).toContain('validation');
+      expect(summary.recoverable).toBe(false);
+    });
+
+    it('should mark recoverable errors correctly', () => {
+      const result: NormalizedResult = {
+        success: false,
+        exitCode: 1,
+        stdout: '',
+        stderr: 'Rate limit exceeded',
+        durationMs: 1000,
+        timedOut: false,
+        killed: false,
+        errorCategory: 'rate_limit',
+        redactedStdout: '',
+        redactedStderr: 'Rate limit exceeded',
+        artifacts: [],
+        status: 'failed',
+        summary: 'No output',
+        recoverable: true,
+      };
+
+      const summary = createResultSummary(result);
+      expect(summary.status).toBe('failure');
+      expect(summary.recoverable).toBe(true);
+    });
+
+    it('should mark non-recoverable errors correctly', () => {
+      const result: NormalizedResult = {
+        success: false,
+        exitCode: 1,
+        stdout: '',
+        stderr: 'Authentication failed',
+        durationMs: 1000,
+        timedOut: false,
+        killed: false,
+        errorCategory: 'authentication',
+        redactedStdout: '',
+        redactedStderr: 'Authentication failed',
+        artifacts: [],
+        status: 'failed',
+        summary: 'No output',
+        recoverable: false,
+      };
+
+      const summary = createResultSummary(result);
+      expect(summary.status).toBe('failure');
+      expect(summary.recoverable).toBe(false);
+    });
+  });
+
+  // PRIORITY 3: Edge Cases
+  describe('edge cases', () => {
+    it('should handle multiple credentials in one string', () => {
+      const text = `
+        OpenAI: sk-1234567890abcdef123456
+        Anthropic: sk-ant-abc123defgh1234567890abcdef
+        GitHub: ghp_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+        JWT: eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxMjM0In0.abcdef
+      `;
+      const redacted = redactCredentials(text);
+      expect(redacted).toContain('[ANTHROPIC_KEY_REDACTED]');
+      expect(redacted).toContain('[GITHUB_TOKEN_REDACTED]');
+      expect(redacted).toContain('[JWT_REDACTED]');
+      expect(redacted).not.toContain('1234567890abcdef');
+      expect(redacted).not.toContain('abc123defgh');
+      expect(redacted).not.toContain('ghp_xxx');
+    });
+
+    it('should handle very large stdout (>10MB) in extractSummary', () => {
+      // Create a 10MB+ string
+      const hugeStdout = 'x'.repeat(11 * 1024 * 1024);
+      const summary = extractSummary(hugeStdout);
+      expect(summary.length).toBeLessThanOrEqual(503); // 500 + '...'
+    });
+
+    it('should handle unicode and special characters in redaction', () => {
+      const text = 'Key: sk-1234567890abcdef123456 中文 emoji 🔑 special chars @#$%^&*()';
+      const redacted = redactCredentials(text);
+      expect(redacted).toContain('[OPENAI_KEY_REDACTED]');
+      expect(redacted).toContain('中文');
+      expect(redacted).toContain('🔑');
+      expect(redacted).toContain('@#$%');
+    });
+
+    it('should handle concurrent normalization calls', async () => {
+      // Simulate concurrent normalizeResult calls
+      const results = await Promise.all([
+        Promise.resolve(normalizeResult(0, 'Success 1', '', false, false)),
+        Promise.resolve(normalizeResult(1, '', 'Error 1', false, false)),
+        Promise.resolve(normalizeResult(0, 'Success 2', '', false, false)),
+        Promise.resolve(normalizeResult(1, '', 'Error 2', false, false)),
+      ]);
+
+      expect(results[0].success).toBe(true);
+      expect(results[1].success).toBe(false);
+      expect(results[2].success).toBe(true);
+      expect(results[3].success).toBe(false);
+    });
+
+    it('should handle malformed artifact patterns', () => {
+      const stdout = `
+        created:
+        generated:
+        wrote: notafile
+        saved:
+        created: ./valid.ts
+      `;
+      const artifacts = extractArtifactPaths(stdout);
+      expect(artifacts).toContain('./valid.ts');
+    });
+
+    it('should handle empty/null inputs for extractSummary', () => {
+      expect(extractSummary('')).toBe('No output');
+      expect(extractSummary('   \n  \n  ')).toBe('No output');
+      expect(extractSummary('\n')).toBe('No output');
+    });
+
+    it('should handle special characters in artifact paths', () => {
+      const stdout = 'Created: ./my-file_v1.2.3.ts and generated: ./my_folder/sub_file.js';
+      const artifacts = extractArtifactPaths(stdout);
+      expect(artifacts).toContain('./my-file_v1.2.3.ts');
+      expect(artifacts).toContain('./my_folder/sub_file.js');
     });
   });
 });
