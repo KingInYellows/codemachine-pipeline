@@ -3,6 +3,7 @@ import { spawn, type ChildProcess } from 'node:child_process';
 import * as fs from 'node:fs/promises';
 import { createWriteStream, type WriteStream } from 'node:fs';
 import { EventEmitter } from 'node:events';
+import { Readable } from 'node:stream';
 import {
   runCodeMachine,
   validateCliPath,
@@ -54,8 +55,8 @@ vi.mock('node:fs', async () => {
 // Mock ChildProcess factory
 function createMockChildProcess(): ChildProcess {
   const childProcess = new EventEmitter() as ChildProcess;
-  childProcess.stdout = new EventEmitter() as any;
-  childProcess.stderr = new EventEmitter() as any;
+  childProcess.stdout = new Readable({ read() {} });
+  childProcess.stderr = new Readable({ read() {} });
   childProcess.kill = vi.fn(() => true);
   // Use Object.defineProperty to allow writing to killed property
   Object.defineProperty(childProcess, 'killed', {
@@ -68,26 +69,21 @@ function createMockChildProcess(): ChildProcess {
 
 // Mock WriteStream factory
 function createMockWriteStream(): WriteStream {
-  const stream = new EventEmitter() as WriteStream;
-  stream.write = vi.fn((_chunk: any, cb?: any) => {
-    if (typeof cb === 'function') cb();
-    return true;
-  });
-  stream.end = vi.fn((cb?: any) => {
-    if (typeof cb === 'function') cb();
-    return stream;
-  });
+  const stream = new EventEmitter() as unknown as WriteStream;
+  stream.write = vi.fn(() => true) as WriteStream['write'];
+  stream.end = vi.fn(() => stream) as WriteStream['end'];
   return stream;
 }
 
 // Mock StructuredLogger
 function createMockLogger(): StructuredLogger {
-  return {
+  const logger: StructuredLogger = {
     info: vi.fn(),
     warn: vi.fn(),
     error: vi.fn(),
     debug: vi.fn(),
-  } as any;
+  };
+  return logger;
 }
 
 describe('CodeMachineRunner', () => {
