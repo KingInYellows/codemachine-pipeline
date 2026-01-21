@@ -15,6 +15,7 @@ COPY src ./src
 
 # Install all dependencies (including dev for build)
 # This will trigger prepare script which will build
+ENV OCLIF_SKIP_MANIFEST=1
 RUN npm ci
 
 # Production stage

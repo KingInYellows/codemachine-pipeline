@@ -9,8 +9,8 @@ import {
   loadQueue,
   updateTaskInQueue,
 } from '../../src/workflows/queueStore.js';
-import { createRunDirectory, readManifest } from '../../src/persistence/runDirectoryManager.js';
-import { serializeExecutionTask, type ExecutionTask } from '../../src/core/models/ExecutionTask.js';
+import { createRunDirectory } from '../../src/persistence/runDirectoryManager.js';
+import { type ExecutionTask } from '../../src/core/models/ExecutionTask.js';
 
 describe('queueStore - initializeQueueFromPlan', () => {
   let tempDir: string;
