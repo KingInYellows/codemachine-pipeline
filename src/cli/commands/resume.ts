@@ -8,6 +8,9 @@ import {
 } from '../../workflows/resumeCoordinator';
 import { getRunDirectoryPath } from '../../persistence/runDirectoryManager';
 import type { QueueValidationResult } from '../../workflows/queueStore';
+import { CLIExecutionEngine } from '../../workflows/cliExecutionEngine';
+import { createCodeMachineStrategy } from '../../workflows/codeMachineStrategy';
+import { loadRepoConfig, type RepoConfig } from '../../core/config/RepoConfig';
 import { createCliLogger, LogLevel } from '../../telemetry/logger';
 import { createRunMetricsCollector, StandardMetrics } from '../../telemetry/metrics';
 import { createRunTraceManager, SpanStatusCode } from '../../telemetry/traces';
@@ -34,6 +37,7 @@ type ResumeFlags = {
   'validate-queue': boolean;
   json: boolean;
   verbose: boolean;
+  'max-parallel'?: number;
 };
 
 interface ResumePayload {
@@ -52,6 +56,14 @@ interface ResumePayload {
     pending: number;
     completed: number;
     failed: number;
+  };
+  execution?: {
+    total_tasks: number;
+    completed: number;
+    failed: number;
+    permanently_failed: number;
+    skipped: number;
+    duration_ms: number;
   };
   pending_approvals: string[];
   integrity_check?: {
@@ -156,6 +168,12 @@ export default class Resume extends Command {
       char: 'v',
       description: 'Show detailed diagnostics',
       default: false,
+    }),
+    'max-parallel': Flags.integer({
+      description: 'Maximum parallel tasks during execution (1-10)',
+      default: 1,
+      min: 1,
+      max: 10,
     }),
   };
 
@@ -292,15 +310,112 @@ export default class Resume extends Command {
 
       logger.info('Resume preparation completed', { feature_id: featureId });
 
+      // Load repo config
+      const repoConfigPath = path.join(process.cwd(), '.ai-feature-pipeline', 'config.json');
+      const repoConfigResult = loadRepoConfig(repoConfigPath);
+      if (!repoConfigResult.success || !repoConfigResult.config) {
+        const errorMessages = repoConfigResult.errors?.map((e) => e.message).join(', ') ?? 'unknown error';
+        throw new Error(
+          `Invalid repository configuration: ${errorMessages}`
+        );
+      }
+      const repoConfig = repoConfigResult.config;
+
+      // Execute tasks via CLIExecutionEngine
+      logger.info('Starting task execution via CLIExecutionEngine', { feature_id: featureId });
+
+      const executionConfig = repoConfig.execution ?? {
+        task_timeout_ms: 1800000,
+        max_parallel_tasks: typedFlags['max-parallel'] ?? 1,
+        max_retries: 3,
+        retry_backoff_ms: 5000,
+        codemachine_cli_path: 'codemachine',
+        default_engine: 'claude' as const,
+        workspace_dir: undefined,
+        max_log_buffer_size: 10 * 1024 * 1024,
+        env_allowlist: [],
+        spec_path: '',
+        log_rotation_mb: 100,
+        log_rotation_keep: 3,
+        log_rotation_compress: false,
+      };
+
+      const mergedConfig: RepoConfig = {
+        ...repoConfig,
+        execution: {
+          ...executionConfig,
+          max_parallel_tasks: typedFlags['max-parallel'] ?? executionConfig.max_parallel_tasks,
+        },
+      };
+
+      const strategy = createCodeMachineStrategy({
+        config: mergedConfig.execution!,
+        logger: logger!,
+      });
+
+      const executionEngine = new CLIExecutionEngine({
+        runDir: runDirPath,
+        config: mergedConfig,
+        strategies: [strategy],
+        dryRun: false,
+        logger: logger!,
+      });
+
+      const prereqResult = await executionEngine.validatePrerequisites();
+      if (!prereqResult.valid) {
+        throw new Error(`Execution prerequisites failed: ${prereqResult.errors.join(', ')}`);
+      }
+
+      if (prereqResult.warnings.length > 0) {
+        prereqResult.warnings.forEach((w) => logger!.warn(w));
+      }
+
+      const executionStartTime = Date.now();
+      const executionResults = await executionEngine.execute();
+      const executionDuration = Date.now() - executionStartTime;
+
+      logger.info('Resume execution completed', {
+        feature_id: featureId,
+        totalTasks: executionResults.totalTasks,
+        completed: executionResults.completedTasks,
+        failed: executionResults.failedTasks,
+        duration_ms: executionDuration,
+      });
+
+      // Update payload with execution results
+      payload.execution = {
+        total_tasks: executionResults.totalTasks,
+        completed: executionResults.completedTasks,
+        failed: executionResults.failedTasks,
+        permanently_failed: executionResults.permanentlyFailedTasks,
+        skipped: executionResults.skippedTasks,
+        duration_ms: executionDuration,
+      };
+
       if (!typedFlags.json) {
         this.log('');
-        this.log('✅ Resume preparation successful');
+        this.log('✅ Resume execution successful');
+        this.log('');
+        this.log('Execution results:');
+        this.log(`  Total tasks: ${executionResults.totalTasks}`);
+        this.log(`  Completed: ${executionResults.completedTasks}`);
+        this.log(`  Failed: ${executionResults.failedTasks}`);
+        this.log(
+          `  Permanently failed: ${executionResults.permanentlyFailedTasks}`
+        );
+        this.log(`  Skipped: ${executionResults.skippedTasks}`);
+        this.log(`  Duration: ${(executionDuration / 1000).toFixed(2)}s`);
         this.log('');
         this.log('Next steps:');
-        this.log('  • The execution coordinator will resume from the last checkpoint');
         this.log('  • Monitor progress with: ai-feature status --feature ' + featureId);
         this.log('  • View logs in: ' + path.join(runDirPath, 'logs', 'logs.ndjson'));
         this.log('');
+
+        if (executionResults.failedTasks > 0) {
+          this.warn(
+            `Warning: ${executionResults.failedTasks} task(s) failed. Run 'ai-feature resume' to retry.`
+          );
+        }
       }
 
       metrics.increment(StandardMetrics.COMMAND_INVOCATIONS_TOTAL, {
