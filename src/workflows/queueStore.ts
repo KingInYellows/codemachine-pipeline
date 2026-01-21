@@ -26,7 +26,7 @@ import {
   appendOperation,
   appendOperationsBatch,
 } from './queueOperationsLog.js';
-import { shouldCompact, compactWithState, compact, maybeCompact } from './queueCompactionEngine.js';
+import { shouldCompact, compactWithState, compact } from './queueCompactionEngine.js';
 import type { QueueIndexState, QueueOperation, ExecutionTaskData } from './queueTypes.js';
 
 /**
