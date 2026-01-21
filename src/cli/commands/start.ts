@@ -27,11 +27,15 @@ import {
 import type { ResearchTask } from '../../core/models/ResearchTask';
 import { draftPRD } from '../../workflows/prdAuthoringEngine';
 import { createLinearAdapter, type IssueSnapshot } from '../../adapters/linear/LinearAdapter';
+import { CLIExecutionEngine } from '../../workflows/cliExecutionEngine';
+import { loadQueue } from '../../workflows/queueStore';
+import { createCodeMachineStrategy } from '../../workflows/codeMachineStrategy';
 
 const EXECUTION_STEPS = {
   Context: 'context_aggregation',
   Research: 'research_detection',
   PRD: 'prd_authoring',
+  Execution: 'task_execution',
 } as const;
 
 type StartFlags = {
@@ -40,6 +44,8 @@ type StartFlags = {
   spec?: string;
   json: boolean;
   'dry-run': boolean;
+  'max-parallel'?: number;
+  'skip-execution': boolean;
 };
 
 type ResearchDetectionOptions = {
@@ -57,7 +63,7 @@ interface StartResultPayload {
   feature_id: string;
   run_dir: string;
   source: string;
-  status: 'awaiting_prd_approval' | 'completed';
+  status: 'awaiting_prd_approval' | 'completed' | 'execution_complete';
   context: {
     files: number;
     total_tokens: number;
@@ -74,6 +80,12 @@ interface StartResultPayload {
       incompleteSections: string[];
       warnings: string[];
     };
+  };
+  execution?: {
+    total_tasks: number;
+    completed: number;
+    failed: number;
+    duration_ms: number;
   };
   approvals: {
     required: boolean;
@@ -114,6 +126,16 @@ export default class Start extends Command {
     }),
     'dry-run': Flags.boolean({
       description: 'Simulate execution without making changes',
+      default: false,
+    }),
+    'max-parallel': Flags.integer({
+      description: 'Maximum parallel tasks during execution (1-10)',
+      default: 1,
+      min: 1,
+      max: 10,
+    }),
+    'skip-execution': Flags.boolean({
+      description: 'Skip task execution phase (stop after PRD)',
       default: false,
     }),
   };
@@ -266,11 +288,33 @@ export default class Start extends Command {
         status: approvalRequired ? 'paused' : 'in_progress',
       }));
 
+      if (approvalRequired) {
+        await markApprovalRequired(runDir, 'prd');
+      }
+
+      // Execute tasks if not skipped and no approval required
+      let executionResult: Awaited<ReturnType<CLIExecutionEngine['execute']>> | undefined;
+      if (!typedFlags['skip-execution'] && !approvalRequired) {
+        currentStepLabel = EXECUTION_STEPS.Execution;
+        executionResult = await this.runTaskExecution({
+          runDir,
+          repoRoot,
+          repoConfig,
+          logger,
+          metrics,
+          maxParallel: typedFlags['max-parallel'] ?? 1,
+        });
+      }
+
       const payload: StartResultPayload = {
         feature_id: featureId,
         run_dir: runDir,
         source: featureSource,
-        status: approvalRequired ? 'awaiting_prd_approval' : 'completed',
+        status: approvalRequired
+          ? 'awaiting_prd_approval'
+          : executionResult
+            ? 'execution_complete'
+            : 'completed',
         context: {
           files: Object.keys(contextResult.contextDocument.files).length,
           total_tokens: contextResult.contextDocument.total_token_count ?? 0,
@@ -294,8 +338,13 @@ export default class Start extends Command {
         },
       };
 
-      if (approvalRequired) {
-        await markApprovalRequired(runDir, 'prd');
+      if (executionResult) {
+        payload.execution = {
+          total_tasks: executionResult.totalTasks,
+          completed: executionResult.completedTasks,
+          failed: executionResult.failedTasks,
+          duration_ms: Date.now() - startTime,
+        };
       }
 
       this.emitStartSummary(payload, typedFlags.json);
@@ -460,6 +509,107 @@ export default class Start extends Command {
     return result;
   }
 
+  private async runTaskExecution(options: {
+    runDir: string;
+    repoRoot: string;
+    repoConfig: RepoConfig;
+    logger: StructuredLogger;
+    metrics: MetricsCollector;
+    maxParallel: number;
+  }): Promise<Awaited<ReturnType<CLIExecutionEngine['execute']>>> {
+    const { runDir, repoConfig, logger, maxParallel } = options;
+
+    await setCurrentStep(runDir, EXECUTION_STEPS.Execution);
+    logger.info('Starting task execution via CLIExecutionEngine');
+
+    // Load queue to check if there are tasks
+    const queue = await loadQueue(runDir);
+    if (queue.size === 0) {
+      logger.info('No tasks in queue, skipping execution');
+      await setLastStep(runDir, EXECUTION_STEPS.Execution);
+      return {
+        totalTasks: 0,
+        completedTasks: 0,
+        failedTasks: 0,
+        permanentlyFailedTasks: 0,
+        skippedTasks: 0,
+      };
+    }
+
+    // Create execution config with max parallel override
+    const executionConfig = repoConfig.execution ?? {
+      task_timeout_ms: 1800000,
+      max_parallel_tasks: maxParallel,
+      max_retries: 3,
+      retry_backoff_ms: 5000,
+      codemachine_cli_path: 'codemachine',
+      default_engine: 'claude' as const,
+      workspace_dir: undefined,
+      max_log_buffer_size: 10 * 1024 * 1024,
+      env_allowlist: [],
+      spec_path: '',
+      log_rotation_mb: 100,
+      log_rotation_keep: 3,
+      log_rotation_compress: false,
+    };
+
+    // Override max_parallel_tasks if specified
+    const mergedConfig: RepoConfig = {
+      ...repoConfig,
+      execution: {
+        ...executionConfig!,
+        max_parallel_tasks: maxParallel,
+      },
+    };
+
+    // Create strategy
+    const strategy = createCodeMachineStrategy({
+      config: mergedConfig.execution!,
+      logger,
+    });
+
+    // Create execution engine
+    const executionEngine = new CLIExecutionEngine({
+      runDir,
+      config: mergedConfig,
+      strategies: [strategy],
+      dryRun: false,
+      logger,
+    });
+
+    // Validate prerequisites
+    const prereqResult = await executionEngine.validatePrerequisites();
+    if (!prereqResult.valid) {
+      throw new Error(`Execution prerequisites failed: ${prereqResult.errors.join(', ')}`);
+    }
+
+    if (prereqResult.warnings.length > 0) {
+      prereqResult.warnings.forEach((w) => logger.warn(w));
+    }
+
+    // Execute all pending tasks from queue
+    const results = await executionEngine.execute();
+
+    // Set completion step
+    await setLastStep(runDir, EXECUTION_STEPS.Execution);
+
+    logger.info('Execution complete', {
+      totalTasks: results.totalTasks,
+      completed: results.completedTasks,
+      failed: results.failedTasks,
+      permanentlyFailed: results.permanentlyFailedTasks,
+    });
+
+    if (results.failedTasks > 0) {
+      logger.warn('Some tasks failed', {
+        failedCount: results.failedTasks,
+        permanentlyFailedCount: results.permanentlyFailedTasks,
+      });
+    }
+
+    return results;
+  }
+
   private resolveFeatureTitle(flags: StartFlags): string {
     if (flags.prompt) {
       return flags.prompt.slice(0, 80);
@@ -517,33 +667,59 @@ export default class Start extends Command {
       payload.prd.diagnostics.warnings.forEach((w) => this.log(`  • ${w}`));
     }
 
+    if (payload.execution) {
+      this.log('\nExecution results:');
+      this.log(`  Total tasks: ${payload.execution.total_tasks}`);
+      this.log(`  Completed: ${payload.execution.completed}`);
+      this.log(`  Failed: ${payload.execution.failed}`);
+      this.log(`  Duration: ${(payload.execution.duration_ms / 1000).toFixed(2)}s`);
+
+      if (payload.execution.failed > 0) {
+        this.warn(
+          `  Warning: ${payload.execution.failed} task(s) failed. Use 'ai-feature resume' to retry.`
+        );
+      }
+    }
+
     if (payload.approvals.required) {
       this.log('\n✅ PRD draft created. Approval required before continuing.');
       this.log(`Review the document at ${payload.prd.path}, then run:`);
       this.log(`  ai-feature approve prd --feature ${payload.feature_id} --signer "<email>"`);
       this.log('Need edits? Request revisions via: ai-feature prd edit --request "<details>"');
       this.log('');
-    } else {
+    } else if (!payload.execution) {
       this.log('\nPRD approved automatically based on configuration.');
+      this.log('Use --skip-execution flag was used or execution skipped.');
+    } else {
+      this.log('\nPipeline execution completed.');
     }
   }
 
   private outputDryRunPlan(flags: StartFlags): void {
+    const steps = [
+      'Load repo configuration and verify git repository',
+      'Create feature run directory and manifest',
+      'Aggregate context files under configured globs',
+      'Detect unknowns to queue research tasks',
+      'Render PRD draft using docs/templates/prd_template.md',
+      'Record PRD hash for approval workflow',
+    ];
+
+    if (!flags['skip-execution']) {
+      steps.push('Execute queued tasks via CLIExecutionEngine');
+      steps.push(`  - Max parallel tasks: ${flags['max-parallel'] ?? 1}`);
+    }
+
     const plan = {
       status: 'dry_run',
       message: 'Dry-run mode previews the planned steps without creating artifacts.',
-      planned_steps: [
-        'Load repo configuration and verify git repository',
-        'Create feature run directory and manifest',
-        'Aggregate context files under configured globs',
-        'Detect unknowns to queue research tasks',
-        'Render PRD draft using docs/templates/prd_template.md',
-        'Record PRD hash for approval workflow',
-      ],
+      planned_steps: steps,
       input: {
         prompt: flags.prompt,
         linear: flags.linear,
         spec: flags.spec,
+        max_parallel: flags['max-parallel'],
+        skip_execution: flags['skip-execution'],
       },
     };
 

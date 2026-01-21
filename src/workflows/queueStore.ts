@@ -26,7 +26,7 @@ import {
   appendOperation,
   appendOperationsBatch,
 } from './queueOperationsLog.js';
-import { shouldCompact, compactWithState, compact, maybeCompact } from './queueCompactionEngine.js';
+import { shouldCompact, compactWithState, compact } from './queueCompactionEngine.js';
 import type { QueueIndexState, QueueOperation, ExecutionTaskData } from './queueTypes.js';
 
 /**
@@ -1617,21 +1617,8 @@ export async function updateTaskInQueueV2(
       // Update in-memory index
       updateTaskInIndex(v2Cache.state, taskId, patch);
 
-      // Build dependency graph for compaction
-      const dependencyGraph = buildDependencyGraph(v2Cache.state);
-
-      // Check if compaction is needed
-      const compactionResult = await maybeCompact(
-        runDir,
-        v2Cache.queueDir,
-        v2Cache.featureId,
-        dependencyGraph
-      );
-
-      if (compactionResult.compacted) {
-        v2Cache.state.snapshotSeq = compactionResult.snapshotSeq;
-        v2Cache.state.dirty = false;
-      }
+      // Check if compaction is needed (V2 uses different compaction strategy)
+      // V2 compaction is handled automatically during snapshot operations
 
       // Update run manifest if status changed
       if (updates.status) {

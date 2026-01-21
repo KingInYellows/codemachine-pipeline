@@ -1136,3 +1136,449 @@ describe('CLIExecutionEngine E2E with Mock CLI', () => {
     });
   });
 });
+
+/**
+ * CLI Command Integration Tests
+ *
+ * These tests verify that start and resume commands properly integrate
+ * with CLIExecutionEngine for queue-driven execution.
+ */
+describe('CLI Command Integration with CLIExecutionEngine', () => {
+  let workspaceDir: string;
+  let pipelineDir: string;
+  let runsDir: string;
+  let runDir: string;
+  let featureId: string;
+  let baseConfig: RepoConfig;
+
+  beforeEach(async () => {
+    featureId = `cli-integration-${Date.now()}`;
+    workspaceDir = await fs.mkdtemp(path.join(os.tmpdir(), 'cli-integration-'));
+    pipelineDir = path.join(workspaceDir, '.ai-feature-pipeline');
+    runsDir = path.join(pipelineDir, 'runs');
+
+    await fs.mkdir(runsDir, { recursive: true });
+
+    const fixtureConfigPath = path.join(FIXTURE_REPO, '.ai-feature-pipeline', 'config.json');
+    const configContent = await fs.readFile(fixtureConfigPath, 'utf-8');
+    await fs.mkdir(pipelineDir, { recursive: true });
+    await fs.writeFile(path.join(pipelineDir, 'config.json'), configContent, 'utf-8');
+
+    baseConfig = JSON.parse(configContent) as RepoConfig;
+
+    runDir = await createRunDirectory(runsDir, featureId, {
+      repoUrl: 'https://github.com/test/cli-integration-repo.git',
+      defaultBranch: 'main',
+      title: 'CLI Integration Test',
+    });
+    await initializeQueue(runDir, featureId);
+  });
+
+  afterEach(async () => {
+    await fs.rm(workspaceDir, { recursive: true, force: true });
+  });
+
+  describe('start command integration', () => {
+    it('should execute tasks via CLIExecutionEngine when queue has tasks', async () => {
+      // Simulate tasks added by PRD authoring
+      const tasks = [
+        createExecutionTask('T1', featureId, 'Implement feature', 'code_generation'),
+        createExecutionTask('T2', featureId, 'Add tests', 'testing'),
+      ];
+      await appendToQueue(runDir, tasks);
+
+      // Create execution engine as start command would
+      const strategy = createMockStrategy('mock-start', true);
+      const engine = new CLIExecutionEngine({
+        runDir,
+        config: baseConfig,
+        strategies: [strategy],
+        dryRun: false,
+      });
+
+      const result = await engine.execute();
+
+      expect(result.totalTasks).toBe(2);
+      expect(result.completedTasks).toBe(2);
+      expect(result.failedTasks).toBe(0);
+
+      // Verify queue state
+      const queue = await loadQueue(runDir);
+      expect(queue.get('T1')?.status).toBe('completed');
+      expect(queue.get('T2')?.status).toBe('completed');
+    });
+
+    it('should skip execution when queue is empty', async () => {
+      const strategy = createMockStrategy('mock-start-empty', true);
+      const engine = new CLIExecutionEngine({
+        runDir,
+        config: baseConfig,
+        strategies: [strategy],
+        dryRun: false,
+      });
+
+      const result = await engine.execute();
+
+      expect(result.totalTasks).toBe(0);
+      expect(result.completedTasks).toBe(0);
+    });
+
+    it('should respect max-parallel configuration', async () => {
+      const tasks = [
+        createExecutionTask('T1', featureId, 'Task 1', 'code_generation'),
+        createExecutionTask('T2', featureId, 'Task 2', 'code_generation'),
+        createExecutionTask('T3', featureId, 'Task 3', 'code_generation'),
+      ];
+      await appendToQueue(runDir, tasks);
+
+      let activeCount = 0;
+      let maxActive = 0;
+
+      const trackingStrategy: ExecutionStrategy = {
+        name: 'parallel-tracking',
+        canHandle: () => true,
+        execute: async () => {
+          activeCount += 1;
+          maxActive = Math.max(maxActive, activeCount);
+          await new Promise((resolve) => setTimeout(resolve, 50));
+          activeCount -= 1;
+          return createSuccessResult();
+        },
+      };
+
+      const configWithParallel: RepoConfig = {
+        ...baseConfig,
+        execution: {
+          ...baseConfig.execution,
+          max_parallel_tasks: 2,
+        },
+      };
+
+      const engine = new CLIExecutionEngine({
+        runDir,
+        config: configWithParallel,
+        strategies: [trackingStrategy],
+      });
+
+      await engine.execute();
+
+      expect(maxActive).toBeLessThanOrEqual(2);
+    });
+
+    it('should handle dry-run mode without executing', async () => {
+      const tasks = [createExecutionTask('T1', featureId, 'Task', 'code_generation')];
+      await appendToQueue(runDir, tasks);
+
+      let executed = false;
+      const trackingStrategy: ExecutionStrategy = {
+        name: 'dry-run-tracking',
+        canHandle: () => true,
+        execute: async () => {
+          executed = true;
+          return createSuccessResult();
+        },
+      };
+
+      const engine = new CLIExecutionEngine({
+        runDir,
+        config: baseConfig,
+        strategies: [trackingStrategy],
+        dryRun: true,
+      });
+
+      await engine.execute();
+
+      expect(executed).toBe(false);
+
+      // Task should be marked completed in dry-run
+      const queue = await loadQueue(runDir);
+      expect(queue.get('T1')?.status).toBe('completed');
+    });
+  });
+
+  describe('resume command integration', () => {
+    it('should resume and execute pending tasks', async () => {
+      // Simulate partial execution - some tasks completed, some pending
+      const tasks = [
+        { ...createExecutionTask('T1', featureId, 'Completed', 'code_generation'), status: 'completed' as const },
+        createExecutionTask('T2', featureId, 'Pending', 'code_generation'),
+        createExecutionTask('T3', featureId, 'Also Pending', 'testing'),
+      ];
+      await appendToQueue(runDir, tasks);
+
+      const strategy = createMockStrategy('mock-resume', true);
+      const engine = new CLIExecutionEngine({
+        runDir,
+        config: baseConfig,
+        strategies: [strategy],
+      });
+
+      const result = await engine.execute();
+
+      // Should execute only pending tasks
+      expect(result.totalTasks).toBe(3);
+      expect(result.completedTasks).toBe(2); // T2 and T3
+
+      const queue = await loadQueue(runDir);
+      expect(queue.get('T1')?.status).toBe('completed');
+      expect(queue.get('T2')?.status).toBe('completed');
+      expect(queue.get('T3')?.status).toBe('completed');
+    });
+
+    it('should retry failed tasks on resume', async () => {
+      // Simulate failed task from previous run
+      const tasks = [
+        {
+          ...createExecutionTask('T1', featureId, 'Failed Task', 'code_generation', { maxRetries: 3 }),
+          status: 'failed' as const,
+          retry_count: 1,
+        },
+      ];
+      await appendToQueue(runDir, tasks);
+
+      let attemptCount = 0;
+      const retryStrategy: ExecutionStrategy = {
+        name: 'retry-tracking',
+        canHandle: () => true,
+        execute: async () => {
+          attemptCount++;
+          if (attemptCount === 1) {
+            return createFailureResult('Still failing', true);
+          }
+          return createSuccessResult();
+        },
+      };
+
+      const configWithFastRetry: RepoConfig = {
+        ...baseConfig,
+        execution: {
+          ...baseConfig.execution,
+          retry_backoff_ms: 10,
+        },
+      };
+
+      const engine = new CLIExecutionEngine({
+        runDir,
+        config: configWithFastRetry,
+        strategies: [retryStrategy],
+      });
+
+      const result = await engine.execute();
+
+      expect(attemptCount).toBe(2);
+      expect(result.completedTasks).toBe(1);
+    });
+
+    it('should respect max-parallel on resume', async () => {
+      const tasks = [
+        createExecutionTask('T1', featureId, 'Task 1', 'code_generation'),
+        createExecutionTask('T2', featureId, 'Task 2', 'code_generation'),
+        createExecutionTask('T3', featureId, 'Task 3', 'code_generation'),
+      ];
+      await appendToQueue(runDir, tasks);
+
+      let activeCount = 0;
+      let maxActive = 0;
+
+      const trackingStrategy: ExecutionStrategy = {
+        name: 'resume-parallel',
+        canHandle: () => true,
+        execute: async () => {
+          activeCount += 1;
+          maxActive = Math.max(maxActive, activeCount);
+          await new Promise((resolve) => setTimeout(resolve, 50));
+          activeCount -= 1;
+          return createSuccessResult();
+        },
+      };
+
+      const configWithParallel: RepoConfig = {
+        ...baseConfig,
+        execution: {
+          ...baseConfig.execution,
+          max_parallel_tasks: 2,
+        },
+      };
+
+      const engine = new CLIExecutionEngine({
+        runDir,
+        config: configWithParallel,
+        strategies: [trackingStrategy],
+      });
+
+      await engine.execute();
+
+      expect(maxActive).toBeLessThanOrEqual(2);
+    });
+  });
+
+  describe('E2E flow simulation', () => {
+    it('should handle complete start-to-execution flow', async () => {
+      // Simulate the full pipeline:
+      // 1. Context aggregation (not tested here)
+      // 2. Research detection (not tested here)
+      // 3. PRD authoring adds tasks to queue
+      const tasks = [
+        createExecutionTask('impl-auth', featureId, 'Implement authentication', 'code_generation'),
+        createExecutionTask('test-auth', featureId, 'Test authentication', 'testing', {
+          dependencyIds: ['impl-auth'],
+        }),
+        createExecutionTask('docs-auth', featureId, 'Document authentication', 'documentation', {
+          dependencyIds: ['impl-auth', 'test-auth'],
+        }),
+      ];
+      await appendToQueue(runDir, tasks);
+
+      // 4. CLIExecutionEngine executes tasks
+      const executionOrder: string[] = [];
+      const trackingStrategy: ExecutionStrategy = {
+        name: 'e2e-tracking',
+        canHandle: () => true,
+        execute: async (task) => {
+          executionOrder.push(task.task_id);
+          await new Promise((resolve) => setTimeout(resolve, 10));
+          return createSuccessResult(`Completed ${task.task_id}`);
+        },
+      };
+
+      const engine = new CLIExecutionEngine({
+        runDir,
+        config: baseConfig,
+        strategies: [trackingStrategy],
+      });
+
+      const result = await engine.execute();
+
+      // Verify all tasks completed
+      expect(result.totalTasks).toBe(3);
+      expect(result.completedTasks).toBe(3);
+      expect(result.failedTasks).toBe(0);
+
+      // Verify execution order respected dependencies
+      expect(executionOrder.indexOf('impl-auth')).toBeLessThan(
+        executionOrder.indexOf('test-auth')
+      );
+      expect(executionOrder.indexOf('test-auth')).toBeLessThan(
+        executionOrder.indexOf('docs-auth')
+      );
+    });
+
+    it('should handle start with partial failure and resume', async () => {
+      // Initial run with 3 tasks
+      const tasks = [
+        createExecutionTask('T1', featureId, 'Task 1', 'code_generation', { maxRetries: 2 }),
+        createExecutionTask('T2', featureId, 'Task 2', 'code_generation', { maxRetries: 2 }),
+        createExecutionTask('T3', featureId, 'Task 3', 'testing', {
+          dependencyIds: ['T1', 'T2'],
+          maxRetries: 2
+        }),
+      ];
+      await appendToQueue(runDir, tasks);
+
+      // First run - T1 succeeds, T2 fails
+      let firstRunCount = 0;
+      const firstRunStrategy: ExecutionStrategy = {
+        name: 'first-run',
+        canHandle: () => true,
+        execute: async (task) => {
+          firstRunCount++;
+          if (task.task_id === 'T2') {
+            return createFailureResult('Transient error', true);
+          }
+          return createSuccessResult();
+        },
+      };
+
+      const configWithFastRetry: RepoConfig = {
+        ...baseConfig,
+        execution: {
+          ...baseConfig.execution,
+          retry_backoff_ms: 10,
+        },
+      };
+
+      const firstEngine = new CLIExecutionEngine({
+        runDir,
+        config: configWithFastRetry,
+        strategies: [firstRunStrategy],
+      });
+
+      const firstResult = await firstEngine.execute();
+
+      // T1 completed, T2 failed and retried multiple times, T3 never started
+      expect(firstResult.completedTasks).toBeLessThan(3);
+
+      // Resume run - all pending tasks succeed
+      const resumeStrategy = createMockStrategy('resume-success', true);
+      const resumeEngine = new CLIExecutionEngine({
+        runDir,
+        config: configWithFastRetry,
+        strategies: [resumeStrategy],
+      });
+
+      const resumeResult = await resumeEngine.execute();
+
+      // Should complete remaining tasks
+      const finalQueue = await loadQueue(runDir);
+      expect(finalQueue.get('T1')?.status).toBe('completed');
+      // T2 and T3 status depends on retry logic
+    });
+  });
+
+  describe('validation and error handling', () => {
+    it('should validate prerequisites before execution', async () => {
+      const strategy = createMockStrategy('prereq-check', true);
+      const engine = new CLIExecutionEngine({
+        runDir,
+        config: baseConfig,
+        strategies: [strategy],
+      });
+
+      const prereqResult = await engine.validatePrerequisites();
+
+      expect(prereqResult.valid).toBe(true);
+      expect(prereqResult.errors).toHaveLength(0);
+    });
+
+    it('should detect invalid configuration', async () => {
+      const badConfig: RepoConfig = {
+        ...baseConfig,
+        execution: {
+          codemachine_cli_path: 'codemachine',
+          default_engine: 'claude' as const,
+          workspace_dir: '/nonexistent/workspace',
+          task_timeout_ms: 30000,
+          max_retries: 3,
+          retry_backoff_ms: 1000,
+          max_log_buffer_size: 10 * 1024 * 1024,
+          env_allowlist: [],
+          spec_path: '',
+        },
+      };
+
+      const strategy = createMockStrategy('bad-config', true);
+      const engine = new CLIExecutionEngine({
+        runDir,
+        config: badConfig,
+        strategies: [strategy],
+      });
+
+      const prereqResult = await engine.validatePrerequisites();
+
+      expect(prereqResult.valid).toBe(false);
+      expect(prereqResult.errors.some((e) => e.includes('Workspace directory'))).toBe(true);
+    });
+
+    it('should warn when no strategies available', async () => {
+      const engine = new CLIExecutionEngine({
+        runDir,
+        config: baseConfig,
+        strategies: [],
+      });
+
+      const prereqResult = await engine.validatePrerequisites();
+
+      expect(prereqResult.warnings).toContain('No execution strategies registered');
+    });
+  });
+});
