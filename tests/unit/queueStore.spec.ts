@@ -7,6 +7,7 @@ import {
   initializeQueueFromPlan,
   type TaskPlan,
   loadQueue,
+  updateTaskInQueue,
 } from '../../src/workflows/queueStore.js';
 import { createRunDirectory, readManifest } from '../../src/persistence/runDirectoryManager.js';
 import { serializeExecutionTask, type ExecutionTask } from '../../src/core/models/ExecutionTask.js';
@@ -383,7 +384,8 @@ describe('queueStore - initializeQueueFromPlan', () => {
   });
 
   describe('Queue Updates', () => {
-    it('should apply updates from queue_updates.jsonl on subsequent load', async () => {
+    it('should apply updates from V2 WAL on subsequent load', async () => {
+      // V2 Format: Uses WAL (operations.log) instead of V1 queue_updates.jsonl
       const plan: TaskPlan = {
         feature_id: 'FEATURE-UPDATES',
         tasks: [{ id: 'TASK-1', title: 'Update Task', task_type: 'code_generation' }],
@@ -398,18 +400,14 @@ describe('queueStore - initializeQueueFromPlan', () => {
         throw new Error('Expected task to exist');
       }
 
-      const manifest = await readManifest(runDir);
-      const queueDir = path.join(runDir, manifest.queue.queue_dir);
-      const updatesPath = path.join(queueDir, 'queue_updates.jsonl');
-
-      const updatedTask: ExecutionTask = {
-        ...task,
+      // Use V2 updateTaskInQueue API instead of manually writing to queue_updates.jsonl
+      const updateResult = await updateTaskInQueue(runDir, 'TASK-1', {
         status: 'completed',
-        updated_at: new Date().toISOString(),
-      };
-      const updateLine = `${serializeExecutionTask(updatedTask, false)}\n`;
-      await fs.appendFile(updatesPath, updateLine, 'utf-8');
+      });
 
+      expect(updateResult.success).toBe(true);
+
+      // Reload queue to verify update was persisted via V2 WAL
       const updatedTasks = await loadQueue(runDir);
       expect(updatedTasks.get('TASK-1')?.status).toBe('completed');
     });

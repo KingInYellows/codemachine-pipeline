@@ -454,7 +454,16 @@ describe('ResumeCoordinator', () => {
         tasks: Record<string, unknown>;
         checksum: string;
         timestamp: string;
+        schemaVersion?: string;
+        schema_version?: string;
+        snapshotSeq?: number;
+        counts?: unknown;
+        dependencyGraph?: Record<string, string[]>;
+        dependency_graph?: Record<string, string[]>;
       };
+
+      // Build QueueSnapshotMetadata from the actual snapshot file
+      // Works for both V1 (schema_version: '1.0.0') and V2 (schemaVersion: '2.0.0') formats
       const snapshot: QueueSnapshotMetadata = {
         taskCount: Object.keys(snapshotData.tasks).length,
         checksum: snapshotData.checksum,
