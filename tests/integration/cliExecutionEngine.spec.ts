@@ -1507,6 +1507,7 @@ describe('CLI Command Integration with CLIExecutionEngine', () => {
 
       // T1 completed, T2 failed and retried multiple times, T3 never started
       expect(firstResult.completedTasks).toBeLessThan(3);
+      expect(firstRunCount).toBeGreaterThan(0);
 
       // Resume run - all pending tasks succeed
       const resumeStrategy = createMockStrategy('resume-success', true);
@@ -1517,6 +1518,7 @@ describe('CLI Command Integration with CLIExecutionEngine', () => {
       });
 
       const resumeResult = await resumeEngine.execute();
+      expect(resumeResult.completedTasks).toBeGreaterThan(0);
 
       // Should complete remaining tasks
       const finalQueue = await loadQueue(runDir);
