@@ -730,19 +730,15 @@ export class BranchProtectionAdapter {
   private createDefaultLogger(): LoggerInterface {
     return {
       debug: (message: string, context?: Record<string, unknown>) => {
-        // eslint-disable-next-line no-console
         console.debug(`[DEBUG] ${message}`, context ? JSON.stringify(context) : '');
       },
       info: (message: string, context?: Record<string, unknown>) => {
-        // eslint-disable-next-line no-console
         console.info(`[INFO] ${message}`, context ? JSON.stringify(context) : '');
       },
       warn: (message: string, context?: Record<string, unknown>) => {
-        // eslint-disable-next-line no-console
         console.warn(`[WARN] ${message}`, context ? JSON.stringify(context) : '');
       },
       error: (message: string, context?: Record<string, unknown>) => {
-        // eslint-disable-next-line no-console
         console.error(`[ERROR] ${message}`, context ? JSON.stringify(context) : '');
       },
     };
