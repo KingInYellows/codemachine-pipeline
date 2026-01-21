@@ -557,7 +557,7 @@ export default class Start extends Command {
     const mergedConfig: RepoConfig = {
       ...repoConfig,
       execution: {
-        ...executionConfig!,
+        ...executionConfig,
         max_parallel_tasks: maxParallel,
       },
     };
