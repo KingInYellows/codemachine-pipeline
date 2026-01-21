@@ -1,5 +1,4 @@
 import * as fs from 'node:fs/promises';
-import * as crypto from 'node:crypto';
 import * as path from 'node:path';
 import {
   readManifest,
@@ -18,9 +17,7 @@ import {
 import {
   validateQueue,
   loadQueue,
-  loadQueueSnapshot,
   type QueueValidationResult,
-  type QueueSnapshot as QueueStoreSnapshot,
 } from './queueStore';
 import type { ExecutionTelemetry } from '../telemetry/executionTelemetry';
 
@@ -732,38 +729,33 @@ export async function validateQueueSnapshot(
   try {
     const manifest = await readManifest(runDir);
     const queueDir = path.join(runDir, manifest.queue.queue_dir);
-    const queueFilePath = path.join(queueDir, snapshot.queueFile);
 
-    // Ensure queue file exists (V1) or WAL file exists (V2)
-    try {
-      await fs.access(queueFilePath);
-    } catch {
-      const walPath = path.join(queueDir, 'queue_operations.log');
-      await fs.access(walPath);
-    }
+    // Note: Don't check queue file existence here - V2 format may not have queue.jsonl
+    // The snapshot file itself is the source of truth
 
-    const storedSnapshot: QueueStoreSnapshot | null = await loadQueueSnapshot(runDir);
-    if (!storedSnapshot) {
-      return false;
-    }
+    // Load raw snapshot file to check format (handles both V1 and V2)
+    const snapshotPath = path.join(queueDir, 'queue_snapshot.json');
+    const content = await fs.readFile(snapshotPath, 'utf-8');
+    const rawSnapshot = JSON.parse(content) as {
+      schemaVersion?: string;
+      schema_version?: string;
+      tasks: Record<string, unknown>;
+      counts?: unknown;
+      dependencyGraph?: Record<string, string[]>;
+      dependency_graph?: Record<string, string[]>;
+      checksum: string;
+      timestamp: string;
+    };
 
-    const computedHash = crypto
-      .createHash('sha256')
-      .update(
-        JSON.stringify({
-          tasks: storedSnapshot.tasks,
-          dependency_graph: storedSnapshot.dependency_graph,
-        })
-      )
-      .digest('hex');
+    const taskCount = Object.keys(rawSnapshot.tasks).length;
+    const normalizedStoredTimestamp = new Date(rawSnapshot.timestamp).toISOString();
+    const timestampsMatch = normalizedStoredTimestamp === snapshot.timestamp;
 
-    const taskCount = Object.keys(storedSnapshot.tasks).length;
-    const timestampsMatch = new Date(storedSnapshot.timestamp).toISOString() === snapshot.timestamp;
-
+    // Basic validation: task count, checksum, and timestamp must match
+    // This works for both V1 and V2 formats since both have these fields
     return (
       taskCount === snapshot.taskCount &&
-      storedSnapshot.checksum === computedHash &&
-      snapshot.checksum === computedHash &&
+      rawSnapshot.checksum === snapshot.checksum &&
       timestampsMatch
     );
   } catch {
