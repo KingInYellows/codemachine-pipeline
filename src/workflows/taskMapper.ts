@@ -207,17 +207,17 @@ export function validateCommandStructure(structure: CommandStructure): void {
  * @returns Command structure with executable, command, and optional subcommand
  */
 export function getCommandStructure(taskType: ExecutionTaskType): CommandStructure {
-  const mapping = TASK_TYPE_TO_WORKFLOW[taskType];
+  const { command, subcommand } = TASK_TYPE_TO_WORKFLOW[taskType];
 
   const structure: CommandStructure = {
     executable: 'codemachine',
-    command: mapping.command,
+    command,
     args: [],
   };
 
   // Only include subcommand if defined (exactOptionalPropertyTypes compliance)
-  if (mapping.subcommand !== undefined) {
-    structure.subcommand = mapping.subcommand;
+  if (subcommand !== undefined) {
+    structure.subcommand = subcommand;
   }
 
   return structure;
