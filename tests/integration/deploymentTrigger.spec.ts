@@ -356,7 +356,6 @@ describe('Deployment Trigger Module', () => {
       // Assert
       expect(context.pr.pr_number).toBe(42);
       expect(context.branchProtection).toBeNull();
-      // eslint-disable-next-line @typescript-eslint/unbound-method
       const warnSpy = mockLogger.warn as Mock;
       expect(warnSpy).toHaveBeenCalledWith(
         expect.stringContaining('Branch protection report not found'),
@@ -855,7 +854,6 @@ describe('Deployment Trigger Module', () => {
       expect(outcome.success).toBe(true);
       expect(outcome.strategy).toBe(DeploymentStrategy.AUTO_MERGE);
       expect(outcome.action).toBe('auto-merge');
-      // eslint-disable-next-line @typescript-eslint/unbound-method
       const enableAutoMergeSpy = mockGitHubAdapter.enableAutoMerge as Mock;
       expect(enableAutoMergeSpy).toHaveBeenCalledWith(42, 'MERGE');
 
@@ -916,7 +914,6 @@ describe('Deployment Trigger Module', () => {
       expect(outcome.strategy).toBe(DeploymentStrategy.MANUAL_MERGE);
       expect(outcome.action).toBe('merge');
       expect(outcome.merge_sha).toBe('merge123sha456');
-      // eslint-disable-next-line @typescript-eslint/unbound-method
       const mergePullRequestSpy = mockGitHubAdapter.mergePullRequest as Mock;
       expect(mergePullRequestSpy).toHaveBeenCalledWith({
         pull_number: 42,
@@ -1115,9 +1112,7 @@ describe('Deployment Trigger Module', () => {
       expect(outcome.success).toBe(false); // No action taken
       expect(outcome.action).toBe('none');
       expect(outcome.strategy).toBe(DeploymentStrategy.AUTO_MERGE);
-      // eslint-disable-next-line @typescript-eslint/unbound-method
       const enableAutoMergeSpy = mockGitHubAdapter.enableAutoMerge as Mock;
-      // eslint-disable-next-line @typescript-eslint/unbound-method
       const mergePullRequestSpy = mockGitHubAdapter.mergePullRequest as Mock;
       expect(enableAutoMergeSpy).not.toHaveBeenCalled();
       expect(mergePullRequestSpy).not.toHaveBeenCalled();

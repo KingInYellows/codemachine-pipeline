@@ -237,13 +237,11 @@ describe('traceabilityMapper', () => {
       );
 
       // Verify metrics
-      // eslint-disable-next-line @typescript-eslint/unbound-method
       expect(mockMetrics.increment).toHaveBeenCalledWith('trace_maps_generated_total', {
         feature_id: 'feat-123',
       });
 
       // Verify logging
-      // eslint-disable-next-line @typescript-eslint/unbound-method
       expect(mockLogger.info).toHaveBeenCalledWith(
         'Starting traceability map generation',
         expect.objectContaining({ featureId: 'feat-123' })
@@ -302,7 +300,6 @@ describe('traceabilityMapper', () => {
       expect(fs.writeFile).not.toHaveBeenCalled();
 
       // Verify logging
-      // eslint-disable-next-line @typescript-eslint/unbound-method
       expect(mockLogger.info).toHaveBeenCalledWith(
         'trace.json already exists, skipping generation',
         expect.any(Object)
@@ -749,7 +746,6 @@ _TODO: Define goals_
       expect(result.tracePath).toBe('/run/feat-123/trace.json');
       expect(result.links.length).toBeGreaterThan(0);
 
-      // eslint-disable-next-line @typescript-eslint/unbound-method
       expect(mockLogger.info).toHaveBeenCalledWith(
         'Updating trace map due to spec change',
         expect.objectContaining({ featureId: 'feat-123' })
