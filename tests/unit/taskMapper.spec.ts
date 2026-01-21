@@ -8,6 +8,9 @@ import {
   isValidCommand,
   isValidSubcommand,
   validateCommandStructure,
+  createStepCommand,
+  createStatusCommand,
+  ALLOWED_COMMANDS,
   type CommandStructure,
 } from '../../src/workflows/taskMapper';
 
@@ -229,6 +232,154 @@ describe('taskMapper', () => {
         const err = error as Error & { code?: string };
         expect(err.code).toBe('EC-EXEC-010');
       }
+    });
+  });
+
+  describe('step command', () => {
+    it('should include step in ALLOWED_COMMANDS', () => {
+      expect(ALLOWED_COMMANDS).toContain('step');
+    });
+
+    it('should have step as the third command in ALLOWED_COMMANDS', () => {
+      expect(ALLOWED_COMMANDS[2]).toBe('step');
+    });
+
+    it('should validate step command as allowed', () => {
+      const structure: CommandStructure = {
+        executable: 'codemachine',
+        command: 'step',
+        args: [],
+      };
+      expect(() => validateCommandStructure(structure)).not.toThrow();
+    });
+
+    it('should validate that step is a valid command', () => {
+      expect(isValidCommand('step')).toBe(true);
+    });
+
+    it('should create step command without args', () => {
+      const stepCmd = createStepCommand();
+      expect(stepCmd.command).toBe('step');
+      expect(stepCmd.args).toEqual([]);
+      expect(stepCmd.executable).toBe('codemachine');
+      expect(stepCmd.subcommand).toBeUndefined();
+    });
+
+    it('should create step command with args', () => {
+      const stepCmd = createStepCommand(['--step-id', 'my-step']);
+      expect(stepCmd.command).toBe('step');
+      expect(stepCmd.args).toEqual(['--step-id', 'my-step']);
+      expect(stepCmd.executable).toBe('codemachine');
+      expect(stepCmd.subcommand).toBeUndefined();
+    });
+
+    it('should create step command with engine option', () => {
+      const stepCmd = createStepCommand(['--engine', 'claude']);
+      expect(stepCmd.command).toBe('step');
+      expect(stepCmd.args).toEqual(['--engine', 'claude']);
+    });
+
+    it('should reject step command with subcommand', () => {
+      const structure: CommandStructure = {
+        executable: 'codemachine',
+        command: 'step',
+        subcommand: 'pr',
+        args: [],
+      };
+      try {
+        validateCommandStructure(structure);
+        expect(false).toBe(true);
+      } catch (error) {
+        const err = error as Error & { code?: string };
+        expect(err.message).toContain('does not support subcommands');
+        expect(err.code).toBe('EC-EXEC-010');
+      }
+    });
+
+    it('should handle empty args array in createStepCommand', () => {
+      const stepCmd = createStepCommand([]);
+      expect(stepCmd.args).toHaveLength(0);
+    });
+
+    it('should preserve all args passed to createStepCommand', () => {
+      const args = ['--step-id', 'step-1', '--engine', 'claude', '--verbose'];
+      const stepCmd = createStepCommand(args);
+      expect(stepCmd.args).toEqual(args);
+      expect(stepCmd.args).toHaveLength(5);
+    });
+  });
+
+  describe('status command', () => {
+    it('should include status in ALLOWED_COMMANDS', () => {
+      expect(ALLOWED_COMMANDS).toContain('status');
+    });
+
+    it('should have status as the fourth command in ALLOWED_COMMANDS', () => {
+      expect(ALLOWED_COMMANDS[3]).toBe('status');
+    });
+
+    it('should validate status command as allowed', () => {
+      const structure: CommandStructure = {
+        executable: 'codemachine',
+        command: 'status',
+        args: [],
+      };
+      expect(() => validateCommandStructure(structure)).not.toThrow();
+    });
+
+    it('should validate that status is a valid command', () => {
+      expect(isValidCommand('status')).toBe(true);
+    });
+
+    it('should create status command without args', () => {
+      const statusCmd = createStatusCommand();
+      expect(statusCmd.command).toBe('status');
+      expect(statusCmd.args).toEqual([]);
+      expect(statusCmd.executable).toBe('codemachine');
+      expect(statusCmd.subcommand).toBeUndefined();
+    });
+
+    it('should create status command with args', () => {
+      const statusCmd = createStatusCommand(['--json', '--verbose']);
+      expect(statusCmd.command).toBe('status');
+      expect(statusCmd.args).toEqual(['--json', '--verbose']);
+      expect(statusCmd.executable).toBe('codemachine');
+      expect(statusCmd.subcommand).toBeUndefined();
+    });
+
+    it('should create status command with single arg', () => {
+      const statusCmd = createStatusCommand(['--json']);
+      expect(statusCmd.command).toBe('status');
+      expect(statusCmd.args).toEqual(['--json']);
+    });
+
+    it('should reject status command with subcommand', () => {
+      const structure: CommandStructure = {
+        executable: 'codemachine',
+        command: 'status',
+        subcommand: 'pr',
+        args: [],
+      };
+      try {
+        validateCommandStructure(structure);
+        expect(false).toBe(true);
+      } catch (error) {
+        const err = error as Error & { code?: string };
+        expect(err.message).toContain('does not support subcommands');
+        expect(err.code).toBe('EC-EXEC-010');
+      }
+    });
+
+    it('should handle empty args array in createStatusCommand', () => {
+      const statusCmd = createStatusCommand([]);
+      expect(statusCmd.args).toHaveLength(0);
+    });
+
+    it('should preserve all args passed to createStatusCommand', () => {
+      const args = ['--format', 'table', '--filter', 'running', '--limit', '10'];
+      const statusCmd = createStatusCommand(args);
+      expect(statusCmd.args).toEqual(args);
+      expect(statusCmd.args).toHaveLength(6);
     });
   });
 });

@@ -30,8 +30,12 @@ export interface TaskExecutionResult {
 /**
  * Valid primary commands for CodeMachine CLI
  * Used for security validation to prevent command injection
+ * - start: Begin new workflow execution
+ * - run: Execute workflow with optional subcommand (pr, review, docs)
+ * - step: Execute single step within workflow (incremental execution)
+ * - status: Query workflow execution status and progress
  */
-export const ALLOWED_COMMANDS = ['start', 'run'] as const;
+export const ALLOWED_COMMANDS = ['start', 'run', 'step', 'status'] as const;
 export type AllowedCommand = (typeof ALLOWED_COMMANDS)[number];
 
 /**
@@ -189,9 +193,9 @@ export function validateCommandStructure(structure: CommandStructure): void {
     throw error;
   }
 
-  // Validate that 'start' command doesn't have a subcommand
-  if (structure.command === 'start' && structure.subcommand !== undefined) {
-    const error = new Error(`Command 'start' does not support subcommands`);
+  // Validate that 'start', 'step', and 'status' commands don't have subcommands
+  if ((structure.command === 'start' || structure.command === 'step' || structure.command === 'status') && structure.subcommand !== undefined) {
+    const error = new Error(`Command '${structure.command}' does not support subcommands`);
     (error as { code?: string }).code = 'EC-EXEC-010';
     throw error;
   }
@@ -221,6 +225,62 @@ export function getCommandStructure(taskType: ExecutionTaskType): CommandStructu
   }
 
   return structure;
+}
+
+/**
+ * Creates a command structure for executing a single workflow step
+ *
+ * Builds a command for incremental workflow execution, allowing execution
+ * of a single step within a workflow without running the full workflow.
+ * Step execution can be filtered by optional arguments.
+ *
+ * @param args - Optional arguments for step execution (e.g., --step-id, --engine)
+ * @returns CommandStructure configured for step execution with no subcommand
+ *
+ * @example
+ * // Execute default step in workflow
+ * const stepCmd = createStepCommand();
+ * // Returns: { executable: 'codemachine', command: 'step', args: [] }
+ *
+ * @example
+ * // Execute specific step
+ * const stepCmd = createStepCommand(['--step-id', 'my-step']);
+ * // Returns: { executable: 'codemachine', command: 'step', args: ['--step-id', 'my-step'] }
+ */
+export function createStepCommand(args: string[] = []): CommandStructure {
+  const structure: CommandStructure = {
+    executable: 'codemachine',
+    command: 'step' as const,
+    args,
+  };
+  return structure;
+}
+
+/**
+ * Creates a command structure for querying execution status
+ *
+ * Builds a command for on-demand status queries without workflow execution.
+ * Status queries can be filtered by optional arguments.
+ *
+ * @param args - Optional arguments for filtering status queries (e.g., --json, --verbose)
+ * @returns CommandStructure configured for status query with no subcommand
+ *
+ * @example
+ * // Query all workflow status
+ * const statusCmd = createStatusCommand();
+ * // Returns: { executable: 'codemachine', command: 'status', args: [] }
+ *
+ * @example
+ * // Query with JSON formatting
+ * const statusCmd = createStatusCommand(['--json']);
+ * // Returns: { executable: 'codemachine', command: 'status', args: ['--json'] }
+ */
+export function createStatusCommand(args: string[] = []): CommandStructure {
+  return {
+    executable: 'codemachine',
+    command: 'status',
+    args,
+  } as CommandStructure;
 }
 
 /**
