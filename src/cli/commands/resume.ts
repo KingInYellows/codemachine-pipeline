@@ -350,7 +350,7 @@ export default class Resume extends Command {
 
       const strategy = createCodeMachineStrategy({
         config: mergedConfig.execution!,
-        logger: logger!,
+        logger,
       });
 
       const executionEngine = new CLIExecutionEngine({
@@ -358,7 +358,7 @@ export default class Resume extends Command {
         config: mergedConfig,
         strategies: [strategy],
         dryRun: false,
-        logger: logger!,
+        logger,
       });
 
       const prereqResult = await executionEngine.validatePrerequisites();
