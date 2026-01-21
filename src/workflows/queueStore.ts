@@ -26,7 +26,7 @@ import {
   appendOperation,
   appendOperationsBatch,
 } from './queueOperationsLog.js';
-import { shouldCompact, compactWithState, compact } from './queueCompactionEngine.js';
+import { shouldCompact, compactWithState, compact, maybeCompact } from './queueCompactionEngine.js';
 import type { QueueIndexState, QueueOperation, ExecutionTaskData } from './queueTypes.js';
 
 /**
@@ -175,6 +175,11 @@ interface V2IndexCache {
   queueDir: string;
   /** Feature ID for this queue */
   featureId: string;
+  /**
+   * Offset (bytes) into legacy V1 `queue_updates.jsonl` that have already been applied.
+   * Supports backward compatibility for older update mechanisms and test fixtures.
+   */
+  legacyUpdatesOffset: number;
   /** Last hydration timestamp */
   hydratedAt: number;
   /** Whether V2 migration has been checked */
@@ -186,6 +191,55 @@ interface V2IndexCache {
  * Stores hydrated index state for O(1) task lookups.
  */
 const v2IndexCache = new Map<string, V2IndexCache>();
+
+async function applyLegacyQueueUpdatesToV2Index(cache: V2IndexCache): Promise<void> {
+  const updatesPath = path.join(cache.queueDir, QUEUE_UPDATES_FILE);
+  const stats = await fs.stat(updatesPath).catch(() => null);
+  if (!stats) {
+    return;
+  }
+
+  if (stats.size < cache.legacyUpdatesOffset) {
+    cache.legacyUpdatesOffset = 0;
+  }
+
+  if (stats.size === cache.legacyUpdatesOffset) {
+    return;
+  }
+
+  const length = stats.size - cache.legacyUpdatesOffset;
+  const buffer = Buffer.alloc(length);
+  const handle = await fs.open(updatesPath, 'r');
+  try {
+    await handle.read(buffer, 0, length, cache.legacyUpdatesOffset);
+  } finally {
+    await handle.close();
+  }
+
+  const content = buffer.toString('utf-8');
+  const lines = content.split('\n').filter((line: string) => line.length > 0);
+
+  for (const line of lines) {
+    try {
+      const parsed: unknown = JSON.parse(line);
+      const result = parseExecutionTask(parsed);
+      if (!result.success) {
+        continue;
+      }
+
+      const task = result.data;
+      if (getTask(cache.state, task.task_id)) {
+        updateTaskInIndex(cache.state, task.task_id, toExecutionTaskData(task));
+      } else {
+        addTaskToIndex(cache.state, toExecutionTaskData(task));
+      }
+    } catch {
+      // Ignore malformed legacy updates
+    }
+  }
+
+  cache.legacyUpdatesOffset = stats.size;
+}
 
 /**
  * Get or create V2 index cache entry.
@@ -203,6 +257,7 @@ async function getV2IndexCache(runDir: string): Promise<V2IndexCache> {
 
   // Return existing cache if available and fresh
   if (existing && existing.queueDir === queueDir && existing.migrationChecked) {
+    await applyLegacyQueueUpdatesToV2Index(existing);
     return existing;
   }
 
@@ -219,10 +274,12 @@ async function getV2IndexCache(runDir: string): Promise<V2IndexCache> {
     state,
     queueDir,
     featureId,
+    legacyUpdatesOffset: 0,
     hydratedAt: Date.now(),
     migrationChecked: true,
   };
 
+  await applyLegacyQueueUpdatesToV2Index(cache);
   v2IndexCache.set(runDir, cache);
   return cache;
 }
@@ -815,6 +872,12 @@ export async function appendToQueue(
         for (const task of tasks) {
           addTaskToIndex(v2Cache.state, toExecutionTaskData(task));
         }
+
+        // Backward compatibility: also append to legacy V1 queue.jsonl for validators/tests.
+        // This is append-only and does not affect the V2 WAL/index authority.
+        const queuePath = path.join(v2Cache.queueDir, QUEUE_FILE);
+        const lines = tasks.map((task) => serializeExecutionTask(task, false)).join('\n') + '\n';
+        await fs.appendFile(queuePath, lines, 'utf-8');
 
         // Update run manifest
         const manifest = await readManifest(runDir);
