@@ -29,3 +29,5 @@ core telemetry and artifact capture, and raising test coverage to prevent regres
 - Security scan requirements could introduce new CI gate failures without clear remediation paths (CDMCH-5).
 - Telemetry and artifact capture can affect execution performance or introduce I/O edge cases (CDMCH-22/24/25).
 - E2E tests may be flaky if mock CLI or timing controls are not fully deterministic (CDMCH-29).
+- Unit testing `CodeMachineRunner` may be complex if it is tightly coupled to the filesystem or process spawning, leading to brittle mocks (CDMCH-26).
+- Automated dependency updates can introduce breaking changes or new vulnerabilities, requiring manual intervention (CDMCH-6).
