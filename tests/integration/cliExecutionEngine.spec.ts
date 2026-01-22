@@ -1049,6 +1049,47 @@ describe('CLIExecutionEngine E2E with Mock CLI', () => {
       );
     });
 
+    it('should emit taskFailed events on failed execution', async () => {
+      const mockLogger = createMockLogger();
+
+      const logWriter = new ExecutionLogWriter(mockLogger as never, {
+        runDir,
+        runId: featureId,
+      });
+
+      const taskFailedSpy = vi.spyOn(logWriter, 'taskFailed');
+
+      process.env.MOCK_BEHAVIOR = 'failure';
+
+      const config = createTestConfig({ max_retries: 0 });
+      const strategy = new CodeMachineStrategy({ config });
+
+      const tasks = [createExecutionTask('T1', featureId, 'Fail Telemetry', 'code_generation')];
+      await appendToQueue(runDir, tasks);
+
+      const baseConfig = createTestBaseConfig('telemetry-failure', { max_retries: 0 });
+
+      const engine = new CLIExecutionEngine({
+        runDir,
+        config: baseConfig,
+        strategies: [strategy],
+        logWriter,
+      });
+
+      await engine.execute();
+
+      expect(taskFailedSpy).toHaveBeenCalledWith(
+        'T1',
+        ExecutionTaskType.CODE_GENERATION,
+        expect.any(Error),
+        expect.any(Number),
+        expect.objectContaining({
+          strategy: 'codemachine',
+          willRetry: false,
+        })
+      );
+    });
+
     it('should log error on permanent task failure', async () => {
       const mockLogger = createMockLogger();
 

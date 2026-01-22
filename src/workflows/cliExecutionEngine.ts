@@ -7,7 +7,12 @@ import { updateTaskInQueue, loadQueue } from './queueStore.js';
 import { validateCliAvailability } from './codeMachineRunner.js';
 import { StructuredLogger } from '../telemetry/logger.js';
 import { ExecutionLogWriter } from '../telemetry/logWriters.js';
-import { ExecutionTaskType } from '../telemetry/executionMetrics.js';
+import {
+  ExecutionTaskStatus,
+  ExecutionTaskType,
+  type CodeMachineExecutionStatus,
+} from '../telemetry/executionMetrics.js';
+import type { ExecutionTelemetry } from '../telemetry/executionTelemetry.js';
 
 type TaskTypeString = ExecutionTask['task_type'];
 
@@ -121,6 +126,7 @@ export interface ExecutionEngineOptions {
   dryRun?: boolean;
   logger?: StructuredLogger;
   logWriter?: ExecutionLogWriter;
+  telemetry?: ExecutionTelemetry;
 }
 
 export interface ExecutionResult {
@@ -157,6 +163,7 @@ export class CLIExecutionEngine {
   private readonly dryRun: boolean;
   private readonly logger: StructuredLogger | undefined;
   private readonly logWriter: ExecutionLogWriter | undefined;
+  private readonly telemetry: ExecutionTelemetry | undefined;
   private stopped = false;
 
   constructor(options: ExecutionEngineOptions) {
@@ -165,7 +172,8 @@ export class CLIExecutionEngine {
     this.strategies = options.strategies;
     this.dryRun = options.dryRun ?? false;
     this.logger = options.logger;
-    this.logWriter = options.logWriter;
+    this.telemetry = options.telemetry;
+    this.logWriter = options.logWriter ?? options.telemetry?.logs;
   }
 
   async validatePrerequisites(): Promise<PrerequisiteResult> {
@@ -335,6 +343,17 @@ export class CLIExecutionEngine {
           recoverable: false,
         },
       });
+      this.logWriter?.taskSkipped(
+        task.task_id,
+        toExecutionTaskType(task.task_type),
+        'no_strategy',
+        { reason: 'No execution strategy available' }
+      );
+      this.telemetry?.metrics?.recordTaskLifecycle(
+        task.task_id,
+        toExecutionTaskType(task.task_type),
+        ExecutionTaskStatus.SKIPPED
+      );
       return { success: false, permanentlyFailed: true };
     }
 
@@ -343,11 +362,26 @@ export class CLIExecutionEngine {
     this.logWriter?.taskStarted(task.task_id, toExecutionTaskType(task.task_type), {
       strategy: strategy.name,
     });
+    this.telemetry?.metrics?.recordTaskLifecycle(
+      task.task_id,
+      toExecutionTaskType(task.task_type),
+      ExecutionTaskStatus.STARTED
+    );
     const startTime = Date.now();
 
     if (this.dryRun) {
       this.logger?.info('Dry run - skipping actual execution', { taskId: task.task_id });
       await updateTaskInQueue(this.runDir, task.task_id, { status: 'completed' });
+      this.logWriter?.taskCompleted(task.task_id, toExecutionTaskType(task.task_type), 0, {
+        strategy: strategy.name,
+        dry_run: true,
+      });
+      this.telemetry?.metrics?.recordTaskLifecycle(
+        task.task_id,
+        toExecutionTaskType(task.task_type),
+        ExecutionTaskStatus.COMPLETED,
+        0
+      );
       return { success: true, permanentlyFailed: false };
     }
 
@@ -362,9 +396,9 @@ export class CLIExecutionEngine {
     await fs.mkdir(path.dirname(context.logPath), { recursive: true });
 
     const strategyResult = await strategy.execute(task, context);
+    const durationMs = strategyResult.durationMs ?? Date.now() - startTime;
 
     if (strategyResult.success) {
-      const durationMs = Date.now() - startTime;
       const artifacts = await captureArtifacts(
         this.runDir,
         task,
@@ -372,6 +406,10 @@ export class CLIExecutionEngine {
         strategyResult.artifacts,
         this.logger
       );
+      if (strategy.name === 'codemachine') {
+        const engine = executionConfig.default_engine;
+        this.telemetry?.metrics?.recordCodeMachineExecution(engine, 'success', durationMs);
+      }
       this.logWriter?.taskCompleted(task.task_id, toExecutionTaskType(task.task_type), durationMs, {
         strategy: strategy.name,
         summary: strategyResult.summary,
@@ -379,8 +417,14 @@ export class CLIExecutionEngine {
       });
       await updateTaskInQueue(this.runDir, task.task_id, {
         status: 'completed',
-        metadata: { summary: strategyResult.summary },
+        metadata: { summary: strategyResult.summary, artifacts },
       });
+      this.telemetry?.metrics?.recordTaskLifecycle(
+        task.task_id,
+        toExecutionTaskType(task.task_type),
+        ExecutionTaskStatus.COMPLETED,
+        durationMs
+      );
       return { success: true, permanentlyFailed: false };
     }
 
@@ -396,6 +440,27 @@ export class CLIExecutionEngine {
     };
 
     const canRetryTask = canRetry(updatedTask);
+    const status: CodeMachineExecutionStatus =
+      strategyResult.status === 'timeout' ? 'timeout' : 'failure';
+    if (strategy.name === 'codemachine') {
+      const engine = executionConfig.default_engine;
+      this.telemetry?.metrics?.recordCodeMachineExecution(engine, status, durationMs);
+      if (canRetryTask) {
+        this.telemetry?.metrics?.recordCodeMachineRetry(engine);
+      }
+    }
+    this.logWriter?.taskFailed(
+      task.task_id,
+      toExecutionTaskType(task.task_type),
+      new Error(strategyResult.errorMessage ?? 'Unknown error'),
+      durationMs,
+      {
+        strategy: strategy.name,
+        recoverable: strategyResult.recoverable,
+        retryCount: updatedTask.retry_count,
+        willRetry: canRetryTask,
+      }
+    );
 
     if (canRetryTask) {
       await this.applyRetryBackoff(updatedTask.retry_count);
@@ -408,6 +473,12 @@ export class CLIExecutionEngine {
         taskId: task.task_id,
         retryCount: updatedTask.retry_count,
       });
+      this.telemetry?.metrics?.recordTaskLifecycle(
+        task.task_id,
+        toExecutionTaskType(task.task_type),
+        ExecutionTaskStatus.FAILED,
+        durationMs
+      );
       return { success: false, permanentlyFailed: false };
     }
 
@@ -416,6 +487,12 @@ export class CLIExecutionEngine {
       retry_count: updatedTask.retry_count,
       last_error: updatedTask.last_error,
     });
+    this.telemetry?.metrics?.recordTaskLifecycle(
+      task.task_id,
+      toExecutionTaskType(task.task_type),
+      ExecutionTaskStatus.FAILED,
+      durationMs
+    );
 
     return { success: false, permanentlyFailed: true };
   }

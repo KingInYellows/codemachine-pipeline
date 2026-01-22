@@ -57,7 +57,7 @@ export {
 export { createExecutionMetrics } from './executionMetrics.js';
 
 // Execution telemetry exports
-export { ExecutionTelemetry } from './executionTelemetry.js';
+export { ExecutionTelemetry, createExecutionTelemetry } from './executionTelemetry.js';
 
 // Rate limit exports
 export { createRateLimitLedger } from './rateLimitLedger.js';
