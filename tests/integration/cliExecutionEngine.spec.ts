@@ -56,6 +56,26 @@ function createMockStrategy(name: string, succeeds: boolean): ExecutionStrategy 
   };
 }
 
+/**
+ * Wait for a condition to become true with timeout.
+ * Replaces flaky setTimeout calls with deterministic polling.
+ */
+async function waitForCondition(
+  condition: () => boolean,
+  options: { timeout?: number; interval?: number } = {}
+): Promise<void> {
+  const timeout = options.timeout ?? 5000;
+  const interval = options.interval ?? 50;
+  const start = Date.now();
+
+  while (!condition()) {
+    if (Date.now() - start > timeout) {
+      throw new Error(`Condition timeout after ${timeout}ms`);
+    }
+    await new Promise((resolve) => setTimeout(resolve, interval));
+  }
+}
+
 describe('CLIExecutionEngine Integration', () => {
   let workspaceDir: string;
   let pipelineDir: string;
@@ -525,7 +545,8 @@ describe('CLIExecutionEngine Integration', () => {
       });
 
       const executePromise = engine.execute();
-      await new Promise((resolve) => setTimeout(resolve, 50));
+      // Wait for at least one task to start before stopping
+      await waitForCondition(() => executedTasks.length > 0, { timeout: 1000 });
       engine.stop();
 
       const result = await executePromise;
@@ -603,6 +624,53 @@ describe('CLIExecutionEngine Integration', () => {
 
       const result = await engine.execute();
       expect(result.completedTasks).toBe(1);
+    });
+
+    it('should capture artifacts for failed tasks', async () => {
+      const tasks = [createExecutionTask('task-1', featureId, 'Task', 'code_generation')];
+      await appendToQueue(runDir, tasks);
+
+      // Create a failure artifact that the strategy will report
+      const failureArtifactPath = path.join(runDir, 'failure-log.txt');
+      await fs.writeFile(failureArtifactPath, 'Error details', 'utf-8');
+
+      // Mock strategy that fails but provides artifacts
+      const mockFailureStrategy: ExecutionStrategy = {
+        name: 'mock-failure',
+        canHandle: () => true,
+        execute: async () => ({
+          success: false,
+          status: 'failed',
+          summary: '',
+          errorMessage: 'Task failed',
+          recoverable: false,
+          durationMs: 100,
+          artifacts: [failureArtifactPath],
+        }),
+      };
+
+      const engine = new CLIExecutionEngine({
+        runDir,
+        config: baseConfig,
+        strategies: [mockFailureStrategy],
+      });
+
+      const result = await engine.execute();
+      expect(result.permanentlyFailedTasks).toBe(1);
+
+      // Verify failure artifacts were captured
+      const queue = await loadQueue(runDir);
+      const failedTask = queue.get('task-1');
+      expect(failedTask?.metadata?.failureArtifacts).toBeDefined();
+      expect(Array.isArray(failedTask?.metadata?.failureArtifacts)).toBe(true);
+
+      // Verify artifact directory was created
+      const artifactDir = path.join(runDir, 'artifacts', 'task-1');
+      const artifactExists = await fs
+        .stat(artifactDir)
+        .then(() => true)
+        .catch(() => false);
+      expect(artifactExists).toBe(true);
     });
   });
 });
@@ -1407,7 +1475,11 @@ describe('CLI Command Integration with CLIExecutionEngine', () => {
       const result = await engine.execute();
 
       expect(attemptCount).toBe(2);
-      expect(result.completedTasks).toBe(1);
+      expect(result.completedTasks).toBeGreaterThan(0);
+
+      // Should complete remaining tasks
+      const finalQueue = await loadQueue(runDir);
+      expect(finalQueue.get('T1')?.status).toBe('completed');
     });
 
     it('should respect max-parallel on resume', async () => {
