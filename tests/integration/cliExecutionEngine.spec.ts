@@ -1518,12 +1518,14 @@ describe('CLI Command Integration with CLIExecutionEngine', () => {
 
       // First run - T1 succeeds, T2 fails
       let firstRunCount = 0;
+      let firstEngine: CLIExecutionEngine;
       const firstRunStrategy: ExecutionStrategy = {
         name: 'first-run',
         canHandle: () => true,
         execute: async (task) => {
           firstRunCount++;
           if (task.task_id === 'T2') {
+            firstEngine!.stop();
             return createFailureResult('Transient error', true);
           }
           return createSuccessResult();
@@ -1538,7 +1540,7 @@ describe('CLI Command Integration with CLIExecutionEngine', () => {
         },
       };
 
-      const firstEngine = new CLIExecutionEngine({
+      firstEngine = new CLIExecutionEngine({
         runDir,
         config: configWithFastRetry,
         strategies: [firstRunStrategy],
