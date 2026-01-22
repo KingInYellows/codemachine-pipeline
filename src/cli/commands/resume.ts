@@ -14,9 +14,7 @@ import { loadRepoConfig, type RepoConfig } from '../../core/config/RepoConfig';
 import { createCliLogger, LogLevel } from '../../telemetry/logger';
 import { createRunMetricsCollector, StandardMetrics } from '../../telemetry/metrics';
 import { createRunTraceManager, SpanStatusCode } from '../../telemetry/traces';
-import { createExecutionMetrics } from '../../telemetry/executionMetrics';
-import { createExecutionLogWriter } from '../../telemetry/logWriters';
-import type { ExecutionTelemetry } from '../../telemetry/executionTelemetry';
+import { createExecutionTelemetry } from '../../telemetry/executionTelemetry';
 import type { StructuredLogger } from '../../telemetry/logger';
 import type { MetricsCollector } from '../../telemetry/metrics';
 import type { TraceManager, ActiveSpan } from '../../telemetry/traces';
@@ -190,7 +188,7 @@ export default class Resume extends Command {
     let metrics: MetricsCollector | undefined;
     let traceManager: TraceManager | undefined;
     let commandSpan: ActiveSpan | undefined;
-    let executionTelemetry: ExecutionTelemetry | undefined;
+    let executionTelemetry: ReturnType<typeof createExecutionTelemetry> | undefined;
     let runDirPath: string | undefined;
     const startTime = Date.now();
 
@@ -222,15 +220,14 @@ export default class Resume extends Command {
       if (!metrics || !logger) {
         throw new Error('Telemetry initialization failed for resume command');
       }
-      executionTelemetry = {
-        metrics: createExecutionMetrics(metrics, {
-          runDir: runDirPath,
-          runId: featureId,
-          component: 'execution_queue',
-        }),
-        logs: createExecutionLogWriter(logger, { runDir: runDirPath, runId: featureId }),
+      executionTelemetry = createExecutionTelemetry({
+        logger,
+        metrics,
+        runDir: runDirPath,
+        runId: featureId,
         traceManager,
-      };
+        component: 'execution_queue',
+      });
 
       logger.info('Resume command invoked', {
         feature_id: featureId,
@@ -359,6 +356,7 @@ export default class Resume extends Command {
         strategies: [strategy],
         dryRun: false,
         logger,
+        telemetry: executionTelemetry,
       });
 
       const prereqResult = await executionEngine.validatePrerequisites();
