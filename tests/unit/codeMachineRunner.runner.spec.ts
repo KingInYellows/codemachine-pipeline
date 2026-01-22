@@ -71,7 +71,12 @@ function createMockChildProcess(): ChildProcess {
 function createMockWriteStream(): WriteStream {
   const stream = new EventEmitter() as unknown as WriteStream;
   stream.write = vi.fn(() => true) as WriteStream['write'];
-  stream.end = vi.fn(() => stream) as WriteStream['end'];
+  stream.end = vi.fn((callback?: () => void) => {
+    if (callback) {
+      callback();
+    }
+    return stream;
+  }) as WriteStream['end'];
   return stream;
 }
 
