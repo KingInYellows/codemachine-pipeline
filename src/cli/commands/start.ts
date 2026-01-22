@@ -8,6 +8,7 @@ import { createCliLogger, LogLevel } from '../../telemetry/logger';
 import type { MetricsCollector } from '../../telemetry/metrics';
 import { createRunMetricsCollector, StandardMetrics } from '../../telemetry/metrics';
 import { createRunTraceManager, SpanStatusCode } from '../../telemetry/traces';
+import { createExecutionTelemetry, type ExecutionTelemetry } from '../../telemetry/executionTelemetry';
 import {
   createRunDirectory,
   setCurrentStep,
@@ -205,6 +206,14 @@ export default class Start extends Command {
     });
     const metrics = createRunMetricsCollector(runDir, featureId);
     const traceManager = createRunTraceManager(runDir, featureId);
+    const executionTelemetry = createExecutionTelemetry({
+      logger,
+      metrics,
+      runDir,
+      runId: featureId,
+      traceManager,
+      component: 'execution_engine',
+    });
     const commandSpan = traceManager.startSpan('cli.start');
     commandSpan.setAttribute('feature_id', featureId);
     commandSpan.setAttribute('input_source', featureSource);
@@ -302,6 +311,7 @@ export default class Start extends Command {
           repoConfig,
           logger,
           metrics,
+          telemetry: executionTelemetry,
           maxParallel: typedFlags['max-parallel'] ?? 1,
         });
       }
@@ -515,9 +525,10 @@ export default class Start extends Command {
     repoConfig: RepoConfig;
     logger: StructuredLogger;
     metrics: MetricsCollector;
+    telemetry: ExecutionTelemetry;
     maxParallel: number;
   }): Promise<Awaited<ReturnType<CLIExecutionEngine['execute']>>> {
-    const { runDir, repoConfig, logger, maxParallel } = options;
+    const { runDir, repoConfig, logger, maxParallel, telemetry } = options;
 
     await setCurrentStep(runDir, EXECUTION_STEPS.Execution);
     logger.info('Starting task execution via CLIExecutionEngine');
@@ -575,6 +586,7 @@ export default class Start extends Command {
       strategies: [strategy],
       dryRun: false,
       logger,
+      telemetry,
     });
 
     // Validate prerequisites
