@@ -118,6 +118,51 @@ describe('Resume Flow Integration Tests', () => {
       expect(nextTask?.task_id).toBe('task-2'); // Should retry running task
     });
 
+    it('should preserve failure artifacts across retries', async () => {
+      // Create a task that will fail then succeed
+      const task = createExecutionTask('artifact-retry', featureId, 'Artifact retry test', 'code_generation');
+      await appendToQueue(runDir, [task]);
+
+      // Create a failure artifact
+      const failureLog = path.join(runDir, 'failure-debug.log');
+      await fs.writeFile(failureLog, 'Debug info from first failure', 'utf-8');
+
+      // Simulate first run failure with artifact
+      await updateTaskInQueue(runDir, 'artifact-retry', {
+        status: 'failed',
+        retry_count: 1,
+        last_error: {
+          step: 'code_generation',
+          message: 'First attempt failed',
+          timestamp: new Date().toISOString(),
+          recoverable: true,
+        },
+        metadata: {
+          failureArtifacts: [failureLog],
+        },
+      });
+
+      // Simulate crash - set status to paused
+      await setLastError(runDir, 'code_generation', 'First attempt failed', true);
+      await updateManifest(runDir, { status: 'paused' });
+
+      // Resume analysis should succeed
+      const analysis: ResumeState = await analyzeResumeState(runDir);
+      expect(analysis.canResume).toBe(true);
+
+      // Prepare resume
+      await prepareResume(runDir);
+
+      // Verify task is ready for retry
+      const queue = await loadQueue(runDir);
+      const retryTask = queue.get('artifact-retry');
+      expect(retryTask).toBeDefined();
+
+      // Verify failure artifacts were preserved in metadata
+      expect(retryTask?.metadata?.failureArtifacts).toBeDefined();
+      expect(retryTask?.metadata?.failureArtifacts?.length).toBeGreaterThan(0);
+    });
+
     it('should restore queue from snapshot after crash', async () => {
       // Create and populate queue
       const tasks = Array.from({ length: 10 }, (_, i) =>
@@ -429,8 +474,12 @@ describe('Resume Flow Integration Tests', () => {
 
   describe('Scenario: Queue Task Dependencies', () => {
     it('should resume with correct task ordering based on dependencies', async () => {
-      // Create DAG: task-1 → task-2 → task-3
-      //                    ↘ task-4 ↗
+      // Create diamond dependency DAG:
+      //        task-1 (base)
+      //       /       \
+      //   task-2     task-4
+      //       \       /
+      //        task-3 (depends on both task-2 and task-4)
       const task1 = createExecutionTask('task-1', featureId, 'Base', 'code_generation');
       const task2 = createExecutionTask('task-2', featureId, 'Depends on 1', 'testing', {
         dependencyIds: ['task-1'],

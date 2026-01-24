@@ -672,6 +672,46 @@ describe('CLIExecutionEngine Integration', () => {
         .catch(() => false);
       expect(artifactExists).toBe(true);
     });
+
+    it('should handle captureArtifacts exception gracefully with non-existent artifact paths', async () => {
+      const tasks = [createExecutionTask('task-1', featureId, 'Task', 'code_generation')];
+      await appendToQueue(runDir, tasks);
+
+      // Mock strategy that succeeds but reports non-existent artifact paths
+      const mockSuccessWithBadArtifacts: ExecutionStrategy = {
+        name: 'mock-success-with-bad-artifacts',
+        canHandle: () => true,
+        execute: async () => ({
+          success: true,
+          status: 'completed',
+          summary: 'Task completed',
+          recoverable: false,
+          durationMs: 100,
+          // Point to non-existent files to trigger graceful handling
+          artifacts: ['/non/existent/path/artifact.txt', '/another/missing/file.md'],
+        }),
+      };
+
+      const engine = new CLIExecutionEngine({
+        runDir,
+        config: baseConfig,
+        strategies: [mockSuccessWithBadArtifacts],
+      });
+
+      const result = await engine.execute();
+
+      // Task should complete successfully even when artifact capture finds no files
+      expect(result.completedTasks).toBe(1);
+      expect(result.permanentlyFailedTasks).toBe(0);
+
+      // Verify task completed with empty artifacts array (graceful handling)
+      const queue = await loadQueue(runDir);
+      const completedTask = queue.get('task-1');
+      expect(completedTask?.status).toBe('completed');
+      expect(completedTask?.metadata?.artifacts).toBeDefined();
+      expect(Array.isArray(completedTask?.metadata?.artifacts)).toBe(true);
+      expect(completedTask?.metadata?.artifacts).toHaveLength(0);
+    });
   });
 });
 
@@ -1197,6 +1237,86 @@ describe('CLIExecutionEngine E2E with Mock CLI', () => {
         expect.stringContaining('permanently failed'),
         expect.objectContaining({ taskId: 'T1' })
       );
+    });
+
+    it('should emit task lifecycle telemetry for each completed task', async () => {
+      const mockMetrics = {
+        recordTaskLifecycle: vi.fn(),
+        recordCodeMachineExecution: vi.fn(),
+        setQueueDepth: vi.fn(),
+      };
+
+      const tasks = [
+        createExecutionTask('task-1', featureId, 'First', 'code_generation'),
+        createExecutionTask('task-2', featureId, 'Second', 'code_generation'),
+        createExecutionTask('task-3', featureId, 'Third', 'code_generation'),
+      ];
+      await appendToQueue(runDir, tasks);
+
+      const successStrategy: ExecutionStrategy = {
+        name: 'success-lifecycle',
+        canHandle: () => true,
+        execute: async () => ({
+          success: true,
+          status: 'completed',
+          summary: 'Done',
+          recoverable: false,
+          durationMs: 100,
+          artifacts: [],
+        }),
+      };
+
+      const baseTestConfig: RepoConfig = {
+        schema_version: '1.0',
+        platform: 'github',
+        provider: { type: 'github', base_url: 'https://api.github.com' },
+        repository: {
+          owner: 'test',
+          repo: 'lifecycle-test',
+          default_branch: 'main',
+          visibility: 'private',
+        },
+        execution: {
+          codemachine_cli_path: MOCK_CLI_PATH,
+          default_engine: 'claude' as const,
+          workspace_dir: workspaceDir,
+          task_timeout_ms: 30000,
+          max_retries: 3,
+          retry_backoff_ms: 10,
+          env_allowlist: ['MOCK_BEHAVIOR'],
+        },
+      };
+
+      const engine = new CLIExecutionEngine({
+        runDir,
+        config: baseTestConfig,
+        strategies: [successStrategy],
+        telemetry: { metrics: mockMetrics as never },
+      });
+
+      await engine.execute();
+
+      // Verify recordTaskLifecycle was called for each task (STARTED + COMPLETED = 6 calls)
+      expect(mockMetrics.recordTaskLifecycle).toHaveBeenCalledTimes(6);
+
+      // Verify each task had STARTED and COMPLETED lifecycle events
+      const calls = mockMetrics.recordTaskLifecycle.mock.calls;
+      const taskLifecycles = new Map<string, string[]>();
+      for (const call of calls) {
+        const [taskId, , status] = call;
+        if (!taskLifecycles.has(taskId)) {
+          taskLifecycles.set(taskId, []);
+        }
+        taskLifecycles.get(taskId)!.push(status);
+      }
+
+      // Each task should have started then completed lifecycle events
+      for (const taskId of ['task-1', 'task-2', 'task-3']) {
+        const lifecycle = taskLifecycles.get(taskId);
+        expect(lifecycle).toBeDefined();
+        expect(lifecycle).toContain('started');
+        expect(lifecycle).toContain('completed');
+      }
     });
 
     it('should log execution metrics summary', async () => {

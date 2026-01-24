@@ -1,105 +1,122 @@
 # Submission Workflow
 
-## Always Use Graphite for PR Submissions
+This document describes the standard workflow for submitting changes to the repository.
 
-When submitting completed work, **ALWAYS** use Graphite (`gt`) commands instead of pushing directly to main.
+## Overview
 
-## Proper Workflow
+All changes must go through pull requests. Direct pushes to protected branches are not allowed.
 
-### 1. Start New Work
+---
+
+## Standard Workflow
+
+### 1. Create a Feature Branch
+
 ```bash
-# Create a new Graphite branch from main
+git checkout -b feature/my-feature main
+```
+
+Or with Graphite for stacked PRs:
+
+```bash
 gt create <branch-name> --message "Brief description"
 ```
 
-### 2. Make Changes
+### 2. Make Changes and Commit
+
 ```bash
-# Make your code changes
-# Stage files
 git add <files>
+git commit -m "feat: description of change
 
-# Commit with detailed message
-git commit -m "type: description
-
-Details...
-
-Co-Authored-By: Claude Sonnet 4.5 (1M context) <noreply@anthropic.com>"
+Co-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>"
 ```
 
-### 3. Submit to Graphite
+### 3. Push to Remote
+
 ```bash
-# Push and create PR through Graphite
+git push -u origin feature/my-feature
+```
+
+Or with Graphite:
+
+```bash
 gt submit --no-edit
-
-# Mark as ready for review (if created as draft)
-gh pr ready <PR-number>
-
-# Update PR description if needed
-gh pr edit <PR-number> --body "Detailed description"
 ```
 
-### 4. View Stack Status
-```bash
-# View your current stack
-gt log
+### 4. Create Pull Request
 
-# View specific stack
-gt log --stack
-```
+- Open a PR against the `main` branch
+- Ensure all CI checks pass
+- Request review from appropriate team members
 
-## ❌ What NOT to Do
+### 5. Merge
 
-**NEVER push directly to main:**
-```bash
-# ❌ DON'T DO THIS
-git checkout main
-git push origin main
-```
+After approval, merge via the GitHub UI using squash merge.
 
-**NEVER create PRs without Graphite:**
-```bash
-# ❌ DON'T DO THIS
-gh pr create --title "..." --body "..."
-```
+---
 
-## ✅ Correct Flow Example
+## CI Checks
 
-```bash
-# 1. Create branch
-gt create fix-bug-123 --message "Fix authentication bug"
+All PRs must pass:
 
-# 2. Make changes and commit
-git add src/auth/handler.ts tests/auth.spec.ts
-git commit -m "fix: resolve authentication token expiry issue"
+- **Type checking:** `npm run type-check` (if available)
+- **Linting:** `npm run lint`
+- **Unit tests:** `npm run test:unit`
+- **Integration tests:** `npm run test:integration`
+- **Security checks:** `npm run security:glob-guard`
 
-# 3. Submit through Graphite
-gt submit --no-edit
-
-# 4. Mark ready if needed
-gh pr ready $(gh pr list --head $(git branch --show-current) --json number -q '.[0].number')
-```
+---
 
 ## Recovery from Accidental Direct Push
 
-If you accidentally pushed to main:
+> **WARNING:** Force-pushing to main can cause issues if others have already pulled the commit.
+> Coordinate with your team before proceeding with these steps.
+
+If you accidentally push directly to a protected branch:
+
+### 1. Identify the Problematic Commit
 
 ```bash
-# 1. Reset main to before your commit
-git checkout main
-git reset --hard origin/main~1
-git push origin main --force
-
-# 2. Create proper Graphite branch
-gt create <branch-name> --message "Description"
-
-# 3. Cherry-pick your commit
-git cherry-pick <commit-hash>
-
-# 4. Submit properly
-gt submit --no-edit
+git log --oneline -5
 ```
 
-## Key Commands Reference
+### 2. Create a Revert Commit (Preferred)
+
+```bash
+git revert <commit-sha>
+git push origin main
+```
+
+### 3. Force Push (Last Resort)
+
+Only if absolutely necessary and coordinated with team:
+
+```bash
+git reset --hard <previous-good-commit>
+git push --force-with-lease origin main
+```
+
+### 4. Notify Team
+
+- Post in team channel about the incident
+- Ensure others pull the corrected history
+
+---
+
+## Branch Protection
+
+The `main` branch has the following protections:
+
+- Require pull request before merging
+- Require status checks to pass
+- Require linear history
+- No force pushes (except by admins in emergencies)
+
+---
+
+## Graphite Integration
+
+For stacked PRs, use Graphite commands:
 
 | Command | Purpose |
 |---------|---------|
@@ -110,18 +127,9 @@ gt submit --no-edit
 | `gh pr ready <num>` | Mark draft PR as ready |
 | `gh pr view <num>` | View PR details |
 
-## Integration with CI/CD
+---
 
-All PRs submitted through Graphite will automatically:
-- ✅ Run CI tests (unit + integration)
-- ✅ Run security scans
-- ✅ Build Docker images
-- ✅ Check code quality
-- ✅ Validate with Graphite workflows
+**Related Documents:**
 
-## Notes
-
-- Graphite maintains proper branch relationships and dependencies
-- Stacked PRs are easier to review
-- CI runs on all branches before merge
-- Main branch is protected and requires PRs
+- [Branch Protection Playbook](../requirements/branch_protection_playbook.md)
+- [GitHub Branch Protection](../requirements/github_branch_protection.md)
