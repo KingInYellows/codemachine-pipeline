@@ -313,6 +313,14 @@ export class CLIExecutionEngine {
       } else {
         result.failedTasks++;
       }
+
+      // Update queue depth metrics after each task completion
+      const pending = result.totalTasks - result.completedTasks - result.failedTasks - result.permanentlyFailedTasks - result.skippedTasks;
+      this.telemetry?.metrics?.setQueueDepth(
+        pending,
+        result.completedTasks,
+        result.failedTasks + result.permanentlyFailedTasks
+      );
     }
 
     this.logger?.info('Execution complete', {
@@ -462,16 +470,38 @@ export class CLIExecutionEngine {
       }
     );
 
+    // Capture failure artifacts for debugging
+    let failureArtifacts: string[] = [];
+    try {
+      failureArtifacts = await captureArtifacts(
+        this.runDir,
+        task,
+        context.workspaceDir,
+        strategyResult.artifacts ?? [],
+        this.logger
+      );
+    } catch (err) {
+      this.logger?.warn('Failed to capture failure artifacts', { 
+        error: err instanceof Error ? err.message : String(err),
+        taskId: task.task_id 
+      });
+    }
+
     if (canRetryTask) {
       await this.applyRetryBackoff(updatedTask.retry_count);
       await updateTaskInQueue(this.runDir, task.task_id, {
         status: 'pending',
         retry_count: updatedTask.retry_count,
         last_error: updatedTask.last_error,
+        metadata: {
+          ...task.metadata,
+          failureArtifacts,
+        },
       });
       this.logger?.info('Task failed, will retry', {
         taskId: task.task_id,
         retryCount: updatedTask.retry_count,
+        artifactsCaptured: failureArtifacts.length,
       });
       this.telemetry?.metrics?.recordTaskLifecycle(
         task.task_id,
@@ -486,6 +516,10 @@ export class CLIExecutionEngine {
       status: 'failed',
       retry_count: updatedTask.retry_count,
       last_error: updatedTask.last_error,
+      metadata: {
+        ...task.metadata,
+        failureArtifacts,
+      },
     });
     this.telemetry?.metrics?.recordTaskLifecycle(
       task.task_id,
