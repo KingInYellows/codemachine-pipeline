@@ -1590,6 +1590,7 @@ describe('CLI Command Integration with CLIExecutionEngine', () => {
 
       // First run - T1 succeeds, T2 fails
       let firstRunCount = 0;
+      // eslint-disable-next-line prefer-const -- assigned after strategy creation for closure reference
       let firstEngine: CLIExecutionEngine;
       const firstRunStrategy: ExecutionStrategy = {
         name: 'first-run',
