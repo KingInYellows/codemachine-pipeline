@@ -364,8 +364,8 @@ describe('CLIExecutionEngine Resume Flow E2E', () => {
     });
   });
 
-  describe('Respect parallel execution limits on resume', () => {
-    it('should respect parallel execution limits on resume', async () => {
+  describe('Respect parallel execution limits', () => {
+    it('should respect parallel execution limits', async () => {
       // Create 5 independent tasks
       const tasks = Array.from({ length: 5 }, (_, i) =>
         createExecutionTask(`task-${i}`, featureId, `Task ${i}`, 'code_generation')
@@ -554,7 +554,7 @@ describe('CLIExecutionEngine Resume Flow E2E', () => {
       await updateManifest(runDir, { status: 'in_progress' });
 
       // Analyze state
-      let analysis = await analyzeResumeState(runDir);
+      const analysis = await analyzeResumeState(runDir);
       expect(analysis.canResume).toBe(true);
       expect(analysis.queueState.completed).toBe(2);
       expect(analysis.queueState.pending).toBe(2);

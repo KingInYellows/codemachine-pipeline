@@ -1475,7 +1475,7 @@ describe('CLI Command Integration with CLIExecutionEngine', () => {
       const result = await engine.execute();
 
       expect(attemptCount).toBe(2);
-      expect(result.completedTasks).toBeGreaterThan(0);
+      expect(result.completedTasks).toBe(1);
 
       // Should complete remaining tasks
       const finalQueue = await loadQueue(runDir);
