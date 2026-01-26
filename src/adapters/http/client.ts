@@ -1,6 +1,7 @@
 import { fetch, RequestInit, Response, HeadersInit, Headers } from 'undici';
 import * as crypto from 'node:crypto';
 import { RateLimitLedger, RateLimitEnvelope } from '../../telemetry/rateLimitLedger';
+import { createLogger, type StructuredLogger, LogLevel } from '../../telemetry/logger';
 
 /**
  * HTTP Client Module
@@ -774,21 +775,27 @@ function sleep(ms: number): Promise<void> {
 }
 
 /**
- * Create a basic console logger implementation
+ * Create a default logger implementation using StructuredLogger
  */
 function createConsoleLogger(): LoggerInterface {
+  const logger: StructuredLogger = createLogger({
+    component: 'http-client',
+    minLevel: LogLevel.DEBUG,
+    mirrorToStderr: true,
+  });
+
   return {
     debug: (message: string, context?: Record<string, unknown>) => {
-      console.debug(`[DEBUG] ${message}`, context ? JSON.stringify(context) : '');
+      logger.debug(message, context);
     },
     info: (message: string, context?: Record<string, unknown>) => {
-      console.info(`[INFO] ${message}`, context ? JSON.stringify(context) : '');
+      logger.info(message, context);
     },
     warn: (message: string, context?: Record<string, unknown>) => {
-      console.warn(`[WARN] ${message}`, context ? JSON.stringify(context) : '');
+      logger.warn(message, context);
     },
     error: (message: string, context?: Record<string, unknown>) => {
-      console.error(`[ERROR] ${message}`, context ? JSON.stringify(context) : '');
+      logger.error(message, context);
     },
   };
 }

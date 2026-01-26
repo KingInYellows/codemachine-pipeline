@@ -267,6 +267,12 @@ export class StructuredLogger implements LoggerInterface {
   private readonly redactor: RedactionEngine;
   private readonly logFilePath?: string;
   private writeQueue: Promise<void> = Promise.resolve();
+  /** Pending log entries that failed to persist to disk - used as fallback storage */
+  private pendingLogs: string[] = [];
+  /** Flag indicating if disk writes are currently failing */
+  private diskWritesFailing = false;
+  /** Maximum number of pending logs to keep in memory before dropping oldest */
+  private static readonly MAX_PENDING_LOGS = 1000;
 
   constructor(options: LoggerOptions) {
     this.options = {
@@ -351,11 +357,20 @@ export class StructuredLogger implements LoggerInterface {
     if (this.logFilePath) {
       this.writeQueue = this.writeQueue.then(async () => {
         try {
+          // First, try to flush any pending logs from previous failures
+          if (this.pendingLogs.length > 0 && !this.diskWritesFailing) {
+            await this.flushPendingLogs();
+          }
           await this.appendToFile(serialized);
+          // If we get here, disk writes are working
+          this.diskWritesFailing = false;
         } catch (error) {
-          // Fallback to stderr on file write failure
-          console.error('[LOGGER_ERROR] Failed to write log:', error);
-          console.error(serialized);
+          // Log the failure to stderr
+          console.error('[LOGGER_ERROR] Failed to write log to disk:', error);
+          // Store in memory as fallback
+          this.addToPendingLogs(serialized);
+          this.diskWritesFailing = true;
+          // Logging continues - entry is stored in pendingLogs
         }
       });
     }
@@ -413,6 +428,7 @@ export class StructuredLogger implements LoggerInterface {
 
   /**
    * Append log line to NDJSON file
+   * @throws {Error} If file write fails (caller should handle fallback)
    */
   private async appendToFile(line: string): Promise<void> {
     if (!this.logFilePath) {
@@ -421,10 +437,63 @@ export class StructuredLogger implements LoggerInterface {
 
     // Ensure logs directory exists
     const logsDir = path.dirname(this.logFilePath);
-    await fs.mkdir(logsDir, { recursive: true });
+    try {
+      await fs.mkdir(logsDir, { recursive: true });
+    } catch (mkdirError) {
+      // Directory creation failed - this is a critical disk issue
+      const error = mkdirError instanceof Error ? mkdirError : new Error(String(mkdirError));
+      console.error('[LOGGER_ERROR] Failed to create logs directory:', error.message);
+      throw error;
+    }
 
     // Append log line
-    await fs.appendFile(this.logFilePath, `${line}\n`, 'utf-8');
+    try {
+      await fs.appendFile(this.logFilePath, `${line}\n`, 'utf-8');
+    } catch (appendError) {
+      const error = appendError instanceof Error ? appendError : new Error(String(appendError));
+      console.error('[LOGGER_ERROR] Failed to append log to file:', error.message);
+      throw error;
+    }
+  }
+
+  /**
+   * Add a log entry to pending logs with size limit management
+   */
+  private addToPendingLogs(serialized: string): void {
+    this.pendingLogs.push(serialized);
+    // Drop oldest logs if we exceed the limit to prevent unbounded memory growth
+    if (this.pendingLogs.length > StructuredLogger.MAX_PENDING_LOGS) {
+      const dropped = this.pendingLogs.shift();
+      console.error(
+        `[LOGGER_ERROR] Pending logs exceeded ${StructuredLogger.MAX_PENDING_LOGS}, dropping oldest entry`
+      );
+      // Optionally log the dropped entry to stderr for debugging
+      if (dropped) {
+        console.error('[LOGGER_DROPPED]', dropped);
+      }
+    }
+  }
+
+  /**
+   * Attempt to flush pending logs that failed to persist earlier
+   */
+  private async flushPendingLogs(): Promise<void> {
+    if (!this.logFilePath || this.pendingLogs.length === 0) {
+      return;
+    }
+
+    const logsToFlush = [...this.pendingLogs];
+    this.pendingLogs = [];
+
+    for (const logLine of logsToFlush) {
+      try {
+        await this.appendToFile(logLine);
+      } catch (error) {
+        // Re-add to pending if flush fails
+        this.pendingLogs.push(logLine);
+        throw error; // Propagate to indicate ongoing disk issues
+      }
+    }
   }
 
   /**
@@ -452,10 +521,47 @@ export class StructuredLogger implements LoggerInterface {
   }
 
   /**
+   * Get log entries that failed to persist to disk (for debugging/recovery)
+   */
+  getPendingLogs(): string[] {
+    return [...this.pendingLogs];
+  }
+
+  /**
+   * Check if disk writes are currently failing
+   */
+  isDiskWriteFailing(): boolean {
+    return this.diskWritesFailing;
+  }
+
+  /**
    * Flush pending writes (call before process exit)
+   * This method never throws - it logs errors and returns gracefully
    */
   async flush(): Promise<void> {
-    await this.writeQueue;
+    try {
+      await this.writeQueue;
+      // Attempt one final flush of pending logs
+      if (this.pendingLogs.length > 0) {
+        try {
+          await this.flushPendingLogs();
+        } catch (error) {
+          console.error(
+            '[LOGGER_ERROR] Failed to flush pending logs on shutdown:',
+            error instanceof Error ? error.message : error
+          );
+          console.error(
+            `[LOGGER_ERROR] ${this.pendingLogs.length} log entries remain unflushed (available via getPendingLogs())`
+          );
+        }
+      }
+    } catch (error) {
+      // Never throw from flush - logging should not crash the application
+      console.error(
+        '[LOGGER_ERROR] Error during log flush:',
+        error instanceof Error ? error.message : error
+      );
+    }
   }
 }
 

@@ -452,8 +452,10 @@ describe('queueStore - snapshots', () => {
 
     const snapshotPath = path.join(runDir, 'queue', 'queue_snapshot.json');
     const snapshotContent = await fs.readFile(snapshotPath, 'utf-8');
-    const snapshot = JSON.parse(snapshotContent) as { feature_id: string };
+    // V2 snapshot format uses camelCase fields
+    const snapshot = JSON.parse(snapshotContent) as { featureId: string; schemaVersion: string };
 
-    expect(snapshot.feature_id).toBe('FEATURE-SNAP');
+    expect(snapshot.featureId).toBe('FEATURE-SNAP');
+    expect(snapshot.schemaVersion).toBe('2.0.0');
   });
 });

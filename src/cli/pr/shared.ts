@@ -14,6 +14,7 @@ import {
   readManifest,
   type RunManifest,
 } from '../../persistence/runDirectoryManager';
+import { safeJsonParse } from '../../utils/safeJson';
 import { createGitHubAdapter, GitHubAdapter } from '../../adapters/github/GitHubAdapter';
 import { createCliLogger, LogLevel, type StructuredLogger } from '../../telemetry/logger';
 import type { RepoConfig } from '../../core/config/RepoConfig';
@@ -125,11 +126,15 @@ export async function loadPRContext(
   const prJsonPath = path.join(runDir, 'pr.json');
   try {
     const prContent = await fs.readFile(prJsonPath, 'utf-8');
-    prMetadata = JSON.parse(prContent) as PRMetadata;
-    logger.debug('Loaded existing PR metadata', {
-      pr_number: prMetadata.pr_number,
-      url: prMetadata.url,
-    });
+    prMetadata = safeJsonParse<PRMetadata>(prContent);
+    if (prMetadata) {
+      logger.debug('Loaded existing PR metadata', {
+        pr_number: prMetadata.pr_number,
+        url: prMetadata.url,
+      });
+    } else {
+      logger.debug('No existing PR metadata found (invalid JSON)');
+    }
   } catch {
     // pr.json doesn't exist yet - that's ok
     logger.debug('No existing PR metadata found');
@@ -223,11 +228,11 @@ export async function persistPRData(context: PRContext, prMetadata: PRMetadata):
     const featureJsonPath = path.join(runDir, 'feature.json');
     try {
       const featureContent = await fs.readFile(featureJsonPath, 'utf-8');
-      const featureData = JSON.parse(featureContent) as {
+      const featureData = safeJsonParse<{
         external_links?: { github_pr_number?: number };
-      };
+      }>(featureContent);
 
-      if (featureData.external_links?.github_pr_number !== prMetadata.pr_number) {
+      if (featureData && featureData.external_links?.github_pr_number !== prMetadata.pr_number) {
         featureData.external_links = {
           ...featureData.external_links,
           github_pr_number: prMetadata.pr_number,
@@ -388,8 +393,8 @@ export async function hasValidationsPassed(runDir: string): Promise<boolean> {
 
   try {
     const content = await fs.readFile(validationPath, 'utf-8');
-    const validation = JSON.parse(content) as { success: boolean };
-    return validation.success === true;
+    const validation = safeJsonParse<{ success: boolean }>(content);
+    return validation?.success === true;
   } catch {
     // validation.json doesn't exist or is invalid
     return false;
@@ -438,8 +443,8 @@ export async function logDeploymentAction(
     // Load existing deployment.json if it exists
     try {
       const content = await fs.readFile(deploymentPath, 'utf-8');
-      const parsed = JSON.parse(content) as unknown;
-      if (isDeploymentLog(parsed)) {
+      const parsed = safeJsonParse<unknown>(content);
+      if (parsed && isDeploymentLog(parsed)) {
         deployment = parsed;
       } else {
         deployment = { actions: [] };
