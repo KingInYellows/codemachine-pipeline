@@ -234,6 +234,10 @@ export class TraceManager {
   private readonly tracesFilePath?: string;
   private readonly spans: Span[] = [];
   private writeQueue: Promise<void> = Promise.resolve();
+  /** Pending spans that failed to persist to disk - used as fallback storage */
+  private pendingSpans: Span[] = [];
+  /** Flag indicating if disk writes are currently failing */
+  private diskWritesFailing = false;
 
   constructor(options: TraceManagerOptions = {}) {
     this.options = {
@@ -314,16 +318,50 @@ export class TraceManager {
     if (this.tracesFilePath) {
       this.writeQueue = this.writeQueue.then(async () => {
         try {
+          // First, try to flush any pending spans from previous failures
+          if (this.pendingSpans.length > 0 && !this.diskWritesFailing) {
+            await this.flushPendingSpans();
+          }
           await this.appendSpanToFile(span);
+          // If we get here, disk writes are working
+          this.diskWritesFailing = false;
         } catch (error) {
-          console.error('[TRACE_ERROR] Failed to write span:', error);
+          // Log the failure
+          console.error('[TRACE_ERROR] Failed to write span to disk:', error);
+          // Store in memory as fallback
+          this.pendingSpans.push(span);
+          this.diskWritesFailing = true;
+          // Trace collection continues - span is still in this.spans array
         }
       });
     }
   }
 
   /**
+   * Attempt to flush pending spans that failed to persist earlier
+   */
+  private async flushPendingSpans(): Promise<void> {
+    if (!this.tracesFilePath || this.pendingSpans.length === 0) {
+      return;
+    }
+
+    const spansToFlush = [...this.pendingSpans];
+    this.pendingSpans = [];
+
+    for (const span of spansToFlush) {
+      try {
+        await this.appendSpanToFile(span);
+      } catch (error) {
+        // Re-add to pending if flush fails
+        this.pendingSpans.push(span);
+        throw error; // Propagate to indicate ongoing disk issues
+      }
+    }
+  }
+
+  /**
    * Append span to traces file (NDJSON format)
+   * @throws {Error} If file write fails (caller should handle fallback)
    */
   private async appendSpanToFile(span: Span): Promise<void> {
     if (!this.tracesFilePath) {
@@ -332,11 +370,24 @@ export class TraceManager {
 
     // Ensure telemetry directory exists
     const telemetryDir = path.dirname(this.tracesFilePath);
-    await fs.mkdir(telemetryDir, { recursive: true });
+    try {
+      await fs.mkdir(telemetryDir, { recursive: true });
+    } catch (mkdirError) {
+      // Directory creation failed - this is a critical disk issue
+      const error = mkdirError instanceof Error ? mkdirError : new Error(String(mkdirError));
+      console.error('[TRACE_ERROR] Failed to create telemetry directory:', error.message);
+      throw error;
+    }
 
     // Append span as JSON line
     const line = JSON.stringify(span);
-    await fs.appendFile(this.tracesFilePath, `${line}\n`, 'utf-8');
+    try {
+      await fs.appendFile(this.tracesFilePath, `${line}\n`, 'utf-8');
+    } catch (appendError) {
+      const error = appendError instanceof Error ? appendError : new Error(String(appendError));
+      console.error('[TRACE_ERROR] Failed to append span to file:', error.message);
+      throw error;
+    }
   }
 
   /**
@@ -347,10 +398,47 @@ export class TraceManager {
   }
 
   /**
+   * Get spans that failed to persist to disk (for debugging/recovery)
+   */
+  getPendingSpans(): Span[] {
+    return [...this.pendingSpans];
+  }
+
+  /**
+   * Check if disk writes are currently failing
+   */
+  isDiskWriteFailing(): boolean {
+    return this.diskWritesFailing;
+  }
+
+  /**
    * Flush pending writes (call before process exit)
+   * This method never throws - it logs errors and returns gracefully
    */
   async flush(): Promise<void> {
-    await this.writeQueue;
+    try {
+      await this.writeQueue;
+      // Attempt one final flush of pending spans
+      if (this.pendingSpans.length > 0) {
+        try {
+          await this.flushPendingSpans();
+        } catch (error) {
+          console.error(
+            '[TRACE_ERROR] Failed to flush pending spans on shutdown:',
+            error instanceof Error ? error.message : error
+          );
+          console.error(
+            `[TRACE_ERROR] ${this.pendingSpans.length} spans remain unflushed (available via getPendingSpans())`
+          );
+        }
+      }
+    } catch (error) {
+      // Never throw from flush - trace collection should not crash the application
+      console.error(
+        '[TRACE_ERROR] Error during trace flush:',
+        error instanceof Error ? error.message : error
+      );
+    }
   }
 
   /**
@@ -358,6 +446,8 @@ export class TraceManager {
    */
   reset(): void {
     this.spans.length = 0;
+    this.pendingSpans.length = 0;
+    this.diskWritesFailing = false;
   }
 }
 

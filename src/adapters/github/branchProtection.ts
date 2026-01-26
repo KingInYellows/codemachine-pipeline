@@ -13,6 +13,7 @@
 import { HttpClient, Provider, HttpError, ErrorType } from '../http/client';
 import type { LoggerInterface, HttpClientConfig } from '../http/client';
 import { serializeError, createErrorNormalizer } from '../../utils/errors';
+import { createLogger, type StructuredLogger, LogLevel } from '../../telemetry/logger';
 
 // ============================================================================
 // Types & Schemas
@@ -725,21 +726,27 @@ export class BranchProtectionAdapter {
   );
 
   /**
-   * Create default console logger
+   * Create default logger using StructuredLogger
    */
   private createDefaultLogger(): LoggerInterface {
+    const logger: StructuredLogger = createLogger({
+      component: 'branch-protection',
+      minLevel: LogLevel.DEBUG,
+      mirrorToStderr: true,
+    });
+
     return {
       debug: (message: string, context?: Record<string, unknown>) => {
-        console.debug(`[DEBUG] ${message}`, context ? JSON.stringify(context) : '');
+        logger.debug(message, context);
       },
       info: (message: string, context?: Record<string, unknown>) => {
-        console.info(`[INFO] ${message}`, context ? JSON.stringify(context) : '');
+        logger.info(message, context);
       },
       warn: (message: string, context?: Record<string, unknown>) => {
-        console.warn(`[WARN] ${message}`, context ? JSON.stringify(context) : '');
+        logger.warn(message, context);
       },
       error: (message: string, context?: Record<string, unknown>) => {
-        console.error(`[ERROR] ${message}`, context ? JSON.stringify(context) : '');
+        logger.error(message, context);
       },
     };
   }

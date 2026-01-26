@@ -449,7 +449,12 @@ export class ExecutionMetricsHelper {
    * Flush metrics to disk
    */
   async flush(): Promise<void> {
-    await this.metrics.flush();
+    try {
+      await this.metrics.flush();
+    } catch (error) {
+      // Log the failure but don't throw - metrics collection should not crash the application
+      console.error('[ExecutionMetrics] Failed to flush metrics to disk:', error);
+    }
   }
 }
 

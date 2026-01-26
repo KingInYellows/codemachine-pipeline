@@ -6,6 +6,7 @@ import {
   getSubdirectoryPath,
   withLock,
 } from '../../../persistence/runDirectoryManager';
+import { safeJsonParse } from '../../../utils/safeJson';
 import {
   ensureTelemetryReferences,
   resolveRunDirectorySettings,
@@ -346,7 +347,12 @@ export default class ContextSummarize extends Command {
       throw error;
     }
 
-    const parsed = parseContextDocument(JSON.parse(raw));
+    const jsonData = safeJsonParse<unknown>(raw);
+    if (!jsonData) {
+      this.error('Context summary contains invalid JSON', { exit: 30 });
+    }
+
+    const parsed = parseContextDocument(jsonData);
     if (!parsed.success) {
       const message = parsed.errors.map((err) => `${err.path}: ${err.message}`).join('; ');
       this.error(`Context summary validation failed: ${message}`, { exit: 30 });

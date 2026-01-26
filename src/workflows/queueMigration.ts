@@ -46,8 +46,9 @@ const V2_OPERATIONS_FILENAME = 'queue_operations.log';
  * Detect queue format version.
  *
  * Detection logic:
- * - V2: queue_snapshot.json exists with schemaVersion '2.0.0'
- * - V1: queue.jsonl exists (without V2 snapshot)
+ * - V2: queue_snapshot.json exists with schemaVersion '2.0.0', OR
+ *       queue_operations.log exists (V2 WAL marker)
+ * - V1: queue.jsonl exists (without V2 snapshot or operations log)
  * - none: No queue files found
  *
  * @param queueDir - Path to queue directory
@@ -60,7 +61,16 @@ export async function detectQueueVersion(queueDir: string): Promise<'v1' | 'v2' 
     return 'v2';
   }
 
-  // Check for V1 queue file
+  // Check for V2 operations log (WAL marker for V2 format without snapshot yet)
+  const v2OpsLogPath = path.join(queueDir, V2_OPERATIONS_FILENAME);
+  try {
+    await fs.access(v2OpsLogPath);
+    return 'v2';
+  } catch {
+    // V2 operations log doesn't exist
+  }
+
+  // Check for V1 queue file (only considered V1 if no V2 markers present)
   const v1QueuePath = path.join(queueDir, V1_QUEUE_FILENAME);
   try {
     await fs.access(v1QueuePath);
