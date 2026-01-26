@@ -930,6 +930,9 @@ export default class Status extends Command {
 
         integrations.github = github;
       } catch (error) {
+        this.logger?.warn('Failed to load GitHub integration data', {
+          error: error instanceof Error ? error.message : 'unknown error',
+        });
         integrations.github = {
           enabled: true,
           warnings: [
@@ -990,6 +993,9 @@ export default class Status extends Command {
 
         integrations.linear = linear;
       } catch (error) {
+        this.logger?.warn('Failed to load Linear integration data', {
+          error: error instanceof Error ? error.message : 'unknown error',
+        });
         integrations.linear = {
           enabled: true,
           warnings: [
@@ -1135,6 +1141,10 @@ export default class Status extends Command {
         warnings,
       };
     } catch (error) {
+      this.logger?.warn('Failed to load research status', {
+        error: error instanceof Error ? error.message : 'unknown error',
+        research_dir: researchDir,
+      });
       return {
         total_tasks: 0,
         pending_tasks: 0,
@@ -1274,6 +1284,10 @@ export default class Status extends Command {
       if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
         return;
       }
+      this.logger?.warn('Failed to read summarization metadata', {
+        error: error instanceof Error ? error.message : 'unknown error',
+        context_dir: contextDir,
+      });
       payload.warnings = [...(payload.warnings ?? []), 'Failed to read summarization metadata'];
     }
   }
@@ -1321,6 +1335,10 @@ export default class Status extends Command {
       if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
         return;
       }
+      this.logger?.warn('Failed to read cost telemetry', {
+        error: error instanceof Error ? error.message : 'unknown error',
+        run_dir: runDir,
+      });
       payload.warnings = [...(payload.warnings ?? []), 'Failed to read cost telemetry'];
     }
   }
