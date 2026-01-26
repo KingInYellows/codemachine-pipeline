@@ -1277,44 +1277,81 @@ export async function validateQueue(runDir: string): Promise<QueueValidationResu
  *
  * Uses V2 memory index for efficient task selection.
  * Priority order: running tasks (crash recovery) > pending tasks > retryable failures
- * V1 format is no longer supported - run migration tool to upgrade.
  *
  * @param runDir - Run directory path
  * @returns Next task to execute, or null if none available
- * @throws If queue is in V1 format (must run migration tool)
  */
 export async function getNextTask(runDir: string): Promise<ExecutionTask | null> {
-  const v2Cache = await getV2IndexCache(runDir);
-  const dependencyGraph = buildDependencyGraph(v2Cache.state);
+  // Try V2 index first (preferred path)
+  try {
+    const v2Cache = await getV2IndexCache(runDir);
+    const dependencyGraph = buildDependencyGraph(v2Cache.state);
+    const seen = new Set<string>();
+
+    // 1. Retry tasks that were running when crash occurred
+    for (const [, taskData] of v2Cache.state.tasks) {
+      if (taskData.status === 'running') {
+        if (v2AreDependenciesCompleted(v2Cache.state, taskData.task_id, dependencyGraph)) {
+          if (!seen.has(taskData.task_id)) {
+            return toExecutionTask(taskData);
+          }
+        }
+      }
+    }
+
+    // 2. Pending tasks with completed dependencies
+    const readyTasks = getReadyTasksFromIndex(v2Cache.state, dependencyGraph);
+    for (const taskData of readyTasks) {
+      if (!seen.has(taskData.task_id)) {
+        return toExecutionTask(taskData);
+      }
+    }
+
+    // 3. Retryable failures with completed dependencies
+    for (const [, taskData] of v2Cache.state.tasks) {
+      const task = toExecutionTask(taskData);
+      if (canRetry(task)) {
+        if (v2AreDependenciesCompleted(v2Cache.state, taskData.task_id, dependencyGraph)) {
+          if (!seen.has(taskData.task_id)) {
+            return task;
+          }
+        }
+      }
+    }
+
+    return null;
+  } catch (error) {
+    // Log warning but fall back to V1 for resilience
+    logger.warn('V2 getNextTask failed, falling back to V1', { error: error instanceof Error ? error.message : String(error) });
+  }
+
+  // Fallback to V1 implementation
+  const tasks = await loadQueue(runDir);
   const seen = new Set<string>();
 
-  // 1. Retry tasks that were running when crash occurred
-  for (const [, taskData] of v2Cache.state.tasks) {
-    if (taskData.status === 'running') {
-      if (v2AreDependenciesCompleted(v2Cache.state, taskData.task_id, dependencyGraph)) {
-        if (!seen.has(taskData.task_id)) {
-          return toExecutionTask(taskData);
-        }
+  // Retry tasks that were running when the crash occurred
+  for (const [, task] of tasks) {
+    if (task.status === 'running' && areDependenciesCompleted(task, tasks)) {
+      if (!seen.has(task.task_id)) {
+        return task;
       }
     }
   }
 
-  // 2. Pending tasks with completed dependencies
-  const readyTasks = getReadyTasksFromIndex(v2Cache.state, dependencyGraph);
-  for (const taskData of readyTasks) {
-    if (!seen.has(taskData.task_id)) {
-      return toExecutionTask(taskData);
+  // Next, pending tasks ready to run
+  for (const [, task] of tasks) {
+    if (task.status === 'pending' && areDependenciesCompleted(task, tasks)) {
+      if (!seen.has(task.task_id)) {
+        return task;
+      }
     }
   }
 
-  // 3. Retryable failures with completed dependencies
-  for (const [, taskData] of v2Cache.state.tasks) {
-    const task = toExecutionTask(taskData);
-    if (canRetry(task)) {
-      if (v2AreDependenciesCompleted(v2Cache.state, taskData.task_id, dependencyGraph)) {
-        if (!seen.has(taskData.task_id)) {
-          return task;
-        }
+  // Finally, retryable failures
+  for (const [, task] of tasks) {
+    if (canRetry(task) && areDependenciesCompleted(task, tasks)) {
+      if (!seen.has(task.task_id)) {
+        return task;
       }
     }
   }

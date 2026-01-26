@@ -242,6 +242,9 @@ interface StatusResearchPayload {
 export default class Status extends Command {
   static description = 'Show the current state of a feature development pipeline';
 
+  // Logger instance available to helper methods for structured logging
+  private logger?: StructuredLogger;
+
   static examples = [
     '<%= config.bin %> <%= command.id %>',
     '<%= config.bin %> <%= command.id %> --feature feature-auth-123',
@@ -296,6 +299,7 @@ export default class Status extends Command {
           minLevel: typedFlags.verbose ? LogLevel.DEBUG : LogLevel.INFO,
           mirrorToStderr: !typedFlags.json,
         });
+        this.logger = logger;
         metrics = createRunMetricsCollector(runDirPath, featureId);
         traceManager = createRunTraceManager(runDirPath, featureId);
         commandSpan = traceManager.startSpan('cli.status');
@@ -613,7 +617,7 @@ export default class Status extends Command {
     } catch (error) {
       // Log unexpected errors (non-ENOENT) for debugging
       if (error && typeof error === 'object' && 'code' in error && error.code !== 'ENOENT') {
-        console.warn('[status] Failed to load plan:', error instanceof Error ? error.message : 'Unknown error');
+        this.logger?.warn('Failed to load plan', { error: error instanceof Error ? error.message : 'Unknown error' });
       }
       return {
         plan_path: planPath,
@@ -648,7 +652,7 @@ export default class Status extends Command {
     } catch (error) {
       // Log unexpected errors (non-ENOENT) for debugging
       if (error && typeof error === 'object' && 'code' in error && error.code !== 'ENOENT') {
-        console.warn('[status] Failed to load queue validation:', error instanceof Error ? error.message : 'Unknown error');
+        this.logger?.warn('Failed to load queue validation', { error: error instanceof Error ? error.message : 'Unknown error' });
       }
     }
 
@@ -664,7 +668,7 @@ export default class Status extends Command {
     } catch (error) {
       // Log unexpected errors (non-ENOENT) for debugging
       if (error && typeof error === 'object' && 'code' in error && error.code !== 'ENOENT') {
-        console.warn('[status] Failed to load plan validation:', error instanceof Error ? error.message : 'Unknown error');
+        this.logger?.warn('Failed to load plan validation', { error: error instanceof Error ? error.message : 'Unknown error' });
       }
     }
 
@@ -716,7 +720,7 @@ export default class Status extends Command {
     } catch (error) {
       // Log unexpected errors (non-ENOENT) for debugging
       if (error && typeof error === 'object' && 'code' in error && error.code !== 'ENOENT') {
-        console.warn('[status] Failed to load branch protection:', error instanceof Error ? error.message : 'Unknown error');
+        this.logger?.warn('Failed to load branch protection', { error: error instanceof Error ? error.message : 'Unknown error' });
       }
       return undefined;
     }
@@ -980,7 +984,7 @@ export default class Status extends Command {
         } catch (error) {
           // Log unexpected errors (non-ENOENT) for debugging
           if (error && typeof error === 'object' && 'code' in error && error.code !== 'ENOENT') {
-            console.warn('[status] Failed to read manifest for Linear status:', error instanceof Error ? error.message : 'Unknown error');
+            this.logger?.warn('Failed to read manifest for Linear status', { error: error instanceof Error ? error.message : 'Unknown error' });
           }
         }
 
@@ -1045,7 +1049,7 @@ export default class Status extends Command {
     } catch (error) {
       // Log unexpected errors (non-ENOENT) for debugging
       if (error && typeof error === 'object' && 'code' in error && error.code !== 'ENOENT') {
-        console.warn('[status] Failed to load rate limits:', error instanceof Error ? error.message : 'Unknown error');
+        this.logger?.warn('Failed to load rate limits', { error: error instanceof Error ? error.message : 'Unknown error' });
       }
       return undefined;
     }
@@ -1067,7 +1071,7 @@ export default class Status extends Command {
     } catch (error) {
       // Log unexpected errors (non-ENOENT) for debugging
       if (error && typeof error === 'object' && 'code' in error && error.code !== 'ENOENT') {
-        console.warn('[status] Failed to access research directory:', error instanceof Error ? error.message : 'Unknown error');
+        this.logger?.warn('Failed to access research directory', { error: error instanceof Error ? error.message : 'Unknown error' });
       }
       return undefined;
     }
@@ -1173,7 +1177,7 @@ export default class Status extends Command {
     } catch (error) {
       // Log unexpected errors (non-ENOENT) for debugging
       if (error && typeof error === 'object' && 'code' in error && error.code !== 'ENOENT') {
-        console.warn('[status] Failed to load traceability:', error instanceof Error ? error.message : 'Unknown error');
+        this.logger?.warn('Failed to load traceability', { error: error instanceof Error ? error.message : 'Unknown error' });
       }
       return undefined;
     }
@@ -1289,7 +1293,7 @@ export default class Status extends Command {
         warnings?: string[];
       }>(content);
 
-      if (costs && costs.totals) {
+      if (costs?.totals) {
         const tokensUsed: { prompt?: number; completion?: number; total?: number } = {};
         if (typeof costs.totals.promptTokens === 'number') {
           tokensUsed.prompt = costs.totals.promptTokens;
@@ -1310,7 +1314,7 @@ export default class Status extends Command {
         };
       }
 
-      if (costs && costs.warnings && costs.warnings.length > 0) {
+      if (costs?.warnings && costs.warnings.length > 0) {
         payload.budget_warnings = costs.warnings;
       }
     } catch (error) {
