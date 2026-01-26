@@ -6,7 +6,7 @@ import {
   readManifest,
   type RunManifest,
 } from '../../persistence/runDirectoryManager';
-import { safeJsonParse } from '../../utils/safeJson.js';
+import { safeJsonParse } from '../../utils/safeJson';
 import { createCliLogger, LogLevel } from '../../telemetry/logger';
 import { createRunMetricsCollector, StandardMetrics } from '../../telemetry/metrics';
 import { createRunTraceManager, SpanStatusCode, withSpan } from '../../telemetry/traces';

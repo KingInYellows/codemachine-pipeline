@@ -26,7 +26,7 @@ import { HttpClient, Provider, HttpError, ErrorType } from '../http/client';
 import type { LoggerInterface, HttpClientConfig } from '../http/client';
 import { RateLimitLedger } from '../../telemetry/rateLimitLedger';
 import { serializeError, createErrorNormalizer } from '../../utils/errors';
-import { createLogger, type StructuredLogger, LogLevel } from '../../telemetry/logger.js';
+import { createLogger, type StructuredLogger, LogLevel } from '../../telemetry/logger';
 
 // ============================================================================
 // Types & Schemas

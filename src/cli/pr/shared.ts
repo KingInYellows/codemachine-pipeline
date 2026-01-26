@@ -14,7 +14,7 @@ import {
   readManifest,
   type RunManifest,
 } from '../../persistence/runDirectoryManager';
-import { safeJsonParse } from '../../utils/safeJson.js';
+import { safeJsonParse } from '../../utils/safeJson';
 import { createGitHubAdapter, GitHubAdapter } from '../../adapters/github/GitHubAdapter';
 import { createCliLogger, LogLevel, type StructuredLogger } from '../../telemetry/logger';
 import type { RepoConfig } from '../../core/config/RepoConfig';

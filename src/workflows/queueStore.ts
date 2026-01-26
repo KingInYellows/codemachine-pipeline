@@ -6,10 +6,9 @@ import {
   parseExecutionTask,
   serializeExecutionTask,
   canRetry,
-  areDependenciesCompleted,
 } from '../core/models/ExecutionTask';
 import { readManifest, writeManifest, withLock } from '../persistence/runDirectoryManager';
-import { createLogger, type StructuredLogger, LogLevel } from '../telemetry/logger.js';
+import { createLogger, type StructuredLogger, LogLevel } from '../telemetry/logger';
 
 // V2 WAL Components
 import { ensureV2Format } from './queueMigration.js';
@@ -132,11 +131,8 @@ export interface QueueValidationResult {
 // ============================================================================
 
 const QUEUE_FILE = 'queue.jsonl';
-const QUEUE_UPDATES_FILE = 'queue_updates.jsonl';
 const QUEUE_MANIFEST_FILE = 'queue_manifest.json';
 const QUEUE_SNAPSHOT_FILE = 'queue_snapshot.json';
-const QUEUE_COMPACTION_MAX_UPDATES = 1000;
-const QUEUE_COMPACTION_MAX_BYTES = 5 * 1024 * 1024;
 
 // Module-level logger for queue store operations
 const logger: StructuredLogger = createLogger({
@@ -155,19 +151,6 @@ interface QueueCounts {
   cancelled: number;
 }
 
-interface QueueCache {
-  tasks: Map<string, ExecutionTask>;
-  queuePath: string;
-  updatesPath: string;
-  queueSize: number;
-  queueMtimeMs: number;
-  updatesOffset: number;
-  updatesCount: number;
-  counts: QueueCounts;
-}
-
-const queueCache = new Map<string, QueueCache>();
-
 // ============================================================================
 // V2 Index State Management
 // ============================================================================
@@ -183,14 +166,9 @@ interface V2IndexCache {
   queueDir: string;
   /** Feature ID for this queue */
   featureId: string;
-  /**
-   * Offset (bytes) into legacy V1 `queue_updates.jsonl` that have already been applied.
-   * Supports backward compatibility for older update mechanisms and test fixtures.
-   */
-  legacyUpdatesOffset: number;
   /** Last hydration timestamp */
   hydratedAt: number;
-  /** Whether V2 migration has been checked */
+  /** Whether V2 format has been verified */
   migrationChecked: boolean;
 }
 
@@ -200,58 +178,10 @@ interface V2IndexCache {
  */
 const v2IndexCache = new Map<string, V2IndexCache>();
 
-async function applyLegacyQueueUpdatesToV2Index(cache: V2IndexCache): Promise<void> {
-  const updatesPath = path.join(cache.queueDir, QUEUE_UPDATES_FILE);
-  const stats = await fs.stat(updatesPath).catch(() => null);
-  if (!stats) {
-    return;
-  }
-
-  if (stats.size < cache.legacyUpdatesOffset) {
-    cache.legacyUpdatesOffset = 0;
-  }
-
-  if (stats.size === cache.legacyUpdatesOffset) {
-    return;
-  }
-
-  const length = stats.size - cache.legacyUpdatesOffset;
-  const buffer = Buffer.alloc(length);
-  const handle = await fs.open(updatesPath, 'r');
-  try {
-    await handle.read(buffer, 0, length, cache.legacyUpdatesOffset);
-  } finally {
-    await handle.close();
-  }
-
-  const content = buffer.toString('utf-8');
-  const lines = content.split('\n').filter((line: string) => line.length > 0);
-
-  for (const line of lines) {
-    try {
-      const parsed: unknown = JSON.parse(line);
-      const result = parseExecutionTask(parsed);
-      if (!result.success) {
-        continue;
-      }
-
-      const task = result.data;
-      if (getTask(cache.state, task.task_id)) {
-        updateTaskInIndex(cache.state, task.task_id, toExecutionTaskData(task));
-      } else {
-        addTaskToIndex(cache.state, toExecutionTaskData(task));
-      }
-    } catch {
-      // Ignore malformed legacy updates
-    }
-  }
-
-  cache.legacyUpdatesOffset = stats.size;
-}
-
 /**
  * Get or create V2 index cache entry.
- * Performs auto-migration if needed and hydrates index state.
+ * Hydrates index state from V2 WAL format.
+ * Automatically migrates V1 queues to V2 when detected.
  *
  * @param runDir - Run directory path
  * @returns V2 index cache entry with hydrated state
@@ -265,14 +195,21 @@ async function getV2IndexCache(runDir: string): Promise<V2IndexCache> {
 
   // Return existing cache if available and fresh
   if (existing && existing.queueDir === queueDir && existing.migrationChecked) {
-    await applyLegacyQueueUpdatesToV2Index(existing);
     return existing;
   }
 
-  // Ensure V2 format (auto-migrates from V1 if needed)
+  // Ensure V2 format (auto-migrate from V1 if needed)
   const migrationResult = await ensureV2Format(queueDir, featureId);
+  if (migrationResult.result && !migrationResult.result.success) {
+    throw new Error(
+      `Queue migration failed: ${migrationResult.result.error ?? 'Unknown error'}`
+    );
+  }
   if (migrationResult.migrated && migrationResult.result) {
-    logger.info('Migrated queue to V2 format', { tasksConverted: migrationResult.result.tasksConverted });
+    logger.info('Migrated queue from V1 to V2 format', {
+      tasks_converted: migrationResult.result.tasksConverted,
+      backup_path: migrationResult.result.backupPath,
+    });
   }
 
   // Hydrate index from snapshot + WAL
@@ -282,12 +219,10 @@ async function getV2IndexCache(runDir: string): Promise<V2IndexCache> {
     state,
     queueDir,
     featureId,
-    legacyUpdatesOffset: 0,
     hydratedAt: Date.now(),
     migrationChecked: true,
   };
 
-  await applyLegacyQueueUpdatesToV2Index(cache);
   v2IndexCache.set(runDir, cache);
   return cache;
 }
@@ -457,377 +392,6 @@ function computeEmptyQueueChecksum(): string {
   return crypto.createHash('sha256').update('').digest('hex');
 }
 
-function createEmptyCounts(): QueueCounts {
-  return {
-    total: 0,
-    pending: 0,
-    running: 0,
-    completed: 0,
-    failed: 0,
-    skipped: 0,
-    cancelled: 0,
-  };
-}
-
-function countTasks(tasks: Map<string, ExecutionTask>): QueueCounts {
-  const counts = createEmptyCounts();
-  for (const task of tasks.values()) {
-    counts.total += 1;
-    switch (task.status) {
-      case 'pending':
-        counts.pending += 1;
-        break;
-      case 'running':
-        counts.running += 1;
-        break;
-      case 'completed':
-        counts.completed += 1;
-        break;
-      case 'failed':
-        counts.failed += 1;
-        break;
-      case 'skipped':
-        counts.skipped += 1;
-        break;
-      case 'cancelled':
-        counts.cancelled += 1;
-        break;
-      default:
-        break;
-    }
-  }
-  return counts;
-}
-
-async function loadQueueCounts(
-  queueDir: string,
-  tasks: Map<string, ExecutionTask>
-): Promise<QueueCounts> {
-  const manifestPath = path.join(queueDir, QUEUE_MANIFEST_FILE);
-  try {
-    const manifestContent = await fs.readFile(manifestPath, 'utf-8');
-    const manifest = JSON.parse(manifestContent) as QueueManifest;
-    const counts: QueueCounts = {
-      total: manifest.total_tasks,
-      pending: manifest.pending_count,
-      running: manifest.running_count,
-      completed: manifest.completed_count,
-      failed: manifest.failed_count,
-      skipped: manifest.skipped_count,
-      cancelled: manifest.cancelled_count,
-    };
-    const values = Object.values(counts);
-    if (values.every((value) => Number.isFinite(value) && value >= 0)) {
-      return counts;
-    }
-  } catch (error) {
-    // Fall back to computing counts from queue data
-    logger.warn('Failed to load queue counts from manifest, falling back to re-counting', { error: error instanceof Error ? error.message : String(error) });
-  }
-
-  return countTasks(tasks);
-}
-
-function applyTaskUpdate(cache: QueueCache, updatedTask: ExecutionTask): void {
-  const previous = cache.tasks.get(updatedTask.task_id);
-
-  if (previous) {
-    cache.counts.total -= 1;
-    switch (previous.status) {
-      case 'pending':
-        cache.counts.pending -= 1;
-        break;
-      case 'running':
-        cache.counts.running -= 1;
-        break;
-      case 'completed':
-        cache.counts.completed -= 1;
-        break;
-      case 'failed':
-        cache.counts.failed -= 1;
-        break;
-      case 'skipped':
-        cache.counts.skipped -= 1;
-        break;
-      case 'cancelled':
-        cache.counts.cancelled -= 1;
-        break;
-      default:
-        break;
-    }
-  }
-
-  cache.tasks.set(updatedTask.task_id, updatedTask);
-  cache.counts.total += 1;
-  switch (updatedTask.status) {
-    case 'pending':
-      cache.counts.pending += 1;
-      break;
-    case 'running':
-      cache.counts.running += 1;
-      break;
-    case 'completed':
-      cache.counts.completed += 1;
-      break;
-    case 'failed':
-      cache.counts.failed += 1;
-      break;
-    case 'skipped':
-      cache.counts.skipped += 1;
-      break;
-    case 'cancelled':
-      cache.counts.cancelled += 1;
-      break;
-    default:
-      break;
-  }
-}
-
-async function loadQueueFromFile(queuePath: string): Promise<Map<string, ExecutionTask>> {
-  const tasks = new Map<string, ExecutionTask>();
-
-  try {
-    const content = await fs.readFile(queuePath, 'utf-8');
-    const lines = content
-      .trim()
-      .split('\n')
-      .filter((line) => line.length > 0);
-
-    for (const line of lines) {
-      try {
-        const parsed: unknown = JSON.parse(line);
-        const result = parseExecutionTask(parsed);
-
-        if (result.success) {
-          tasks.set(result.data.task_id, result.data);
-        }
-      } catch {
-        // Skip corrupted lines (will be caught by validation)
-      }
-    }
-  } catch (error) {
-    if (error && typeof error === 'object' && 'code' in error && error.code === 'ENOENT') {
-      return tasks;
-    }
-    throw error;
-  }
-
-  return tasks;
-}
-
-async function applyQueueUpdates(cache: QueueCache): Promise<void> {
-  let stats: { size: number } | null = null;
-  try {
-    stats = await fs.stat(cache.updatesPath);
-  } catch {
-    cache.updatesOffset = 0;
-    return;
-  }
-
-  if (stats.size < cache.updatesOffset) {
-    cache.updatesOffset = 0;
-    cache.updatesCount = 0;
-  }
-
-  if (stats.size === cache.updatesOffset) {
-    return;
-  }
-
-  const length = stats.size - cache.updatesOffset;
-  const buffer = Buffer.alloc(length);
-  const handle = await fs.open(cache.updatesPath, 'r');
-  try {
-    await handle.read(buffer, 0, length, cache.updatesOffset);
-  } finally {
-    await handle.close();
-  }
-
-  const content = buffer.toString('utf-8');
-  const lines = content.split('\n').filter((line: string) => line.length > 0);
-
-  for (const line of lines) {
-    try {
-      const parsed: unknown = JSON.parse(line);
-      const result = parseExecutionTask(parsed);
-      if (result.success) {
-        applyTaskUpdate(cache, result.data);
-        cache.updatesCount += 1;
-      }
-    } catch {
-      // Ignore malformed updates
-    }
-  }
-
-  cache.updatesOffset = stats.size;
-}
-
-async function getQueueCache(runDir: string): Promise<QueueCache> {
-  const manifest = await readManifest(runDir);
-  const queueDir = path.join(runDir, manifest.queue.queue_dir);
-  const queuePath = path.join(queueDir, QUEUE_FILE);
-  const updatesPath = path.join(queueDir, QUEUE_UPDATES_FILE);
-
-  const stats = await fs.stat(queuePath).catch(() => null);
-  const queueSize = stats?.size ?? 0;
-  const queueMtimeMs = stats?.mtimeMs ?? 0;
-
-  const existing = queueCache.get(runDir);
-  if (!existing || existing.queueSize !== queueSize || existing.queueMtimeMs !== queueMtimeMs) {
-    const tasks = await loadQueueFromFile(queuePath);
-    const counts = await loadQueueCounts(queueDir, tasks);
-    const cache: QueueCache = {
-      tasks,
-      queuePath,
-      updatesPath,
-      queueSize,
-      queueMtimeMs,
-      updatesOffset: 0,
-      updatesCount: 0,
-      counts,
-    };
-    queueCache.set(runDir, cache);
-  }
-
-  const cache = queueCache.get(runDir)!;
-  await applyQueueUpdates(cache);
-  return cache;
-}
-
-async function updateQueueManifestFromCache(
-  queueDir: string,
-  cache: QueueCache,
-  options?: { queueChecksum?: string; lastSnapshotAt?: string }
-): Promise<void> {
-  const manifestPath = path.join(queueDir, QUEUE_MANIFEST_FILE);
-  const manifestContent = await fs.readFile(manifestPath, 'utf-8');
-  const manifest = JSON.parse(manifestContent) as QueueManifest;
-
-  manifest.total_tasks = cache.counts.total;
-  manifest.pending_count = cache.counts.pending;
-  manifest.running_count = cache.counts.running;
-  manifest.completed_count = cache.counts.completed;
-  manifest.failed_count = cache.counts.failed;
-  manifest.skipped_count = cache.counts.skipped;
-  manifest.cancelled_count = cache.counts.cancelled;
-  if (options?.queueChecksum) {
-    manifest.queue_checksum = options.queueChecksum;
-  }
-  if (options?.lastSnapshotAt) {
-    manifest.last_snapshot_at = options.lastSnapshotAt;
-  }
-  manifest.updated_at = new Date().toISOString();
-
-  await writeQueueManifest(queueDir, manifest);
-}
-
-function getCompactionTasks(tasks: Map<string, ExecutionTask>): Map<string, ExecutionTask> {
-  const requiredDependencies = new Set<string>();
-
-  for (const task of tasks.values()) {
-    if (task.status !== 'completed') {
-      for (const dependencyId of task.dependency_ids) {
-        requiredDependencies.add(dependencyId);
-      }
-    }
-  }
-
-  const compacted = new Map<string, ExecutionTask>();
-  for (const [taskId, task] of tasks) {
-    if (task.status !== 'completed' || requiredDependencies.has(taskId)) {
-      compacted.set(taskId, task);
-    }
-  }
-
-  return compacted;
-}
-
-function serializeTasksToJsonl(tasks: Iterable<ExecutionTask>): string {
-  const lines: string[] = [];
-  for (const task of tasks) {
-    lines.push(serializeExecutionTask(task, false));
-  }
-
-  return lines.length > 0 ? `${lines.join('\n')}\n` : '';
-}
-
-function buildQueueSnapshot(featureId: string, tasks: Map<string, ExecutionTask>): QueueSnapshot {
-  const dependencyGraph: Record<string, string[]> = {};
-  const tasksObject: Record<string, ExecutionTask> = {};
-
-  for (const [taskId, task] of tasks) {
-    tasksObject[taskId] = task;
-    if (task.dependency_ids.length > 0) {
-      dependencyGraph[taskId] = task.dependency_ids;
-    }
-  }
-
-  const dataToHash = JSON.stringify({
-    tasks: tasksObject,
-    dependency_graph: dependencyGraph,
-  });
-  const checksum = crypto.createHash('sha256').update(dataToHash).digest('hex');
-
-  return {
-    schema_version: '1.0.0',
-    feature_id: featureId,
-    tasks: tasksObject,
-    dependency_graph: dependencyGraph,
-    timestamp: new Date().toISOString(),
-    checksum,
-  };
-}
-
-async function writeQueueSnapshot(queueDir: string, snapshot: QueueSnapshot): Promise<void> {
-  const snapshotPath = path.join(queueDir, QUEUE_SNAPSHOT_FILE);
-  const content = JSON.stringify(snapshot, null, 2);
-  await fs.writeFile(snapshotPath, content, 'utf-8');
-}
-
-async function compactQueue(
-  queueDir: string,
-  featureId: string,
-  cache: QueueCache
-): Promise<void> {
-  const compactedTasks = getCompactionTasks(cache.tasks);
-  const content = serializeTasksToJsonl(compactedTasks.values());
-  const checksum = crypto.createHash('sha256').update(content).digest('hex');
-
-  await fs.writeFile(cache.queuePath, content, 'utf-8');
-
-  const snapshot = buildQueueSnapshot(featureId, compactedTasks);
-  await writeQueueSnapshot(queueDir, snapshot);
-
-  await fs.writeFile(cache.updatesPath, '', 'utf-8');
-
-  const stats = await fs.stat(cache.queuePath);
-  cache.tasks = compactedTasks;
-  cache.queueSize = stats.size;
-  cache.queueMtimeMs = stats.mtimeMs;
-  cache.updatesOffset = 0;
-  cache.updatesCount = 0;
-
-  await updateQueueManifestFromCache(queueDir, cache, {
-    queueChecksum: checksum,
-    lastSnapshotAt: snapshot.timestamp,
-  });
-}
-
-async function maybeCompactQueue(
-  queueDir: string,
-  featureId: string,
-  cache: QueueCache
-): Promise<boolean> {
-  if (
-    cache.updatesCount < QUEUE_COMPACTION_MAX_UPDATES &&
-    cache.updatesOffset < QUEUE_COMPACTION_MAX_BYTES
-  ) {
-    return false;
-  }
-
-  await compactQueue(queueDir, featureId, cache);
-  return true;
-}
-
 // ============================================================================
 // Queue Writing
 // ============================================================================
@@ -836,7 +400,7 @@ async function maybeCompactQueue(
  * Append tasks to queue
  *
  * Uses V2 WAL for atomic task creation with batch support.
- * Falls back to V1 JSONL append if V2 fails.
+ * Automatically migrates V1 queues to V2 when detected.
  *
  * @param runDir - Run directory path
  * @param tasks - Tasks to append
@@ -849,162 +413,67 @@ export async function appendToQueue(
   return withLock(
     runDir,
     async () => {
-      // Try V2 WAL first (preferred path)
-      try {
-        const v2Cache = await getV2IndexCache(runDir);
+      const v2Cache = await getV2IndexCache(runDir);
 
-        if (tasks.length === 0) {
-          return {
-            success: true,
-            message: 'No tasks to append',
-            tasksAffected: 0,
-          };
-        }
-
-        // Build create operations for batch append
-        const ops: Array<Omit<QueueOperation, 'seq' | 'checksum'>> = tasks.map((task) => ({
-          op: 'create' as const,
-          ts: new Date().toISOString(),
-          taskId: task.task_id,
-          task: toExecutionTaskData(task),
-        }));
-
-        // Batch append to WAL (non-locked, we're already inside withLock)
-        const appendedOps = await appendOperationsBatch(v2Cache.queueDir, ops);
-        const lastOp = appendedOps[appendedOps.length - 1];
-        if (lastOp) {
-          v2Cache.state.lastSeq = lastOp.seq;
-        }
-
-        // Update in-memory index
-        for (const task of tasks) {
-          addTaskToIndex(v2Cache.state, toExecutionTaskData(task));
-        }
-
-        // Backward compatibility: also append to legacy V1 queue.jsonl for validators/tests.
-        // This is append-only and does not affect the V2 WAL/index authority.
-        const queuePath = path.join(v2Cache.queueDir, QUEUE_FILE);
-        const lines = tasks.map((task) => serializeExecutionTask(task, false)).join('\n') + '\n';
-        await fs.appendFile(queuePath, lines, 'utf-8');
-
-        // Update run manifest
-        const manifest = await readManifest(runDir);
-        const counts = getCounts(v2Cache.state);
-
-        const updatedManifest = {
-          ...manifest,
-          queue: {
-            ...manifest.queue,
-            pending_count: counts.pending,
-          },
-          timestamps: {
-            ...manifest.timestamps,
-            updated_at: new Date().toISOString(),
-          },
-        };
-
-        await writeManifest(runDir, updatedManifest);
-
+      if (tasks.length === 0) {
         return {
           success: true,
-          message: `Successfully appended ${tasks.length} task(s) to queue (V2 WAL)`,
-          tasksAffected: tasks.length,
-        };
-      } catch (v2Error) {
-        invalidateV2Cache(runDir);
-        // Log warning and fall back to V1
-        logger.warn('V2 appendToQueue failed, falling back to V1', { error: v2Error instanceof Error ? v2Error.message : String(v2Error) });
-      }
-
-      // Fallback to V1 implementation
-      try {
-        const manifest = await readManifest(runDir);
-        const queueDir = path.join(runDir, manifest.queue.queue_dir);
-        const queuePath = path.join(queueDir, QUEUE_FILE);
-
-        // Append tasks to JSONL file
-        const lines = tasks.map((task) => serializeExecutionTask(task, false)).join('\n') + '\n';
-        await fs.appendFile(queuePath, lines, 'utf-8');
-
-        // Update queue manifest
-        await updateQueueManifest(runDir, queueDir, tasks.length);
-
-        // Update run manifest queue counts without acquiring nested locks
-        const updatedManifest = {
-          ...manifest,
-          queue: {
-            ...manifest.queue,
-            pending_count: manifest.queue.pending_count + tasks.length,
-          },
-          timestamps: {
-            ...manifest.timestamps,
-            updated_at: new Date().toISOString(),
-          },
-        };
-
-        await writeManifest(runDir, updatedManifest);
-
-        return {
-          success: true,
-          message: `Successfully appended ${tasks.length} task(s) to queue`,
-          tasksAffected: tasks.length,
-        };
-      } catch (error) {
-        return {
-          success: false,
-          message: error instanceof Error ? error.message : 'Unknown error',
+          message: 'No tasks to append',
           tasksAffected: 0,
-          errors: [error instanceof Error ? error.stack || error.message : 'Unknown error'],
         };
       }
+
+      // Build create operations for batch append
+      const ops: Array<Omit<QueueOperation, 'seq' | 'checksum'>> = tasks.map((task) => ({
+        op: 'create' as const,
+        ts: new Date().toISOString(),
+        taskId: task.task_id,
+        task: toExecutionTaskData(task),
+      }));
+
+      // Batch append to WAL (non-locked, we're already inside withLock)
+      const appendedOps = await appendOperationsBatch(v2Cache.queueDir, ops);
+      const lastOp = appendedOps[appendedOps.length - 1];
+      if (lastOp) {
+        v2Cache.state.lastSeq = lastOp.seq;
+      }
+
+      // Update in-memory index
+      for (const task of tasks) {
+        addTaskToIndex(v2Cache.state, toExecutionTaskData(task));
+      }
+
+      // Also append to queue.jsonl for validators/tests that read from it
+      const queuePath = path.join(v2Cache.queueDir, QUEUE_FILE);
+      const lines = tasks.map((task) => serializeExecutionTask(task, false)).join('\n') + '\n';
+      await fs.appendFile(queuePath, lines, 'utf-8');
+
+      // Update run manifest
+      const manifest = await readManifest(runDir);
+      const counts = getCounts(v2Cache.state);
+
+      const updatedManifest = {
+        ...manifest,
+        queue: {
+          ...manifest.queue,
+          pending_count: counts.pending,
+        },
+        timestamps: {
+          ...manifest.timestamps,
+          updated_at: new Date().toISOString(),
+        },
+      };
+
+      await writeManifest(runDir, updatedManifest);
+
+      return {
+        success: true,
+        message: `Successfully appended ${tasks.length} task(s) to queue (V2 WAL)`,
+        tasksAffected: tasks.length,
+      };
     },
     { operation: 'append_to_queue' }
   );
-}
-
-/**
- * Update queue manifest after modifications
- */
-async function updateQueueManifest(
-  runDir: string,
-  queueDir: string,
-  newTaskCount: number
-): Promise<void> {
-  const queuePath = path.join(queueDir, QUEUE_FILE);
-  const manifestPath = path.join(queueDir, QUEUE_MANIFEST_FILE);
-
-  // Compute current queue checksum
-  const checksum = await computeFileChecksum(queuePath);
-
-  // Load existing manifest or create new one
-  let queueManifest: QueueManifest;
-  try {
-    const content = await fs.readFile(manifestPath, 'utf-8');
-    queueManifest = JSON.parse(content) as QueueManifest;
-  } catch {
-    const manifest = await readManifest(runDir);
-    queueManifest = {
-      schema_version: '1.0.0',
-      feature_id: manifest.feature_id,
-      total_tasks: 0,
-      pending_count: 0,
-      running_count: 0,
-      completed_count: 0,
-      failed_count: 0,
-      skipped_count: 0,
-      cancelled_count: 0,
-      queue_checksum: computeEmptyQueueChecksum(),
-      updated_at: new Date().toISOString(),
-    };
-  }
-
-  // Update counts
-  queueManifest.total_tasks += newTaskCount;
-  queueManifest.pending_count += newTaskCount;
-  queueManifest.queue_checksum = checksum;
-  queueManifest.updated_at = new Date().toISOString();
-
-  await writeQueueManifest(queueDir, queueManifest);
 }
 
 /**
@@ -1039,30 +508,20 @@ async function computeFileChecksum(filePath: string): Promise<string> {
  * Load all tasks from queue
  *
  * Uses V2 WAL-based index for O(1) task lookups.
- * Automatically migrates from V1 format if needed.
+ * Automatically migrates V1 queues to V2 when detected.
  *
  * @param runDir - Run directory path
  * @returns Map of task_id to ExecutionTask
  */
 export async function loadQueue(runDir: string): Promise<Map<string, ExecutionTask>> {
-  // Try V2 index first (preferred path)
-  try {
-    const v2Cache = await getV2IndexCache(runDir);
-    const tasks = new Map<string, ExecutionTask>();
+  const v2Cache = await getV2IndexCache(runDir);
+  const tasks = new Map<string, ExecutionTask>();
 
-    for (const [taskId, taskData] of v2Cache.state.tasks) {
-      tasks.set(taskId, toExecutionTask(taskData));
-    }
-
-    return tasks;
-  } catch (error) {
-    // Log warning but fall back to V1 cache for resilience
-    logger.warn('V2 index load failed, falling back to V1', { error: error instanceof Error ? error.message : String(error) });
+  for (const [taskId, taskData] of v2Cache.state.tasks) {
+    tasks.set(taskId, toExecutionTask(taskData));
   }
 
-  // Fallback to V1 cache (backward compatibility)
-  const cache = await getQueueCache(runDir);
-  return cache.tasks;
+  return tasks;
 }
 
 /**
@@ -1124,44 +583,42 @@ export async function loadQueueSnapshot(runDir: string): Promise<QueueSnapshot |
 /**
  * Create queue snapshot for fast recovery
  *
+ * Uses V2 compaction engine to create snapshot with WAL truncation.
+ * Automatically migrates V1 queues to V2 when detected.
+ *
  * @param runDir - Run directory path
  * @returns Operation result
  */
 export async function createQueueSnapshot(runDir: string): Promise<QueueOperationResult> {
-  return withLock(
-    runDir,
-    async () => {
-      try {
-        const manifest = await readManifest(runDir);
-        const queueDir = path.join(runDir, manifest.queue.queue_dir);
+  try {
+    const v2Cache = await getV2IndexCache(runDir);
+    const dependencyGraph = buildDependencyGraph(v2Cache.state);
 
-        // Load all tasks
-        const tasks = await loadQueue(runDir);
-        const snapshot = buildQueueSnapshot(manifest.feature_id, tasks);
-        await writeQueueSnapshot(queueDir, snapshot);
+    // Use V2 compaction engine to create snapshot
+    const result = await compact(
+      runDir,
+      v2Cache.queueDir,
+      v2Cache.featureId,
+      dependencyGraph,
+      { pruneCompleted: false } // Don't prune, just snapshot
+    );
 
-        // Update queue manifest
-        const queueManifestPath = path.join(queueDir, QUEUE_MANIFEST_FILE);
-        const queueManifestContent = await fs.readFile(queueManifestPath, 'utf-8');
-        const queueManifest = JSON.parse(queueManifestContent) as QueueManifest;
-        queueManifest.last_snapshot_at = snapshot.timestamp;
-        await writeQueueManifest(queueDir, queueManifest);
+    const taskCount = v2Cache.state.tasks.size;
 
-        return {
-          success: true,
-          message: `Snapshot created with ${tasks.size} task(s)`,
-          tasksAffected: tasks.size,
-        };
-      } catch (error) {
-        return {
-          success: false,
-          message: error instanceof Error ? error.message : 'Unknown error',
-          errors: [error instanceof Error ? error.stack || error.message : 'Unknown error'],
-        };
-      }
-    },
-    { operation: 'create_queue_snapshot' }
-  );
+    return {
+      success: true,
+      message: result.compacted
+        ? `Snapshot created with ${taskCount} task(s) at seq ${result.snapshotSeq}`
+        : `Queue already at snapshot seq ${result.snapshotSeq}, no changes needed`,
+      tasksAffected: taskCount,
+    };
+  } catch (error) {
+    return {
+      success: false,
+      message: error instanceof Error ? error.message : 'Unknown error',
+      errors: [error instanceof Error ? error.stack || error.message : 'Unknown error'],
+    };
+  }
 }
 
 // ============================================================================
@@ -1277,81 +734,43 @@ export async function validateQueue(runDir: string): Promise<QueueValidationResu
  *
  * Uses V2 memory index for efficient task selection.
  * Priority order: running tasks (crash recovery) > pending tasks > retryable failures
+ * Automatically migrates V1 queues to V2 when detected.
  *
  * @param runDir - Run directory path
  * @returns Next task to execute, or null if none available
  */
 export async function getNextTask(runDir: string): Promise<ExecutionTask | null> {
-  // Try V2 index first (preferred path)
-  try {
-    const v2Cache = await getV2IndexCache(runDir);
-    const dependencyGraph = buildDependencyGraph(v2Cache.state);
-    const seen = new Set<string>();
-
-    // 1. Retry tasks that were running when crash occurred
-    for (const [, taskData] of v2Cache.state.tasks) {
-      if (taskData.status === 'running') {
-        if (v2AreDependenciesCompleted(v2Cache.state, taskData.task_id, dependencyGraph)) {
-          if (!seen.has(taskData.task_id)) {
-            return toExecutionTask(taskData);
-          }
-        }
-      }
-    }
-
-    // 2. Pending tasks with completed dependencies
-    const readyTasks = getReadyTasksFromIndex(v2Cache.state, dependencyGraph);
-    for (const taskData of readyTasks) {
-      if (!seen.has(taskData.task_id)) {
-        return toExecutionTask(taskData);
-      }
-    }
-
-    // 3. Retryable failures with completed dependencies
-    for (const [, taskData] of v2Cache.state.tasks) {
-      const task = toExecutionTask(taskData);
-      if (canRetry(task)) {
-        if (v2AreDependenciesCompleted(v2Cache.state, taskData.task_id, dependencyGraph)) {
-          if (!seen.has(taskData.task_id)) {
-            return task;
-          }
-        }
-      }
-    }
-
-    return null;
-  } catch (error) {
-    // Log warning but fall back to V1 for resilience
-    logger.warn('V2 getNextTask failed, falling back to V1', { error: error instanceof Error ? error.message : String(error) });
-  }
-
-  // Fallback to V1 implementation
-  const tasks = await loadQueue(runDir);
+  const v2Cache = await getV2IndexCache(runDir);
+  const dependencyGraph = buildDependencyGraph(v2Cache.state);
   const seen = new Set<string>();
 
-  // Retry tasks that were running when the crash occurred
-  for (const [, task] of tasks) {
-    if (task.status === 'running' && areDependenciesCompleted(task, tasks)) {
-      if (!seen.has(task.task_id)) {
-        return task;
+  // 1. Retry tasks that were running when crash occurred
+  for (const [, taskData] of v2Cache.state.tasks) {
+    if (taskData.status === 'running') {
+      if (v2AreDependenciesCompleted(v2Cache.state, taskData.task_id, dependencyGraph)) {
+        if (!seen.has(taskData.task_id)) {
+          return toExecutionTask(taskData);
+        }
       }
     }
   }
 
-  // Next, pending tasks ready to run
-  for (const [, task] of tasks) {
-    if (task.status === 'pending' && areDependenciesCompleted(task, tasks)) {
-      if (!seen.has(task.task_id)) {
-        return task;
-      }
+  // 2. Pending tasks with completed dependencies
+  const readyTasks = getReadyTasksFromIndex(v2Cache.state, dependencyGraph);
+  for (const taskData of readyTasks) {
+    if (!seen.has(taskData.task_id)) {
+      return toExecutionTask(taskData);
     }
   }
 
-  // Finally, retryable failures
-  for (const [, task] of tasks) {
-    if (canRetry(task) && areDependenciesCompleted(task, tasks)) {
-      if (!seen.has(task.task_id)) {
-        return task;
+  // 3. Retryable failures with completed dependencies
+  for (const [, taskData] of v2Cache.state.tasks) {
+    const task = toExecutionTask(taskData);
+    if (canRetry(task)) {
+      if (v2AreDependenciesCompleted(v2Cache.state, taskData.task_id, dependencyGraph)) {
+        if (!seen.has(taskData.task_id)) {
+          return task;
+        }
       }
     }
   }
@@ -1385,36 +804,27 @@ export async function getFailedTasks(runDir: string): Promise<ExecutionTask[]> {
  * Get task by ID
  *
  * Uses V2 memory index for O(1) lookup.
+ * Automatically migrates V1 queues to V2 when detected.
  *
  * @param runDir - Run directory path
  * @param taskId - Task ID
  * @returns Task or null if not found
  */
 export async function getTaskById(runDir: string, taskId: string): Promise<ExecutionTask | null> {
-  // Try V2 index first (O(1) lookup)
-  try {
-    const v2Cache = await getV2IndexCache(runDir);
-    const taskData = getTask(v2Cache.state, taskId);
+  const v2Cache = await getV2IndexCache(runDir);
+  const taskData = getTask(v2Cache.state, taskId);
 
-    if (taskData) {
-      return toExecutionTask(taskData);
-    }
-    return null;
-  } catch (error) {
-    // Log warning but fall back to V1 for resilience
-    logger.warn('V2 getTaskById failed, falling back to V1', { error: error instanceof Error ? error.message : String(error) });
+  if (taskData) {
+    return toExecutionTask(taskData);
   }
-
-  // Fallback to V1 implementation
-  const tasks = await loadQueue(runDir);
-  return tasks.get(taskId) || null;
+  return null;
 }
 
 /**
  * Update task status in queue
  *
  * Uses V2 WAL for atomic updates with O(1) appends.
- * Falls back to V1 implementation if V2 fails.
+ * Automatically migrates V1 queues to V2 when detected.
  *
  * @param runDir - Run directory path
  * @param taskId - Task ID to update
@@ -1429,150 +839,78 @@ export async function updateTaskInQueue(
   return withLock(
     runDir,
     async () => {
-      // Try V2 WAL first (preferred path)
-      try {
-        const v2Cache = await getV2IndexCache(runDir);
-        const existingTask = getTask(v2Cache.state, taskId);
+      const v2Cache = await getV2IndexCache(runDir);
+      const existingTask = getTask(v2Cache.state, taskId);
 
-        if (!existingTask) {
-          return {
-            success: false,
-            message: `Task ${taskId} not found in queue`,
-          };
-        }
-
-        // Build patch with updated_at timestamp
-        const patch: Partial<ExecutionTaskData> = {
-          ...updates,
-          updated_at: new Date().toISOString(),
-        } as Partial<ExecutionTaskData>;
-
-        // Append update operation to WAL
-        const op: Omit<QueueOperation, 'seq' | 'checksum'> = {
-          op: 'update',
-          ts: new Date().toISOString(),
-          taskId,
-          patch,
-        };
-
-  const appendedOp = await appendOperation(v2Cache.queueDir, op);
-  v2Cache.state.lastSeq = appendedOp.seq;
-
-        // Update in-memory index
-        updateTaskInIndex(v2Cache.state, taskId, patch);
-
-        // Build dependency graph for compaction
-        const dependencyGraph = buildDependencyGraph(v2Cache.state);
-
-  // Check if compaction is needed (avoid nested locks)
-  const compactionCheck = await shouldCompact(v2Cache.queueDir);
-  if (compactionCheck.needed) {
-    await compactWithState(
-      runDir,
-      v2Cache.queueDir,
-      v2Cache.featureId,
-      v2Cache.state,
-      dependencyGraph
-    );
-  }
-
-        // Update run manifest if status changed
-        if (updates.status) {
-          const manifest = await readManifest(runDir);
-          const counts = getCounts(v2Cache.state);
-
-          const updatedManifest = {
-            ...manifest,
-            queue: {
-              ...manifest.queue,
-              pending_count: counts.pending,
-              completed_count: counts.completed,
-              failed_count: counts.failed,
-            },
-            timestamps: {
-              ...manifest.timestamps,
-              updated_at: new Date().toISOString(),
-            },
-          };
-
-          await writeManifest(runDir, updatedManifest);
-        }
-
-        return {
-          success: true,
-          message: `Task ${taskId} updated successfully (V2 WAL)`,
-          tasksAffected: 1,
-        };
-      } catch (v2Error) {
-        invalidateV2Cache(runDir);
-        // Log warning and fall back to V1
-        logger.warn('V2 updateTaskInQueue failed, falling back to V1', { error: v2Error instanceof Error ? v2Error.message : String(v2Error) });
-      }
-
-      // Fallback to V1 implementation
-      try {
-        const cache = await getQueueCache(runDir);
-        const task = cache.tasks.get(taskId);
-
-        if (!task) {
-          return {
-            success: false,
-            message: `Task ${taskId} not found in queue`,
-          };
-        }
-
-        // Create updated task
-        const updatedTask: ExecutionTask = {
-          ...task,
-          ...updates,
-          updated_at: new Date().toISOString(),
-        };
-
-        const manifest = await readManifest(runDir);
-        const queueDir = path.join(runDir, manifest.queue.queue_dir);
-        const updateLine = `${serializeExecutionTask(updatedTask, false)}\n`;
-
-        await fs.appendFile(cache.updatesPath, updateLine, 'utf-8');
-        cache.updatesOffset += Buffer.byteLength(updateLine);
-        cache.updatesCount += 1;
-        applyTaskUpdate(cache, updatedTask);
-
-        const compacted = await maybeCompactQueue(queueDir, manifest.feature_id, cache);
-        if (!compacted) {
-          await updateQueueManifestFromCache(queueDir, cache);
-        }
-
-        // Update run manifest if needed
-        if (updates.status) {
-          const updatedManifest = {
-            ...manifest,
-            queue: {
-              ...manifest.queue,
-              pending_count: cache.counts.pending,
-              completed_count: cache.counts.completed,
-              failed_count: cache.counts.failed,
-            },
-            timestamps: {
-              ...manifest.timestamps,
-              updated_at: new Date().toISOString(),
-            },
-          };
-
-          await writeManifest(runDir, updatedManifest);
-        }
-
-        return {
-          success: true,
-          message: `Task ${taskId} updated successfully`,
-          tasksAffected: 1,
-        };
-      } catch (error) {
+      if (!existingTask) {
         return {
           success: false,
-          message: error instanceof Error ? error.message : 'Unknown error',
-          errors: [error instanceof Error ? error.stack || error.message : 'Unknown error'],
+          message: `Task ${taskId} not found in queue`,
         };
       }
+
+      // Build patch with updated_at timestamp
+      const patch: Partial<ExecutionTaskData> = {
+        ...updates,
+        updated_at: new Date().toISOString(),
+      } as Partial<ExecutionTaskData>;
+
+      // Append update operation to WAL
+      const op: Omit<QueueOperation, 'seq' | 'checksum'> = {
+        op: 'update',
+        ts: new Date().toISOString(),
+        taskId,
+        patch,
+      };
+
+      const appendedOp = await appendOperation(v2Cache.queueDir, op);
+      v2Cache.state.lastSeq = appendedOp.seq;
+
+      // Update in-memory index
+      updateTaskInIndex(v2Cache.state, taskId, patch);
+
+      // Build dependency graph for compaction
+      const dependencyGraph = buildDependencyGraph(v2Cache.state);
+
+      // Check if compaction is needed (avoid nested locks)
+      const compactionCheck = await shouldCompact(v2Cache.queueDir);
+      if (compactionCheck.needed) {
+        await compactWithState(
+          runDir,
+          v2Cache.queueDir,
+          v2Cache.featureId,
+          v2Cache.state,
+          dependencyGraph
+        );
+      }
+
+      // Update run manifest if status changed
+      if (updates.status) {
+        const manifest = await readManifest(runDir);
+        const counts = getCounts(v2Cache.state);
+
+        const updatedManifest = {
+          ...manifest,
+          queue: {
+            ...manifest.queue,
+            pending_count: counts.pending,
+            completed_count: counts.completed,
+            failed_count: counts.failed,
+          },
+          timestamps: {
+            ...manifest.timestamps,
+            updated_at: new Date().toISOString(),
+          },
+        };
+
+        await writeManifest(runDir, updatedManifest);
+      }
+
+      return {
+        success: true,
+        message: `Task ${taskId} updated successfully (V2 WAL)`,
+        tasksAffected: 1,
+      };
     },
     { operation: 'update_task_in_queue' }
   );

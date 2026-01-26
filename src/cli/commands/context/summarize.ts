@@ -6,7 +6,7 @@ import {
   getSubdirectoryPath,
   withLock,
 } from '../../../persistence/runDirectoryManager';
-import { safeJsonParse } from '../../../utils/safeJson.js';
+import { safeJsonParse } from '../../../utils/safeJson';
 import {
   ensureTelemetryReferences,
   resolveRunDirectorySettings,

@@ -1,7 +1,7 @@
 import { fetch, RequestInit, Response, HeadersInit, Headers } from 'undici';
 import * as crypto from 'node:crypto';
 import { RateLimitLedger, RateLimitEnvelope } from '../../telemetry/rateLimitLedger';
-import { createLogger, type StructuredLogger, LogLevel } from '../../telemetry/logger.js';
+import { createLogger, type StructuredLogger, LogLevel } from '../../telemetry/logger';
 
 /**
  * HTTP Client Module

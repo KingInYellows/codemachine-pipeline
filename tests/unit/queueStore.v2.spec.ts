@@ -39,6 +39,25 @@ describe('queueStore V2 Integration', () => {
     })),
   });
 
+  // Helper to create a V1-format task for migration tests
+  const createV1Task = (
+    id: string,
+    status: ExecutionTask['status'] = 'pending',
+    deps: string[] = []
+  ): ExecutionTask => ({
+    schema_version: '1.0.0',
+    task_id: id,
+    feature_id: 'FEATURE-V2-TEST',
+    title: `Task ${id}`,
+    task_type: 'code_generation',
+    status,
+    dependency_ids: deps,
+    retry_count: 0,
+    max_retries: 3,
+    created_at: '2025-01-01T00:00:00.000Z',
+    updated_at: '2025-01-01T00:00:00.000Z',
+  });
+
   beforeEach(async () => {
     tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'queuestore-v2-test-'));
     runDir = await createRunDirectory(tempDir, 'FEATURE-V2-TEST', {
@@ -62,7 +81,7 @@ describe('queueStore V2 Integration', () => {
 
   describe('V2 Format Detection', () => {
     it('should load V2 format correctly when snapshot exists', async () => {
-      // Initialize queue - this creates V1 format initially
+      // Initialize queue (V2 WAL format)
       const plan = createPlan([{ id: 'task-1' }, { id: 'task-2' }]);
       await initializeQueueFromPlan(runDir, plan);
 
@@ -73,21 +92,54 @@ describe('queueStore V2 Integration', () => {
       expect(tasks.get('task-2')).toBeDefined();
     });
 
-    it('should auto-migrate V1 to V2 on first access', async () => {
-      // Create V1 format queue
+    it('should use V2 format on first access', async () => {
+      // Create V2 format queue (initializeQueueFromPlan creates V2 format)
       const plan = createPlan([{ id: 'task-1' }]);
       await initializeQueueFromPlan(runDir, plan);
 
       // Invalidate cache to force re-hydration
       invalidateV2Cache(runDir);
 
-      // Access queue - triggers auto-migration if needed
+      // Access queue - uses V2 format
       const tasks = await loadQueue(runDir);
       expect(tasks.size).toBe(1);
 
       // Subsequent access should use cached V2 state
       const tasksAgain = await loadQueue(runDir);
       expect(tasksAgain.size).toBe(1);
+    });
+
+    it('should auto-migrate V1 queue on access', async () => {
+      const queueDir = path.join(runDir, 'queue');
+      await fs.mkdir(queueDir, { recursive: true });
+
+      const v1Tasks = [createV1Task('task-1'), createV1Task('task-2')];
+      const v1Content = v1Tasks.map((task) => JSON.stringify(task)).join('\n') + '\n';
+      await fs.writeFile(path.join(queueDir, 'queue.jsonl'), v1Content, 'utf-8');
+
+      invalidateV2Cache(runDir);
+      const tasks = await loadQueue(runDir);
+
+      expect(tasks.size).toBe(2);
+      expect(tasks.get('task-1')).toBeDefined();
+      expect(tasks.get('task-2')).toBeDefined();
+
+      const snapshotExists = await fs
+        .access(path.join(queueDir, 'queue_snapshot.json'))
+        .then(() => true)
+        .catch(() => false);
+      const walExists = await fs
+        .access(path.join(queueDir, 'queue_operations.log'))
+        .then(() => true)
+        .catch(() => false);
+      const backupExists = await fs
+        .access(path.join(queueDir, 'queue.jsonl.v1backup'))
+        .then(() => true)
+        .catch(() => false);
+
+      expect(snapshotExists).toBe(true);
+      expect(walExists).toBe(true);
+      expect(backupExists).toBe(true);
     });
   });
 
@@ -168,10 +220,10 @@ describe('queueStore V2 Integration', () => {
       // Update task
       await updateTaskInQueue(runDir, 'task-1', { status: 'completed' });
 
-      // Invalidate cache
+      // Invalidate cache (but don't delete WAL files)
       invalidateV2Cache(runDir);
 
-      // Reload queue - should read from persisted WAL
+      // Reload queue - should read from V2 WAL (snapshot + operations log)
       const tasks = await loadQueue(runDir);
       const task = tasks.get('task-1');
 
