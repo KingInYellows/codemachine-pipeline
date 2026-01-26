@@ -5,6 +5,8 @@
  * uncaught exceptions from malformed JSON content.
  */
 
+import * as fs from 'fs/promises';
+
 /**
  * Result type for JSON parse operations
  */
@@ -12,6 +14,81 @@ export interface SafeJsonResult<T> {
   success: boolean;
   data?: T;
   error?: string;
+}
+
+/**
+ * Extended result type for file-based JSON operations
+ */
+export interface SafeJsonFileResult<T> extends SafeJsonResult<T> {
+  /** Whether the error was due to file not found (vs parse error) */
+  fileNotFound?: boolean;
+}
+
+/**
+ * Check if an error is a file-not-found error (ENOENT)
+ *
+ * Centralized utility to avoid duplicating this check across the codebase.
+ *
+ * @param error - Error to check
+ * @returns True if the error is an ENOENT error
+ */
+export function isFileNotFound(error: unknown): error is NodeJS.ErrnoException {
+  return (
+    error !== null &&
+    typeof error === 'object' &&
+    'code' in error &&
+    (error as NodeJS.ErrnoException).code === 'ENOENT'
+  );
+}
+
+/**
+ * Check if an error is a JSON parse error (SyntaxError)
+ *
+ * @param error - Error to check
+ * @returns True if the error is a SyntaxError from JSON.parse
+ */
+export function isJsonParseError(error: unknown): error is SyntaxError {
+  return error instanceof SyntaxError;
+}
+
+/**
+ * Safely read and parse a JSON file
+ *
+ * Distinguishes between file-not-found errors and JSON parse errors,
+ * returning appropriate results for each case.
+ *
+ * @param filePath - Path to the JSON file
+ * @returns Result object with parsed data, or error information
+ *
+ * @example
+ * ```typescript
+ * const result = await safeJsonReadFile<Config>('/path/to/config.json');
+ * if (result.success) {
+ *   console.log(result.data);
+ * } else if (result.fileNotFound) {
+ *   console.log('Config file does not exist');
+ * } else {
+ *   console.error('Invalid JSON:', result.error);
+ * }
+ * ```
+ */
+export async function safeJsonReadFile<T>(filePath: string): Promise<SafeJsonFileResult<T>> {
+  try {
+    const content = await fs.readFile(filePath, 'utf-8');
+    const data = JSON.parse(content) as T;
+    return { success: true, data };
+  } catch (error) {
+    if (isFileNotFound(error)) {
+      return { success: false, fileNotFound: true, error: error.message };
+    }
+    if (isJsonParseError(error)) {
+      return { success: false, error: `JSON parse error: ${error.message}` };
+    }
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error reading file',
+    };
+  }
 }
 
 /**
