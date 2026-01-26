@@ -206,9 +206,12 @@ async function getV2IndexCache(runDir: string): Promise<V2IndexCache> {
     );
   }
   if (migrationResult.migrated && migrationResult.result) {
-    logger.info('Migrated queue from V1 to V2 format', {
+    logger.warn('⚠️ V1 queue format detected - auto-migrated to V2', {
       tasks_converted: migrationResult.result.tasksConverted,
       backup_path: migrationResult.result.backupPath,
+      from_version: migrationResult.result.fromVersion,
+      to_version: migrationResult.result.toVersion,
+      message: "Run 'ai-feature queue verify' to confirm migration integrity",
     });
   }
 

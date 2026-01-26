@@ -25,8 +25,16 @@ import type { ExecutionTask } from '../core/models/ExecutionTask';
 import { parseExecutionTask } from '../core/models/ExecutionTask';
 import { loadSnapshot, saveSnapshot } from './queueSnapshotManager';
 import { initializeOperationsLog } from './queueOperationsLog';
+import { createLogger, LogLevel } from '../telemetry/logger';
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
+
+// Module-level logger for migration operations
+const logger = createLogger({
+  component: 'queue-migration',
+  minLevel: LogLevel.DEBUG,
+  mirrorToStderr: true,
+});
 
 // ============================================================================
 // Constants
@@ -241,14 +249,32 @@ export async function migrateV1ToV2(
   const v1QueueBackup = `${v1QueuePath}${V1_BACKUP_SUFFIX}`;
   const v1UpdatesBackup = `${v1UpdatesPath}${V1_BACKUP_SUFFIX}`;
 
+  logger.info('Starting V1 to V2 queue migration', {
+    queue_dir: queueDir,
+    feature_id: featureId,
+    v1_queue_file: v1QueuePath,
+    backup_location: v1QueueBackup,
+  });
+
   try {
     // Step 1: Load V1 queue
+    logger.debug('Loading V1 queue tasks', { queue_path: v1QueuePath });
     const tasks = await loadV1Queue(queueDir);
+    logger.info('Loaded V1 queue tasks', { task_count: tasks.length });
 
     // Step 2: Build V2 snapshot data
+    logger.debug('Building V2 snapshot data from tasks');
     const { tasks: taskRecord, counts, dependencyGraph } = buildInitialSnapshot(tasks);
+    logger.info('Built V2 snapshot', {
+      total_tasks: counts.total,
+      pending: counts.pending,
+      completed: counts.completed,
+      failed: counts.failed,
+      dependency_edges: Object.keys(dependencyGraph).length,
+    });
 
     // Step 3: Create V2 snapshot (snapshotSeq = 0 for initial snapshot)
+    logger.debug('Saving V2 snapshot');
     await saveSnapshot(
       queueDir,
       featureId,
@@ -259,11 +285,14 @@ export async function migrateV1ToV2(
     );
 
     // Step 4: Initialize empty WAL
+    logger.debug('Initializing V2 operations log (WAL)');
     await initializeOperationsLog(queueDir);
 
     // Step 5: Backup V1 files (rename to .v1backup)
+    logger.debug('Backing up V1 files');
     try {
       await fs.rename(v1QueuePath, v1QueueBackup);
+      logger.info('V1 queue file backed up', { backup_path: v1QueueBackup });
     } catch (error) {
       if (error && typeof error === 'object' && 'code' in error && error.code !== 'ENOENT') {
         throw error;
@@ -272,11 +301,18 @@ export async function migrateV1ToV2(
 
     try {
       await fs.rename(v1UpdatesPath, v1UpdatesBackup);
+      logger.info('V1 updates file backed up', { backup_path: v1UpdatesBackup });
     } catch (error) {
       if (error && typeof error === 'object' && 'code' in error && error.code !== 'ENOENT') {
         // Updates file may not exist - that's fine
+        logger.debug('No V1 updates file to backup (expected for queues without updates)');
       }
     }
+
+    logger.info('V1 to V2 migration completed successfully', {
+      tasks_converted: tasks.length,
+      backup_path: v1QueueBackup,
+    });
 
     return {
       success: true,
@@ -286,6 +322,10 @@ export async function migrateV1ToV2(
       backupPath: v1QueueBackup,
     };
   } catch (error) {
+    logger.error('V1 to V2 migration failed', {
+      error: error instanceof Error ? error.message : String(error),
+      queue_dir: queueDir,
+    });
     return {
       success: false,
       fromVersion: '1.0.0',
@@ -386,16 +426,23 @@ export async function ensureV2Format(
   const version = await detectQueueVersion(queueDir);
 
   if (version === 'v2') {
+    logger.debug('Queue already in V2 format', { queue_dir: queueDir });
     return { migrated: false };
   }
 
   if (version === 'none') {
     // No existing queue - just initialize empty V2 structure
+    logger.debug('Initializing new V2 queue (no existing queue found)', { queue_dir: queueDir });
     await initializeOperationsLog(queueDir);
     return { migrated: false };
   }
 
   // V1 detected - perform migration
+  logger.warn('⚠️ V1 queue format detected - auto-migration will be performed', {
+    queue_dir: queueDir,
+    feature_id: featureId,
+    recommendation: "Run 'ai-feature queue verify' after migration to confirm integrity",
+  });
   const result = await migrateV1ToV2(queueDir, featureId);
   return { migrated: result.success, result };
 }
