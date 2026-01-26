@@ -26,6 +26,7 @@ import { loadSpecMetadata } from './specComposer';
 import type { StructuredLogger } from '../telemetry/logger';
 import type { MetricsCollector } from '../telemetry/metrics';
 import { computeFileHash } from '../persistence/hashManifest';
+import { isFileNotFound } from '../utils/safeJson';
 
 // ============================================================================
 // Types
@@ -425,8 +426,15 @@ export async function generateTraceMap(
           gaps: [],
         },
       };
-    } catch {
-      // File doesn't exist, continue with generation
+    } catch (error) {
+      if (!isFileNotFound(error)) {
+        // File exists but failed to read or parse - log warning and regenerate
+        logger.warn('Failed to read existing trace.json, regenerating', {
+          tracePath,
+          error: error instanceof Error ? error.message : String(error),
+        });
+      }
+      // File doesn't exist or is corrupted, continue with generation
     }
   }
 
@@ -655,7 +663,15 @@ export async function loadTraceSummary(runDir: string): Promise<TraceSummary | n
       lastUpdated: doc.updated_at,
       outstandingGaps,
     };
-  } catch {
+  } catch (error) {
+    // Return null for both file-not-found and parse errors
+    // This function is designed for graceful degradation
+    // Non-ENOENT errors (like JSON parse failures) indicate corrupted data
+    // but we still return null to allow the caller to continue
+    if (!isFileNotFound(error) && process.env.DEBUG) {
+      // Only log in debug mode to avoid noise in normal operation
+      console.warn('[traceabilityMapper] Failed to load trace.json:', error);
+    }
     return null;
   }
 }
