@@ -1,13 +1,8 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import * as fs from 'fs/promises';
-import * as path from 'path';
-import * as os from 'os';
+import { describe, it, expect } from 'vitest';
 import {
   isProtectedBranch,
   validateBranchName,
   generateBranchName,
-  type BranchConfig,
-  type CreateBranchOptions,
 } from '../../src/workflows/branchManager';
 import type { RepoConfig } from '../../src/core/config/RepoConfig';
 

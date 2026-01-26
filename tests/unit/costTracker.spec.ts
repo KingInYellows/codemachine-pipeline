@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import * as os from 'os';
@@ -7,13 +7,15 @@ import {
   type ProviderCostConfig,
   type BudgetConfig,
 } from '../../src/telemetry/costTracker';
-import { createCliLogger } from '../../src/telemetry/logger';
-import { createRunMetricsCollector } from '../../src/telemetry/metrics';
+import { createCliLogger, type StructuredLogger } from '../../src/telemetry/logger';
+import { createRunMetricsCollector, type MetricsCollector } from '../../src/telemetry/metrics';
 
 describe('CostTracker', () => {
   let tempDir: string;
   let runDir: string;
   let tracker: CostTracker;
+  let logger: StructuredLogger;
+  let metrics: MetricsCollector;
   const featureId = 'test-feature-123';
 
   beforeEach(async () => {
@@ -21,8 +23,8 @@ describe('CostTracker', () => {
     runDir = path.join(tempDir, 'runs', featureId);
     await fs.mkdir(path.join(runDir, 'telemetry'), { recursive: true });
 
-    const logger = createCliLogger('costTracker', 'info', runDir);
-    const metrics = createRunMetricsCollector(runDir, featureId, 'costTracker');
+    logger = createCliLogger('costTracker', 'info', runDir);
+    metrics = createRunMetricsCollector(runDir, featureId, 'costTracker');
 
     tracker = new CostTracker(featureId, runDir, logger, metrics);
   });
@@ -58,8 +60,6 @@ describe('CostTracker', () => {
         warningThreshold: 80, // 80% threshold
       };
 
-      const logger = createCliLogger('costTracker', 'info', runDir);
-      const metrics = createRunMetricsCollector(runDir, featureId, 'costTracker');
       const trackerWithBudget = new CostTracker(featureId, runDir, logger, metrics, budget);
 
       const state = trackerWithBudget.getState();
@@ -170,8 +170,6 @@ describe('CostTracker', () => {
         warningThreshold: 50, // Warn at 50% (percentage, not decimal)
       };
 
-      const logger = createCliLogger('costTracker', 'info', runDir);
-      const metrics = createRunMetricsCollector(runDir, featureId, 'costTracker');
       const trackerWithBudget = new CostTracker(featureId, runDir, logger, metrics, budget);
 
       // Record usage that exceeds 50% of budget
@@ -191,8 +189,6 @@ describe('CostTracker', () => {
         warningThreshold: 50, // Warn at 50% (percentage, not decimal)
       };
 
-      const logger = createCliLogger('costTracker', 'info', runDir);
-      const metrics = createRunMetricsCollector(runDir, featureId, 'costTracker');
       const trackerWithBudget = new CostTracker(featureId, runDir, logger, metrics, budget);
 
       // Total 600 tokens, which is 60% > 50%
