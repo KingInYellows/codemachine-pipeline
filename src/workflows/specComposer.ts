@@ -49,6 +49,7 @@ import {
   type ApprovalRecord,
   type ApprovalVerdict,
 } from '../core/models/ApprovalRecord';
+import { isFileNotFound } from '../utils/safeJson';
 
 // ============================================================================
 // Types
@@ -1028,8 +1029,15 @@ export async function recordSpecApproval(
     try {
       const existingIndex = await fs.readFile(approvalsIndexPath, 'utf-8');
       approvalsIndex = JSON.parse(existingIndex) as { approvals: ApprovalRecord[] };
-    } catch {
-      // Index file may not exist yet
+    } catch (error) {
+      if (!isFileNotFound(error)) {
+        // Log non-ENOENT errors (e.g., JSON parse failures) but continue with empty index
+        logger.warn('Failed to parse existing approvals.json, starting fresh', {
+          featureId,
+          error: error instanceof Error ? error.message : String(error),
+        });
+      }
+      // Index file may not exist yet - continue with empty index
     }
 
     approvalsIndex.approvals.push(approvalRecord);
