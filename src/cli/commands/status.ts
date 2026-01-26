@@ -617,7 +617,12 @@ export default class Status extends Command {
     } catch (error) {
       // Log unexpected errors (non-ENOENT) for debugging
       if (error && typeof error === 'object' && 'code' in error && error.code !== 'ENOENT') {
-        this.logger?.warn('Failed to load plan', { error: error instanceof Error ? error.message : 'Unknown error' });
+        this.logger?.warn('Failed to load plan', {
+          error: error instanceof Error ? error.message : 'Unknown error',
+          stack: error instanceof Error ? error.stack : undefined,
+          plan_path: planPath,
+          error_code: 'STATUS_PLAN_LOAD_FAILED',
+        });
       }
       return {
         plan_path: planPath,
@@ -652,7 +657,12 @@ export default class Status extends Command {
     } catch (error) {
       // Log unexpected errors (non-ENOENT) for debugging
       if (error && typeof error === 'object' && 'code' in error && error.code !== 'ENOENT') {
-        this.logger?.warn('Failed to load queue validation', { error: error instanceof Error ? error.message : 'Unknown error' });
+        this.logger?.warn('Failed to load queue validation', {
+          error: error instanceof Error ? error.message : 'Unknown error',
+          stack: error instanceof Error ? error.stack : undefined,
+          queue_validation_path: queueValidationPath,
+          error_code: 'STATUS_QUEUE_VALIDATION_LOAD_FAILED',
+        });
       }
     }
 
@@ -668,7 +678,12 @@ export default class Status extends Command {
     } catch (error) {
       // Log unexpected errors (non-ENOENT) for debugging
       if (error && typeof error === 'object' && 'code' in error && error.code !== 'ENOENT') {
-        this.logger?.warn('Failed to load plan validation', { error: error instanceof Error ? error.message : 'Unknown error' });
+        this.logger?.warn('Failed to load plan validation', {
+          error: error instanceof Error ? error.message : 'Unknown error',
+          stack: error instanceof Error ? error.stack : undefined,
+          plan_validation_path: planValidationPath,
+          error_code: 'STATUS_PLAN_VALIDATION_LOAD_FAILED',
+        });
       }
     }
 
@@ -720,7 +735,12 @@ export default class Status extends Command {
     } catch (error) {
       // Log unexpected errors (non-ENOENT) for debugging
       if (error && typeof error === 'object' && 'code' in error && error.code !== 'ENOENT') {
-        this.logger?.warn('Failed to load branch protection', { error: error instanceof Error ? error.message : 'Unknown error' });
+        this.logger?.warn('Failed to load branch protection', {
+          error: error instanceof Error ? error.message : 'Unknown error',
+          stack: error instanceof Error ? error.stack : undefined,
+          run_dir: runDir,
+          error_code: 'STATUS_BRANCH_PROTECTION_LOAD_FAILED',
+        });
       }
       return undefined;
     }
@@ -766,6 +786,9 @@ export default class Status extends Command {
     } catch (error) {
       logger?.warn('Failed to read PR metadata for branch protection refresh', {
         error: error instanceof Error ? error.message : 'unknown error',
+        stack: error instanceof Error ? error.stack : undefined,
+        run_dir: runDir,
+        error_code: 'STATUS_PR_METADATA_READ_FAILED',
       });
       return;
     }
@@ -826,6 +849,9 @@ export default class Status extends Command {
         } catch (error) {
           logger?.warn('Failed to compare ExecutionTask validations with required checks', {
             error: error instanceof Error ? error.message : 'unknown error',
+            stack: error instanceof Error ? error.stack : undefined,
+            run_dir: runDir,
+            error_code: 'STATUS_BRANCH_PROTECTION_VALIDATION_COMPARE_FAILED',
           });
         }
       }
@@ -862,6 +888,9 @@ export default class Status extends Command {
     } catch (error) {
       logger?.warn('Branch protection refresh failed', {
         error: error instanceof Error ? error.message : 'unknown error',
+        stack: error instanceof Error ? error.stack : undefined,
+        run_dir: runDir,
+        error_code: 'STATUS_BRANCH_PROTECTION_REFRESH_FAILED',
       });
     }
   }
@@ -930,6 +959,12 @@ export default class Status extends Command {
 
         integrations.github = github;
       } catch (error) {
+        this.logger?.warn('Failed to load GitHub integration data', {
+          error: error instanceof Error ? error.message : 'unknown error',
+          stack: error instanceof Error ? error.stack : undefined,
+          run_dir: runDir,
+          error_code: 'STATUS_GITHUB_INTEGRATION_LOAD_FAILED',
+        });
         integrations.github = {
           enabled: true,
           warnings: [
@@ -984,12 +1019,23 @@ export default class Status extends Command {
         } catch (error) {
           // Log unexpected errors (non-ENOENT) for debugging
           if (error && typeof error === 'object' && 'code' in error && error.code !== 'ENOENT') {
-            this.logger?.warn('Failed to read manifest for Linear status', { error: error instanceof Error ? error.message : 'Unknown error' });
+            this.logger?.warn('Failed to read manifest for Linear status', {
+              error: error instanceof Error ? error.message : 'Unknown error',
+              stack: error instanceof Error ? error.stack : undefined,
+              manifest_path: manifestPath,
+              error_code: 'STATUS_LINEAR_MANIFEST_READ_FAILED',
+            });
           }
         }
 
         integrations.linear = linear;
       } catch (error) {
+        this.logger?.warn('Failed to load Linear integration data', {
+          error: error instanceof Error ? error.message : 'unknown error',
+          stack: error instanceof Error ? error.stack : undefined,
+          run_dir: runDir,
+          error_code: 'STATUS_LINEAR_INTEGRATION_LOAD_FAILED',
+        });
         integrations.linear = {
           enabled: true,
           warnings: [
@@ -1049,7 +1095,12 @@ export default class Status extends Command {
     } catch (error) {
       // Log unexpected errors (non-ENOENT) for debugging
       if (error && typeof error === 'object' && 'code' in error && error.code !== 'ENOENT') {
-        this.logger?.warn('Failed to load rate limits', { error: error instanceof Error ? error.message : 'Unknown error' });
+        this.logger?.warn('Failed to load rate limits', {
+          error: error instanceof Error ? error.message : 'Unknown error',
+          stack: error instanceof Error ? error.stack : undefined,
+          run_dir: runDir,
+          error_code: 'STATUS_RATE_LIMITS_LOAD_FAILED',
+        });
       }
       return undefined;
     }
@@ -1071,7 +1122,12 @@ export default class Status extends Command {
     } catch (error) {
       // Log unexpected errors (non-ENOENT) for debugging
       if (error && typeof error === 'object' && 'code' in error && error.code !== 'ENOENT') {
-        this.logger?.warn('Failed to access research directory', { error: error instanceof Error ? error.message : 'Unknown error' });
+        this.logger?.warn('Failed to access research directory', {
+          error: error instanceof Error ? error.message : 'Unknown error',
+          stack: error instanceof Error ? error.stack : undefined,
+          research_dir: researchDir,
+          error_code: 'STATUS_RESEARCH_DIR_ACCESS_FAILED',
+        });
       }
       return undefined;
     }
@@ -1135,6 +1191,12 @@ export default class Status extends Command {
         warnings,
       };
     } catch (error) {
+      this.logger?.warn('Failed to load research status', {
+        error: error instanceof Error ? error.message : 'unknown error',
+        stack: error instanceof Error ? error.stack : undefined,
+        research_dir: researchDir,
+        error_code: 'STATUS_RESEARCH_LOAD_FAILED',
+      });
       return {
         total_tasks: 0,
         pending_tasks: 0,
@@ -1177,7 +1239,12 @@ export default class Status extends Command {
     } catch (error) {
       // Log unexpected errors (non-ENOENT) for debugging
       if (error && typeof error === 'object' && 'code' in error && error.code !== 'ENOENT') {
-        this.logger?.warn('Failed to load traceability', { error: error instanceof Error ? error.message : 'Unknown error' });
+        this.logger?.warn('Failed to load traceability', {
+          error: error instanceof Error ? error.message : 'Unknown error',
+          stack: error instanceof Error ? error.stack : undefined,
+          run_dir: runDir,
+          error_code: 'STATUS_TRACEABILITY_LOAD_FAILED',
+        });
       }
       return undefined;
     }
@@ -1274,6 +1341,12 @@ export default class Status extends Command {
       if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
         return;
       }
+      this.logger?.warn('Failed to read summarization metadata', {
+        error: error instanceof Error ? error.message : 'unknown error',
+        stack: error instanceof Error ? error.stack : undefined,
+        context_dir: contextDir,
+        error_code: 'STATUS_SUMMARIZATION_METADATA_READ_FAILED',
+      });
       payload.warnings = [...(payload.warnings ?? []), 'Failed to read summarization metadata'];
     }
   }
@@ -1321,6 +1394,12 @@ export default class Status extends Command {
       if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
         return;
       }
+      this.logger?.warn('Failed to read cost telemetry', {
+        error: error instanceof Error ? error.message : 'unknown error',
+        stack: error instanceof Error ? error.stack : undefined,
+        run_dir: runDir,
+        error_code: 'STATUS_COST_TELEMETRY_READ_FAILED',
+      });
       payload.warnings = [...(payload.warnings ?? []), 'Failed to read cost telemetry'];
     }
   }
