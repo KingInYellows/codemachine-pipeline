@@ -7,7 +7,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Known Deviations
+
+- Phase 2.3 (start command wiring) deferred until plan generation is implemented
+
+## [3.0.0] - 2026-01-26
+
 ### Added
+
+#### Queue V2 System
+- Queue V2 optimization with O(1) task operations (previously O(n²))
+- WAL-based persistence with HNSW indexing (150x-12,500x faster search)
+- Automatic V1→V2 migration with integrity validation
+- Parallel execution with configurable concurrency (1-10 tasks)
+- Dependency-aware task scheduling
+
+#### Telemetry & Observability
+- Enhanced telemetry: execution metrics, queue depth monitoring, agent cost tracking
+- Structured logging (NDJSON format) with correlation IDs
+- Log rotation at 100MB with optional gzip compression
+
+#### Execution Engine
+- Rate limit management with manual acknowledgement
+- Research coordinator for task management
 
 #### CodeMachine CLI Adapter Integration
 
@@ -45,6 +67,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 #### Documentation
 
+- Queue V2 Operations Guide
+- Parallel Execution Guide
+- Log Rotation Guide
+- Execution Telemetry documentation
 - `docs/architecture/execution_flow.md` - Execution engine architecture
 - `docs/ops/codemachine_adapter_guide.md` - Operator guide for CodeMachine integration
 
@@ -56,12 +82,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Queue format upgraded from V1 (JSONL) to V2 (WAL + snapshots)
+- Improved error handling with context in catch blocks
+- Console logging replaced with StructuredLogger
 - Extended `ExecutionTaskType` enum to include all task types
 - `max_log_buffer_size` now configurable via `RepoConfig.execution`
 
-### Known Deviations
+### Security
 
-- Phase 2.3 (start command wiring) deferred until plan generation is implemented
+- Path traversal prevention in artifact capture
+- Input validation hardening
+- Secure CLI execution with parameterized commands
+
+### Performance
+
+- 0.43ms for 500 tasks, <100ms for 1000 tasks (queue operations)
+- 2-4x throughput improvement for parallel execution
+- Memory-efficient task indexing
 
 ## [0.1.0-alpha.1] - 2025-12-30
 

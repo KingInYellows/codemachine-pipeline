@@ -9,6 +9,7 @@ import {
   areDependenciesCompleted,
 } from '../core/models/ExecutionTask';
 import { readManifest, writeManifest, withLock } from '../persistence/runDirectoryManager';
+import { createLogger, type StructuredLogger, LogLevel } from '../telemetry/logger.js';
 
 // V2 WAL Components
 import { ensureV2Format } from './queueMigration.js';
@@ -137,6 +138,13 @@ const QUEUE_SNAPSHOT_FILE = 'queue_snapshot.json';
 const QUEUE_COMPACTION_MAX_UPDATES = 1000;
 const QUEUE_COMPACTION_MAX_BYTES = 5 * 1024 * 1024;
 
+// Module-level logger for queue store operations
+const logger: StructuredLogger = createLogger({
+  component: 'queue-store',
+  minLevel: LogLevel.DEBUG,
+  mirrorToStderr: true,
+});
+
 interface QueueCounts {
   total: number;
   pending: number;
@@ -264,7 +272,7 @@ async function getV2IndexCache(runDir: string): Promise<V2IndexCache> {
   // Ensure V2 format (auto-migrates from V1 if needed)
   const migrationResult = await ensureV2Format(queueDir, featureId);
   if (migrationResult.migrated && migrationResult.result) {
-    console.log(`[QueueStore] Migrated queue to V2 format: ${migrationResult.result.tasksConverted} tasks`);
+    logger.info('Migrated queue to V2 format', { tasksConverted: migrationResult.result.tasksConverted });
   }
 
   // Hydrate index from snapshot + WAL
@@ -514,7 +522,7 @@ async function loadQueueCounts(
     }
   } catch (error) {
     // Fall back to computing counts from queue data
-    console.warn(`Failed to load queue counts from manifest, falling back to re-counting. Error: ${error instanceof Error ? error.message : String(error)}`);
+    logger.warn('Failed to load queue counts from manifest, falling back to re-counting', { error: error instanceof Error ? error.message : String(error) });
   }
 
   return countTasks(tasks);
@@ -905,7 +913,7 @@ export async function appendToQueue(
       } catch (v2Error) {
         invalidateV2Cache(runDir);
         // Log warning and fall back to V1
-        console.warn(`[QueueStore] V2 appendToQueue failed, falling back to V1: ${v2Error instanceof Error ? v2Error.message : String(v2Error)}`);
+        logger.warn('V2 appendToQueue failed, falling back to V1', { error: v2Error instanceof Error ? v2Error.message : String(v2Error) });
       }
 
       // Fallback to V1 implementation
@@ -1049,7 +1057,7 @@ export async function loadQueue(runDir: string): Promise<Map<string, ExecutionTa
     return tasks;
   } catch (error) {
     // Log warning but fall back to V1 cache for resilience
-    console.warn(`[QueueStore] V2 index load failed, falling back to V1: ${error instanceof Error ? error.message : String(error)}`);
+    logger.warn('V2 index load failed, falling back to V1', { error: error instanceof Error ? error.message : String(error) });
   }
 
   // Fallback to V1 cache (backward compatibility)
@@ -1099,7 +1107,7 @@ export async function loadQueueSnapshot(runDir: string): Promise<QueueSnapshot |
     const expectedChecksum = crypto.createHash('sha256').update(dataToHash).digest('hex');
 
     if (snapshot.checksum !== expectedChecksum) {
-      console.warn('Queue snapshot checksum mismatch - falling back to JSONL');
+      logger.warn('Queue snapshot checksum mismatch - falling back to JSONL');
       return null;
     }
 
@@ -1269,81 +1277,44 @@ export async function validateQueue(runDir: string): Promise<QueueValidationResu
  *
  * Uses V2 memory index for efficient task selection.
  * Priority order: running tasks (crash recovery) > pending tasks > retryable failures
+ * V1 format is no longer supported - run migration tool to upgrade.
  *
  * @param runDir - Run directory path
  * @returns Next task to execute, or null if none available
+ * @throws If queue is in V1 format (must run migration tool)
  */
 export async function getNextTask(runDir: string): Promise<ExecutionTask | null> {
-  // Try V2 index first (preferred path)
-  try {
-    const v2Cache = await getV2IndexCache(runDir);
-    const dependencyGraph = buildDependencyGraph(v2Cache.state);
-    const seen = new Set<string>();
-
-    // 1. Retry tasks that were running when crash occurred
-    for (const [, taskData] of v2Cache.state.tasks) {
-      if (taskData.status === 'running') {
-        if (v2AreDependenciesCompleted(v2Cache.state, taskData.task_id, dependencyGraph)) {
-          if (!seen.has(taskData.task_id)) {
-            return toExecutionTask(taskData);
-          }
-        }
-      }
-    }
-
-    // 2. Pending tasks with completed dependencies
-    const readyTasks = getReadyTasksFromIndex(v2Cache.state, dependencyGraph);
-    for (const taskData of readyTasks) {
-      if (!seen.has(taskData.task_id)) {
-        return toExecutionTask(taskData);
-      }
-    }
-
-    // 3. Retryable failures with completed dependencies
-    for (const [, taskData] of v2Cache.state.tasks) {
-      const task = toExecutionTask(taskData);
-      if (canRetry(task)) {
-        if (v2AreDependenciesCompleted(v2Cache.state, taskData.task_id, dependencyGraph)) {
-          if (!seen.has(taskData.task_id)) {
-            return task;
-          }
-        }
-      }
-    }
-
-    return null;
-  } catch (error) {
-    // Log warning but fall back to V1 for resilience
-    console.warn(`[QueueStore] V2 getNextTask failed, falling back to V1: ${error instanceof Error ? error.message : String(error)}`);
-  }
-
-  // Fallback to V1 implementation
-  const tasks = await loadQueue(runDir);
+  const v2Cache = await getV2IndexCache(runDir);
+  const dependencyGraph = buildDependencyGraph(v2Cache.state);
   const seen = new Set<string>();
 
-  // Retry tasks that were running when the crash occurred
-  for (const [, task] of tasks) {
-    if (task.status === 'running' && areDependenciesCompleted(task, tasks)) {
-      if (!seen.has(task.task_id)) {
-        return task;
+  // 1. Retry tasks that were running when crash occurred
+  for (const [, taskData] of v2Cache.state.tasks) {
+    if (taskData.status === 'running') {
+      if (v2AreDependenciesCompleted(v2Cache.state, taskData.task_id, dependencyGraph)) {
+        if (!seen.has(taskData.task_id)) {
+          return toExecutionTask(taskData);
+        }
       }
     }
   }
 
-  // Next, pending tasks ready to run
-  for (const [, task] of tasks) {
-    if (task.status === 'pending' && areDependenciesCompleted(task, tasks)) {
-      if (!seen.has(task.task_id)) {
-        return task;
-      }
+  // 2. Pending tasks with completed dependencies
+  const readyTasks = getReadyTasksFromIndex(v2Cache.state, dependencyGraph);
+  for (const taskData of readyTasks) {
+    if (!seen.has(taskData.task_id)) {
+      return toExecutionTask(taskData);
     }
   }
 
-  // Finally, retryable failures
-  for (const [, task] of tasks) {
-    if (canRetry(task) && areDependenciesCompleted(task, tasks)) {
-      if (!seen.has(task.task_id)) {
-        return task;
+  // 3. Retryable failures with completed dependencies
+  for (const [, taskData] of v2Cache.state.tasks) {
+    const task = toExecutionTask(taskData);
+    if (canRetry(task)) {
+      if (v2AreDependenciesCompleted(v2Cache.state, taskData.task_id, dependencyGraph)) {
+        if (!seen.has(taskData.task_id)) {
+          return task;
+        }
       }
     }
   }
@@ -1394,7 +1365,7 @@ export async function getTaskById(runDir: string, taskId: string): Promise<Execu
     return null;
   } catch (error) {
     // Log warning but fall back to V1 for resilience
-    console.warn(`[QueueStore] V2 getTaskById failed, falling back to V1: ${error instanceof Error ? error.message : String(error)}`);
+    logger.warn('V2 getTaskById failed, falling back to V1', { error: error instanceof Error ? error.message : String(error) });
   }
 
   // Fallback to V1 implementation
@@ -1498,7 +1469,7 @@ export async function updateTaskInQueue(
       } catch (v2Error) {
         invalidateV2Cache(runDir);
         // Log warning and fall back to V1
-        console.warn(`[QueueStore] V2 updateTaskInQueue failed, falling back to V1: ${v2Error instanceof Error ? v2Error.message : String(v2Error)}`);
+        logger.warn('V2 updateTaskInQueue failed, falling back to V1', { error: v2Error instanceof Error ? v2Error.message : String(v2Error) });
       }
 
       // Fallback to V1 implementation

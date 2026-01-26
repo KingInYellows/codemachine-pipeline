@@ -6,6 +6,7 @@ import {
   readManifest,
   type RunManifest,
 } from '../../persistence/runDirectoryManager';
+import { safeJsonParse } from '../../utils/safeJson.js';
 import { createCliLogger, LogLevel } from '../../telemetry/logger';
 import { createRunMetricsCollector, StandardMetrics } from '../../telemetry/metrics';
 import { createRunTraceManager, SpanStatusCode, withSpan } from '../../telemetry/traces';
@@ -609,7 +610,11 @@ export default class Status extends Command {
       }
 
       return result;
-    } catch {
+    } catch (error) {
+      // Log unexpected errors (non-ENOENT) for debugging
+      if (error && typeof error === 'object' && 'code' in error && error.code !== 'ENOENT') {
+        console.warn('[status] Failed to load plan:', error instanceof Error ? error.message : 'Unknown error');
+      }
       return {
         plan_path: planPath,
         plan_exists: false,
@@ -633,24 +638,34 @@ export default class Status extends Command {
 
     try {
       const queueContent = await fs.readFile(queueValidationPath, 'utf-8');
-      const queueData = JSON.parse(queueContent) as { valid: boolean; errors?: unknown[] };
-      queueValid = queueData.valid;
-      if (!queueData.valid && queueData.errors && Array.isArray(queueData.errors)) {
-        integrityWarnings.push(`Queue validation found ${queueData.errors.length} errors`);
+      const queueData = safeJsonParse<{ valid: boolean; errors?: unknown[] }>(queueContent);
+      if (queueData) {
+        queueValid = queueData.valid;
+        if (!queueData.valid && queueData.errors && Array.isArray(queueData.errors)) {
+          integrityWarnings.push(`Queue validation found ${queueData.errors.length} errors`);
+        }
       }
-    } catch {
-      // Queue validation file doesn't exist
+    } catch (error) {
+      // Log unexpected errors (non-ENOENT) for debugging
+      if (error && typeof error === 'object' && 'code' in error && error.code !== 'ENOENT') {
+        console.warn('[status] Failed to load queue validation:', error instanceof Error ? error.message : 'Unknown error');
+      }
     }
 
     try {
       const planContent = await fs.readFile(planValidationPath, 'utf-8');
-      const planData = JSON.parse(planContent) as { valid: boolean; errors?: string[] };
-      planValid = planData.valid;
-      if (!planData.valid && planData.errors && Array.isArray(planData.errors)) {
-        integrityWarnings.push(...planData.errors);
+      const planData = safeJsonParse<{ valid: boolean; errors?: string[] }>(planContent);
+      if (planData) {
+        planValid = planData.valid;
+        if (!planData.valid && planData.errors && Array.isArray(planData.errors)) {
+          integrityWarnings.push(...planData.errors);
+        }
       }
-    } catch {
-      // Plan validation file doesn't exist
+    } catch (error) {
+      // Log unexpected errors (non-ENOENT) for debugging
+      if (error && typeof error === 'object' && 'code' in error && error.code !== 'ENOENT') {
+        console.warn('[status] Failed to load plan validation:', error instanceof Error ? error.message : 'Unknown error');
+      }
     }
 
     const hasValidationData = queueValid !== undefined || planValid !== undefined;
@@ -698,8 +713,11 @@ export default class Status extends Command {
         evaluated_at: report.evaluated_at,
         ...(report.validation_mismatch && { validation_mismatch: report.validation_mismatch }),
       };
-    } catch {
-      // Silently return undefined if branch_protection.json doesn't exist or is invalid
+    } catch (error) {
+      // Log unexpected errors (non-ENOENT) for debugging
+      if (error && typeof error === 'object' && 'code' in error && error.code !== 'ENOENT') {
+        console.warn('[status] Failed to load branch protection:', error instanceof Error ? error.message : 'Unknown error');
+      }
       return undefined;
     }
   }
@@ -848,7 +866,8 @@ export default class Status extends Command {
     const prPath = path.join(runDir, 'pr.json');
     try {
       const content = await fs.readFile(prPath, 'utf-8');
-      return JSON.parse(content) as PRMetadata;
+      const parsed = safeJsonParse<PRMetadata>(content);
+      return parsed ?? null;
     } catch (error) {
       if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
         return null;
@@ -950,16 +969,19 @@ export default class Status extends Command {
         const manifestPath = path.join(runDir, 'manifest.json');
         try {
           const manifestContent = await fs.readFile(manifestPath, 'utf-8');
-          const manifest = JSON.parse(manifestContent) as RunManifest;
-          if (manifest.source === 'linear' && manifest.title) {
+          const manifest = safeJsonParse<RunManifest>(manifestContent);
+          if (manifest && manifest.source === 'linear' && manifest.title) {
             linear.issue_status = {
               identifier: manifest.title.split(':')[0]?.trim() ?? 'unknown',
               state: 'tracked',
               url: '',
             };
           }
-        } catch {
-          // Manifest read failed, skip issue status
+        } catch (error) {
+          // Log unexpected errors (non-ENOENT) for debugging
+          if (error && typeof error === 'object' && 'code' in error && error.code !== 'ENOENT') {
+            console.warn('[status] Failed to read manifest for Linear status:', error instanceof Error ? error.message : 'Unknown error');
+          }
         }
 
         integrations.linear = linear;
@@ -1020,8 +1042,11 @@ export default class Status extends Command {
         },
         warnings,
       };
-    } catch {
-      // Rate limit ledger doesn't exist yet
+    } catch (error) {
+      // Log unexpected errors (non-ENOENT) for debugging
+      if (error && typeof error === 'object' && 'code' in error && error.code !== 'ENOENT') {
+        console.warn('[status] Failed to load rate limits:', error instanceof Error ? error.message : 'Unknown error');
+      }
       return undefined;
     }
   }
@@ -1039,8 +1064,11 @@ export default class Status extends Command {
     // Check if research directory exists
     try {
       await fs.access(researchDir);
-    } catch {
-      // No research directory yet
+    } catch (error) {
+      // Log unexpected errors (non-ENOENT) for debugging
+      if (error && typeof error === 'object' && 'code' in error && error.code !== 'ENOENT') {
+        console.warn('[status] Failed to access research directory:', error instanceof Error ? error.message : 'Unknown error');
+      }
       return undefined;
     }
 
@@ -1142,8 +1170,11 @@ export default class Status extends Command {
         last_updated: traceSummary.lastUpdated,
         outstanding_gaps: traceSummary.outstandingGaps,
       };
-    } catch {
-      // Silently return undefined if trace.json doesn't exist or is invalid
+    } catch (error) {
+      // Log unexpected errors (non-ENOENT) for debugging
+      if (error && typeof error === 'object' && 'code' in error && error.code !== 'ENOENT') {
+        console.warn('[status] Failed to load traceability:', error instanceof Error ? error.message : 'Unknown error');
+      }
       return undefined;
     }
   }
@@ -1169,31 +1200,32 @@ export default class Status extends Command {
     }
 
     let docPayload: StatusContextPayload = {};
-    try {
-      const parsed = parseContextDocument(JSON.parse(content));
-      if (!parsed.success) {
-        return {
-          error: parsed.errors.map((err) => `${err.path}: ${err.message}`).join('; '),
-        };
-      }
-
-      const contextDoc = parsed.data;
-      docPayload = {
-        files: Object.keys(contextDoc.files).length,
-        total_tokens: contextDoc.total_token_count,
-        summaries: contextDoc.summaries.length,
-        summaries_preview: contextDoc.summaries.slice(0, 5).map((entry) => ({
-          file_path: entry.file_path,
-          chunk_id: entry.chunk_id,
-          generated_at: entry.generated_at,
-          summary: truncateSummary(entry.summary),
-        })),
-      };
-    } catch (error) {
+    const jsonData = safeJsonParse<unknown>(content);
+    if (!jsonData) {
       return {
-        error: error instanceof Error ? error.message : 'Failed to parse context summary',
+        error: 'Failed to parse context summary JSON',
       };
     }
+
+    const parsed = parseContextDocument(jsonData);
+    if (!parsed.success) {
+      return {
+        error: parsed.errors.map((err) => `${err.path}: ${err.message}`).join('; '),
+      };
+    }
+
+    const contextDoc = parsed.data;
+    docPayload = {
+      files: Object.keys(contextDoc.files).length,
+      total_tokens: contextDoc.total_token_count,
+      summaries: contextDoc.summaries.length,
+      summaries_preview: contextDoc.summaries.slice(0, 5).map((entry) => ({
+        file_path: entry.file_path,
+        chunk_id: entry.chunk_id,
+        generated_at: entry.generated_at,
+        summary: truncateSummary(entry.summary),
+      })),
+    };
 
     await this.attachSummarizationMetadata(docPayload, contextDir);
     await this.attachCostTelemetry(docPayload, runDir);
@@ -1209,28 +1241,30 @@ export default class Status extends Command {
 
     try {
       const metadataRaw = await fs.readFile(metadataPath, 'utf-8');
-      const metadata = JSON.parse(metadataRaw) as {
+      const metadata = safeJsonParse<{
         updated_at?: string;
         chunks_generated?: number;
         chunks_cached?: number;
         tokens_used?: { prompt?: number; completion?: number; total?: number };
         warnings?: string[];
-      };
+      }>(metadataRaw);
 
-      payload.summarization = {
-        ...(payload.summarization ?? {}),
-        ...(metadata.updated_at && { updated_at: metadata.updated_at }),
-        ...(typeof metadata.chunks_generated === 'number' && {
-          chunks_generated: metadata.chunks_generated,
-        }),
-        ...(typeof metadata.chunks_cached === 'number' && {
-          chunks_cached: metadata.chunks_cached,
-        }),
-        ...(metadata.tokens_used && { tokens_used: metadata.tokens_used }),
-      };
+      if (metadata) {
+        payload.summarization = {
+          ...(payload.summarization ?? {}),
+          ...(metadata.updated_at && { updated_at: metadata.updated_at }),
+          ...(typeof metadata.chunks_generated === 'number' && {
+            chunks_generated: metadata.chunks_generated,
+          }),
+          ...(typeof metadata.chunks_cached === 'number' && {
+            chunks_cached: metadata.chunks_cached,
+          }),
+          ...(metadata.tokens_used && { tokens_used: metadata.tokens_used }),
+        };
 
-      if (metadata.warnings && metadata.warnings.length > 0) {
-        payload.warnings = [...(payload.warnings ?? []), ...metadata.warnings];
+        if (metadata.warnings && metadata.warnings.length > 0) {
+          payload.warnings = [...(payload.warnings ?? []), ...metadata.warnings];
+        }
       }
     } catch (error) {
       if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
@@ -1245,7 +1279,7 @@ export default class Status extends Command {
 
     try {
       const content = await fs.readFile(costsPath, 'utf-8');
-      const costs = JSON.parse(content) as {
+      const costs = safeJsonParse<{
         totals?: {
           promptTokens?: number;
           completionTokens?: number;
@@ -1253,9 +1287,9 @@ export default class Status extends Command {
           totalCostUsd?: number;
         };
         warnings?: string[];
-      };
+      }>(content);
 
-      if (costs.totals) {
+      if (costs && costs.totals) {
         const tokensUsed: { prompt?: number; completion?: number; total?: number } = {};
         if (typeof costs.totals.promptTokens === 'number') {
           tokensUsed.prompt = costs.totals.promptTokens;
@@ -1276,7 +1310,7 @@ export default class Status extends Command {
         };
       }
 
-      if (costs.warnings && costs.warnings.length > 0) {
+      if (costs && costs.warnings && costs.warnings.length > 0) {
         payload.budget_warnings = costs.warnings;
       }
     } catch (error) {

@@ -19,6 +19,7 @@ import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 import { loadPlanMetadata } from './taskPlanner';
 import { loadSpecMetadata } from './specComposer';
+import { safeJsonParse } from '../utils/safeJson.js';
 
 /**
  * Plan diff result
@@ -83,8 +84,10 @@ export async function comparePlanDiff(runDir: string): Promise<PlanDiff> {
   const planPath = path.join(runDir, 'plan.json');
   try {
     const planContent = await fs.readFile(planPath, 'utf-8');
-    const plan = JSON.parse(planContent) as { checksum?: string };
-    if (plan.checksum !== planMetadata.plan_hash) {
+    const plan = safeJsonParse<{ checksum?: string }>(planContent);
+    if (!plan) {
+      changedFields.push('plan_file_invalid');
+    } else if (plan.checksum !== planMetadata.plan_hash) {
       changedFields.push('plan_checksum_mismatch');
     }
   } catch {
