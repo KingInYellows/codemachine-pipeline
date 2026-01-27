@@ -25,6 +25,7 @@ import type { ExecutionTask } from '../core/models/ExecutionTask';
 import { parseExecutionTask } from '../core/models/ExecutionTask';
 import { loadSnapshot, saveSnapshot } from './queueSnapshotManager';
 import { initializeOperationsLog } from './queueOperationsLog';
+import { invalidateV2Cache } from './queueStore';
 import { createLogger, LogLevel } from '../telemetry/logger';
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
@@ -444,5 +445,14 @@ export async function ensureV2Format(
     recommendation: "Run 'ai-feature queue verify' after migration to confirm integrity",
   });
   const result = await migrateV1ToV2(queueDir, featureId);
+
+  // Invalidate V2 cache to ensure fresh data is loaded after migration
+  if (result.success) {
+    // Find the run directory (parent of queue directory)
+    const runDir = path.dirname(queueDir);
+    invalidateV2Cache(runDir);
+    logger.debug('V2 index cache invalidated after successful migration', { run_dir: runDir });
+  }
+
   return { migrated: result.success, result };
 }

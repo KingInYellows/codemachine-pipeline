@@ -174,9 +174,15 @@ export async function saveSnapshot(
   };
 
   try {
-    // Write to temp file
+    // Write to temp file with fsync for durability
     const content = JSON.stringify(snapshot, null, 2);
-    await fs.writeFile(tempPath, content, 'utf-8');
+    const handle = await fs.open(tempPath, 'w');
+    try {
+      await handle.writeFile(content, 'utf-8');
+      await handle.sync(); // Ensure data is on disk before rename
+    } finally {
+      await handle.close();
+    }
 
     // Atomic rename
     await fs.rename(tempPath, snapshotPath);

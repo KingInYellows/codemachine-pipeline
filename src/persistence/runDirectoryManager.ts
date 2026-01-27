@@ -196,7 +196,7 @@ const MANIFEST_FILE_NAME = 'manifest.json';
 const HASH_MANIFEST_FILE_NAME = 'hash_manifest.json';
 const DEFAULT_LOCK_TIMEOUT = 30000; // 30 seconds
 const DEFAULT_POLL_INTERVAL = 100; // 100ms
-const STALE_LOCK_THRESHOLD = 300000; // 5 minutes
+const STALE_LOCK_THRESHOLD_MS = 60000; // 60 seconds - reduced for faster crash recovery in homelab use
 const SQLITE_DIR_NAME = 'sqlite';
 const SQLITE_DB_NAME = 'run_queue.db';
 
@@ -387,7 +387,7 @@ async function isLockStale(lockPath: string): Promise<boolean> {
     const acquiredAt = new Date(lockData.acquired_at).getTime();
     const now = Date.now();
 
-    if (now - acquiredAt > STALE_LOCK_THRESHOLD) {
+    if (now - acquiredAt > STALE_LOCK_THRESHOLD_MS) {
       return true;
     }
 
@@ -634,9 +634,15 @@ export async function writeManifest(runDir: string, manifest: RunManifest): Prom
   const tempPath = `${manifestPath}.tmp.${crypto.randomBytes(8).toString('hex')}`;
 
   try {
-    // Write to temp file
+    // Write to temp file with fsync for durability
     const content = JSON.stringify(manifest, null, 2);
-    await fs.writeFile(tempPath, content, 'utf-8');
+    const handle = await fs.open(tempPath, 'w');
+    try {
+      await handle.writeFile(content, 'utf-8');
+      await handle.sync(); // Ensure data is on disk before rename
+    } finally {
+      await handle.close();
+    }
 
     // Atomic rename
     await fs.rename(tempPath, manifestPath);

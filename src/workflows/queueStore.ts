@@ -480,12 +480,35 @@ export async function appendToQueue(
 }
 
 /**
- * Write queue manifest to disk
+ * Write queue manifest to disk with fsync for durability.
+ * Uses write-to-temp-then-rename pattern for atomicity.
  */
 async function writeQueueManifest(queueDir: string, manifest: QueueManifest): Promise<void> {
   const manifestPath = path.join(queueDir, QUEUE_MANIFEST_FILE);
+  const tempPath = `${manifestPath}.tmp.${crypto.randomBytes(8).toString('hex')}`;
   const content = JSON.stringify(manifest, null, 2);
-  await fs.writeFile(manifestPath, content, 'utf-8');
+
+  try {
+    // Write to temp file with fsync
+    const handle = await fs.open(tempPath, 'w');
+    try {
+      await handle.writeFile(content, 'utf-8');
+      await handle.sync(); // Ensure data is on disk before rename
+    } finally {
+      await handle.close();
+    }
+
+    // Atomic rename
+    await fs.rename(tempPath, manifestPath);
+  } catch (error) {
+    // Clean up temp file on error
+    try {
+      await fs.unlink(tempPath);
+    } catch {
+      // Ignore cleanup errors - don't mask the original error
+    }
+    throw error;
+  }
 }
 
 /**
