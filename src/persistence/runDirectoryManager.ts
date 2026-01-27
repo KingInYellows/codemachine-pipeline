@@ -650,8 +650,13 @@ export async function writeManifest(runDir: string, manifest: RunManifest): Prom
     // Clean up temp file on error
     try {
       await fs.unlink(tempPath);
-    } catch {
-      // Ignore cleanup errors - don't mask the original error
+    } catch (cleanupError) {
+      // Log cleanup failure but don't mask the original error
+      console.warn(
+        `[runDirectoryManager] Failed to clean up temp file ${tempPath}: ${
+          cleanupError instanceof Error ? cleanupError.message : String(cleanupError)
+        }`
+      );
     }
     throw wrapError(error, `write manifest to ${runDir}`);
   }

@@ -504,8 +504,12 @@ async function writeQueueManifest(queueDir: string, manifest: QueueManifest): Pr
     // Clean up temp file on error
     try {
       await fs.unlink(tempPath);
-    } catch {
-      // Ignore cleanup errors - don't mask the original error
+    } catch (cleanupError) {
+      // Log cleanup failure but don't mask the original error
+      logger.debug('Failed to clean up temp file during error recovery', {
+        temp_path: tempPath,
+        cleanup_error: cleanupError instanceof Error ? cleanupError.message : String(cleanupError),
+      });
     }
     throw error;
   }

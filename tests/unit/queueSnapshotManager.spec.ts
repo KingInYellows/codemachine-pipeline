@@ -239,6 +239,59 @@ describe('queueSnapshotManager', () => {
       expect(snapshot.tasks['task-1'].priority).toBe(5);
       expect(snapshot.dependencyGraph['task-1']).toEqual(['dep-1']);
     });
+
+    it('should persist data durably (fsync before rename pattern)', async () => {
+      // This test verifies the durability pattern works correctly
+      // The implementation uses: open -> write -> sync -> close -> rename
+      // We verify the end result: data persists and is readable
+      const tasks = { 'task-1': createTaskData('task-1') } as Record<string, ExecutionTask>;
+      const counts = createCounts({ total: 1, pending: 1 });
+
+      // Save snapshot
+      const savedSnapshot = await saveSnapshot(testDir, 'feature-123', tasks, counts, 5, { 'task-1': [] });
+
+      // Verify snapshot was persisted correctly
+      const loadedSnapshot = await loadSnapshot(testDir);
+      expect(loadedSnapshot).not.toBeNull();
+      expect(loadedSnapshot!.snapshotSeq).toBe(savedSnapshot.snapshotSeq);
+      expect(loadedSnapshot!.checksum).toBe(savedSnapshot.checksum);
+
+      // Verify no temp files remain (atomic write completed)
+      const files = await fs.readdir(testDir);
+      const tempFiles = files.filter((f) => f.includes('.tmp'));
+      expect(tempFiles).toHaveLength(0);
+    });
+
+    it('should handle write errors without leaving temp files', async () => {
+      // Create a read-only directory to force a write error
+      const readOnlyDir = path.join(testDir, 'readonly');
+      await fs.mkdir(readOnlyDir);
+
+      // First create a valid snapshot
+      const tasks = { 'task-1': createTaskData('task-1') } as Record<string, ExecutionTask>;
+      const counts = createCounts({ total: 1 });
+      await saveSnapshot(readOnlyDir, 'feature-123', tasks, counts, 1, {});
+
+      // Make directory read-only (this will cause write to fail on next attempt)
+      await fs.chmod(readOnlyDir, 0o444);
+
+      const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+      try {
+        // This should fail due to permission denied
+        await saveSnapshot(readOnlyDir, 'feature-123', tasks, counts, 2, {});
+        // If we get here, the write succeeded (CI might run as root)
+      } catch {
+        // Expected error - verify no temp files left
+        await fs.chmod(readOnlyDir, 0o755); // Restore permissions to check
+        const files = await fs.readdir(readOnlyDir);
+        const tempFiles = files.filter((f) => f.includes('.tmp'));
+        expect(tempFiles).toHaveLength(0);
+      } finally {
+        await fs.chmod(readOnlyDir, 0o755); // Restore for cleanup
+        warnSpy.mockRestore();
+      }
+    });
   });
 
   describe('deleteSnapshot', () => {
