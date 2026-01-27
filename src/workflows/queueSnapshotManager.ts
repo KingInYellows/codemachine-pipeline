@@ -130,6 +130,22 @@ export async function loadSnapshot(queueDir: string): Promise<QueueSnapshotV2 | 
 // ============================================================================
 
 /**
+ * Validate that a queue directory path is safe and doesn't escape its parent.
+ * Defense-in-depth check to prevent path traversal.
+ *
+ * @param queueDir - Queue directory path to validate
+ * @throws Error if path appears unsafe
+ */
+function validateQueueDirectory(queueDir: string): void {
+  const segments = queueDir.split(/[\\\/]+/).filter(Boolean);
+
+  // Basic sanity checks for path traversal patterns
+  if (segments.includes('..')) {
+    throw new Error(`Unsafe queue directory path: ${queueDir}`);
+  }
+}
+
+/**
  * Save snapshot atomically using write-temp-rename pattern.
  *
  * This ensures no partial snapshots are ever visible - either the
@@ -151,6 +167,7 @@ export async function saveSnapshot(
   snapshotSeq: number,
   dependencyGraph: Record<string, string[]>
 ): Promise<QueueSnapshotV2> {
+  validateQueueDirectory(queueDir);
   const snapshotPath = path.join(queueDir, SNAPSHOT_FILENAME);
   const tempPath = `${snapshotPath}${TEMP_SNAPSHOT_SUFFIX}.${crypto.randomBytes(8).toString('hex')}`;
 

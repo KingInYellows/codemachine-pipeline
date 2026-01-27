@@ -480,10 +480,27 @@ export async function appendToQueue(
 }
 
 /**
+ * Validate that a queue directory path is safe and doesn't escape its parent.
+ * Defense-in-depth check to prevent path traversal.
+ *
+ * @param queueDir - Queue directory path to validate
+ * @throws Error if path appears unsafe
+ */
+function validateQueueDirectory(queueDir: string): void {
+  const segments = queueDir.split(/[\\\/]+/).filter(Boolean);
+
+  // Basic sanity checks for path traversal patterns
+  if (segments.includes('..')) {
+    throw new Error(`Unsafe queue directory path: ${queueDir}`);
+  }
+}
+
+/**
  * Write queue manifest to disk with fsync for durability.
  * Uses write-to-temp-then-rename pattern for atomicity.
  */
 async function writeQueueManifest(queueDir: string, manifest: QueueManifest): Promise<void> {
+  validateQueueDirectory(queueDir);
   const manifestPath = path.join(queueDir, QUEUE_MANIFEST_FILE);
   const tempPath = `${manifestPath}.tmp.${crypto.randomBytes(8).toString('hex')}`;
   const content = JSON.stringify(manifest, null, 2);

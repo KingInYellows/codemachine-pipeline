@@ -215,13 +215,49 @@ const STANDARD_SUBDIRS = [
 // ============================================================================
 
 /**
+ * Validate that a feature ID is safe for use in file paths.
+ * Prevents path traversal attacks by ensuring the ID contains no directory separators
+ * and is not "." or "..".
+ *
+ * @param featureId - Feature identifier to validate
+ * @throws Error if feature ID contains unsafe characters
+ */
+function validateFeatureId(featureId: string): void {
+  // Reject absolute paths
+  if (path.isAbsolute(featureId)) {
+    throw new Error(
+      `Invalid feature ID "${featureId}": must be a relative identifier, not an absolute path`
+    );
+  }
+
+  // Reject paths with directory separators
+  if (featureId.includes('/') || featureId.includes('\\')) {
+    throw new Error(
+      `Invalid feature ID "${featureId}": must not contain path separators (/ or \\)`
+    );
+  }
+
+  // Reject empty, whitespace-only, or traversal IDs
+  const trimmed = featureId.trim();
+  if (!trimmed) {
+    throw new Error('Invalid feature ID: must not be empty');
+  }
+
+  if (trimmed === '.' || trimmed === '..') {
+    throw new Error(`Invalid feature ID "${featureId}": must not be '.' or '..'`);
+  }
+}
+
+/**
  * Get the absolute path to a run directory
  *
  * @param baseDir - Base pipeline directory (.ai-feature-pipeline/runs)
  * @param featureId - Feature identifier
  * @returns Absolute path to run directory
+ * @throws Error if featureId contains path traversal sequences
  */
 export function getRunDirectoryPath(baseDir: string, featureId: string): string {
+  validateFeatureId(featureId);
   return path.resolve(baseDir, featureId);
 }
 
@@ -622,6 +658,22 @@ function createInitialManifest(featureId: string, options: CreateRunDirectoryOpt
 }
 
 /**
+ * Validate that a run directory path is safe.
+ * Defense-in-depth check to prevent path traversal.
+ *
+ * @param runDir - Run directory path to validate
+ * @throws Error if path appears unsafe
+ */
+function validateRunDirectory(runDir: string): void {
+  const segments = runDir.split(/[\\/]+/).filter(Boolean);
+
+  // Basic sanity checks for path traversal patterns in the provided path
+  if (segments.includes('..')) {
+    throw new Error(`Unsafe run directory path: ${runDir}`);
+  }
+}
+
+/**
  * Write manifest to disk atomically
  *
  * Uses write-to-temp-then-rename pattern for atomicity
@@ -630,6 +682,7 @@ function createInitialManifest(featureId: string, options: CreateRunDirectoryOpt
  * @param manifest - Manifest to write
  */
 export async function writeManifest(runDir: string, manifest: RunManifest): Promise<void> {
+  validateRunDirectory(runDir);
   const manifestPath = path.join(runDir, MANIFEST_FILE_NAME);
   const tempPath = `${manifestPath}.tmp.${crypto.randomBytes(8).toString('hex')}`;
 
