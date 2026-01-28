@@ -11,6 +11,52 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Phase 2.3 (start command wiring) deferred until plan generation is implemented
 
+## [3.0.1] - 2026-01-28
+
+### Fixed
+
+#### Reliability & Crash Recovery
+- Add fsync after critical writes to prevent data loss on power failure (#250)
+  - `queueSnapshotManager.ts`: fsync before atomic rename
+  - `queueStore.ts`: fsync in writeQueueManifest()
+  - `runDirectoryManager.ts`: fsync in writeManifest()
+- Reduce stale lock threshold from 5 minutes to 60 seconds for faster crash recovery in single-user scenarios (CDMCH-71)
+- Invalidate v2IndexCache after queue migration to prevent stale data (CDMCH-73)
+
+#### Queue System
+- Add explicit WARN-level logging when V1 queue format is detected and auto-migration occurs (#232)
+- Include guidance to run `ai-feature queue verify` after migration
+
+#### Error Handling
+- Add error logging to silent catch blocks in status command (#231)
+  - `loadIntegrationsStatus()` GitHub/Linear error visibility
+  - `loadResearchStatus()` error logging
+  - `attachSummarizationMetadata()` non-ENOENT errors
+  - `attachCostTelemetry()` non-ENOENT errors
+- Add safe JSON parsing utilities with centralized error handling (#223)
+  - `isFileNotFound()` utility for ENOENT detection
+  - `isJsonParseError()` for SyntaxError detection
+  - `safeJsonReadFile()` for file-based JSON parsing
+
+### Added
+
+#### Documentation
+- `docs/stable-release-audit.md`: Tech debt findings with evidence
+- `docs/stable-release-definition.md`: v1.0.0 criteria and acceptance
+- `docs/stable-release-roadmap.md`: 6-week milestone plan
+
+#### Testing
+- Comprehensive unit tests for CostTracker class (#224)
+- 24 new tests for safe JSON parsing utilities
+
+### Changed
+
+- Correct broken documentation links in README (#222)
+
+### Dependencies
+
+- Bump minor-and-patch dependencies: undici, zod, vitest
+
 ## [3.0.0] - 2026-01-26
 
 ### Added
