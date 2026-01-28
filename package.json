@@ -1,6 +1,6 @@
 {
   "name": "ai-feature-pipeline",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "description": "Autonomous AI-powered feature development pipeline CLI",
   "author": "CodeMachine Team",
   "license": "MIT",
