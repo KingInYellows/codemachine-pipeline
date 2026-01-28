@@ -196,7 +196,7 @@ const MANIFEST_FILE_NAME = 'manifest.json';
 const HASH_MANIFEST_FILE_NAME = 'hash_manifest.json';
 const DEFAULT_LOCK_TIMEOUT = 30000; // 30 seconds
 const DEFAULT_POLL_INTERVAL = 100; // 100ms
-const STALE_LOCK_THRESHOLD = 300000; // 5 minutes
+const STALE_LOCK_THRESHOLD_MS = 60000; // 60 seconds - reduced for faster crash recovery in homelab use
 const SQLITE_DIR_NAME = 'sqlite';
 const SQLITE_DB_NAME = 'run_queue.db';
 
@@ -215,13 +215,49 @@ const STANDARD_SUBDIRS = [
 // ============================================================================
 
 /**
+ * Validate that a feature ID is safe for use in file paths.
+ * Prevents path traversal attacks by ensuring the ID contains no directory separators
+ * and is not "." or "..".
+ *
+ * @param featureId - Feature identifier to validate
+ * @throws Error if feature ID contains unsafe characters
+ */
+function validateFeatureId(featureId: string): void {
+  // Reject absolute paths
+  if (path.isAbsolute(featureId)) {
+    throw new Error(
+      `Invalid feature ID "${featureId}": must be a relative identifier, not an absolute path`
+    );
+  }
+
+  // Reject paths with directory separators
+  if (featureId.includes('/') || featureId.includes('\\')) {
+    throw new Error(
+      `Invalid feature ID "${featureId}": must not contain path separators (/ or \\)`
+    );
+  }
+
+  // Reject empty, whitespace-only, or traversal IDs
+  const trimmed = featureId.trim();
+  if (!trimmed) {
+    throw new Error('Invalid feature ID: must not be empty');
+  }
+
+  if (trimmed === '.' || trimmed === '..') {
+    throw new Error(`Invalid feature ID "${featureId}": must not be '.' or '..'`);
+  }
+}
+
+/**
  * Get the absolute path to a run directory
  *
  * @param baseDir - Base pipeline directory (.ai-feature-pipeline/runs)
  * @param featureId - Feature identifier
  * @returns Absolute path to run directory
+ * @throws Error if featureId contains path traversal sequences
  */
 export function getRunDirectoryPath(baseDir: string, featureId: string): string {
+  validateFeatureId(featureId);
   return path.resolve(baseDir, featureId);
 }
 
@@ -387,7 +423,7 @@ async function isLockStale(lockPath: string): Promise<boolean> {
     const acquiredAt = new Date(lockData.acquired_at).getTime();
     const now = Date.now();
 
-    if (now - acquiredAt > STALE_LOCK_THRESHOLD) {
+    if (now - acquiredAt > STALE_LOCK_THRESHOLD_MS) {
       return true;
     }
 
@@ -622,6 +658,22 @@ function createInitialManifest(featureId: string, options: CreateRunDirectoryOpt
 }
 
 /**
+ * Validate that a run directory path is safe.
+ * Defense-in-depth check to prevent path traversal.
+ *
+ * @param runDir - Run directory path to validate
+ * @throws Error if path appears unsafe
+ */
+function validateRunDirectory(runDir: string): void {
+  const segments = runDir.split(/[\\/]+/).filter(Boolean);
+
+  // Basic sanity checks for path traversal patterns in the provided path
+  if (segments.includes('..')) {
+    throw new Error(`Unsafe run directory path: ${runDir}`);
+  }
+}
+
+/**
  * Write manifest to disk atomically
  *
  * Uses write-to-temp-then-rename pattern for atomicity
@@ -630,13 +682,20 @@ function createInitialManifest(featureId: string, options: CreateRunDirectoryOpt
  * @param manifest - Manifest to write
  */
 export async function writeManifest(runDir: string, manifest: RunManifest): Promise<void> {
+  validateRunDirectory(runDir);
   const manifestPath = path.join(runDir, MANIFEST_FILE_NAME);
   const tempPath = `${manifestPath}.tmp.${crypto.randomBytes(8).toString('hex')}`;
 
   try {
-    // Write to temp file
+    // Write to temp file with fsync for durability
     const content = JSON.stringify(manifest, null, 2);
-    await fs.writeFile(tempPath, content, 'utf-8');
+    const handle = await fs.open(tempPath, 'w');
+    try {
+      await handle.writeFile(content, 'utf-8');
+      await handle.sync(); // Ensure data is on disk before rename
+    } finally {
+      await handle.close();
+    }
 
     // Atomic rename
     await fs.rename(tempPath, manifestPath);
@@ -644,8 +703,13 @@ export async function writeManifest(runDir: string, manifest: RunManifest): Prom
     // Clean up temp file on error
     try {
       await fs.unlink(tempPath);
-    } catch {
-      // Ignore cleanup errors - don't mask the original error
+    } catch (cleanupError) {
+      // Log cleanup failure but don't mask the original error
+      console.warn(
+        `[runDirectoryManager] Failed to clean up temp file ${tempPath}: ${
+          cleanupError instanceof Error ? cleanupError.message : String(cleanupError)
+        }`
+      );
     }
     throw wrapError(error, `write manifest to ${runDir}`);
   }
