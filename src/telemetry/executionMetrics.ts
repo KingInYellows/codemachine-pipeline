@@ -197,7 +197,7 @@ export class ExecutionMetricsHelper {
     if (this.logger) {
       this.logger.error(message, context);
     } else {
-      console.error(message, context ? JSON.stringify(context) : '');
+      console.error(message, context);
     }
   }
 
