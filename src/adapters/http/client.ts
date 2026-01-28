@@ -1,4 +1,4 @@
-import { fetch, RequestInit, Response, HeadersInit, Headers } from 'undici';
+import type { RequestInit, Response, HeadersInit, Headers } from 'undici-types';
 import * as crypto from 'node:crypto';
 import { RateLimitLedger, RateLimitEnvelope } from '../../telemetry/rateLimitLedger';
 import { createLogger, type StructuredLogger, LogLevel } from '../../telemetry/logger';

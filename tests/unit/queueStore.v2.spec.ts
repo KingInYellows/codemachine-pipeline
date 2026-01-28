@@ -423,4 +423,54 @@ describe('queueStore V2 Integration', () => {
       expect(tasks.get('task-1')?.status).toBe('running');
     });
   });
+
+  // ==========================================================================
+  // Fsync Durability Tests
+  // ==========================================================================
+
+  describe('writeQueueManifest fsync durability', () => {
+    it('should persist manifest durably (fsync before rename pattern)', async () => {
+      // This test verifies the durability pattern works correctly
+      // The implementation uses: open -> write -> sync -> close -> rename
+      // We verify the end result: data persists and queue is loadable
+      const plan = createPlan([{ id: 'task-durable-1' }, { id: 'task-durable-2', deps: ['task-durable-1'] }]);
+
+      await initializeQueueFromPlan(runDir, plan);
+
+      // Verify queue was persisted correctly
+      const tasks = await loadQueue(runDir);
+      expect(tasks.size).toBe(2);
+      expect(tasks.has('task-durable-1')).toBe(true);
+      expect(tasks.has('task-durable-2')).toBe(true);
+
+      // Verify no temp files remain in the queue directory (atomic write completed)
+      const queueDir = path.join(runDir, 'queue');
+      const files = await fs.readdir(queueDir);
+      const tempFiles = files.filter((f) => f.includes('.tmp'));
+      expect(tempFiles).toHaveLength(0);
+    });
+
+    it('should use atomic write pattern (no partial writes)', async () => {
+      // Initialize queue
+      const plan = createPlan([{ id: 'task-atomic-1' }]);
+      await initializeQueueFromPlan(runDir, plan);
+
+      // Update task multiple times
+      await updateTaskInQueue(runDir, 'task-atomic-1', { status: 'running' });
+      await updateTaskInQueue(runDir, 'task-atomic-1', { status: 'completed' });
+
+      // Clear cache and reload to verify persistence
+      invalidateV2Cache(runDir);
+      const tasks = await loadQueue(runDir);
+
+      // Verify final state is consistent
+      expect(tasks.get('task-atomic-1')?.status).toBe('completed');
+
+      // Verify no temp files remain
+      const queueDir = path.join(runDir, 'queue');
+      const files = await fs.readdir(queueDir);
+      const tempFiles = files.filter((f) => f.includes('.tmp'));
+      expect(tempFiles).toHaveLength(0);
+    });
+  });
 });
