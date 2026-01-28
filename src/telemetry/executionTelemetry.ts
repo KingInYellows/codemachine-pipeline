@@ -36,6 +36,7 @@ export function createExecutionTelemetry(
       runDir: options.runDir,
       runId: options.runId,
       component: options.component ?? 'execution_engine',
+      logger: options.logger,
     }),
     logs: createExecutionLogWriter(options.logger, {
       runDir: options.runDir,
