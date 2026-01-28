@@ -111,7 +111,7 @@ export default class RateLimits extends Command {
         mirrorToStderr: !typedFlags.json,
       });
       metrics = createRunMetricsCollector(runDirPath, featureId);
-      traceManager = createRunTraceManager(runDirPath, featureId);
+      traceManager = createRunTraceManager(runDirPath, featureId, logger);
       commandSpan = traceManager.startSpan('cli.rate_limits');
       commandSpan.setAttribute('feature_id', featureId);
       commandSpan.setAttribute('json_mode', typedFlags.json);

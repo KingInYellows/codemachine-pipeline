@@ -205,7 +205,7 @@ export default class Start extends Command {
       mirrorToStderr: !typedFlags.json,
     });
     const metrics = createRunMetricsCollector(runDir, featureId);
-    const traceManager = createRunTraceManager(runDir, featureId);
+    const traceManager = createRunTraceManager(runDir, featureId, logger);
     const executionTelemetry = createExecutionTelemetry({
       logger,
       metrics,

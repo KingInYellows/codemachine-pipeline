@@ -97,7 +97,7 @@ export default class PRStatus extends Command {
 
       const { logger, runDir, prMetadata } = context;
       const metrics = createRunMetricsCollector(runDir, featureId);
-      const traceManager = createRunTraceManager(runDir, featureId);
+      const traceManager = createRunTraceManager(runDir, featureId, logger);
       const commandSpan = traceManager.startSpan('cli.pr.status');
 
       try {
