@@ -82,7 +82,6 @@ describe('RateLimitLedger Error Handling', () => {
       expect(ledger).toBeInstanceOf(RateLimitLedger);
     });
   });
-  });
 
   describe('getProviderState error handling', () => {
     it('should log error when ledger file is corrupted', async () => {
