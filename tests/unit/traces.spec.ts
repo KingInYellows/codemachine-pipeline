@@ -6,9 +6,6 @@ import {
   TraceManager,
   createTraceManager,
   createRunTraceManager,
-  SpanKind,
-  SpanStatusCode,
-  withSpan,
   type LoggerInterface,
 } from '../../src/telemetry/traces';
 

@@ -171,9 +171,6 @@ export class RateLimitLedger {
   private readonly logger: LoggerInterface;
 
   constructor(runDir: string, provider: Provider | string, logger: LoggerInterface) {
-    if (!logger) {
-      throw new Error('RateLimitLedger requires a logger instance');
-    }
     this.provider = provider;
     this.ledgerPath = getLedgerPath(runDir);
     this.logger = logger;

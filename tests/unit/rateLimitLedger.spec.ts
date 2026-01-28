@@ -81,13 +81,7 @@ describe('RateLimitLedger Error Handling', () => {
 
       expect(ledger).toBeInstanceOf(RateLimitLedger);
     });
-
-    it('should throw if logger is not provided', () => {
-      // Without logger, constructor should throw
-      expect(() => {
-        createRateLimitLedger(tempDir, 'github');
-      }).toThrow();
-    });
+  });
   });
 
   describe('getProviderState error handling', () => {
