@@ -641,11 +641,11 @@ The `TaskMapper` routes task types to appropriate execution strategies:
 
 | Task Type | Strategy | Workflow | Description |
 |-----------|----------|----------|-------------|
-| `code_generation` | CodeMachine | `generate-code` | AI-driven code generation |
-| `testing` | CodeMachine | `run-tests` | Test execution with coverage |
-| `pr_creation` | CodeMachine | `create-pr` | Pull request creation |
-| `review` | CodeMachine | `code-review` | AI code review |
-| `documentation` | CodeMachine | `generate-docs` | Documentation generation |
+| `code_generation` | CodeMachine | `start` | AI-driven code generation |
+| `testing` | Native | `native-autofix` | Test execution via native AutoFixEngine |
+| `pr_creation` | CodeMachine | `run pr` | Pull request creation |
+| `review` | CodeMachine | `run review` | AI code review |
+| `documentation` | CodeMachine | `run docs` | Documentation generation |
 | `deployment` | Native | N/A | Handled by native executor |
 
 **Engine Detection:**
@@ -664,9 +664,10 @@ CodeMachine adapter configuration in `config.json`:
   "execution": {
     "default_engine": "claude",
     "codemachine_cli_path": "codemachine",
-    "task_timeout_ms": 300000,
+    "task_timeout_ms": 1800000,
     "max_retries": 3,
-    "max_log_buffer_size": 10485760
+    "max_parallel_tasks": 1,
+    "retry_backoff_ms": 5000
   }
 }
 ```
@@ -675,9 +676,10 @@ CodeMachine adapter configuration in `config.json`:
 |-------|------|---------|-------------|
 | `default_engine` | string | `"claude"` | Default AI engine for code generation |
 | `codemachine_cli_path` | string | `"codemachine"` | Path to CodeMachine CLI binary |
-| `task_timeout_ms` | number | `300000` | Task timeout (5 minutes) |
+| `task_timeout_ms` | number | `1800000` | Task timeout (30 minutes) |
 | `max_retries` | number | `3` | Max retry attempts for recoverable errors |
-| `max_log_buffer_size` | number | `10485760` | Log buffer limit (10MB) |
+| `max_parallel_tasks` | number | `1` | Maximum number of tasks to execute in parallel |
+| `retry_backoff_ms` | number | `5000` | Base backoff delay for exponential retry (milliseconds) |
 
 **Environment Overrides:**
 
@@ -692,12 +694,10 @@ CodeMachine adapter configuration in `config.json`:
 The `CodeMachineRunner` spawns CLI processes with validated parameters:
 
 ```bash
-codemachine execute \
-  --task-id "I3-T-UNIT-001" \
-  --task-type "code_generation" \
-  --workspace "/path/to/repo" \
-  --output-format json \
-  --log-file "/path/to/logs/I3-T-UNIT-001.log"
+codemachine run \
+  -d "/path/to/repo" \
+  --spec "/path/to/spec.md" \
+  claude "Implement Task Planner upgrades"
 ```
 
 **Security Measures:**
@@ -721,9 +721,9 @@ The adapter categorizes errors for appropriate recovery:
 
 | Attempt | Delay |
 |---------|-------|
-| 1 | 1 second |
-| 2 | 2 seconds |
-| 3 | 4 seconds |
+| 1 | 5 seconds |
+| 2 | 10 seconds |
+| 3 | 20 seconds |
 
 After max retries, task transitions to `failed` state with `recoverable: false`.
 
@@ -764,17 +764,13 @@ ai-feature doctor
 
 **Successful Check:**
 ```
-CodeMachine CLI:
-  ✓ CLI found at /usr/local/bin/codemachine
-  ✓ Version: 2.1.0
+✓ CodeMachine CLI (Execution): /usr/local/bin/codemachine 2.1.0
 ```
 
 **Warning (non-blocking):**
 ```
-CodeMachine CLI:
-  ⚠ CLI not found
-  → Install CodeMachine CLI: npm install -g codemachine
-  → Or set execution.codemachine_cli_path in config
+⚠ CodeMachine CLI (Execution): codemachine-cli command failed
+→ Install codemachine-cli: npm install -g codemachine-cli (optional for execution engine)
 ```
 
 See `docs/ops/codemachine_adapter_guide.md` for comprehensive operational guidance.
