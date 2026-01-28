@@ -384,13 +384,39 @@ export function checkSchemaCompatibility(
     migrationNotes.push('Test migration in non-production environment first');
   }
 
-  // Check for deprecated fields
+  // Check for deprecated fields and provide specific migration paths
+
+  // Deprecated: governance_notes at root level
   if (config.governance_notes && !config.governance?.governance_notes) {
     migrationNotes.push('Migrate "governance_notes" to "governance.governance_notes"');
   }
 
+  // Deprecated: safety.require_approval_for_prd → governance.approval_workflow
   if (config.safety.require_approval_for_prd !== undefined) {
-    migrationNotes.push('Migrate safety.require_approval_* fields to governance.approval_workflow');
+    migrationNotes.push(
+      'Migrate "safety.require_approval_for_prd" to "governance.approval_workflow.require_approval_for_prd"'
+    );
+  }
+
+  // Deprecated: safety.require_approval_for_plan → governance.approval_workflow
+  if (config.safety.require_approval_for_plan !== undefined) {
+    migrationNotes.push(
+      'Migrate "safety.require_approval_for_plan" to "governance.approval_workflow.require_approval_for_plan"'
+    );
+  }
+
+  // Deprecated: safety.require_approval_for_pr → governance.approval_workflow
+  if (config.safety.require_approval_for_pr !== undefined) {
+    migrationNotes.push(
+      'Migrate "safety.require_approval_for_pr" to "governance.approval_workflow.require_approval_for_pr"'
+    );
+  }
+
+  // Deprecated: safety.prevent_force_push → governance.risk_controls
+  if (config.safety.prevent_force_push !== undefined) {
+    migrationNotes.push(
+      'Migrate "safety.prevent_force_push" to "governance.risk_controls.prevent_force_push"'
+    );
   }
 
   return {
