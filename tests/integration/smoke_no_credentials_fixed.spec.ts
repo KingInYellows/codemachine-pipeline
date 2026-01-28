@@ -34,6 +34,28 @@ import {
 import { createExecutionTask } from '../../src/core/models/ExecutionTask';
 import { analyzeResumeState } from '../../src/workflows/resumeCoordinator';
 
+/**
+ * Helper function to check if a file exists
+ */
+async function fileExists(filePath: string): Promise<boolean> {
+  try {
+    await fs.access(filePath);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Helper function to parse NDJSON strings
+ */
+function parseNDJSON(ndjson: string): unknown[] {
+  return ndjson
+    .split('\n')
+    .filter((line) => line.trim() !== '')
+    .map((line) => JSON.parse(line));
+}
+
 describe('Smoke Tests: No Credentials Required', () => {
   let tempDir: string;
   let configPath: string;
@@ -170,10 +192,7 @@ describe('Smoke Tests: No Credentials Required', () => {
 
       // Verify manifest created
       const manifestPath = path.join(runDir, 'manifest.json');
-      const manifestExists = await fs
-        .access(manifestPath)
-        .then(() => true)
-        .catch(() => false);
+      const manifestExists = await fileExists(manifestPath);
       expect(manifestExists).toBe(true);
     });
 
@@ -272,7 +291,7 @@ describe('Smoke Tests: No Credentials Required', () => {
       }
 
       // Parse back
-      const parsed = lines.map((line) => JSON.parse(line));
+      const parsed = parseNDJSON(ndjson);
       expect(parsed.length).toBe(3);
       expect(parsed[0].id).toBe(1);
       expect(parsed[2].name).toBe('third');
@@ -280,19 +299,13 @@ describe('Smoke Tests: No Credentials Required', () => {
 
     it('should handle empty NDJSON', () => {
       const ndjson = '';
-      const parsed = ndjson
-        .split('\n')
-        .filter((line) => line.trim() !== '')
-        .map((line) => JSON.parse(line));
+      const parsed = parseNDJSON(ndjson);
       expect(parsed).toEqual([]);
     });
 
     it('should handle NDJSON with blank lines', () => {
       const ndjson = '{"a":1}\n\n{"b":2}\n';
-      const parsed = ndjson
-        .split('\n')
-        .filter((line) => line.trim() !== '')
-        .map((line) => JSON.parse(line));
+      const parsed = parseNDJSON(ndjson);
       expect(parsed.length).toBe(2);
     });
   });
@@ -409,10 +422,7 @@ describe('Smoke Tests: No Credentials Required', () => {
 
       for (const expectedPath of expectedPaths) {
         const fullPath = path.join(runDir, expectedPath);
-        const exists = await fs
-          .access(fullPath)
-          .then(() => true)
-          .catch(() => false);
+        const exists = await fileExists(fullPath);
         expect(exists).toBe(true);
       }
     });
@@ -436,10 +446,7 @@ describe('Smoke Tests: No Credentials Required', () => {
       // All should be created successfully
       expect(runDirs.length).toBe(3);
       for (const runDir of runDirs) {
-        const manifestExists = await fs
-          .access(path.join(runDir, 'manifest.json'))
-          .then(() => true)
-          .catch(() => false);
+        const manifestExists = await fileExists(path.join(runDir, 'manifest.json'));
         expect(manifestExists).toBe(true);
       }
     });
