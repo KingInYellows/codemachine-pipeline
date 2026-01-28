@@ -325,58 +325,38 @@ describe('checkSchemaCompatibility', () => {
   });
 
   describe('deprecated field detection', () => {
-    it('should detect safety.require_approval_for_prd and suggest migration', () => {
+    const testCases = [
+      {
+        field: 'require_approval_for_prd',
+        newPath: 'governance.approval_workflow.require_approval_for_prd',
+      },
+      {
+        field: 'require_approval_for_plan',
+        newPath: 'governance.approval_workflow.require_approval_for_plan',
+      },
+      {
+        field: 'require_approval_for_pr',
+        newPath: 'governance.approval_workflow.require_approval_for_pr',
+      },
+      {
+        field: 'prevent_force_push',
+        newPath: 'governance.risk_controls.prevent_force_push',
+      },
+    ];
+
+    it.each(testCases)('should detect safety.$field and suggest migration', ({ field, newPath }) => {
       const config = createDefaultConfig('https://github.com/org/repo.git');
-      config.safety.require_approval_for_prd = true;
-      const result = checkSchemaCompatibility(config, '1.1.0');
+      const rawConfig = {
+        schema_version: '1.0.0',
+        safety: {
+          [field]: true,
+        },
+      };
+      const result = checkSchemaCompatibility(config, '1.1.0', rawConfig);
 
       expect(
         result.migration_notes.some(
-          (note) =>
-            note.includes('safety.require_approval_for_prd') &&
-            note.includes('governance.approval_workflow.require_approval_for_prd')
-        )
-      ).toBe(true);
-    });
-
-    it('should detect safety.require_approval_for_plan and suggest migration', () => {
-      const config = createDefaultConfig('https://github.com/org/repo.git');
-      config.safety.require_approval_for_plan = true;
-      const result = checkSchemaCompatibility(config, '1.1.0');
-
-      expect(
-        result.migration_notes.some(
-          (note) =>
-            note.includes('safety.require_approval_for_plan') &&
-            note.includes('governance.approval_workflow.require_approval_for_plan')
-        )
-      ).toBe(true);
-    });
-
-    it('should detect safety.require_approval_for_pr and suggest migration', () => {
-      const config = createDefaultConfig('https://github.com/org/repo.git');
-      config.safety.require_approval_for_pr = true;
-      const result = checkSchemaCompatibility(config, '1.1.0');
-
-      expect(
-        result.migration_notes.some(
-          (note) =>
-            note.includes('safety.require_approval_for_pr') &&
-            note.includes('governance.approval_workflow.require_approval_for_pr')
-        )
-      ).toBe(true);
-    });
-
-    it('should detect safety.prevent_force_push and suggest migration', () => {
-      const config = createDefaultConfig('https://github.com/org/repo.git');
-      config.safety.prevent_force_push = true;
-      const result = checkSchemaCompatibility(config, '1.1.0');
-
-      expect(
-        result.migration_notes.some(
-          (note) =>
-            note.includes('safety.prevent_force_push') &&
-            note.includes('governance.risk_controls.prevent_force_push')
+          (note) => note.includes(`safety.${field}`) && note.includes(newPath)
         )
       ).toBe(true);
     });
@@ -400,11 +380,17 @@ describe('checkSchemaCompatibility', () => {
       const config = createDefaultConfig('https://github.com/org/repo.git', {
         includeGovernance: false,
       });
-      config.safety.require_approval_for_prd = true;
-      config.safety.require_approval_for_plan = true;
-      config.safety.prevent_force_push = true;
       config.governance_notes = 'Notes';
-      const result = checkSchemaCompatibility(config, '1.1.0');
+      const rawConfig = {
+        schema_version: '1.0.0',
+        safety: {
+          require_approval_for_prd: true,
+          require_approval_for_plan: true,
+          prevent_force_push: true,
+        },
+        governance_notes: 'Notes',
+      };
+      const result = checkSchemaCompatibility(config, '1.1.0', rawConfig);
 
       // Should have migration notes for each deprecated field
       expect(result.migration_notes.length).toBeGreaterThanOrEqual(4);
@@ -420,9 +406,22 @@ describe('checkSchemaCompatibility', () => {
       const config = createDefaultConfig('https://github.com/org/repo.git', {
         includeGovernance: true,
       });
-      // Don't explicitly set deprecated fields - they'll have defaults but should be migrated
-      const result = checkSchemaCompatibility(config, '1.1.0');
+      // Don't explicitly set deprecated fields in raw config
+      const rawConfig = {
+        schema_version: '1.0.0',
+        safety: {}, // Empty safety object - no deprecated fields explicitly set
+      };
+      const result = checkSchemaCompatibility(config, '1.1.0', rawConfig);
 
+      // Should not have migration notes for safety.* fields since they weren't explicitly set
+      expect(result.migration_notes.some((n) => n.includes('require_approval_for_prd'))).toBe(
+        false
+      );
+      expect(result.migration_notes.some((n) => n.includes('require_approval_for_plan'))).toBe(
+        false
+      );
+      expect(result.migration_notes.some((n) => n.includes('require_approval_for_pr'))).toBe(false);
+      expect(result.migration_notes.some((n) => n.includes('prevent_force_push'))).toBe(false);
       // When governance is included and no root governance_notes, no migration needed for that
       expect(result.migration_notes.some((n) => n.includes('governance_notes'))).toBe(false);
     });

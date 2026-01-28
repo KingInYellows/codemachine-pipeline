@@ -355,11 +355,13 @@ export function validateEnvironmentVariables(
  * Check if config can be safely migrated to a new schema version
  * @param config Current config
  * @param targetVersion Target schema version
+ * @param rawConfig Optional raw config (before Zod parsing) to detect explicitly set fields
  * @returns Compatibility result with migration notes
  */
 export function checkSchemaCompatibility(
   config: RepoConfig,
-  targetVersion: string
+  targetVersion: string,
+  rawConfig?: unknown
 ): {
   compatible: boolean;
   current_version: string;
@@ -385,38 +387,45 @@ export function checkSchemaCompatibility(
   }
 
   // Check for deprecated fields and provide specific migration paths
+  // Use rawConfig if provided to detect explicitly set fields (avoids false positives from defaults)
+  const raw = rawConfig as Record<string, unknown> | undefined;
 
   // Deprecated: governance_notes at root level
   if (config.governance_notes && !config.governance?.governance_notes) {
     migrationNotes.push('Migrate "governance_notes" to "governance.governance_notes"');
   }
 
-  // Deprecated: safety.require_approval_for_prd → governance.approval_workflow
-  if (config.safety.require_approval_for_prd !== undefined) {
-    migrationNotes.push(
-      'Migrate "safety.require_approval_for_prd" to "governance.approval_workflow.require_approval_for_prd"'
-    );
-  }
+  // Check safety.* fields only if we have raw config to detect explicit settings
+  if (raw?.safety && typeof raw.safety === 'object') {
+    const rawSafety = raw.safety as Record<string, unknown>;
 
-  // Deprecated: safety.require_approval_for_plan → governance.approval_workflow
-  if (config.safety.require_approval_for_plan !== undefined) {
-    migrationNotes.push(
-      'Migrate "safety.require_approval_for_plan" to "governance.approval_workflow.require_approval_for_plan"'
-    );
-  }
+    // Deprecated: safety.require_approval_for_prd → governance.approval_workflow
+    if ('require_approval_for_prd' in rawSafety) {
+      migrationNotes.push(
+        'Migrate "safety.require_approval_for_prd" to "governance.approval_workflow.require_approval_for_prd"'
+      );
+    }
 
-  // Deprecated: safety.require_approval_for_pr → governance.approval_workflow
-  if (config.safety.require_approval_for_pr !== undefined) {
-    migrationNotes.push(
-      'Migrate "safety.require_approval_for_pr" to "governance.approval_workflow.require_approval_for_pr"'
-    );
-  }
+    // Deprecated: safety.require_approval_for_plan → governance.approval_workflow
+    if ('require_approval_for_plan' in rawSafety) {
+      migrationNotes.push(
+        'Migrate "safety.require_approval_for_plan" to "governance.approval_workflow.require_approval_for_plan"'
+      );
+    }
 
-  // Deprecated: safety.prevent_force_push → governance.risk_controls
-  if (config.safety.prevent_force_push !== undefined) {
-    migrationNotes.push(
-      'Migrate "safety.prevent_force_push" to "governance.risk_controls.prevent_force_push"'
-    );
+    // Deprecated: safety.require_approval_for_pr → governance.approval_workflow
+    if ('require_approval_for_pr' in rawSafety) {
+      migrationNotes.push(
+        'Migrate "safety.require_approval_for_pr" to "governance.approval_workflow.require_approval_for_pr"'
+      );
+    }
+
+    // Deprecated: safety.prevent_force_push → governance.risk_controls
+    if ('prevent_force_push' in rawSafety) {
+      migrationNotes.push(
+        'Migrate "safety.prevent_force_push" to "governance.risk_controls.prevent_force_push"'
+      );
+    }
   }
 
   return {
