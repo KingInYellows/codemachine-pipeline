@@ -324,6 +324,109 @@ describe('checkSchemaCompatibility', () => {
     expect(result.migration_notes.some((note) => note.includes('governance_notes'))).toBe(true);
   });
 
+  describe('deprecated field detection', () => {
+    const testCases = [
+      {
+        field: 'require_approval_for_prd',
+        newPath: 'governance.approval_workflow.require_approval_for_prd',
+      },
+      {
+        field: 'require_approval_for_plan',
+        newPath: 'governance.approval_workflow.require_approval_for_plan',
+      },
+      {
+        field: 'require_approval_for_pr',
+        newPath: 'governance.approval_workflow.require_approval_for_pr',
+      },
+      {
+        field: 'prevent_force_push',
+        newPath: 'governance.risk_controls.prevent_force_push',
+      },
+    ];
+
+    it.each(testCases)('should detect safety.$field and suggest migration', ({ field, newPath }) => {
+      const config = createDefaultConfig('https://github.com/org/repo.git');
+      const rawConfig = {
+        schema_version: '1.0.0',
+        safety: {
+          [field]: true,
+        },
+      };
+      const result = checkSchemaCompatibility(config, '1.1.0', rawConfig);
+
+      expect(
+        result.migration_notes.some(
+          (note) => note.includes(`safety.${field}`) && note.includes(newPath)
+        )
+      ).toBe(true);
+    });
+
+    it('should detect governance_notes at root and suggest migration', () => {
+      const config = createDefaultConfig('https://github.com/org/repo.git', {
+        includeGovernance: false,
+      });
+      config.governance_notes = 'Some governance notes';
+      const result = checkSchemaCompatibility(config, '1.1.0');
+
+      expect(
+        result.migration_notes.some(
+          (note) =>
+            note.includes('governance_notes') && note.includes('governance.governance_notes')
+        )
+      ).toBe(true);
+    });
+
+    it('should detect multiple deprecated fields and list all migrations', () => {
+      const config = createDefaultConfig('https://github.com/org/repo.git', {
+        includeGovernance: false,
+      });
+      config.governance_notes = 'Notes';
+      const rawConfig = {
+        schema_version: '1.0.0',
+        safety: {
+          require_approval_for_prd: true,
+          require_approval_for_plan: true,
+          prevent_force_push: true,
+        },
+        governance_notes: 'Notes',
+      };
+      const result = checkSchemaCompatibility(config, '1.1.0', rawConfig);
+
+      // Should have migration notes for each deprecated field
+      expect(result.migration_notes.length).toBeGreaterThanOrEqual(4);
+      expect(result.migration_notes.some((n) => n.includes('require_approval_for_prd'))).toBe(true);
+      expect(result.migration_notes.some((n) => n.includes('require_approval_for_plan'))).toBe(
+        true
+      );
+      expect(result.migration_notes.some((n) => n.includes('prevent_force_push'))).toBe(true);
+      expect(result.migration_notes.some((n) => n.includes('governance_notes'))).toBe(true);
+    });
+
+    it('should not add migration notes when deprecated fields are not set', () => {
+      const config = createDefaultConfig('https://github.com/org/repo.git', {
+        includeGovernance: true,
+      });
+      // Don't explicitly set deprecated fields in raw config
+      const rawConfig = {
+        schema_version: '1.0.0',
+        safety: {}, // Empty safety object - no deprecated fields explicitly set
+      };
+      const result = checkSchemaCompatibility(config, '1.1.0', rawConfig);
+
+      // Should not have migration notes for safety.* fields since they weren't explicitly set
+      expect(result.migration_notes.some((n) => n.includes('require_approval_for_prd'))).toBe(
+        false
+      );
+      expect(result.migration_notes.some((n) => n.includes('require_approval_for_plan'))).toBe(
+        false
+      );
+      expect(result.migration_notes.some((n) => n.includes('require_approval_for_pr'))).toBe(false);
+      expect(result.migration_notes.some((n) => n.includes('prevent_force_push'))).toBe(false);
+      // When governance is included and no root governance_notes, no migration needed for that
+      expect(result.migration_notes.some((n) => n.includes('governance_notes'))).toBe(false);
+    });
+  });
+
   it('should include migration documentation reference', () => {
     const config = createDefaultConfig('https://github.com/org/repo.git');
     const result = checkSchemaCompatibility(config, '2.0.0');
