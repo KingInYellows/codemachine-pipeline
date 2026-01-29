@@ -1,6 +1,7 @@
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 import * as crypto from 'node:crypto';
+import type { LogContext } from '../core/sharedTypes';
 
 /**
  * Trace Instrumentation (File-Based)
@@ -119,10 +120,10 @@ export interface ActiveSpan {
  * Logger interface for trace error reporting
  */
 export interface LoggerInterface {
-  debug(message: string, context?: Record<string, unknown>): void;
-  info(message: string, context?: Record<string, unknown>): void;
-  warn(message: string, context?: Record<string, unknown>): void;
-  error(message: string, context?: Record<string, unknown>): void;
+  debug(message: string, context?: LogContext): void;
+  info(message: string, context?: LogContext): void;
+  warn(message: string, context?: LogContext): void;
+  error(message: string, context?: LogContext): void;
 }
 
 /**
