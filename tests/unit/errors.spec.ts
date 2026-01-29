@@ -101,10 +101,11 @@ describe('Error Utilities', () => {
       });
     });
 
-    it('serializes non-Error as string', () => {
-      expect(serializeError('string error')).toEqual({ error: 'string error' });
-      expect(serializeError(42)).toEqual({ error: '42' });
-      expect(serializeError(null)).toEqual({ error: 'null' });
+    it('serializes non-Error as UnknownError with message', () => {
+      // Non-Error values are serialized with a consistent SerializedError shape
+      expect(serializeError('string error')).toEqual({ name: 'UnknownError', message: 'string error' });
+      expect(serializeError(42)).toEqual({ name: 'UnknownError', message: '42' });
+      expect(serializeError(null)).toEqual({ name: 'UnknownError', message: 'null' });
     });
 
     it('serializes HttpError using toJSON', () => {

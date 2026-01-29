@@ -1,4 +1,5 @@
 import { ErrorType, HttpError } from '../adapters/http/client';
+import { SerializedError } from '../core/sharedTypes';
 
 /**
  * Error Handling Utilities
@@ -48,11 +49,20 @@ export function getErrorMessage(error: unknown): string {
  * Serializes error for logging/telemetry.
  *
  * @param error - Unknown error object
- * @returns JSON-serializable error representation
+ * @returns Type-safe JSON-serializable error representation
  */
-export function serializeError(error: unknown): Record<string, unknown> {
+export function serializeError(error: unknown): SerializedError {
   if (error instanceof HttpError) {
-    return error.toJSON();
+    const json = error.toJSON();
+    return {
+      name: json.name as string,
+      message: json.message as string,
+      stack: json.stack as string | undefined,
+      statusCode: json.statusCode as number | undefined,
+      requestId: json.requestId as string | undefined,
+      type: json.type as string | undefined,
+      operation: json.operation as string | undefined,
+    };
   }
 
   if (error instanceof Error) {
@@ -64,7 +74,7 @@ export function serializeError(error: unknown): Record<string, unknown> {
     };
   }
 
-  return { error: String(error) };
+  return { name: 'UnknownError', message: String(error) };
 }
 
 /**

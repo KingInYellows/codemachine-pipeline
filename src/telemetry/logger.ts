@@ -1,5 +1,6 @@
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
+import { LogContext } from '../core/sharedTypes';
 
 /**
  * Structured Logger
@@ -46,7 +47,7 @@ export interface LogEntry {
   /** Event name or message */
   message: string;
   /** Structured context data */
-  context?: Record<string, unknown>;
+  context?: LogContext;
   /** Optional error details */
   error?: {
     name: string;
@@ -57,12 +58,13 @@ export interface LogEntry {
 
 /**
  * Logger interface (compatible with existing rateLimitLedger)
+ * Uses LogContext for better autocomplete of common fields while remaining flexible.
  */
 export interface LoggerInterface {
-  debug(message: string, context?: Record<string, unknown>): void;
-  info(message: string, context?: Record<string, unknown>): void;
-  warn(message: string, context?: Record<string, unknown>): void;
-  error(message: string, context?: Record<string, unknown>): void;
+  debug(message: string, context?: LogContext): void;
+  info(message: string, context?: LogContext): void;
+  warn(message: string, context?: LogContext): void;
+  error(message: string, context?: LogContext): void;
 }
 
 /**
@@ -84,7 +86,7 @@ export interface LoggerOptions {
   /** Enable redaction (default: true) */
   enableRedaction?: boolean;
   /** Base context attached to all log entries */
-  baseContext?: Record<string, unknown>;
+  baseContext?: LogContext;
 }
 
 // ============================================================================
@@ -294,23 +296,23 @@ export class StructuredLogger implements LoggerInterface {
     }
   }
 
-  debug(message: string, context?: Record<string, unknown>): void {
+  debug(message: string, context?: LogContext): void {
     this.log(LogLevel.DEBUG, message, context);
   }
 
-  info(message: string, context?: Record<string, unknown>): void {
+  info(message: string, context?: LogContext): void {
     this.log(LogLevel.INFO, message, context);
   }
 
-  warn(message: string, context?: Record<string, unknown>): void {
+  warn(message: string, context?: LogContext): void {
     this.log(LogLevel.WARN, message, context);
   }
 
-  error(message: string, context?: Record<string, unknown>): void {
+  error(message: string, context?: LogContext): void {
     this.log(LogLevel.ERROR, message, context);
   }
 
-  fatal(message: string, context?: Record<string, unknown>): void {
+  fatal(message: string, context?: LogContext): void {
     this.log(LogLevel.FATAL, message, context);
   }
 
@@ -321,7 +323,7 @@ export class StructuredLogger implements LoggerInterface {
     level: LogLevel,
     message: string,
     error: Error,
-    context?: Record<string, unknown>
+    context?: LogContext
   ): void {
     const errorContext = {
       ...context,
@@ -338,7 +340,7 @@ export class StructuredLogger implements LoggerInterface {
   /**
    * Core logging implementation
    */
-  private log(level: LogLevel, message: string, context?: Record<string, unknown>): void {
+  private log(level: LogLevel, message: string, context?: LogContext): void {
     // Check minimum level
     if (!this.shouldLog(level)) {
       return;
@@ -387,7 +389,7 @@ export class StructuredLogger implements LoggerInterface {
   private buildLogEntry(
     level: LogLevel,
     message: string,
-    context?: Record<string, unknown>
+    context?: LogContext
   ): LogEntry {
     const entry: LogEntry = {
       timestamp: new Date().toISOString(),
@@ -510,7 +512,7 @@ export class StructuredLogger implements LoggerInterface {
   /**
    * Create child logger with additional context
    */
-  child(additionalContext: Record<string, unknown>): StructuredLogger {
+  child(additionalContext: LogContext): StructuredLogger {
     return new StructuredLogger({
       ...this.options,
       baseContext: {

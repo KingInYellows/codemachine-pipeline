@@ -13,6 +13,7 @@ import {
   type CodeMachineExecutionStatus,
 } from '../telemetry/executionMetrics.js';
 import type { ExecutionTelemetry } from '../telemetry/executionTelemetry.js';
+import { getErrorMessage } from '../utils/errors.js';
 
 type TaskTypeString = ExecutionTask['task_type'];
 
@@ -75,7 +76,7 @@ async function captureArtifacts(
   try {
     await fs.mkdir(artifactDir, { recursive: true, mode: 0o700 });
   } catch (err) {
-    logger?.warn('Failed to create artifact directory', { error: err, taskId: task.task_id });
+    logger?.warn('Failed to create artifact directory', { error: getErrorMessage(err), taskId: task.task_id });
     return [];
   }
 
