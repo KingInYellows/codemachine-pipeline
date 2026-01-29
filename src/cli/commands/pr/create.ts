@@ -122,7 +122,7 @@ export default class PRCreate extends Command {
 
       const { logger, manifest, runDir, config } = context;
       const metrics = createRunMetricsCollector(runDir, featureId);
-      const traceManager = createRunTraceManager(runDir, featureId);
+      const traceManager = createRunTraceManager(runDir, featureId, logger);
       const commandSpan = traceManager.startSpan('cli.pr.create');
 
       try {

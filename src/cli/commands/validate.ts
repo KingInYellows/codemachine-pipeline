@@ -128,7 +128,7 @@ export default class Validate extends Command {
         mirrorToStderr: !flags.json,
       });
       metrics = createRunMetricsCollector(runDirPath, featureId);
-      traceManager = createRunTraceManager(runDirPath, featureId);
+      traceManager = createRunTraceManager(runDirPath, featureId, logger);
       commandSpan = traceManager.startSpan('cli.validate');
       commandSpan.setAttribute('feature_id', featureId);
       commandSpan.setAttribute('json_mode', flags.json);

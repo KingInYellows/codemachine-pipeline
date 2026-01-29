@@ -170,10 +170,10 @@ export class RateLimitLedger {
   private readonly ledgerPath: string;
   private readonly logger: LoggerInterface;
 
-  constructor(runDir: string, provider: Provider | string, logger?: LoggerInterface) {
+  constructor(runDir: string, provider: Provider | string, logger: LoggerInterface) {
     this.provider = provider;
     this.ledgerPath = getLedgerPath(runDir);
-    this.logger = logger ?? createConsoleLogger();
+    this.logger = logger;
   }
 
   /**
@@ -270,7 +270,12 @@ export class RateLimitLedger {
     try {
       const ledger = await loadLedgerFile(this.ledgerPath);
       return ledger.providers[provider];
-    } catch {
+    } catch (error) {
+      this.logger.error('Failed to read rate limit ledger', {
+        error: error instanceof Error ? error.message : 'Unknown error',
+        provider,
+        ledgerPath: this.ledgerPath,
+      });
       return undefined;
     }
   }
@@ -437,32 +442,12 @@ export async function writeRateLimitLedger(
 // ============================================================================
 
 /**
- * Create a basic console logger
- */
-function createConsoleLogger(): LoggerInterface {
-  return {
-    debug: (message: string, context?: Record<string, unknown>) => {
-      console.debug(`[DEBUG] ${message}`, context ? JSON.stringify(context) : '');
-    },
-    info: (message: string, context?: Record<string, unknown>) => {
-      console.info(`[INFO] ${message}`, context ? JSON.stringify(context) : '');
-    },
-    warn: (message: string, context?: Record<string, unknown>) => {
-      console.warn(`[WARN] ${message}`, context ? JSON.stringify(context) : '');
-    },
-    error: (message: string, context?: Record<string, unknown>) => {
-      console.error(`[ERROR] ${message}`, context ? JSON.stringify(context) : '');
-    },
-  };
-}
-
-/**
  * Export helper to create a ledger instance
  */
 export function createRateLimitLedger(
   runDir: string,
   provider: Provider | string,
-  logger?: LoggerInterface
+  logger: LoggerInterface
 ): RateLimitLedger {
   return new RateLimitLedger(runDir, provider, logger);
 }

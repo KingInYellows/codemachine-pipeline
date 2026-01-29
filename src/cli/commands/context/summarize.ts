@@ -145,7 +145,7 @@ export default class ContextSummarize extends Command {
         mirrorToStderr: !typedFlags.json,
       });
       metrics = createRunMetricsCollector(runDir, featureId);
-      traceManager = createRunTraceManager(runDir, featureId);
+      traceManager = createRunTraceManager(runDir, featureId, logger);
       commandSpan = traceManager.startSpan('cli.context.summarize');
       commandSpan.setAttribute('feature_id', featureId);
       commandSpan.setAttribute('patterns', typedFlags.path?.length ?? 0);

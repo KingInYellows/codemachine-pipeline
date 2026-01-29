@@ -100,6 +100,18 @@ function createMockMetrics(): MetricsCollector & {
 }
 
 /**
+ * Create a no-op logger for testing
+ */
+function createNoOpLogger(): LoggerInterface {
+  return {
+    debug: () => {},
+    info: () => {},
+    warn: () => {},
+    error: () => {},
+  };
+}
+
+/**
  * Mock executor that tracks calls
  */
 function createMockExecutor(
@@ -133,7 +145,7 @@ async function simulateRateLimitHit(
   provider: string,
   consecutiveHits: number = 1
 ): Promise<void> {
-  const ledger = new RateLimitLedger(runDir, provider);
+  const ledger = new RateLimitLedger(runDir, provider, createNoOpLogger());
 
   for (let i = 0; i < consecutiveHits; i++) {
     const envelope: RateLimitEnvelope = {
@@ -487,7 +499,7 @@ describe('WriteActionQueue', () => {
       await simulateRateLimitHit(testDir, 'github', 1);
 
       // Clear cooldown manually
-      const ledger = new RateLimitLedger(testDir, 'github');
+      const ledger = new RateLimitLedger(testDir, 'github', createNoOpLogger());
       await ledger.clearCooldown('github');
 
       // Now draining should work
@@ -532,7 +544,7 @@ describe('WriteActionQueue', () => {
       expect(result2.message).toContain('waiting for rate limit cooldown');
 
       // Clear cooldown
-      const ledger = new RateLimitLedger(testDir, 'github');
+      const ledger = new RateLimitLedger(testDir, 'github', createNoOpLogger());
       await ledger.clearCooldown('github');
 
       // Resume draining (should complete remaining actions)

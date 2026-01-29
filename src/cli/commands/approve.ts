@@ -167,7 +167,7 @@ export default class Approve extends Command {
       mirrorToStderr: !typedFlags.json,
     });
     const metrics = createRunMetricsCollector(runDir, featureId);
-    const traceManager = createRunTraceManager(runDir, featureId);
+    const traceManager = createRunTraceManager(runDir, featureId, logger);
     const commandSpan = traceManager.startSpan('cli.approve');
     commandSpan.setAttribute('feature_id', featureId);
     commandSpan.setAttribute('gate_type', gateArg);

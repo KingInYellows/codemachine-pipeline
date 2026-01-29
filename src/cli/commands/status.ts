@@ -301,7 +301,7 @@ export default class Status extends Command {
         });
         this.logger = logger;
         metrics = createRunMetricsCollector(runDirPath, featureId);
-        traceManager = createRunTraceManager(runDirPath, featureId);
+        traceManager = createRunTraceManager(runDirPath, featureId, logger);
         commandSpan = traceManager.startSpan('cli.status');
         commandSpan.setAttribute('feature_id', featureId);
         commandSpan.setAttribute('json_mode', typedFlags.json);
