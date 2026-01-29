@@ -30,7 +30,7 @@ The execution flow integrates four primary components:
    - Monitors dependency satisfaction
    - Updates queue state (pending → running → completed/failed)
 
-3. **Execution Engine** (Future: `src/execution/executionEngine.ts`)
+3. **Execution Engine** (`src/workflows/cliExecutionEngine.ts`)
    - Dequeues tasks in topological order
    - Applies code patches with allowlist enforcement
    - Runs validation commands (lint, test, build)
@@ -598,6 +598,183 @@ When execution completes:
 - **Checksum Integrity**: SHA-256 hashes prevent plan tampering
 - **Git Safety**: Commits require valid author info; no force-push to main/master
 
+## CodeMachine CLI Adapter
+
+The execution engine supports delegation to the external CodeMachine CLI for autonomous task execution. This section documents the adapter integration, task routing, and operational considerations.
+
+### Adapter Architecture
+
+The CodeMachine CLI adapter provides a pluggable execution backend via the Strategy pattern:
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                    CLIExecutionEngine                           │
+│  ┌─────────────────┐  ┌─────────────────┐  ┌─────────────────┐  │
+│  │ ExecutionQueue  │→ │ StrategyRouter  │→ │   TaskMapper    │  │
+│  │ (V2 WAL-based)  │  │                 │  │                 │  │
+│  └─────────────────┘  └─────────────────┘  └─────────────────┘  │
+│           │                    │                    │           │
+│           ▼                    ▼                    ▼           │
+│  ┌──────────────────────────────────────────────────────────┐   │
+│  │                 CodeMachineStrategy                       │   │
+│  │  ┌──────────────────┐    ┌────────────────────────────┐  │   │
+│  │  │ CodeMachineRunner│ →  │   ResultNormalizer         │  │   │
+│  │  │ (CLI Spawning)   │    │ (Output + Credential Redact)│  │   │
+│  │  └──────────────────┘    └────────────────────────────┘  │   │
+│  └──────────────────────────────────────────────────────────┘   │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+**Key Components:**
+
+| Component | File | Responsibility |
+|-----------|------|----------------|
+| `CLIExecutionEngine` | `src/workflows/cliExecutionEngine.ts` | Queue-based task orchestration with retry logic |
+| `CodeMachineRunner` | `src/workflows/codeMachineRunner.ts` | CLI process spawning, log streaming, path validation |
+| `TaskMapper` | `src/workflows/taskMapper.ts` | Maps task types to execution strategies/workflows |
+| `ResultNormalizer` | `src/workflows/resultNormalizer.ts` | Output parsing, error categorization, credential redaction |
+| `CodeMachineStrategy` | `src/workflows/codeMachineStrategy.ts` | Strategy implementation for CodeMachine backend |
+
+### Task-to-Workflow Mapping
+
+The `TaskMapper` routes task types to appropriate execution strategies:
+
+| Task Type | Strategy | Workflow | Description |
+|-----------|----------|----------|-------------|
+| `code_generation` | CodeMachine | `start` | AI-driven code generation |
+| `testing` | Native | `native-autofix` | Test execution via native AutoFixEngine |
+| `pr_creation` | CodeMachine | `run pr` | Pull request creation |
+| `review` | CodeMachine | `run review` | AI code review |
+| `documentation` | CodeMachine | `run docs` | Documentation generation |
+| `deployment` | Native | N/A | Handled by native executor |
+
+**Engine Detection:**
+
+```typescript
+const mapping = mapTaskToWorkflow(task.task_type);
+// Returns: { engine: 'codemachine' | 'native', workflow?: string }
+```
+
+### Configuration Reference
+
+CodeMachine adapter configuration in `config.json`:
+
+```json
+{
+  "execution": {
+    "default_engine": "claude",
+    "codemachine_cli_path": "codemachine",
+    "task_timeout_ms": 1800000,
+    "max_retries": 3,
+    "max_parallel_tasks": 1,
+    "retry_backoff_ms": 5000
+  }
+}
+```
+
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| `default_engine` | string | `"claude"` | Default AI engine for code generation |
+| `codemachine_cli_path` | string | `"codemachine"` | Path to CodeMachine CLI binary |
+| `task_timeout_ms` | number | `1800000` | Task timeout (30 minutes) |
+| `max_retries` | number | `3` | Max retry attempts for recoverable errors |
+| `max_parallel_tasks` | number | `1` | Maximum number of tasks to execute in parallel |
+| `retry_backoff_ms` | number | `5000` | Base backoff delay for exponential retry (milliseconds) |
+
+**Environment Overrides:**
+
+| Variable | Description |
+|----------|-------------|
+| `CODEMACHINE_CLI_PATH` | Override CLI binary path |
+| `CODEMACHINE_TIMEOUT` | Override timeout in milliseconds |
+| `CODEMACHINE_LOG_LEVEL` | CLI verbosity (debug/info/warn/error) |
+
+### CLI Invocation
+
+The `CodeMachineRunner` spawns CLI processes with validated parameters:
+
+```bash
+codemachine run \
+  -d "/path/to/repo" \
+  --spec "/path/to/spec.md" \
+  claude "Implement Task Planner upgrades"
+```
+
+**Security Measures:**
+
+- Path validation prevents traversal attacks (`../` patterns rejected)
+- Task IDs are sanitized before use in file paths
+- CLI arguments use parameterized commands (no shell interpolation)
+
+### Error Handling and Retry Logic
+
+The adapter categorizes errors for appropriate recovery:
+
+| Category | Recoverable | Action | Examples |
+|----------|-------------|--------|----------|
+| `transient` | Yes | Retry with exponential backoff | Network timeout, rate limit |
+| `permanent` | No | Mark task failed | Invalid config, auth failure |
+| `timeout` | Yes | Retry with extended timeout | Long-running task |
+| `human_action_required` | No | Pause queue, notify operator | Approval needed, merge conflict |
+
+**Backoff Schedule:**
+
+| Attempt | Delay |
+|---------|-------|
+| 1 | 5 seconds |
+| 2 | 10 seconds |
+| 3 | 20 seconds |
+
+After max retries, task transitions to `failed` state with `recoverable: false`.
+
+### Exit Code Semantics
+
+The adapter interprets CLI exit codes:
+
+| Exit Code | Meaning | Recovery |
+|-----------|---------|----------|
+| `0` | Success | Mark completed |
+| `1` | General error | Retry if transient |
+| `2` | Invalid arguments | Permanent failure |
+| `124` | Timeout (via `timeout` command) | Retry with extension |
+| `137` | Killed (SIGKILL) | Retry once |
+| `143` | Terminated (SIGTERM) | Graceful stop |
+
+### Credential Redaction
+
+The `ResultNormalizer` automatically redacts 18+ sensitive patterns:
+
+| Pattern Type | Example | Redacted Output |
+|--------------|---------|-----------------|
+| Bearer tokens | `Bearer eyJ...` | `Bearer [REDACTED]` |
+| API keys | `sk-abc123...` | `[REDACTED]` |
+| GitHub tokens | `ghp_xxxxx` | `[REDACTED]` |
+| Private keys | `-----BEGIN...` | `[REDACTED]` |
+| Connection strings | `postgresql://user:pass@...` | `[REDACTED]` |
+| AWS keys | `AKIA...` | `[REDACTED]` |
+| JWT tokens | `eyJhbG...` | `[REDACTED]` |
+
+### Doctor Integration
+
+The `ai-feature doctor` command validates CodeMachine availability:
+
+```bash
+ai-feature doctor
+```
+
+**Successful Check:**
+```
+✓ CodeMachine CLI (Execution): /usr/local/bin/codemachine 2.1.0
+```
+
+**Warning (non-blocking):**
+```
+⚠ CodeMachine CLI (Execution): codemachine-cli command failed
+→ Install codemachine-cli: npm install -g codemachine-cli (optional for execution engine)
+```
+
+See `docs/ops/codemachine_adapter_guide.md` for comprehensive operational guidance.
+
 ## Related Requirements
 
 - **FR-9**: Traceability (PRD → Spec → ExecutionTask → Diff mapping)
@@ -620,3 +797,4 @@ When execution completes:
 | Version | Date       | Author       | Changes                          |
 |---------|------------|--------------|----------------------------------|
 | 1.0.0   | 2025-01-15 | AI Pipeline  | Initial execution flow documentation |
+| 1.1.0   | 2026-01-28 | AI Pipeline  | Add CodeMachine CLI Adapter section (CDMCH-31) |
