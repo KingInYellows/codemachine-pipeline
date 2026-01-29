@@ -27,6 +27,7 @@ import type { LoggerInterface, HttpClientConfig } from '../http/client';
 import { RateLimitLedger } from '../../telemetry/rateLimitLedger';
 import { serializeError, createErrorNormalizer } from '../../utils/errors';
 import { createLogger, type StructuredLogger, LogLevel } from '../../telemetry/logger';
+import type { LogContext } from '../../core/sharedTypes';
 
 // ============================================================================
 // Types & Schemas
@@ -847,16 +848,16 @@ export class LinearAdapter {
     });
 
     return {
-      debug: (message: string, context?: Record<string, unknown>) => {
+      debug: (message: string, context?: LogContext) => {
         logger.debug(message, context);
       },
-      info: (message: string, context?: Record<string, unknown>) => {
+      info: (message: string, context?: LogContext) => {
         logger.info(message, context);
       },
-      warn: (message: string, context?: Record<string, unknown>) => {
+      warn: (message: string, context?: LogContext) => {
         logger.warn(message, context);
       },
-      error: (message: string, context?: Record<string, unknown>) => {
+      error: (message: string, context?: LogContext) => {
         logger.error(message, context);
       },
     };

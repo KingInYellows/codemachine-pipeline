@@ -264,7 +264,7 @@ export class TraceManager {
   /**
    * Log an error message via injected logger or console fallback
    */
-  private logError(message: string, context?: Record<string, unknown>): void {
+  private logError(message: string, context?: LogContext): void {
     if (this.logger) {
       this.logger.error(message, context);
     } else {

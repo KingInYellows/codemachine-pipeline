@@ -25,6 +25,7 @@ import {
 import { RateLimitLedger, type RateLimitEnvelope } from '../../src/telemetry/rateLimitLedger';
 import type { LoggerInterface } from '../../src/adapters/http/client';
 import type { MetricsCollector } from '../../src/telemetry/metrics';
+import type { LogContext } from '../../src/core/sharedTypes';
 
 // ============================================================================
 // Test Helpers
@@ -54,19 +55,19 @@ async function cleanupTestDir(testDir: string): Promise<void> {
  * Mock logger for testing
  */
 function createMockLogger(): LoggerInterface {
-  const logs: Array<{ level: string; message: string; context?: Record<string, unknown> }> = [];
+  const logs: Array<{ level: string; message: string; context?: LogContext }> = [];
 
   return {
-    debug: (message: string, context?: Record<string, unknown>) => {
+    debug: (message: string, context?: LogContext) => {
       logs.push({ level: 'debug', message, context });
     },
-    info: (message: string, context?: Record<string, unknown>) => {
+    info: (message: string, context?: LogContext) => {
       logs.push({ level: 'info', message, context });
     },
-    warn: (message: string, context?: Record<string, unknown>) => {
+    warn: (message: string, context?: LogContext) => {
       logs.push({ level: 'warn', message, context });
     },
-    error: (message: string, context?: Record<string, unknown>) => {
+    error: (message: string, context?: LogContext) => {
       logs.push({ level: 'error', message, context });
     },
     getLogs: () => logs,

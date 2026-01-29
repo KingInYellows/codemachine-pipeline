@@ -22,6 +22,7 @@ import * as fs from 'node:fs/promises';
 import * as crypto from 'node:crypto';
 import * as path from 'node:path';
 import type { LoggerInterface } from '../adapters/http/client';
+import type { LogContext } from '../core/sharedTypes';
 import { RateLimitLedger } from '../telemetry/rateLimitLedger';
 import type { MetricsCollector } from '../telemetry/metrics';
 import { withLock } from '../persistence/runDirectoryManager';
@@ -264,16 +265,16 @@ function isFileNotFound(error: unknown): error is NodeJS.ErrnoException {
  */
 function createConsoleLogger(): LoggerInterface {
   return {
-    debug: (message: string, context?: Record<string, unknown>) => {
+    debug: (message: string, context?: LogContext) => {
       console.debug(`[DEBUG] ${message}`, context ? JSON.stringify(context) : '');
     },
-    info: (message: string, context?: Record<string, unknown>) => {
+    info: (message: string, context?: LogContext) => {
       console.info(`[INFO] ${message}`, context ? JSON.stringify(context) : '');
     },
-    warn: (message: string, context?: Record<string, unknown>) => {
+    warn: (message: string, context?: LogContext) => {
       console.warn(`[WARN] ${message}`, context ? JSON.stringify(context) : '');
     },
-    error: (message: string, context?: Record<string, unknown>) => {
+    error: (message: string, context?: LogContext) => {
       console.error(`[ERROR] ${message}`, context ? JSON.stringify(context) : '');
     },
   };
