@@ -57,11 +57,10 @@ export function serializeError(error: unknown): SerializedError {
     return {
       name: json.name as string,
       message: json.message as string,
-      stack: json.stack as string | undefined,
+      stack: error.stack, // Use error.stack directly - toJSON() doesn't include it
       statusCode: json.statusCode as number | undefined,
       requestId: json.requestId as string | undefined,
       type: json.type as string | undefined,
-      operation: json.operation as string | undefined,
     };
   }
 

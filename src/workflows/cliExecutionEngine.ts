@@ -110,7 +110,7 @@ async function captureArtifacts(
       artifacts.push(artifactName);
     } catch (err) {
       logger?.warn('Artifact capture failed', {
-        error: err instanceof Error ? err.message : String(err),
+        error: getErrorMessage(err),
         artifactPath,
         taskId: task.task_id,
       });
@@ -267,7 +267,7 @@ export class CLIExecutionEngine {
         await this.handleTaskError(task, error);
         this.logger?.error('Unexpected error executing task', {
           taskId: task.task_id,
-          error: error instanceof Error ? error.message : String(error),
+          error: getErrorMessage(error),
         });
         return {
           taskId: task.task_id,
@@ -482,9 +482,9 @@ export class CLIExecutionEngine {
         this.logger
       );
     } catch (err) {
-      this.logger?.warn('Failed to capture failure artifacts', { 
-        error: err instanceof Error ? err.message : String(err),
-        taskId: task.task_id 
+      this.logger?.warn('Failed to capture failure artifacts', {
+        error: getErrorMessage(err),
+        taskId: task.task_id
       });
     }
 

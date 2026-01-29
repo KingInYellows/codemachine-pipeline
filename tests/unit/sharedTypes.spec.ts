@@ -54,6 +54,32 @@ describe('SharedTypes', () => {
       };
       expect(isSerializedError(withCause)).toBe(true);
     });
+
+    it('should reject invalid optional field types', () => {
+      // Invalid stack type
+      expect(isSerializedError({ name: 'Error', message: 'test', stack: 123 })).toBe(false);
+      // Invalid statusCode type
+      expect(isSerializedError({ name: 'Error', message: 'test', statusCode: 'not a number' })).toBe(false);
+      // Invalid requestId type
+      expect(isSerializedError({ name: 'Error', message: 'test', requestId: 123 })).toBe(false);
+      // Invalid type type
+      expect(isSerializedError({ name: 'Error', message: 'test', type: 123 })).toBe(false);
+      // Invalid operation type
+      expect(isSerializedError({ name: 'Error', message: 'test', operation: 123 })).toBe(false);
+      // Invalid cause type (not an object)
+      expect(isSerializedError({ name: 'Error', message: 'test', cause: 'not an object' })).toBe(false);
+    });
+
+    it('should accept valid type, operation, and cause fields', () => {
+      const valid: unknown = {
+        name: 'HttpError',
+        message: 'Request failed',
+        type: 'TRANSIENT',
+        operation: 'fetchUser',
+        cause: { name: 'NetworkError', message: 'Connection refused' },
+      };
+      expect(isSerializedError(valid)).toBe(true);
+    });
   });
 
   describe('LogContext', () => {

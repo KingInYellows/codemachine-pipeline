@@ -71,6 +71,15 @@ export function isSerializedError(value: unknown): value is SerializedError {
   if (candidate.requestId !== undefined && typeof candidate.requestId !== 'string') {
     return false;
   }
+  if (candidate.type !== undefined && typeof candidate.type !== 'string') {
+    return false;
+  }
+  if (candidate.operation !== undefined && typeof candidate.operation !== 'string') {
+    return false;
+  }
+  if (candidate.cause !== undefined && typeof candidate.cause !== 'object') {
+    return false;
+  }
 
   return true;
 }
@@ -246,13 +255,3 @@ export function isNumber(value: unknown): value is number {
 export function isBoolean(value: unknown): value is boolean {
   return typeof value === 'boolean';
 }
-
-// ============================================================================
-// Re-exports for convenience
-// ============================================================================
-
-/**
- * Zod schema for EntityMetadata.
- * Can be used in existing Zod-based validation.
- */
-export { z } from 'zod';
