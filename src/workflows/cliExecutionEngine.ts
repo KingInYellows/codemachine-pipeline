@@ -594,7 +594,7 @@ export class CLIExecutionEngine {
   }
 
   private async handleTaskError(task: ExecutionTask, error: unknown): Promise<void> {
-    const errorMessage = error instanceof Error ? error.message : String(error);
+    const errorMessage = getErrorMessage(error);
 
     await updateTaskInQueue(this.runDir, task.task_id, {
       status: 'failed',

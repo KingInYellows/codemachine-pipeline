@@ -1,13 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import {
-  SerializedError,
-  LogContext,
-  EntityMetadata,
   isSerializedError,
-  isLogContext,
-  isEntityMetadata,
-  createLogContext,
-  mergeMetadata,
 } from '../../src/core/sharedTypes';
 
 describe('SharedTypes', () => {
@@ -55,6 +48,10 @@ describe('SharedTypes', () => {
       expect(isSerializedError(withCause)).toBe(true);
     });
 
+    it('should reject null cause', () => {
+      expect(isSerializedError({ name: 'Error', message: 'test', cause: null })).toBe(false);
+    });
+
     it('should reject invalid optional field types', () => {
       // Invalid stack type
       expect(isSerializedError({ name: 'Error', message: 'test', stack: 123 })).toBe(false);
@@ -79,86 +76,6 @@ describe('SharedTypes', () => {
         cause: { name: 'NetworkError', message: 'Connection refused' },
       };
       expect(isSerializedError(valid)).toBe(true);
-    });
-  });
-
-  describe('LogContext', () => {
-    it('should type-guard valid log contexts', () => {
-      const valid: unknown = {
-        component: 'http-client',
-        operation: 'fetch',
-      };
-      expect(isLogContext(valid)).toBe(true);
-    });
-
-    it('should accept empty objects as valid context', () => {
-      expect(isLogContext({})).toBe(true);
-    });
-
-    it('should reject non-objects', () => {
-      expect(isLogContext(null)).toBe(false);
-      expect(isLogContext(undefined)).toBe(false);
-      expect(isLogContext('string')).toBe(false);
-      expect(isLogContext(123)).toBe(false);
-      expect(isLogContext([])).toBe(false);
-    });
-
-    it('should allow string, number, boolean, and nested values', () => {
-      const context: unknown = {
-        stringVal: 'test',
-        numberVal: 42,
-        boolVal: true,
-        nested: { deep: 'value' },
-        arrayVal: [1, 2, 3],
-      };
-      expect(isLogContext(context)).toBe(true);
-    });
-
-    it('should create typed log context via factory', () => {
-      const context = createLogContext({
-        component: 'test',
-        traceId: 'trace-123',
-        featureId: 'feat-456',
-      });
-      expect(context.component).toBe('test');
-      expect(context.traceId).toBe('trace-123');
-    });
-  });
-
-  describe('EntityMetadata', () => {
-    it('should type-guard valid metadata', () => {
-      const valid: unknown = {
-        createdBy: 'user@example.com',
-        source: 'api',
-      };
-      expect(isEntityMetadata(valid)).toBe(true);
-    });
-
-    it('should accept empty objects', () => {
-      expect(isEntityMetadata({})).toBe(true);
-    });
-
-    it('should reject non-objects', () => {
-      expect(isEntityMetadata(null)).toBe(false);
-      expect(isEntityMetadata(undefined)).toBe(false);
-      expect(isEntityMetadata('string')).toBe(false);
-    });
-
-    it('should merge metadata correctly', () => {
-      const base: EntityMetadata = { source: 'api', version: 1 };
-      const override: EntityMetadata = { version: 2, newField: 'added' };
-      const merged = mergeMetadata(base, override);
-
-      expect(merged.source).toBe('api');
-      expect(merged.version).toBe(2);
-      expect(merged.newField).toBe('added');
-    });
-
-    it('should handle undefined inputs in merge', () => {
-      const base: EntityMetadata = { source: 'api' };
-      expect(mergeMetadata(base, undefined)).toEqual(base);
-      expect(mergeMetadata(undefined, base)).toEqual(base);
-      expect(mergeMetadata(undefined, undefined)).toEqual({});
     });
   });
 

@@ -101,20 +101,53 @@ describe('Error Utilities', () => {
       });
     });
 
+    it('serializes HttpError with all fields', () => {
+      const httpError = new HttpError(
+        'Not found',
+        ErrorType.PERMANENT,
+        404,
+        undefined,     // headers
+        undefined,     // responseBody
+        'req-123'      // requestId
+      );
+      const serialized = serializeError(httpError);
+
+      expect(serialized.name).toBe('HttpError');
+      expect(serialized.message).toBe('Not found');
+      expect(serialized.type).toBe(ErrorType.PERMANENT);
+      expect(serialized.statusCode).toBe(404);
+      expect(serialized.requestId).toBe('req-123');
+      expect(serialized.stack).toBeDefined();
+    });
+
+    it('serializes HttpError with headers and responseBody', () => {
+      const httpError = new HttpError(
+        'Validation failed',
+        ErrorType.PERMANENT,
+        422,
+        { 'x-request-id': 'abc-123', authorization: 'Bearer secret' },
+        '{"errors":["title is required"]}',
+        'req-456',
+        false
+      );
+      const serialized = serializeError(httpError);
+
+      expect(serialized.name).toBe('HttpError');
+      expect(serialized.statusCode).toBe(422);
+      expect(serialized.requestId).toBe('req-456');
+      expect(serialized.retryable).toBe(false);
+      expect(serialized.headers).toBeDefined();
+      expect(serialized.responseBody).toBeDefined();
+      // Headers should be sanitized (authorization redacted)
+      expect(serialized.headers?.['authorization']).not.toBe('Bearer secret');
+    });
+
     it('serializes non-Error as UnknownError with message', () => {
       // Non-Error values are serialized with a consistent SerializedError shape
       expect(serializeError('string error')).toEqual({ name: 'UnknownError', message: 'string error' });
       expect(serializeError(42)).toEqual({ name: 'UnknownError', message: '42' });
       expect(serializeError(null)).toEqual({ name: 'UnknownError', message: 'null' });
-    });
-
-    it('serializes HttpError using toJSON', () => {
-      const httpError = new HttpError('Not found', ErrorType.PERMANENT, 404, 'req-123');
-      const serialized = serializeError(httpError);
-
-      expect(serialized.message).toBe('Not found');
-      expect(serialized.type).toBe(ErrorType.PERMANENT);
-      expect(serialized.statusCode).toBe(404);
+      expect(serializeError(undefined)).toEqual({ name: 'UnknownError', message: 'undefined' });
     });
   });
 
