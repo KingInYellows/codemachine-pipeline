@@ -109,7 +109,7 @@ export default class Doctor extends Command {
           mirrorToStderr: !flags.json,
         });
         metrics = createRunMetricsCollector(pipelineDir, 'diagnostics');
-        traceManager = createRunTraceManager(pipelineDir, 'diagnostics');
+        traceManager = createRunTraceManager(pipelineDir, 'diagnostics', logger);
         commandSpan = traceManager.startSpan('cli.doctor');
         commandSpan.setAttribute('json_mode', flags.json);
         commandSpan.setAttribute('verbose', flags.verbose);

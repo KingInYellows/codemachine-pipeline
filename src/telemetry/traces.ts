@@ -116,6 +116,16 @@ export interface ActiveSpan {
 }
 
 /**
+ * Logger interface for trace error reporting
+ */
+export interface LoggerInterface {
+  debug(message: string, context?: Record<string, unknown>): void;
+  info(message: string, context?: Record<string, unknown>): void;
+  warn(message: string, context?: Record<string, unknown>): void;
+  error(message: string, context?: Record<string, unknown>): void;
+}
+
+/**
  * Trace manager configuration
  */
 export interface TraceManagerOptions {
@@ -125,6 +135,8 @@ export interface TraceManagerOptions {
   serviceName?: string;
   /** Default attributes attached to all spans */
   defaultAttributes?: Record<string, string | number | boolean>;
+  /** Optional logger for error reporting (replaces console.error) */
+  logger?: LoggerInterface;
 }
 
 // ============================================================================
@@ -230,7 +242,8 @@ class ActiveSpanImpl implements ActiveSpan {
  * Trace manager with file-based export
  */
 export class TraceManager {
-  private readonly options: Required<TraceManagerOptions>;
+  private readonly options: Required<Omit<TraceManagerOptions, 'logger'>>;
+  private readonly logger?: LoggerInterface;
   private readonly tracesFilePath?: string;
   private readonly spans: Span[] = [];
   private writeQueue: Promise<void> = Promise.resolve();
@@ -245,10 +258,24 @@ export class TraceManager {
       serviceName: options.serviceName ?? 'ai-feature-pipeline',
       defaultAttributes: options.defaultAttributes ?? {},
     };
+    if (options.logger) {
+      this.logger = options.logger;
+    }
 
     // Determine traces file path if run directory is provided
     if (this.options.runDir) {
       this.tracesFilePath = path.join(this.options.runDir, 'telemetry', 'traces.json');
+    }
+  }
+
+  /**
+   * Log an error message via injected logger or console fallback
+   */
+  private logError(message: string, context?: Record<string, unknown>): void {
+    if (this.logger) {
+      this.logger.error(message, context);
+    } else {
+      console.error(message, context ? JSON.stringify(context) : '');
     }
   }
 
@@ -327,7 +354,10 @@ export class TraceManager {
           this.diskWritesFailing = false;
         } catch (error) {
           // Log the failure
-          console.error('[TRACE_ERROR] Failed to write span to disk:', error);
+          this.logError('[TRACE_ERROR] Failed to write span to disk', {
+            error: error instanceof Error ? error.message : String(error),
+            spanName: span.name,
+          });
           // Store in memory as fallback
           this.pendingSpans.push(span);
           this.diskWritesFailing = true;
@@ -375,7 +405,10 @@ export class TraceManager {
     } catch (mkdirError) {
       // Directory creation failed - this is a critical disk issue
       const error = mkdirError instanceof Error ? mkdirError : new Error(String(mkdirError));
-      console.error('[TRACE_ERROR] Failed to create telemetry directory:', error.message);
+      this.logError('[TRACE_ERROR] Failed to create telemetry directory', {
+        directory: telemetryDir,
+        error: error.message,
+      });
       throw error;
     }
 
@@ -385,7 +418,10 @@ export class TraceManager {
       await fs.appendFile(this.tracesFilePath, `${line}\n`, 'utf-8');
     } catch (appendError) {
       const error = appendError instanceof Error ? appendError : new Error(String(appendError));
-      console.error('[TRACE_ERROR] Failed to append span to file:', error.message);
+      this.logError('[TRACE_ERROR] Failed to append span to file', {
+        file: this.tracesFilePath,
+        error: error.message,
+      });
       throw error;
     }
   }
@@ -423,21 +459,19 @@ export class TraceManager {
         try {
           await this.flushPendingSpans();
         } catch (error) {
-          console.error(
-            '[TRACE_ERROR] Failed to flush pending spans on shutdown:',
-            error instanceof Error ? error.message : error
-          );
-          console.error(
-            `[TRACE_ERROR] ${this.pendingSpans.length} spans remain unflushed (available via getPendingSpans())`
-          );
+          this.logError('[TRACE_ERROR] Failed to flush pending spans on shutdown', {
+            error: error instanceof Error ? error.message : String(error),
+          });
+          this.logError('[TRACE_ERROR] Spans remain unflushed (available via getPendingSpans())', {
+            unflushedCount: this.pendingSpans.length,
+          });
         }
       }
     } catch (error) {
       // Never throw from flush - trace collection should not crash the application
-      console.error(
-        '[TRACE_ERROR] Error during trace flush:',
-        error instanceof Error ? error.message : error
-      );
+      this.logError('[TRACE_ERROR] Error during trace flush', {
+        error: error instanceof Error ? error.message : String(error),
+      });
     }
   }
 
@@ -547,15 +581,25 @@ export function createTraceManager(options: TraceManagerOptions = {}): TraceMana
 /**
  * Create a trace manager for a run directory
  */
-export function createRunTraceManager(runDir: string, runId?: string): TraceManager {
+export function createRunTraceManager(
+  runDir: string,
+  runId?: string,
+  logger?: LoggerInterface
+): TraceManager {
   const defaultAttributes: Record<string, string | number | boolean> = {};
 
   if (runId) {
     defaultAttributes.run_id = runId;
   }
 
-  return createTraceManager({
+  const options: TraceManagerOptions = {
     runDir,
     defaultAttributes,
-  });
+  };
+
+  if (logger) {
+    options.logger = logger;
+  }
+
+  return createTraceManager(options);
 }

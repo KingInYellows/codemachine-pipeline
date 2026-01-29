@@ -122,7 +122,7 @@ export default class Init extends Command {
           mirrorToStderr: !flags.json,
         });
         metrics = createRunMetricsCollector(pipelineDir, 'bootstrap');
-        traceManager = createRunTraceManager(pipelineDir, 'bootstrap');
+        traceManager = createRunTraceManager(pipelineDir, 'bootstrap', logger);
         commandSpan = traceManager.startSpan('cli.init');
         commandSpan.setAttribute('dry_run', flags['dry-run']);
         commandSpan.setAttribute('json_mode', flags.json);

@@ -211,7 +211,7 @@ export default class Resume extends Command {
         mirrorToStderr: !typedFlags.json,
       });
       metrics = createRunMetricsCollector(runDirPath, featureId);
-      traceManager = createRunTraceManager(runDirPath, featureId);
+      traceManager = createRunTraceManager(runDirPath, featureId, logger);
       commandSpan = traceManager.startSpan('cli.resume');
       commandSpan.setAttribute('feature_id', featureId);
       commandSpan.setAttribute('dry_run', typedFlags['dry-run']);
