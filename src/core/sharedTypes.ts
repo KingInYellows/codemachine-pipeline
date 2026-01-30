@@ -79,7 +79,16 @@ export function isSerializedError(value: unknown): value is SerializedError {
   if (candidate.operation !== undefined && typeof candidate.operation !== 'string') {
     return false;
   }
-  if (candidate.cause !== undefined && (candidate.cause === null || typeof candidate.cause !== 'object')) {
+  if (candidate.cause !== undefined && !isSerializedError(candidate.cause)) {
+    return false;
+  }
+  if (candidate.retryable !== undefined && typeof candidate.retryable !== 'boolean') {
+    return false;
+  }
+  if (candidate.headers !== undefined && (candidate.headers === null || typeof candidate.headers !== 'object')) {
+    return false;
+  }
+  if (candidate.responseBody !== undefined && typeof candidate.responseBody !== 'string') {
     return false;
   }
 

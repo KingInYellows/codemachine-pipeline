@@ -53,18 +53,32 @@ export function getErrorMessage(error: unknown): string {
  */
 export function serializeError(error: unknown): SerializedError {
   if (error instanceof HttpError) {
-    const toJson = error.toJSON();
-    return {
-      name: error.name,
-      message: error.message,
-      stack: error.stack,
-      statusCode: error.statusCode,
-      requestId: error.requestId,
-      type: error.type,
-      retryable: error.retryable,
-      headers: error.headers ? (toJson.headers as Record<string, string>) : undefined,
-      responseBody: error.responseBody ? (toJson.responseBody as string) : undefined,
-    };
+    try {
+      const toJson = error.toJSON();
+      return {
+        name: error.name,
+        message: error.message,
+        stack: error.stack,
+        statusCode: error.statusCode,
+        requestId: error.requestId,
+        type: error.type,
+        retryable: error.retryable,
+        headers: error.headers ? (toJson.headers as Record<string, string>) : undefined,
+        responseBody: error.responseBody ? (toJson.responseBody as string) : undefined,
+        cause: error.cause ? serializeError(error.cause) : undefined,
+      };
+    } catch {
+      return {
+        name: error.name,
+        message: error.message,
+        stack: error.stack,
+        statusCode: error.statusCode,
+        requestId: error.requestId,
+        type: error.type,
+        retryable: error.retryable,
+        cause: error.cause ? serializeError(error.cause) : undefined,
+      };
+    }
   }
 
   if (error instanceof Error) {
@@ -76,7 +90,11 @@ export function serializeError(error: unknown): SerializedError {
     };
   }
 
-  return { name: 'UnknownError', message: String(error) };
+  try {
+    return { name: 'UnknownError', message: String(error) };
+  } catch {
+    return { name: 'UnknownError', message: '[unserializable error]' };
+  }
 }
 
 /**

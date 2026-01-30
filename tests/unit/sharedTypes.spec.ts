@@ -67,6 +67,45 @@ describe('SharedTypes', () => {
       expect(isSerializedError({ name: 'Error', message: 'test', cause: 'not an object' })).toBe(false);
     });
 
+    it('should reject invalid nested cause (recursive validation)', () => {
+      const invalidNestedCause: unknown = {
+        name: 'WrapperError',
+        message: 'Wrapped',
+        cause: {
+          name: 'MiddleError',
+          message: 'Middle',
+          cause: { notAValidError: true },
+        },
+      };
+      expect(isSerializedError(invalidNestedCause)).toBe(false);
+    });
+
+    it('should reject invalid retryable type', () => {
+      expect(isSerializedError({ name: 'Error', message: 'test', retryable: 'yes' })).toBe(false);
+      expect(isSerializedError({ name: 'Error', message: 'test', retryable: 1 })).toBe(false);
+    });
+
+    it('should reject invalid headers type', () => {
+      expect(isSerializedError({ name: 'Error', message: 'test', headers: 'not-object' })).toBe(false);
+      expect(isSerializedError({ name: 'Error', message: 'test', headers: null })).toBe(false);
+    });
+
+    it('should reject invalid responseBody type', () => {
+      expect(isSerializedError({ name: 'Error', message: 'test', responseBody: 123 })).toBe(false);
+      expect(isSerializedError({ name: 'Error', message: 'test', responseBody: {} })).toBe(false);
+    });
+
+    it('should accept valid retryable, headers, and responseBody', () => {
+      const valid: unknown = {
+        name: 'HttpError',
+        message: 'Bad request',
+        retryable: true,
+        headers: { 'content-type': 'application/json' },
+        responseBody: '{"error":"bad"}',
+      };
+      expect(isSerializedError(valid)).toBe(true);
+    });
+
     it('should accept valid type, operation, and cause fields', () => {
       const valid: unknown = {
         name: 'HttpError',
