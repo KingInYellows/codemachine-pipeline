@@ -736,6 +736,17 @@ function sanitizeUrl(url: string): string {
 /**
  * Sanitize headers by redacting authorization and sensitive values
  */
+const SENSITIVE_HEADERS = new Set([
+  'authorization',
+  'proxy-authorization',
+  'cookie',
+  'set-cookie',
+  'x-api-key',
+  'x-csrf-token',
+]);
+
+const SENSITIVE_KEYWORDS = ['token', 'secret', 'password', 'credential'];
+
 function sanitizeHeaders(headers: Record<string, string>): Record<string, string> {
   const sanitized: Record<string, string> = {};
 
@@ -743,10 +754,8 @@ function sanitizeHeaders(headers: Record<string, string>): Record<string, string
     const lowerKey = key.toLowerCase();
 
     if (
-      lowerKey === 'authorization' ||
-      lowerKey === 'x-api-key' ||
-      lowerKey === 'cookie' ||
-      lowerKey.includes('token')
+      SENSITIVE_HEADERS.has(lowerKey) ||
+      SENSITIVE_KEYWORDS.some((kw) => lowerKey.includes(kw))
     ) {
       sanitized[key] = '***REDACTED***';
     } else {
