@@ -2,7 +2,7 @@ import type { RequestInit, Response, HeadersInit, Headers } from 'undici-types';
 import type { LogContext } from '../../core/sharedTypes';
 import * as crypto from 'node:crypto';
 import { RateLimitLedger, RateLimitEnvelope } from '../../telemetry/rateLimitLedger';
-import { createLogger, type StructuredLogger, LogLevel } from '../../telemetry/logger';
+import { createLogger, type StructuredLogger, type LoggerInterface, LogLevel } from '../../telemetry/logger';
 
 /**
  * HTTP Client Module
@@ -105,15 +105,7 @@ export interface HttpClientConfig {
   logger?: LoggerInterface;
 }
 
-/**
- * Logger interface for dependency injection
- */
-export interface LoggerInterface {
-  debug(message: string, context?: LogContext): void;
-  info(message: string, context?: LogContext): void;
-  warn(message: string, context?: LogContext): void;
-  error(message: string, context?: LogContext): void;
-}
+export type { LoggerInterface };
 
 /**
  * HTTP request options

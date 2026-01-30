@@ -17,6 +17,7 @@
 
 import type { MetricsCollector, Labels } from './metrics';
 import type { LogContext } from '../core/sharedTypes';
+import type { LoggerInterface } from './logger';
 import { LATENCY_BUCKETS } from './metrics';
 
 // ============================================================================
@@ -84,15 +85,7 @@ export interface ValidationResult {
   errorTypes?: string[];
 }
 
-/**
- * Logger interface for error reporting
- */
-export interface LoggerInterface {
-  debug(message: string, context?: LogContext): void;
-  info(message: string, context?: LogContext): void;
-  warn(message: string, context?: LogContext): void;
-  error(message: string, context?: LogContext): void;
-}
+export type { LoggerInterface };
 
 /**
  * Execution metrics options

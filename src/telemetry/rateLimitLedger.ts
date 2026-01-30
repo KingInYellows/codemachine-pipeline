@@ -1,7 +1,7 @@
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 import type { Provider } from '../adapters/http/client';
-import type { LogContext } from '../core/sharedTypes';
+import type { LoggerInterface } from './logger';
 
 /**
  * Rate Limit Ledger
@@ -90,15 +90,7 @@ export interface RateLimitLedgerData {
   };
 }
 
-/**
- * Logger interface (matches HttpClient logger)
- */
-export interface LoggerInterface {
-  debug(message: string, context?: LogContext): void;
-  info(message: string, context?: LogContext): void;
-  warn(message: string, context?: LogContext): void;
-  error(message: string, context?: LogContext): void;
-}
+export type { LoggerInterface };
 
 // ============================================================================
 // Constants
