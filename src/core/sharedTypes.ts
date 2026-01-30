@@ -85,8 +85,14 @@ export function isSerializedError(value: unknown): value is SerializedError {
   if (candidate.retryable !== undefined && typeof candidate.retryable !== 'boolean') {
     return false;
   }
-  if (candidate.headers !== undefined && (candidate.headers === null || typeof candidate.headers !== 'object')) {
-    return false;
+  if (candidate.headers !== undefined) {
+    if (candidate.headers === null || typeof candidate.headers !== 'object' || Array.isArray(candidate.headers)) {
+      return false;
+    }
+    // Validate all values are strings
+    for (const value of Object.values(candidate.headers)) {
+      if (typeof value !== 'string') return false;
+    }
   }
   if (candidate.responseBody !== undefined && typeof candidate.responseBody !== 'string') {
     return false;
