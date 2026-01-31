@@ -101,19 +101,100 @@ describe('Error Utilities', () => {
       });
     });
 
-    it('serializes non-Error as string', () => {
-      expect(serializeError('string error')).toEqual({ error: 'string error' });
-      expect(serializeError(42)).toEqual({ error: '42' });
-      expect(serializeError(null)).toEqual({ error: 'null' });
-    });
-
-    it('serializes HttpError using toJSON', () => {
-      const httpError = new HttpError('Not found', ErrorType.PERMANENT, 404, 'req-123');
+    it('serializes HttpError with all fields', () => {
+      const httpError = new HttpError(
+        'Not found',
+        ErrorType.PERMANENT,
+        404,
+        undefined,     // headers
+        undefined,     // responseBody
+        'req-123'      // requestId
+      );
       const serialized = serializeError(httpError);
 
+      expect(serialized.name).toBe('HttpError');
       expect(serialized.message).toBe('Not found');
       expect(serialized.type).toBe(ErrorType.PERMANENT);
       expect(serialized.statusCode).toBe(404);
+      expect(serialized.requestId).toBe('req-123');
+      expect(serialized.stack).toBeDefined();
+    });
+
+    it('serializes HttpError with headers and responseBody', () => {
+      const httpError = new HttpError(
+        'Validation failed',
+        ErrorType.PERMANENT,
+        422,
+        { 'x-request-id': 'abc-123', authorization: 'Bearer secret' },
+        '{"errors":["title is required"]}',
+        'req-456',
+        false
+      );
+      const serialized = serializeError(httpError);
+
+      expect(serialized.name).toBe('HttpError');
+      expect(serialized.statusCode).toBe(422);
+      expect(serialized.requestId).toBe('req-456');
+      expect(serialized.retryable).toBe(false);
+      expect(serialized.headers).toBeDefined();
+      expect(serialized.responseBody).toBeDefined();
+      // Headers should be sanitized (authorization redacted)
+      expect(serialized.headers?.['authorization']).not.toBe('Bearer secret');
+    });
+
+    it('gracefully handles HttpError with toJSON() that throws', () => {
+      const httpError = new HttpError(
+        'Bad gateway',
+        ErrorType.TRANSIENT,
+        502,
+        undefined,
+        undefined,
+        'req-throw'
+      );
+      // Monkey-patch toJSON to throw
+      httpError.toJSON = () => { throw new Error('toJSON exploded'); };
+      const serialized = serializeError(httpError);
+
+      expect(serialized.name).toBe('HttpError');
+      expect(serialized.message).toBe('Bad gateway');
+      expect(serialized.statusCode).toBe(502);
+      expect(serialized.requestId).toBe('req-throw');
+      // Should not have headers/responseBody since toJSON failed
+      expect(serialized.headers).toBeUndefined();
+      expect(serialized.responseBody).toBeUndefined();
+    });
+
+    it('handles exotic object whose toString() throws', () => {
+      const evil = {
+        toString() { throw new Error('cannot stringify'); },
+      };
+      const serialized = serializeError(evil);
+
+      expect(serialized.name).toBe('UnknownError');
+      expect(serialized.message).toBe('[unserializable error]');
+    });
+
+    it('serializes HttpError with cause chain', () => {
+      const root = new Error('Root cause');
+      const httpError = new HttpError(
+        'Request failed',
+        ErrorType.TRANSIENT,
+        500,
+      );
+      httpError.cause = root;
+      const serialized = serializeError(httpError);
+
+      expect(serialized.cause).toBeDefined();
+      expect(serialized.cause?.name).toBe('Error');
+      expect(serialized.cause?.message).toBe('Root cause');
+    });
+
+    it('serializes non-Error as UnknownError with message', () => {
+      // Non-Error values are serialized with a consistent SerializedError shape
+      expect(serializeError('string error')).toEqual({ name: 'UnknownError', message: 'string error' });
+      expect(serializeError(42)).toEqual({ name: 'UnknownError', message: '42' });
+      expect(serializeError(null)).toEqual({ name: 'UnknownError', message: 'null' });
+      expect(serializeError(undefined)).toEqual({ name: 'UnknownError', message: 'undefined' });
     });
   });
 
