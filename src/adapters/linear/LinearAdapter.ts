@@ -26,8 +26,7 @@ import { HttpClient, Provider, HttpError, ErrorType } from '../http/client';
 import type { LoggerInterface, HttpClientConfig } from '../http/client';
 import { RateLimitLedger } from '../../telemetry/rateLimitLedger';
 import { serializeError, createErrorNormalizer } from '../../utils/errors';
-import { createLogger, type StructuredLogger, LogLevel } from '../../telemetry/logger';
-import type { LogContext } from '../../core/sharedTypes';
+import { createLogger, LogLevel } from '../../telemetry/logger';
 
 // ============================================================================
 // Types & Schemas
@@ -838,29 +837,14 @@ export class LinearAdapter {
   }
 
   /**
-   * Create default logger using StructuredLogger
+   * Create default logger
    */
   private createDefaultLogger(): LoggerInterface {
-    const logger: StructuredLogger = createLogger({
+    return createLogger({
       component: 'linear-adapter',
       minLevel: LogLevel.DEBUG,
       mirrorToStderr: true,
     });
-
-    return {
-      debug: (message: string, context?: LogContext) => {
-        logger.debug(message, context);
-      },
-      info: (message: string, context?: LogContext) => {
-        logger.info(message, context);
-      },
-      warn: (message: string, context?: LogContext) => {
-        logger.warn(message, context);
-      },
-      error: (message: string, context?: LogContext) => {
-        logger.error(message, context);
-      },
-    };
   }
 }
 

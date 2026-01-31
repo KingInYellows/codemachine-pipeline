@@ -22,7 +22,7 @@ import * as fs from 'node:fs/promises';
 import * as crypto from 'node:crypto';
 import * as path from 'node:path';
 import type { LoggerInterface } from '../adapters/http/client';
-import type { LogContext } from '../core/sharedTypes';
+import { createLogger, LogLevel } from '../telemetry/logger';
 import { RateLimitLedger } from '../telemetry/rateLimitLedger';
 import type { MetricsCollector } from '../telemetry/metrics';
 import { withLock } from '../persistence/runDirectoryManager';
@@ -261,23 +261,14 @@ function isFileNotFound(error: unknown): error is NodeJS.ErrnoException {
 }
 
 /**
- * Create console logger
+ * Create console logger using StructuredLogger (includes redaction)
  */
 function createConsoleLogger(): LoggerInterface {
-  return {
-    debug: (message: string, context?: LogContext) => {
-      console.debug(`[DEBUG] ${message}`, context ? JSON.stringify(context) : '');
-    },
-    info: (message: string, context?: LogContext) => {
-      console.info(`[INFO] ${message}`, context ? JSON.stringify(context) : '');
-    },
-    warn: (message: string, context?: LogContext) => {
-      console.warn(`[WARN] ${message}`, context ? JSON.stringify(context) : '');
-    },
-    error: (message: string, context?: LogContext) => {
-      console.error(`[ERROR] ${message}`, context ? JSON.stringify(context) : '');
-    },
-  };
+  return createLogger({
+    component: 'write-action-queue',
+    minLevel: LogLevel.DEBUG,
+    mirrorToStderr: true,
+  });
 }
 
 // ============================================================================

@@ -2,7 +2,7 @@ import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 import * as crypto from 'node:crypto';
 import type { LogContext } from '../core/sharedTypes';
-import type { LoggerInterface } from './logger';
+import { createLogger, LogLevel, type LoggerInterface } from './logger';
 
 /**
  * Trace Instrumentation (File-Based)
@@ -237,7 +237,7 @@ class ActiveSpanImpl implements ActiveSpan {
  */
 export class TraceManager {
   private readonly options: Required<Omit<TraceManagerOptions, 'logger'>>;
-  private readonly logger?: LoggerInterface;
+  private readonly logger: LoggerInterface;
   private readonly tracesFilePath?: string;
   private readonly spans: Span[] = [];
   private writeQueue: Promise<void> = Promise.resolve();
@@ -252,9 +252,11 @@ export class TraceManager {
       serviceName: options.serviceName ?? 'ai-feature-pipeline',
       defaultAttributes: options.defaultAttributes ?? {},
     };
-    if (options.logger) {
-      this.logger = options.logger;
-    }
+    this.logger = options.logger ?? createLogger({
+      component: 'trace-manager',
+      minLevel: LogLevel.DEBUG,
+      mirrorToStderr: true,
+    });
 
     // Determine traces file path if run directory is provided
     if (this.options.runDir) {
@@ -263,14 +265,10 @@ export class TraceManager {
   }
 
   /**
-   * Log an error message via injected logger or console fallback
+   * Log an error message via injected or default logger
    */
   private logError(message: string, context?: LogContext): void {
-    if (this.logger) {
-      this.logger.error(message, context);
-    } else {
-      console.error(message, context ? JSON.stringify(context) : '');
-    }
+    this.logger.error(message, context);
   }
 
   /**
