@@ -8,6 +8,7 @@ import {
   createRunTraceManager,
   type LoggerInterface,
 } from '../../src/telemetry/traces';
+import type { LogContext } from '../../src/core/sharedTypes';
 
 // ============================================================================
 // Test Utilities
@@ -26,21 +27,21 @@ async function cleanupTempDir(dir: string): Promise<void> {
 }
 
 function createMockLogger(): LoggerInterface & {
-  calls: { level: string; message: string; context?: Record<string, unknown> }[];
+  calls: { level: string; message: string; context?: LogContext }[];
 } {
-  const calls: { level: string; message: string; context?: Record<string, unknown> }[] = [];
+  const calls: { level: string; message: string; context?: LogContext }[] = [];
   return {
     calls,
-    debug: (message: string, context?: Record<string, unknown>) => {
+    debug: (message: string, context?: LogContext) => {
       calls.push({ level: 'debug', message, context });
     },
-    info: (message: string, context?: Record<string, unknown>) => {
+    info: (message: string, context?: LogContext) => {
       calls.push({ level: 'info', message, context });
     },
-    warn: (message: string, context?: Record<string, unknown>) => {
+    warn: (message: string, context?: LogContext) => {
       calls.push({ level: 'warn', message, context });
     },
-    error: (message: string, context?: Record<string, unknown>) => {
+    error: (message: string, context?: LogContext) => {
       calls.push({ level: 'error', message, context });
     },
   };

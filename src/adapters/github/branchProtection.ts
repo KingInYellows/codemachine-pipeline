@@ -13,7 +13,7 @@
 import { HttpClient, Provider, HttpError, ErrorType } from '../http/client';
 import type { LoggerInterface, HttpClientConfig } from '../http/client';
 import { serializeError, createErrorNormalizer } from '../../utils/errors';
-import { createLogger, type StructuredLogger, LogLevel } from '../../telemetry/logger';
+import { createLogger, LogLevel } from '../../telemetry/logger';
 
 // ============================================================================
 // Types & Schemas
@@ -726,29 +726,14 @@ export class BranchProtectionAdapter {
   );
 
   /**
-   * Create default logger using StructuredLogger
+   * Create default logger
    */
   private createDefaultLogger(): LoggerInterface {
-    const logger: StructuredLogger = createLogger({
+    return createLogger({
       component: 'branch-protection',
       minLevel: LogLevel.DEBUG,
       mirrorToStderr: true,
     });
-
-    return {
-      debug: (message: string, context?: Record<string, unknown>) => {
-        logger.debug(message, context);
-      },
-      info: (message: string, context?: Record<string, unknown>) => {
-        logger.info(message, context);
-      },
-      warn: (message: string, context?: Record<string, unknown>) => {
-        logger.warn(message, context);
-      },
-      error: (message: string, context?: Record<string, unknown>) => {
-        logger.error(message, context);
-      },
-    };
   }
 }
 
