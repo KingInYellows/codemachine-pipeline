@@ -16,6 +16,8 @@
  */
 
 import type { MetricsCollector, Labels } from './metrics';
+import type { LogContext } from '../core/sharedTypes';
+import type { LoggerInterface } from './logger';
 import { LATENCY_BUCKETS } from './metrics';
 
 // ============================================================================
@@ -83,15 +85,7 @@ export interface ValidationResult {
   errorTypes?: string[];
 }
 
-/**
- * Logger interface for error reporting
- */
-export interface LoggerInterface {
-  debug(message: string, context?: Record<string, unknown>): void;
-  info(message: string, context?: Record<string, unknown>): void;
-  warn(message: string, context?: Record<string, unknown>): void;
-  error(message: string, context?: Record<string, unknown>): void;
-}
+export type { LoggerInterface };
 
 /**
  * Execution metrics options
@@ -193,7 +187,7 @@ export class ExecutionMetricsHelper {
   /**
    * Log an error message via injected logger or console fallback
    */
-  private logError(message: string, context?: Record<string, unknown>): void {
+  private logError(message: string, context?: LogContext): void {
     if (this.logger) {
       this.logger.error(message, context);
     } else {
