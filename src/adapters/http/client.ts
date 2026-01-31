@@ -1,7 +1,8 @@
 import type { RequestInit, Response, HeadersInit, Headers } from 'undici-types';
+import type { LogContext } from '../../core/sharedTypes';
 import * as crypto from 'node:crypto';
 import { RateLimitLedger, RateLimitEnvelope } from '../../telemetry/rateLimitLedger';
-import { createLogger, type StructuredLogger, LogLevel } from '../../telemetry/logger';
+import { createLogger, type StructuredLogger, type LoggerInterface, LogLevel } from '../../telemetry/logger';
 
 /**
  * HTTP Client Module
@@ -104,15 +105,7 @@ export interface HttpClientConfig {
   logger?: LoggerInterface;
 }
 
-/**
- * Logger interface for dependency injection
- */
-export interface LoggerInterface {
-  debug(message: string, context?: Record<string, unknown>): void;
-  info(message: string, context?: Record<string, unknown>): void;
-  warn(message: string, context?: Record<string, unknown>): void;
-  error(message: string, context?: Record<string, unknown>): void;
-}
+export type { LoggerInterface };
 
 /**
  * HTTP request options
@@ -794,16 +787,16 @@ function createConsoleLogger(): LoggerInterface {
   });
 
   return {
-    debug: (message: string, context?: Record<string, unknown>) => {
+    debug: (message: string, context?: LogContext) => {
       logger.debug(message, context);
     },
-    info: (message: string, context?: Record<string, unknown>) => {
+    info: (message: string, context?: LogContext) => {
       logger.info(message, context);
     },
-    warn: (message: string, context?: Record<string, unknown>) => {
+    warn: (message: string, context?: LogContext) => {
       logger.warn(message, context);
     },
-    error: (message: string, context?: Record<string, unknown>) => {
+    error: (message: string, context?: LogContext) => {
       logger.error(message, context);
     },
   };

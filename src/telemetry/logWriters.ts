@@ -16,6 +16,7 @@
  */
 
 import { LogLevel, type StructuredLogger } from './logger';
+import type { LogContext } from '../core/sharedTypes';
 import type { DiffStats, ValidationResult, ExecutionTaskType } from './executionMetrics';
 
 // ============================================================================
@@ -92,7 +93,7 @@ export class ExecutionLogWriter {
   taskStarted(
     taskId: string,
     taskType: ExecutionTaskType,
-    additionalContext?: Record<string, unknown>
+    additionalContext?: LogContext
   ): void {
     const context: TaskContext = {
       task_id: taskId,
@@ -110,7 +111,7 @@ export class ExecutionLogWriter {
     taskId: string,
     taskType: ExecutionTaskType,
     durationMs: number,
-    additionalContext?: Record<string, unknown>
+    additionalContext?: LogContext
   ): void {
     const context: TaskContext = {
       task_id: taskId,
@@ -130,7 +131,7 @@ export class ExecutionLogWriter {
     taskType: ExecutionTaskType,
     error: Error,
     durationMs?: number,
-    additionalContext?: Record<string, unknown>
+    additionalContext?: LogContext
   ): void {
     const context: TaskContext = {
       task_id: taskId,
@@ -149,7 +150,7 @@ export class ExecutionLogWriter {
     taskId: string,
     taskType: ExecutionTaskType,
     reason: string,
-    additionalContext?: Record<string, unknown>
+    additionalContext?: LogContext
   ): void {
     const context: TaskContext = {
       task_id: taskId,
@@ -208,7 +209,7 @@ export class ExecutionLogWriter {
     taskId: string,
     errorType: string,
     errorMessage: string,
-    additionalContext?: Record<string, unknown>
+    additionalContext?: LogContext
   ): void {
     const context: TaskContext = {
       task_id: taskId,
@@ -255,7 +256,7 @@ export class ExecutionLogWriter {
   /**
    * Log git operation event
    */
-  gitOperation(taskId: string, operation: string, details: Record<string, unknown>): void {
+  gitOperation(taskId: string, operation: string, details: LogContext): void {
     const context: TaskContext = {
       task_id: taskId,
       execution_task_type: 'git_operation',
