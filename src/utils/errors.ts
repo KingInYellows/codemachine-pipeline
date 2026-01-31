@@ -1,4 +1,5 @@
 import { ErrorType, HttpError } from '../adapters/http/client';
+import { SerializedError } from '../core/sharedTypes';
 
 /**
  * Error Handling Utilities
@@ -48,11 +49,36 @@ export function getErrorMessage(error: unknown): string {
  * Serializes error for logging/telemetry.
  *
  * @param error - Unknown error object
- * @returns JSON-serializable error representation
+ * @returns Type-safe JSON-serializable error representation
  */
-export function serializeError(error: unknown): Record<string, unknown> {
+export function serializeError(error: unknown): SerializedError {
   if (error instanceof HttpError) {
-    return error.toJSON();
+    try {
+      const toJson = error.toJSON();
+      return {
+        name: error.name,
+        message: error.message,
+        stack: error.stack,
+        statusCode: error.statusCode,
+        requestId: error.requestId,
+        type: error.type,
+        retryable: error.retryable,
+        headers: error.headers ? (toJson.headers as Record<string, string>) : undefined,
+        responseBody: error.responseBody ? (toJson.responseBody as string) : undefined,
+        cause: error.cause ? serializeError(error.cause) : undefined,
+      };
+    } catch {
+      return {
+        name: error.name,
+        message: error.message,
+        stack: error.stack,
+        statusCode: error.statusCode,
+        requestId: error.requestId,
+        type: error.type,
+        retryable: error.retryable,
+        cause: error.cause ? serializeError(error.cause) : undefined,
+      };
+    }
   }
 
   if (error instanceof Error) {
@@ -64,7 +90,11 @@ export function serializeError(error: unknown): Record<string, unknown> {
     };
   }
 
-  return { error: String(error) };
+  try {
+    return { name: 'UnknownError', message: String(error) };
+  } catch {
+    return { name: 'UnknownError', message: '[unserializable error]' };
+  }
 }
 
 /**

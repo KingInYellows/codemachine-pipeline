@@ -616,6 +616,37 @@ describe('HttpClient', () => {
       }
     });
 
+    it('should redact set-cookie, proxy-authorization, and secret-bearing headers', () => {
+      const error = new HttpError(
+        'Bad Gateway',
+        ErrorType.TRANSIENT,
+        502,
+        {
+          'content-type': 'application/json',
+          'set-cookie': 'session=abc123; HttpOnly; Secure',
+          'proxy-authorization': 'Basic dXNlcjpwYXNz',
+          'x-csrf-token': 'csrf-value-here',
+          'x-custom-secret': 'my-secret-value',
+          'x-request-id': 'req-999',
+          'authorization': 'Bearer tok-redact-me',
+        },
+      );
+
+      const json = error.toJSON();
+      const headers = json.headers as Record<string, string>;
+
+      // These must be redacted
+      expect(headers['set-cookie']).toBe('***REDACTED***');
+      expect(headers['proxy-authorization']).toBe('***REDACTED***');
+      expect(headers['x-csrf-token']).toBe('***REDACTED***');
+      expect(headers['x-custom-secret']).toBe('***REDACTED***');
+      expect(headers['authorization']).toBe('***REDACTED***');
+
+      // These must be preserved
+      expect(headers['content-type']).toBe('application/json');
+      expect(headers['x-request-id']).toBe('req-999');
+    });
+
     it('should sanitize URLs with tokens in query parameters', async () => {
       const client = new HttpClient({
         baseUrl: 'https://api.example.com',
