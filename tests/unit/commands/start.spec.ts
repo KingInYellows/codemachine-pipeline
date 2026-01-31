@@ -1,33 +1,28 @@
-import { expect, test, describe, beforeEach, afterEach } from '@jest/globals';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { execSync } from 'node:child_process';
 
 describe('start command', () => {
-  const testDir = path.join(__dirname, '../../.test-temp-start');
+  const testDir = path.join(__dirname, '../../../.test-temp-start');
   const pipelineDir = path.join(testDir, '.ai-feature-pipeline');
-  const binPath = path.join(__dirname, '../../bin/run.js');
+  const binPath = path.join(__dirname, '../../../bin/run.js');
 
   beforeEach(() => {
-    // Clean up test directory
     if (fs.existsSync(testDir)) {
       fs.rmSync(testDir, { recursive: true, force: true });
     }
     fs.mkdirSync(testDir, { recursive: true });
 
-    // Initialize git repo in test directory
     execSync('git init', { cwd: testDir, stdio: 'pipe' });
     execSync('git config user.email "test@example.com"', { cwd: testDir, stdio: 'pipe' });
     execSync('git config user.name "Test User"', { cwd: testDir, stdio: 'pipe' });
 
-    // Create initial commit (required for some git operations)
     fs.writeFileSync(path.join(testDir, 'README.md'), '# Test Project\n', 'utf-8');
     execSync('git add .', { cwd: testDir, stdio: 'pipe' });
     execSync('git commit -m "Initial commit"', { cwd: testDir, stdio: 'pipe' });
   });
 
   afterEach(() => {
-    // Clean up test directory
     if (fs.existsSync(testDir)) {
       fs.rmSync(testDir, { recursive: true, force: true });
     }
@@ -40,7 +35,7 @@ describe('start command', () => {
         throw new Error('Command should have failed');
       } catch (error: unknown) {
         if (error && typeof error === 'object' && 'status' in error) {
-          expect(error.status).toBe(1); // oclif errors exit with 1 in execSync
+          expect(error.status).toBe(1);
         }
       }
     });
@@ -48,7 +43,6 @@ describe('start command', () => {
     test('--prompt flag is accepted', () => {
       execSync(`node ${binPath} init`, { cwd: testDir, stdio: 'pipe' });
 
-      // Dry-run to avoid full execution
       const output = execSync(`node ${binPath} start --prompt "Test feature" --dry-run`, {
         cwd: testDir,
         encoding: 'utf-8',
@@ -100,7 +94,6 @@ describe('start command', () => {
         });
         expect(true).toBe(false);
       } catch (error: unknown) {
-        // Should fail because file doesn't exist
         expect(error).toBeDefined();
       }
     });
@@ -108,7 +101,6 @@ describe('start command', () => {
     test('--spec flag works with existing file', () => {
       execSync(`node ${binPath} init`, { cwd: testDir, stdio: 'pipe' });
 
-      // Create a spec file
       const specPath = path.join(testDir, 'spec.md');
       fs.writeFileSync(specPath, '# Feature Spec\n\nDescription here.', 'utf-8');
 
@@ -144,7 +136,6 @@ describe('start command', () => {
         });
         expect(true).toBe(false);
       } catch (error: unknown) {
-        // Should fail due to exclusive flags
         expect(error).toBeDefined();
       }
     });
@@ -159,7 +150,6 @@ describe('start command', () => {
         stdio: 'pipe',
       });
 
-      // Check that no feature run directories were created
       const runsDir = path.join(pipelineDir, 'runs');
       if (fs.existsSync(runsDir)) {
         const entries = fs.readdirSync(runsDir);
@@ -178,7 +168,6 @@ describe('start command', () => {
         expect(output).toContain('dry-run');
       } catch (error: unknown) {
         if (error && typeof error === 'object' && 'stderr' in error) {
-          // Command may fail but should show dry-run output
           expect(error.stderr || '').toContain('');
         }
       }
@@ -242,7 +231,7 @@ describe('start command', () => {
         throw new Error('Command should have failed');
       } catch (error: unknown) {
         if (error && typeof error === 'object' && 'status' in error) {
-          expect(error.status).toBe(1); // oclif errors exit with 1 in execSync
+          expect(error.status).toBe(1);
         }
       }
     });
@@ -250,7 +239,6 @@ describe('start command', () => {
     test('returns exit code 0 for successful dry-run', () => {
       execSync(`node ${binPath} init`, { cwd: testDir, stdio: 'pipe' });
 
-      // Should not throw (exit code 0)
       expect(() => {
         execSync(`node ${binPath} start --prompt "Test" --dry-run`, {
           cwd: testDir,
@@ -260,7 +248,6 @@ describe('start command', () => {
     });
 
     test('fails if config not initialized', () => {
-      // Don't run init
       try {
         execSync(`node ${binPath} start --prompt "Test"`, {
           cwd: testDir,
@@ -269,7 +256,7 @@ describe('start command', () => {
         expect(true).toBe(false);
       } catch (error: unknown) {
         if (error && typeof error === 'object' && 'status' in error) {
-          expect(error.status).toBe(1); // Config errors also exit with 1
+          expect(error.status).toBe(1);
         }
       }
     });
@@ -277,13 +264,12 @@ describe('start command', () => {
 
   describe('repository validation', () => {
     test('fails if not in a git repository', () => {
-      const nonGitDir = path.join(__dirname, '../../.test-temp-start-no-git');
+      const nonGitDir = path.join(__dirname, '../../../.test-temp-start-no-git');
       if (fs.existsSync(nonGitDir)) {
         fs.rmSync(nonGitDir, { recursive: true, force: true });
       }
       fs.mkdirSync(nonGitDir, { recursive: true });
 
-      // Create pipeline dir without git
       const nonGitPipelineDir = path.join(nonGitDir, '.ai-feature-pipeline');
       fs.mkdirSync(nonGitPipelineDir, { recursive: true });
 

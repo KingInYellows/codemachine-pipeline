@@ -1,28 +1,24 @@
-import { expect, test, describe, beforeEach, afterEach } from '@jest/globals';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { execSync } from 'node:child_process';
 
 describe('validate command', () => {
-  const testDir = path.join(__dirname, '../../.test-temp-validate');
+  const testDir = path.join(__dirname, '../../../.test-temp-validate');
   const pipelineDir = path.join(testDir, '.ai-feature-pipeline');
-  const binPath = path.join(__dirname, '../../bin/run.js');
+  const binPath = path.join(__dirname, '../../../bin/run.js');
 
   beforeEach(() => {
-    // Clean up test directory
     if (fs.existsSync(testDir)) {
       fs.rmSync(testDir, { recursive: true, force: true });
     }
     fs.mkdirSync(testDir, { recursive: true });
 
-    // Initialize git repo in test directory
     execSync('git init', { cwd: testDir, stdio: 'pipe' });
     execSync('git config user.email "test@example.com"', { cwd: testDir, stdio: 'pipe' });
     execSync('git config user.name "Test User"', { cwd: testDir, stdio: 'pipe' });
   });
 
   afterEach(() => {
-    // Clean up test directory
     if (fs.existsSync(testDir)) {
       fs.rmSync(testDir, { recursive: true, force: true });
     }
@@ -37,7 +33,6 @@ describe('validate command', () => {
           cwd: testDir,
           stdio: 'pipe',
         });
-        // May fail because no feature exists
         expect(true).toBe(false);
       } catch (error: unknown) {
         if (error && typeof error === 'object' && 'status' in error) {
@@ -61,12 +56,10 @@ describe('validate command', () => {
     test('--init flag is accepted', () => {
       execSync(`node ${binPath} init`, { cwd: testDir, stdio: 'pipe' });
 
-      // Create a minimal feature run directory structure
       const featureId = 'FEAT-test123';
       const runDir = path.join(pipelineDir, 'runs', featureId);
       fs.mkdirSync(runDir, { recursive: true });
 
-      // Create minimal manifest
       const manifest = {
         schema_version: '1.0.0',
         feature_id: featureId,
@@ -173,7 +166,6 @@ describe('validate command', () => {
         encoding: 'utf-8',
       });
 
-      // Help should mention the flag
       expect(output).toContain('max-retries');
     });
   });
@@ -258,18 +250,15 @@ describe('validate command', () => {
     });
 
     test('exit code 10 indicates validation failed', () => {
-      // This is documented behavior - validation failures return 10
       const output = execSync(`node ${binPath} validate --help`, {
         cwd: testDir,
         encoding: 'utf-8',
       });
 
-      // Help should document exit codes
       expect(output.toLowerCase()).toContain('validation');
     });
 
     test('exit code 11 indicates retry limit exceeded', () => {
-      // This is documented behavior
       const output = execSync(`node ${binPath} validate --help`, {
         cwd: testDir,
         encoding: 'utf-8',
@@ -283,7 +272,6 @@ describe('validate command', () => {
     test('provides clear error when registry not initialized', () => {
       execSync(`node ${binPath} init`, { cwd: testDir, stdio: 'pipe' });
 
-      // Create a minimal feature run directory without validation registry
       const featureId = 'FEAT-noregistry';
       const runDir = path.join(pipelineDir, 'runs', featureId);
       fs.mkdirSync(runDir, { recursive: true });
@@ -355,7 +343,6 @@ describe('validate command', () => {
 
   describe('strict mode behavior', () => {
     test('validation respects configured retry limits', () => {
-      // This tests the documented behavior
       const output = execSync(`node ${binPath} validate --help`, {
         cwd: testDir,
         encoding: 'utf-8',

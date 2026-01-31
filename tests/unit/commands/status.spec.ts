@@ -1,29 +1,25 @@
-import { expect, test, describe, beforeEach, afterEach } from '@jest/globals';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { execSync } from 'node:child_process';
 
 describe('status command', () => {
-  const testDir = path.join(__dirname, '../../.test-temp-status');
+  const testDir = path.join(__dirname, '../../../.test-temp-status');
   const pipelineDir = path.join(testDir, '.ai-feature-pipeline');
   const configPath = path.join(pipelineDir, 'config.json');
-  const binPath = path.join(__dirname, '../../bin/run.js');
+  const binPath = path.join(__dirname, '../../../bin/run.js');
 
   beforeEach(() => {
-    // Clean up test directory
     if (fs.existsSync(testDir)) {
       fs.rmSync(testDir, { recursive: true, force: true });
     }
     fs.mkdirSync(testDir, { recursive: true });
 
-    // Initialize git repo in test directory
     execSync('git init', { cwd: testDir, stdio: 'pipe' });
     execSync('git config user.email "test@example.com"', { cwd: testDir, stdio: 'pipe' });
     execSync('git config user.name "Test User"', { cwd: testDir, stdio: 'pipe' });
   });
 
   afterEach(() => {
-    // Clean up test directory
     if (fs.existsSync(testDir)) {
       fs.rmSync(testDir, { recursive: true, force: true });
     }
@@ -31,10 +27,8 @@ describe('status command', () => {
 
   describe('basic execution', () => {
     test('runs without error when no feature exists', () => {
-      // Initialize config first
       execSync(`node ${binPath} init`, { cwd: testDir, stdio: 'pipe' });
 
-      // Status should run without error even with no feature
       const output = execSync(`node ${binPath} status`, {
         cwd: testDir,
         encoding: 'utf-8',
@@ -47,7 +41,6 @@ describe('status command', () => {
     test('exits with code 0 when no feature exists', () => {
       execSync(`node ${binPath} init`, { cwd: testDir, stdio: 'pipe' });
 
-      // Should not throw (exit code 0)
       expect(() => {
         execSync(`node ${binPath} status`, { cwd: testDir, stdio: 'pipe' });
       }).not.toThrow();
@@ -78,7 +71,7 @@ describe('status command', () => {
         throw new Error('Command should have failed');
       } catch (error: unknown) {
         if (error && typeof error === 'object' && 'status' in error) {
-          expect(error.status).toBe(1); // oclif errors exit with 1 in execSync
+          expect(error.status).toBe(1);
         }
       }
     });
@@ -95,7 +88,7 @@ describe('status command', () => {
         throw new Error('Command should have failed');
       } catch (error: unknown) {
         if (error && typeof error === 'object' && 'status' in error) {
-          expect(error.status).toBe(1); // oclif errors exit with 1 in execSync
+          expect(error.status).toBe(1);
         }
       }
     });
@@ -110,7 +103,6 @@ describe('status command', () => {
         encoding: 'utf-8',
       });
 
-      // Should be valid JSON
       expect(() => JSON.parse(output)).not.toThrow();
     });
 
@@ -148,7 +140,6 @@ describe('status command', () => {
     test('accepts --verbose flag', () => {
       execSync(`node ${binPath} init`, { cwd: testDir, stdio: 'pipe' });
 
-      // Should not throw
       expect(() => {
         execSync(`node ${binPath} status --verbose`, { cwd: testDir, stdio: 'pipe' });
       }).not.toThrow();
@@ -186,15 +177,12 @@ describe('status command', () => {
 
   describe('no run directory scenario', () => {
     test('handles missing .ai-feature-pipeline directory gracefully', () => {
-      // Don't run init - no pipeline directory exists
       try {
         execSync(`node ${binPath} status`, {
           cwd: testDir,
           stdio: 'pipe',
         });
-        // May succeed with warnings or fail gracefully
       } catch (error: unknown) {
-        // Expected to fail without init
         if (error && typeof error === 'object' && 'status' in error) {
           expect(typeof error.status).toBe('number');
         }
@@ -209,7 +197,6 @@ describe('status command', () => {
         encoding: 'utf-8',
       });
 
-      // Should mention how to create a feature
       expect(output.toLowerCase()).toMatch(/start|run|feature/);
     });
   });
@@ -218,7 +205,6 @@ describe('status command', () => {
     test('returns exit code 0 on success', () => {
       execSync(`node ${binPath} init`, { cwd: testDir, stdio: 'pipe' });
 
-      // Should not throw (exit code 0)
       expect(() => {
         execSync(`node ${binPath} status`, { cwd: testDir, stdio: 'pipe' });
       }).not.toThrow();
@@ -236,7 +222,7 @@ describe('status command', () => {
         throw new Error('Command should have failed');
       } catch (error: unknown) {
         if (error && typeof error === 'object' && 'status' in error) {
-          expect(error.status).toBe(1); // oclif errors exit with 1 in execSync
+          expect(error.status).toBe(1);
         }
       }
     });
@@ -273,14 +259,12 @@ describe('status command', () => {
         encoding: 'utf-8',
       });
 
-      // Notes are prefixed with bullet points
-      expect(output).toContain('•');
+      expect(output).toContain('\u2022');
     });
   });
 
   describe('config validation', () => {
     test('reports config errors in output', () => {
-      // Create invalid config
       fs.mkdirSync(pipelineDir, { recursive: true });
       fs.writeFileSync(configPath, JSON.stringify({ schema_version: 'invalid' }), 'utf-8');
 
