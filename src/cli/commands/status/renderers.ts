@@ -1,0 +1,382 @@
+import type { StatusPayload, StatusFlags } from './types';
+
+export interface RenderCallbacks {
+  log: (msg: string) => void;
+  warn: (msg: string) => void;
+}
+
+export function renderHumanReadable(
+  payload: StatusPayload,
+  flags: StatusFlags,
+  callbacks: RenderCallbacks
+): void {
+  const { log, warn } = callbacks;
+
+  log('');
+  log(`Feature: ${payload.feature_id ?? '(none detected)'}`);
+  if (payload.title) {
+    log(`Title: ${payload.title}`);
+  }
+  if (payload.source) {
+    log(`Source: ${payload.source}`);
+  }
+  log(`Manifest: ${payload.manifest_path}`);
+  log(`Status: ${payload.status}`);
+  log(`Last step: ${payload.last_step ?? 'not recorded'}`);
+
+  if (payload.last_error) {
+    log(
+      `Last error: ${payload.last_error.step} — ${payload.last_error.message} (${payload.last_error.recoverable ? 'recoverable' : 'fatal'})`
+    );
+  } else {
+    log('Last error: none recorded');
+  }
+
+  if (payload.queue) {
+    log(
+      `Queue: pending=${payload.queue.pending_count} completed=${payload.queue.completed_count} failed=${payload.queue.failed_count}`
+    );
+    if (flags.verbose && payload.queue.sqlite_index) {
+      log(`Queue SQLite index: ${payload.queue.sqlite_index.database}`);
+    }
+  } else {
+    log('Queue: manifest data unavailable');
+  }
+
+  if (payload.approvals) {
+    log(
+      `Approvals: pending=${payload.approvals.pending.length} completed=${payload.approvals.completed.length}`
+    );
+
+    // Highlight pending approvals with actionable prompts
+    if (payload.approvals.pending.length > 0) {
+      log('');
+      warn('\u26a0 Pending approvals required:');
+      payload.approvals.pending.forEach((gate) => {
+        warn(
+          `  \u2022 ${gate.toUpperCase()} - Review artifact and run: ai-feature approve ${gate} --signer "<your-email>"`
+        );
+      });
+    }
+
+    // Show completed approvals in verbose mode
+    if (flags.verbose && payload.approvals.completed.length > 0) {
+      log('Completed approvals:');
+      payload.approvals.completed.forEach((gate) => {
+        log(`  \u2022 ${gate.toUpperCase()}`);
+      });
+    }
+  }
+
+  if (payload.context) {
+    if (payload.context.error) {
+      warn(`Context summaries unavailable: ${payload.context.error}`);
+    } else {
+      log(
+        `Context: files=${payload.context.files ?? 0} summaries=${payload.context.summaries ?? 0} total_tokens=${payload.context.total_tokens ?? 0}`
+      );
+      if (payload.context.budget_warnings && payload.context.budget_warnings.length > 0) {
+        warn(`Context budget warnings: ${payload.context.budget_warnings.join(' | ')}`);
+      }
+      if (payload.context.warnings && payload.context.warnings.length > 0) {
+        warn(`Context summarization warnings: ${payload.context.warnings.join(' | ')}`);
+      }
+      if (
+        flags.verbose &&
+        payload.context.summaries_preview &&
+        payload.context.summaries_preview.length > 0
+      ) {
+        log('Context summary preview:');
+        for (const preview of payload.context.summaries_preview) {
+          log(`  - ${preview.file_path} (${preview.chunk_id}): ${preview.summary}`);
+        }
+      }
+    }
+  }
+
+  if (payload.plan) {
+    if (payload.plan.plan_exists) {
+      log(
+        `Plan: ${payload.plan.total_tasks} tasks (${payload.plan.entry_tasks} entry, ${payload.plan.blocked_tasks} blocked)`
+      );
+      if (payload.plan.dag_metadata) {
+        log(
+          `DAG: parallel_paths=${payload.plan.dag_metadata.parallel_paths ?? 'N/A'} depth=${payload.plan.dag_metadata.critical_path_depth ?? 'N/A'}`
+        );
+      }
+      if (flags.verbose && payload.plan.task_type_breakdown) {
+        log('Task types:');
+        for (const [taskType, count] of Object.entries(payload.plan.task_type_breakdown)) {
+          log(`  \u2022 ${taskType}: ${count}`);
+        }
+      }
+      if (flags.verbose && payload.plan.checksum) {
+        log(`Plan checksum: ${payload.plan.checksum.substring(0, 16)}...`);
+      }
+    } else {
+      log('Plan: not generated yet');
+    }
+  }
+
+  if (payload.validation) {
+    const validationParts: string[] = [];
+    if (payload.validation.queue_valid !== undefined) {
+      validationParts.push(`queue=${payload.validation.queue_valid ? '\u2713' : '\u2717'}`);
+    }
+    if (payload.validation.plan_valid !== undefined) {
+      validationParts.push(`plan=${payload.validation.plan_valid ? '\u2713' : '\u2717'}`);
+    }
+    if (validationParts.length > 0) {
+      log(`Validation: ${validationParts.join(' ')}`);
+    }
+    if (
+      payload.validation.integrity_warnings &&
+      payload.validation.integrity_warnings.length > 0
+    ) {
+      warn('Integrity warnings:');
+      payload.validation.integrity_warnings.forEach((warning) => {
+        warn(`  \u2022 ${warning}`);
+      });
+    }
+  }
+
+  if (payload.traceability) {
+    log(
+      `Traceability: ${payload.traceability.total_links} links (${payload.traceability.prd_goals_mapped} PRD goals \u2192 ${payload.traceability.spec_requirements_mapped} spec requirements \u2192 ${payload.traceability.execution_tasks_mapped} tasks)`
+    );
+    log(`Last updated: ${payload.traceability.last_updated}`);
+    if (payload.traceability.outstanding_gaps > 0) {
+      warn(`Outstanding gaps: ${payload.traceability.outstanding_gaps}`);
+    } else {
+      log('Outstanding gaps: None');
+    }
+    if (flags.verbose) {
+      log(`Trace file: ${payload.traceability.trace_path}`);
+    }
+  }
+
+  if (payload.branch_protection) {
+    const bp = payload.branch_protection;
+    log('');
+    log('Branch Protection:');
+    log(`  Protected: ${bp.protected ? 'Yes' : 'No'}`);
+    log(`  Compliant: ${bp.compliant ? 'Yes' : 'No'}`);
+
+    if (bp.blockers_count > 0) {
+      warn(`  Blockers (${bp.blockers_count}):`);
+      bp.blockers.forEach((blocker) => {
+        warn(`    \u2022 ${blocker}`);
+      });
+    }
+
+    if (bp.missing_checks.length > 0) {
+      log(`  Missing Checks:`);
+      bp.missing_checks.forEach((check) => {
+        log(`    - ${check}`);
+      });
+    }
+
+    log(
+      `  Reviews: ${bp.reviews_status.completed}/${bp.reviews_status.required} (${bp.reviews_status.satisfied ? 'satisfied' : 'not satisfied'})`
+    );
+    log(`  Branch Up-to-date: ${bp.branch_status.up_to_date ? 'Yes' : 'No'}`);
+    log(`  Auto-merge Allowed: ${bp.auto_merge.allowed ? 'Yes' : 'No'}`);
+
+    if (bp.validation_mismatch) {
+      const { missing_in_registry, extra_in_registry, recommendations } = bp.validation_mismatch;
+      if (missing_in_registry.length === 0 && extra_in_registry.length === 0) {
+        log('  Validation Alignment: ExecutionTask validations cover all required checks');
+      } else {
+        log('  Validation Alignment:');
+        if (missing_in_registry.length > 0) {
+          warn(
+            `    Missing ExecutionTask validations for: ${missing_in_registry.join(', ')}`
+          );
+        }
+        if (extra_in_registry.length > 0) {
+          log(
+            `    Extra validations not required by branch protection: ${extra_in_registry.join(', ')}`
+          );
+        }
+        if (flags.verbose && recommendations.length > 0) {
+          log('    Recommendations:');
+          recommendations.forEach((rec) => log(`      \u2022 ${rec}`));
+        }
+      }
+    }
+
+    if (flags.verbose && bp.evaluated_at) {
+      log(`  Last Evaluated: ${bp.evaluated_at}`);
+    }
+  }
+
+  // Rate limits section (API ledger block per architecture)
+  if (payload.rate_limits) {
+    const rl = payload.rate_limits;
+    log('');
+    log('\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500');
+    log('API Ledger (Rate Limits)');
+    log('\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500');
+
+    if (Object.keys(rl.providers).length === 0) {
+      log('No rate limit data recorded yet.');
+    } else {
+      for (const [providerName, providerData] of Object.entries(rl.providers)) {
+        log(`\n${providerName}:`);
+        log(`  Remaining: ${providerData.remaining}`);
+        log(`  Reset: ${providerData.reset_at}`);
+        log(`  In Cooldown: ${providerData.in_cooldown ? 'Yes' : 'No'}`);
+
+        if (providerData.manual_ack_required) {
+          warn(
+            `  \u26a0 Manual Acknowledgement Required (${providerData.recent_hit_count} consecutive hits)`
+          );
+        }
+
+        if (flags.verbose) {
+          log(`  Recent Hits: ${providerData.recent_hit_count}`);
+        }
+      }
+    }
+
+    if (rl.warnings.length > 0) {
+      log('\nRate Limit Warnings:');
+      rl.warnings.forEach((warning) => {
+        warn(`  \u26a0 ${warning}`);
+      });
+    }
+
+    log('\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500');
+  }
+
+  // Integrations section
+  if (payload.integrations) {
+    const integrations = payload.integrations;
+    log('');
+    log('Integration Status:');
+
+    if (integrations.github) {
+      log('  GitHub:');
+      log(`    Enabled: ${integrations.github.enabled ? 'Yes' : 'No'}`);
+
+      if (integrations.github.rate_limit) {
+        log(`    Rate Limit: ${integrations.github.rate_limit.remaining} remaining`);
+        if (integrations.github.rate_limit.in_cooldown) {
+          warn(`    \u26a0 In cooldown until ${integrations.github.rate_limit.reset_at}`);
+        }
+      }
+
+      if (integrations.github.pr_status) {
+        log(
+          `    PR #${integrations.github.pr_status.number}: ${integrations.github.pr_status.state}`
+        );
+        log(
+          `    Mergeable: ${integrations.github.pr_status.mergeable === null ? 'Unknown' : integrations.github.pr_status.mergeable ? 'Yes' : 'No'}`
+        );
+        if (flags.verbose && integrations.github.pr_status.url) {
+          log(`    URL: ${integrations.github.pr_status.url}`);
+        }
+      }
+
+      if (integrations.github.warnings.length > 0) {
+        integrations.github.warnings.forEach((warning) => {
+          warn(`    \u26a0 ${warning}`);
+        });
+      }
+    }
+
+    if (integrations.linear) {
+      log('  Linear:');
+      log(`    Enabled: ${integrations.linear.enabled ? 'Yes' : 'No'}`);
+
+      if (integrations.linear.rate_limit) {
+        log(`    Rate Limit: ${integrations.linear.rate_limit.remaining} remaining`);
+        if (integrations.linear.rate_limit.in_cooldown) {
+          warn(`    \u26a0 In cooldown until ${integrations.linear.rate_limit.reset_at}`);
+        }
+      }
+
+      if (integrations.linear.issue_status) {
+        log(
+          `    Issue: ${integrations.linear.issue_status.identifier} (${integrations.linear.issue_status.state})`
+        );
+        if (flags.verbose && integrations.linear.issue_status.url) {
+          log(`    URL: ${integrations.linear.issue_status.url}`);
+        }
+      }
+
+      if (integrations.linear.warnings.length > 0) {
+        integrations.linear.warnings.forEach((warning) => {
+          warn(`    \u26a0 ${warning}`);
+        });
+      }
+    }
+  }
+
+  // Research section
+  if (payload.research) {
+    const research = payload.research;
+    log('');
+    log('Research Tasks:');
+    log(`  Total: ${research.total_tasks}`);
+    log(`  Pending: ${research.pending_tasks}, In Progress: ${research.in_progress_tasks}`);
+    log(`  Completed: ${research.completed_tasks}, Failed: ${research.failed_tasks}`);
+    log(`  Cached: ${research.cached_tasks}, Stale: ${research.stale_tasks}`);
+    log(`  Research Directory: ${research.research_dir}`);
+    log(`  Snapshot: ${research.tasks_file}`);
+
+    if (research.warnings.length > 0) {
+      research.warnings.forEach((warning) => {
+        warn(`  \u26a0 ${warning}`);
+      });
+    }
+  }
+
+  if (payload.manifest_error) {
+    warn(`Manifest read warning: ${payload.manifest_error}`);
+  }
+
+  if (flags['show-costs']) {
+    if (payload.telemetry?.costs_file) {
+      log(`Telemetry (costs): ${payload.telemetry.costs_file}`);
+    } else {
+      log('Telemetry (costs): not recorded in manifest');
+    }
+  }
+
+  if (flags.verbose) {
+    if (payload.timestamps) {
+      const start = payload.timestamps.started_at
+        ? ` started=${payload.timestamps.started_at}`
+        : '';
+      const complete = payload.timestamps.completed_at
+        ? ` completed=${payload.timestamps.completed_at}`
+        : '';
+      log(`Timestamps: created=${payload.timestamps.created_at}${start}${complete}`);
+    }
+
+    if (payload.config_errors.length > 0) {
+      warn(`Config validation issues: ${payload.config_errors.join(' | ')}`);
+    }
+
+    if (payload.config_warnings.length > 0) {
+      log(`Config warnings: ${payload.config_warnings.join(' | ')}`);
+    }
+
+    log(`Manifest schema: ${payload.manifest_schema_doc}`);
+    log(`Manifest template: ${payload.manifest_template}`);
+  }
+
+  log('');
+  for (const note of payload.notes) {
+    log(`\u2022 ${note}`);
+  }
+  log('');
+}
+
+export function truncateSummary(summary: string, maxLength = 240): string {
+  if (summary.length <= maxLength) {
+    return summary;
+  }
+  return `${summary.slice(0, maxLength - 1)}\u2026`;
+}
