@@ -54,5 +54,15 @@ oclif.manifest.json
 .ai-feature-pipeline/logs/
 ISSUE_RESOLUTION_PLAN.md
 
-.claude/
+# Claude Code / Claude Flow - config (committed)
+# .mcp.json, .npmrc, claude-flow.config.json — tracked
+# .claude/settings.json — tracked (hooks, statusline, permissions)
+.claude/*
+!.claude/settings.json
+
+# Claude Flow - runtime state (ignored)
 .claude-flow/
+.swarm/
+vectors.db
+tmp/
+my-ruvector/
