@@ -19,7 +19,12 @@ import {
   appendOperationsBatch,
 } from './queueOperationsLog.js';
 import { compact } from './queueCompactionEngine.js';
-import type { QueueIndexState, QueueOperation, ExecutionTaskData } from './queueTypes.js';
+import {
+  QUEUE_FILE, QUEUE_MANIFEST_FILE, QUEUE_SNAPSHOT_FILE,
+  buildDependencyGraph, toExecutionTask, toExecutionTaskData,
+  type QueueIndexState, type QueueOperation,
+  type QueueManifest, type QueueSnapshot, type QueueOperationResult,
+} from './queueTypes.js';
 
 /**
  * Queue Store
@@ -32,79 +37,9 @@ import type { QueueIndexState, QueueOperation, ExecutionTaskData } from './queue
 
 // --- Types ---
 
-/** Queue manifest metadata */
-export interface QueueManifest {
-  /** Schema version */
-  schema_version: string;
-  /** Feature ID */
-  feature_id: string;
-  /** Total tasks in queue */
-  total_tasks: number;
-  /** Pending tasks */
-  pending_count: number;
-  /** Running tasks */
-  running_count: number;
-  /** Completed tasks */
-  completed_count: number;
-  /** Failed tasks */
-  failed_count: number;
-  /** Skipped tasks */
-  skipped_count: number;
-  /** Cancelled tasks */
-  cancelled_count: number;
-  /** SHA-256 checksum of queue.jsonl */
-  queue_checksum: string;
-  /** Timestamp of last update */
-  updated_at: string;
-  /** Timestamp of last snapshot */
-  last_snapshot_at?: string;
-}
-
-/** Queue snapshot for fast recovery */
-export interface QueueSnapshot {
-  /** Schema version */
-  schema_version: string;
-  /** Feature ID */
-  feature_id: string;
-  /** All tasks indexed by task_id */
-  tasks: Record<string, ExecutionTask>;
-  /** Task dependency graph (task_id -> dependent task_ids) */
-  dependency_graph: Record<string, string[]>;
-  /** Snapshot timestamp */
-  timestamp: string;
-  /** Checksum of snapshot data */
-  checksum: string;
-}
-
-/** Queue operation result */
-export interface QueueOperationResult {
-  success: boolean;
-  message: string;
-  tasksAffected?: number;
-  errors?: string[];
-}
-
-/** Queue validation result */
-export interface QueueValidationResult {
-  valid: boolean;
-  errors: Array<{
-    taskId: string;
-    line: number;
-    message: string;
-  }>;
-  warnings: Array<{
-    taskId: string;
-    message: string;
-  }>;
-  totalTasks: number;
-  corruptedTasks: number;
-}
-
-// --- Constants ---
-
-const QUEUE_FILE = 'queue.jsonl';
-const QUEUE_MANIFEST_FILE = 'queue_manifest.json';
-const QUEUE_SNAPSHOT_FILE = 'queue_snapshot.json';
+// Re-export types and pure helpers from queueTypes for backward compatibility
+export type { QueueManifest, QueueSnapshot, QueueOperationResult, QueueValidationResult } from './queueTypes.js';
+export { buildDependencyGraph, toExecutionTask, toExecutionTaskData } from './queueTypes.js';
 
 // Module-level logger for queue store operations
 const logger: StructuredLogger = createLogger({
@@ -178,29 +113,6 @@ export async function getV2IndexCache(runDir: string): Promise<V2IndexCache> {
 
   v2IndexCache.set(runDir, cache);
   return cache;
-}
-
-/** Build dependency graph from tasks in index state. */
-export function buildDependencyGraph(state: QueueIndexState): Record<string, string[]> {
-  const graph: Record<string, string[]> = {};
-
-  for (const [taskId, task] of state.tasks) {
-    if (task.dependency_ids && task.dependency_ids.length > 0) {
-      graph[taskId] = [...task.dependency_ids];
-    }
-  }
-
-  return graph;
-}
-
-/** Convert ExecutionTaskData to ExecutionTask (readonly). */
-export function toExecutionTask(data: ExecutionTaskData): ExecutionTask {
-  return data as ExecutionTask;
-}
-
-/** Convert ExecutionTask to ExecutionTaskData (mutable). */
-export function toExecutionTaskData(task: ExecutionTask): ExecutionTaskData {
-  return { ...task } as ExecutionTaskData;
 }
 
 /** Invalidate V2 cache for a run directory. Forces re-hydration on next access. */

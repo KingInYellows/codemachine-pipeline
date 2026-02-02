@@ -12,6 +12,7 @@ import type {
   MergePullRequestParams,
 } from '../adapters/github/GitHubAdapter';
 import {
+  DEPLOYMENT_SCHEMA_VERSION,
   DeploymentStrategy,
   type Blocker,
   type DeploymentContext,
@@ -19,12 +20,6 @@ import {
   type DeploymentOptions,
   type MergeReadiness,
 } from './deploymentTriggerTypes';
-
-// ============================================================================
-// Constants
-// ============================================================================
-
-const SCHEMA_VERSION = '1.0.0';
 
 // ============================================================================
 // Execution Handlers
@@ -83,7 +78,7 @@ export async function executeAutoMerge(
     });
 
     return {
-      schema_version: SCHEMA_VERSION,
+      schema_version: DEPLOYMENT_SCHEMA_VERSION,
       feature_id: featureId,
       timestamp: new Date().toISOString(),
       strategy: DeploymentStrategy.AUTO_MERGE,
@@ -102,7 +97,7 @@ export async function executeAutoMerge(
     });
 
     return {
-      schema_version: SCHEMA_VERSION,
+      schema_version: DEPLOYMENT_SCHEMA_VERSION,
       feature_id: featureId,
       timestamp: new Date().toISOString(),
       strategy: DeploymentStrategy.AUTO_MERGE,
@@ -162,7 +157,7 @@ export async function executeManualMerge(
     });
 
     return {
-      schema_version: SCHEMA_VERSION,
+      schema_version: DEPLOYMENT_SCHEMA_VERSION,
       feature_id: featureId,
       timestamp: new Date().toISOString(),
       strategy: DeploymentStrategy.MANUAL_MERGE,
@@ -183,7 +178,7 @@ export async function executeManualMerge(
     });
 
     return {
-      schema_version: SCHEMA_VERSION,
+      schema_version: DEPLOYMENT_SCHEMA_VERSION,
       feature_id: featureId,
       timestamp: new Date().toISOString(),
       strategy: DeploymentStrategy.MANUAL_MERGE,
@@ -229,7 +224,7 @@ export async function executeWorkflowDispatch(
   if (!workflowId) {
     logger.error('Workflow dispatch requested but no workflow_id configured');
     return {
-      schema_version: SCHEMA_VERSION,
+      schema_version: DEPLOYMENT_SCHEMA_VERSION,
       feature_id: featureId,
       timestamp: new Date().toISOString(),
       strategy: DeploymentStrategy.WORKFLOW_DISPATCH,
@@ -267,7 +262,7 @@ export async function executeWorkflowDispatch(
     });
 
     return {
-      schema_version: SCHEMA_VERSION,
+      schema_version: DEPLOYMENT_SCHEMA_VERSION,
       feature_id: featureId,
       timestamp: new Date().toISOString(),
       strategy: DeploymentStrategy.WORKFLOW_DISPATCH,
@@ -286,7 +281,7 @@ export async function executeWorkflowDispatch(
     });
 
     return {
-      schema_version: SCHEMA_VERSION,
+      schema_version: DEPLOYMENT_SCHEMA_VERSION,
       feature_id: featureId,
       timestamp: new Date().toISOString(),
       strategy: DeploymentStrategy.WORKFLOW_DISPATCH,
@@ -486,7 +481,7 @@ export function handleBlocked(context: DeploymentContext, readiness: MergeReadin
   });
 
   return {
-    schema_version: SCHEMA_VERSION,
+    schema_version: DEPLOYMENT_SCHEMA_VERSION,
     feature_id: featureId,
     timestamp: new Date().toISOString(),
     strategy: DeploymentStrategy.BLOCKED,

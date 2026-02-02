@@ -27,14 +27,9 @@ import { appendOperation } from './queueOperationsLog.js';
 import { shouldCompact, compactWithState } from './queueCompactionEngine.js';
 import type { QueueOperation, ExecutionTaskData } from './queueTypes.js';
 
-// Internal helpers from queueStore (exported for companion modules)
-import {
-  getV2IndexCache,
-  buildDependencyGraph,
-  toExecutionTask,
-  loadQueue,
-} from './queueStore.js';
-import type { QueueOperationResult } from './queueStore.js';
+import { buildDependencyGraph, toExecutionTask, type QueueOperationResult } from './queueTypes.js';
+// Stateful helpers that remain in queueStore
+import { getV2IndexCache, loadQueue } from './queueStore.js';
 
 // ============================================================================
 // Queue Task Management

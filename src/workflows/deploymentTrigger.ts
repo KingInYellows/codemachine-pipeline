@@ -32,6 +32,22 @@ import type { LoggerInterface } from '../adapters/http/client';
 import { readManifest, type RunManifest } from '../persistence/runDirectoryManager';
 import { computeContentHash } from './approvalRegistry';
 
+// Import from companion modules (also re-exported for backward compatibility)
+import {
+  DEPLOYMENT_SCHEMA_VERSION,
+  DeploymentStrategy,
+  DeploymentOutcomeSchema,
+  DeploymentHistorySchema,
+  type WorkflowDispatchConfig,
+  type DeploymentConfig,
+  type ApprovalState,
+  type DeploymentContext,
+  type DeploymentOutcome,
+  type DeploymentHistory,
+  type DeploymentOptions,
+  type MergeReadiness,
+} from './deploymentTriggerTypes';
+
 // Re-export all types for backward compatibility
 export type {
   Blocker,
@@ -45,23 +61,10 @@ export type {
   DeploymentOptions,
 } from './deploymentTriggerTypes';
 export {
+  DEPLOYMENT_SCHEMA_VERSION,
   DeploymentStrategy,
   DeploymentOutcomeSchema,
   DeploymentHistorySchema,
-} from './deploymentTriggerTypes';
-
-import {
-  DeploymentStrategy,
-  DeploymentOutcomeSchema,
-  DeploymentHistorySchema,
-  type WorkflowDispatchConfig,
-  type DeploymentConfig,
-  type ApprovalState,
-  type DeploymentContext,
-  type DeploymentOutcome,
-  type DeploymentHistory,
-  type DeploymentOptions,
-  type MergeReadiness,
 } from './deploymentTriggerTypes';
 
 import {
@@ -79,7 +82,6 @@ export { assessMergeReadiness } from './deploymentTriggerExecution';
 // Constants
 // ============================================================================
 
-const SCHEMA_VERSION = '1.0.0';
 const DEPLOYMENT_FILE = 'deployment.json';
 const APPROVALS_FILE = path.join('approvals', 'approvals.json');
 
@@ -356,7 +358,7 @@ export async function persistDeploymentOutcome(
   } catch {
     // deployment.json doesn't exist or is invalid - create new
     history = {
-      schema_version: SCHEMA_VERSION,
+      schema_version: DEPLOYMENT_SCHEMA_VERSION,
       feature_id: outcome.feature_id,
       outcomes: [],
       last_updated: new Date().toISOString(),
@@ -432,7 +434,7 @@ export async function triggerDeployment(
     if (options?.dry_run) {
       logger.info('Dry run mode - skipping execution', { strategy });
       return {
-        schema_version: SCHEMA_VERSION,
+        schema_version: DEPLOYMENT_SCHEMA_VERSION,
         feature_id: featureId,
         timestamp: new Date().toISOString(),
         strategy,
@@ -489,7 +491,7 @@ export async function triggerDeployment(
 
     // Create failure outcome
     const outcome: DeploymentOutcome = {
-      schema_version: SCHEMA_VERSION,
+      schema_version: DEPLOYMENT_SCHEMA_VERSION,
       feature_id: featureId,
       timestamp: new Date().toISOString(),
       strategy: DeploymentStrategy.BLOCKED,

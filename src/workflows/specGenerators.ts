@@ -122,7 +122,7 @@ export function generateTestPlan(acceptanceCriteria: string[], constraints: stri
 }
 
 /**
- * Generate rollout plan based on risks and constraints
+ * Generate rollout plan based on risk assessments (risk severity)
  */
 export function generateRolloutPlan(risks: RiskAssessment[]): RolloutPlan {
   const hasHighRisks = risks.some((r) => r.severity === 'high' || r.severity === 'critical');

@@ -13,6 +13,86 @@
 import type { ExecutionTask } from '../core/models/ExecutionTask';
 
 // ============================================================================
+// Queue Store Types (shared across companion modules)
+// ============================================================================
+
+/** Queue manifest metadata */
+export interface QueueManifest {
+  schema_version: string;
+  feature_id: string;
+  total_tasks: number;
+  pending_count: number;
+  running_count: number;
+  completed_count: number;
+  failed_count: number;
+  skipped_count: number;
+  cancelled_count: number;
+  queue_checksum: string;
+  updated_at: string;
+  last_snapshot_at?: string;
+}
+
+/** Queue snapshot for fast recovery */
+export interface QueueSnapshot {
+  schema_version: string;
+  feature_id: string;
+  tasks: Record<string, ExecutionTask>;
+  dependency_graph: Record<string, string[]>;
+  timestamp: string;
+  checksum: string;
+}
+
+/** Queue operation result */
+export interface QueueOperationResult {
+  success: boolean;
+  message: string;
+  tasksAffected?: number;
+  errors?: string[];
+}
+
+/** Queue validation result */
+export interface QueueValidationResult {
+  valid: boolean;
+  errors: Array<{ taskId: string; line: number; message: string }>;
+  warnings: Array<{ taskId: string; message: string }>;
+  totalTasks: number;
+  corruptedTasks: number;
+}
+
+// ============================================================================
+// Pure Helpers (shared across companion modules)
+// ============================================================================
+
+/** Build dependency graph from tasks in index state. */
+export function buildDependencyGraph(state: QueueIndexState): Record<string, string[]> {
+  const graph: Record<string, string[]> = {};
+  for (const [taskId, task] of state.tasks) {
+    if (task.dependency_ids && task.dependency_ids.length > 0) {
+      graph[taskId] = [...task.dependency_ids];
+    }
+  }
+  return graph;
+}
+
+/** Convert ExecutionTaskData to ExecutionTask (readonly). */
+export function toExecutionTask(data: ExecutionTaskData): ExecutionTask {
+  return data as ExecutionTask;
+}
+
+/** Convert ExecutionTask to ExecutionTaskData (mutable). */
+export function toExecutionTaskData(task: ExecutionTask): ExecutionTaskData {
+  return { ...task } as ExecutionTaskData;
+}
+
+// ============================================================================
+// Constants
+// ============================================================================
+
+export const QUEUE_FILE = 'queue.jsonl';
+export const QUEUE_MANIFEST_FILE = 'queue_manifest.json';
+export const QUEUE_SNAPSHOT_FILE = 'queue_snapshot.json';
+
+// ============================================================================
 // Core Data Type (Task without readonly)
 // ============================================================================
 

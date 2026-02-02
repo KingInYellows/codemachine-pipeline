@@ -17,14 +17,7 @@ import * as path from 'node:path';
 import { parseExecutionTask } from '../core/models/ExecutionTask';
 import { readManifest } from '../persistence/runDirectoryManager';
 
-import type { QueueManifest, QueueValidationResult } from './queueStore.js';
-
-// ============================================================================
-// Internal Helpers
-// ============================================================================
-
-const QUEUE_FILE = 'queue.jsonl';
-const QUEUE_MANIFEST_FILE = 'queue_manifest.json';
+import { QUEUE_FILE, QUEUE_MANIFEST_FILE, type QueueManifest, type QueueValidationResult } from './queueTypes.js';
 
 /**
  * Compute SHA-256 checksum of empty content.

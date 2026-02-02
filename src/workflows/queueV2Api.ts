@@ -22,12 +22,9 @@ import {
 import { compact } from './queueCompactionEngine.js';
 import type { QueueIndexState, ExecutionTaskData, QueueCounts } from './queueTypes.js';
 
-// Internal helpers from queueStore (exported for companion modules)
-import {
-  getV2IndexCache,
-  buildDependencyGraph,
-  toExecutionTask,
-} from './queueStore.js';
+import { buildDependencyGraph, toExecutionTask } from './queueTypes.js';
+// Stateful helpers that remain in queueStore
+import { getV2IndexCache } from './queueStore.js';
 
 // ============================================================================
 // V2 Queue API (Direct Access)
