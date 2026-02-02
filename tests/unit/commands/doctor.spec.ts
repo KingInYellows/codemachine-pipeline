@@ -1,13 +1,12 @@
-import { expect, test, describe, beforeEach, afterEach } from '@jest/globals';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { execSync } from 'node:child_process';
 
 describe('doctor command', () => {
-  const testDir = path.join(__dirname, '../../.test-temp-doctor');
+  const testDir = path.join(__dirname, '../../../.test-temp-doctor');
   const pipelineDir = path.join(testDir, '.ai-feature-pipeline');
   const configPath = path.join(pipelineDir, 'config.json');
-  const binPath = path.join(__dirname, '../../bin/run.js');
+  const binPath = path.join(__dirname, '../../../bin/run.js');
 
   beforeEach(() => {
     // Clean up test directory

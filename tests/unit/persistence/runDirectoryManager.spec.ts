@@ -1,4 +1,3 @@
-import { describe, it, expect, beforeEach, afterEach } from '@jest/globals';
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 import * as os from 'node:os';
@@ -24,7 +23,7 @@ import {
   runDirectoryExists,
   listRunDirectories,
   type CreateRunDirectoryOptions,
-} from '../../src/persistence/runDirectoryManager';
+} from '../../../src/persistence/runDirectoryManager';
 
 /**
  * Unit tests for Run Directory Manager
@@ -43,13 +42,11 @@ describe('Run Directory Manager', () => {
   let testFeatureId: string;
 
   beforeEach(async () => {
-    // Create temporary test directory
     testBaseDir = await fs.mkdtemp(path.join(os.tmpdir(), 'ai-feature-test-'));
     testFeatureId = `01JFTEST${Date.now()}`;
   });
 
   afterEach(async () => {
-    // Clean up test directory
     try {
       await fs.rm(testBaseDir, { recursive: true, force: true });
     } catch {
@@ -68,11 +65,9 @@ describe('Run Directory Manager', () => {
 
       const runDir = await createRunDirectory(testBaseDir, testFeatureId, options);
 
-      // Verify directory exists
       const stats = await fs.stat(runDir);
       expect(stats.isDirectory()).toBe(true);
 
-      // Verify subdirectories
       const subdirs = ['artifacts', 'logs', 'queue', 'telemetry', 'approvals', 'context'];
       for (const subdir of subdirs) {
         const subdirPath = path.join(runDir, subdir);
@@ -80,7 +75,6 @@ describe('Run Directory Manager', () => {
         expect(subdirStats.isDirectory()).toBe(true);
       }
 
-      // Verify manifest exists
       const manifestPath = path.join(runDir, 'manifest.json');
       const manifestStats = await fs.stat(manifestPath);
       expect(manifestStats.isFile()).toBe(true);
@@ -253,7 +247,7 @@ describe('Run Directory Manager', () => {
 
     it('should not duplicate pending approvals', async () => {
       await markApprovalRequired(runDir, 'prd');
-      await markApprovalRequired(runDir, 'prd'); // Duplicate
+      await markApprovalRequired(runDir, 'prd');
 
       const manifest = await readManifest(runDir);
       expect(manifest.approvals.pending.filter((a) => a === 'prd').length).toBe(1);
@@ -322,7 +316,6 @@ describe('Run Directory Manager', () => {
     it('should handle concurrent lock attempts', async () => {
       const results: boolean[] = [];
 
-      // First process acquires lock
       const process1 = (async () => {
         await acquireLock(runDir);
         await new Promise((resolve) => setTimeout(resolve, 200));
@@ -330,10 +323,8 @@ describe('Run Directory Manager', () => {
         results.push(true);
       })();
 
-      // Wait a bit to ensure process1 acquires first
       await new Promise((resolve) => setTimeout(resolve, 50));
 
-      // Second process attempts to acquire
       const process2 = (async () => {
         try {
           await acquireLock(runDir, { timeout: 1000 });
@@ -346,7 +337,6 @@ describe('Run Directory Manager', () => {
 
       await Promise.all([process1, process2]);
 
-      // First should succeed, second should eventually succeed after first releases
       expect(results).toEqual([true, true]);
     });
   });
@@ -362,7 +352,6 @@ describe('Run Directory Manager', () => {
     });
 
     it('should handle concurrent updates without corruption', async () => {
-      // Simulate concurrent updates from multiple processes
       const updates = Array.from({ length: 10 }, (_, i) =>
         updateManifest(runDir, {
           metadata: { [`update_${i}`]: true },
@@ -373,17 +362,13 @@ describe('Run Directory Manager', () => {
 
       const manifest = await readManifest(runDir);
 
-      // Manifest should be valid JSON
       expect(manifest.schema_version).toBe('1.0.0');
 
-      // At least some updates should have succeeded
-      // (Due to locking, updates are serialized, so all should succeed)
       const metadataKeys = Object.keys(manifest.metadata || {});
       expect(metadataKeys.length).toBeGreaterThan(0);
     });
 
     it('should maintain manifest integrity during parallel writes', async () => {
-      // Multiple operations that modify different fields
       await Promise.all([
         setLastStep(runDir, 'step_1'),
         markApprovalRequired(runDir, 'approval_1'),
@@ -392,11 +377,9 @@ describe('Run Directory Manager', () => {
 
       const manifest = await readManifest(runDir);
 
-      // All updates should be present (though order is non-deterministic)
       expect(manifest.schema_version).toBe('1.0.0');
       expect(manifest.feature_id).toBe(testFeatureId);
 
-      // Verify JSON is still valid and parseable
       const manifestJson = JSON.stringify(manifest);
       expect(() => JSON.parse(manifestJson)).not.toThrow();
     });
@@ -436,7 +419,6 @@ describe('Run Directory Manager', () => {
     });
 
     it('should generate hash manifest for artifacts', async () => {
-      // Create some test artifacts
       const prdPath = path.join(runDir, 'artifacts', 'prd.md');
       const specPath = path.join(runDir, 'artifacts', 'spec.md');
 
@@ -454,21 +436,17 @@ describe('Run Directory Manager', () => {
     });
 
     it('should verify run directory integrity', async () => {
-      // Create artifacts
       const prdPath = path.join(runDir, 'artifacts', 'prd.md');
       await fs.writeFile(prdPath, '# Original Content', 'utf-8');
 
       await generateHashManifest(runDir, ['artifacts/prd.md']);
 
-      // Verify integrity - should pass
       let result = await verifyRunDirectoryIntegrity(runDir);
       expect(result.valid).toBe(true);
       expect(result.passed).toContain(path.join(runDir, 'artifacts', 'prd.md'));
 
-      // Modify file
       await fs.writeFile(prdPath, '# Modified Content', 'utf-8');
 
-      // Verify integrity - should fail
       result = await verifyRunDirectoryIntegrity(runDir);
       expect(result.valid).toBe(false);
       expect(result.failed.length).toBeGreaterThan(0);
@@ -506,7 +484,7 @@ describe('Run Directory Manager', () => {
     it('should check cleanup eligibility based on age', async () => {
       const hook = {
         eligibility: {
-          min_age_days: 0, // Eligible immediately
+          min_age_days: 0,
           required_status: ['completed' as const],
         },
         actions: {
@@ -542,7 +520,7 @@ describe('Run Directory Manager', () => {
     it('should reject cleanup if too recent', async () => {
       const hook = {
         eligibility: {
-          min_age_days: 365, // One year
+          min_age_days: 365,
           required_status: ['completed' as const],
         },
         actions: {

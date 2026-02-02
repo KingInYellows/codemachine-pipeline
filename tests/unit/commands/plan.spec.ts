@@ -1,27 +1,23 @@
-import { expect, test, describe, beforeEach, afterEach } from '@jest/globals';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { execSync } from 'node:child_process';
 
 describe('plan command', () => {
-  const testDir = path.join(__dirname, '../../.test-temp-plan');
-  const binPath = path.join(__dirname, '../../bin/run.js');
+  const testDir = path.join(__dirname, '../../../.test-temp-plan');
+  const binPath = path.join(__dirname, '../../../bin/run.js');
 
   beforeEach(() => {
-    // Clean up test directory
     if (fs.existsSync(testDir)) {
       fs.rmSync(testDir, { recursive: true, force: true });
     }
     fs.mkdirSync(testDir, { recursive: true });
 
-    // Initialize git repo in test directory
     execSync('git init', { cwd: testDir, stdio: 'pipe' });
     execSync('git config user.email "test@example.com"', { cwd: testDir, stdio: 'pipe' });
     execSync('git config user.name "Test User"', { cwd: testDir, stdio: 'pipe' });
   });
 
   afterEach(() => {
-    // Clean up test directory
     if (fs.existsSync(testDir)) {
       fs.rmSync(testDir, { recursive: true, force: true });
     }
@@ -83,7 +79,7 @@ describe('plan command', () => {
         expect(true).toBe(false);
       } catch (error: unknown) {
         if (error && typeof error === 'object' && 'status' in error) {
-          expect(error.status).toBe(1); // oclif errors exit with 1
+          expect(error.status).toBe(1);
         }
       }
     });
@@ -99,7 +95,7 @@ describe('plan command', () => {
         expect(true).toBe(false);
       } catch (error: unknown) {
         if (error && typeof error === 'object' && 'status' in error) {
-          expect(error.status).toBe(1); // oclif errors exit with 1
+          expect(error.status).toBe(1);
         }
       }
     });
@@ -181,7 +177,6 @@ describe('plan command', () => {
       });
 
       const payload = JSON.parse(output);
-      // plan_diff may be undefined if no feature exists, but the field should be handled
       expect(payload).toHaveProperty('notes');
     });
   });
@@ -195,7 +190,6 @@ describe('plan command', () => {
         encoding: 'utf-8',
       });
 
-      // Should mention spec or plan generation
       expect(output.toLowerCase()).toMatch(/spec|plan|generation/);
     });
 
@@ -233,7 +227,7 @@ describe('plan command', () => {
         expect(true).toBe(false);
       } catch (error: unknown) {
         if (error && typeof error === 'object' && 'status' in error) {
-          expect(error.status).toBe(1); // oclif errors exit with 1
+          expect(error.status).toBe(1);
         }
       }
     });
@@ -260,8 +254,7 @@ describe('plan command', () => {
         encoding: 'utf-8',
       });
 
-      // Notes are prefixed with bullet points
-      expect(output).toContain('•');
+      expect(output).toContain('\u2022');
     });
   });
 
@@ -291,15 +284,12 @@ describe('plan command', () => {
 
   describe('config validation', () => {
     test('handles missing config gracefully', () => {
-      // Don't run init
       try {
         execSync(`node ${binPath} plan`, {
           cwd: testDir,
           stdio: 'pipe',
         });
-        // May succeed with warnings or fail
       } catch (error: unknown) {
-        // Expected behavior without init
         if (error && typeof error === 'object' && 'status' in error) {
           expect(typeof error.status).toBe('number');
         }

@@ -1,14 +1,13 @@
-import { expect, test, describe, beforeEach, afterEach } from '@jest/globals';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { execSync } from 'node:child_process';
-import { loadRepoConfig } from '../../src/core/config/repo_config';
+import { loadRepoConfig } from '../../../src/core/config/repo_config';
 
 describe('init command', () => {
-  const testDir = path.join(__dirname, '../../.test-temp');
+  const testDir = path.join(__dirname, '../../../.test-temp');
   const pipelineDir = path.join(testDir, '.ai-feature-pipeline');
   const configPath = path.join(pipelineDir, 'config.json');
-  const binPath = path.join(__dirname, '../../bin/run.js');
+  const binPath = path.join(__dirname, '../../../bin/run.js');
 
   beforeEach(() => {
     // Clean up test directory
@@ -301,7 +300,7 @@ describe('init command', () => {
 
   describe('git repository detection', () => {
     test('fails if not in a git repository', () => {
-      const nonGitDir = path.join(__dirname, '../../.test-temp-no-git');
+      const nonGitDir = path.join(__dirname, '../../../.test-temp-no-git');
       if (fs.existsSync(nonGitDir)) {
         fs.rmSync(nonGitDir, { recursive: true, force: true });
       }
