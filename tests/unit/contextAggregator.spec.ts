@@ -540,5 +540,62 @@ describe('Context Aggregator Integration', () => {
       expect(metadata.branch).toBeUndefined();
       expect(metadata.fileCommitDates.size).toBe(0);
     });
+
+    it('should return git metadata for actual git repository (CDMCH-91)', async () => {
+      // Use the project root which IS a git repository
+      const projectRoot = path.resolve(__dirname, '../..');
+      const metadata = await getGitMetadata(projectRoot);
+
+      // In a real git repo, we should get commit SHA and branch
+      expect(metadata.commitSha).toBeDefined();
+      expect(metadata.commitSha).toMatch(/^[a-f0-9]{40}$/);
+      expect(metadata.branch).toBeDefined();
+      expect(typeof metadata.branch).toBe('string');
+    });
+
+    it('should populate fileCommitDates map for git repository (CDMCH-91)', async () => {
+      const projectRoot = path.resolve(__dirname, '../..');
+      const metadata = await getGitMetadata(projectRoot);
+
+      // fileCommitDates should have entries for tracked files
+      expect(metadata.fileCommitDates.size).toBeGreaterThan(0);
+    });
+  });
+
+  describe('resolveAggregatorConfig - edge cases (CDMCH-91)', () => {
+    it('should apply token budget override', () => {
+      const repoConfig = {
+        project: {
+          repo_url: 'https://github.com/test/repo',
+          context_paths: ['src/**/*.ts'],
+        },
+        runtime: { context_token_budget: 50000 },
+      } as unknown as import('../../src/core/config/RepoConfig').RepoConfig;
+
+      const config = resolveAggregatorConfig(repoConfig, '/tmp/run', 'FEAT-1', {
+        tokenBudget: 10000,
+      });
+
+      expect(config.tokenBudget).toBe(10000);
+      expect(config.featureId).toBe('FEAT-1');
+    });
+
+    it('should apply include overrides to context paths', () => {
+      const repoConfig = {
+        project: {
+          repo_url: 'https://github.com/test/repo',
+          context_paths: ['src/**/*.ts'],
+        },
+        runtime: { context_token_budget: 50000 },
+      } as unknown as import('../../src/core/config/RepoConfig').RepoConfig;
+
+      const config = resolveAggregatorConfig(repoConfig, '/tmp/run', 'FEAT-1', {
+        includeOverrides: ['docs/**/*.md'],
+      });
+
+      expect(config.contextPaths).toContain('src/**/*.ts');
+      expect(config.contextPaths).toContain('docs/**/*.md');
+      expect(config.includeOverrides).toEqual(['docs/**/*.md']);
+    });
   });
 });

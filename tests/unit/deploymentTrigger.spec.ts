@@ -258,4 +258,58 @@ describe('deploymentTrigger', () => {
       });
     });
   });
+
+  // ==========================================================================
+  // Coverage gap-fill: exported function signatures (CDMCH-87)
+  // ==========================================================================
+
+  describe('deployment function exports', () => {
+    it('should export loadDeploymentContext', async () => {
+      const mod = await import('../../src/workflows/deploymentTrigger');
+      expect(typeof mod.loadDeploymentContext).toBe('function');
+    });
+
+    it('should export persistDeploymentOutcome', async () => {
+      const mod = await import('../../src/workflows/deploymentTrigger');
+      expect(typeof mod.persistDeploymentOutcome).toBe('function');
+    });
+
+    it('should export triggerDeployment', async () => {
+      const mod = await import('../../src/workflows/deploymentTrigger');
+      expect(typeof mod.triggerDeployment).toBe('function');
+    });
+
+    it('should export DeploymentStrategy enum with expected values', () => {
+      expect(DeploymentStrategy.AUTO_MERGE).toBeDefined();
+      expect(DeploymentStrategy.MANUAL_MERGE).toBeDefined();
+      expect(DeploymentStrategy.WORKFLOW_DISPATCH).toBeDefined();
+    });
+  });
+
+  describe('strategy selection completeness', () => {
+    it('should not auto-merge when not merge-eligible', () => {
+      const context = createDeploymentContext({
+        config: { enable_auto_merge: true },
+        branchProtection: { allows_auto_merge: true },
+      });
+      const readiness = createMergeReadiness({ eligible: false });
+
+      const strategy = selectDeploymentStrategy(context, readiness);
+      // When not eligible, strategy should not be AUTO_MERGE
+      expect(strategy).not.toBe(DeploymentStrategy.AUTO_MERGE);
+    });
+
+    it('should select MANUAL_MERGE when auto_merge disabled and no workflow dispatch', () => {
+      const context = createDeploymentContext({
+        config: {
+          enable_auto_merge: false,
+          enable_deployment_triggers: false,
+        },
+      });
+      const readiness = createMergeReadiness({ eligible: true });
+
+      const strategy = selectDeploymentStrategy(context, readiness);
+      expect(strategy).toBe(DeploymentStrategy.MANUAL_MERGE);
+    });
+  });
 });
