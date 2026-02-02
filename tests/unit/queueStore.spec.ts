@@ -414,6 +414,20 @@ describe('queueStore - initializeQueueFromPlan', () => {
   });
 });
 
+describe('queueStore - fsync durability (CDMCH-67)', () => {
+  it('should use handle.sync() in queue manifest write path', async () => {
+    // Verify the source code uses fsync pattern: open → write → sync → close → rename
+    const queueStoreSource = await fs.readFile(
+      path.join(__dirname, '../../src/workflows/queueStore.ts'),
+      'utf-8'
+    );
+    // queueStore.ts line 268: await handle.sync()
+    expect(queueStoreSource).toContain('await handle.sync()');
+    // Verify it's part of the atomic write pattern (temp file + rename)
+    expect(queueStoreSource).toContain('await fs.rename(tempPath, manifestPath)');
+  });
+});
+
 describe('queueStore - snapshots', () => {
   let tempDir: string;
   let runDir: string;

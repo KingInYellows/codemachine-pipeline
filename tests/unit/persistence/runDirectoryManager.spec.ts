@@ -536,6 +536,26 @@ describe('Run Directory Manager', () => {
     });
   });
 
+  describe('Stale lock threshold (CDMCH-71)', () => {
+    it('should define STALE_LOCK_THRESHOLD_MS as 60 seconds', async () => {
+      const source = await fs.readFile(
+        path.join(__dirname, '../../../src/persistence/runDirectoryManager.ts'),
+        'utf-8'
+      );
+      // runDirectoryManager.ts line 199: const STALE_LOCK_THRESHOLD_MS = 60000
+      expect(source).toContain('STALE_LOCK_THRESHOLD_MS = 60000');
+    });
+
+    it('should use handle.sync() in manifest write path (CDMCH-67)', async () => {
+      const source = await fs.readFile(
+        path.join(__dirname, '../../../src/persistence/runDirectoryManager.ts'),
+        'utf-8'
+      );
+      // runDirectoryManager.ts line 695: await handle.sync()
+      expect(source).toContain('await handle.sync()');
+    });
+  });
+
   describe('Edge Cases', () => {
     it('should handle missing manifest gracefully', async () => {
       const runDir = getRunDirectoryPath(testBaseDir, testFeatureId);

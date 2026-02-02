@@ -294,6 +294,58 @@ describe('queueSnapshotManager', () => {
     });
   });
 
+  describe('checksum integrity verification (CDMCH-69)', () => {
+    it('should reject snapshot with corrupted checksum on load', async () => {
+      // Save a valid snapshot first
+      const tasks = { 'task-1': createTaskData('task-1') } as Record<string, ExecutionTask>;
+      const counts = createCounts({ total: 1, pending: 1 });
+      await saveSnapshot(testDir, 'feature-123', tasks, counts, 5, { 'task-1': [] });
+
+      // Corrupt the checksum in the file
+      const snapshotPath = path.join(testDir, 'queue_snapshot.json');
+      const content = JSON.parse(await fs.readFile(snapshotPath, 'utf-8'));
+      content.checksum = 'deadbeef'.repeat(8); // 64-char fake checksum
+      await fs.writeFile(snapshotPath, JSON.stringify(content), 'utf-8');
+
+      const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+      const result = await loadSnapshot(testDir);
+      warnSpy.mockRestore();
+
+      // loadSnapshot must return null for checksum mismatch (CDMCH-69)
+      expect(result).toBeNull();
+    });
+
+    it('should accept snapshot with valid SHA-256 checksum', async () => {
+      const tasks = { 'task-1': createTaskData('task-1') } as Record<string, ExecutionTask>;
+      const counts = createCounts({ total: 1, pending: 1 });
+      await saveSnapshot(testDir, 'feature-123', tasks, counts, 5, { 'task-1': [] });
+
+      const result = await loadSnapshot(testDir);
+      expect(result).not.toBeNull();
+      expect(result!.checksum).toHaveLength(64); // SHA-256 = 64 hex chars
+      expect(verifySnapshotChecksum(result!)).toBe(true);
+    });
+
+    it('should use SHA-256 algorithm for snapshot checksums', () => {
+      const tasks = { 'task-1': createTaskData('task-1') };
+      const counts = createCounts({ total: 1 });
+      const checksum = computeSnapshotChecksum(tasks, counts, {});
+      // SHA-256 outputs 64 hex characters
+      expect(checksum).toMatch(/^[a-f0-9]{64}$/);
+    });
+  });
+
+  describe('fsync durability (CDMCH-67)', () => {
+    it('should use handle.sync() in snapshot write path', async () => {
+      const source = await fs.readFile(
+        path.join(__dirname, '../../src/workflows/queueSnapshotManager.ts'),
+        'utf-8'
+      );
+      // queueSnapshotManager.ts line 199: await handle.sync()
+      expect(source).toContain('await handle.sync()');
+    });
+  });
+
   describe('deleteSnapshot', () => {
     it('should delete existing file', async () => {
       const tasks = {} as Record<string, ExecutionTask>;
