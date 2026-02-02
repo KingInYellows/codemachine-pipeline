@@ -298,4 +298,96 @@ describe('branchManager', () => {
       });
     });
   });
+
+  // ==========================================================================
+  // Coverage gap-fill: git operation exports (CDMCH-83)
+  // ==========================================================================
+
+  describe('git operation exports', () => {
+    it('should export getCurrentBranch', async () => {
+      const mod = await import('../../src/workflows/branchManager');
+      expect(typeof mod.getCurrentBranch).toBe('function');
+    });
+
+    it('should export branchExists', async () => {
+      const mod = await import('../../src/workflows/branchManager');
+      expect(typeof mod.branchExists).toBe('function');
+    });
+
+    it('should export getCommitSha', async () => {
+      const mod = await import('../../src/workflows/branchManager');
+      expect(typeof mod.getCommitSha).toBe('function');
+    });
+
+    it('should export getRemoteUrl', async () => {
+      const mod = await import('../../src/workflows/branchManager');
+      expect(typeof mod.getRemoteUrl).toBe('function');
+    });
+
+    it('should export createBranch', async () => {
+      const mod = await import('../../src/workflows/branchManager');
+      expect(typeof mod.createBranch).toBe('function');
+    });
+
+    it('should export pushBranch', async () => {
+      const mod = await import('../../src/workflows/branchManager');
+      expect(typeof mod.pushBranch).toBe('function');
+    });
+
+    it('should export saveBranchMetadata', async () => {
+      const mod = await import('../../src/workflows/branchManager');
+      expect(typeof mod.saveBranchMetadata).toBe('function');
+    });
+
+    it('should export createSafeCommit', async () => {
+      const mod = await import('../../src/workflows/branchManager');
+      expect(typeof mod.createSafeCommit).toBe('function');
+    });
+  });
+
+  describe('createBranch - branch name validation', () => {
+    it('should reject branch names that fail validation', async () => {
+      const { createBranch } = await import('../../src/workflows/branchManager');
+      const vi = await import('vitest');
+      const mockLogger = {
+        info: vi.vi.fn(), debug: vi.vi.fn(), warn: vi.vi.fn(), error: vi.vi.fn(),
+        child: vi.vi.fn(), flush: vi.vi.fn(),
+      } as unknown as import('../../src/telemetry/logger').StructuredLogger;
+      const mockMetrics = { recordCounter: vi.vi.fn(), recordGauge: vi.vi.fn(), recordHistogram: vi.vi.fn() } as unknown as import('../../src/telemetry/metrics').MetricsCollector;
+
+      const config = {
+        runDir: '/tmp',
+        featureId: 'test',
+        workingDir: '/tmp',
+        repoConfig: createMockRepoConfig('main'),
+      };
+
+      // Using an invalid branch name (contains invalid chars)
+      const result = await createBranch(config, { branchName: '../../../etc/passwd' }, mockLogger, mockMetrics);
+      expect(result.success).toBe(false);
+    });
+  });
+
+  describe('pushBranch - protected branch guard', () => {
+    it('should reject pushing to a protected branch', async () => {
+      const { pushBranch } = await import('../../src/workflows/branchManager');
+      const vi = await import('vitest');
+      const mockLogger = {
+        info: vi.vi.fn(), debug: vi.vi.fn(), warn: vi.vi.fn(), error: vi.vi.fn(),
+        child: vi.vi.fn(), flush: vi.vi.fn(),
+      } as unknown as import('../../src/telemetry/logger').StructuredLogger;
+      const mockMetrics = { recordCounter: vi.vi.fn(), recordGauge: vi.vi.fn(), recordHistogram: vi.vi.fn() } as unknown as import('../../src/telemetry/metrics').MetricsCollector;
+
+      const config = {
+        runDir: '/tmp',
+        featureId: 'test',
+        workingDir: '/tmp',
+        repoConfig: createMockRepoConfig('main'),
+      };
+
+      const result = await pushBranch(config, 'main', 'origin', mockLogger, mockMetrics);
+      expect(result.success).toBe(false);
+      expect(result.error).toContain('protected');
+    });
+  });
 });

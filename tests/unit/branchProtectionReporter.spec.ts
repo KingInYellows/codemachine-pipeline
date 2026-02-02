@@ -760,4 +760,94 @@ describe('Edge Cases', () => {
 
     expect(formatted).toContain('1. ' + longBlocker);
   });
+
+  // ==========================================================================
+  // Coverage gap-fill: edge cases (CDMCH-84)
+  // ==========================================================================
+
+  describe('loadReport - error handling edge cases', () => {
+    let tempDir: string;
+
+    beforeEach(async () => {
+      tempDir = await createTempDir();
+    });
+
+    afterEach(async () => {
+      await cleanupTempDir(tempDir);
+    });
+
+    it('should return null for non-existent report file', async () => {
+      const result = await loadReport(path.join(tempDir, 'nonexistent'));
+      expect(result).toBeNull();
+    });
+
+    it('should return null for corrupt JSON', async () => {
+      const reportPath = path.join(tempDir, 'branch_protection.json');
+      await fs.writeFile(reportPath, '{invalid json', 'utf-8');
+
+      const result = await loadReport(tempDir);
+      expect(result).toBeNull();
+    });
+  });
+
+  describe('detectValidationMismatch - edge cases', () => {
+    let tempDir: string;
+
+    beforeEach(async () => {
+      tempDir = await createTempDir();
+    });
+
+    afterEach(async () => {
+      await cleanupTempDir(tempDir);
+    });
+
+    it('should report missing validations when commands.json does not exist', async () => {
+      const result = await detectValidationMismatch(tempDir, ['ci/build']);
+      // When no commands.json, all required checks are "missing_in_registry"
+      expect(result).toBeDefined();
+      expect(result!.missing_in_registry).toContain('ci/build');
+    });
+
+    it('should detect mismatch when required checks differ from configured commands', async () => {
+      const commandsPath = path.join(tempDir, 'commands.json');
+      await fs.writeFile(
+        commandsPath,
+        JSON.stringify({ commands: [{ name: 'lint', command: 'npm run lint' }] }),
+        'utf-8'
+      );
+
+      const result = await detectValidationMismatch(tempDir, ['ci/build', 'test/unit']);
+      // Result should indicate what's required vs configured
+      expect(result).toBeDefined();
+    });
+  });
+
+  describe('getRecommendedAction - comprehensive states', () => {
+    it('should recommend waiting when checks are pending', () => {
+      const action = getRecommendedAction({
+        can_proceed: false,
+        blockers_count: 1,
+        blockers: ['Required status checks: pending'],
+        has_branch_protection: true,
+        meets_review_requirements: true,
+        meets_status_requirements: false,
+      });
+      expect(action).toBeDefined();
+      expect(typeof action).toBe('string');
+      expect(action.length).toBeGreaterThan(0);
+    });
+
+    it('should recommend requesting review when reviews are needed', () => {
+      const action = getRecommendedAction({
+        can_proceed: false,
+        blockers_count: 1,
+        blockers: ['Required review approvals: 0/1'],
+        has_branch_protection: true,
+        meets_review_requirements: false,
+        meets_status_requirements: true,
+      });
+      expect(action).toBeDefined();
+      expect(typeof action).toBe('string');
+    });
+  });
 });

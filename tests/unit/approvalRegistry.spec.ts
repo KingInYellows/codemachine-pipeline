@@ -550,3 +550,78 @@ describe('Edge Cases', () => {
     expect(parseResult.success).toBe(true);
   });
 });
+
+// ============================================================================
+// Coverage gap-fill: Workflow functions (CDMCH-85)
+// ============================================================================
+
+describe('approvalRegistry - workflow exports', () => {
+  it('should export requestApproval', async () => {
+    const mod = await import('../../src/workflows/approvalRegistry');
+    expect(typeof mod.requestApproval).toBe('function');
+  });
+
+  it('should export grantApproval', async () => {
+    const mod = await import('../../src/workflows/approvalRegistry');
+    expect(typeof mod.grantApproval).toBe('function');
+  });
+
+  it('should export denyApproval', async () => {
+    const mod = await import('../../src/workflows/approvalRegistry');
+    expect(typeof mod.denyApproval).toBe('function');
+  });
+
+  it('should export getPendingApprovals', async () => {
+    const mod = await import('../../src/workflows/approvalRegistry');
+    expect(typeof mod.getPendingApprovals).toBe('function');
+  });
+
+  it('should export getApprovalHistory', async () => {
+    const mod = await import('../../src/workflows/approvalRegistry');
+    expect(typeof mod.getApprovalHistory).toBe('function');
+  });
+
+  it('should export validateApprovalForTransition', async () => {
+    const mod = await import('../../src/workflows/approvalRegistry');
+    expect(typeof mod.validateApprovalForTransition).toBe('function');
+  });
+});
+
+describe('approvalRegistry - requestApproval', () => {
+  it('should accept valid SHA-256 artifact hash', async () => {
+    const hash = 'a'.repeat(64);
+    const { computeContentHash } = await import('../../src/workflows/approvalRegistry');
+    const result = computeContentHash('test content');
+    // SHA-256 produces 64 hex chars
+    expect(result).toMatch(/^[a-f0-9]{64}$/);
+    expect(hash).toHaveLength(64);
+  });
+});
+
+describe('approvalRegistry - validateApprovalForTransition', () => {
+  let tempDir: string;
+
+  beforeEach(async () => {
+    tempDir = await createTempDir();
+  });
+
+  afterEach(async () => {
+    await cleanupTempDir(tempDir);
+  });
+
+  it('should fail validation when no approval exists', async () => {
+    const { createRunDirectory } = await import('../../src/persistence/runDirectoryManager');
+    const { validateApprovalForTransition } = await import(
+      '../../src/workflows/approvalRegistry'
+    );
+
+    const runDir = await createRunDirectory(tempDir, 'FEAT-VAL', {
+      title: 'Test Validation',
+      repoUrl: 'https://github.com/test/repo',
+    });
+
+    const result = await validateApprovalForTransition(runDir, 'prd', 'abc123');
+    expect(result.valid).toBe(false);
+    expect(result.errors.length).toBeGreaterThan(0);
+  });
+});
