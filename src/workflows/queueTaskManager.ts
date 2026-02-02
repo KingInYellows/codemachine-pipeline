@@ -25,11 +25,17 @@ import {
 } from './queueMemoryIndex.js';
 import { appendOperation } from './queueOperationsLog.js';
 import { shouldCompact, compactWithState } from './queueCompactionEngine.js';
-import type { QueueOperation, ExecutionTaskData } from './queueTypes.js';
+import type { QueueOperation, ExecutionTaskData, QueueOperationResult } from './queueTypes.js';
 
-import { buildDependencyGraph, toExecutionTask, type QueueOperationResult } from './queueTypes.js';
-// Stateful helpers that remain in queueStore
-import { getV2IndexCache, loadQueue } from './queueStore.js';
+// Shared cache and helpers (avoids circular dependency with queueStore)
+import {
+  getV2IndexCache,
+  buildDependencyGraph,
+  toExecutionTask,
+} from './queueCache.js';
+
+// loadQueue helper - still from queueStore for now (only used in filter functions)
+import { loadQueue } from './queueStore.js';
 
 // ============================================================================
 // Queue Task Management

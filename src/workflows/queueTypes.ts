@@ -60,39 +60,6 @@ export interface QueueValidationResult {
 }
 
 // ============================================================================
-// Pure Helpers (shared across companion modules)
-// ============================================================================
-
-/** Build dependency graph from tasks in index state. */
-export function buildDependencyGraph(state: QueueIndexState): Record<string, string[]> {
-  const graph: Record<string, string[]> = {};
-  for (const [taskId, task] of state.tasks) {
-    if (task.dependency_ids && task.dependency_ids.length > 0) {
-      graph[taskId] = [...task.dependency_ids];
-    }
-  }
-  return graph;
-}
-
-/** Convert ExecutionTaskData to ExecutionTask (readonly). */
-export function toExecutionTask(data: ExecutionTaskData): ExecutionTask {
-  return data as ExecutionTask;
-}
-
-/** Convert ExecutionTask to ExecutionTaskData (mutable). */
-export function toExecutionTaskData(task: ExecutionTask): ExecutionTaskData {
-  return { ...task } as ExecutionTaskData;
-}
-
-// ============================================================================
-// Constants
-// ============================================================================
-
-export const QUEUE_FILE = 'queue.jsonl';
-export const QUEUE_MANIFEST_FILE = 'queue_manifest.json';
-export const QUEUE_SNAPSHOT_FILE = 'queue_snapshot.json';
-
-// ============================================================================
 // Core Data Type (Task without readonly)
 // ============================================================================
 
