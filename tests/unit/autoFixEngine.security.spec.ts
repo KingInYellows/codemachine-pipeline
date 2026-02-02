@@ -6,7 +6,6 @@
  * command injection attacks via shell metacharacters.
  */
 
-import { describe, test, expect } from '@jest/globals';
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 import { execFile } from 'node:child_process';
@@ -20,7 +19,7 @@ const executeShellCommandForTesting = async (
     cwd: string;
     env: Record<string, string | undefined>;
     timeout: number;
-    logger?: any;
+    logger?: { warn: (...args: unknown[]) => void; error: (...args: unknown[]) => void; info: (...args: unknown[]) => void; debug: (...args: unknown[]) => void };
   }
 ): Promise<{ exitCode: number; stdout: string; stderr: string; durationMs: number }> => {
 
@@ -146,7 +145,6 @@ describe('autoFixEngine security - command execution', () => {
   const testRunDir = path.join(__dirname, '../../.test-temp-security-exec');
 
   beforeEach(async () => {
-    // Clean up test directory
     try {
       await fs.rm(testRunDir, { recursive: true, force: true });
     } catch {
@@ -156,7 +154,6 @@ describe('autoFixEngine security - command execution', () => {
   });
 
   afterEach(async () => {
-    // Clean up test directory
     try {
       await fs.rm(testRunDir, { recursive: true, force: true });
     } catch {
@@ -204,13 +201,12 @@ describe('autoFixEngine security - command execution', () => {
   describe('command injection prevention', () => {
     test('should detect shell metacharacters (pipe) and treat as literal', async () => {
       const mockLogger = {
-        warn: jest.fn(),
-        error: jest.fn(),
-        info: jest.fn(),
-        debug: jest.fn(),
+        warn: vi.fn(),
+        error: vi.fn(),
+        info: vi.fn(),
+        debug: vi.fn(),
       };
 
-      // Echo will treat the pipe as a literal string (not as shell pipe)
       const result = await executeShellCommandForTesting('echo test | grep test', {
         cwd: testRunDir,
         env: process.env,
@@ -218,11 +214,9 @@ describe('autoFixEngine security - command execution', () => {
         logger: mockLogger,
       });
 
-      // Echo succeeds but treats metacharacters as literals (no shell interpretation)
       expect(result.exitCode).toBe(0);
-      expect(result.stdout).toContain('|'); // Pipe is literal, not interpreted
+      expect(result.stdout).toContain('|');
 
-      // Should have logged a warning about shell metacharacters
       expect(mockLogger.warn).toHaveBeenCalledWith(
         expect.stringContaining('shell metacharacters'),
         expect.objectContaining({
@@ -232,7 +226,6 @@ describe('autoFixEngine security - command execution', () => {
     });
 
     test('should prevent command injection via semicolon', async () => {
-      // Attempt command injection with semicolon - this would create a test file if vulnerable
       const maliciousFile = path.join(testRunDir, 'INJECTED.txt');
 
       const result = await executeShellCommandForTesting(
@@ -244,9 +237,8 @@ describe('autoFixEngine security - command execution', () => {
         }
       );
 
-      // Echo succeeds but treats semicolon as literal (no shell interpretation)
       expect(result.exitCode).toBe(0);
-      expect(result.stdout).toContain(';'); // Semicolon is literal
+      expect(result.stdout).toContain(';');
 
       // CRITICAL: Verify the malicious file was NOT created
       await expect(fs.access(maliciousFile)).rejects.toThrow();
@@ -259,7 +251,6 @@ describe('autoFixEngine security - command execution', () => {
         timeout: 5000,
       });
 
-      // Should fail (ampersand not supported without shell)
       expect(result.exitCode).not.toBe(0);
     });
 
@@ -270,10 +261,8 @@ describe('autoFixEngine security - command execution', () => {
         timeout: 5000,
       });
 
-      // Echo succeeds but treats backticks as literals (no command substitution)
       expect(result.exitCode).toBe(0);
-      expect(result.stdout).toContain('`'); // Backticks are literal, not interpreted
-      // The actual username should NOT appear in output (proving no substitution occurred)
+      expect(result.stdout).toContain('`');
     });
 
     test('should prevent variable expansion via dollar sign', async () => {
@@ -283,10 +272,8 @@ describe('autoFixEngine security - command execution', () => {
         timeout: 5000,
       });
 
-      // Echo succeeds but treats $HOME as literal (no variable expansion)
       expect(result.exitCode).toBe(0);
-      expect(result.stdout).toContain('$HOME'); // Variable is literal, not expanded
-      // The actual home directory should NOT appear in output
+      expect(result.stdout).toContain('$HOME');
     });
   });
 
@@ -295,10 +282,9 @@ describe('autoFixEngine security - command execution', () => {
       const result = await executeShellCommandForTesting('sleep 10', {
         cwd: testRunDir,
         env: process.env,
-        timeout: 500, // 500ms timeout
+        timeout: 500,
       });
 
-      // Should fail with timeout exit code
       expect(result.exitCode).toBe(124);
       expect(result.stderr).toContain('timed out');
     }, 10000);
@@ -353,42 +339,32 @@ describe('autoFixEngine security - command execution', () => {
   });
 
   describe('security improvements verification', () => {
-    test('SECURITY FIX: execFile is used instead of spawn with shell:true', () => {
-      // This test verifies the fix is in place by checking the source code
-      const fs = require('fs');
+    test('SECURITY FIX: execFile is used instead of spawn with shell:true', async () => {
+      const fsSync = await import('node:fs');
       const autoFixEnginePath = path.join(__dirname, '../../src/workflows/autoFixEngine.ts');
-      const sourceCode = fs.readFileSync(autoFixEnginePath, 'utf-8');
+      const sourceCode = fsSync.readFileSync(autoFixEnginePath, 'utf-8');
 
-      // Verify execFile is imported
       expect(sourceCode).toContain("import { execFile } from 'node:child_process'");
-
-      // Verify spawn with shell:true is NOT used
       expect(sourceCode).not.toContain('shell: true');
-
-      // Verify security documentation is present
       expect(sourceCode).toContain('command injection');
       expect(sourceCode).toContain('SECURITY');
     });
 
-    test('SECURITY FIX: Shell metacharacter detection is implemented', () => {
-      const fs = require('fs');
+    test('SECURITY FIX: Shell metacharacter detection is implemented', async () => {
+      const fsSync = await import('node:fs');
       const autoFixEnginePath = path.join(__dirname, '../../src/workflows/autoFixEngine.ts');
-      const sourceCode = fs.readFileSync(autoFixEnginePath, 'utf-8');
+      const sourceCode = fsSync.readFileSync(autoFixEnginePath, 'utf-8');
 
-      // Verify metacharacter detection regex exists
       expect(sourceCode).toContain('SHELL_METACHARACTERS');
       expect(sourceCode).toMatch(/\[|&;`\$<>\(\)\{\}\[\]!\*\?~#\]/);
     });
 
-    test('SECURITY FIX: Command parsing function prevents shell interpretation', () => {
-      const fs = require('fs');
+    test('SECURITY FIX: Command parsing function prevents shell interpretation', async () => {
+      const fsSync = await import('node:fs');
       const autoFixEnginePath = path.join(__dirname, '../../src/workflows/autoFixEngine.ts');
-      const sourceCode = fs.readFileSync(autoFixEnginePath, 'utf-8');
+      const sourceCode = fsSync.readFileSync(autoFixEnginePath, 'utf-8');
 
-      // Verify command parsing function exists
       expect(sourceCode).toContain('parseCommandString');
-
-      // Verify it handles quotes properly
       expect(sourceCode).toContain('inSingleQuote');
       expect(sourceCode).toContain('inDoubleQuote');
     });

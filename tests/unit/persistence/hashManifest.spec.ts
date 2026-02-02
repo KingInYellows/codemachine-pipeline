@@ -1,4 +1,3 @@
-import { describe, it, expect, beforeEach, afterEach } from '@jest/globals';
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 import * as os from 'node:os';
@@ -16,7 +15,7 @@ import {
   getManifestTotalSize,
   filterManifest,
   type HashManifest,
-} from '../../src/persistence/hashManifest';
+} from '../../../src/persistence/hashManifest';
 
 /**
  * Unit tests for Hash Manifest utilities
@@ -51,9 +50,8 @@ describe('Hash Manifest Utilities', () => {
 
       const hash = await computeFileHash(filePath);
 
-      // Expected SHA-256 of "Hello World"
       expect(hash).toBe('a591a6d40bf420404a011733cfb7b190d62c65bf0bcda32b57b277d9ad9f146e');
-      expect(hash.length).toBe(64); // SHA-256 produces 64 hex characters
+      expect(hash.length).toBe(64);
     });
 
     it('should compute consistent hash for same content', async () => {
@@ -81,7 +79,7 @@ describe('Hash Manifest Utilities', () => {
 
     it('should handle large files', async () => {
       const filePath = path.join(testDir, 'large.txt');
-      const largeContent = 'x'.repeat(1024 * 1024); // 1MB
+      const largeContent = 'x'.repeat(1024 * 1024);
       await fs.writeFile(filePath, largeContent, 'utf-8');
 
       const hash = await computeFileHash(filePath);
@@ -140,11 +138,10 @@ describe('Hash Manifest Utilities', () => {
 
     it('should skip files that cannot be read and report them', async () => {
       const file1 = path.join(testDir, 'file1.txt');
-      const file2 = path.join(testDir, 'missing.txt'); // Does not exist
+      const file2 = path.join(testDir, 'missing.txt');
 
       await fs.writeFile(file1, 'Content', 'utf-8');
 
-      // Should not throw, just skip the missing file and report it
       const { manifest, skipped } = await createHashManifest([file1, file2]);
 
       expect(Object.keys(manifest.files).length).toBe(1);
@@ -181,7 +178,6 @@ describe('Hash Manifest Utilities', () => {
     });
 
     it('should update manifest with new files', async () => {
-      // Wait a tiny bit to ensure different timestamps
       await new Promise((resolve) => setTimeout(resolve, 10));
 
       const { manifest: updated, skipped } = await updateHashManifest(manifest, [file2]);
@@ -190,7 +186,6 @@ describe('Hash Manifest Utilities', () => {
       expect(Object.keys(updated.files).length).toBe(2);
       expect(updated.files[file1]).toBeDefined();
       expect(updated.files[file2]).toBeDefined();
-      // Check that updated_at is newer or equal (might be same in fast systems)
       expect(new Date(updated.updated_at).getTime()).toBeGreaterThanOrEqual(
         new Date(manifest.updated_at).getTime()
       );
@@ -199,7 +194,6 @@ describe('Hash Manifest Utilities', () => {
     it('should update existing file records', async () => {
       const originalHash = manifest.files[file1].hash;
 
-      // Modify file
       await fs.writeFile(file1, 'Modified Content', 'utf-8');
 
       const { manifest: updated } = await updateHashManifest(manifest, [file1]);
@@ -261,7 +255,6 @@ describe('Hash Manifest Utilities', () => {
     });
 
     it('should detect modified files', async () => {
-      // Modify file after creating manifest
       await fs.writeFile(file1, 'Modified Content', 'utf-8');
 
       const result = await verifyHashManifest(manifest);
@@ -274,7 +267,6 @@ describe('Hash Manifest Utilities', () => {
     });
 
     it('should detect missing files', async () => {
-      // Delete file after creating manifest
       await fs.unlink(file1);
 
       const result = await verifyHashManifest(manifest);
@@ -294,7 +286,6 @@ describe('Hash Manifest Utilities', () => {
         expect(result.matches).toBe(true);
       }
 
-      // Modify file
       await fs.writeFile(file1, 'Modified', 'utf-8');
 
       result = await verifyFileHash(file1, hash);
@@ -316,7 +307,6 @@ describe('Hash Manifest Utilities', () => {
     });
 
     it('should handle verification with base path', async () => {
-      // Create manifest with relative paths
       const relativeManifest: HashManifest = {
         schema_version: '1.0.0',
         created_at: new Date().toISOString(),
@@ -421,7 +411,7 @@ describe('Hash Manifest Utilities', () => {
     it('should calculate total size', () => {
       const totalSize = getManifestTotalSize(manifest);
 
-      expect(totalSize).toBe(600); // 100 + 200 + 300
+      expect(totalSize).toBe(600);
     });
 
     it('should filter manifest by pattern', () => {
