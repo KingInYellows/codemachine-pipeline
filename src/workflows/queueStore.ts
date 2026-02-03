@@ -31,7 +31,6 @@ import {
 // Re-export for backward compatibility
 export {
   getV2IndexCache,
-  invalidateV2Cache,
   buildDependencyGraph,
   toExecutionTask,
   toExecutionTaskData,
