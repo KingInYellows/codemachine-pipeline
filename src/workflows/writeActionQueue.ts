@@ -407,8 +407,8 @@ export class WriteActionQueue {
           idempotency_key: idempotencyKey,
         });
 
-        // Update manifest
-        await this.updateManifestCounts(1, 0, 0, 0, 0);
+        // Update manifest (totalDelta=1, pendingDelta=1)
+        await this.updateManifestCounts(1, 1, 0, 0, 0);
 
         // Update metrics
         if (this.metrics) {
@@ -714,6 +714,7 @@ export class WriteActionQueue {
       throw new Error(`Action ${actionId} not found`);
     }
 
+    const oldStatus = action.status;
     action.retry_count++;
     action.last_error = lastError;
     action.last_retry_at = new Date().toISOString();
@@ -721,6 +722,11 @@ export class WriteActionQueue {
     action.updated_at = new Date().toISOString();
 
     await this.saveQueue(actions);
+
+    // Update manifest counts (transition from IN_PROGRESS back to PENDING)
+    const pendingDelta = oldStatus !== WriteActionStatus.PENDING ? 1 : 0;
+    const inProgressDelta = oldStatus === WriteActionStatus.IN_PROGRESS ? -1 : 0;
+    await this.updateManifestCounts(0, pendingDelta, inProgressDelta, 0, 0);
   }
 
   /**

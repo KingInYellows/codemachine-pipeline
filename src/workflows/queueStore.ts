@@ -30,13 +30,22 @@ import {
 } from './queueCache.js';
 
 // Re-export for backward compatibility (including invalidateV2Cache which is used by migration code)
+import { invalidateV2Cache as _invalidateV2CacheOriginal } from './queueCache.js';
 export {
-  invalidateV2Cache,
   getV2IndexCache,
   buildDependencyGraph,
   toExecutionTask,
   toExecutionTaskData,
 } from './queueCache.js';
+
+/** Set of runDirs whose integrity has already been verified this process. */
+const integrityVerifiedDirs = new Set<string>();
+
+/** Invalidate V2 cache and integrity verification flag for a run directory. */
+export function invalidateV2Cache(runDir: string): void {
+  _invalidateV2CacheOriginal(runDir);
+  integrityVerifiedDirs.delete(runDir);
+}
 
 /**
  * Queue Store
@@ -291,11 +300,8 @@ async function writeQueueManifest(queueDir: string, manifest: QueueManifest): Pr
 
 /** Load all tasks from queue via V2 WAL-based index. */
 export async function loadQueue(runDir: string): Promise<Map<string, ExecutionTask>> {
-  // Verify queue integrity before loading (CDMCH-69)
-  // To avoid an expensive full integrity scan on every call in production,
-  // only run the check outside production environments.
-  const shouldVerifyIntegrity = process.env.NODE_ENV !== 'production';
-  if (shouldVerifyIntegrity) {
+  // Verify queue integrity only on first (cold) load per runDir (CDMCH-69)
+  if (!integrityVerifiedDirs.has(runDir)) {
     const integrity = await verifyQueueIntegrity(runDir);
     if (!integrity.valid) {
       logger.warn('Queue integrity check found issues', {
@@ -304,6 +310,7 @@ export async function loadQueue(runDir: string): Promise<Map<string, ExecutionTa
         wal_checksum_failures: integrity.walChecksumFailures,
       });
     }
+    integrityVerifiedDirs.add(runDir);
   }
 
   const v2Cache = await getV2IndexCache(runDir);

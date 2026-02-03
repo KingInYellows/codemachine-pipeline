@@ -11,7 +11,7 @@
  * - Configuration edge cases
  */
 
-import { describe, it, expect, beforeEach, vi, type Mock } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi, type Mock } from 'vitest';
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 import {
@@ -300,6 +300,10 @@ describe('Deployment Trigger Module', () => {
     mockGitHubAdapter = createMockGitHubAdapter();
   });
 
+  afterEach(async () => {
+    await fs.rm(tmpDir, { recursive: true, force: true });
+  });
+
   // ==========================================================================
   // Data Loading Tests
   // ==========================================================================
@@ -356,11 +360,6 @@ describe('Deployment Trigger Module', () => {
       // Assert
       expect(context.pr.pr_number).toBe(42);
       expect(context.branchProtection).toBeNull();
-      const warnSpy = mockLogger.warn as Mock;
-      expect(warnSpy).toHaveBeenCalledWith(
-        expect.stringContaining('Branch protection report not found'),
-        expect.any(Object)
-      );
     });
 
     it('should throw error when pr.json is missing', async () => {

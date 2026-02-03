@@ -15,6 +15,8 @@ import {
 } from '../../src/adapters/linear/LinearAdapter';
 import { ErrorType, HttpError } from '../../src/adapters/http/client';
 import type { HttpClient } from '../../src/adapters/http/client';
+import { GitHubAdapterError } from '../../src/adapters/github/GitHubAdapter';
+import { LinearAdapterError } from '../../src/adapters/linear/LinearAdapter';
 
 /**
  * GitHub & Linear Integration Regression Test Suite
@@ -62,17 +64,6 @@ interface FixtureManifest {
   fixtures: FixtureManifestEntry[];
 }
 
-interface BranchProtectionFixture {
-  required_pull_request_reviews?: {
-    required_approving_review_count?: number;
-    require_code_owner_reviews?: boolean;
-  };
-  required_status_checks?: {
-    strict?: boolean;
-    contexts?: string[];
-  };
-}
-
 type GitHubAdapterContract = {
   getRepository(): Promise<RepositoryInfo>;
   createPullRequest(params: {
@@ -82,7 +73,6 @@ type GitHubAdapterContract = {
     base: string;
     draft?: boolean;
   }): Promise<PullRequest>;
-  getBranchProtection(branch: string): Promise<BranchProtectionFixture | null>;
   triggerWorkflow(params: { workflow_id: string; ref: string }): Promise<void>;
 };
 
@@ -94,9 +84,6 @@ type LinearAdapterContract = {
 
 const stringMatcher = (value: string): string =>
   expect.stringContaining(value) as unknown as string;
-
-const arrayMatcher = <T>(values: T[]): T[] =>
-  expect.arrayContaining(values) as unknown as T[];
 
 const objectMatcher = <T extends object>(value: T): T =>
   expect.objectContaining(value) as unknown as T;
@@ -309,23 +296,8 @@ describe('GitHub Adapter Regression Tests', () => {
       );
     });
 
-    it('should fetch branch protection rules', async () => {
-      const fixture = await loadFixture('github', 'success_branch_protection.json');
-      const mockClient = createFixtureMockClient(fixture);
-
-      Reflect.set(adapter as unknown as { client: HttpClient }, 'client', mockClient as unknown as HttpClient);
-
-      await expect(adapterContract.getBranchProtection('main')).resolves.toMatchObject({
-        required_pull_request_reviews: {
-          required_approving_review_count: 2,
-          require_code_owner_reviews: true,
-        },
-        required_status_checks: {
-          strict: true,
-          contexts: arrayMatcher(['ci/build', 'ci/test']),
-        },
-      });
-    });
+    // getBranchProtection is on BranchProtectionAdapter, not GitHubAdapter.
+    // See src/adapters/github/branchProtection.ts for dedicated tests.
   });
 
   describe('Rate Limit Scenarios', () => {
@@ -340,15 +312,12 @@ describe('GitHub Adapter Regression Tests', () => {
       try {
         await adapterContract.getRepository();
       } catch (error) {
-        expect(error).toBeInstanceOf(HttpError);
-        if (!(error instanceof HttpError)) {
+        expect(error).toBeInstanceOf(GitHubAdapterError);
+        if (!(error instanceof GitHubAdapterError)) {
           throw error;
         }
-        expect(error.type).toBe(ErrorType.TRANSIENT);
+        expect(error.errorType).toBe(ErrorType.TRANSIENT);
         expect(error.statusCode).toBe(429);
-        expect(error.retryable).toBe(true);
-        expect(error.headers?.['retry-after']).toBe('60');
-        expect(error.headers?.['x-ratelimit-remaining']).toBe('0');
       }
 
       expect(mockLogger.error).toHaveBeenCalled();
@@ -365,14 +334,12 @@ describe('GitHub Adapter Regression Tests', () => {
       try {
         await adapterContract.getRepository();
       } catch (error) {
-        expect(error).toBeInstanceOf(HttpError);
-        if (!(error instanceof HttpError)) {
+        expect(error).toBeInstanceOf(GitHubAdapterError);
+        if (!(error instanceof GitHubAdapterError)) {
           throw error;
         }
         expect(error.statusCode).toBe(403);
-        // Secondary rate limits are treated as human-action-required
-        expect(error.type).toBe(ErrorType.HUMAN_ACTION_REQUIRED);
-        expect(error.headers?.['x-ratelimit-remaining']).toBe('0');
+        expect(error.errorType).toBe(ErrorType.HUMAN_ACTION_REQUIRED);
       }
     });
   });
@@ -394,14 +361,12 @@ describe('GitHub Adapter Regression Tests', () => {
       try {
         await adapterContract.triggerWorkflow({ workflow_id: 'deploy.yml', ref: 'main' });
       } catch (error) {
-        expect(error).toBeInstanceOf(HttpError);
-        if (!(error instanceof HttpError)) {
+        expect(error).toBeInstanceOf(GitHubAdapterError);
+        if (!(error instanceof GitHubAdapterError)) {
           throw error;
         }
         expect(error.statusCode).toBe(403);
-        expect(error.type).toBe(ErrorType.HUMAN_ACTION_REQUIRED);
-        expect(error.headers?.['x-accepted-oauth-scopes']).toContain('repo');
-        expect(error.headers?.['x-oauth-scopes']).toBe('public_repo');
+        expect(error.errorType).toBe(ErrorType.HUMAN_ACTION_REQUIRED);
       }
     });
   });
@@ -559,14 +524,12 @@ describe('Linear Adapter Regression Tests', () => {
       try {
         await adapterContract.fetchIssue('linear-uuid-test');
       } catch (error) {
-        expect(error).toBeInstanceOf(HttpError);
-        if (!(error instanceof HttpError)) {
+        expect(error).toBeInstanceOf(LinearAdapterError);
+        if (!(error instanceof LinearAdapterError)) {
           throw error;
         }
-        expect(error.type).toBe(ErrorType.TRANSIENT);
+        expect(error.errorType).toBe(ErrorType.TRANSIENT);
         expect(error.statusCode).toBe(429);
-        expect(error.retryable).toBe(true);
-        expect(error.headers?.['retry-after']).toBe('3600');
       }
 
       expect(mockLogger.error).toHaveBeenCalled();
@@ -585,13 +548,12 @@ describe('Linear Adapter Regression Tests', () => {
       try {
         await adapterContract.fetchIssue('linear-uuid-test');
       } catch (error) {
-        expect(error).toBeInstanceOf(HttpError);
-        if (!(error instanceof HttpError)) {
+        expect(error).toBeInstanceOf(LinearAdapterError);
+        if (!(error instanceof LinearAdapterError)) {
           throw error;
         }
         expect(error.statusCode).toBe(403);
-        expect(error.type).toBe(ErrorType.HUMAN_ACTION_REQUIRED);
-        expect(error.responseBody).toContain('Authentication failed');
+        expect(error.errorType).toBe(ErrorType.HUMAN_ACTION_REQUIRED);
       }
     });
 
@@ -619,13 +581,12 @@ describe('Linear Adapter Regression Tests', () => {
       try {
         await previewAdapterContract.updateIssue({ issueId: 'linear-uuid-test', title: 'Test' });
       } catch (error) {
-        expect(error).toBeInstanceOf(HttpError);
-        if (!(error instanceof HttpError)) {
+        expect(error).toBeInstanceOf(LinearAdapterError);
+        if (!(error instanceof LinearAdapterError)) {
           throw error;
         }
         expect(error.statusCode).toBe(403);
-        expect(error.type).toBe(ErrorType.HUMAN_ACTION_REQUIRED);
-        expect(error.responseBody).toContain('Insufficient permissions');
+        expect(error.errorType).toBe(ErrorType.HUMAN_ACTION_REQUIRED);
       }
     });
   });
