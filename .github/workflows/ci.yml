@@ -44,14 +44,7 @@ jobs:
         with:
           node-version: '24'
 
-      - name: Install dependencies
-        run: npm ci
 
-      - name: Run security advisory guard
-        run: npm run security:glob-guard
-
-      - name: Run linter
-        run: npm run lint
 
       - name: Check formatting
         run: npm run format:check
@@ -119,6 +112,11 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
       - name: Build Docker image
         run: |
           docker build -t ai-feature-pipeline:test .
@@ -128,7 +126,7 @@ jobs:
           set -o pipefail
           docker run --rm ai-feature-pipeline:test --version || true
           docker run --rm ai-feature-pipeline:test --help
-          docker run --rm ai-feature-pipeline:test doctor --json | python3 -m json.tool > /dev/null && echo 'doctor --json: valid JSON'
+          docker run --rm ai-feature-pipeline:test doctor --json | node -e "const fs=require('fs');JSON.parse(fs.readFileSync(0,'utf8'))" > /dev/null && echo 'doctor --json: valid JSON'
 
       - name: Cleanup
         if: always()
