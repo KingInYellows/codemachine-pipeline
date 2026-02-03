@@ -137,7 +137,7 @@ export async function loadSnapshot(queueDir: string): Promise<QueueSnapshotV2 | 
  * @throws Error if path appears unsafe
  */
 function validateQueueDirectory(queueDir: string): void {
-  const segments = queueDir.split(/[\\\/]+/).filter(Boolean);
+  const segments = queueDir.split(/[\\/]+/).filter(Boolean);
 
   // Basic sanity checks for path traversal patterns
   if (segments.includes('..')) {

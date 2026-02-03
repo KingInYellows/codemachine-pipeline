@@ -244,7 +244,7 @@ export async function appendToQueue(
 
 /** Validate that a queue directory path is safe (defense-in-depth against path traversal). */
 function validateQueueDirectory(queueDir: string): void {
-  const segments = queueDir.split(/[\\\/]+/).filter(Boolean);
+  const segments = queueDir.split(/[\\/]+/).filter(Boolean);
 
   // Basic sanity checks for path traversal patterns
   if (segments.includes('..')) {
