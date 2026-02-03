@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeAll } from 'vitest';
 import {
   selectDeploymentStrategy,
   DeploymentStrategy,
@@ -258,4 +258,49 @@ describe('deploymentTrigger', () => {
       });
     });
   });
+
+  // ==========================================================================
+  // Coverage gap-fill: exported function signatures (CDMCH-87)
+  // ==========================================================================
+
+  describe('deployment function exports', () => {
+    let mod: typeof import('../../src/workflows/deploymentTrigger');
+
+    beforeAll(async () => {
+      mod = await import('../../src/workflows/deploymentTrigger');
+    });
+
+    it('should export loadDeploymentContext', () => {
+      expect(typeof mod.loadDeploymentContext).toBe('function');
+    });
+
+    it('should export persistDeploymentOutcome', () => {
+      expect(typeof mod.persistDeploymentOutcome).toBe('function');
+    });
+
+    it('should export triggerDeployment', () => {
+      expect(typeof mod.triggerDeployment).toBe('function');
+    });
+
+    it('should export DeploymentStrategy enum with expected values', () => {
+      expect(DeploymentStrategy.AUTO_MERGE).toBe('AUTO_MERGE');
+      expect(DeploymentStrategy.MANUAL_MERGE).toBe('MANUAL_MERGE');
+      expect(DeploymentStrategy.WORKFLOW_DISPATCH).toBe('WORKFLOW_DISPATCH');
+      expect(DeploymentStrategy.BLOCKED).toBe('BLOCKED');
+    });
+  });
+
+  describe('strategy selection completeness', () => {
+    it('should return BLOCKED when not merge-eligible', () => {
+      const context = createDeploymentContext({
+        config: { enable_auto_merge: true },
+        branchProtection: { allows_auto_merge: true },
+      });
+      const readiness = createMergeReadiness({ eligible: false });
+
+      const strategy = selectDeploymentStrategy(context, readiness);
+      expect(strategy).toBe(DeploymentStrategy.BLOCKED);
+    });
+  });
 });
+

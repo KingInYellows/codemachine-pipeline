@@ -540,5 +540,32 @@ describe('Context Aggregator Integration', () => {
       expect(metadata.branch).toBeUndefined();
       expect(metadata.fileCommitDates.size).toBe(0);
     });
+
+    // Skip git tests if running in an environment without .git directory
+    const projectRoot = path.resolve(__dirname, '../..');
+    const hasGit = (() => {
+      try {
+        return require('node:fs').existsSync(path.join(projectRoot, '.git'));
+      } catch {
+        return false;
+      }
+    })();
+
+    (hasGit ? it : it.skip)('should return git metadata for actual git repository (CDMCH-91)', async () => {
+      const metadata = await getGitMetadata(projectRoot);
+
+      // In a real git repo, we should get commit SHA and branch
+      expect(metadata.commitSha).toBeDefined();
+      expect(metadata.commitSha).toMatch(/^[a-f0-9]{40}$/);
+      expect(metadata.branch).toBeDefined();
+      expect(typeof metadata.branch).toBe('string');
+    });
+
+    (hasGit ? it : it.skip)('should populate fileCommitDates map for git repository (CDMCH-91)', async () => {
+      const metadata = await getGitMetadata(projectRoot);
+
+      // fileCommitDates should have entries for tracked files
+      expect(metadata.fileCommitDates.size).toBeGreaterThan(0);
+    });
   });
 });
