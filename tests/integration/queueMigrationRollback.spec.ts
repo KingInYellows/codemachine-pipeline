@@ -62,8 +62,6 @@ describe('Queue Migration Rollback Integration', () => {
 
   describe('25-task migration and rollback', () => {
     let tasks: ExecutionTask[];
-    let originalContent: string;
-
     beforeEach(async () => {
       // Seed 25 tasks with dependency chains
       tasks = [];
@@ -74,8 +72,7 @@ describe('Queue Migration Rollback Integration', () => {
         tasks.push(createV1Task(`task-${i}`, status, deps));
       }
 
-      originalContent = createV1QueueContent(tasks);
-      await fs.writeFile(path.join(testDir, 'queue.jsonl'), originalContent, 'utf-8');
+      await fs.writeFile(path.join(testDir, 'queue.jsonl'), createV1QueueContent(tasks), 'utf-8');
     });
 
     it('should migrate 25 tasks to V2 and back to V1 with data integrity', async () => {
@@ -191,20 +188,21 @@ describe('Queue Migration Rollback Integration', () => {
       expect(restored).toHaveLength(5);
     });
 
-    it('should handle migration failure when V1 file has invalid JSON lines', async () => {
+    it('should preserve data when V1 file has mixed valid and invalid JSON lines', async () => {
       const validTask = createV1Task('task-1');
       const content = JSON.stringify(validTask) + '\n' + 'NOT_VALID_JSON\n';
       await fs.writeFile(path.join(testDir, 'queue.jsonl'), content, 'utf-8');
 
       const result = await migrateV1ToV2(testDir, 'feature-invalid');
 
-      // Migration should handle or fail gracefully
-      // If it fails, rollback should restore original
+      // Migration may succeed (skipping invalid lines) or fail gracefully.
+      // Either way, the original data must remain accessible.
       if (!result.success) {
-        // V1 file should still be accessible (migration didn't remove it on failure)
         const v1Exists = await fs.access(path.join(testDir, 'queue.jsonl')).then(() => true).catch(() => false);
         const backupExists = await fs.access(path.join(testDir, 'queue.jsonl.v1backup')).then(() => true).catch(() => false);
         expect(v1Exists || backupExists).toBe(true);
+      } else {
+        expect(result.tasksConverted).toBeGreaterThanOrEqual(1);
       }
     });
   });
