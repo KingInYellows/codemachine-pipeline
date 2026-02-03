@@ -17,7 +17,8 @@ import * as path from 'node:path';
 import { parseExecutionTask } from '../core/models/ExecutionTask';
 import { readManifest } from '../persistence/runDirectoryManager';
 
-import { QUEUE_FILE, QUEUE_MANIFEST_FILE, type QueueManifest, type QueueValidationResult } from './queueTypes.js';
+import { QUEUE_FILE, QUEUE_MANIFEST_FILE } from './queueConstants.js';
+import type { QueueManifest, QueueValidationResult } from './queueTypes.js';
 
 /**
  * Compute SHA-256 checksum of empty content.
