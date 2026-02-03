@@ -292,13 +292,18 @@ async function writeQueueManifest(queueDir: string, manifest: QueueManifest): Pr
 /** Load all tasks from queue via V2 WAL-based index. */
 export async function loadQueue(runDir: string): Promise<Map<string, ExecutionTask>> {
   // Verify queue integrity before loading (CDMCH-69)
-  const integrity = await verifyQueueIntegrity(runDir);
-  if (!integrity.valid) {
-    logger.warn('Queue integrity check found issues', {
-      errors: integrity.errors,
-      sequence_gaps: integrity.sequenceGaps,
-      wal_checksum_failures: integrity.walChecksumFailures,
-    });
+  // To avoid an expensive full integrity scan on every call in production,
+  // only run the check outside production environments.
+  const shouldVerifyIntegrity = process.env.NODE_ENV !== 'production';
+  if (shouldVerifyIntegrity) {
+    const integrity = await verifyQueueIntegrity(runDir);
+    if (!integrity.valid) {
+      logger.warn('Queue integrity check found issues', {
+        errors: integrity.errors,
+        sequence_gaps: integrity.sequenceGaps,
+        wal_checksum_failures: integrity.walChecksumFailures,
+      });
+    }
   }
 
   const v2Cache = await getV2IndexCache(runDir);
@@ -378,7 +383,7 @@ export async function verifyQueueIntegrity(runDir: string): Promise<QueueIntegri
     valid: true,
     snapshotValid: null,
     walEntriesChecked: 0,
-    walChecksumFailures: 0,
+    walChecksumFailures: 0, // Note: readOperations() skips invalid entries, count unavailable
     sequenceGaps: [],
     errors: [],
   };
@@ -396,7 +401,7 @@ export async function verifyQueueIntegrity(runDir: string): Promise<QueueIntegri
     // We can distinguish by checking if the file exists
     if (!snapshot) {
       try {
-        await fs.access(path.join(queueDir, 'queue_snapshot.json'));
+        await fs.access(path.join(queueDir, QUEUE_SNAPSHOT_FILE));
         // File exists but loadSnapshot returned null => invalid
         result.snapshotValid = false;
         result.valid = false;
