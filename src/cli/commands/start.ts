@@ -146,19 +146,22 @@ export default class Start extends Command {
     const { flags } = await this.parse(Start);
     const typedFlags = flags as StartFlags;
 
-    if (!typedFlags.prompt && !typedFlags.linear && !typedFlags.spec) {
-      this.error(
-        new CliError(
-          'Must provide one of: --prompt, --linear, or --spec',
-          CliErrorCode.CONFIG_INVALID,
-          { remediation: 'Provide an input source: --prompt "description", --linear ISSUE-ID, or --spec path/to/spec.md' }
-        ).message,
-        { exit: 10 }
-      );
-    }
-
     if (typedFlags.json) {
       process.env.JSON_OUTPUT = '1';
+    }
+
+    // Early validation with proper error handling
+    if (!typedFlags.prompt && !typedFlags.linear && !typedFlags.spec) {
+      const cliErr = new CliError(
+        'Must provide one of: --prompt, --linear, or --spec',
+        CliErrorCode.CONFIG_INVALID,
+        { remediation: 'Provide an input source: --prompt "description", --linear ISSUE-ID, or --spec path/to/spec.md' }
+      );
+      if (typedFlags.json) {
+        this.log(JSON.stringify(formatErrorJson(cliErr), null, 2));
+        this.exit(cliErr.exitCode);
+      }
+      this.error(cliErr.message, { exit: cliErr.exitCode });
     }
 
     if (typedFlags['dry-run']) {
@@ -166,8 +169,6 @@ export default class Start extends Command {
       return;
     }
 
-    const startTime = Date.now();
-    let currentStepLabel: string | undefined;
     const settings = resolveRunDirectorySettings();
 
     if (settings.errors.length > 0 || !settings.config) {
@@ -175,18 +176,20 @@ export default class Start extends Command {
         settings.errors.length > 0
           ? settings.errors.join('\n')
           : 'Repository not initialized. Run "ai-feature init" first.';
-      this.error(
-        new CliError(
-          message,
-          CliErrorCode.CONFIG_NOT_FOUND,
-          { remediation: 'Run "ai-feature init" to initialize the repository configuration.' }
-        ).message,
-        { exit: 10 }
+      const cliErr = new CliError(
+        message,
+        CliErrorCode.CONFIG_NOT_FOUND,
+        { remediation: 'Run "ai-feature init" to initialize the repository configuration.' }
       );
+      if (typedFlags.json) {
+        this.log(JSON.stringify(formatErrorJson(cliErr), null, 2));
+        this.exit(cliErr.exitCode);
+      }
+      this.error(cliErr.message, { exit: cliErr.exitCode });
     }
 
-    if (!typedFlags.json && settings.warnings.length > 0) {
-      for (const warn of settings.warnings) {
+    const startTime = Date.now();
+    let currentStepLabel: string | undefined;
         this.warn(warn);
       }
     }
@@ -399,22 +402,16 @@ export default class Start extends Command {
 
       await setLastError(runDir, currentStepLabel ?? 'start', formatErrorMessage(error), true);
 
-      if (error instanceof CliError) {
-        if (typedFlags.json) {
-          this.logJson(formatErrorJson(error));
-        }
-        this.error(error.message, { exit: error.exitCode });
-      } else {
-        const cliErr = new CliError(
-          `Start command failed: ${formatErrorMessage(error)}`,
-          CliErrorCode.GENERAL,
-          error instanceof Error ? { cause: error } : {}
-        );
-        if (typedFlags.json) {
-          this.logJson(formatErrorJson(cliErr));
-        }
-        this.error(cliErr.message, { exit: cliErr.exitCode });
+      const cliErr = error instanceof CliError ? error : new CliError(
+        `Start command failed: ${formatErrorMessage(error)}`,
+        CliErrorCode.GENERAL,
+        error instanceof Error ? { cause: error } : {}
+      );
+      if (typedFlags.json) {
+        this.log(JSON.stringify(formatErrorJson(cliErr), null, 2));
+        this.exit(cliErr.exitCode);
       }
+      this.error(cliErr.message, { exit: cliErr.exitCode });
     }
   }
 
