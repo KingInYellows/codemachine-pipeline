@@ -115,3 +115,33 @@ describe('getDocsUrl', () => {
     expect(getDocsUrl(CliErrorCode.DISK_FULL)).toBeUndefined();
   });
 });
+
+describe('CliError integration with commands', () => {
+  it('should map CONFIG_INVALID to exit code 10', () => {
+    const err = new CliError('bad config', CliErrorCode.CONFIG_INVALID);
+    expect(err.exitCode).toBe(10);
+    expect(err.code).toBe('CONFIG_INVALID');
+  });
+
+  it('should map RUN_DIR_NOT_FOUND to exit code 20', () => {
+    const err = new CliError('not found', CliErrorCode.RUN_DIR_NOT_FOUND);
+    expect(err.exitCode).toBe(20);
+    expect(err.code).toBe('RUN_DIR_NOT_FOUND');
+  });
+
+  it('should include remediation in formatErrorJson', () => {
+    const err = new CliError('missing input', CliErrorCode.CONFIG_INVALID, {
+      remediation: 'Provide --prompt or --linear',
+    });
+    const json = formatErrorJson(err);
+    expect(json.remediation).toBe('Provide --prompt or --linear');
+    expect(json.docs_url).toContain('configuration');
+  });
+
+  it('should wrap non-CliError in GENERAL code', () => {
+    const raw = new Error('something broke');
+    const wrapped = new CliError(raw.message, CliErrorCode.GENERAL, { cause: raw });
+    expect(wrapped.exitCode).toBe(1);
+    expect(wrapped.cause).toBe(raw);
+  });
+});
