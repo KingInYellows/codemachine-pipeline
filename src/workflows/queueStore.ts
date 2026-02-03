@@ -23,7 +23,6 @@ import type {
 // V2 Cache and helpers (shared with other queue modules to avoid circular dependencies)
 import {
   getV2IndexCache,
-  invalidateV2Cache,
   buildDependencyGraph,
   toExecutionTask,
   toExecutionTaskData,

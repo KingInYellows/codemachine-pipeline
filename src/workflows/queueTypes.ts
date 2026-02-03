@@ -12,6 +12,9 @@
 
 import type { ExecutionTask } from '../core/models/ExecutionTask';
 
+// Re-export constants for modules that import from queueTypes
+export { QUEUE_FILE, QUEUE_MANIFEST_FILE, QUEUE_SNAPSHOT_FILE } from './queueConstants.js';
+
 // ============================================================================
 // Queue Store Types (shared across companion modules)
 // ============================================================================
