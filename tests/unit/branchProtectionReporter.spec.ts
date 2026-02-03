@@ -781,12 +781,12 @@ describe('Edge Cases', () => {
       expect(result).toBeNull();
     });
 
-    it('should return null for corrupt JSON', async () => {
-      const reportPath = path.join(tempDir, 'branch_protection.json');
-      await fs.writeFile(reportPath, '{invalid json', 'utf-8');
+    it('should throw for corrupt JSON in correct path', async () => {
+      const statusDir = path.join(tempDir, 'status');
+      await fs.mkdir(statusDir, { recursive: true });
+      await fs.writeFile(path.join(statusDir, 'branch_protection.json'), '{invalid json', 'utf-8');
 
-      const result = await loadReport(tempDir);
-      expect(result).toBeNull();
+      await expect(loadReport(tempDir)).rejects.toThrow();
     });
   });
 
@@ -809,45 +809,47 @@ describe('Edge Cases', () => {
     });
 
     it('should detect mismatch when required checks differ from configured commands', async () => {
-      const commandsPath = path.join(tempDir, 'commands.json');
+      const validationDir = path.join(tempDir, 'validation');
+      await fs.mkdir(validationDir, { recursive: true });
       await fs.writeFile(
-        commandsPath,
-        JSON.stringify({ commands: [{ name: 'lint', command: 'npm run lint' }] }),
+        path.join(validationDir, 'commands.json'),
+        JSON.stringify({ commands: [{ type: 'lint', description: 'Run linter' }] }),
         'utf-8'
       );
 
       const result = await detectValidationMismatch(tempDir, ['ci/build', 'test/unit']);
-      // Result should indicate what's required vs configured
-      expect(result).toBeDefined();
+      expect(result.missing_in_registry).toContain('ci/build');
+      expect(result.missing_in_registry).toContain('test/unit');
+      expect(result.extra_in_registry).toContain('validation/lint');
     });
   });
 
   describe('getRecommendedAction - comprehensive states', () => {
     it('should recommend waiting when checks are pending', () => {
-      const action = getRecommendedAction({
-        can_proceed: false,
-        blockers_count: 1,
-        blockers: ['Required status checks: pending'],
-        has_branch_protection: true,
-        meets_review_requirements: true,
-        meets_status_requirements: false,
+      const compliance = createTestCompliance({
+        checks_passing: false,
+        failing_checks: ['ci/build'],
+        compliant: false,
+        blockers: ['Required status checks not passing'],
       });
-      expect(action).toBeDefined();
-      expect(typeof action).toBe('string');
-      expect(action.length).toBeGreaterThan(0);
+      const report = generateReport('feature-test-123', compliance);
+      const action = getRecommendedAction(report);
+      expect(action).toContain('Wait for');
+      expect(action).toContain('1 required check(s)');
     });
 
     it('should recommend requesting review when reviews are needed', () => {
-      const action = getRecommendedAction({
-        can_proceed: false,
-        blockers_count: 1,
-        blockers: ['Required review approvals: 0/1'],
-        has_branch_protection: true,
-        meets_review_requirements: false,
-        meets_status_requirements: true,
+      const compliance = createTestCompliance({
+        reviews_satisfied: false,
+        reviews_required: 2,
+        reviews: [createTestReview()],
+        compliant: false,
+        blockers: ['Required review approvals: 1/2'],
       });
-      expect(action).toBeDefined();
-      expect(typeof action).toBe('string');
+      const report = generateReport('feature-test-123', compliance);
+      const action = getRecommendedAction(report);
+      expect(action).toContain('Request');
+      expect(action).toContain('1 more approving review');
     });
   });
 });
