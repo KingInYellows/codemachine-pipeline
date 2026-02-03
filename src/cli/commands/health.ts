@@ -4,6 +4,7 @@ import * as path from 'node:path';
 import { loadRepoConfig } from '../../core/config/repo_config';
 
 const CONFIG_RELATIVE_PATH = path.join('.ai-feature-pipeline', 'config.json');
+const MIN_FREE_DISK_MB = 100;
 
 /**
  * Health check result
@@ -106,7 +107,7 @@ export default class Health extends Command {
       JSON.parse(content);
 
       // Attempt full config validation
-      loadRepoConfig(process.cwd());
+      loadRepoConfig(configPath);
 
       return {
         name: 'config',
@@ -133,8 +134,11 @@ export default class Health extends Command {
 
       // Probe writability with a temp file
       const probePath = path.join(runsDir, `.health_probe_${process.pid}`);
-      fs.writeFileSync(probePath, 'probe', 'utf-8');
-      fs.unlinkSync(probePath);
+      try {
+        fs.writeFileSync(probePath, 'probe', 'utf-8');
+      } finally {
+        try { fs.unlinkSync(probePath); } catch { /* probe may not exist */ }
+      }
 
       return {
         name: 'run_dir',
@@ -155,13 +159,12 @@ export default class Health extends Command {
       const stats = fs.statfsSync(process.cwd());
       const freeBytes = stats.bavail * stats.bsize;
       const freeMB = Math.round(freeBytes / (1024 * 1024));
-      const minFreeMB = 100;
 
-      if (freeMB < minFreeMB) {
+      if (freeMB < MIN_FREE_DISK_MB) {
         return {
           name: 'disk_space',
           status: 'fail',
-          message: `Low disk space: ${freeMB}MB free (minimum ${minFreeMB}MB)`,
+          message: `Low disk space: ${freeMB}MB free (minimum ${MIN_FREE_DISK_MB}MB)`,
         };
       }
 

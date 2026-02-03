@@ -2,8 +2,9 @@
  * Unit tests for src/cli/commands/health.ts (CDMCH-77)
  */
 
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import * as fs from 'node:fs';
+import * as os from 'node:os';
 import * as path from 'node:path';
 
 describe('Health command', () => {
@@ -53,7 +54,7 @@ describe('Health command', () => {
     let tempDir: string;
 
     beforeEach(() => {
-      tempDir = fs.mkdtempSync(path.join(require('os').tmpdir(), 'health-test-'));
+      tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'health-test-'));
     });
 
     afterEach(() => {
