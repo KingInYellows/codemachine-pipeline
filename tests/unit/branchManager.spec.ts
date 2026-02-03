@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeAll } from 'vitest';
 import {
   isProtectedBranch,
   validateBranchName,
@@ -296,6 +296,96 @@ describe('branchManager', () => {
         // Trailing punctuation becomes hyphen which gets stripped
         expect(result).toBe('feature/fix-critical-bug');
       });
+    });
+  });
+
+  // ==========================================================================
+  // Coverage gap-fill: git operation exports (CDMCH-83)
+  // ==========================================================================
+
+  describe('git operation exports', () => {
+    let mod: typeof import('../../src/workflows/branchManager');
+
+    beforeAll(async () => {
+      mod = await import('../../src/workflows/branchManager');
+    });
+
+    it('should export getCurrentBranch', () => {
+      expect(typeof mod.getCurrentBranch).toBe('function');
+    });
+
+    it('should export branchExists', () => {
+      expect(typeof mod.branchExists).toBe('function');
+    });
+
+    it('should export getCommitSha', () => {
+      expect(typeof mod.getCommitSha).toBe('function');
+    });
+
+    it('should export getRemoteUrl', () => {
+      expect(typeof mod.getRemoteUrl).toBe('function');
+    });
+
+    it('should export createBranch', () => {
+      expect(typeof mod.createBranch).toBe('function');
+    });
+
+    it('should export pushBranch', () => {
+      expect(typeof mod.pushBranch).toBe('function');
+    });
+
+    it('should export saveBranchMetadata', () => {
+      expect(typeof mod.saveBranchMetadata).toBe('function');
+    });
+
+    it('should export createSafeCommit', () => {
+      expect(typeof mod.createSafeCommit).toBe('function');
+    });
+  });
+
+  describe('createBranch - branch name validation', () => {
+    it('should reject branch names that fail validation', async () => {
+      const { createBranch } = await import('../../src/workflows/branchManager');
+      const vi = await import('vitest');
+      const mockLogger = {
+        info: vi.vi.fn(), debug: vi.vi.fn(), warn: vi.vi.fn(), error: vi.vi.fn(),
+        child: vi.vi.fn(), flush: vi.vi.fn(),
+      } as unknown as import('../../src/telemetry/logger').StructuredLogger;
+      const mockMetrics = { recordCounter: vi.vi.fn(), recordGauge: vi.vi.fn(), recordHistogram: vi.vi.fn() } as unknown as import('../../src/telemetry/metrics').MetricsCollector;
+
+      const config = {
+        runDir: '/tmp',
+        featureId: 'test',
+        workingDir: '/tmp',
+        repoConfig: createMockRepoConfig('main'),
+      };
+
+      // Using an invalid branch name (contains invalid chars)
+      const result = await createBranch(config, { branchName: '../../../etc/passwd' }, mockLogger, mockMetrics);
+      expect(result.success).toBe(false);
+    });
+  });
+
+  describe('pushBranch - protected branch guard', () => {
+    it('should reject pushing to a protected branch', async () => {
+      const { pushBranch } = await import('../../src/workflows/branchManager');
+      const vi = await import('vitest');
+      const mockLogger = {
+        info: vi.vi.fn(), debug: vi.vi.fn(), warn: vi.vi.fn(), error: vi.vi.fn(),
+        child: vi.vi.fn(), flush: vi.vi.fn(),
+      } as unknown as import('../../src/telemetry/logger').StructuredLogger;
+      const mockMetrics = { recordCounter: vi.vi.fn(), recordGauge: vi.vi.fn(), recordHistogram: vi.vi.fn() } as unknown as import('../../src/telemetry/metrics').MetricsCollector;
+
+      const config = {
+        runDir: '/tmp',
+        featureId: 'test',
+        workingDir: '/tmp',
+        repoConfig: createMockRepoConfig('main'),
+      };
+
+      const result = await pushBranch(config, 'main', 'origin', mockLogger, mockMetrics);
+      expect(result.success).toBe(false);
+      expect(result.error).toContain('protected');
     });
   });
 });

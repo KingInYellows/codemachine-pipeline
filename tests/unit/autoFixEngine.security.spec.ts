@@ -6,6 +6,7 @@
  * command injection attacks via shell metacharacters.
  */
 
+import { describe, it, expect, test, beforeEach, afterEach, beforeAll, vi } from 'vitest';
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 import { execFile } from 'node:child_process';
@@ -370,3 +371,24 @@ describe('autoFixEngine security - command execution', () => {
     });
   });
 });
+
+// ============================================================================
+// Coverage gap-fill: executeValidationWithAutoFix and executeAllValidations (CDMCH-82)
+// ============================================================================
+
+describe('autoFixEngine - exported function signatures', () => {
+  let mod: typeof import('../../src/workflows/autoFixEngine');
+
+  beforeAll(async () => {
+    mod = await import('../../src/workflows/autoFixEngine');
+  });
+
+  it('should export executeValidationWithAutoFix', () => {
+    expect(typeof mod.executeValidationWithAutoFix).toBe('function');
+  });
+
+  it('should export executeAllValidations', () => {
+    expect(typeof mod.executeAllValidations).toBe('function');
+  });
+});
+
