@@ -12,6 +12,7 @@ COPY package*.json ./
 # Copy source code BEFORE installing (to avoid prepare script running without source)
 COPY tsconfig.json ./
 COPY src ./src
+COPY scripts ./scripts
 
 # Install all dependencies (including dev for build)
 # This will trigger prepare script which will build
