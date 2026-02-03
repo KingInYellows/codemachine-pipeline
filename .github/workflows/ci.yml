@@ -109,8 +109,10 @@ jobs:
 
       - name: Test Docker image
         run: |
+          set -o pipefail
           docker run --rm ai-feature-pipeline:test --version || true
           docker run --rm ai-feature-pipeline:test --help
+          docker run --rm ai-feature-pipeline:test doctor --json | python3 -m json.tool > /dev/null && echo 'doctor --json: valid JSON'
 
       - name: Cleanup
         if: always()
