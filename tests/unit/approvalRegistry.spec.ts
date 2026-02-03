@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, beforeAll } from 'vitest';
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 import * as os from 'node:os';
@@ -548,5 +548,69 @@ describe('Edge Cases', () => {
 
     const parseResult = parseApprovalRecord(record);
     expect(parseResult.success).toBe(true);
+  });
+});
+
+// ============================================================================
+// Coverage gap-fill: Workflow functions (CDMCH-85)
+// ============================================================================
+
+describe('approvalRegistry - workflow exports', () => {
+  let mod: typeof import('../../src/workflows/approvalRegistry');
+
+  beforeAll(async () => {
+    mod = await import('../../src/workflows/approvalRegistry');
+  });
+
+  it('should export requestApproval', () => {
+    expect(typeof mod.requestApproval).toBe('function');
+  });
+
+  it('should export grantApproval', () => {
+    expect(typeof mod.grantApproval).toBe('function');
+  });
+
+  it('should export denyApproval', () => {
+    expect(typeof mod.denyApproval).toBe('function');
+  });
+
+  it('should export getPendingApprovals', () => {
+    expect(typeof mod.getPendingApprovals).toBe('function');
+  });
+
+  it('should export getApprovalHistory', () => {
+    expect(typeof mod.getApprovalHistory).toBe('function');
+  });
+
+  it('should export validateApprovalForTransition', () => {
+    expect(typeof mod.validateApprovalForTransition).toBe('function');
+  });
+});
+
+describe('approvalRegistry - validateApprovalForTransition', () => {
+  let tempDir: string;
+
+  beforeEach(async () => {
+    tempDir = await createTempDir();
+  });
+
+  afterEach(async () => {
+    await cleanupTempDir(tempDir);
+  });
+
+  it('should fail validation when no approval exists', async () => {
+    const { createRunDirectory } = await import('../../src/persistence/runDirectoryManager');
+    const { validateApprovalForTransition } = await import(
+      '../../src/workflows/approvalRegistry'
+    );
+
+    const runDir = await createRunDirectory(tempDir, 'FEAT-VAL', {
+      title: 'Test Validation',
+      repoUrl: 'https://github.com/test/repo',
+    });
+
+    const result = await validateApprovalForTransition(runDir, 'prd', 'abc123');
+    expect(result.valid).toBe(false);
+    expect(result.errors.length).toBeGreaterThan(0);
   });
 });

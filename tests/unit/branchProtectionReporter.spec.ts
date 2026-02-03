@@ -760,4 +760,96 @@ describe('Edge Cases', () => {
 
     expect(formatted).toContain('1. ' + longBlocker);
   });
+
+  // ==========================================================================
+  // Coverage gap-fill: edge cases (CDMCH-84)
+  // ==========================================================================
+
+  describe('loadReport - error handling edge cases', () => {
+    let tempDir: string;
+
+    beforeEach(async () => {
+      tempDir = await createTempDir();
+    });
+
+    afterEach(async () => {
+      await cleanupTempDir(tempDir);
+    });
+
+    it('should return null for non-existent report file', async () => {
+      const result = await loadReport(path.join(tempDir, 'nonexistent'));
+      expect(result).toBeNull();
+    });
+
+    it('should throw for corrupt JSON in correct path', async () => {
+      const statusDir = path.join(tempDir, 'status');
+      await fs.mkdir(statusDir, { recursive: true });
+      await fs.writeFile(path.join(statusDir, 'branch_protection.json'), '{invalid json', 'utf-8');
+
+      await expect(loadReport(tempDir)).rejects.toThrow();
+    });
+  });
+
+  describe('detectValidationMismatch - edge cases', () => {
+    let tempDir: string;
+
+    beforeEach(async () => {
+      tempDir = await createTempDir();
+    });
+
+    afterEach(async () => {
+      await cleanupTempDir(tempDir);
+    });
+
+    it('should report missing validations when commands.json does not exist', async () => {
+      const result = await detectValidationMismatch(tempDir, ['ci/build']);
+      // When no commands.json, all required checks are "missing_in_registry"
+      expect(result).toBeDefined();
+      expect(result!.missing_in_registry).toContain('ci/build');
+    });
+
+    it('should detect mismatch when required checks differ from configured commands', async () => {
+      const validationDir = path.join(tempDir, 'validation');
+      await fs.mkdir(validationDir, { recursive: true });
+      await fs.writeFile(
+        path.join(validationDir, 'commands.json'),
+        JSON.stringify({ commands: [{ type: 'lint', description: 'Run linter' }] }),
+        'utf-8'
+      );
+
+      const result = await detectValidationMismatch(tempDir, ['ci/build', 'test/unit']);
+      expect(result.missing_in_registry).toContain('ci/build');
+      expect(result.missing_in_registry).toContain('test/unit');
+      expect(result.extra_in_registry).toContain('validation/lint');
+    });
+  });
+
+  describe('getRecommendedAction - comprehensive states', () => {
+    it('should recommend waiting when checks are pending', () => {
+      const compliance = createTestCompliance({
+        checks_passing: false,
+        failing_checks: ['ci/build'],
+        compliant: false,
+        blockers: ['Required status checks not passing'],
+      });
+      const report = generateReport('feature-test-123', compliance);
+      const action = getRecommendedAction(report);
+      expect(action).toContain('Wait for');
+      expect(action).toContain('1 required check(s)');
+    });
+
+    it('should recommend requesting review when reviews are needed', () => {
+      const compliance = createTestCompliance({
+        reviews_satisfied: false,
+        reviews_required: 2,
+        reviews: [createTestReview()],
+        compliant: false,
+        blockers: ['Required review approvals: 1/2'],
+      });
+      const report = generateReport('feature-test-123', compliance);
+      const action = getRecommendedAction(report);
+      expect(action).toContain('Request');
+      expect(action).toContain('1 more approving review');
+    });
+  });
 });
