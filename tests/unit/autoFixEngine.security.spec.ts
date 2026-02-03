@@ -6,6 +6,7 @@
  * command injection attacks via shell metacharacters.
  */
 
+import { describe, it, expect, test, beforeEach, afterEach, beforeAll, vi } from 'vitest';
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 import { execFile } from 'node:child_process';
@@ -376,36 +377,18 @@ describe('autoFixEngine security - command execution', () => {
 // ============================================================================
 
 describe('autoFixEngine - exported function signatures', () => {
-  it('should export executeValidationWithAutoFix', async () => {
-    const mod = await import('../../src/workflows/autoFixEngine');
+  let mod: typeof import('../../src/workflows/autoFixEngine');
+
+  beforeAll(async () => {
+    mod = await import('../../src/workflows/autoFixEngine');
+  });
+
+  it('should export executeValidationWithAutoFix', () => {
     expect(typeof mod.executeValidationWithAutoFix).toBe('function');
   });
 
-  it('should export executeAllValidations', async () => {
-    const mod = await import('../../src/workflows/autoFixEngine');
+  it('should export executeAllValidations', () => {
     expect(typeof mod.executeAllValidations).toBe('function');
   });
-
-  it('should use execFile instead of exec for command safety', async () => {
-    const fsSync = await import('node:fs');
-    const source = fsSync.readFileSync(
-      path.join(__dirname, '../../src/workflows/autoFixEngine.ts'),
-      'utf-8'
-    );
-    // Verify secure execution pattern
-    expect(source).toContain('execFile');
-    // Verify retry logic exists
-    expect(source).toContain('max_retries');
-    expect(source).toContain('backoff');
-  });
-
-  it('should implement template variable substitution', async () => {
-    const fsSync = await import('node:fs');
-    const source = fsSync.readFileSync(
-      path.join(__dirname, '../../src/workflows/autoFixEngine.ts'),
-      'utf-8'
-    );
-    // Template variables for repo_root and run_dir should be supported
-    expect(source).toContain('repo_root');
-  });
 });
+

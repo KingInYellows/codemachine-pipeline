@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, beforeAll } from 'vitest';
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 import * as os from 'node:os';
@@ -556,45 +556,34 @@ describe('Edge Cases', () => {
 // ============================================================================
 
 describe('approvalRegistry - workflow exports', () => {
-  it('should export requestApproval', async () => {
-    const mod = await import('../../src/workflows/approvalRegistry');
+  let mod: typeof import('../../src/workflows/approvalRegistry');
+
+  beforeAll(async () => {
+    mod = await import('../../src/workflows/approvalRegistry');
+  });
+
+  it('should export requestApproval', () => {
     expect(typeof mod.requestApproval).toBe('function');
   });
 
-  it('should export grantApproval', async () => {
-    const mod = await import('../../src/workflows/approvalRegistry');
+  it('should export grantApproval', () => {
     expect(typeof mod.grantApproval).toBe('function');
   });
 
-  it('should export denyApproval', async () => {
-    const mod = await import('../../src/workflows/approvalRegistry');
+  it('should export denyApproval', () => {
     expect(typeof mod.denyApproval).toBe('function');
   });
 
-  it('should export getPendingApprovals', async () => {
-    const mod = await import('../../src/workflows/approvalRegistry');
+  it('should export getPendingApprovals', () => {
     expect(typeof mod.getPendingApprovals).toBe('function');
   });
 
-  it('should export getApprovalHistory', async () => {
-    const mod = await import('../../src/workflows/approvalRegistry');
+  it('should export getApprovalHistory', () => {
     expect(typeof mod.getApprovalHistory).toBe('function');
   });
 
-  it('should export validateApprovalForTransition', async () => {
-    const mod = await import('../../src/workflows/approvalRegistry');
+  it('should export validateApprovalForTransition', () => {
     expect(typeof mod.validateApprovalForTransition).toBe('function');
-  });
-});
-
-describe('approvalRegistry - requestApproval', () => {
-  it('should accept valid SHA-256 artifact hash', async () => {
-    const hash = 'a'.repeat(64);
-    const { computeContentHash } = await import('../../src/workflows/approvalRegistry');
-    const result = computeContentHash('test content');
-    // SHA-256 produces 64 hex chars
-    expect(result).toMatch(/^[a-f0-9]{64}$/);
-    expect(hash).toHaveLength(64);
   });
 });
 

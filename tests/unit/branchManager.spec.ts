@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeAll } from 'vitest';
 import {
   isProtectedBranch,
   validateBranchName,
@@ -304,43 +304,41 @@ describe('branchManager', () => {
   // ==========================================================================
 
   describe('git operation exports', () => {
-    it('should export getCurrentBranch', async () => {
-      const mod = await import('../../src/workflows/branchManager');
+    let mod: typeof import('../../src/workflows/branchManager');
+
+    beforeAll(async () => {
+      mod = await import('../../src/workflows/branchManager');
+    });
+
+    it('should export getCurrentBranch', () => {
       expect(typeof mod.getCurrentBranch).toBe('function');
     });
 
-    it('should export branchExists', async () => {
-      const mod = await import('../../src/workflows/branchManager');
+    it('should export branchExists', () => {
       expect(typeof mod.branchExists).toBe('function');
     });
 
-    it('should export getCommitSha', async () => {
-      const mod = await import('../../src/workflows/branchManager');
+    it('should export getCommitSha', () => {
       expect(typeof mod.getCommitSha).toBe('function');
     });
 
-    it('should export getRemoteUrl', async () => {
-      const mod = await import('../../src/workflows/branchManager');
+    it('should export getRemoteUrl', () => {
       expect(typeof mod.getRemoteUrl).toBe('function');
     });
 
-    it('should export createBranch', async () => {
-      const mod = await import('../../src/workflows/branchManager');
+    it('should export createBranch', () => {
       expect(typeof mod.createBranch).toBe('function');
     });
 
-    it('should export pushBranch', async () => {
-      const mod = await import('../../src/workflows/branchManager');
+    it('should export pushBranch', () => {
       expect(typeof mod.pushBranch).toBe('function');
     });
 
-    it('should export saveBranchMetadata', async () => {
-      const mod = await import('../../src/workflows/branchManager');
+    it('should export saveBranchMetadata', () => {
       expect(typeof mod.saveBranchMetadata).toBe('function');
     });
 
-    it('should export createSafeCommit', async () => {
-      const mod = await import('../../src/workflows/branchManager');
+    it('should export createSafeCommit', () => {
       expect(typeof mod.createSafeCommit).toBe('function');
     });
   });
