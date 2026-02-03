@@ -30,8 +30,8 @@ import {
 
 // Re-export for backward compatibility
 export {
-  getV2IndexCache,
   invalidateV2Cache,
+  getV2IndexCache,
   buildDependencyGraph,
   toExecutionTask,
   toExecutionTaskData,
@@ -377,6 +377,9 @@ export async function createQueueSnapshot(runDir: string): Promise<QueueOperatio
 
 // --- Re-exports from companion modules for backward compatibility ---
 
-export { getNextTask, getPendingTasks, getFailedTasks, getTaskById, updateTaskInQueue, updateTaskInQueueV2 } from './queueTaskManager.js';
-export { getQueueCountsV2, getReadyTasksV2, getV2IndexState, forceCompactV2, exportV2State } from './queueV2Api.js';
-export { validateQueue } from './queueValidation.js';
+export {
+  getNextTask, getPendingTasks, getFailedTasks, getTaskById, updateTaskInQueue, updateTaskInQueueV2 } from './queueTaskManager.js';
+export {
+  getQueueCountsV2, getReadyTasksV2, getV2IndexState, forceCompactV2, exportV2State } from './queueV2Api.js';
+export {
+  validateQueue } from './queueValidation.js';
