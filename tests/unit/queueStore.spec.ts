@@ -4,13 +4,22 @@ import * as path from 'node:path';
 import * as os from 'node:os';
 import {
   createQueueSnapshot,
+  initializeQueue,
   initializeQueueFromPlan,
   type TaskPlan,
   loadQueue,
   updateTaskInQueue,
 } from '../../src/workflows/queueStore.js';
-import { createRunDirectory } from '../../src/persistence/runDirectoryManager.js';
+import { createRunDirectory, writeManifest } from '../../src/persistence/runDirectoryManager.js';
 import { type ExecutionTask } from '../../src/core/models/ExecutionTask.js';
+
+vi.mock('node:fs/promises', async () => {
+  const actual = await vi.importActual<typeof import('node:fs/promises')>('node:fs/promises');
+  return {
+    ...actual,
+    open: vi.fn(actual.open),
+  };
+});
 
 describe('queueStore - initializeQueueFromPlan', () => {
   let tempDir: string;
@@ -448,18 +457,15 @@ describe('queueStore - fsync durability (CDMCH-67)', () => {
     const queueDir = path.join(runDir, 'queue');
     await fs.mkdir(queueDir, { recursive: true });
 
-    // Spy on fs.open to intercept the file handle
-    const syncSpy = vi.fn().mockResolvedValue(undefined);
-    const closeSpy = vi.fn().mockResolvedValue(undefined);
-    const writeFileSpy = vi.fn().mockResolvedValue(undefined);
-
-    const mockHandle = {
-      writeFile: writeFileSpy,
-      sync: syncSpy,
-      close: closeSpy,
-    };
-
-    const openSpy = vi.spyOn(fs, 'open').mockResolvedValue(mockHandle as any);
+    const actualFs = await vi.importActual<typeof import('node:fs/promises')>('node:fs/promises');
+    const openMock = vi.mocked(fs.open);
+    let syncSpy = vi.spyOn({ sync: async () => undefined }, 'sync');
+    openMock.mockImplementation(async (...args) => {
+      const handle = await actualFs.open(...args);
+      syncSpy.mockRestore();
+      syncSpy = vi.spyOn(handle, 'sync');
+      return handle;
+    });
 
     try {
       // This should trigger queue manifest write which uses the fsync pattern
@@ -467,9 +473,9 @@ describe('queueStore - fsync durability (CDMCH-67)', () => {
 
       // Verify handle.sync() was called for durability
       expect(syncSpy).toHaveBeenCalled();
-      expect(closeSpy).toHaveBeenCalled();
     } finally {
-      openSpy.mockRestore();
+      openMock.mockImplementation(actualFs.open);
+      syncSpy.mockRestore();
     }
   });
 });

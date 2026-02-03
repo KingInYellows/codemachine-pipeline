@@ -805,7 +805,10 @@ describe('Edge Cases', () => {
       const result = await detectValidationMismatch(tempDir, ['ci/build']);
       // When no commands.json, all required checks are "missing_in_registry"
       expect(result).toBeDefined();
-      expect(result!.missing_in_registry).toContain('ci/build');
+      if (!result) {
+        throw new Error('Expected validation mismatch result');
+      }
+      expect(result.missing_in_registry).toContain('ci/build');
     });
 
     it('should detect mismatch when required checks differ from configured commands', async () => {

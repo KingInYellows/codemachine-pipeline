@@ -61,7 +61,7 @@ export default class Health extends Command {
     checks.push(this.checkConfig());
 
     // Check 2: Run directory writable
-    checks.push(await this.checkRunDirWritable());
+    checks.push(this.checkRunDirWritable());
 
     // Check 3: Disk space
     checks.push(this.checkDiskSpace());
@@ -123,7 +123,7 @@ export default class Health extends Command {
     }
   }
 
-  private async checkRunDirWritable(): Promise<HealthCheck> {
+  private checkRunDirWritable(): HealthCheck {
     const runsDir = path.resolve(process.cwd(), '.ai-feature-pipeline', 'runs');
 
     try {

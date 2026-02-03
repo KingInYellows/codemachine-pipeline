@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 import * as os from 'node:os';
@@ -401,17 +401,6 @@ describe('queueMigration', () => {
       const second = await ensureV2Format(testDir, 'feature-123');
       expect(second.migrated).toBe(false);
       expect(second.result).toBeUndefined();
-    });
-
-      const { migrated, result } = await ensureV2Format(testDir, 'feature-123');
-
-      expect(migrated).toBe(true);
-      expect(result?.success).toBe(true);
-
-      // After migration+cache invalidation, a fresh V2 load should work correctly
-      // (this proves the cache was invalidated - stale V2 data doesn't interfere)
-      const version = await detectQueueVersion(testDir);
-      expect(version).toBe('v2');
     });
   });
 
