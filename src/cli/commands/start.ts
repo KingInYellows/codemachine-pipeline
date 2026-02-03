@@ -31,6 +31,7 @@ import { createLinearAdapter, type IssueSnapshot } from '../../adapters/linear/L
 import { CLIExecutionEngine } from '../../workflows/cliExecutionEngine';
 import { loadQueue } from '../../workflows/queueStore';
 import { createCodeMachineStrategy } from '../../workflows/codeMachineStrategy';
+import { formatErrorMessage } from '../utils/cliErrors';
 
 const EXECUTION_STEPS = {
   Context: 'context_aggregation',
@@ -380,11 +381,11 @@ export default class Start extends Command {
         exit_code: '1',
       });
       await metrics.flush();
-      commandSpan.end({ code: SpanStatusCode.ERROR, message: this.formatUnknownError(error) });
+      commandSpan.end({ code: SpanStatusCode.ERROR, message: formatErrorMessage(error) });
 
-      await setLastError(runDir, currentStepLabel ?? 'start', this.formatUnknownError(error), true);
+      await setLastError(runDir, currentStepLabel ?? 'start', formatErrorMessage(error), true);
 
-      this.error(`Start command failed: ${this.formatUnknownError(error)}`, { exit: 1 });
+      this.error(`Start command failed: ${formatErrorMessage(error)}`, { exit: 1 });
     }
   }
 
@@ -744,20 +745,6 @@ export default class Start extends Command {
     }
   }
 
-  private formatUnknownError(error: unknown): string {
-    if (error instanceof Error) {
-      return error.message;
-    }
-    if (typeof error === 'string') {
-      return error;
-    }
-    try {
-      return JSON.stringify(error);
-    } catch {
-      return 'Unknown error';
-    }
-  }
-
   private findGitRoot(): string {
     try {
       return execSync('git rev-parse --show-toplevel', {
@@ -766,7 +753,7 @@ export default class Start extends Command {
       }).trim();
     } catch (error) {
       throw new Error(
-        `Failed to determine git repository root. Ensure you are running inside a git repo. (${this.formatUnknownError(error)})`
+        `Failed to determine git repository root. Ensure you are running inside a git repo. (${formatErrorMessage(error)})`
       );
     }
   }
