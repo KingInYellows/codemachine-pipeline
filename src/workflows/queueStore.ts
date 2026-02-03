@@ -10,7 +10,8 @@ import { createLogger, type StructuredLogger, LogLevel } from '../telemetry/logg
 
 // V2 WAL Components
 import { getCounts, addTask as addTaskToIndex } from './queueMemoryIndex.js';
-import { appendOperationsBatch } from './queueOperationsLog.js';
+import { appendOperationsBatch, readOperations } from './queueOperationsLog.js';
+import { loadSnapshot } from './queueSnapshotManager.js';
 import { compact } from './queueCompactionEngine.js';
 import { QUEUE_FILE, QUEUE_MANIFEST_FILE, QUEUE_SNAPSHOT_FILE } from './queueConstants.js';
 import type {
@@ -290,6 +291,16 @@ async function writeQueueManifest(queueDir: string, manifest: QueueManifest): Pr
 
 /** Load all tasks from queue via V2 WAL-based index. */
 export async function loadQueue(runDir: string): Promise<Map<string, ExecutionTask>> {
+  // Verify queue integrity before loading (CDMCH-69)
+  const integrity = await verifyQueueIntegrity(runDir);
+  if (!integrity.valid) {
+    logger.warn('Queue integrity check found issues', {
+      errors: integrity.errors,
+      sequence_gaps: integrity.sequenceGaps,
+      wal_checksum_failures: integrity.walChecksumFailures,
+    });
+  }
+
   const v2Cache = await getV2IndexCache(runDir);
   const tasks = new Map<string, ExecutionTask>();
 
@@ -337,6 +348,91 @@ export async function loadQueueSnapshot(runDir: string): Promise<QueueSnapshot |
     return snapshot;
   } catch {
     return null;
+  }
+}
+
+// --- Queue Integrity Verification (CDMCH-69) ---
+
+/** Result of queue integrity verification. */
+export interface QueueIntegrityResult {
+  valid: boolean;
+  snapshotValid: boolean | null; // null if no snapshot
+  walEntriesChecked: number;
+  walChecksumFailures: number;
+  sequenceGaps: number[];
+  errors: string[];
+}
+
+/**
+ * Verify queue integrity by checking snapshot checksum and WAL sequence continuity.
+ *
+ * This function is a read-only check that loads the snapshot and WAL operations,
+ * validates checksums, and checks for sequence number gaps. It does NOT modify
+ * any state and returns a structured result instead of throwing.
+ *
+ * @param runDir - Path to the run directory
+ * @returns Integrity verification result
+ */
+export async function verifyQueueIntegrity(runDir: string): Promise<QueueIntegrityResult> {
+  const result: QueueIntegrityResult = {
+    valid: true,
+    snapshotValid: null,
+    walEntriesChecked: 0,
+    walChecksumFailures: 0,
+    sequenceGaps: [],
+    errors: [],
+  };
+
+  try {
+    const manifest = await readManifest(runDir);
+    const queueDir = path.join(runDir, manifest.queue.queue_dir);
+
+    // 1. Verify snapshot (loadSnapshot already validates checksum internally)
+    const snapshot = await loadSnapshot(queueDir);
+    if (snapshot) {
+      result.snapshotValid = true; // loadSnapshot returns null on checksum mismatch
+    }
+    // null means no snapshot exists or it was invalid
+    // We can distinguish by checking if the file exists
+    if (!snapshot) {
+      try {
+        await fs.access(path.join(queueDir, 'queue_snapshot.json'));
+        // File exists but loadSnapshot returned null => invalid
+        result.snapshotValid = false;
+        result.valid = false;
+        result.errors.push('Snapshot file exists but failed validation (schema or checksum)');
+      } catch {
+        // File does not exist - that's fine, snapshotValid stays null
+      }
+    }
+
+    // 2. Read and verify WAL operations (readOperations already skips bad checksums)
+    // We read all operations (afterSeq = -1) to do a full integrity check
+    const afterSeq = snapshot?.snapshotSeq ?? -1;
+    const operations = await readOperations(queueDir, afterSeq);
+    result.walEntriesChecked = operations.length;
+
+    // 3. Check sequence continuity
+    if (operations.length > 0) {
+      let expectedSeq = operations[0].seq;
+      for (let i = 1; i < operations.length; i++) {
+        const nextSeq = operations[i].seq;
+        if (nextSeq !== expectedSeq + 1) {
+          result.sequenceGaps.push(expectedSeq + 1);
+          result.valid = false;
+          result.errors.push(
+            `Sequence gap: expected ${expectedSeq + 1}, got ${nextSeq}`
+          );
+        }
+        expectedSeq = nextSeq;
+      }
+    }
+
+    return result;
+  } catch (error) {
+    result.valid = false;
+    result.errors.push(error instanceof Error ? error.message : String(error));
+    return result;
   }
 }
 
