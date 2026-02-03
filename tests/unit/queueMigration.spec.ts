@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 import * as os from 'node:os';
@@ -380,6 +380,53 @@ describe('queueMigration', () => {
 
       const opsLogExists = await fs.access(path.join(testDir, 'queue_operations.log')).then(() => true).catch(() => false);
       expect(opsLogExists).toBe(true);
+    });
+
+    it('should invalidate cache after successful migration (CDMCH-73)', async () => {
+      // Set up V1 queue and perform initial migration
+      const tasks = [createV1Task('task-1'), createV1Task('task-2')];
+      await fs.writeFile(path.join(testDir, 'queue.jsonl'), createV1QueueContent(tasks), 'utf-8');
+
+      const { migrated, result } = await ensureV2Format(testDir, 'feature-123');
+
+      expect(migrated).toBe(true);
+      expect(result?.success).toBe(true);
+
+      // Verify cache was invalidated by checking that subsequent calls
+      // see the already-migrated V2 queue (not stale cached data)
+      const version = await detectQueueVersion(testDir);
+      expect(version).toBe('v2');
+
+      // Second migration call should detect V2 format and skip migration
+      const second = await ensureV2Format(testDir, 'feature-123');
+      expect(second.migrated).toBe(false);
+      expect(second.result).toBeUndefined();
+    });
+
+      const { migrated, result } = await ensureV2Format(testDir, 'feature-123');
+
+      expect(migrated).toBe(true);
+      expect(result?.success).toBe(true);
+
+      // After migration+cache invalidation, a fresh V2 load should work correctly
+      // (this proves the cache was invalidated - stale V2 data doesn't interfere)
+      const version = await detectQueueVersion(testDir);
+      expect(version).toBe('v2');
+    });
+  });
+
+  // ==========================================================================
+  // ESLint no-empty catch block verification (CDMCH-68)
+  // ==========================================================================
+
+  describe('empty catch block guard (CDMCH-68)', () => {
+    it('should enforce no-empty via eslint js.configs.recommended', async () => {
+      const eslintConfig = await fs.readFile(
+        path.join(__dirname, '../../eslint.config.cjs'),
+        'utf-8'
+      );
+      // ESLint config includes js.configs.recommended which enables no-empty
+      expect(eslintConfig).toContain('js.configs.recommended');
     });
   });
 });

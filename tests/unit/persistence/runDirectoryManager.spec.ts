@@ -536,6 +536,55 @@ describe('Run Directory Manager', () => {
     });
   });
 
+  describe('Stale lock threshold (CDMCH-71)', () => {
+    it('should be 60 seconds (60000ms)', async () => {
+      // Import and test the constant directly instead of source inspection
+      const { STALE_LOCK_THRESHOLD_MS } = await import('../../../src/persistence/runDirectoryManager.js');
+      expect(STALE_LOCK_THRESHOLD_MS).toBe(60000);
+    });
+  });
+
+  describe('Manifest write durability (CDMCH-67)', () => {
+    it('should call handle.sync() when writing manifest', async () => {
+      const runDir = getRunDirectoryPath(testBaseDir, testFeatureId);
+      await fs.mkdir(runDir, { recursive: true });
+
+      // Spy on fs.open to intercept the file handle
+      const syncSpy = vi.fn().mockResolvedValue(undefined);
+      const closeSpy = vi.fn().mockResolvedValue(undefined);
+      const writeFileSpy = vi.fn().mockResolvedValue(undefined);
+
+      const mockHandle = {
+        writeFile: writeFileSpy,
+        sync: syncSpy,
+        close: closeSpy,
+      };
+
+      const openSpy = vi.spyOn(fs, 'open').mockResolvedValue(mockHandle as any);
+
+      try {
+        await writeManifest(runDir, {
+          schema_version: '1.0.0',
+          feature_id: testFeatureId,
+          repo: { url: 'https://example.com', default_branch: 'main' },
+          status: 'pending',
+          execution: { completed_steps: 0 },
+          timestamps: { created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
+          approvals: { pending: [], completed: [] },
+          queue: { queue_dir: 'queue', pending_count: 0, completed_count: 0, failed_count: 0 },
+          artifacts: {},
+          telemetry: { logs_dir: 'logs' },
+        });
+
+        // Verify handle.sync() was called for durability
+        expect(syncSpy).toHaveBeenCalled();
+        expect(closeSpy).toHaveBeenCalled();
+      } finally {
+        openSpy.mockRestore();
+      }
+    });
+  });
+
   describe('Edge Cases', () => {
     it('should handle missing manifest gracefully', async () => {
       const runDir = getRunDirectoryPath(testBaseDir, testFeatureId);

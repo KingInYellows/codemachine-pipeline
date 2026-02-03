@@ -196,7 +196,10 @@ const MANIFEST_FILE_NAME = 'manifest.json';
 const HASH_MANIFEST_FILE_NAME = 'hash_manifest.json';
 const DEFAULT_LOCK_TIMEOUT = 30000; // 30 seconds
 const DEFAULT_POLL_INTERVAL = 100; // 100ms
-const STALE_LOCK_THRESHOLD_MS = 60000; // 60 seconds - reduced for faster crash recovery in homelab use
+
+// Export for testing (CDMCH-71)
+export const STALE_LOCK_THRESHOLD_MS = 60000; // 60 seconds - reduced for faster crash recovery in homelab use
+
 const SQLITE_DIR_NAME = 'sqlite';
 const SQLITE_DB_NAME = 'run_queue.db';
 
