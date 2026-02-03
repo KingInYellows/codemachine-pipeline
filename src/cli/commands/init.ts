@@ -20,6 +20,7 @@ import { createRunTraceManager, SpanStatusCode } from '../../telemetry/traces';
 import type { StructuredLogger } from '../../telemetry/logger';
 import type { MetricsCollector } from '../../telemetry/metrics';
 import type { TraceManager, ActiveSpan } from '../../telemetry/traces';
+import { formatErrorMessage } from '../utils/cliErrors';
 
 interface ConfigValidationPayload {
   status: 'not_found' | 'validation_error' | 'valid';
@@ -443,7 +444,7 @@ export default class Init extends Command {
         logger.error('Init command failed', {
           exit_code: exitCode,
           duration_ms: duration,
-          error: this.formatUnknownError(error),
+          error: formatErrorMessage(error),
           stack: error instanceof Error ? error.stack : undefined,
         });
       } else if (exitCode !== 0) {
@@ -490,22 +491,6 @@ export default class Init extends Command {
       return normalized === 'y' || normalized === 'yes';
     } finally {
       rl.close();
-    }
-  }
-
-  private formatUnknownError(error: unknown): string {
-    if (error instanceof Error) {
-      return error.message;
-    }
-
-    if (typeof error === 'string') {
-      return error;
-    }
-
-    try {
-      return JSON.stringify(error);
-    } catch {
-      return 'Unknown error';
     }
   }
 
