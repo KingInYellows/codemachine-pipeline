@@ -26,6 +26,7 @@ import {
   selectFeatureId,
   ensureTelemetryReferences,
 } from '../utils/runDirectory';
+import { formatErrorMessage } from '../utils/cliErrors';
 
 /**
  * Approve Command
@@ -330,7 +331,7 @@ export default class Approve extends Command {
       await metrics.flush();
       commandSpan.end({
         code: SpanStatusCode.ERROR,
-        message: this.formatUnknownError(error),
+        message: formatErrorMessage(error),
       });
       await traceManager.flush();
       await ensureTelemetryReferences(runDir);
@@ -353,7 +354,7 @@ export default class Approve extends Command {
         );
       }
 
-      this.error(`Approve command failed: ${this.formatUnknownError(error)}`, { exit: 1 });
+      this.error(`Approve command failed: ${formatErrorMessage(error)}`, { exit: 1 });
     }
   }
 
@@ -513,22 +514,9 @@ export default class Approve extends Command {
       });
     } catch (error) {
       options.logger.warn('Failed to generate trace map after spec approval', {
-        error: this.formatUnknownError(error),
+        error: formatErrorMessage(error),
       });
     }
   }
-
-  private formatUnknownError(error: unknown): string {
-    if (error instanceof Error) {
-      return error.message;
-    }
-    if (typeof error === 'string') {
-      return error;
-    }
-    try {
-      return JSON.stringify(error);
-    } catch {
-      return 'Unknown error';
-    }
-  }
 }
+
