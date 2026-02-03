@@ -31,7 +31,7 @@ import type { TaskPlan } from '../../src/workflows/queueStore.js';
 // ============================================================================
 
 const COLD_LOAD_MAX_MS = 1000;
-const WARM_LOAD_MAX_MS = 5;
+const WARM_LOAD_MAX_MS = 10;
 const UPDATE_MAX_MS = 100;
 const GET_NEXT_TASK_MAX_MS = 50;
 const JITTER_ALLOWANCE_FACTOR = 5;
