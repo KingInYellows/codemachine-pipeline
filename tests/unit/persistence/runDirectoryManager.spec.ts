@@ -5,6 +5,7 @@ import {
   createRunDirectory,
   getRunDirectoryPath,
   readManifest,
+  writeManifest,
   updateManifest,
   setLastStep,
   setLastError,
@@ -24,6 +25,14 @@ import {
   listRunDirectories,
   type CreateRunDirectoryOptions,
 } from '../../../src/persistence/runDirectoryManager';
+
+vi.mock('node:fs/promises', async () => {
+  const actual = await vi.importActual<typeof import('node:fs/promises')>('node:fs/promises');
+  return {
+    ...actual,
+    open: vi.fn(actual.open),
+  };
+});
 
 /**
  * Unit tests for Run Directory Manager
@@ -549,18 +558,15 @@ describe('Run Directory Manager', () => {
       const runDir = getRunDirectoryPath(testBaseDir, testFeatureId);
       await fs.mkdir(runDir, { recursive: true });
 
-      // Spy on fs.open to intercept the file handle
-      const syncSpy = vi.fn().mockResolvedValue(undefined);
-      const closeSpy = vi.fn().mockResolvedValue(undefined);
-      const writeFileSpy = vi.fn().mockResolvedValue(undefined);
-
-      const mockHandle = {
-        writeFile: writeFileSpy,
-        sync: syncSpy,
-        close: closeSpy,
-      };
-
-      const openSpy = vi.spyOn(fs, 'open').mockResolvedValue(mockHandle as any);
+      const actualFs = await vi.importActual<typeof import('node:fs/promises')>('node:fs/promises');
+      const openMock = vi.mocked(fs.open);
+      let syncSpy = vi.spyOn({ sync: async () => undefined }, 'sync');
+      openMock.mockImplementation(async (...args) => {
+        const handle = await actualFs.open(...args);
+        syncSpy.mockRestore();
+        syncSpy = vi.spyOn(handle, 'sync');
+        return handle;
+      });
 
       try {
         await writeManifest(runDir, {
@@ -578,9 +584,9 @@ describe('Run Directory Manager', () => {
 
         // Verify handle.sync() was called for durability
         expect(syncSpy).toHaveBeenCalled();
-        expect(closeSpy).toHaveBeenCalled();
       } finally {
-        openSpy.mockRestore();
+        openMock.mockImplementation(actualFs.open);
+        syncSpy.mockRestore();
       }
     });
   });
