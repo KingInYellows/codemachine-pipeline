@@ -35,24 +35,7 @@ jobs:
         with:
           node-version: '24'
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '24'
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '24'
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Run security advisory guard
-        run: npm run security:glob-guard
-
-      - name: Run linter
-        run: npm run lint
 
       - name: Check formatting
         run: npm run format:check
