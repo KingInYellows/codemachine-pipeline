@@ -9,6 +9,7 @@ import {
   type TaskPlan,
   loadQueue,
   updateTaskInQueue,
+  verifyQueueIntegrity,
 } from '../../src/workflows/queueStore.js';
 import { createRunDirectory, writeManifest } from '../../src/persistence/runDirectoryManager.js';
 import { type ExecutionTask } from '../../src/core/models/ExecutionTask.js';
@@ -525,3 +526,132 @@ describe('queueStore - snapshots', () => {
     expect(snapshot.schemaVersion).toBe('2.0.0');
   });
 });
+
+describe('queueStore - verifyQueueIntegrity (CDMCH-69)', () => {
+  let tempDir: string;
+  let runDir: string;
+
+  beforeEach(async () => {
+    tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'queuestore-integrity-'));
+    runDir = await createRunDirectory(tempDir, 'FEATURE-INTEGRITY', {
+      title: 'Integrity Test',
+      repo: {
+        url: 'https://github.com/test/repo',
+        default_branch: 'main',
+      },
+    });
+  });
+
+  afterEach(async () => {
+    await fs.rm(tempDir, { recursive: true, force: true });
+  });
+
+  it('should return valid for a clean queue', async () => {
+    await initializeQueueFromPlan(runDir, {
+      feature_id: 'FEATURE-INTEGRITY',
+      tasks: [
+        { id: 'T1', title: 'Task 1', task_type: 'code_generation', },
+        { id: 'T2', title: 'Task 2', task_type: 'code_generation', },
+      ],
+    } as TaskPlan);
+
+    const result = await verifyQueueIntegrity(runDir);
+    expect(result.valid).toBe(true);
+    expect(result.errors).toHaveLength(0);
+    expect(result.sequenceGaps).toHaveLength(0);
+  });
+
+  it('should detect corrupted snapshot', async () => {
+    await initializeQueueFromPlan(runDir, {
+      feature_id: 'FEATURE-INTEGRITY',
+      tasks: [
+        { id: 'T1', title: 'Task 1', task_type: 'code_generation', },
+      ],
+    } as TaskPlan);
+
+    // Create a snapshot then corrupt it
+    await createQueueSnapshot(runDir);
+
+    const { readManifest } = await import('../../src/persistence/runDirectoryManager.js');
+    const manifest = await readManifest(runDir);
+    const queueDir = path.join(runDir, manifest.queue.queue_dir);
+    const snapshotPath = path.join(queueDir, 'queue_snapshot.json');
+
+    try {
+      const content = await fs.readFile(snapshotPath, 'utf-8');
+      const snapshot = JSON.parse(content);
+      snapshot.checksum = 'corrupted';
+      await fs.writeFile(snapshotPath, JSON.stringify(snapshot), 'utf-8');
+    } catch {
+      // Snapshot may not exist for this queue type - that's OK
+    }
+
+    const result = await verifyQueueIntegrity(runDir);
+    // Snapshot invalid means valid should be false
+    expect(result.snapshotValid).toBe(false);
+    expect(result.valid).toBe(false);
+    expect(result.errors.length).toBeGreaterThan(0);
+  });
+
+  it('should report WAL entries checked', async () => {
+    await initializeQueueFromPlan(runDir, {
+      feature_id: 'FEATURE-INTEGRITY',
+      tasks: [
+        { id: 'T1', title: 'Task 1', task_type: 'code_generation', },
+        { id: 'T2', title: 'Task 2', task_type: 'code_generation', },
+        { id: 'T3', title: 'Task 3', task_type: 'code_generation', },
+      ],
+    } as TaskPlan);
+
+    const result = await verifyQueueIntegrity(runDir);
+    expect(result.walEntriesChecked).toBeGreaterThanOrEqual(3);
+  });
+
+  it('should return valid with null snapshotValid when no snapshot exists', async () => {
+    await initializeQueueFromPlan(runDir, {
+      feature_id: 'FEATURE-INTEGRITY',
+      tasks: [
+        { id: 'T1', title: 'Task 1', task_type: 'code_generation', },
+      ],
+    } as TaskPlan);
+
+    const result = await verifyQueueIntegrity(runDir);
+    expect(result.snapshotValid).toBeNull();
+    expect(result.valid).toBe(true);
+  });
+
+  it('should handle invalid runDir gracefully without throwing', async () => {
+    const result = await verifyQueueIntegrity('/nonexistent/directory/path');
+    expect(result.valid).toBe(false);
+    expect(result.errors.length).toBeGreaterThan(0);
+  });
+
+  it('should detect sequence gaps in the WAL', async () => {
+    // Create a queue with 3 operations
+    await initializeQueueFromPlan(runDir, {
+      feature_id: 'FEATURE-INTEGRITY',
+      tasks: [{ id: 'T1', title: 'Task 1', task_type: 'code_generation' }],
+    });
+    await updateTaskInQueue(runDir, 'T1', { status: 'running' });
+    await updateTaskInQueue(runDir, 'T1', { status: 'completed' });
+
+    const { readManifest } = await import('../../src/persistence/runDirectoryManager.js');
+    const manifest = await readManifest(runDir);
+    const queueDir = path.join(runDir, manifest.queue.queue_dir);
+    const walPath = path.join(queueDir, 'queue_operations.log');
+
+    const walContent = await fs.readFile(walPath, 'utf-8');
+    const lines = walContent.trim().split('\n');
+    
+    // Create a gap by removing the second line (operation)
+    const newWalContent = [lines[0], lines[2]].join('\n') + '\n';
+    await fs.writeFile(walPath, newWalContent, 'utf-8');
+
+    const result = await verifyQueueIntegrity(runDir);
+
+    expect(result.valid).toBe(false);
+    expect(result.sequenceGaps.length).toBeGreaterThan(0);
+    expect(result.errors.some(e => e.includes('Sequence gap'))).toBe(true);
+  });
+});
+
