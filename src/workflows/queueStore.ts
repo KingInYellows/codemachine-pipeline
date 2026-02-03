@@ -363,6 +363,9 @@ export interface QueueIntegrityResult {
   valid: boolean;
   snapshotValid: boolean | null; // null if no snapshot
   walEntriesChecked: number;
+  /** Number of WAL entries with checksum failures. Currently always 0 since readOperations() 
+   * silently skips invalid entries without returning a count. Future enhancement: modify 
+   * readOperations() to return both valid entries and failure count. */
   walChecksumFailures: number;
   sequenceGaps: number[];
   errors: string[];
@@ -383,7 +386,7 @@ export async function verifyQueueIntegrity(runDir: string): Promise<QueueIntegri
     valid: true,
     snapshotValid: null,
     walEntriesChecked: 0,
-    walChecksumFailures: 0, // Note: readOperations() skips invalid entries, count unavailable
+    walChecksumFailures: 0, // Always 0: readOperations() skips invalid entries without reporting count
     sequenceGaps: [],
     errors: [],
   };
@@ -396,10 +399,9 @@ export async function verifyQueueIntegrity(runDir: string): Promise<QueueIntegri
     const snapshot = await loadSnapshot(queueDir);
     if (snapshot) {
       result.snapshotValid = true; // loadSnapshot returns null on checksum mismatch
-    }
-    // null means no snapshot exists or it was invalid
-    // We can distinguish by checking if the file exists
-    if (!snapshot) {
+    } else {
+      // null means no snapshot exists or it was invalid
+      // We can distinguish by checking if the file exists
       try {
         await fs.access(path.join(queueDir, QUEUE_SNAPSHOT_FILE));
         // File exists but loadSnapshot returned null => invalid
@@ -419,14 +421,40 @@ export async function verifyQueueIntegrity(runDir: string): Promise<QueueIntegri
 
     // 3. Check sequence continuity
     if (operations.length > 0) {
+      // First, verify snapshot-to-WAL continuity if snapshot exists
+      if (snapshot) {
+        const firstSeq = operations[0].seq;
+        const expectedFirstSeq = snapshot.snapshotSeq + 1;
+        if (firstSeq !== expectedFirstSeq) {
+          result.valid = false;
+          result.errors.push(
+            `Gap between snapshot and WAL: snapshot ends at ${snapshot.snapshotSeq}, WAL starts at ${firstSeq}`
+          );
+          // Report all missing sequence numbers in the gap
+          for (let missingSeq = expectedFirstSeq; missingSeq < firstSeq; missingSeq++) {
+            result.sequenceGaps.push(missingSeq);
+          }
+        }
+      }
+
+      // Check WAL internal continuity
       let expectedSeq = operations[0].seq;
       for (let i = 1; i < operations.length; i++) {
         const nextSeq = operations[i].seq;
-        if (nextSeq !== expectedSeq + 1) {
-          result.sequenceGaps.push(expectedSeq + 1);
+        if (nextSeq > expectedSeq + 1) {
+          // Gap detected - report all missing sequence numbers
           result.valid = false;
           result.errors.push(
             `Sequence gap: expected ${expectedSeq + 1}, got ${nextSeq}`
+          );
+          for (let missingSeq = expectedSeq + 1; missingSeq < nextSeq; missingSeq++) {
+            result.sequenceGaps.push(missingSeq);
+          }
+        } else if (nextSeq <= expectedSeq) {
+          // Non-monotonic sequence - severe integrity issue
+          result.valid = false;
+          result.errors.push(
+            `Sequence not monotonic: expected > ${expectedSeq}, got ${nextSeq}`
           );
         }
         expectedSeq = nextSeq;

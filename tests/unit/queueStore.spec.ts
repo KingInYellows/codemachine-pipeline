@@ -625,4 +625,33 @@ describe('queueStore - verifyQueueIntegrity (CDMCH-69)', () => {
     expect(result.valid).toBe(false);
     expect(result.errors.length).toBeGreaterThan(0);
   });
+
+  it('should detect sequence gaps in the WAL', async () => {
+    // Create a queue with 3 operations
+    await initializeQueueFromPlan(runDir, {
+      feature_id: 'FEATURE-INTEGRITY',
+      tasks: [{ id: 'T1', title: 'Task 1', task_type: 'code_generation' }],
+    });
+    await updateTaskInQueue(runDir, 'T1', { status: 'running' });
+    await updateTaskInQueue(runDir, 'T1', { status: 'completed' });
+
+    const { readManifest } = await import('../../src/persistence/runDirectoryManager.js');
+    const manifest = await readManifest(runDir);
+    const queueDir = path.join(runDir, manifest.queue.queue_dir);
+    const walPath = path.join(queueDir, 'queue_operations.log');
+
+    const walContent = await fs.readFile(walPath, 'utf-8');
+    const lines = walContent.trim().split('\n');
+    
+    // Create a gap by removing the second line (operation)
+    const newWalContent = [lines[0], lines[2]].join('\n') + '\n';
+    await fs.writeFile(walPath, newWalContent, 'utf-8');
+
+    const result = await verifyQueueIntegrity(runDir);
+
+    expect(result.valid).toBe(false);
+    expect(result.sequenceGaps.length).toBeGreaterThan(0);
+    expect(result.errors.some(e => e.includes('Sequence gap'))).toBe(true);
+  });
 });
+
