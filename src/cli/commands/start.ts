@@ -31,7 +31,7 @@ import { createLinearAdapter, type IssueSnapshot } from '../../adapters/linear/L
 import { CLIExecutionEngine } from '../../workflows/cliExecutionEngine';
 import { loadQueue } from '../../workflows/queueStore';
 import { createCodeMachineStrategy } from '../../workflows/codeMachineStrategy';
-import { formatErrorMessage } from '../utils/cliErrors';
+import { CliError, CliErrorCode, formatErrorMessage, formatErrorJson } from '../utils/cliErrors';
 
 const EXECUTION_STEPS = {
   Context: 'context_aggregation',
@@ -147,7 +147,14 @@ export default class Start extends Command {
     const typedFlags = flags as StartFlags;
 
     if (!typedFlags.prompt && !typedFlags.linear && !typedFlags.spec) {
-      this.error('Must provide one of: --prompt, --linear, or --spec', { exit: 10 });
+      this.error(
+        new CliError(
+          'Must provide one of: --prompt, --linear, or --spec',
+          CliErrorCode.CONFIG_INVALID,
+          { remediation: 'Provide an input source: --prompt "description", --linear ISSUE-ID, or --spec path/to/spec.md' }
+        ).message,
+        { exit: 10 }
+      );
     }
 
     if (typedFlags.json) {
@@ -168,7 +175,14 @@ export default class Start extends Command {
         settings.errors.length > 0
           ? settings.errors.join('\n')
           : 'Repository not initialized. Run "ai-feature init" first.';
-      this.error(message, { exit: 10 });
+      this.error(
+        new CliError(
+          message,
+          CliErrorCode.CONFIG_NOT_FOUND,
+          { remediation: 'Run "ai-feature init" to initialize the repository configuration.' }
+        ).message,
+        { exit: 10 }
+      );
     }
 
     if (!typedFlags.json && settings.warnings.length > 0) {
@@ -385,7 +399,22 @@ export default class Start extends Command {
 
       await setLastError(runDir, currentStepLabel ?? 'start', formatErrorMessage(error), true);
 
-      this.error(`Start command failed: ${formatErrorMessage(error)}`, { exit: 1 });
+      if (error instanceof CliError) {
+        if (typedFlags.json) {
+          this.logJson(formatErrorJson(error));
+        }
+        this.error(error.message, { exit: error.exitCode });
+      } else {
+        const cliErr = new CliError(
+          `Start command failed: ${formatErrorMessage(error)}`,
+          CliErrorCode.GENERAL,
+          error instanceof Error ? { cause: error } : {}
+        );
+        if (typedFlags.json) {
+          this.logJson(formatErrorJson(cliErr));
+        }
+        this.error(cliErr.message, { exit: cliErr.exitCode });
+      }
     }
   }
 

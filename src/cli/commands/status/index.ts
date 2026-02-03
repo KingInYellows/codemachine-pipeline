@@ -42,6 +42,7 @@ import {
   refreshBranchProtectionArtifact,
 } from './data';
 import { renderHumanReadable } from './renderers';
+import { CliError, CliErrorCode, formatErrorMessage, formatErrorJson } from '../../utils/cliErrors.js';
 
 /**
  * Status command - Display current state of a feature pipeline
@@ -127,7 +128,14 @@ export default class Status extends Command {
         if (logger) {
           logger.error('Feature not found', { requested: typedFlags.feature });
         }
-        this.error(`Feature run directory not found: ${typedFlags.feature}`, { exit: 10 });
+        this.error(
+          new CliError(
+            `Feature run directory not found: ${typedFlags.feature}`,
+            CliErrorCode.RUN_DIR_NOT_FOUND,
+            { remediation: 'Check the feature ID with "ai-feature status" or start a new run with "ai-feature start".' }
+          ).message,
+          { exit: 10 }
+        );
       }
 
       const manifestInfo = featureId
@@ -282,11 +290,15 @@ export default class Status extends Command {
         throw error;
       }
 
-      if (error instanceof Error) {
-        this.error(`Status command failed: ${error.message}`, { exit: 1 });
-      } else {
-        this.error('Status command failed with an unknown error', { exit: 1 });
+      const cliErr = error instanceof CliError ? error : new CliError(
+        `Status command failed: ${formatErrorMessage(error)}`,
+        CliErrorCode.GENERAL,
+        error instanceof Error ? { cause: error } : {}
+      );
+      if (typedFlags.json) {
+        this.logJson(formatErrorJson(cliErr));
       }
+      this.error(cliErr.message, { exit: cliErr.exitCode });
     }
   }
 
