@@ -336,13 +336,32 @@ describe('queueSnapshotManager', () => {
   });
 
   describe('fsync durability (CDMCH-67)', () => {
-    it('should use handle.sync() in snapshot write path', async () => {
-      const source = await fs.readFile(
-        path.join(__dirname, '../../src/workflows/queueSnapshotManager.ts'),
-        'utf-8'
-      );
-      // queueSnapshotManager.ts line 199: await handle.sync()
-      expect(source).toContain('await handle.sync()');
+    it('should call handle.sync() when saving snapshot', async () => {
+      // Spy on fs.open to intercept the file handle
+      const syncSpy = vi.fn().mockResolvedValue(undefined);
+      const closeSpy = vi.fn().mockResolvedValue(undefined);
+      const writeFileSpy = vi.fn().mockResolvedValue(undefined);
+
+      const mockHandle = {
+        writeFile: writeFileSpy,
+        sync: syncSpy,
+        close: closeSpy,
+      };
+
+      const openSpy = vi.spyOn(fs, 'open').mockResolvedValue(mockHandle as any);
+
+      try {
+        const tasks = { 'task-1': createTaskData('task-1') } as Record<string, ExecutionTask>;
+        const counts = createCounts({ total: 1, pending: 1 });
+        
+        await saveSnapshot(testDir, 'feature-123', tasks, counts, 5, { 'task-1': [] });
+
+        // Verify handle.sync() was called for durability
+        expect(syncSpy).toHaveBeenCalled();
+        expect(closeSpy).toHaveBeenCalled();
+      } finally {
+        openSpy.mockRestore();
+      }
     });
   });
 

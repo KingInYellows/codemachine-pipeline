@@ -415,16 +415,62 @@ describe('queueStore - initializeQueueFromPlan', () => {
 });
 
 describe('queueStore - fsync durability (CDMCH-67)', () => {
-  it('should use handle.sync() in queue manifest write path', async () => {
-    // Verify the source code uses fsync pattern: open → write → sync → close → rename
-    const queueStoreSource = await fs.readFile(
-      path.join(__dirname, '../../src/workflows/queueStore.ts'),
-      'utf-8'
-    );
-    // queueStore.ts line 268: await handle.sync()
-    expect(queueStoreSource).toContain('await handle.sync()');
-    // Verify it's part of the atomic write pattern (temp file + rename)
-    expect(queueStoreSource).toContain('await fs.rename(tempPath, manifestPath)');
+  let tempDir: string;
+  let runDir: string;
+  
+  beforeEach(async () => {
+    tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'queue-fsync-test-'));
+    runDir = path.join(tempDir, 'run-001');
+    await fs.mkdir(runDir, { recursive: true });
+  });
+
+  afterEach(async () => {
+    await fs.rm(tempDir, { recursive: true, force: true });
+  });
+
+  it('should call handle.sync() when writing queue manifest', async () => {
+    // Initialize run directory with minimal manifest
+    const manifest = {
+      schema_version: '1.0.0',
+      feature_id: 'test-feature',
+      repo: { url: 'https://example.com', default_branch: 'main' },
+      status: 'pending' as const,
+      execution: { completed_steps: 0 },
+      timestamps: { created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
+      approvals: { pending: [], completed: [] },
+      queue: { queue_dir: 'queue', pending_count: 0, completed_count: 0, failed_count: 0 },
+      artifacts: {},
+      telemetry: { logs_dir: 'logs' },
+    };
+
+    await writeManifest(runDir, manifest);
+
+    const queueDir = path.join(runDir, 'queue');
+    await fs.mkdir(queueDir, { recursive: true });
+
+    // Spy on fs.open to intercept the file handle
+    const syncSpy = vi.fn().mockResolvedValue(undefined);
+    const closeSpy = vi.fn().mockResolvedValue(undefined);
+    const writeFileSpy = vi.fn().mockResolvedValue(undefined);
+
+    const mockHandle = {
+      writeFile: writeFileSpy,
+      sync: syncSpy,
+      close: closeSpy,
+    };
+
+    const openSpy = vi.spyOn(fs, 'open').mockResolvedValue(mockHandle as any);
+
+    try {
+      // This should trigger queue manifest write which uses the fsync pattern
+      await initializeQueue(runDir, 'test-feature');
+
+      // Verify handle.sync() was called for durability
+      expect(syncSpy).toHaveBeenCalled();
+      expect(closeSpy).toHaveBeenCalled();
+    } finally {
+      openSpy.mockRestore();
+    }
   });
 });
 

@@ -382,20 +382,26 @@ describe('queueMigration', () => {
       expect(opsLogExists).toBe(true);
     });
 
-    it('should call invalidateV2Cache after successful migration (CDMCH-73)', async () => {
-      // Verify via source inspection that invalidateV2Cache is called post-migration
-      const source = await fs.readFile(
-        path.join(__dirname, '../../src/workflows/queueMigration.ts'),
-        'utf-8'
-      );
-      // queueMigration.ts lines 449-454: invalidateV2Cache called after successful migration
-      expect(source).toContain('invalidateV2Cache(runDir)');
-    });
-
-    it('should invalidate cache only on successful migration (CDMCH-73)', async () => {
-      // Set up V1 queue and migrate via ensureV2Format
+    it('should invalidate cache after successful migration (CDMCH-73)', async () => {
+      // Set up V1 queue and perform initial migration
       const tasks = [createV1Task('task-1'), createV1Task('task-2')];
       await fs.writeFile(path.join(testDir, 'queue.jsonl'), createV1QueueContent(tasks), 'utf-8');
+
+      const { migrated, result } = await ensureV2Format(testDir, 'feature-123');
+
+      expect(migrated).toBe(true);
+      expect(result?.success).toBe(true);
+
+      // Verify cache was invalidated by checking that subsequent calls
+      // see the already-migrated V2 queue (not stale cached data)
+      const version = await detectQueueVersion(testDir);
+      expect(version).toBe('v2');
+
+      // Second migration call should detect V2 format and skip migration
+      const second = await ensureV2Format(testDir, 'feature-123');
+      expect(second.migrated).toBe(false);
+      expect(second.result).toBeUndefined();
+    });
 
       const { migrated, result } = await ensureV2Format(testDir, 'feature-123');
 

@@ -28,7 +28,7 @@ import {
   toExecutionTaskData,
 } from './queueCache.js';
 
-// Re-export for backward compatibility
+// Re-export for backward compatibility (including invalidateV2Cache which is used by migration code)
 export {
   invalidateV2Cache,
   getV2IndexCache,
