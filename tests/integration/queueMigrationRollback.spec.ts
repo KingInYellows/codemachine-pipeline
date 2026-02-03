@@ -62,6 +62,7 @@ describe('Queue Migration Rollback Integration', () => {
 
   describe('25-task migration and rollback', () => {
     let tasks: ExecutionTask[];
+
     beforeEach(async () => {
       // Seed 25 tasks with dependency chains
       tasks = [];
