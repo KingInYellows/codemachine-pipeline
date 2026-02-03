@@ -10,9 +10,8 @@ import {
 } from '../core/models/ApprovalRecord';
 import {
   withLock,
-  markApprovalCompleted,
   readManifest,
-  updateManifest,
+  writeManifest,
 } from '../persistence/runDirectoryManager';
 
 /**
@@ -140,19 +139,21 @@ export async function requestApproval(
     // Append to approvals file
     await appendApprovalRecord(runDir, featureId, record);
 
-    // Update manifest pending approvals
-    await updateManifest(runDir, (manifest) => {
-      const pending = manifest.approvals.pending;
-      if (!pending.includes(gateType)) {
-        return {
-          approvals: {
-            ...manifest.approvals,
-            pending: [...pending, gateType],
-          },
-        };
-      }
-      return null;
-    });
+    // Update manifest pending approvals (inline to avoid nested withLock deadlock)
+    if (!manifest.approvals.pending.includes(gateType)) {
+      const updated = {
+        ...manifest,
+        approvals: {
+          ...manifest.approvals,
+          pending: [...manifest.approvals.pending, gateType],
+        },
+        timestamps: {
+          ...manifest.timestamps,
+          updated_at: new Date().toISOString(),
+        },
+      };
+      await writeManifest(runDir, updated);
+    }
 
     return record;
   });
@@ -231,8 +232,23 @@ export async function grantApproval(
     // Append approval record
     await appendApprovalRecord(runDir, featureId, record);
 
-    // Update manifest (move from pending to completed)
-    await markApprovalCompleted(runDir, gateType);
+    // Update manifest inline (move from pending to completed, avoiding nested withLock deadlock)
+    const pending = manifest.approvals.pending.filter((a: string) => a !== gateType);
+    const completedSet = new Set(manifest.approvals.completed);
+    completedSet.add(gateType);
+    const updated = {
+      ...manifest,
+      approvals: {
+        ...manifest.approvals,
+        pending,
+        completed: Array.from(completedSet),
+      },
+      timestamps: {
+        ...manifest.timestamps,
+        updated_at: new Date().toISOString(),
+      },
+    };
+    await writeManifest(runDir, updated);
 
     return record;
   });
