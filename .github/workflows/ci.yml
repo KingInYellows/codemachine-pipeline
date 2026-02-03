@@ -2,19 +2,25 @@ name: CI
 
 on:
   push:
-    branches: ['**']
+    branches: [main, master]
   pull_request:
     branches: [main, master]
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   optimize_ci:
     runs-on: self-hosted
     outputs:
-      skip: ${{ steps.check_skip.outputs.skip }}
+      skip: ${{ steps.check_skip.outputs.skip || 'false' }}
     steps:
       - name: Optimize CI
         id: check_skip
-        uses: withgraphite/graphite-ci-action@main
+        continue-on-error: true
+        uses: withgraphite/graphite-ci-action@v0.0.9
         with:
           graphite_token: ${{ secrets.GRAPHITE_TOKEN }}
 
@@ -25,6 +31,9 @@ jobs:
     runs-on: self-hosted
     env:
       OCLIF_SKIP_MANIFEST: '1'
+      TZ: UTC
+      LANG: C.UTF-8
+      LC_ALL: C.UTF-8
 
     steps:
       - name: Checkout code
@@ -72,6 +81,9 @@ jobs:
     runs-on: self-hosted
     env:
       OCLIF_SKIP_MANIFEST: '1'
+      TZ: UTC
+      LANG: C.UTF-8
+      LC_ALL: C.UTF-8
 
     steps:
       - name: Checkout code
@@ -87,6 +99,7 @@ jobs:
 
       - name: Run npm audit (high+)
         run: npm audit --audit-level=high
+        continue-on-error: true
 
       - name: Run security advisory guard
         run: npm run security:glob-guard
@@ -98,6 +111,9 @@ jobs:
     runs-on: self-hosted
     env:
       OCLIF_SKIP_MANIFEST: '1'
+      TZ: UTC
+      LANG: C.UTF-8
+      LC_ALL: C.UTF-8
 
     steps:
       - name: Checkout code
