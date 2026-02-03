@@ -19,6 +19,7 @@ jobs:
     steps:
       - name: Optimize CI
         id: check_skip
+        # Pinned to v0.0.9 (9bc969adfd43bb790da3b64b543c78c75cef9689) for traceability.
         continue-on-error: true
         uses: withgraphite/graphite-ci-action@v0.0.9
         with:
