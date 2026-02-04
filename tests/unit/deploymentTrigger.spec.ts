@@ -40,12 +40,13 @@ function createDeploymentContext(
 
   return {
     config: { ...defaultConfig, ...overrides.config },
-    branchProtection: overrides.branchProtection === null
-      ? null
-      : {
-          allows_auto_merge: true,
-          ...overrides.branchProtection,
-        } as BranchProtectionReport,
+    branchProtection:
+      overrides.branchProtection === null
+        ? null
+        : ({
+            allows_auto_merge: true,
+            ...overrides.branchProtection,
+          } as BranchProtectionReport),
     logger: createMockLogger(),
     pr: { url: 'https://github.com/test/repo/pull/1' } as DeploymentContext['pr'],
     approvals: { approvalsHash: 'abc123' } as DeploymentContext['approvals'],
@@ -56,9 +57,7 @@ function createDeploymentContext(
 }
 
 // Create minimal merge readiness
-function createMergeReadiness(
-  overrides: Partial<MergeReadiness> = {}
-): MergeReadiness {
+function createMergeReadiness(overrides: Partial<MergeReadiness> = {}): MergeReadiness {
   return {
     eligible: true,
     blockers: [],
@@ -303,4 +302,3 @@ describe('deploymentTrigger', () => {
     });
   });
 });
-

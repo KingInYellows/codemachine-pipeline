@@ -41,7 +41,11 @@ import { updateManifest } from '../../src/persistence/runDirectoryManager';
 vi.mock('node:fs/promises');
 vi.mock('node:child_process', () => ({
   exec: vi.fn(
-    (command: string | Buffer, optionsOrCallback?: ExecOptionsArg, callbackMaybe?: ExecCallbackArg) => {
+    (
+      command: string | Buffer,
+      optionsOrCallback?: ExecOptionsArg,
+      callbackMaybe?: ExecCallbackArg
+    ) => {
       const callback = isExecCallback(optionsOrCallback)
         ? optionsOrCallback
         : isExecCallback(callbackMaybe)
@@ -88,7 +92,7 @@ type ChildProcessStdio = [
   Readable | null,
   Readable | null,
   Readable | Writable | null,
-  Readable | Writable | null
+  Readable | Writable | null,
 ];
 type ExecHandler = (command: string, callback: ExecCallback) => void;
 
@@ -114,11 +118,18 @@ const childProcessStub: ChildProcess = Object.assign(new EventEmitter(), {
   ref: vi.fn(),
 });
 
-function isExecCallback(value: ExecOptionsArg | ExecCallbackArg | undefined): value is ExecCallback {
+function isExecCallback(
+  value: ExecOptionsArg | ExecCallbackArg | undefined
+): value is ExecCallback {
   return typeof value === 'function';
 }
 
-function respond(callback: ExecCallback, stdout = '', stderr = '', error: Error | null = null): void {
+function respond(
+  callback: ExecCallback,
+  stdout = '',
+  stderr = '',
+  error: Error | null = null
+): void {
   process.nextTick(() => {
     callback(error, stdout, stderr);
   });
@@ -166,7 +177,7 @@ function assertIsDiffSummary(value: unknown): asserts value is DiffSummaryShape 
     typeof value.feature_id !== 'string' ||
     (value.task_id !== undefined && typeof value.task_id !== 'string') ||
     !Array.isArray(value.modified_files) ||
-    value.modified_files.some(file => typeof file !== 'string') ||
+    value.modified_files.some((file) => typeof file !== 'string') ||
     typeof value.patch_hash !== 'string'
   ) {
     throw new Error('Invalid diff summary payload');
@@ -459,7 +470,9 @@ describe('Patch Manager', () => {
         return false;
       });
 
-      await expect(isWorkingTreeClean('/test/repo')).rejects.toThrow('Failed to check git working tree status');
+      await expect(isWorkingTreeClean('/test/repo')).rejects.toThrow(
+        'Failed to check git working tree status'
+      );
     });
   });
 
@@ -531,13 +544,20 @@ describe('Patch Manager', () => {
       const result = await validatePatchDryRun(patch, '/test/repo', repoConfig, mockLogger);
 
       expect(result.success).toBe(false);
-      expect(result.errors).toContain('Working tree is not clean. Commit or stash changes before applying patches.');
+      expect(result.errors).toContain(
+        'Working tree is not clean. Commit or stash changes before applying patches.'
+      );
     });
 
     it('should fail dry-run when git apply --check fails', async () => {
       mockExecWithOverrides((command, callback) => {
         if (command.includes('git apply --check')) {
-          respond(callback, '', 'error: patch failed: src/index.ts:42', new Error('patch does not apply'));
+          respond(
+            callback,
+            '',
+            'error: patch failed: src/index.ts:42',
+            new Error('patch does not apply')
+          );
           return true;
         }
         return false;

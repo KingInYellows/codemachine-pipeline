@@ -247,10 +247,7 @@ describe('GitHubAdapter Integration Tests', () => {
         })
       ).rejects.toThrow(GitHubAdapterError);
 
-      expect(mockLogger.error).toHaveBeenCalledWith(
-        'Failed to create branch',
-        expect.any(Object)
-      );
+      expect(mockLogger.error).toHaveBeenCalledWith('Failed to create branch', expect.any(Object));
     });
 
     it('should get branch reference', async () => {

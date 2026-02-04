@@ -268,9 +268,7 @@ describe('logDeploymentAction', () => {
   it('should not throw if write fails', async () => {
     const context = createMockContext('/nonexistent/path');
     // Should not throw - logging failure is non-fatal
-    await expect(
-      logDeploymentAction(context, 'action', { test: true })
-    ).resolves.not.toThrow();
+    await expect(logDeploymentAction(context, 'action', { test: true })).resolves.not.toThrow();
   });
 });
 

@@ -86,7 +86,11 @@ export function isSerializedError(value: unknown): value is SerializedError {
     return false;
   }
   if (candidate.headers !== undefined) {
-    if (candidate.headers === null || typeof candidate.headers !== 'object' || Array.isArray(candidate.headers)) {
+    if (
+      candidate.headers === null ||
+      typeof candidate.headers !== 'object' ||
+      Array.isArray(candidate.headers)
+    ) {
       return false;
     }
     // Validate all values are strings

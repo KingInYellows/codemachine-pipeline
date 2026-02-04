@@ -4,7 +4,12 @@ import * as path from 'node:path';
 import * as os from 'node:os';
 import { CLIExecutionEngine } from '../../src/workflows/cliExecutionEngine';
 import { CodeMachineStrategy } from '../../src/workflows/codeMachineStrategy';
-import { createRunDirectory, updateManifest, setCurrentStep, setLastStep } from '../../src/persistence/runDirectoryManager';
+import {
+  createRunDirectory,
+  updateManifest,
+  setCurrentStep,
+  setLastStep,
+} from '../../src/persistence/runDirectoryManager';
 import {
   initializeQueue,
   appendToQueue,
@@ -418,7 +423,12 @@ describe('CLIExecutionEngine Resume Flow E2E', () => {
 
       // Verify first artifact captured
       const artifact1Dir = path.join(runDir, 'artifacts', 'pre-crash');
-      expect(await fs.stat(artifact1Dir).then(() => true).catch(() => false)).toBe(true);
+      expect(
+        await fs
+          .stat(artifact1Dir)
+          .then(() => true)
+          .catch(() => false)
+      ).toBe(true);
 
       // Simulate crash
       await updateManifest(runDir, { status: 'in_progress' });
@@ -432,7 +442,12 @@ describe('CLIExecutionEngine Resume Flow E2E', () => {
 
       // Verify second artifact captured
       const artifact2Dir = path.join(runDir, 'artifacts', 'post-crash');
-      expect(await fs.stat(artifact2Dir).then(() => true).catch(() => false)).toBe(true);
+      expect(
+        await fs
+          .stat(artifact2Dir)
+          .then(() => true)
+          .catch(() => false)
+      ).toBe(true);
     });
   });
 

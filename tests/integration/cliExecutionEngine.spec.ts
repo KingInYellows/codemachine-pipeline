@@ -1053,7 +1053,10 @@ describe('CLIExecutionEngine E2E with Mock CLI', () => {
       ...overrides,
     });
 
-    const createTestBaseConfig = (repoName: string, executionConfig?: Partial<RepoConfig['execution']>): RepoConfig => ({
+    const createTestBaseConfig = (
+      repoName: string,
+      executionConfig?: Partial<RepoConfig['execution']>
+    ): RepoConfig => ({
       schema_version: '1.0',
       platform: 'github',
       provider: { type: 'github', base_url: 'https://api.github.com' },
@@ -1409,7 +1412,10 @@ describe('CLI Command Integration with CLIExecutionEngine', () => {
     it('should resume and execute pending tasks', async () => {
       // Simulate partial execution - some tasks completed, some pending
       const tasks = [
-        { ...createExecutionTask('T1', featureId, 'Completed', 'code_generation'), status: 'completed' as const },
+        {
+          ...createExecutionTask('T1', featureId, 'Completed', 'code_generation'),
+          status: 'completed' as const,
+        },
         createExecutionTask('T2', featureId, 'Pending', 'code_generation'),
         createExecutionTask('T3', featureId, 'Also Pending', 'testing'),
       ];
@@ -1438,7 +1444,9 @@ describe('CLI Command Integration with CLIExecutionEngine', () => {
       // Simulate failed task from previous run
       const tasks = [
         {
-          ...createExecutionTask('T1', featureId, 'Failed Task', 'code_generation', { maxRetries: 3 }),
+          ...createExecutionTask('T1', featureId, 'Failed Task', 'code_generation', {
+            maxRetries: 3,
+          }),
           status: 'failed' as const,
           retry_count: 1,
         },
@@ -1568,12 +1576,8 @@ describe('CLI Command Integration with CLIExecutionEngine', () => {
       expect(result.failedTasks).toBe(0);
 
       // Verify execution order respected dependencies
-      expect(executionOrder.indexOf('impl-auth')).toBeLessThan(
-        executionOrder.indexOf('test-auth')
-      );
-      expect(executionOrder.indexOf('test-auth')).toBeLessThan(
-        executionOrder.indexOf('docs-auth')
-      );
+      expect(executionOrder.indexOf('impl-auth')).toBeLessThan(executionOrder.indexOf('test-auth'));
+      expect(executionOrder.indexOf('test-auth')).toBeLessThan(executionOrder.indexOf('docs-auth'));
     });
 
     it('should handle start with partial failure and resume', async () => {
@@ -1583,7 +1587,7 @@ describe('CLI Command Integration with CLIExecutionEngine', () => {
         createExecutionTask('T2', featureId, 'Task 2', 'code_generation', { maxRetries: 2 }),
         createExecutionTask('T3', featureId, 'Task 3', 'testing', {
           dependencyIds: ['T1', 'T2'],
-          maxRetries: 2
+          maxRetries: 2,
         }),
       ];
       await appendToQueue(runDir, tasks);

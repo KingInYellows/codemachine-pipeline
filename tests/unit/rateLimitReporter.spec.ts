@@ -158,9 +158,18 @@ describe('RateLimitReporter', () => {
     });
 
     it('should detect manual acknowledgement requirement (3+ consecutive 429s)', async () => {
-      const envelope429_1 = createTestEnvelope({ statusCode: 429, errorMessage: 'Rate limit exceeded' });
-      const envelope429_2 = createTestEnvelope({ statusCode: 429, errorMessage: 'Rate limit exceeded' });
-      const envelope429_3 = createTestEnvelope({ statusCode: 429, errorMessage: 'Rate limit exceeded' });
+      const envelope429_1 = createTestEnvelope({
+        statusCode: 429,
+        errorMessage: 'Rate limit exceeded',
+      });
+      const envelope429_2 = createTestEnvelope({
+        statusCode: 429,
+        errorMessage: 'Rate limit exceeded',
+      });
+      const envelope429_3 = createTestEnvelope({
+        statusCode: 429,
+        errorMessage: 'Rate limit exceeded',
+      });
 
       const linearState = createTestProviderState('linear', {
         state: {
@@ -189,8 +198,14 @@ describe('RateLimitReporter', () => {
 
     it('should not require manual ack for non-consecutive 429s', async () => {
       const envelope200 = createTestEnvelope({ statusCode: 200 });
-      const envelope429_1 = createTestEnvelope({ statusCode: 429, errorMessage: 'Rate limit exceeded' });
-      const envelope429_2 = createTestEnvelope({ statusCode: 429, errorMessage: 'Rate limit exceeded' });
+      const envelope429_1 = createTestEnvelope({
+        statusCode: 429,
+        errorMessage: 'Rate limit exceeded',
+      });
+      const envelope429_2 = createTestEnvelope({
+        statusCode: 429,
+        errorMessage: 'Rate limit exceeded',
+      });
 
       const githubState = createTestProviderState('github', {
         recentEnvelopes: [envelope429_2, envelope200, envelope429_1],

@@ -210,7 +210,9 @@ describe('Task Planner', () => {
       expect(result.plan.checksum).toBeDefined();
       expect(result.plan.checksum).toMatch(/^[a-f0-9]{64}$/);
 
-      const startLog = rawLogger.info.mock.calls.find(call => call[0] === 'Starting execution plan generation');
+      const startLog = rawLogger.info.mock.calls.find(
+        (call) => call[0] === 'Starting execution plan generation'
+      );
       expect(startLog).toBeDefined();
       const startContext = (startLog?.[1] ?? {}) as Record<string, unknown>;
       expect(startContext).toMatchObject({ featureId: 'feat-123' });
@@ -341,8 +343,8 @@ describe('Task Planner', () => {
       const result = await generateExecutionPlan(config, mockLogger, mockMetrics);
 
       // Assert
-      const codeTask = result.plan.tasks.find(t => t.task_type === 'code_generation');
-      const testTask = result.plan.tasks.find(t => t.task_type === 'testing');
+      const codeTask = result.plan.tasks.find((t) => t.task_type === 'code_generation');
+      const testTask = result.plan.tasks.find((t) => t.task_type === 'testing');
 
       expect(codeTask).toBeDefined();
       expect(testTask).toBeDefined();
@@ -381,22 +383,24 @@ describe('Task Planner', () => {
       const result = await generateExecutionPlan(config, mockLogger, mockMetrics);
 
       // Assert
-      const unitTasks = result.plan.tasks.filter(t => t.config?.test_type === 'unit');
-      const integrationTasks = result.plan.tasks.filter(t => t.config?.test_type === 'integration');
-      const e2eTasks = result.plan.tasks.filter(t => t.config?.test_type === 'e2e');
+      const unitTasks = result.plan.tasks.filter((t) => t.config?.test_type === 'unit');
+      const integrationTasks = result.plan.tasks.filter(
+        (t) => t.config?.test_type === 'integration'
+      );
+      const e2eTasks = result.plan.tasks.filter((t) => t.config?.test_type === 'e2e');
 
       // Integration tasks should depend on unit tasks
       for (const intTask of integrationTasks) {
-        const hasDependencyOnUnit = unitTasks.some(unitTask =>
-          intTask.dependencies.some(dep => dep.task_id === unitTask.task_id)
+        const hasDependencyOnUnit = unitTasks.some((unitTask) =>
+          intTask.dependencies.some((dep) => dep.task_id === unitTask.task_id)
         );
         expect(hasDependencyOnUnit).toBe(true);
       }
 
       // E2E tasks should depend on integration tasks
       for (const e2eTask of e2eTasks) {
-        const hasDependencyOnInt = integrationTasks.some(intTask =>
-          e2eTask.dependencies.some(dep => dep.task_id === intTask.task_id)
+        const hasDependencyOnInt = integrationTasks.some((intTask) =>
+          e2eTask.dependencies.some((dep) => dep.task_id === intTask.task_id)
         );
         expect(hasDependencyOnInt).toBe(true);
       }
@@ -429,9 +433,7 @@ describe('Task Planner', () => {
       vi.mocked(fs.writeFile).mockResolvedValue();
 
       // Act & Assert
-      await expect(
-        generateExecutionPlan(config, mockLogger, mockMetrics)
-      ).resolves.toBeDefined();
+      await expect(generateExecutionPlan(config, mockLogger, mockMetrics)).resolves.toBeDefined();
 
       expect(rawLogger.info).toHaveBeenCalledWith('DAG validation passed');
     });
@@ -478,9 +480,9 @@ describe('Task Planner', () => {
       vi.mocked(fs.writeFile).mockResolvedValue();
 
       // Act & Assert
-      await expect(
-        generateExecutionPlan(config, mockLogger, mockMetrics)
-      ).rejects.toThrow(/Plan validation failed/);
+      await expect(generateExecutionPlan(config, mockLogger, mockMetrics)).rejects.toThrow(
+        /Plan validation failed/
+      );
     });
 
     it('should compute topological order and depth levels', async () => {
@@ -516,7 +518,9 @@ describe('Task Planner', () => {
       expect(result.statistics.maxDepth).toBeGreaterThan(0);
       expect(result.statistics.parallelPaths).toBeGreaterThan(0);
 
-      const orderLog = rawLogger.debug.mock.calls.find(call => call[0] === 'Computed execution order');
+      const orderLog = rawLogger.debug.mock.calls.find(
+        (call) => call[0] === 'Computed execution order'
+      );
       expect(orderLog).toBeDefined();
       const orderContext = (orderLog?.[1] ?? {}) as Record<string, unknown>;
       expect(typeof orderContext.maxDepth).toBe('number');
@@ -558,7 +562,9 @@ describe('Task Planner', () => {
       const writeCalls = vi.mocked(fs.writeFile).mock.calls;
 
       // Check plan.json write
-      const planJsonCall = writeCalls.find(call => typeof call[0] === 'string' && call[0].includes('plan.json'));
+      const planJsonCall = writeCalls.find(
+        (call) => typeof call[0] === 'string' && call[0].includes('plan.json')
+      );
       expect(planJsonCall).toBeDefined();
       const parsedPlan: unknown = JSON.parse(planJsonCall![1] as string);
       const planContent = parsedPlan as PlanArtifact;
@@ -569,7 +575,7 @@ describe('Task Planner', () => {
 
       // Check plan_metadata.json write
       const metadataCall = writeCalls.find(
-        call => typeof call[0] === 'string' && call[0].includes('plan_metadata.json')
+        (call) => typeof call[0] === 'string' && call[0].includes('plan_metadata.json')
       );
       expect(metadataCall).toBeDefined();
       const parsedMetadata: unknown = JSON.parse(metadataCall![1] as string);
@@ -603,9 +609,9 @@ describe('Task Planner', () => {
       });
 
       // Act & Assert
-      await expect(
-        generateExecutionPlan(config, mockLogger, mockMetrics)
-      ).rejects.toThrow('Spec must be approved before generating execution plan');
+      await expect(generateExecutionPlan(config, mockLogger, mockMetrics)).rejects.toThrow(
+        'Spec must be approved before generating execution plan'
+      );
     });
 
     it('should throw error when spec metadata is missing', async () => {
@@ -621,9 +627,9 @@ describe('Task Planner', () => {
       vi.mocked(fs.readFile).mockRejectedValue(new Error('File not found'));
 
       // Act & Assert
-      await expect(
-        generateExecutionPlan(config, mockLogger, mockMetrics)
-      ).rejects.toThrow('Spec metadata not found');
+      await expect(generateExecutionPlan(config, mockLogger, mockMetrics)).rejects.toThrow(
+        'Spec metadata not found'
+      );
     });
 
     it('should load existing plan when force=false and plan exists', async () => {
@@ -665,9 +671,11 @@ describe('Task Planner', () => {
       expect(result.plan.tasks).toHaveLength(1);
       expect(result.summary.totalTasks).toBe(1);
       expect(result.statistics.blockedTasks).toBe(result.summary.blockedTasks);
-      expect(result.diagnostics.warnings).toContain('plan.json already exists; use --force to regenerate');
+      expect(result.diagnostics.warnings).toContain(
+        'plan.json already exists; use --force to regenerate'
+      );
       const reuseLog = rawLogger.info.mock.calls.find(
-        call => call[0] === 'plan.json already exists, loading existing plan'
+        (call) => call[0] === 'plan.json already exists, loading existing plan'
       );
       expect(reuseLog).toBeDefined();
       const reuseContext = (reuseLog?.[1] ?? {}) as Record<string, unknown>;

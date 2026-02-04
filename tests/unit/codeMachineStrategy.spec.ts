@@ -216,12 +216,15 @@ describe('CodeMachineStrategy', () => {
       expect(result.errorMessage).toBeUndefined();
 
       expect(mockMapTaskToWorkflow).toHaveBeenCalledWith('code_generation');
-      expect(mockRunCodeMachine).toHaveBeenCalledWith(config, expect.objectContaining({
-        taskId: 'task-001',
-        prompt: 'Implement authentication',
-        workspaceDir: '/workspace/project',
-        timeoutMs: 300000,
-      }));
+      expect(mockRunCodeMachine).toHaveBeenCalledWith(
+        config,
+        expect.objectContaining({
+          taskId: 'task-001',
+          prompt: 'Implement authentication',
+          workspaceDir: '/workspace/project',
+          timeoutMs: 300000,
+        })
+      );
       expect(mockNormalizeResult).toHaveBeenCalledWith(runnerResult);
     });
 
@@ -364,9 +367,12 @@ describe('CodeMachineStrategy', () => {
       const strategy = new CodeMachineStrategy({ config });
       await strategy.execute(task, context);
 
-      expect(mockRunCodeMachine).toHaveBeenCalledWith(config, expect.objectContaining({
-        specPath: expect.stringContaining('specs/custom.md'),
-      }));
+      expect(mockRunCodeMachine).toHaveBeenCalledWith(
+        config,
+        expect.objectContaining({
+          specPath: expect.stringContaining('specs/custom.md'),
+        })
+      );
     });
 
     it('generates default spec path when task config has no spec_path', async () => {
@@ -387,9 +393,12 @@ describe('CodeMachineStrategy', () => {
       const strategy = new CodeMachineStrategy({ config });
       await strategy.execute(task, context);
 
-      expect(mockRunCodeMachine).toHaveBeenCalledWith(config, expect.objectContaining({
-        specPath: expect.stringContaining('task-001.md'),
-      }));
+      expect(mockRunCodeMachine).toHaveBeenCalledWith(
+        config,
+        expect.objectContaining({
+          specPath: expect.stringContaining('task-001.md'),
+        })
+      );
     });
 
     it('truncates summary to 500 characters from redactedStdout', async () => {
@@ -442,9 +451,12 @@ describe('CodeMachineStrategy', () => {
       const strategy = new CodeMachineStrategy({ config, logger });
       await strategy.execute(task, context);
 
-      expect(mockRunCodeMachine).toHaveBeenCalledWith(config, expect.objectContaining({
-        logger,
-      }));
+      expect(mockRunCodeMachine).toHaveBeenCalledWith(
+        config,
+        expect.objectContaining({
+          logger,
+        })
+      );
     });
   });
 

@@ -21,9 +21,7 @@
 
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
-import type {
-  GitHubAdapter,
-} from '../adapters/github/GitHubAdapter';
+import type { GitHubAdapter } from '../adapters/github/GitHubAdapter';
 import type { BranchProtectionReport } from './branchProtectionReporter';
 import { loadReport as loadBranchProtectionReport } from './branchProtectionReporter';
 import type { RepoConfig } from '../core/config/RepoConfig';

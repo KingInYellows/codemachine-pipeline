@@ -28,9 +28,7 @@ export interface ExecutionTelemetryOptions {
   component?: string;
 }
 
-export function createExecutionTelemetry(
-  options: ExecutionTelemetryOptions
-): ExecutionTelemetry {
+export function createExecutionTelemetry(options: ExecutionTelemetryOptions): ExecutionTelemetry {
   const telemetry: ExecutionTelemetry = {
     metrics: createExecutionMetrics(options.metrics, {
       runDir: options.runDir,

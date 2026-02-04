@@ -2,10 +2,7 @@ import { describe, it, expect, beforeEach, afterEach, beforeAll } from 'vitest';
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 import * as os from 'node:os';
-import {
-  computeArtifactHash,
-  computeContentHash,
-} from '../../src/workflows/approvalRegistry';
+import { computeArtifactHash, computeContentHash } from '../../src/workflows/approvalRegistry';
 import type { ApprovalGateType } from '../../src/core/models/ApprovalRecord';
 import {
   createApprovalRecord,
@@ -222,7 +219,15 @@ describe('ApprovalRecord', () => {
     });
 
     it('should create record with all gate types', () => {
-      const gateTypes: ApprovalGateType[] = ['prd', 'spec', 'plan', 'code', 'pr', 'deploy', 'other'];
+      const gateTypes: ApprovalGateType[] = [
+        'prd',
+        'spec',
+        'plan',
+        'code',
+        'pr',
+        'deploy',
+        'other',
+      ];
 
       for (const gateType of gateTypes) {
         const record = createApprovalRecord(
@@ -600,9 +605,7 @@ describe('approvalRegistry - validateApprovalForTransition', () => {
 
   it('should fail validation when no approval exists', async () => {
     const { createRunDirectory } = await import('../../src/persistence/runDirectoryManager');
-    const { validateApprovalForTransition } = await import(
-      '../../src/workflows/approvalRegistry'
-    );
+    const { validateApprovalForTransition } = await import('../../src/workflows/approvalRegistry');
 
     const runDir = await createRunDirectory(tempDir, 'FEAT-VAL', {
       title: 'Test Validation',

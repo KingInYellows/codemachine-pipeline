@@ -36,8 +36,11 @@ async function readPrometheusFile(filePath: string): Promise<string> {
 
 async function readNdjsonFile(filePath: string): Promise<LogEntry[]> {
   const content = await fs.readFile(filePath, 'utf-8');
-  const lines = content.trim().split('\n').filter(line => line);
-  return lines.map(line => JSON.parse(line) as LogEntry);
+  const lines = content
+    .trim()
+    .split('\n')
+    .filter((line) => line);
+  return lines.map((line) => JSON.parse(line) as LogEntry);
 }
 
 function parsePrometheusMetric(content: string, metricName: string): number | null {
@@ -168,10 +171,30 @@ describe('ExecutionMetricsHelper', () => {
         runId: 'test-run-123',
       });
 
-      executionMetrics.recordTaskLifecycle('T1', ExecutionTaskType.CODE_GENERATION, ExecutionTaskStatus.COMPLETED, 1000);
-      executionMetrics.recordTaskLifecycle('T2', ExecutionTaskType.VALIDATION, ExecutionTaskStatus.COMPLETED, 2000);
-      executionMetrics.recordTaskLifecycle('T3', ExecutionTaskType.PATCH_APPLICATION, ExecutionTaskStatus.COMPLETED, 3000);
-      executionMetrics.recordTaskLifecycle('T4', ExecutionTaskType.GIT_OPERATION, ExecutionTaskStatus.COMPLETED, 4000);
+      executionMetrics.recordTaskLifecycle(
+        'T1',
+        ExecutionTaskType.CODE_GENERATION,
+        ExecutionTaskStatus.COMPLETED,
+        1000
+      );
+      executionMetrics.recordTaskLifecycle(
+        'T2',
+        ExecutionTaskType.VALIDATION,
+        ExecutionTaskStatus.COMPLETED,
+        2000
+      );
+      executionMetrics.recordTaskLifecycle(
+        'T3',
+        ExecutionTaskType.PATCH_APPLICATION,
+        ExecutionTaskStatus.COMPLETED,
+        3000
+      );
+      executionMetrics.recordTaskLifecycle(
+        'T4',
+        ExecutionTaskType.GIT_OPERATION,
+        ExecutionTaskStatus.COMPLETED,
+        4000
+      );
 
       await executionMetrics.flush();
 
@@ -199,9 +222,12 @@ describe('ExecutionMetricsHelper', () => {
       const metricsPath = path.join(tempDir, 'metrics', 'prometheus.txt');
       const content = await readPrometheusFile(metricsPath);
 
-      const expectedTotalMetric = 'codemachine_pipeline_codemachine_execution_total{component="execution",engine="claude",run_id="test-run-123",status="success"} 1';
-      const expectedDurationCountMetric = 'codemachine_pipeline_codemachine_execution_duration_ms_count{component="execution",engine="claude",run_id="test-run-123"} 1';
-      const expectedDurationSumMetric = 'codemachine_pipeline_codemachine_execution_duration_ms_sum{component="execution",engine="claude",run_id="test-run-123"} 1234';
+      const expectedTotalMetric =
+        'codemachine_pipeline_codemachine_execution_total{component="execution",engine="claude",run_id="test-run-123",status="success"} 1';
+      const expectedDurationCountMetric =
+        'codemachine_pipeline_codemachine_execution_duration_ms_count{component="execution",engine="claude",run_id="test-run-123"} 1';
+      const expectedDurationSumMetric =
+        'codemachine_pipeline_codemachine_execution_duration_ms_sum{component="execution",engine="claude",run_id="test-run-123"} 1234';
 
       expect(content).toContain(expectedTotalMetric);
       expect(content).toContain(expectedDurationCountMetric);
@@ -221,7 +247,8 @@ describe('ExecutionMetricsHelper', () => {
       const metricsPath = path.join(tempDir, 'metrics', 'prometheus.txt');
       const content = await readPrometheusFile(metricsPath);
 
-      const expectedMetric = 'codemachine_pipeline_codemachine_retry_total{component="execution",engine="codex",run_id="test-run-123"} 1';
+      const expectedMetric =
+        'codemachine_pipeline_codemachine_retry_total{component="execution",engine="codex",run_id="test-run-123"} 1';
       expect(content).toContain(expectedMetric);
     });
   });
@@ -336,9 +363,24 @@ describe('ExecutionMetricsHelper', () => {
         runId: 'test-run-123',
       });
 
-      executionMetrics.recordDiffStats({ filesChanged: 2, insertions: 50, deletions: 10, patchId: 'patch_1' });
-      executionMetrics.recordDiffStats({ filesChanged: 5, insertions: 100, deletions: 20, patchId: 'patch_2' });
-      executionMetrics.recordDiffStats({ filesChanged: 10, insertions: 500, deletions: 50, patchId: 'patch_3' });
+      executionMetrics.recordDiffStats({
+        filesChanged: 2,
+        insertions: 50,
+        deletions: 10,
+        patchId: 'patch_1',
+      });
+      executionMetrics.recordDiffStats({
+        filesChanged: 5,
+        insertions: 100,
+        deletions: 20,
+        patchId: 'patch_2',
+      });
+      executionMetrics.recordDiffStats({
+        filesChanged: 10,
+        insertions: 500,
+        deletions: 50,
+        patchId: 'patch_3',
+      });
 
       await executionMetrics.flush();
 
@@ -438,7 +480,11 @@ describe('ExecutionMetricsHelper', () => {
 
       // These calls should never throw
       expect(() => {
-        executionMetrics.recordTaskLifecycle('T1', ExecutionTaskType.CODE_GENERATION, ExecutionTaskStatus.STARTED);
+        executionMetrics.recordTaskLifecycle(
+          'T1',
+          ExecutionTaskType.CODE_GENERATION,
+          ExecutionTaskStatus.STARTED
+        );
         executionMetrics.recordValidationRun({ passed: true, durationMs: 1000 });
         executionMetrics.recordDiffStats({ filesChanged: 1, insertions: 10, deletions: 5 });
         executionMetrics.setQueueDepth(1, 2, 3);

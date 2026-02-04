@@ -111,7 +111,7 @@ async function readSequenceCounter(queueDir: string): Promise<number> {
     // Counter file doesn't exist or is corrupted
     if (error && typeof error === 'object' && 'code' in error && error.code !== 'ENOENT') {
       const message =
-        error instanceof Error ? error.message : JSON.stringify(error) ?? 'Unknown error';
+        error instanceof Error ? error.message : (JSON.stringify(error) ?? 'Unknown error');
       console.warn(`[WAL] Failed to read sequence counter: ${message}`);
     }
   }
@@ -143,7 +143,10 @@ async function scanLastSequence(queueDir: string): Promise<number> {
 
   try {
     const content = await fs.readFile(logPath, 'utf-8');
-    const lines = content.trim().split('\n').filter((line) => line.length > 0);
+    const lines = content
+      .trim()
+      .split('\n')
+      .filter((line) => line.length > 0);
 
     if (lines.length === 0) {
       return 0;
@@ -230,11 +233,7 @@ export async function appendOperationLocked(
   queueDir: string,
   op: Omit<QueueOperation, 'seq' | 'checksum'>
 ): Promise<QueueOperation> {
-  return withLock(
-    runDir,
-    async () => appendOperation(queueDir, op),
-    { operation: 'wal_append' }
-  );
+  return withLock(runDir, async () => appendOperation(queueDir, op), { operation: 'wal_append' });
 }
 
 /** Result of reading WAL operations, including corruption metrics. */
@@ -285,7 +284,9 @@ export async function readOperationsWithStats(
 
         // Verify checksum
         if (!verifyOperationChecksum(parsed)) {
-          console.warn(`[WAL] Line ${lineNum + 1}: Checksum mismatch for seq ${parsed.seq}, skipping`);
+          console.warn(
+            `[WAL] Line ${lineNum + 1}: Checksum mismatch for seq ${parsed.seq}, skipping`
+          );
           checksumFailures++;
           continue;
         }
@@ -295,7 +296,9 @@ export async function readOperationsWithStats(
           operations.push(parsed);
         }
       } catch (parseError) {
-        console.warn(`[WAL] Line ${lineNum + 1}: JSON parse error, skipping - ${parseError instanceof Error ? parseError.message : String(parseError)}`);
+        console.warn(
+          `[WAL] Line ${lineNum + 1}: JSON parse error, skipping - ${parseError instanceof Error ? parseError.message : String(parseError)}`
+        );
         parseErrors++;
       }
     }
@@ -386,15 +389,10 @@ export async function truncateOperationsLogToSeq(
  * @param runDir - Run directory path (for lock coordination)
  * @param queueDir - Queue directory path
  */
-export async function truncateOperationsLogLocked(
-  runDir: string,
-  queueDir: string
-): Promise<void> {
-  return withLock(
-    runDir,
-    async () => truncateOperationsLog(queueDir),
-    { operation: 'wal_truncate' }
-  );
+export async function truncateOperationsLogLocked(runDir: string, queueDir: string): Promise<void> {
+  return withLock(runDir, async () => truncateOperationsLog(queueDir), {
+    operation: 'wal_truncate',
+  });
 }
 
 /**
@@ -537,9 +535,7 @@ export async function appendOperationsBatchLocked(
   queueDir: string,
   ops: Array<Omit<QueueOperation, 'seq' | 'checksum'>>
 ): Promise<QueueOperation[]> {
-  return withLock(
-    runDir,
-    async () => appendOperationsBatch(queueDir, ops),
-    { operation: 'wal_append_batch' }
-  );
+  return withLock(runDir, async () => appendOperationsBatch(queueDir, ops), {
+    operation: 'wal_append_batch',
+  });
 }

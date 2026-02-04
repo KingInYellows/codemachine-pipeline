@@ -132,8 +132,10 @@ export default class Status extends Command {
           `Feature run directory not found: ${typedFlags.feature}`,
           CliErrorCode.RUN_DIR_NOT_FOUND,
           {
-            remediation: 'Check the feature ID with "codepipe status" or start a new run with "codepipe start".',
-            howToFix: 'List available features with "codepipe status" (no --feature flag) to see existing runs.',
+            remediation:
+              'Check the feature ID with "codepipe status" or start a new run with "codepipe start".',
+            howToFix:
+              'List available features with "codepipe status" (no --feature flag) to see existing runs.',
             commonFixes: [
               'Verify the feature ID spelling',
               'Run "codepipe status" without --feature to see available runs',
@@ -295,11 +297,14 @@ export default class Status extends Command {
         throw error;
       }
 
-      const cliErr = error instanceof CliError ? error : new CliError(
-        `Status command failed: ${formatErrorMessage(error)}`,
-        CliErrorCode.GENERAL,
-        error instanceof Error ? { cause: error } : {}
-      );
+      const cliErr =
+        error instanceof CliError
+          ? error
+          : new CliError(
+              `Status command failed: ${formatErrorMessage(error)}`,
+              CliErrorCode.GENERAL,
+              error instanceof Error ? { cause: error } : {}
+            );
       if (typedFlags.json) {
         this.log(JSON.stringify(formatErrorJson(cliErr), null, 2));
         this.exit(cliErr.exitCode);

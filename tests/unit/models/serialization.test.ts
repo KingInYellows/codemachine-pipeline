@@ -134,7 +134,7 @@ describe('Feature Model Serialization', () => {
     expect(result.success).toBe(false);
     if (!result.success) {
       expect(result.errors.length).toBeGreaterThan(0);
-      expect(result.errors.some(e => e.path.includes('feature_id'))).toBe(true);
+      expect(result.errors.some((e) => e.path.includes('feature_id'))).toBe(true);
     }
   });
 
@@ -212,8 +212,18 @@ describe('PlanArtifact Model Serialization', () => {
     const cyclicPlan = {
       ...fixtures.plan_artifact,
       tasks: [
-        { task_id: 'A', title: 'Task A', task_type: 'test', dependencies: [{ task_id: 'B', type: 'required' }] },
-        { task_id: 'B', title: 'Task B', task_type: 'test', dependencies: [{ task_id: 'A', type: 'required' }] },
+        {
+          task_id: 'A',
+          title: 'Task A',
+          task_type: 'test',
+          dependencies: [{ task_id: 'B', type: 'required' }],
+        },
+        {
+          task_id: 'B',
+          title: 'Task B',
+          task_type: 'test',
+          dependencies: [{ task_id: 'A', type: 'required' }],
+        },
       ],
     };
     const parseResult = parsePlanArtifact(cyclicPlan);
@@ -222,7 +232,7 @@ describe('PlanArtifact Model Serialization', () => {
     if (parseResult.success) {
       const validation = validateDAG(parseResult.data);
       expect(validation.valid).toBe(false);
-      expect(validation.errors.some(e => e.includes('Cycle'))).toBe(true);
+      expect(validation.errors.some((e) => e.includes('Cycle'))).toBe(true);
     }
   });
 
@@ -244,7 +254,7 @@ describe('PlanArtifact Model Serialization', () => {
     if (parseResult.success) {
       const validation = validateDAG(parseResult.data);
       expect(validation.valid).toBe(false);
-      expect(validation.errors.some(e => e.includes('non-existent'))).toBe(true);
+      expect(validation.errors.some((e) => e.includes('non-existent'))).toBe(true);
     }
   });
 });

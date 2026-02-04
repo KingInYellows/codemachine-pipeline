@@ -77,7 +77,10 @@ export function generateRiskAssessments(
 /**
  * Generate test plan from acceptance criteria and constraints
  */
-export function generateTestPlan(acceptanceCriteria: string[], constraints: string[]): TestPlanItem[] {
+export function generateTestPlan(
+  acceptanceCriteria: string[],
+  constraints: string[]
+): TestPlanItem[] {
   const testPlan: TestPlanItem[] = [];
 
   // Generate unit tests for each constraint

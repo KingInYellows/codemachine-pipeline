@@ -324,11 +324,19 @@ describe('queueTypes', () => {
         featureId: 'my-feature',
         snapshotSeq: 999,
         tasks: {
-          't1': createTaskData('t1'),
-          't2': createTaskData('t2'),
+          t1: createTaskData('t1'),
+          t2: createTaskData('t2'),
         },
-        counts: { total: 2, pending: 1, running: 1, completed: 0, failed: 0, skipped: 0, cancelled: 0 },
-        dependencyGraph: { 't2': ['t1'] },
+        counts: {
+          total: 2,
+          pending: 1,
+          running: 1,
+          completed: 0,
+          failed: 0,
+          skipped: 0,
+          cancelled: 0,
+        },
+        dependencyGraph: { t2: ['t1'] },
         timestamp: '2024-01-15T10:30:00.000Z',
         checksum: 'sha256-snapshot',
       };

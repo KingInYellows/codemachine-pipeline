@@ -598,7 +598,7 @@ describe('BranchProtectionAdapter - Compliance Evaluation', () => {
     }
 
     const approvedCount = Array.from(latestReviews.values()).filter(
-      r => r.state === 'APPROVED'
+      (r) => r.state === 'APPROVED'
     ).length;
 
     expect(latestReviews.size).toBe(2); // Two unique users
@@ -615,10 +615,10 @@ describe('BranchProtectionAdapter - Compliance Evaluation', () => {
     ];
 
     const passingContexts = new Set(
-      actualStatuses.filter(s => s.state === 'success').map(s => s.context)
+      actualStatuses.filter((s) => s.state === 'success').map((s) => s.context)
     );
 
-    const missingOrFailing = requiredContexts.filter(ctx => !passingContexts.has(ctx));
+    const missingOrFailing = requiredContexts.filter((ctx) => !passingContexts.has(ctx));
 
     expect(missingOrFailing).toEqual(['security/scan']);
   });

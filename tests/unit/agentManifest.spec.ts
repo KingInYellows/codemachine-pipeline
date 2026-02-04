@@ -200,7 +200,7 @@ describe('parseAgentManifest - Schema Validation', () => {
     const result = parseAgentManifest(invalid);
     expect(result.success).toBe(false);
     expect(result.errors).toBeDefined();
-    expect(result.errors!.some(e => e.path === 'schema_version')).toBe(true);
+    expect(result.errors!.some((e) => e.path === 'schema_version')).toBe(true);
   });
 
   it('should reject manifest missing providerId', () => {
@@ -209,7 +209,7 @@ describe('parseAgentManifest - Schema Validation', () => {
 
     const result = parseAgentManifest(invalid);
     expect(result.success).toBe(false);
-    expect(result.errors!.some(e => e.path === 'providerId')).toBe(true);
+    expect(result.errors!.some((e) => e.path === 'providerId')).toBe(true);
   });
 
   it('should reject manifest missing rateLimits (ACCEPTANCE CRITERIA)', () => {
@@ -218,7 +218,7 @@ describe('parseAgentManifest - Schema Validation', () => {
 
     const result = parseAgentManifest(invalid);
     expect(result.success).toBe(false);
-    expect(result.errors!.some(e => e.path === 'rateLimits')).toBe(true);
+    expect(result.errors!.some((e) => e.path === 'rateLimits')).toBe(true);
   });
 
   it('should reject manifest with rateLimits missing requestsPerMinute (ACCEPTANCE CRITERIA)', () => {
@@ -231,7 +231,7 @@ describe('parseAgentManifest - Schema Validation', () => {
 
     const result = parseAgentManifest(invalid);
     expect(result.success).toBe(false);
-    expect(result.errors!.some(e => e.path.includes('requestsPerMinute'))).toBe(true);
+    expect(result.errors!.some((e) => e.path.includes('requestsPerMinute'))).toBe(true);
   });
 
   it('should reject manifest missing costConfig (ACCEPTANCE CRITERIA)', () => {
@@ -240,7 +240,7 @@ describe('parseAgentManifest - Schema Validation', () => {
 
     const result = parseAgentManifest(invalid);
     expect(result.success).toBe(false);
-    expect(result.errors!.some(e => e.path === 'costConfig')).toBe(true);
+    expect(result.errors!.some((e) => e.path === 'costConfig')).toBe(true);
   });
 
   it('should reject manifest with empty models array (ACCEPTANCE CRITERIA)', () => {
@@ -254,7 +254,7 @@ describe('parseAgentManifest - Schema Validation', () => {
 
     const result = parseAgentManifest(invalid);
     expect(result.success).toBe(false);
-    expect(result.errors!.some(e => e.path.includes('models'))).toBe(true);
+    expect(result.errors!.some((e) => e.path.includes('models'))).toBe(true);
   });
 
   it('should reject manifest with invalid semver in schema_version', () => {
@@ -265,7 +265,7 @@ describe('parseAgentManifest - Schema Validation', () => {
 
     const result = parseAgentManifest(invalid);
     expect(result.success).toBe(false);
-    expect(result.errors!.some(e => e.path === 'schema_version')).toBe(true);
+    expect(result.errors!.some((e) => e.path === 'schema_version')).toBe(true);
   });
 
   it('should reject manifest with invalid providerId characters', () => {
@@ -276,7 +276,7 @@ describe('parseAgentManifest - Schema Validation', () => {
 
     const result = parseAgentManifest(invalid);
     expect(result.success).toBe(false);
-    expect(result.errors!.some(e => e.path === 'providerId')).toBe(true);
+    expect(result.errors!.some((e) => e.path === 'providerId')).toBe(true);
   });
 
   it('should reject manifest with negative cost values', () => {
@@ -296,7 +296,7 @@ describe('parseAgentManifest - Schema Validation', () => {
 
     const result = parseAgentManifest(invalid);
     expect(result.success).toBe(false);
-    expect(result.errors!.some(e => e.path.includes('inputCostPer1kTokens'))).toBe(true);
+    expect(result.errors!.some((e) => e.path.includes('inputCostPer1kTokens'))).toBe(true);
   });
 
   it('should reject manifest with extra unknown fields (strict mode)', () => {
@@ -307,7 +307,7 @@ describe('parseAgentManifest - Schema Validation', () => {
 
     const result = parseAgentManifest(invalid);
     expect(result.success).toBe(false);
-    expect(result.errors!.some(e => e.message.includes('Unrecognized'))).toBe(true);
+    expect(result.errors!.some((e) => e.message.includes('Unrecognized'))).toBe(true);
   });
 
   it('should validate currency format (ISO 4217)', () => {
@@ -626,9 +626,7 @@ describe('ManifestLoader', () => {
       const { readFile } = await import('node:fs/promises');
       (readFile as Mock).mockResolvedValue(JSON.stringify(invalidManifest));
 
-      await expect(loader.loadManifest('/fake/path/invalid.json')).rejects.toThrow(
-        /rateLimits/
-      );
+      await expect(loader.loadManifest('/fake/path/invalid.json')).rejects.toThrow(/rateLimits/);
       await expect(loader.loadManifest('/fake/path/invalid.json')).rejects.toThrow(
         /acceptance criteria/
       );
@@ -654,9 +652,7 @@ describe('ManifestLoader', () => {
       });
 
       const { readFile } = await import('node:fs/promises');
-      (readFile as Mock)
-        .mockResolvedValueOnce(content1)
-        .mockResolvedValueOnce(content2);
+      (readFile as Mock).mockResolvedValueOnce(content1).mockResolvedValueOnce(content2);
 
       const manifest1 = await loader.loadManifest('/fake/path/manifest.json');
       const manifest2 = await loader.loadManifest('/fake/path/manifest.json');

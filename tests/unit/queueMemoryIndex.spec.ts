@@ -24,16 +24,26 @@ import {
   exportIndexState,
   getOperationsSinceSnapshot,
 } from '../../src/workflows/queueMemoryIndex.js';
-import type { QueueIndexState, QueueOperation, ExecutionTaskData } from '../../src/workflows/queueTypes.js';
+import type {
+  QueueIndexState,
+  QueueOperation,
+  ExecutionTaskData,
+} from '../../src/workflows/queueTypes.js';
 import { createEmptyIndexState, createEmptyQueueCounts } from '../../src/workflows/queueTypes.js';
 import { saveSnapshot } from '../../src/workflows/queueSnapshotManager.js';
-import { appendOperationsBatch, initializeOperationsLog } from '../../src/workflows/queueOperationsLog.js';
+import {
+  appendOperationsBatch,
+  initializeOperationsLog,
+} from '../../src/workflows/queueOperationsLog.js';
 import type { ExecutionTask } from '../../src/core/models/ExecutionTask.js';
 
 describe('queueMemoryIndex', () => {
   let testDir: string;
 
-  const createTaskData = (id: string, status: ExecutionTaskData['status'] = 'pending'): ExecutionTaskData => ({
+  const createTaskData = (
+    id: string,
+    status: ExecutionTaskData['status'] = 'pending'
+  ): ExecutionTaskData => ({
     task_id: id,
     feature_id: 'feature-123',
     task_type: 'code_generation',
@@ -112,7 +122,12 @@ describe('queueMemoryIndex', () => {
       // appendOperationsBatch auto-assigns seq and checksum
       const ops = [
         { op: 'create' as const, taskId: 'task-2', ts: new Date().toISOString(), task: newTask },
-        { op: 'update' as const, taskId: 'task-1', ts: new Date().toISOString(), patch: { status: 'completed' as const } },
+        {
+          op: 'update' as const,
+          taskId: 'task-1',
+          ts: new Date().toISOString(),
+          patch: { status: 'completed' as const },
+        },
       ];
       await appendOperationsBatch(testDir, ops);
 
@@ -230,7 +245,7 @@ describe('queueMemoryIndex', () => {
       const pendingTasks = getTasksByStatus(state, 'pending');
 
       expect(pendingTasks).toHaveLength(2);
-      expect(pendingTasks.map(t => t.task_id).sort()).toEqual(['task-1', 'task-3']);
+      expect(pendingTasks.map((t) => t.task_id).sort()).toEqual(['task-1', 'task-3']);
     });
 
     it('should return empty array for no matches', () => {

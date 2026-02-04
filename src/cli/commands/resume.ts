@@ -311,10 +311,9 @@ export default class Resume extends Command {
       const repoConfigPath = path.join(process.cwd(), '.codepipe', 'config.json');
       const repoConfigResult = loadRepoConfig(repoConfigPath);
       if (!repoConfigResult.success || !repoConfigResult.config) {
-        const errorMessages = repoConfigResult.errors?.map((e) => e.message).join(', ') ?? 'unknown error';
-        throw new Error(
-          `Invalid repository configuration: ${errorMessages}`
-        );
+        const errorMessages =
+          repoConfigResult.errors?.map((e) => e.message).join(', ') ?? 'unknown error';
+        throw new Error(`Invalid repository configuration: ${errorMessages}`);
       }
       const repoConfig = repoConfigResult.config;
 
@@ -398,9 +397,7 @@ export default class Resume extends Command {
         this.log(`  Total tasks: ${executionResults.totalTasks}`);
         this.log(`  Completed: ${executionResults.completedTasks}`);
         this.log(`  Failed: ${executionResults.failedTasks}`);
-        this.log(
-          `  Permanently failed: ${executionResults.permanentlyFailedTasks}`
-        );
+        this.log(`  Permanently failed: ${executionResults.permanentlyFailedTasks}`);
         this.log(`  Skipped: ${executionResults.skippedTasks}`);
         this.log(`  Duration: ${(executionDuration / 1000).toFixed(2)}s`);
         this.log('');

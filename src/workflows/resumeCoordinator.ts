@@ -14,11 +14,7 @@ import {
   canRetry,
   areDependenciesCompleted,
 } from '../core/models/ExecutionTask';
-import {
-  validateQueue,
-  loadQueue,
-  type QueueValidationResult,
-} from './queueStore';
+import { validateQueue, loadQueue, type QueueValidationResult } from './queueStore';
 import type { ExecutionTelemetry } from '../telemetry/executionTelemetry';
 
 /**

@@ -217,14 +217,14 @@ describe('traceabilityMapper', () => {
 
       // Verify links structure
       const prdToSpecLink = result.links.find(
-        l => l.source_type === 'prd_goal' && l.target_type === 'spec_requirement'
+        (l) => l.source_type === 'prd_goal' && l.target_type === 'spec_requirement'
       );
       expect(prdToSpecLink).toBeDefined();
       expect(prdToSpecLink?.relationship).toBe('derived_from');
       expect(prdToSpecLink?.metadata).toHaveProperty('trace_id');
 
       const specToTaskLink = result.links.find(
-        l => l.source_type === 'execution_task' && l.target_type === 'spec_requirement'
+        (l) => l.source_type === 'execution_task' && l.target_type === 'spec_requirement'
       );
       expect(specToTaskLink).toBeDefined();
       expect(specToTaskLink?.relationship).toBe('implements');
@@ -687,7 +687,11 @@ _TODO: Define goals_
           warnings: [],
           gaps: [
             { source: 'PRD', target: 'Goals', reason: 'No goals extracted from PRD' },
-            { source: 'Spec', target: 'Requirements', reason: 'No requirements extracted from spec' },
+            {
+              source: 'Spec',
+              target: 'Requirements',
+              reason: 'No requirements extracted from spec',
+            },
           ],
         },
       };

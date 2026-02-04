@@ -548,7 +548,8 @@ describe('Run Directory Manager', () => {
   describe('Stale lock threshold (CDMCH-71)', () => {
     it('should be 60 seconds (60000ms)', async () => {
       // Import and test the constant directly instead of source inspection
-      const { STALE_LOCK_THRESHOLD_MS } = await import('../../../src/persistence/runDirectoryManager.js');
+      const { STALE_LOCK_THRESHOLD_MS } =
+        await import('../../../src/persistence/runDirectoryManager.js');
       expect(STALE_LOCK_THRESHOLD_MS).toBe(60000);
     });
   });
@@ -575,7 +576,10 @@ describe('Run Directory Manager', () => {
           repo: { url: 'https://example.com', default_branch: 'main' },
           status: 'pending',
           execution: { completed_steps: 0 },
-          timestamps: { created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
+          timestamps: {
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          },
           approvals: { pending: [], completed: [] },
           queue: { queue_dir: 'queue', pending_count: 0, completed_count: 0, failed_count: 0 },
           artifacts: {},

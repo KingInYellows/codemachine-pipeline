@@ -214,7 +214,7 @@ describe('LinearAdapter Integration Tests', () => {
       const [path, body, options] = mockHttpClient.post.mock.calls[0] as [
         string,
         { query: string; variables: { issueId: string } },
-        { metadata?: Record<string, unknown> }
+        { metadata?: Record<string, unknown> },
       ];
       expect(path).toBe('/graphql');
       expect(body.query).toContain('query GetIssue');
@@ -244,7 +244,7 @@ describe('LinearAdapter Integration Tests', () => {
       const [, commentsBody, commentsOptions] = mockHttpClient.post.mock.calls[0] as [
         string,
         { query: string; variables: { issueId: string } },
-        { metadata?: Record<string, unknown> }
+        { metadata?: Record<string, unknown> },
       ];
       expect(commentsBody.query).toContain('query GetComments');
       expect(commentsBody.variables).toEqual({ issueId: MOCK_LINEAR_ISSUE.id });
@@ -265,10 +265,7 @@ describe('LinearAdapter Integration Tests', () => {
       await expect(adapter.fetchIssue('nonexistent-id')).rejects.toThrow(
         'Issue nonexistent-id not found'
       );
-      expect(mockLogger.error).toHaveBeenCalledWith(
-        'Failed to fetch issue',
-        expect.any(Object)
-      );
+      expect(mockLogger.error).toHaveBeenCalledWith('Failed to fetch issue', expect.any(Object));
     });
   });
 
@@ -299,11 +296,7 @@ describe('LinearAdapter Integration Tests', () => {
       expect(snapshot.metadata.isPreview).toBe(false);
 
       // Verify snapshot was saved to cache
-      const snapshotPath = path.join(
-        runDir,
-        'inputs',
-        `linear_issue_${MOCK_LINEAR_ISSUE.id}.json`
-      );
+      const snapshotPath = path.join(runDir, 'inputs', `linear_issue_${MOCK_LINEAR_ISSUE.id}.json`);
       const cachedContent = await fs.readFile(snapshotPath, 'utf-8');
       const cachedSnapshot = JSON.parse(cachedContent) as IssueSnapshot;
       expect(cachedSnapshot.issue.identifier).toBe('ENG-123');
@@ -473,9 +466,7 @@ describe('LinearAdapter Integration Tests', () => {
 
       mockHttpClient.post.mockRejectedValue(networkError);
 
-      await expect(
-        adapter.fetchIssueSnapshot('new-issue-id')
-      ).rejects.toThrow(LinearAdapterError);
+      await expect(adapter.fetchIssueSnapshot('new-issue-id')).rejects.toThrow(LinearAdapterError);
 
       expect(mockLogger.error).toHaveBeenCalledWith(
         'Failed to fetch issue snapshot and no cache available',
@@ -628,7 +619,7 @@ describe('LinearAdapter Integration Tests', () => {
       const [updatePath, updateBody, updateOptions] = mockHttpClient.post.mock.calls[0] as [
         string,
         { query: string; variables: Record<string, unknown> },
-        { metadata?: Record<string, unknown> }
+        { metadata?: Record<string, unknown> },
       ];
       expect(updatePath).toBe('/graphql');
       expect(updateBody.query).toContain('mutation UpdateIssue');
@@ -664,7 +655,7 @@ describe('LinearAdapter Integration Tests', () => {
       const [commentPath, commentBody, commentOptions] = mockHttpClient.post.mock.calls[0] as [
         string,
         { query: string; variables: Record<string, unknown> },
-        { metadata?: Record<string, unknown> }
+        { metadata?: Record<string, unknown> },
       ];
       expect(commentPath).toBe('/graphql');
       expect(commentBody.query).toContain('mutation PostComment');

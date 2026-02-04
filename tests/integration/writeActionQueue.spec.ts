@@ -233,15 +233,10 @@ describe('WriteActionQueue', () => {
       const queue = createWriteActionQueue(queueConfig);
       await queue.initialize();
 
-      const action = await queue.enqueue(
-        WriteActionType.PR_COMMENT,
-        'test-owner',
-        'test-repo',
-        {
-          target_number: 42,
-          comment_body: 'Test comment',
-        }
-      );
+      const action = await queue.enqueue(WriteActionType.PR_COMMENT, 'test-owner', 'test-repo', {
+        target_number: 42,
+        comment_body: 'Test comment',
+      });
 
       expect(action.action_id).toBeDefined();
       expect(action.action_type).toBe(WriteActionType.PR_COMMENT);
@@ -252,7 +247,8 @@ describe('WriteActionQueue', () => {
 
       // Check metrics
       const counters = mockMetrics.getCounters();
-      const enqueuedKey = 'write_action_queue_enqueued{{"provider":"github","action_type":"pr_comment"}}';
+      const enqueuedKey =
+        'write_action_queue_enqueued{{"provider":"github","action_type":"pr_comment"}}';
       expect(counters.get(enqueuedKey)).toBe(1);
     });
 
@@ -307,7 +303,8 @@ describe('WriteActionQueue', () => {
 
       // Check deduplication metric
       const counters = mockMetrics.getCounters();
-      const dedupedKey = 'write_action_queue_deduped{{"provider":"github","action_type":"pr_comment"}}';
+      const dedupedKey =
+        'write_action_queue_deduped{{"provider":"github","action_type":"pr_comment"}}';
       expect(counters.get(dedupedKey)).toBe(1);
 
       // Check that only one action is in queue
@@ -721,7 +718,8 @@ describe('WriteActionQueue', () => {
       await queue.drain(executor);
 
       const counters = mockMetrics.getCounters();
-      const completedKey = 'write_action_queue_completed{{"provider":"github","action_type":"pr_comment"}}';
+      const completedKey =
+        'write_action_queue_completed{{"provider":"github","action_type":"pr_comment"}}';
 
       expect(counters.get(completedKey)).toBe(1);
     });
@@ -744,7 +742,8 @@ describe('WriteActionQueue', () => {
       await queue.drain(executor);
 
       const counters = mockMetrics.getCounters();
-      const retriedKey = 'write_action_queue_retried{{"provider":"github","action_type":"pr_comment"}}';
+      const retriedKey =
+        'write_action_queue_retried{{"provider":"github","action_type":"pr_comment"}}';
 
       expect(counters.get(retriedKey)).toBe(1);
     });
@@ -760,19 +759,9 @@ describe('WriteActionQueue', () => {
         comment_body: 'Test comment',
       };
 
-      const action1 = await queue.enqueue(
-        WriteActionType.PR_COMMENT,
-        'owner',
-        'repo',
-        payload
-      );
+      const action1 = await queue.enqueue(WriteActionType.PR_COMMENT, 'owner', 'repo', payload);
 
-      const action2 = await queue.enqueue(
-        WriteActionType.PR_COMMENT,
-        'owner',
-        'repo',
-        payload
-      );
+      const action2 = await queue.enqueue(WriteActionType.PR_COMMENT, 'owner', 'repo', payload);
 
       expect(action1.idempotency_key).toBe(action2.idempotency_key);
     });
@@ -781,19 +770,15 @@ describe('WriteActionQueue', () => {
       const queue = createWriteActionQueue(queueConfig);
       await queue.initialize();
 
-      const action1 = await queue.enqueue(
-        WriteActionType.PR_COMMENT,
-        'owner',
-        'repo',
-        { target_number: 1, comment_body: 'Comment 1' }
-      );
+      const action1 = await queue.enqueue(WriteActionType.PR_COMMENT, 'owner', 'repo', {
+        target_number: 1,
+        comment_body: 'Comment 1',
+      });
 
-      const action2 = await queue.enqueue(
-        WriteActionType.PR_COMMENT,
-        'owner',
-        'repo',
-        { target_number: 2, comment_body: 'Comment 2' }
-      );
+      const action2 = await queue.enqueue(WriteActionType.PR_COMMENT, 'owner', 'repo', {
+        target_number: 2,
+        comment_body: 'Comment 2',
+      });
 
       expect(action1.idempotency_key).not.toBe(action2.idempotency_key);
     });

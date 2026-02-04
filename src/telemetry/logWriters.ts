@@ -90,11 +90,7 @@ export class ExecutionLogWriter {
   /**
    * Log task started event
    */
-  taskStarted(
-    taskId: string,
-    taskType: ExecutionTaskType,
-    additionalContext?: LogContext
-  ): void {
+  taskStarted(taskId: string, taskType: ExecutionTaskType, additionalContext?: LogContext): void {
     const context: TaskContext = {
       task_id: taskId,
       execution_task_type: taskType,

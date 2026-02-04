@@ -75,18 +75,18 @@ function createTestCoordinator(runDir: string): ResearchCoordinator {
 /**
  * Create a basic context document for tests
  */
-function createTestContextDocument(
-  featureId: string,
-  relativePaths: string[]
-): ContextDocument {
+function createTestContextDocument(featureId: string, relativePaths: string[]): ContextDocument {
   const now = new Date().toISOString();
-  const files: Record<string, {
-    path: string;
-    hash: string;
-    size: number;
-    file_type?: string;
-    token_count?: number;
-  }> = {};
+  const files: Record<
+    string,
+    {
+      path: string;
+      hash: string;
+      size: number;
+      file_type?: string;
+      token_count?: number;
+    }
+  > = {};
 
   for (const relPath of relativePaths) {
     files[relPath] = {
@@ -183,8 +183,14 @@ describe('ResearchCoordinator', () => {
       const researchDir = path.join(runDir, 'research');
       const tasksDir = path.join(researchDir, 'tasks');
 
-      const researchDirExists = await fs.stat(researchDir).then(() => true).catch(() => false);
-      const tasksDirExists = await fs.stat(tasksDir).then(() => true).catch(() => false);
+      const researchDirExists = await fs
+        .stat(researchDir)
+        .then(() => true)
+        .catch(() => false);
+      const tasksDirExists = await fs
+        .stat(tasksDir)
+        .then(() => true)
+        .catch(() => false);
 
       expect(researchDirExists).toBe(true);
       expect(tasksDirExists).toBe(true);
@@ -389,10 +395,7 @@ describe('ResearchCoordinator', () => {
         sources_consulted: [],
       };
 
-      const { task: completed, success } = await coordinator.completeTask(
-        task.task_id,
-        results
-      );
+      const { task: completed, success } = await coordinator.completeTask(task.task_id, results);
 
       expect(success).toBe(true);
       expect(completed.status).toBe('completed');
@@ -609,7 +612,10 @@ describe('ResearchCoordinator', () => {
       });
 
       const taskPath = path.join(runDir, 'research', 'tasks', `${task.task_id}.json`);
-      const exists = await fs.stat(taskPath).then(() => true).catch(() => false);
+      const exists = await fs
+        .stat(taskPath)
+        .then(() => true)
+        .catch(() => false);
 
       expect(exists).toBe(true);
 
@@ -663,7 +669,7 @@ describe('ResearchCoordinator', () => {
 
       expect(results).toHaveLength(10);
 
-      const taskIds = new Set(results.map(r => r.task.task_id));
+      const taskIds = new Set(results.map((r) => r.task.task_id));
       expect(taskIds.size).toBe(10); // All unique IDs
     });
   });
@@ -686,7 +692,7 @@ describe('ResearchCoordinator', () => {
       });
 
       expect(tasks.length).toBeGreaterThan(0);
-      expect(tasks.some(task => hasDetectionMetadata(task))).toBe(true);
+      expect(tasks.some((task) => hasDetectionMetadata(task))).toBe(true);
     });
 
     it('should respect manual unknown inputs', async () => {
@@ -710,7 +716,7 @@ describe('ResearchCoordinator', () => {
       });
 
       expect(tasks).toHaveLength(2);
-      expect(tasks.every(task => task.objectives.length > 0)).toBe(true);
+      expect(tasks.every((task) => task.objectives.length > 0)).toBe(true);
     });
   });
 });

@@ -1,7 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import {
-  isSerializedError,
-} from '../../src/core/sharedTypes';
+import { isSerializedError } from '../../src/core/sharedTypes';
 
 describe('SharedTypes', () => {
   describe('SerializedError', () => {
@@ -56,7 +54,9 @@ describe('SharedTypes', () => {
       // Invalid stack type
       expect(isSerializedError({ name: 'Error', message: 'test', stack: 123 })).toBe(false);
       // Invalid statusCode type
-      expect(isSerializedError({ name: 'Error', message: 'test', statusCode: 'not a number' })).toBe(false);
+      expect(
+        isSerializedError({ name: 'Error', message: 'test', statusCode: 'not a number' })
+      ).toBe(false);
       // Invalid requestId type
       expect(isSerializedError({ name: 'Error', message: 'test', requestId: 123 })).toBe(false);
       // Invalid type type
@@ -64,7 +64,9 @@ describe('SharedTypes', () => {
       // Invalid operation type
       expect(isSerializedError({ name: 'Error', message: 'test', operation: 123 })).toBe(false);
       // Invalid cause type (not an object)
-      expect(isSerializedError({ name: 'Error', message: 'test', cause: 'not an object' })).toBe(false);
+      expect(isSerializedError({ name: 'Error', message: 'test', cause: 'not an object' })).toBe(
+        false
+      );
     });
 
     it('should reject invalid nested cause (recursive validation)', () => {
@@ -86,7 +88,9 @@ describe('SharedTypes', () => {
     });
 
     it('should reject invalid headers type', () => {
-      expect(isSerializedError({ name: 'Error', message: 'test', headers: 'not-object' })).toBe(false);
+      expect(isSerializedError({ name: 'Error', message: 'test', headers: 'not-object' })).toBe(
+        false
+      );
       expect(isSerializedError({ name: 'Error', message: 'test', headers: null })).toBe(false);
     });
 

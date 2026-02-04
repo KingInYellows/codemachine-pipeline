@@ -39,9 +39,7 @@ import type { RepoConfig } from '../../src/core/config/RepoConfig';
 describe('Context Ranking', () => {
   describe('scoreByPathDepth', () => {
     it('should score shallow files higher', () => {
-      expect(scoreByPathDepth('README.md')).toBeGreaterThan(
-        scoreByPathDepth('src/index.ts')
-      );
+      expect(scoreByPathDepth('README.md')).toBeGreaterThan(scoreByPathDepth('src/index.ts'));
       expect(scoreByPathDepth('src/index.ts')).toBeGreaterThan(
         scoreByPathDepth('src/deep/nested/file.ts')
       );
@@ -64,9 +62,7 @@ describe('Context Ranking', () => {
       const recent = new Date('2023-12-31T00:00:00Z'); // 1 day ago
       const old = new Date('2023-06-01T00:00:00Z'); // ~7 months ago
 
-      expect(scoreByGitRecency(recent, now)).toBeGreaterThan(
-        scoreByGitRecency(old, now)
-      );
+      expect(scoreByGitRecency(recent, now)).toBeGreaterThan(scoreByGitRecency(old, now));
     });
 
     it('should return 1.0 for files modified today', () => {
@@ -240,9 +236,7 @@ describe('Context Ranking', () => {
     });
 
     it('should respect maxFiles limit', () => {
-      const files = Array.from({ length: 10 }, (_, i) =>
-        createMockFile(`file${i}.ts`, 1000, 0)
-      );
+      const files = Array.from({ length: 10 }, (_, i) => createMockFile(`file${i}.ts`, 1000, 0));
 
       const result = rankAndBudgetFiles(files, 100000, { maxFiles: 5 });
 
@@ -266,10 +260,7 @@ describe('Context Ranking', () => {
     });
 
     it('should include diagnostics', () => {
-      const files = [
-        createMockFile('a.ts', 4000, 0),
-        createMockFile('b.ts', 4000, 0),
-      ];
+      const files = [createMockFile('a.ts', 4000, 0), createMockFile('b.ts', 4000, 0)];
 
       const result = rankAndBudgetFiles(files, 1500, { maxFiles: 5 });
 
@@ -290,14 +281,10 @@ describe('Context Aggregator Integration', () => {
 
   beforeEach(async () => {
     // Create temporary repository
-    testRepoDir = await fs.mkdtemp(
-      path.join(os.tmpdir(), 'context-aggregator-test-')
-    );
+    testRepoDir = await fs.mkdtemp(path.join(os.tmpdir(), 'context-aggregator-test-'));
 
     // Create temporary run directory
-    testRunDir = await fs.mkdtemp(
-      path.join(os.tmpdir(), 'context-run-test-')
-    );
+    testRunDir = await fs.mkdtemp(path.join(os.tmpdir(), 'context-run-test-'));
 
     // Create subdirectories
     await fs.mkdir(path.join(testRunDir, 'context'), { recursive: true });
@@ -320,7 +307,13 @@ describe('Context Aggregator Integration', () => {
           context_paths: ['src/', 'docs/'],
           project_leads: [],
         },
-        github: { enabled: false, token_env_var: 'GITHUB_TOKEN', api_base_url: 'https://api.github.com', required_scopes: ['repo'], default_reviewers: [] },
+        github: {
+          enabled: false,
+          token_env_var: 'GITHUB_TOKEN',
+          api_base_url: 'https://api.github.com',
+          required_scopes: ['repo'],
+          default_reviewers: [],
+        },
         linear: { enabled: false, api_key_env_var: 'LINEAR_API_KEY' },
         runtime: {
           agent_endpoint_env_var: 'AGENT_ENDPOINT',
@@ -354,16 +347,11 @@ describe('Context Aggregator Integration', () => {
         config_history: [],
       };
 
-      const config = resolveAggregatorConfig(
-        repoConfig,
-        testRunDir,
-        'test-feature-id',
-        {
-          includeOverrides: ['README.md'],
-          tokenBudget: 10000,
-          maxFiles: 50,
-        }
-      );
+      const config = resolveAggregatorConfig(repoConfig, testRunDir, 'test-feature-id', {
+        includeOverrides: ['README.md'],
+        tokenBudget: 10000,
+        maxFiles: 50,
+      });
 
       expect(config.contextPaths).toContain('src/');
       expect(config.contextPaths).toContain('docs/');
@@ -376,15 +364,9 @@ describe('Context Aggregator Integration', () => {
   describe('aggregateContext', () => {
     it('should discover and aggregate files', async () => {
       // Create test files
-      await fs.writeFile(
-        path.join(testRepoDir, 'README.md'),
-        '# Test Project\n\nThis is a test.'
-      );
+      await fs.writeFile(path.join(testRepoDir, 'README.md'), '# Test Project\n\nThis is a test.');
       await fs.mkdir(path.join(testRepoDir, 'src'), { recursive: true });
-      await fs.writeFile(
-        path.join(testRepoDir, 'src', 'index.ts'),
-        'export const foo = "bar";'
-      );
+      await fs.writeFile(path.join(testRepoDir, 'src', 'index.ts'), 'export const foo = "bar";');
 
       const config: AggregatorConfig = {
         repoRoot: testRepoDir,
@@ -404,10 +386,7 @@ describe('Context Aggregator Integration', () => {
 
     it('should persist context artifacts', async () => {
       // Create test file
-      await fs.writeFile(
-        path.join(testRepoDir, 'README.md'),
-        '# Test'
-      );
+      await fs.writeFile(path.join(testRepoDir, 'README.md'), '# Test');
 
       const config: AggregatorConfig = {
         repoRoot: testRepoDir,
@@ -448,10 +427,7 @@ describe('Context Aggregator Integration', () => {
 
     it('should support incremental hashing', async () => {
       // Create initial file
-      await fs.writeFile(
-        path.join(testRepoDir, 'test.md'),
-        'Initial content'
-      );
+      await fs.writeFile(path.join(testRepoDir, 'test.md'), 'Initial content');
 
       const config: AggregatorConfig = {
         repoRoot: testRepoDir,
@@ -471,10 +447,7 @@ describe('Context Aggregator Integration', () => {
       expect(result2.diagnostics.skipped).toBeGreaterThan(0);
 
       // Modify file
-      await fs.writeFile(
-        path.join(testRepoDir, 'test.md'),
-        'Modified content'
-      );
+      await fs.writeFile(path.join(testRepoDir, 'test.md'), 'Modified content');
 
       // Third aggregation with changes
       const result3 = await aggregateContext(config);
@@ -508,14 +481,8 @@ describe('Context Aggregator Integration', () => {
     it('should handle exclusion patterns', async () => {
       // Create files including excluded patterns
       await fs.mkdir(path.join(testRepoDir, 'node_modules'), { recursive: true });
-      await fs.writeFile(
-        path.join(testRepoDir, 'node_modules', 'test.js'),
-        'should be excluded'
-      );
-      await fs.writeFile(
-        path.join(testRepoDir, 'index.js'),
-        'should be included'
-      );
+      await fs.writeFile(path.join(testRepoDir, 'node_modules', 'test.js'), 'should be excluded');
+      await fs.writeFile(path.join(testRepoDir, 'index.js'), 'should be included');
 
       const config: AggregatorConfig = {
         repoRoot: testRepoDir,
@@ -529,7 +496,7 @@ describe('Context Aggregator Integration', () => {
 
       const paths = Object.keys(result.contextDocument.files);
       expect(paths).not.toContain('node_modules/test.js');
-      expect(paths.some(p => p.includes('index.js'))).toBe(true);
+      expect(paths.some((p) => p.includes('index.js'))).toBe(true);
     });
   });
 
@@ -552,21 +519,27 @@ describe('Context Aggregator Integration', () => {
       }
     })();
 
-    (hasGit ? it : it.skip)('should return git metadata for actual git repository (CDMCH-91)', async () => {
-      const metadata = await getGitMetadata(projectRoot);
+    (hasGit ? it : it.skip)(
+      'should return git metadata for actual git repository (CDMCH-91)',
+      async () => {
+        const metadata = await getGitMetadata(projectRoot);
 
-      // In a real git repo, we should get commit SHA and branch
-      expect(metadata.commitSha).toBeDefined();
-      expect(metadata.commitSha).toMatch(/^[a-f0-9]{40}$/);
-      expect(metadata.branch).toBeDefined();
-      expect(typeof metadata.branch).toBe('string');
-    });
+        // In a real git repo, we should get commit SHA and branch
+        expect(metadata.commitSha).toBeDefined();
+        expect(metadata.commitSha).toMatch(/^[a-f0-9]{40}$/);
+        expect(metadata.branch).toBeDefined();
+        expect(typeof metadata.branch).toBe('string');
+      }
+    );
 
-    (hasGit ? it : it.skip)('should populate fileCommitDates map for git repository (CDMCH-91)', async () => {
-      const metadata = await getGitMetadata(projectRoot);
+    (hasGit ? it : it.skip)(
+      'should populate fileCommitDates map for git repository (CDMCH-91)',
+      async () => {
+        const metadata = await getGitMetadata(projectRoot);
 
-      // fileCommitDates should have entries for tracked files
-      expect(metadata.fileCommitDates.size).toBeGreaterThan(0);
-    });
+        // fileCommitDates should have entries for tracked files
+        expect(metadata.fileCommitDates.size).toBeGreaterThan(0);
+      }
+    );
   });
 });
