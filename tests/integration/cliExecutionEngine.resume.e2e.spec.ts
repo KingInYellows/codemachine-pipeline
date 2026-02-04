@@ -40,7 +40,7 @@ describe('CLIExecutionEngine Resume Flow E2E', () => {
   beforeEach(async () => {
     featureId = `resume-e2e-${Date.now()}`;
     workspaceDir = await fs.mkdtemp(path.join(os.tmpdir(), 'resume-e2e-'));
-    pipelineDir = path.join(workspaceDir, '.ai-feature-pipeline');
+    pipelineDir = path.join(workspaceDir, '.codepipe');
     runsDir = path.join(pipelineDir, 'runs');
 
     await fs.mkdir(runsDir, { recursive: true });

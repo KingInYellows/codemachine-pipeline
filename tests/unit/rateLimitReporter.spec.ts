@@ -284,10 +284,10 @@ describe('RateLimitReporter', () => {
       const metricsPath = path.join(tempDir, 'metrics', 'prometheus.txt');
       const content = await fs.readFile(metricsPath, 'utf-8');
 
-      expect(content).toContain('ai_feature_pipeline_rate_limit_remaining');
+      expect(content).toContain('codemachine_pipeline_rate_limit_remaining');
       expect(content).toContain('provider="github"');
       expect(content).toContain('provider="linear"');
-      expect(content).toContain('ai_feature_pipeline_rate_limit_cooldown_active');
+      expect(content).toContain('codemachine_pipeline_rate_limit_cooldown_active');
     });
 
     it('should export cooldown active metric correctly', async () => {
@@ -311,14 +311,14 @@ describe('RateLimitReporter', () => {
 
       // GitHub should be 0 (not in cooldown)
       const githubCooldownMatch = content.match(
-        /ai_feature_pipeline_rate_limit_cooldown_active\{.*provider="github".*\} (\d+)/
+        /codemachine_pipeline_rate_limit_cooldown_active\{.*provider="github".*\} (\d+)/
       );
       expect(githubCooldownMatch).toBeTruthy();
       expect(githubCooldownMatch?.[1]).toBe('0');
 
       // Linear should be 1 (in cooldown)
       const linearCooldownMatch = content.match(
-        /ai_feature_pipeline_rate_limit_cooldown_active\{.*provider="linear".*\} (\d+)/
+        /codemachine_pipeline_rate_limit_cooldown_active\{.*provider="linear".*\} (\d+)/
       );
       expect(linearCooldownMatch).toBeTruthy();
       expect(linearCooldownMatch?.[1]).toBe('1');
@@ -452,7 +452,7 @@ describe('RateLimitReporter', () => {
       expect(output).toContain('⚠ Providers requiring manual acknowledgement: 1');
       expect(output).toContain('⚠ Manual Acknowledgement Required');
       expect(output).toContain('3 consecutive rate limit hits');
-      expect(output).toContain('ai-feature rate-limits clear');
+      expect(output).toContain('codepipe rate-limits clear');
     });
 
     it('should show verbose details when requested', () => {

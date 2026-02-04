@@ -5,7 +5,7 @@ import { loadRepoConfig } from '../../../src/core/config/repo_config';
 
 describe('init command', () => {
   const testDir = path.join(__dirname, '../../../.test-temp');
-  const pipelineDir = path.join(testDir, '.ai-feature-pipeline');
+  const pipelineDir = path.join(testDir, '.codepipe');
   const configPath = path.join(pipelineDir, 'config.json');
   const binPath = path.join(__dirname, '../../../bin/run.js');
 
@@ -30,7 +30,7 @@ describe('init command', () => {
   });
 
   describe('directory structure', () => {
-    test('creates .ai-feature-pipeline directory structure', () => {
+    test('creates .codepipe directory structure', () => {
       // Run init command
       execSync(`node ${binPath} init`, { cwd: testDir, stdio: 'pipe' });
 

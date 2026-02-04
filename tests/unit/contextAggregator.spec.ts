@@ -328,7 +328,7 @@ describe('Context Aggregator Integration', () => {
           timeout_minutes: 30,
           context_token_budget: 32000,
           logs_format: 'ndjson',
-          run_directory: '.ai-feature-pipeline/runs',
+          run_directory: '.codepipe/runs',
         },
         safety: {
           redact_secrets: true,

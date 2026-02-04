@@ -263,7 +263,7 @@ describe('PRD Authoring Engine', () => {
       expect(result.prdDocument).toBeDefined();
       expect(result.prdDocument.featureId).toBe('feat-123');
       expect(result.prdDocument.title).toBe('Test Feature');
-      expect(result.prdDocument.author).toBe('ai-feature-pipeline');
+      expect(result.prdDocument.author).toBe('codemachine-pipeline');
       expect(result.prdDocument.status).toBe('draft');
       expect(result.prdDocument.version).toBe('1.0.0');
     });
@@ -364,7 +364,7 @@ describe('PRD Authoring Engine', () => {
       expect(renderedMarkdown).toContain('# PRD: Test Feature');
       expect(renderedMarkdown).toContain('**Feature ID:** feat-123');
       expect(renderedMarkdown).toContain('**Status:** draft');
-      expect(renderedMarkdown).toContain('**Author:** ai-feature-pipeline');
+      expect(renderedMarkdown).toContain('**Author:** codemachine-pipeline');
     });
 
     it('should include context citations in the rendered output', async () => {

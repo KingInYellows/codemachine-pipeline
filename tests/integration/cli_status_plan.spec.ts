@@ -20,7 +20,7 @@ import type { RateLimitLedgerData } from '../../src/telemetry/rateLimitLedger';
 import type { BranchProtectionReport } from '../../src/workflows/branchProtectionReporter';
 
 const CLI_BIN_PATH = path.resolve(__dirname, '../../bin/run.js');
-const ROOT_CONFIG_PATH = path.resolve(__dirname, '../../.ai-feature-pipeline/config.json');
+const ROOT_CONFIG_PATH = path.resolve(__dirname, '../../.codepipe/config.json');
 
 interface PlanCommandPayload {
   feature_id: string | null;
@@ -153,7 +153,7 @@ describe('CLI Status/Plan/Resume Surfaces', () => {
   beforeEach(async () => {
     featureId = 'cli-test-feature';
     workspaceDir = await fs.mkdtemp(path.join(os.tmpdir(), 'cli-surface-'));
-    pipelineDir = path.join(workspaceDir, '.ai-feature-pipeline');
+    pipelineDir = path.join(workspaceDir, '.codepipe');
     runsDir = path.join(pipelineDir, 'runs');
 
     await fs.mkdir(runsDir, { recursive: true });

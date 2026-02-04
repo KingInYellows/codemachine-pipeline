@@ -87,12 +87,12 @@ describe('CLIExecutionEngine Integration', () => {
   beforeEach(async () => {
     featureId = `cli-exec-test-${Date.now()}`;
     workspaceDir = await fs.mkdtemp(path.join(os.tmpdir(), 'cli-exec-'));
-    pipelineDir = path.join(workspaceDir, '.ai-feature-pipeline');
+    pipelineDir = path.join(workspaceDir, '.codepipe');
     runsDir = path.join(pipelineDir, 'runs');
 
     await fs.mkdir(runsDir, { recursive: true });
 
-    const fixtureConfigPath = path.join(FIXTURE_REPO, '.ai-feature-pipeline', 'config.json');
+    const fixtureConfigPath = path.join(FIXTURE_REPO, '.codepipe', 'config.json');
     const configContent = await fs.readFile(fixtureConfigPath, 'utf-8');
     await fs.mkdir(pipelineDir, { recursive: true });
     await fs.writeFile(path.join(pipelineDir, 'config.json'), configContent, 'utf-8');
@@ -692,7 +692,7 @@ describe('CLIExecutionEngine E2E with Mock CLI', () => {
   beforeEach(async () => {
     featureId = `mock-cli-test-${Date.now()}`;
     workspaceDir = await fs.mkdtemp(path.join(os.tmpdir(), 'mock-cli-'));
-    pipelineDir = path.join(workspaceDir, '.ai-feature-pipeline');
+    pipelineDir = path.join(workspaceDir, '.codepipe');
     runsDir = path.join(pipelineDir, 'runs');
     await fs.mkdir(runsDir, { recursive: true });
 
@@ -1263,12 +1263,12 @@ describe('CLI Command Integration with CLIExecutionEngine', () => {
   beforeEach(async () => {
     featureId = `cli-integration-${Date.now()}`;
     workspaceDir = await fs.mkdtemp(path.join(os.tmpdir(), 'cli-integration-'));
-    pipelineDir = path.join(workspaceDir, '.ai-feature-pipeline');
+    pipelineDir = path.join(workspaceDir, '.codepipe');
     runsDir = path.join(pipelineDir, 'runs');
 
     await fs.mkdir(runsDir, { recursive: true });
 
-    const fixtureConfigPath = path.join(FIXTURE_REPO, '.ai-feature-pipeline', 'config.json');
+    const fixtureConfigPath = path.join(FIXTURE_REPO, '.codepipe', 'config.json');
     const configContent = await fs.readFile(fixtureConfigPath, 'utf-8');
     await fs.mkdir(pipelineDir, { recursive: true });
     await fs.writeFile(path.join(pipelineDir, 'config.json'), configContent, 'utf-8');

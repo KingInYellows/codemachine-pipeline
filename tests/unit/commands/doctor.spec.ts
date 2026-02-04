@@ -4,7 +4,7 @@ import { execSync } from 'node:child_process';
 
 describe('doctor command', () => {
   const testDir = path.join(__dirname, '../../../.test-temp-doctor');
-  const pipelineDir = path.join(testDir, '.ai-feature-pipeline');
+  const pipelineDir = path.join(testDir, '.codepipe');
   const configPath = path.join(pipelineDir, 'config.json');
   const binPath = path.join(__dirname, '../../../bin/run.js');
 

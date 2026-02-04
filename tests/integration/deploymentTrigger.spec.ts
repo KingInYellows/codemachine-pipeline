@@ -127,7 +127,7 @@ const createMockRepoConfig = (overrides?: Partial<RepoConfig>): RepoConfig => ({
     context_token_budget: 32000,
     context_cost_budget_usd: 5,
     logs_format: 'ndjson',
-    run_directory: '.ai-feature-pipeline/runs',
+    run_directory: '.codepipe/runs',
   },
   safety: {
     redact_secrets: true,
