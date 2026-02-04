@@ -802,7 +802,7 @@ describe('loadManifestLoaderFromRepo', () => {
 
   it('should load manifests from standard directory structure', async () => {
     // Create standard directory structure
-    const agentsDir = path.join(tempDir, '.ai-feature-pipeline', 'agents');
+    const agentsDir = path.join(tempDir, '.codepipe', 'agents');
     await fs.mkdir(agentsDir, { recursive: true });
 
     const manifest = createValidManifest({ providerId: 'repo-provider' });
@@ -816,7 +816,7 @@ describe('loadManifestLoaderFromRepo', () => {
   });
 
   it('should set cost tracker when provided', async () => {
-    const agentsDir = path.join(tempDir, '.ai-feature-pipeline', 'agents');
+    const agentsDir = path.join(tempDir, '.codepipe', 'agents');
     await fs.mkdir(agentsDir, { recursive: true });
 
     const manifest = createValidManifest();

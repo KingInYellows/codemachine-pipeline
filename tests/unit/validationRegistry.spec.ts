@@ -33,7 +33,7 @@ describe('ValidationRegistry', () => {
     const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'validation-test-'));
     cleanupDirs.push(tempDir);
 
-    const baseDir = path.join(tempDir, '.ai-feature-pipeline', 'runs');
+    const baseDir = path.join(tempDir, '.codepipe', 'runs');
     await fs.mkdir(baseDir, { recursive: true });
 
     const options: CreateRunDirectoryOptions = {

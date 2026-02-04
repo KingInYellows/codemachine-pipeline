@@ -23,7 +23,7 @@ describe('Health command', () => {
   // Test the underlying health check logic via direct instantiation
   describe('config check', () => {
     it('should detect valid config in project root', () => {
-      const configPath = path.resolve(process.cwd(), '.ai-feature-pipeline', 'config.json');
+      const configPath = path.resolve(process.cwd(), '.codepipe', 'config.json');
       const exists = fs.existsSync(configPath);
 
       // The project has a config file, so this should pass
@@ -34,7 +34,7 @@ describe('Health command', () => {
     });
 
     it('should detect missing config gracefully', () => {
-      const configPath = path.resolve('/nonexistent/path', '.ai-feature-pipeline', 'config.json');
+      const configPath = path.resolve('/nonexistent/path', '.codepipe', 'config.json');
       expect(fs.existsSync(configPath)).toBe(false);
     });
   });

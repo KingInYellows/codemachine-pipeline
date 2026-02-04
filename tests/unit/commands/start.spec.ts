@@ -4,7 +4,7 @@ import { execSync } from 'node:child_process';
 
 describe('start command', () => {
   const testDir = path.join(__dirname, '../../../.test-temp-start');
-  const pipelineDir = path.join(testDir, '.ai-feature-pipeline');
+  const pipelineDir = path.join(testDir, '.codepipe');
   const binPath = path.join(__dirname, '../../../bin/run.js');
 
   beforeEach(() => {
@@ -270,7 +270,7 @@ describe('start command', () => {
       }
       fs.mkdirSync(nonGitDir, { recursive: true });
 
-      const nonGitPipelineDir = path.join(nonGitDir, '.ai-feature-pipeline');
+      const nonGitPipelineDir = path.join(nonGitDir, '.codepipe');
       fs.mkdirSync(nonGitPipelineDir, { recursive: true });
 
       try {
