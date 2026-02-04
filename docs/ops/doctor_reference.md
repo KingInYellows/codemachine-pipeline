@@ -148,11 +148,10 @@ Verbose mode includes:
 **Check:** Validates Node.js version against project requirements.
 
 **Pass Criteria:**
-- Node.js v24.x (LTS, preferred)
-- Node.js v20.x (LTS, acceptable with warning)
+- Node.js v24.x (LTS) or higher
 
 **Fail Criteria:**
-- Node.js < v20.0.0
+- Node.js < v24.0.0
 - Node.js not installed
 
 **Remediation:**
@@ -578,7 +577,7 @@ ai-feature doctor
 **Output:**
 ```
 ❌ Node.js Version: Node.js v18.12.0 is below minimum required version
-  → Install Node.js v20 or v24 LTS from https://nodejs.org/
+  → Install Node.js v24 LTS or higher from https://nodejs.org/
 ```
 
 **Exit Code:** 20

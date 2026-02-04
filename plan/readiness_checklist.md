@@ -35,8 +35,7 @@ Validates that the execution environment meets minimum requirements per Section 
 
 | Check Name | Status | RepoConfig Field | Last Verified | Notes |
 |------------|--------|------------------|---------------|-------|
-| Node.js v20+ installed | ⏳ | N/A | Never | Run `ai-feature doctor` to verify |
-| Node.js v24 LTS (preferred) | ⏳ | N/A | Never | Preferred for optimal performance |
+| Node.js v24+ installed | ⏳ | N/A | Never | Run `ai-feature doctor` to verify (v24 LTS or higher required) |
 | git CLI installed | ⏳ | N/A | Never | Required for repository operations |
 | npm/pnpm installed | ⏳ | N/A | Never | Package manager for dependencies |
 | Docker installed (optional) | ⏳ | N/A | Never | Recommended for containerized agents |
