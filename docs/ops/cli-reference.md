@@ -263,7 +263,7 @@ ai-feature doctor --verbose
 
 | Check | Description | Exit Code on Failure |
 |-------|-------------|---------------------|
-| Node.js Version | Validates Node.js v20+ (v24 preferred) | 20 |
+| Node.js Version | Validates Node.js v24+ | 20 |
 | Git CLI | Verifies git is installed | 20 |
 | npm | Validates npm is available | 20 |
 | Docker | Checks Docker installation (optional) | Warning only |
@@ -610,6 +610,410 @@ ai-feature rate-limits --verbose
 | `0` | Success |
 | `1` | General error |
 | `10` | Feature not found |
+
+---
+
+### ai-feature health
+
+Quick runtime health check (config, disk, writable run dir).
+
+#### Description
+
+Performs a lightweight health probe (target <1s) that validates configuration file validity, run directory writability, and available disk space. Useful for monitoring and liveness checks.
+
+#### Synopsis
+
+```bash
+ai-feature health [FLAGS]
+```
+
+#### Options
+
+| Option | Short | Description | Default |
+|--------|-------|-------------|---------|
+| `--json` | | Output results in JSON format | `false` |
+
+#### Checks Performed
+
+| Check | Description |
+|-------|-------------|
+| Config | Validates `.ai-feature-pipeline/config.json` exists and parses correctly |
+| Run Directory | Verifies `.ai-feature-pipeline/runs/` is writable (creates probe file) |
+| Disk Space | Checks at least 100MB free disk space |
+
+#### Examples
+
+```bash
+# Run health check
+ai-feature health
+
+# Get JSON output for monitoring
+ai-feature health --json
+```
+
+#### Exit Codes
+
+| Code | Meaning |
+|------|---------|
+| `0` | Healthy (all checks pass) |
+| `1` | Unhealthy (one or more checks failed) |
+
+---
+
+### ai-feature pr create
+
+Create a pull request on GitHub for the feature branch.
+
+#### Description
+
+Creates a GitHub pull request with preflight validation. Checks that code approval gates have passed and validations (lint/test/build) are complete before creating the PR.
+
+#### Synopsis
+
+```bash
+ai-feature pr create [FLAGS]
+```
+
+#### Options
+
+| Option | Short | Description | Default |
+|--------|-------|-------------|---------|
+| `--feature` | `-f` | Feature ID (defaults to current/latest) | |
+| `--json` | | Output results in JSON format | `false` |
+| `--reviewers` | `-r` | Comma-separated list of reviewer usernames | |
+| `--draft` | `-d` | Create PR as draft | `false` |
+| `--title` | `-t` | PR title (defaults to feature title) | |
+| `--body` | `-b` | PR body/description (defaults to generated summary) | |
+| `--base` | | Base branch (defaults to default branch from config) | |
+
+#### Examples
+
+```bash
+# Create PR for latest feature
+ai-feature pr create
+
+# Create PR for specific feature
+ai-feature pr create --feature feature-auth-123
+
+# Create PR with reviewers
+ai-feature pr create --reviewers user1,user2
+
+# Create draft PR
+ai-feature pr create --draft
+
+# Get JSON output
+ai-feature pr create --json
+```
+
+#### Exit Codes
+
+| Code | Meaning |
+|------|---------|
+| `0` | Success |
+| `1` | General error |
+| `10` | Validation error (feature not found, invalid inputs) |
+| `30` | Human action required (approvals missing, validations failed) |
+
+---
+
+### ai-feature pr status
+
+Show pull request status and merge readiness.
+
+#### Description
+
+Fetches fresh PR data from GitHub, checks status checks, and evaluates merge readiness. Can optionally fail with a non-zero exit code when blockers are present.
+
+#### Synopsis
+
+```bash
+ai-feature pr status [FLAGS]
+```
+
+#### Options
+
+| Option | Short | Description | Default |
+|--------|-------|-------------|---------|
+| `--feature` | `-f` | Feature ID (defaults to current/latest) | |
+| `--json` | | Output results in JSON format | `false` |
+| `--fail-on-blockers` | | Exit with code 1 if blockers present | `false` |
+
+#### Examples
+
+```bash
+# Show PR status for latest feature
+ai-feature pr status
+
+# Show PR status for specific feature
+ai-feature pr status --feature feature-auth-123
+
+# Fail in CI if blockers exist
+ai-feature pr status --fail-on-blockers
+
+# Get JSON output
+ai-feature pr status --json
+```
+
+#### Exit Codes
+
+| Code | Meaning |
+|------|---------|
+| `0` | Success |
+| `1` | General error (with `--fail-on-blockers`: blockers present) |
+| `10` | Validation error (feature not found, no PR exists) |
+
+---
+
+### ai-feature pr reviewers
+
+Request reviewers for a pull request.
+
+#### Description
+
+Adds reviewer requests to an existing pull request. Merges newly added reviewers with any previously requested reviewers and updates PR metadata.
+
+#### Synopsis
+
+```bash
+ai-feature pr reviewers [FLAGS]
+```
+
+#### Options
+
+| Option | Short | Description | Default |
+|--------|-------|-------------|---------|
+| `--feature` | `-f` | Feature ID (defaults to current/latest) | |
+| `--json` | | Output results in JSON format | `false` |
+| `--add` | `-a` | Comma-separated list of reviewer usernames to add | Required |
+
+#### Examples
+
+```bash
+# Add reviewers to PR
+ai-feature pr reviewers --add user1,user2
+
+# Add reviewer for specific feature
+ai-feature pr reviewers --feature feature-auth-123 --add reviewer
+
+# Get JSON output
+ai-feature pr reviewers --json
+```
+
+#### Exit Codes
+
+| Code | Meaning |
+|------|---------|
+| `0` | Success |
+| `1` | General error |
+| `10` | Validation error (feature not found, no PR exists) |
+
+---
+
+### ai-feature pr disable-auto-merge
+
+Disable auto-merge for a pull request.
+
+#### Description
+
+Disables auto-merge on an existing pull request. Logs the action with an optional reason to `deployment.json` for governance tracking.
+
+#### Synopsis
+
+```bash
+ai-feature pr disable-auto-merge [FLAGS]
+```
+
+#### Options
+
+| Option | Short | Description | Default |
+|--------|-------|-------------|---------|
+| `--feature` | `-f` | Feature ID (defaults to current/latest) | |
+| `--json` | | Output results in JSON format | `false` |
+| `--reason` | `-r` | Reason for disabling auto-merge (logged to deployment.json) | |
+
+#### Examples
+
+```bash
+# Disable auto-merge for latest feature
+ai-feature pr disable-auto-merge
+
+# Disable for specific feature
+ai-feature pr disable-auto-merge --feature feature-auth-123
+
+# Provide reason for audit trail
+ai-feature pr disable-auto-merge --reason "Manual merge required for compliance"
+
+# Get JSON output
+ai-feature pr disable-auto-merge --json
+```
+
+#### Exit Codes
+
+| Code | Meaning |
+|------|---------|
+| `0` | Success |
+| `1` | General error |
+| `10` | Validation error (feature not found, no PR exists) |
+
+---
+
+### ai-feature research create
+
+Create a ResearchTask manually via the CLI.
+
+#### Description
+
+Creates a research task attached to a feature run directory. Supports specifying objectives, sources with type annotations, and freshness requirements for cached results.
+
+#### Synopsis
+
+```bash
+ai-feature research create [FLAGS]
+```
+
+#### Options
+
+| Option | Short | Description | Default |
+|--------|-------|-------------|---------|
+| `--feature` | `-f` | Feature ID to attach the research task to (defaults to latest run) | |
+| `--title` | `-t` | Research task title | Required |
+| `--objective` | `-o` | Research objective/question (repeat for multiples) | Required |
+| `--source` | `-s` | Source to consult formatted as `type:identifier` or `type:identifier\|description` | |
+| `--max-age` | | Freshness window in hours for cached results (default 24, minimum 1) | |
+| `--force-fresh` | | Force new research even if cache exists | `false` |
+| `--json` | | Emit machine-readable JSON output | `false` |
+
+#### Source Types
+
+Valid source types: `codebase`, `web`, `documentation`, `api`, `linear`, `github`, `other`
+
+#### Examples
+
+```bash
+# Create a research task
+ai-feature research create --title "Clarify rate limits" --objective "What are the GitHub API quotas?"
+
+# Create with multiple objectives and sources
+ai-feature research create -f feat-123 \
+  --title "Investigate auth flow" \
+  --objective "What scopes are required?" \
+  --source codebase:src/auth.ts \
+  --source documentation:docs/auth.md
+```
+
+#### Exit Codes
+
+| Code | Meaning |
+|------|---------|
+| `0` | Success |
+| `1` | General error |
+| `2` | Invalid arguments (missing objective, invalid source format) |
+| `10` | Validation error (feature not found) |
+
+---
+
+### ai-feature research list
+
+List ResearchTasks for the selected feature run directory.
+
+#### Description
+
+Lists research tasks with optional filtering by status and staleness. Includes diagnostics showing task counts by status.
+
+#### Synopsis
+
+```bash
+ai-feature research list [FLAGS]
+```
+
+#### Options
+
+| Option | Short | Description | Default |
+|--------|-------|-------------|---------|
+| `--feature` | `-f` | Feature ID to inspect (defaults to most recent run) | |
+| `--status` | `-s` | Filter by task status (repeatable): `pending`, `in_progress`, `completed`, `failed`, `cached` | |
+| `--stale` | | Show only tasks whose cached results are stale | `false` |
+| `--limit` | | Limit the number of tasks returned (minimum 1) | |
+| `--json` | | Emit machine-readable JSON output | `false` |
+
+#### Examples
+
+```bash
+# List all research tasks
+ai-feature research list
+
+# List tasks for specific feature
+ai-feature research list --feature feat-123
+
+# Filter by status
+ai-feature research list --status pending --status in_progress
+
+# Show stale tasks with limit
+ai-feature research list --stale --limit 5
+
+# Get JSON output
+ai-feature research list --json
+```
+
+#### Exit Codes
+
+| Code | Meaning |
+|------|---------|
+| `0` | Success |
+| `1` | General error |
+| `10` | Validation error (feature not found) |
+
+---
+
+### ai-feature context summarize
+
+Generate or refresh cached context summaries.
+
+#### Description
+
+Summarizes context documents using chunking and LLM-based summarization. Supports targeting specific file patterns for re-summarization and respects cost/token budgets configured in the repository settings. Requires the `enable_context_summarization` feature flag to be enabled.
+
+#### Synopsis
+
+```bash
+ai-feature context summarize [FLAGS]
+```
+
+#### Options
+
+| Option | Short | Description | Default |
+|--------|-------|-------------|---------|
+| `--feature` | `-f` | Feature ID to summarize (defaults to most recent) | |
+| `--path` | `-p` | Glob pattern of files to re-summarize (repeatable) | |
+| `--force` | `-F` | Force re-summarization even if cache is warm | `false` |
+| `--json` | | Emit machine-readable JSON output | `false` |
+| `--max-chunk-tokens` | | Override maximum tokens per chunk (500-16000, default 4000) | |
+| `--chunk-overlap` | | Chunk overlap percentage (0-50, default 10) | |
+
+#### Examples
+
+```bash
+# Summarize context for latest feature
+ai-feature context summarize
+
+# Summarize for specific feature with JSON output
+ai-feature context summarize --feature 01JXYZ --json
+
+# Re-summarize specific files
+ai-feature context summarize --path "src/**/*.ts" --path README.md
+
+# Force re-summarization with custom chunk size
+ai-feature context summarize --force --max-chunk-tokens 2000
+```
+
+#### Exit Codes
+
+| Code | Meaning |
+|------|---------|
+| `0` | Success |
+| `1` | General error |
+| `10` | Validation error (feature not found, invalid config) |
+| `30` | Context summarization disabled or context summary missing |
 
 ---
 

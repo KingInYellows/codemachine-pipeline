@@ -18,7 +18,7 @@ This playbook documents exact command usage, approval workflows, and operational
 Before running `ai-feature init`, ensure:
 
 1. **Git Repository**: Current directory must be within a git repository
-2. **Node.js**: v20 LTS (minimum) or v24 LTS (preferred)
+2. **Node.js**: v24 LTS or higher (required)
 3. **Filesystem Permissions**: Write access to create `.ai-feature-pipeline/` directory
 4. **Environment Variables** (optional but recommended):
    - `GITHUB_TOKEN` - GitHub Personal Access Token with `repo`, `workflow` scopes
