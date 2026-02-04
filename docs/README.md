@@ -106,6 +106,8 @@ Runbooks and operational procedures for pipeline administration and troubleshoot
 |----------|-------------|
 | [Init Playbook](ops/init_playbook.md) | Repository initialization with `ai-feature init` command |
 | [Doctor Reference](ops/doctor_reference.md) | Environment diagnostics and prerequisite validation |
+| [CLI Reference](ops/cli-reference.md) | CLI command reference and usage guide |
+| [Troubleshooting](ops/troubleshooting.md) | Common issues and troubleshooting procedures |
 | [Smoke Test Guide](ops/smoke_test_guide.md) | Quick validation tests for deployment verification |
 | [Integration Testing](ops/integration_testing.md) | End-to-end integration test procedures |
 
@@ -221,6 +223,10 @@ Release planning, implementation tracking, and verification reports.
 | Document | Description |
 |----------|-------------|
 | [Alpha Release Readiness](plans/2025-12-31-alpha-release-readiness.md) | Alpha release milestone tracking and readiness criteria |
+| [Stable Release Audit](stable-release-audit.md) | Stable release audit checklist and results |
+| [Stable Release Definition](stable-release-definition.md) | Stable release criteria and definition of done |
+| [Stable Release Roadmap](stable-release-roadmap.md) | Roadmap and timeline for stable release milestones |
+| [CI Stability](ci-stability.md) | CI pipeline stability guidelines and monitoring |
 
 ### Implementation Reports
 
