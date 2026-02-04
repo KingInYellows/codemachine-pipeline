@@ -23,7 +23,7 @@
     "project": {
       "type": "object",
       "description": "Project-level metadata and repository information",
-      "required": ["id", "repo_url", "default_branch"],
+      "required": ["id", "repo_url"],
       "properties": {
         "id": {
           "type": "string",
@@ -182,6 +182,11 @@
           "type": "string",
           "description": "Base directory for feature runs",
           "default": ".ai-feature-pipeline/runs"
+        },
+        "context_cost_budget_usd": {
+          "type": "number",
+          "description": "USD budget for context summarization",
+          "default": 5
         }
       }
     },
@@ -264,6 +269,111 @@
         "enable_developer_preview": {
           "type": "boolean",
           "description": "Enable developer preview features",
+          "default": false
+        }
+      }
+    },
+    "validation": {
+      "type": "object",
+      "description": "Validation command registry configuration (ADR-7 / FR-14)",
+      "properties": {
+        "commands": {
+          "type": "array",
+          "description": "Validation command definitions",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1
+        },
+        "template_context": {
+          "type": "object",
+          "description": "Global templating tokens applied to each command",
+          "additionalProperties": true
+        }
+      }
+    },
+    "execution": {
+      "type": "object",
+      "description": "CodeMachine CLI integration and execution settings",
+      "properties": {
+        "codemachine_cli_path": {
+          "type": "string",
+          "description": "Path to the CodeMachine CLI binary",
+          "default": "codemachine"
+        },
+        "default_engine": {
+          "type": "string",
+          "description": "Default execution engine",
+          "enum": ["claude", "codex", "openai"],
+          "default": "claude"
+        },
+        "workspace_dir": {
+          "type": "string",
+          "description": "Working directory for execution"
+        },
+        "spec_path": {
+          "type": "string",
+          "description": "Path to specification file"
+        },
+        "task_timeout_ms": {
+          "type": "integer",
+          "description": "Task timeout in milliseconds",
+          "minimum": 60000,
+          "maximum": 7200000,
+          "default": 1800000
+        },
+        "max_parallel_tasks": {
+          "type": "integer",
+          "description": "Maximum parallel task executions",
+          "minimum": 1,
+          "maximum": 10,
+          "default": 1
+        },
+        "max_log_buffer_size": {
+          "type": "integer",
+          "description": "Maximum log buffer size in bytes",
+          "minimum": 1024,
+          "maximum": 104857600,
+          "default": 10485760
+        },
+        "env_allowlist": {
+          "type": "array",
+          "description": "Environment variables to pass through to tasks",
+          "items": {
+            "type": "string"
+          },
+          "default": []
+        },
+        "max_retries": {
+          "type": "integer",
+          "description": "Maximum retry attempts per task",
+          "minimum": 0,
+          "maximum": 10,
+          "default": 3
+        },
+        "retry_backoff_ms": {
+          "type": "integer",
+          "description": "Backoff interval between retries in milliseconds",
+          "minimum": 1000,
+          "default": 5000
+        },
+        "log_rotation_mb": {
+          "type": "integer",
+          "description": "Log file rotation threshold in MB",
+          "minimum": 1,
+          "maximum": 10240,
+          "default": 100
+        },
+        "log_rotation_keep": {
+          "type": "integer",
+          "description": "Number of rotated log files to keep",
+          "minimum": 1,
+          "maximum": 20,
+          "default": 3
+        },
+        "log_rotation_compress": {
+          "type": "boolean",
+          "description": "Compress rotated log files",
           "default": false
         }
       }

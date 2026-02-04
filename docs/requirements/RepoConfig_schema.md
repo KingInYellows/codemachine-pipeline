@@ -175,6 +175,41 @@ Validation command registry configuration (ADR-7 / FR-14).
 
 **Templating tokens:** Commands may include placeholders such as `{{feature_id}}`, `{{run_dir}}`, `{{repo_root}}`, `{{command_cwd}}`, and any keys defined in `template_context`. Run `ai-feature validate --init` after editing this section so the run directory registry stays in sync.
 
+### execution
+
+CodeMachine CLI integration and execution settings.
+
+| Field | Type | Required | Default | Description | CLI Override |
+|-------|------|----------|---------|-------------|--------------|
+| `codemachine_cli_path` | `string` | ✗ | `"codemachine"` | Path to the CodeMachine CLI binary | - |
+| `default_engine` | `enum("claude","codex","openai")` | ✗ | `"claude"` | Default execution engine | - |
+| `workspace_dir` | `string` | ✗ | - | Working directory for execution | - |
+| `spec_path` | `string` | ✗ | - | Path to specification file | - |
+| `task_timeout_ms` | `integer` | ✗ | `1800000` | Task timeout in milliseconds (60000-7200000) | - |
+| `max_parallel_tasks` | `integer` | ✗ | `1` | Maximum parallel task executions (1-10) | - |
+| `max_log_buffer_size` | `integer` | ✗ | `10485760` | Maximum log buffer size in bytes (1024-104857600) | - |
+| `env_allowlist` | `string[]` | ✗ | `[]` | Environment variables to pass through to tasks | - |
+| `max_retries` | `integer` | ✗ | `3` | Maximum retry attempts per task (0-10) | - |
+| `retry_backoff_ms` | `integer` | ✗ | `5000` | Backoff interval between retries in ms (min 1000) | - |
+| `log_rotation_mb` | `integer` | ✗ | `100` | Log file rotation threshold in MB (1-10240) | - |
+| `log_rotation_keep` | `integer` | ✗ | `3` | Number of rotated log files to keep (1-20) | - |
+| `log_rotation_compress` | `boolean` | ✗ | `false` | Compress rotated log files | - |
+
+**Example:**
+```json
+{
+  "codemachine_cli_path": "codemachine",
+  "default_engine": "claude",
+  "task_timeout_ms": 1800000,
+  "max_parallel_tasks": 1,
+  "max_retries": 3,
+  "retry_backoff_ms": 5000,
+  "log_rotation_mb": 100,
+  "log_rotation_keep": 3,
+  "log_rotation_compress": false
+}
+```
+
 ### constraints
 
 Resource constraints and rate limits.
