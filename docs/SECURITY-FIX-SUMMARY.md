@@ -36,14 +36,14 @@
    - Input validation for empty commands
 
 3. **Created Security Tests**
-   - `test/unit/autoFixEngine.security.test.ts` - 16 comprehensive tests
+   - `tests/unit/autoFixEngine.security.spec.ts` - 16 comprehensive tests
    - Tests cover: injection prevention, safe execution, timeout handling, output capture
 
 ### Files Modified
 
 ```
 src/workflows/autoFixEngine.ts        (+108 lines, security improvements)
-test/unit/autoFixEngine.security.test.ts  (+393 lines, new test file)
+tests/unit/autoFixEngine.security.spec.ts  (+393 lines, new test file)
 docs/SECURITY-FIX-CVE-HIGH-1.md       (+450 lines, detailed report)
 docs/SECURITY-FIX-SUMMARY.md          (this file)
 ```
@@ -182,7 +182,7 @@ docs/SECURITY-FIX-SUMMARY.md          (this file)
 
 2. **Run Security Tests**
    ```bash
-   npm test test/unit/autoFixEngine.security.test.ts
+   npx vitest run tests/unit/autoFixEngine.security.spec.ts
    ```
 
 3. **Run All Tests**
@@ -221,7 +221,7 @@ docs/SECURITY-FIX-SUMMARY.md          (this file)
 ## Reference Material
 
 - **Detailed Report**: `docs/SECURITY-FIX-CVE-HIGH-1.md`
-- **Test Suite**: `test/unit/autoFixEngine.security.test.ts`
+- **Test Suite**: `tests/unit/autoFixEngine.security.spec.ts`
 - **Modified Code**: `src/workflows/autoFixEngine.ts`
 
 ## Contact

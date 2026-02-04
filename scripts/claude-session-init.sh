@@ -6,7 +6,7 @@
 set -euo pipefail
 
 CF="claude-flow"
-PROJECT_DIR="/home/kinginyellow/projects/codemachine-pipeline"
+PROJECT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 
 # 1. Ensure daemon is running
 if ! $CF daemon status &>/dev/null; then

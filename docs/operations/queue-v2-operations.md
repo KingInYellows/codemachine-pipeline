@@ -76,6 +76,8 @@ const COMPACTION_THRESHOLDS = {
 - `AI_FEATURE_QUEUE_COMPACTION_MAX_BYTES`: Override maxBytes threshold
 - `AI_FEATURE_QUEUE_COMPACTION_MIN_INTERVAL_MS`: Override minIntervalMs
 
+> **Not yet implemented.** These env var overrides are planned but not currently supported. Use config file settings instead.
+
 **Tuning Guidelines:**
 - **High write volume**: Increase maxOperations (20000+) to reduce compaction frequency
 - **Disk space constrained**: Decrease maxBytes (5MB) for tighter disk usage
@@ -96,6 +98,8 @@ const SNAPSHOT_CONFIG = {
 - `AI_FEATURE_QUEUE_SNAPSHOT_INTERVAL`: Override snapshot frequency
 - `AI_FEATURE_QUEUE_SNAPSHOT_COMPRESS`: Enable gzip compression (true/false)
 
+> **Not yet implemented.** These env var overrides are planned but not currently supported. Use config file settings instead.
+
 ### Migration Settings
 
 ```typescript
@@ -110,6 +114,8 @@ const MIGRATION_CONFIG = {
 **Environment Variables:**
 - `AI_FEATURE_QUEUE_AUTO_MIGRATE`: Disable automatic migration (false)
 - `AI_FEATURE_QUEUE_BACKUP_V1`: Disable backup creation (false)
+
+> **Not yet implemented.** These env var overrides are planned but not currently supported. Use config file settings instead.
 
 ## Monitoring
 
