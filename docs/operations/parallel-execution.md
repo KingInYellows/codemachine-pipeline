@@ -64,6 +64,8 @@ export AI_FEATURE_TASK_TIMEOUT_MS=300000
 export AI_FEATURE_ENABLE_PARALLEL_EXECUTION=false
 ```
 
+> **Not yet implemented.** This env var override is planned but not currently supported.
+
 ### Runtime Override
 
 Override parallelism at command execution:

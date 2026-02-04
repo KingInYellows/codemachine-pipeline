@@ -64,7 +64,7 @@ echo ""
 
 # Test 5: Verify security tests exist
 echo "5. Checking for security test file..."
-if [ -f "test/unit/autoFixEngine.security.test.ts" ]; then
+if [ -f "tests/unit/autoFixEngine.security.spec.ts" ]; then
     echo -e "${GREEN}✓ PASSED${NC}: Security test file exists"
     PASSED=$((PASSED + 1))
 else
@@ -75,7 +75,7 @@ echo ""
 
 # Test 6: Run security tests
 echo "6. Running security tests..."
-if npx jest test/unit/autoFixEngine.security.test.ts --silent --testTimeout=20000 > /dev/null 2>&1; then
+if npx vitest run tests/unit/autoFixEngine.security.spec.ts --silent > /dev/null 2>&1; then
     echo -e "${GREEN}✓ PASSED${NC}: All security tests pass"
     PASSED=$((PASSED + 1))
 else
@@ -86,7 +86,7 @@ echo ""
 
 # Test 7: Run existing validation tests
 echo "7. Running existing validation tests..."
-if npx jest test/commands/validate.test.ts --silent --testTimeout=20000 > /dev/null 2>&1; then
+if npx vitest run tests/unit/commands/validate.spec.ts --silent > /dev/null 2>&1; then
     echo -e "${GREEN}✓ PASSED${NC}: All validation tests pass"
     PASSED=$((PASSED + 1))
 else
