@@ -6,12 +6,12 @@
 
 ## Overview
 
-The RepoConfig schema defines the configuration structure for the ai-feature-pipeline CLI tool. It provides:
+The RepoConfig schema defines the configuration structure for the codemachine-pipeline CLI tool. It provides:
 
 - **Type-safe configuration** using Zod validation
 - **Governance controls** for approval workflows and accountability (ADR-5)
 - **Config history tracking** for deterministic migrations (ADR-2)
-- **Environment variable overrides** following `AI_FEATURE_<SECTION>_<FIELD>` convention
+- **Environment variable overrides** following `CODEPIPE_<SECTION>_<FIELD>` convention
 - **Integration toggles** for GitHub, Linear, and agent services
 - **Runtime safety defaults** to contain risk and prevent misuse
 
@@ -20,7 +20,7 @@ The RepoConfig schema defines the configuration structure for the ai-feature-pip
 The configuration file must be located at:
 
 ```
-.ai-feature-pipeline/config.json
+.codepipe/config.json
 ```
 
 ## Schema Structure
@@ -173,7 +173,7 @@ Validation command registry configuration (ADR-7 / FR-14).
 | `description` | `string` | ✗ | - | Human-friendly description |
 | `template_context` | `record<string,string>` | ✗ | `{}` | Per-command templating tokens |
 
-**Templating tokens:** Commands may include placeholders such as `{{feature_id}}`, `{{run_dir}}`, `{{repo_root}}`, `{{command_cwd}}`, and any keys defined in `template_context`. Run `ai-feature validate --init` after editing this section so the run directory registry stays in sync.
+**Templating tokens:** Commands may include placeholders such as `{{feature_id}}`, `{{run_dir}}`, `{{repo_root}}`, `{{command_cwd}}`, and any keys defined in `template_context`. Run `codepipe validate --init` after editing this section so the run directory registry stays in sync.
 
 ### execution
 
@@ -287,7 +287,7 @@ Array of history entries with the following structure:
     {
       "timestamp": "2025-12-15T10:24:00.000Z",
       "schema_version": "1.0.0",
-      "changed_by": "ai-feature init",
+      "changed_by": "codepipe init",
       "change_description": "Initial configuration created",
       "migration_applied": false
     }
@@ -335,23 +335,23 @@ Configuration validation failed:
 
 For detailed schema documentation, see:
   docs/requirements/RepoConfig_schema.md
-  .ai-feature-pipeline/templates/config.example.json
+  .codepipe/templates/config.example.json
 ```
 
 ## Migration Guide
 
 When upgrading schema versions:
 
-1. **Backup current config:** `cp .ai-feature-pipeline/config.json .ai-feature-pipeline/config.json.backup`
+1. **Backup current config:** `cp .codepipe/config.json .codepipe/config.json.backup`
 2. **Review migration checklist:** See `docs/requirements/config_migrations.md`
 3. **Update schema_version:** Change to target version
 4. **Apply migrations:** Run any required migration scripts
 5. **Add history entry:** Document the migration in `config_history`
-6. **Validate:** Run `ai-feature init --validate-only`
+6. **Validate:** Run `codepipe init --validate-only`
 
 ## Complete Example
 
-See `.ai-feature-pipeline/templates/config.example.json` for a complete annotated example.
+See `.codepipe/templates/config.example.json` for a complete annotated example.
 
 ## Related Documentation
 
