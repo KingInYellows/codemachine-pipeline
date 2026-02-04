@@ -68,7 +68,7 @@ npm install -g ai-feature-pipeline
 
 ```bash
 git clone https://github.com/KingInYellows/codemachine-pipeline.git
-cd ai-feature-pipeline
+cd codemachine-pipeline
 npm install
 npm run build
 npm link
@@ -628,7 +628,7 @@ JSON output follows a consistent schema with `status`, `message`, and command-sp
 ## Project Structure
 
 ```
-ai-feature-pipeline/
+codemachine-pipeline/
 ├── src/
 │   ├── cli/               # CLI presentation layer
 │   │   ├── commands/      # oclif command implementations
