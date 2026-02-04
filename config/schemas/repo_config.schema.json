@@ -281,14 +281,87 @@
           "type": "array",
           "description": "Validation command definitions",
           "items": {
-            "type": "string"
+            "type": "object",
+            "required": ["type", "command"],
+            "properties": {
+              "type": {
+                "type": "string",
+                "enum": ["lint", "test", "typecheck", "build"],
+                "description": "Validation command type"
+              },
+              "command": {
+                "type": "string",
+                "minLength": 1,
+                "description": "Command to execute"
+              },
+              "cwd": {
+                "type": "string",
+                "description": "Working directory for command execution",
+                "default": "."
+              },
+              "env": {
+                "type": "object",
+                "description": "Environment variables for command execution",
+                "additionalProperties": {
+                  "type": "string"
+                }
+              },
+              "required": {
+                "type": "boolean",
+                "description": "Whether command is required to pass",
+                "default": true
+              },
+              "timeout_ms": {
+                "type": "integer",
+                "description": "Command timeout in milliseconds",
+                "minimum": 1000,
+                "maximum": 600000,
+                "default": 120000
+              },
+              "max_retries": {
+                "type": "integer",
+                "description": "Maximum retry attempts",
+                "minimum": 0,
+                "maximum": 10,
+                "default": 3
+              },
+              "backoff_ms": {
+                "type": "integer",
+                "description": "Backoff interval between retries in milliseconds",
+                "minimum": 100,
+                "maximum": 10000,
+                "default": 1000
+              },
+              "supports_auto_fix": {
+                "type": "boolean",
+                "description": "Whether command supports auto-fix",
+                "default": false
+              },
+              "auto_fix_command": {
+                "type": "string",
+                "description": "Command to run for auto-fix"
+              },
+              "description": {
+                "type": "string",
+                "description": "Human-readable description of the validation command"
+              },
+              "template_context": {
+                "type": "object",
+                "description": "Command-specific templating tokens",
+                "additionalProperties": {
+                  "type": "string"
+                }
+              }
+            }
           },
           "minItems": 1
         },
         "template_context": {
           "type": "object",
           "description": "Global templating tokens applied to each command",
-          "additionalProperties": true
+          "additionalProperties": {
+            "type": "string"
+          }
         }
       }
     },
