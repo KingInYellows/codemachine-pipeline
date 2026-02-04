@@ -1,4 +1,4 @@
-# Multi-stage build for ai-feature-pipeline CLI
+# Multi-stage build for codemachine-pipeline CLI
 # Targets Node v24 (Active LTS as of December 2025)
 
 # Build stage
@@ -37,11 +37,11 @@ COPY --from=builder /app/dist ./dist
 COPY bin ./bin
 
 # Create non-root user for security
-RUN addgroup -g 1001 -S aifeature && \
-    adduser -S aifeature -u 1001 && \
-    chown -R aifeature:aifeature /app
+RUN addgroup -g 1001 -S codepipe && \
+    adduser -S codepipe -u 1001 && \
+    chown -R codepipe:codepipe /app
 
-USER aifeature
+USER codepipe
 
 # Set entrypoint
 ENTRYPOINT ["node", "./bin/run.js"]
@@ -53,4 +53,4 @@ CMD ["--help"]
 LABEL maintainer="CodeMachine Team"
 LABEL description="Autonomous AI-powered feature development pipeline CLI"
 LABEL version="1.0.0"
-LABEL org.opencontainers.image.source="https://github.com/codemachine/ai-feature-pipeline"
+LABEL org.opencontainers.image.source="https://github.com/codemachine/codemachine-pipeline"

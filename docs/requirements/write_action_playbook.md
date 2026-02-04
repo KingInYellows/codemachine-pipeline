@@ -89,7 +89,7 @@ The `concurrencyLimit` parameter controls how many write actions can execute sim
 
 **Environment variable override:**
 ```bash
-export AI_FEATURE_WRITE_CONCURRENCY=2
+export CODEPIPE_WRITE_CONCURRENCY=2
 ```
 
 ## Usage
@@ -224,7 +224,7 @@ The queue integrates with `RateLimitLedger` to detect and respect cooldown perio
 Use the CLI command to inspect the rate limit ledger:
 
 ```bash
-ai-feature rate-limits --json
+codepipe rate-limits --json
 ```
 
 This surfaces:
@@ -240,7 +240,7 @@ For details, see `docs/ops/rate_limit_reference.md`.
 If you've reviewed the situation and want to resume operations:
 
 ```bash
-ai-feature rate-limits clear github
+codepipe rate-limits clear github
 ```
 
 **Warning:** Only clear cooldowns after:
@@ -337,7 +337,7 @@ Example log:
 
 ### Status Command
 
-Extend the `ai-feature status` command to show write action queue metrics:
+Extend the `codepipe status` command to show write action queue metrics:
 
 ```typescript
 import { WriteActionQueue } from './workflows/writeActionQueue';
@@ -350,7 +350,7 @@ console.log(`Write Actions (queue): ${status.pending_count} pending, ${status.co
 
 ### Resume Behavior
 
-When `ai-feature resume` runs, it should:
+When `codepipe resume` runs, it should:
 
 1. Initialize the write action queue from persisted state
 2. Call `queue.drain(executor)` to process pending actions
@@ -366,13 +366,13 @@ When `ai-feature resume` runs, it should:
 - No actions executing despite calling `drain()`
 
 **Diagnosis:**
-1. Check rate limit ledger: `ai-feature rate-limits`
+1. Check rate limit ledger: `codepipe rate-limits`
 2. Look for cooldown warnings in logs
 3. Verify `concurrencyLimit` isn't exceeded by `in_progress_count`
 
 **Resolution:**
 - If in cooldown, wait for `cooldownUntil` timestamp or clear manually
-- If manual ack required, review cause and clear with `ai-feature rate-limits clear github`
+- If manual ack required, review cause and clear with `codepipe rate-limits clear github`
 - Increase `concurrencyLimit` if backlog is growing and no rate limits are active
 
 ### Duplicate Actions
@@ -472,7 +472,7 @@ For additional context on rate limit ledger structure and cooldown thresholds, c
 ## Support
 
 For questions or issues:
-1. Check queue status: `ai-feature status --json`
-2. Review rate limits: `ai-feature rate-limits`
+1. Check queue status: `codepipe status --json`
+2. Review rate limits: `codepipe rate-limits`
 3. Inspect logs: `tail -f <runDir>/logs.ndjson`
 4. Report bugs: GitHub issues with queue manifest and recent log excerpts

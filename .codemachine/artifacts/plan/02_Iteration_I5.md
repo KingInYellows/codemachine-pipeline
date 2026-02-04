@@ -4,7 +4,7 @@
 *   **Iteration ID:** `I5`
 *   **Goal:** Finalize deployment orchestration (status-check polling, auto-merge toggles, workflow dispatch), implement export bundles + manifest schemas, deliver observability/cleanup commands, codify ops/compliance documentation, and ensure glossary/verification sections remain current.
 *   **Prerequisites:** Integrations operational (`I4`), execution pipeline stable (`I3`), context/spec flows ready (`I2`), and CLI foundation complete (`I1`). GitHub repo must support protected branches and workflow dispatch for testing.
-*   **Key Deliverables:** Deployment trigger module + state diagram, export bundler + schema, `ai-feature observe` & `cleanup`, notification adapter baseline, e2e deploy/resume tests, verification strategy updates, glossary refresh, and compliance/security docs.
+*   **Key Deliverables:** Deployment trigger module + state diagram, export bundler + schema, `codepipe observe` & `cleanup`, notification adapter baseline, e2e deploy/resume tests, verification strategy updates, glossary refresh, and compliance/security docs.
 *   **Exit Criteria:** CLI can detect merge blockers, request approvals, enable auto-merge when allowed, trigger deployment workflows, generate export bundles, run observe/cleanup tasks, and document verification + glossary updates for downstream teams.
 *   **Tasks:**
 
@@ -26,7 +26,7 @@
     *   **Task 5.2:**
         *   **Task ID:** `I5.T2`
         *   **Description:** Build Export Bundle service packaging prompts, context manifest, PRD/spec, plan, logs, metrics, diffs, approvals, rate-limit ledger, deployment records, and API transcripts; define JSON Schema + Markdown playbook per Section 2.1.
-            Support formats `json` and `md`, with CLI `ai-feature export` enhancements.
+            Support formats `json` and `md`, with CLI `codepipe export` enhancements.
         *   **Agent Type Hint:** `BackendAgent`
         *   **Inputs:** Section 2.1 (Export schema), Section 3 (Directory structure), NFR-10.
         *   **Input Files**: ["docs/requirements/export_bundles.md", "docs/requirements/run_directory_schema.md", "docs/requirements/traceability_playbook.md"]
@@ -39,13 +39,13 @@
 <!-- anchor: task-i5-t3 -->
     *   **Task 5.3:**
         *   **Task ID:** `I5.T3`
-        *   **Description:** Deliver Observability operations: `ai-feature observe` command summarizing run health, KPIs, rate-limit events, plus operations runbook per Section 2.1; include metrics ingest instructions for homelab dashboards.
+        *   **Description:** Deliver Observability operations: `codepipe observe` command summarizing run health, KPIs, rate-limit events, plus operations runbook per Section 2.1; include metrics ingest instructions for homelab dashboards.
             Integrate with telemetry files and schedule-friendly output.
         *   **Agent Type Hint:** `OpsAgent`
         *   **Inputs:** Section 2 (Observability), docs from `I1.T6` and `I3.T6`.
         *   **Input Files**: ["docs/ops/observability_baseline.md", "docs/ops/execution_telemetry.md", "plan/milestone_notes.md"]
         *   **Target Files:** ["src/cli/commands/observe.ts", "docs/ops/observe_playbook.md", "tests/integration/observe_command.spec.ts"]
-        *   **Deliverables:** CLI command, documentation detailing KPIs and scheduling, tests verifying JSON output, and instructions for storing reports under `.ai-feature-pipeline/reports/`.
+        *   **Deliverables:** CLI command, documentation detailing KPIs and scheduling, tests verifying JSON output, and instructions for storing reports under `.codepipe/reports/`.
         *   **Acceptance Criteria:** Command enumerates active runs, blocked states, rate-limit warnings, KPIs; doc explains cron usage and retention; tests confirm deterministic JSON schema.
         *   **Dependencies:** `I3.T6`, `I4.T3`
         *   **Parallelizable:** Yes
@@ -53,7 +53,7 @@
 <!-- anchor: task-i5-t4 -->
     *   **Task 5.4:**
         *   **Task ID:** `I5.T4`
-        *   **Description:** Implement `ai-feature cleanup` for run directories, honoring retention metadata, verifying export bundles before deletion, archiving artifacts optionally, and documenting safe usage with sample automation scripts.
+        *   **Description:** Implement `codepipe cleanup` for run directories, honoring retention metadata, verifying export bundles before deletion, archiving artifacts optionally, and documenting safe usage with sample automation scripts.
         *   **Agent Type Hint:** `BackendAgent`
         *   **Inputs:** Section 3 (Directory structure), Section 4 (Directives), ADR-2.
         *   **Input Files**: ["docs/requirements/run_directory_schema.md", "docs/ops/cleanup_policy.md"]
@@ -121,8 +121,8 @@
     - Risk: Export bundles could leak secrets; Mitigation: redaction audit before bundling, schema validation, and docs describing manual review before sharing.
     - Risk: Cleanup command might delete active runs; Mitigation: retention metadata + export verification + dry-run flag minimize mistakes.
 *   **Hand-off Checklist:**
-    - Run `ai-feature deploy --dry-run`, `ai-feature export --format json`, `ai-feature observe`, and `ai-feature cleanup --dry-run` on fixture repo, attaching outputs to `plan/milestone_notes.md`.
-    - Ensure deployment diagrams, export schema, and ops runbooks linked from README and `.ai-feature-pipeline/templates/` for future contributors.
+    - Run `codepipe deploy --dry-run`, `codepipe export --format json`, `codepipe observe`, and `codepipe cleanup --dry-run` on fixture repo, attaching outputs to `plan/milestone_notes.md`.
+    - Ensure deployment diagrams, export schema, and ops runbooks linked from README and `.codepipe/templates/` for future contributors.
     - Share audit checklist + glossary updates with downstream automation (Graphite, CodeMachine) and tag completion in `plan/readiness_checklist.md`.
 *   **Iteration Metrics & Recording Plan:**
     - Monitor deployment latency, workflow success rate, auto-merge enablement frequency, and export bundle generation time.

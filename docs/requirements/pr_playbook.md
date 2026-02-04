@@ -7,7 +7,7 @@ This playbook documents the pull request automation workflow for the AI Feature 
 **Implements:**
 - FR-15: PR automation
 - Section 2: Communication Patterns (PR orchestration)
-- Section 3.10.4: `ai-feature pr` command flows
+- Section 3.10.4: `codepipe pr` command flows
 - ADR-3: Integration Layer design
 
 ---
@@ -35,29 +35,29 @@ Before creating a pull request, the following conditions must be met:
 1. **Code Approval Gate Completed**: The "Code" gate must be approved in `approvals.json`
 2. **Validations Passed**: Lint, test, and build validations must succeed
 3. **Branch Exists**: Feature branch must exist locally and be pushed to remote
-4. **GitHub Integration Enabled**: `config.github.enabled = true` in `.ai-feature-pipeline/config.json`
+4. **GitHub Integration Enabled**: `config.github.enabled = true` in `.codepipe/config.json`
 5. **GitHub Token Available**: `GITHUB_TOKEN` environment variable set with required scopes
 
 ### Command Usage
 
 ```bash
 # Basic PR creation
-ai-feature pr create
+codepipe pr create
 
 # Create with reviewers
-ai-feature pr create --reviewers user1,user2,user3
+codepipe pr create --reviewers user1,user2,user3
 
 # Create as draft
-ai-feature pr create --draft
+codepipe pr create --draft
 
 # Specify custom title and body
-ai-feature pr create --title "feat: Add authentication" --body "Implements OAuth2 flow"
+codepipe pr create --title "feat: Add authentication" --body "Implements OAuth2 flow"
 
 # Specify base branch (defaults to config.project.default_branch)
-ai-feature pr create --base develop
+codepipe pr create --base develop
 
 # JSON output for automation
-ai-feature pr create --json
+codepipe pr create --json
 ```
 
 ### Workflow Steps
@@ -121,13 +121,13 @@ Pull request created successfully. View at: https://github.com/org/repo/pull/42
 
 ```bash
 # Check PR status
-ai-feature pr status
+codepipe pr status
 
 # Fail with exit code 1 if blockers present
-ai-feature pr status --fail-on-blockers
+codepipe pr status --fail-on-blockers
 
 # JSON output
-ai-feature pr status --json
+codepipe pr status --json
 ```
 
 ### Workflow Steps
@@ -184,10 +184,10 @@ When blockers are detected:
    - Review failing contexts in output
    - Fix underlying issues
    - Push new commits to trigger re-run
-   - Use `ai-feature pr status` to confirm resolution
+   - Use `codepipe pr status` to confirm resolution
 
 2. **Required Reviews Missing**:
-   - Request reviewers: `ai-feature pr reviewers --add username`
+   - Request reviewers: `codepipe pr reviewers --add username`
    - Notify reviewers via external channels
    - Wait for approval
 
@@ -204,10 +204,10 @@ When blockers are detected:
 
 ```bash
 # Add reviewers
-ai-feature pr reviewers --add alice,bob,charlie
+codepipe pr reviewers --add alice,bob,charlie
 
 # JSON output
-ai-feature pr reviewers --add alice --json
+codepipe pr reviewers --add alice --json
 ```
 
 ### Workflow Steps
@@ -248,13 +248,13 @@ Auto-merge is a powerful feature but carries risk. The pipeline supports disabli
 
 ```bash
 # Disable auto-merge
-ai-feature pr disable-auto-merge
+codepipe pr disable-auto-merge
 
 # Provide reason (logged to deployment.json)
-ai-feature pr disable-auto-merge --reason "Manual merge required for SOC2 compliance"
+codepipe pr disable-auto-merge --reason "Manual merge required for SOC2 compliance"
 
 # JSON output
-ai-feature pr disable-auto-merge --json
+codepipe pr disable-auto-merge --json
 ```
 
 ### Workflow Steps
@@ -342,13 +342,13 @@ For a production deployment with strict governance:
 
 **Workflow**:
 1. Code generated → **Pause** for Code approval
-2. `ai-feature approve code --signer user@example.com`
+2. `codepipe approve code --signer user@example.com`
 3. PR created → CI/CD runs
 4. **Pause** for PR approval after CI/CD passes
-5. `ai-feature approve pr --signer user@example.com`
+5. `codepipe approve pr --signer user@example.com`
 6. **Manual merge** required (auto-merge disabled)
 7. Merge completed → **Pause** for Deploy approval
-8. `ai-feature approve deploy --signer user@example.com`
+8. `codepipe approve deploy --signer user@example.com`
 9. Deployment triggered
 
 ---
@@ -371,18 +371,18 @@ The PR automation system respects GitHub branch protection settings:
 When branch protection blocks merge:
 
 1. **Blocker Detection**: `isPullRequestReadyToMerge` returns `{ready: false, reasons: [...]}`
-2. **Surface to User**: `ai-feature pr status` displays specific blockers
+2. **Surface to User**: `codepipe pr status` displays specific blockers
 3. **Resolution Guidance**:
    - Request required reviews
    - Wait for status checks to pass
    - Address merge conflicts
-4. **Retry**: `ai-feature pr status` to confirm resolution
+4. **Retry**: `codepipe pr status` to confirm resolution
 5. **Proceed**: Manual merge or auto-merge (if enabled)
 
 ### Example: Required Reviews Blocker
 
 ```
-ai-feature pr status
+codepipe pr status
 
 PR #42
 Merge ready: ✗
@@ -392,9 +392,9 @@ Blockers:
   • 2 required review(s) not approved
 
 Resolution:
-  • Request reviewers: ai-feature pr reviewers --add reviewer1,reviewer2
+  • Request reviewers: codepipe pr reviewers --add reviewer1,reviewer2
   • Wait for approvals
-  • Re-check status: ai-feature pr status
+  • Re-check status: codepipe pr status
 ```
 
 ---
@@ -423,7 +423,7 @@ Currently, PR commands call GitHub adapter directly. Future work will:
 - Route reviewer requests through WriteActionQueue
 - Queue PR comments for deployment summaries
 - Serialize label additions/removals
-- Implement queue draining on `ai-feature resume`
+- Implement queue draining on `codepipe resume`
 
 **Design Principle**: Commands are designed to be queue-compatible (shared helper instead of direct adapter calls).
 
@@ -440,13 +440,13 @@ Currently, PR commands call GitHub adapter directly. Future work will:
 **Resolution**:
 ```bash
 # Review generated code
-cat .ai-feature-pipeline/runs/<feature-id>/code/**/*.ts
+cat .codepipe/runs/<feature-id>/code/**/*.ts
 
 # Approve code gate
-ai-feature approve code --signer "your-email@example.com"
+codepipe approve code --signer "your-email@example.com"
 
 # Retry PR creation
-ai-feature pr create
+codepipe pr create
 ```
 
 ---
@@ -460,53 +460,53 @@ ai-feature pr create
 **Resolution**:
 ```bash
 # Run validations
-ai-feature validate
+codepipe validate
 
 # Fix failing validations
 # (e.g., fix lint errors, broken tests)
 
 # Re-run validations
-ai-feature validate
+codepipe validate
 
 # Retry PR creation
-ai-feature pr create
+codepipe pr create
 ```
 
 ---
 
 ### Error: "No pull request found for this feature"
 
-**Symptom**: `ai-feature pr status` or `ai-feature pr reviewers` fails with exit code 10
+**Symptom**: `codepipe pr status` or `codepipe pr reviewers` fails with exit code 10
 
 **Cause**: `pr.json` doesn't exist (PR not created yet)
 
 **Resolution**:
 ```bash
 # Create PR first
-ai-feature pr create
+codepipe pr create
 
 # Then retry status/reviewers command
-ai-feature pr status
+codepipe pr status
 ```
 
 ---
 
 ### Error: "PR already exists: #42"
 
-**Symptom**: `ai-feature pr create` fails with exit code 10
+**Symptom**: `codepipe pr create` fails with exit code 10
 
 **Cause**: `pr.json` already exists with PR number
 
 **Resolution**:
 - PR already created, no action needed
-- View PR: `ai-feature pr status`
+- View PR: `codepipe pr status`
 - If you need to recreate PR, delete `pr.json` and close/delete PR on GitHub first (manual operation)
 
 ---
 
 ### Warning: "Auto-merge already disabled"
 
-**Symptom**: `ai-feature pr disable-auto-merge` exits successfully but shows warning
+**Symptom**: `codepipe pr disable-auto-merge` exits successfully but shows warning
 
 **Cause**: `pr.json` shows `auto_merge_enabled: false`
 
@@ -525,7 +525,7 @@ All PR commands use standardized exit codes:
 | `10` | Validation Error | Invalid inputs, feature not found, or PR state invalid | Review error message; validate inputs |
 | `30` | Human Action Required | Approvals missing, validations failed, or blockers present | Complete required approvals or fix blockers |
 
-**Special Case**: `ai-feature pr status --fail-on-blockers` exits with code `1` if blockers are present (instead of `0`).
+**Special Case**: `codepipe pr status --fail-on-blockers` exits with code `1` if blockers are present (instead of `0`).
 
 ---
 
@@ -542,27 +542,27 @@ All PR commands use standardized exit codes:
 
 ### Create PR
 ```bash
-ai-feature pr create [--reviewers user1,user2] [--draft]
+codepipe pr create [--reviewers user1,user2] [--draft]
 ```
 
 ### Check Status
 ```bash
-ai-feature pr status [--fail-on-blockers]
+codepipe pr status [--fail-on-blockers]
 ```
 
 ### Request Reviewers
 ```bash
-ai-feature pr reviewers --add user1,user2
+codepipe pr reviewers --add user1,user2
 ```
 
 ### Disable Auto-Merge
 ```bash
-ai-feature pr disable-auto-merge [--reason "<text>"]
+codepipe pr disable-auto-merge [--reason "<text>"]
 ```
 
 ### JSON Output (All Commands)
 ```bash
-ai-feature pr <command> --json
+codepipe pr <command> --json
 ```
 
 ---

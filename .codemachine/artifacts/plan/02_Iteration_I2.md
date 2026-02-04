@@ -123,20 +123,20 @@
 *   **Iteration Risks & Mitigations:**
     - Risk: Context scans could overload large repos; Mitigation: configurable glob allowlists, chunked summarization, and progress logs; doc outlines safe defaults and warns before scanning >20k files.
     - Risk: PRD/spec approvals stall schedule; Mitigation: `approval_playbook.md` describes escalation/timeout handling and `--json` outputs enable automation reminders.
-    - Risk: Agent manifest errors disrupt drafting; Mitigation: schema validation + sample manifests checked into `.ai-feature-pipeline/agents/`, plus fallback templates documented for offline editing.
+    - Risk: Agent manifest errors disrupt drafting; Mitigation: schema validation + sample manifests checked into `.codepipe/agents/`, plus fallback templates documented for offline editing.
 *   **Hand-off Checklist to I3:**
     - Provide sample `context_manifest.json`, ResearchTask outputs, `prd.md`, `spec.md`, and `trace.json` generated against dummy repo for Execution Engine testing.
     - Confirm `docs/diagrams/context_research_sequence.mmd` and `spec_flow.mmd` render in CI and are linked from README + `plan/milestone_notes.md`.
     - Log approval events in `approvals.json` and include CLI transcripts demonstrating gating/resume flows for I3 reference.
-    - Store representative agent manifests, cost telemetry, and summarization logs in `.ai-feature-pipeline/templates/` for automated regression tests.
+    - Store representative agent manifests, cost telemetry, and summarization logs in `.codepipe/templates/` for automated regression tests.
 *   **Iteration Metrics Targets & Recording Plan:**
     - Capture context-gather duration, number of files summarized, and token costs inside `metrics/prometheus.txt` plus `telemetry/costs.json` for regression tracking.
     - Track approval wait times and ResearchTask throughput to identify bottlenecks before execution iteration.
     - Document anomalies (e.g., summarization retries, manifest load failures) in `plan/milestone_notes.md` to inform validation commands planned for I3.
 *   **Iteration Validation Hooks:**
     - Add `tests/integration/context_to_prd.spec.ts` ensuring aggregated context flows into PRD/spec creation deterministically.
-    - Extend `ai-feature status --json` to include context + research summaries verified during CI to guarantee contracts for I3 queue builder.
+    - Extend `codepipe status --json` to include context + research summaries verified during CI to guarantee contracts for I3 queue builder.
     - Schedule smoke test script `scripts/tooling/smoke_context_prd.sh` to run nightly, verifying summarization budgets and approvals remain healthy.
     - Publish summarized context + PRD/spec fixtures under  and document how I3 smoke tests should consume them.
-    - Publish summarized context plus PRD/spec fixtures under '.ai-feature-pipeline/samples/' and document how I3 smoke tests should consume them.
+    - Publish summarized context plus PRD/spec fixtures under '.codepipe/samples/' and document how I3 smoke tests should consume them.
 

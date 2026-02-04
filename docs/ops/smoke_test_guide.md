@@ -574,7 +574,7 @@ When repository structure changes, update test fixtures:
 
 ```bash
 # Edit fixture config
-vi tests/fixtures/sample_repo/.ai-feature-pipeline/config.json
+vi tests/fixtures/sample_repo/.codepipe/config.json
 
 # Add new fixture files
 touch tests/fixtures/sample_repo/src/new_module.ts

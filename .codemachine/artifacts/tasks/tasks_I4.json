@@ -48,7 +48,7 @@
     "task_id": "I4.T3",
     "iteration_id": "I4",
     "iteration_goal": "Wire GitHub and Linear adapters with rate-limit safe HTTP calls, produce OpenAPI specs, add PR automation commands, detect branch protections/reviewer requirements, and ensure CLI status/resume surfaces show real-time integration data.",
-    "description": "Expand rate-limit ledger + telemetry to surface integration-specific cooldown timers, backlog states, and CLI warnings; add Prometheus metrics for GitHub/Linear budgets, and CLI command `ai-feature rate-limits` for manual inspection.",
+    "description": "Expand rate-limit ledger + telemetry to surface integration-specific cooldown timers, backlog states, and CLI warnings; add Prometheus metrics for GitHub/Linear budgets, and CLI command `codepipe rate-limits` for manual inspection.",
     "agent_type_hint": "BackendAgent",
     "inputs": "Section 2 (Observability), Section 4 (Directives), outputs from `I3.T6`.",
     "target_files": [
@@ -71,7 +71,7 @@
     "task_id": "I4.T4",
     "iteration_id": "I4",
     "iteration_goal": "Wire GitHub and Linear adapters with rate-limit safe HTTP calls, produce OpenAPI specs, add PR automation commands, detect branch protections/reviewer requirements, and ensure CLI status/resume surfaces show real-time integration data.",
-    "description": "Implement PR automation CLI surfaces (`ai-feature pr create`, `pr status`, `pr reviewers`, `pr disable-auto-merge`) plus GitHub PR automation sequence diagram (Mermaid) detailing request flow, write action queue, and branch protection feedback loops.",
+    "description": "Implement PR automation CLI surfaces (`codepipe pr create`, `pr status`, `pr reviewers`, `pr disable-auto-merge`) plus GitHub PR automation sequence diagram (Mermaid) detailing request flow, write action queue, and branch protection feedback loops.",
     "agent_type_hint": "FrontendAgent",
     "inputs": "Section 2 (Communication Patterns), Section 2.1 (PR diagram), FR-15, ADR-3.",
     "target_files": [

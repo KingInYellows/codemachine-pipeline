@@ -1,37 +1,37 @@
 # CLI Reference
 
-This document provides comprehensive documentation for the `ai-feature` command-line interface.
+This document provides comprehensive documentation for the `codepipe` command-line interface.
 
 ## Overview
 
-The `ai-feature` CLI is the primary interface for managing feature development pipelines. It provides commands for initializing projects, starting features, checking status, managing approvals, and more.
+The `codepipe` CLI is the primary interface for managing feature development pipelines. It provides commands for initializing projects, starting features, checking status, managing approvals, and more.
 
 ## Installation
 
 ```bash
 # Install globally
-npm install -g ai-feature-pipeline
+npm install -g codemachine-pipeline
 
 # Or run via npx
-npx ai-feature-pipeline <command>
+npx codemachine-pipeline <command>
 ```
 
 ---
 
 ## Commands
 
-### ai-feature init
+### codepipe init
 
-Initialize ai-feature-pipeline with schema-validated configuration.
+Initialize codemachine-pipeline with schema-validated configuration.
 
 #### Description
 
-Creates the `.ai-feature-pipeline/` directory structure and generates a default `config.json` file based on your repository settings. This command must be run from within a git repository.
+Creates the `.codepipe/` directory structure and generates a default `config.json` file based on your repository settings. This command must be run from within a git repository.
 
 #### Synopsis
 
 ```bash
-ai-feature init [FLAGS]
+codepipe init [FLAGS]
 ```
 
 #### Options
@@ -48,19 +48,19 @@ ai-feature init [FLAGS]
 
 ```bash
 # Initialize in current repository
-ai-feature init
+codepipe init
 
 # Force re-initialization
-ai-feature init --force
+codepipe init --force
 
 # Validate existing configuration
-ai-feature init --validate-only
+codepipe init --validate-only
 
 # Preview what would be created (no files written)
-ai-feature init --dry-run --json
+codepipe init --dry-run --json
 
 # Non-interactive initialization
-ai-feature init --yes
+codepipe init --yes
 ```
 
 #### Exit Codes
@@ -75,7 +75,7 @@ ai-feature init --yes
 #### Directory Structure Created
 
 ```
-.ai-feature-pipeline/
+.codepipe/
 ├── config.json       # Repository configuration
 ├── runs/             # Feature run directories
 ├── logs/             # Command logs
@@ -84,7 +84,7 @@ ai-feature init --yes
 
 ---
 
-### ai-feature start
+### codepipe start
 
 Start a new feature development pipeline.
 
@@ -95,7 +95,7 @@ Creates a new feature run directory, aggregates repository context, detects rese
 #### Synopsis
 
 ```bash
-ai-feature start [FLAGS]
+codepipe start [FLAGS]
 ```
 
 #### Options
@@ -116,25 +116,25 @@ ai-feature start [FLAGS]
 
 ```bash
 # Start from a text prompt
-ai-feature start --prompt "Add user authentication with OAuth support"
+codepipe start --prompt "Add user authentication with OAuth support"
 
 # Start from a Linear issue
-ai-feature start --linear PROJ-123
+codepipe start --linear PROJ-123
 
 # Start from an existing specification file
-ai-feature start --spec ./specs/authentication.md
+codepipe start --spec ./specs/authentication.md
 
 # Preview execution plan without making changes
-ai-feature start --prompt "OAuth integration" --dry-run
+codepipe start --prompt "OAuth integration" --dry-run
 
 # Get JSON output for automation
-ai-feature start --prompt "Add logging" --json
+codepipe start --prompt "Add logging" --json
 
 # Run with parallel task execution
-ai-feature start --prompt "Refactor database layer" --max-parallel 4
+codepipe start --prompt "Refactor database layer" --max-parallel 4
 
 # Stop after PRD generation (skip execution)
-ai-feature start --prompt "New API endpoints" --skip-execution
+codepipe start --prompt "New API endpoints" --skip-execution
 ```
 
 #### Exit Codes
@@ -148,7 +148,7 @@ ai-feature start --prompt "New API endpoints" --skip-execution
 
 #### Output
 
-The command creates a run directory at `.ai-feature-pipeline/runs/FEAT-<uuid>/` containing:
+The command creates a run directory at `.codepipe/runs/FEAT-<uuid>/` containing:
 
 - `manifest.json` - Run state and metadata
 - `context/` - Aggregated repository context
@@ -158,7 +158,7 @@ The command creates a run directory at `.ai-feature-pipeline/runs/FEAT-<uuid>/` 
 
 ---
 
-### ai-feature status
+### codepipe status
 
 Show the current state of a feature development pipeline.
 
@@ -169,7 +169,7 @@ Displays comprehensive status information including pipeline state, queue status
 #### Synopsis
 
 ```bash
-ai-feature status [FLAGS]
+codepipe status [FLAGS]
 ```
 
 #### Options
@@ -185,19 +185,19 @@ ai-feature status [FLAGS]
 
 ```bash
 # Show status of latest feature
-ai-feature status
+codepipe status
 
 # Show status of specific feature
-ai-feature status --feature FEAT-abc123
+codepipe status --feature FEAT-abc123
 
 # Get JSON output for parsing
-ai-feature status --json
+codepipe status --json
 
 # Show verbose details including task breakdown
-ai-feature status --verbose
+codepipe status --verbose
 
 # Include cost telemetry
-ai-feature status --show-costs
+codepipe status --show-costs
 ```
 
 #### Exit Codes
@@ -225,18 +225,18 @@ The status output includes:
 
 ---
 
-### ai-feature doctor
+### codepipe doctor
 
 Run environment diagnostics and readiness checks.
 
 #### Description
 
-Validates that your system meets all prerequisites for ai-feature-pipeline operations. Checks runtime environment, repository setup, network connectivity, configuration validity, and credential availability.
+Validates that your system meets all prerequisites for codemachine-pipeline operations. Checks runtime environment, repository setup, network connectivity, configuration validity, and credential availability.
 
 #### Synopsis
 
 ```bash
-ai-feature doctor [FLAGS]
+codepipe doctor [FLAGS]
 ```
 
 #### Options
@@ -250,13 +250,13 @@ ai-feature doctor [FLAGS]
 
 ```bash
 # Run all diagnostic checks
-ai-feature doctor
+codepipe doctor
 
 # Get JSON output for CI/automation
-ai-feature doctor --json
+codepipe doctor --json
 
 # Show detailed information
-ai-feature doctor --verbose
+codepipe doctor --verbose
 ```
 
 #### Checks Performed
@@ -287,7 +287,7 @@ ai-feature doctor --verbose
 
 ---
 
-### ai-feature approve
+### codepipe approve
 
 Approve or deny a feature pipeline gate.
 
@@ -298,7 +298,7 @@ Grants or denies approval for human-in-the-loop governance gates. Records signer
 #### Synopsis
 
 ```bash
-ai-feature approve <gate> [FLAGS]
+codepipe approve <gate> [FLAGS]
 ```
 
 #### Arguments
@@ -337,21 +337,21 @@ ai-feature approve <gate> [FLAGS]
 
 ```bash
 # Approve PRD
-ai-feature approve prd --approve --signer "user@example.com"
+codepipe approve prd --approve --signer "user@example.com"
 
 # Deny spec with comment
-ai-feature approve spec --deny --signer "reviewer@example.com" \
+codepipe approve spec --deny --signer "reviewer@example.com" \
   --comment "Missing acceptance criteria"
 
 # Approve specific feature
-ai-feature approve prd --approve --signer "user@example.com" \
+codepipe approve prd --approve --signer "user@example.com" \
   --feature FEAT-abc123
 
 # Get JSON output
-ai-feature approve prd --approve --signer "user@example.com" --json
+codepipe approve prd --approve --signer "user@example.com" --json
 
 # Skip hash validation (debugging only)
-ai-feature approve prd --approve --signer "user@example.com" --skip-hash-check
+codepipe approve prd --approve --signer "user@example.com" --skip-hash-check
 ```
 
 #### Exit Codes
@@ -365,7 +365,7 @@ ai-feature approve prd --approve --signer "user@example.com" --skip-hash-check
 
 ---
 
-### ai-feature plan
+### codepipe plan
 
 Display the execution plan DAG, task summaries, and dependency graph.
 
@@ -376,7 +376,7 @@ Shows the generated execution plan including task counts, entry points, dependen
 #### Synopsis
 
 ```bash
-ai-feature plan [FLAGS]
+codepipe plan [FLAGS]
 ```
 
 #### Options
@@ -392,19 +392,19 @@ ai-feature plan [FLAGS]
 
 ```bash
 # Show plan for latest feature
-ai-feature plan
+codepipe plan
 
 # Show plan for specific feature
-ai-feature plan --feature FEAT-abc123
+codepipe plan --feature FEAT-abc123
 
 # Get JSON output
-ai-feature plan --json
+codepipe plan --json
 
 # Show detailed task list
-ai-feature plan --verbose
+codepipe plan --verbose
 
 # Check if plan is stale
-ai-feature plan --show-diff
+codepipe plan --show-diff
 ```
 
 #### Exit Codes
@@ -417,7 +417,7 @@ ai-feature plan --show-diff
 
 ---
 
-### ai-feature resume
+### codepipe resume
 
 Resume a failed or paused feature pipeline execution with safety checks.
 
@@ -428,7 +428,7 @@ Analyzes the current state of a feature pipeline and resumes execution from the 
 #### Synopsis
 
 ```bash
-ai-feature resume [FLAGS]
+codepipe resume [FLAGS]
 ```
 
 #### Options
@@ -457,22 +457,22 @@ A feature can be resumed when:
 
 ```bash
 # Resume latest feature
-ai-feature resume
+codepipe resume
 
 # Analyze resume eligibility without executing
-ai-feature resume --dry-run
+codepipe resume --dry-run
 
 # Resume specific feature
-ai-feature resume --feature FEAT-abc123
+codepipe resume --feature FEAT-abc123
 
 # Force resume despite warnings
-ai-feature resume --force
+codepipe resume --force
 
 # Resume with parallel execution
-ai-feature resume --max-parallel 4
+codepipe resume --max-parallel 4
 
 # Verbose output with queue validation details
-ai-feature resume --verbose
+codepipe resume --verbose
 ```
 
 #### Exit Codes
@@ -487,7 +487,7 @@ ai-feature resume --verbose
 
 ---
 
-### ai-feature validate
+### codepipe validate
 
 Execute validation commands (lint, test, typecheck, build) with auto-fix retry loops.
 
@@ -498,7 +498,7 @@ Runs configured validation commands with automatic retry and fix capabilities. S
 #### Synopsis
 
 ```bash
-ai-feature validate [FLAGS]
+codepipe validate [FLAGS]
 ```
 
 #### Options
@@ -528,22 +528,22 @@ ai-feature validate [FLAGS]
 
 ```bash
 # Initialize validation registry (run first)
-ai-feature validate --init
+codepipe validate --init
 
 # Run all validations
-ai-feature validate
+codepipe validate
 
 # Run specific validation
-ai-feature validate --command lint
+codepipe validate --command lint
 
 # Run tests without auto-fix
-ai-feature validate --command test --no-auto-fix
+codepipe validate --command test --no-auto-fix
 
 # Override retry limit
-ai-feature validate --max-retries 5
+codepipe validate --max-retries 5
 
 # Get JSON output
-ai-feature validate --json
+codepipe validate --json
 ```
 
 #### Exit Codes
@@ -557,7 +557,7 @@ ai-feature validate --json
 
 ---
 
-### ai-feature rate-limits
+### codepipe rate-limits
 
 Display rate limit status and telemetry for API providers.
 
@@ -568,7 +568,7 @@ Shows current rate limit state across all providers (GitHub, Linear, etc.). Surf
 #### Synopsis
 
 ```bash
-ai-feature rate-limits [FLAGS]
+codepipe rate-limits [FLAGS]
 ```
 
 #### Options
@@ -585,22 +585,22 @@ ai-feature rate-limits [FLAGS]
 
 ```bash
 # Show all rate limits
-ai-feature rate-limits
+codepipe rate-limits
 
 # Show rate limits for specific feature
-ai-feature rate-limits --feature FEAT-abc123
+codepipe rate-limits --feature FEAT-abc123
 
 # Filter to specific provider
-ai-feature rate-limits --provider github
+codepipe rate-limits --provider github
 
 # Get JSON output
-ai-feature rate-limits --json
+codepipe rate-limits --json
 
 # Clear cooldown for a provider
-ai-feature rate-limits --clear github --feature FEAT-abc123
+codepipe rate-limits --clear github --feature FEAT-abc123
 
 # Show detailed history
-ai-feature rate-limits --verbose
+codepipe rate-limits --verbose
 ```
 
 #### Exit Codes
@@ -613,7 +613,7 @@ ai-feature rate-limits --verbose
 
 ---
 
-### ai-feature health
+### codepipe health
 
 Quick runtime health check (config, disk, writable run dir).
 
@@ -624,7 +624,7 @@ Performs a lightweight health probe (target <1s) that validates configuration fi
 #### Synopsis
 
 ```bash
-ai-feature health [FLAGS]
+codepipe health [FLAGS]
 ```
 
 #### Options
@@ -637,18 +637,18 @@ ai-feature health [FLAGS]
 
 | Check | Description |
 |-------|-------------|
-| Config | Validates `.ai-feature-pipeline/config.json` exists and parses correctly |
-| Run Directory | Verifies `.ai-feature-pipeline/runs/` is writable (creates probe file) |
+| Config | Validates `.codepipe/config.json` exists and parses correctly |
+| Run Directory | Verifies `.codepipe/runs/` is writable (creates probe file) |
 | Disk Space | Checks at least 100MB free disk space |
 
 #### Examples
 
 ```bash
 # Run health check
-ai-feature health
+codepipe health
 
 # Get JSON output for monitoring
-ai-feature health --json
+codepipe health --json
 ```
 
 #### Exit Codes
@@ -660,7 +660,7 @@ ai-feature health --json
 
 ---
 
-### ai-feature pr create
+### codepipe pr create
 
 Create a pull request on GitHub for the feature branch.
 
@@ -671,7 +671,7 @@ Creates a GitHub pull request with preflight validation. Checks that code approv
 #### Synopsis
 
 ```bash
-ai-feature pr create [FLAGS]
+codepipe pr create [FLAGS]
 ```
 
 #### Options
@@ -690,19 +690,19 @@ ai-feature pr create [FLAGS]
 
 ```bash
 # Create PR for latest feature
-ai-feature pr create
+codepipe pr create
 
 # Create PR for specific feature
-ai-feature pr create --feature feature-auth-123
+codepipe pr create --feature feature-auth-123
 
 # Create PR with reviewers
-ai-feature pr create --reviewers user1,user2
+codepipe pr create --reviewers user1,user2
 
 # Create draft PR
-ai-feature pr create --draft
+codepipe pr create --draft
 
 # Get JSON output
-ai-feature pr create --json
+codepipe pr create --json
 ```
 
 #### Exit Codes
@@ -716,7 +716,7 @@ ai-feature pr create --json
 
 ---
 
-### ai-feature pr status
+### codepipe pr status
 
 Show pull request status and merge readiness.
 
@@ -727,7 +727,7 @@ Fetches fresh PR data from GitHub, checks status checks, and evaluates merge rea
 #### Synopsis
 
 ```bash
-ai-feature pr status [FLAGS]
+codepipe pr status [FLAGS]
 ```
 
 #### Options
@@ -742,16 +742,16 @@ ai-feature pr status [FLAGS]
 
 ```bash
 # Show PR status for latest feature
-ai-feature pr status
+codepipe pr status
 
 # Show PR status for specific feature
-ai-feature pr status --feature feature-auth-123
+codepipe pr status --feature feature-auth-123
 
 # Fail in CI if blockers exist
-ai-feature pr status --fail-on-blockers
+codepipe pr status --fail-on-blockers
 
 # Get JSON output
-ai-feature pr status --json
+codepipe pr status --json
 ```
 
 #### Exit Codes
@@ -764,7 +764,7 @@ ai-feature pr status --json
 
 ---
 
-### ai-feature pr reviewers
+### codepipe pr reviewers
 
 Request reviewers for a pull request.
 
@@ -775,7 +775,7 @@ Adds reviewer requests to an existing pull request. Merges newly added reviewers
 #### Synopsis
 
 ```bash
-ai-feature pr reviewers [FLAGS]
+codepipe pr reviewers [FLAGS]
 ```
 
 #### Options
@@ -790,13 +790,13 @@ ai-feature pr reviewers [FLAGS]
 
 ```bash
 # Add reviewers to PR
-ai-feature pr reviewers --add user1,user2
+codepipe pr reviewers --add user1,user2
 
 # Add reviewer for specific feature
-ai-feature pr reviewers --feature feature-auth-123 --add reviewer
+codepipe pr reviewers --feature feature-auth-123 --add reviewer
 
 # Get JSON output
-ai-feature pr reviewers --json
+codepipe pr reviewers --json
 ```
 
 #### Exit Codes
@@ -809,7 +809,7 @@ ai-feature pr reviewers --json
 
 ---
 
-### ai-feature pr disable-auto-merge
+### codepipe pr disable-auto-merge
 
 Disable auto-merge for a pull request.
 
@@ -820,7 +820,7 @@ Disables auto-merge on an existing pull request. Logs the action with an optiona
 #### Synopsis
 
 ```bash
-ai-feature pr disable-auto-merge [FLAGS]
+codepipe pr disable-auto-merge [FLAGS]
 ```
 
 #### Options
@@ -835,16 +835,16 @@ ai-feature pr disable-auto-merge [FLAGS]
 
 ```bash
 # Disable auto-merge for latest feature
-ai-feature pr disable-auto-merge
+codepipe pr disable-auto-merge
 
 # Disable for specific feature
-ai-feature pr disable-auto-merge --feature feature-auth-123
+codepipe pr disable-auto-merge --feature feature-auth-123
 
 # Provide reason for audit trail
-ai-feature pr disable-auto-merge --reason "Manual merge required for compliance"
+codepipe pr disable-auto-merge --reason "Manual merge required for compliance"
 
 # Get JSON output
-ai-feature pr disable-auto-merge --json
+codepipe pr disable-auto-merge --json
 ```
 
 #### Exit Codes
@@ -857,7 +857,7 @@ ai-feature pr disable-auto-merge --json
 
 ---
 
-### ai-feature research create
+### codepipe research create
 
 Create a ResearchTask manually via the CLI.
 
@@ -868,7 +868,7 @@ Creates a research task attached to a feature run directory. Supports specifying
 #### Synopsis
 
 ```bash
-ai-feature research create [FLAGS]
+codepipe research create [FLAGS]
 ```
 
 #### Options
@@ -891,10 +891,10 @@ Valid source types: `codebase`, `web`, `documentation`, `api`, `linear`, `github
 
 ```bash
 # Create a research task
-ai-feature research create --title "Clarify rate limits" --objective "What are the GitHub API quotas?"
+codepipe research create --title "Clarify rate limits" --objective "What are the GitHub API quotas?"
 
 # Create with multiple objectives and sources
-ai-feature research create -f feat-123 \
+codepipe research create -f feat-123 \
   --title "Investigate auth flow" \
   --objective "What scopes are required?" \
   --source codebase:src/auth.ts \
@@ -912,7 +912,7 @@ ai-feature research create -f feat-123 \
 
 ---
 
-### ai-feature research list
+### codepipe research list
 
 List ResearchTasks for the selected feature run directory.
 
@@ -923,7 +923,7 @@ Lists research tasks with optional filtering by status and staleness. Includes d
 #### Synopsis
 
 ```bash
-ai-feature research list [FLAGS]
+codepipe research list [FLAGS]
 ```
 
 #### Options
@@ -940,19 +940,19 @@ ai-feature research list [FLAGS]
 
 ```bash
 # List all research tasks
-ai-feature research list
+codepipe research list
 
 # List tasks for specific feature
-ai-feature research list --feature feat-123
+codepipe research list --feature feat-123
 
 # Filter by status
-ai-feature research list --status pending --status in_progress
+codepipe research list --status pending --status in_progress
 
 # Show stale tasks with limit
-ai-feature research list --stale --limit 5
+codepipe research list --stale --limit 5
 
 # Get JSON output
-ai-feature research list --json
+codepipe research list --json
 ```
 
 #### Exit Codes
@@ -965,7 +965,7 @@ ai-feature research list --json
 
 ---
 
-### ai-feature context summarize
+### codepipe context summarize
 
 Generate or refresh cached context summaries.
 
@@ -976,7 +976,7 @@ Summarizes context documents using chunking and LLM-based summarization. Support
 #### Synopsis
 
 ```bash
-ai-feature context summarize [FLAGS]
+codepipe context summarize [FLAGS]
 ```
 
 #### Options
@@ -994,16 +994,16 @@ ai-feature context summarize [FLAGS]
 
 ```bash
 # Summarize context for latest feature
-ai-feature context summarize
+codepipe context summarize
 
 # Summarize for specific feature with JSON output
-ai-feature context summarize --feature 01JXYZ --json
+codepipe context summarize --feature 01JXYZ --json
 
 # Re-summarize specific files
-ai-feature context summarize --path "src/**/*.ts" --path README.md
+codepipe context summarize --path "src/**/*.ts" --path README.md
 
 # Force re-summarization with custom chunk size
-ai-feature context summarize --force --max-chunk-tokens 2000
+codepipe context summarize --force --max-chunk-tokens 2000
 ```
 
 #### Exit Codes
@@ -1030,11 +1030,11 @@ The following options are available on all commands:
 
 ```bash
 # Show general help
-ai-feature --help
+codepipe --help
 
 # Show help for specific command
-ai-feature start --help
-ai-feature approve --help
+codepipe start --help
+codepipe approve --help
 ```
 
 ---
@@ -1064,11 +1064,11 @@ These variables override corresponding config.json settings:
 
 | Variable | Config Path |
 |----------|-------------|
-| `AI_FEATURE_GITHUB_TOKEN` | `github.token_env_var` |
-| `AI_FEATURE_LINEAR_API_KEY` | `linear.api_key_env_var` |
-| `AI_FEATURE_RUNTIME_AGENT_ENDPOINT` | `runtime.agent_endpoint` |
-| `AI_FEATURE_RUNTIME_MAX_CONCURRENT_TASKS` | `runtime.max_concurrent_tasks` |
-| `AI_FEATURE_RUNTIME_TIMEOUT_MINUTES` | `runtime.timeout_minutes` |
+| `CODEPIPE_GITHUB_TOKEN` | `github.token_env_var` |
+| `CODEPIPE_LINEAR_API_KEY` | `linear.api_key_env_var` |
+| `CODEPIPE_RUNTIME_AGENT_ENDPOINT` | `runtime.agent_endpoint` |
+| `CODEPIPE_RUNTIME_MAX_CONCURRENT_TASKS` | `runtime.max_concurrent_tasks` |
+| `CODEPIPE_RUNTIME_TIMEOUT_MINUTES` | `runtime.timeout_minutes` |
 
 ### Setting Environment Variables
 
@@ -1119,7 +1119,7 @@ When multiple error conditions exist, exit codes are prioritized:
 #!/bin/bash
 set -e
 
-ai-feature doctor
+codepipe doctor
 exit_code=$?
 
 case $exit_code in
@@ -1127,7 +1127,7 @@ case $exit_code in
     echo "All checks passed"
     ;;
   10)
-    echo "Configuration errors - run 'ai-feature init --validate-only'"
+    echo "Configuration errors - run 'codepipe init --validate-only'"
     ;;
   20)
     echo "Environment issues - check Node.js, git installation"
@@ -1156,16 +1156,16 @@ All commands support `--json` for machine-readable output. JSON mode:
 
 ```bash
 # Using jq to parse status
-ai-feature status --json | jq -r '.status'
+codepipe status --json | jq -r '.status'
 
 # Extract feature ID
-ai-feature start --prompt "Test" --json | jq -r '.feature_id'
+codepipe start --prompt "Test" --json | jq -r '.feature_id'
 
 # Check if resumable
-ai-feature resume --dry-run --json | jq -r '.can_resume'
+codepipe resume --dry-run --json | jq -r '.can_resume'
 
 # List failed checks
-ai-feature doctor --json | jq -r '.checks[] | select(.status=="fail") | .name'
+codepipe doctor --json | jq -r '.checks[] | select(.status=="fail") | .name'
 ```
 
 ---

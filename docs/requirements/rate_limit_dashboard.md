@@ -22,15 +22,15 @@ Rate limit dashboards enable operators to:
 
 ## CLI Commands
 
-### `ai-feature rate-limits`
+### `codepipe rate-limits`
 
 Display current rate limit status across all providers tracked in the run directory.
 
 #### Synopsis
 
 ```bash
-ai-feature rate-limits [--feature <feature-id>] [--json] [--verbose] [--provider <name>]
-ai-feature rate-limits --clear <provider> --feature <feature-id>
+codepipe rate-limits [--feature <feature-id>] [--json] [--verbose] [--provider <name>]
+codepipe rate-limits --clear <provider> --feature <feature-id>
 ```
 
 #### Flags
@@ -53,22 +53,22 @@ ai-feature rate-limits --clear <provider> --feature <feature-id>
 
 **Display all providers:**
 ```bash
-ai-feature rate-limits
+codepipe rate-limits
 ```
 
 **Display specific provider:**
 ```bash
-ai-feature rate-limits --provider github
+codepipe rate-limits --provider github
 ```
 
 **JSON output for automation:**
 ```bash
-ai-feature rate-limits --json
+codepipe rate-limits --json
 ```
 
 **Clear cooldown for GitHub:**
 ```bash
-ai-feature rate-limits --clear github --feature feature-auth-123
+codepipe rate-limits --clear github --feature feature-auth-123
 ```
 
 #### Human-Readable Output Format
@@ -96,7 +96,7 @@ Provider: linear
 Warnings:
   • One or more providers are in cooldown. Consider throttling requests or waiting for reset.
   • One or more providers require manual acknowledgement due to repeated rate limit hits.
-    Review your rate limit strategy and use `ai-feature rate-limits clear <provider>` when ready.
+    Review your rate limit strategy and use `codepipe rate-limits clear <provider>` when ready.
 ```
 
 #### JSON Output Schema
@@ -150,17 +150,17 @@ Warnings:
 
 ## Prometheus Metrics
 
-All metrics use the namespace prefix `ai_feature_pipeline_`.
+All metrics use the namespace prefix `codemachine_pipeline_`.
 
 ### Core Rate Limit Metrics
 
 | Metric Name | Type | Description | Labels | Example Query |
 |-------------|------|-------------|--------|---------------|
-| `rate_limit_remaining` | Gauge | Requests remaining before rate limit | `provider` | `ai_feature_pipeline_rate_limit_remaining{provider="github"}` |
-| `rate_limit_reset_timestamp` | Gauge | Unix timestamp when rate limit resets | `provider` | `ai_feature_pipeline_rate_limit_reset_timestamp{provider="github"}` |
-| `rate_limit_cooldown_active` | Gauge | Whether provider is in cooldown (1=active, 0=inactive) | `provider` | `ai_feature_pipeline_rate_limit_cooldown_active{provider="linear"}` |
-| `rate_limit_recent_hits` | Gauge | Number of recent rate limit hits (429 responses) | `provider` | `ai_feature_pipeline_rate_limit_recent_hits{provider="linear"}` |
-| `rate_limit_manual_ack_required` | Gauge | Whether manual acknowledgement is required (1=required, 0=not required) | `provider` | `ai_feature_pipeline_rate_limit_manual_ack_required{provider="linear"}` |
+| `rate_limit_remaining` | Gauge | Requests remaining before rate limit | `provider` | `codemachine_pipeline_rate_limit_remaining{provider="github"}` |
+| `rate_limit_reset_timestamp` | Gauge | Unix timestamp when rate limit resets | `provider` | `codemachine_pipeline_rate_limit_reset_timestamp{provider="github"}` |
+| `rate_limit_cooldown_active` | Gauge | Whether provider is in cooldown (1=active, 0=inactive) | `provider` | `codemachine_pipeline_rate_limit_cooldown_active{provider="linear"}` |
+| `rate_limit_recent_hits` | Gauge | Number of recent rate limit hits (429 responses) | `provider` | `codemachine_pipeline_rate_limit_recent_hits{provider="linear"}` |
+| `rate_limit_manual_ack_required` | Gauge | Whether manual acknowledgement is required (1=required, 0=not required) | `provider` | `codemachine_pipeline_rate_limit_manual_ack_required{provider="linear"}` |
 
 ### Supporting Metrics
 
@@ -175,9 +175,9 @@ These metrics are emitted by the HTTP client and complement rate limit reporting
 ### Metric Collection
 
 Metrics are collected via the `RateLimitReporter.exportMetrics()` method, typically invoked by:
-1. **CLI commands** (`ai-feature rate-limits`, `ai-feature status`)
+1. **CLI commands** (`codepipe rate-limits`, `codepipe status`)
 2. **Workflow orchestrator** (periodic snapshots during execution)
-3. **Cron jobs** (`ai-feature observe` for multi-run aggregation)
+3. **Cron jobs** (`codepipe observe` for multi-run aggregation)
 
 **Example Integration:**
 
@@ -198,7 +198,7 @@ await metrics.flush(); // Writes to metrics/prometheus.txt
 
 **Query:**
 ```promql
-ai_feature_pipeline_rate_limit_remaining
+codemachine_pipeline_rate_limit_remaining
 ```
 
 **Visualization:** Gauge
@@ -216,7 +216,7 @@ ai_feature_pipeline_rate_limit_remaining
 
 **Query:**
 ```promql
-ai_feature_pipeline_rate_limit_reset_timestamp - time()
+codemachine_pipeline_rate_limit_reset_timestamp - time()
 ```
 
 **Visualization:** Stat
@@ -230,7 +230,7 @@ ai_feature_pipeline_rate_limit_reset_timestamp - time()
 
 **Query:**
 ```promql
-ai_feature_pipeline_rate_limit_cooldown_active
+codemachine_pipeline_rate_limit_cooldown_active
 ```
 
 **Visualization:** Stat
@@ -246,7 +246,7 @@ ai_feature_pipeline_rate_limit_cooldown_active
 
 **Query:**
 ```promql
-rate(ai_feature_pipeline_rate_limit_hits_total[5m])
+rate(codemachine_pipeline_rate_limit_hits_total[5m])
 ```
 
 **Visualization:** Time series
@@ -260,7 +260,7 @@ rate(ai_feature_pipeline_rate_limit_hits_total[5m])
 
 A complete Grafana dashboard JSON template is available at:
 ```
-.ai-feature-pipeline/templates/grafana/rate_limits_dashboard.json
+.codepipe/templates/grafana/rate_limits_dashboard.json
 ```
 
 **Import Instructions:**
@@ -277,21 +277,21 @@ A complete Grafana dashboard JSON template is available at:
 
 ### Runbook 1: Provider in Cooldown
 
-**Symptom:** `ai-feature rate-limits` shows `⚠ Cooldown: Active` for a provider.
+**Symptom:** `codepipe rate-limits` shows `⚠ Cooldown: Active` for a provider.
 
 **Diagnosis:**
 1. Check remaining requests and reset time:
    ```bash
-   ai-feature rate-limits --provider <name>
+   codepipe rate-limits --provider <name>
    ```
 2. Review recent envelopes in ledger:
    ```bash
-   cat .ai-feature-pipeline/runs/<feature-id>/rate_limits.json | \
+   cat .codepipe/runs/<feature-id>/rate_limits.json | \
      jq '.providers.<provider>.recentEnvelopes[]'
    ```
 3. Identify high-consumption endpoints:
    ```bash
-   cat .ai-feature-pipeline/runs/<feature-id>/rate_limits.json | \
+   cat .codepipe/runs/<feature-id>/rate_limits.json | \
      jq '.providers.<provider>.recentEnvelopes | group_by(.endpoint) |
          map({endpoint: .[0].endpoint, count: length}) | sort_by(.count) | reverse'
    ```
@@ -300,12 +300,12 @@ A complete Grafana dashboard JSON template is available at:
 - **Option A (Wait):** Wait until reset time, then resume operations
 - **Option B (Clear):** Clear cooldown manually if reset has occurred:
   ```bash
-  ai-feature rate-limits --clear <provider> --feature <feature-id>
+  codepipe rate-limits --clear <provider> --feature <feature-id>
   ```
 - **Option C (Throttle):** Reduce concurrency via environment variable:
   ```bash
-  export AI_FEATURE_HTTP_MAX_CONCURRENCY=2
-  ai-feature resume
+  export CODEPIPE_HTTP_MAX_CONCURRENCY=2
+  codepipe resume
   ```
 
 **Prevention:**
@@ -315,12 +315,12 @@ A complete Grafana dashboard JSON template is available at:
 
 ### Runbook 2: Manual Acknowledgement Required
 
-**Symptom:** `ai-feature rate-limits` shows `⚠ Manual Acknowledgement Required` with 3+ consecutive hits.
+**Symptom:** `codepipe rate-limits` shows `⚠ Manual Acknowledgement Required` with 3+ consecutive hits.
 
 **Diagnosis:**
 1. Review error details:
    ```bash
-   ai-feature rate-limits --provider <name> --verbose
+   codepipe rate-limits --provider <name> --verbose
    ```
 2. Check for secondary abuse limits (GitHub):
    ```bash
@@ -329,7 +329,7 @@ A complete Grafana dashboard JSON template is available at:
    ```
 3. Inspect logs for repeated endpoint calls:
    ```bash
-   grep "rate_limit_exceeded" .ai-feature-pipeline/runs/<feature-id>/logs/logs.ndjson
+   grep "rate_limit_exceeded" .codepipe/runs/<feature-id>/logs/logs.ndjson
    ```
 
 **Resolution:**
@@ -337,11 +337,11 @@ A complete Grafana dashboard JSON template is available at:
 2. **Review strategy:** Identify code paths causing repeated requests (e.g., polling loops, pagination bugs).
 3. **Clear cooldown:** After confirming strategy fix:
    ```bash
-   ai-feature rate-limits --clear <provider> --feature <feature-id>
+   codepipe rate-limits --clear <provider> --feature <feature-id>
    ```
 4. **Resume workflow:**
    ```bash
-   ai-feature resume --feature <feature-id>
+   codepipe resume --feature <feature-id>
    ```
 
 **Prevention:**
@@ -357,36 +357,36 @@ A complete Grafana dashboard JSON template is available at:
 **Diagnosis:**
 1. Verify metrics file exists:
    ```bash
-   ls -la .ai-feature-pipeline/runs/<feature-id>/metrics/prometheus.txt
+   ls -la .codepipe/runs/<feature-id>/metrics/prometheus.txt
    ```
 2. Check metrics content:
    ```bash
-   grep "rate_limit" .ai-feature-pipeline/runs/<feature-id>/metrics/prometheus.txt
+   grep "rate_limit" .codepipe/runs/<feature-id>/metrics/prometheus.txt
    ```
 3. Verify ledger file exists:
    ```bash
-   cat .ai-feature-pipeline/runs/<feature-id>/rate_limits.json
+   cat .codepipe/runs/<feature-id>/rate_limits.json
    ```
 
 **Resolution:**
 1. **Run CLI command to refresh metrics:**
    ```bash
-   ai-feature rate-limits --feature <feature-id> --json > /dev/null
+   codepipe rate-limits --feature <feature-id> --json > /dev/null
    ```
 2. **Check metrics collector initialization in logs:**
    ```bash
-   grep "MetricsCollector" .ai-feature-pipeline/runs/<feature-id>/logs/logs.ndjson
+   grep "MetricsCollector" .codepipe/runs/<feature-id>/logs/logs.ndjson
    ```
 3. **Verify HTTP requests are being made:**
    ```bash
-   grep "http_request" .ai-feature-pipeline/runs/<feature-id>/logs/logs.ndjson | head -5
+   grep "http_request" .codepipe/runs/<feature-id>/logs/logs.ndjson | head -5
    ```
 
 **Prevention:**
-- Ensure `ai-feature status` or `ai-feature rate-limits` is run periodically
+- Ensure `codepipe status` or `codepipe rate-limits` is run periodically
 - Configure cron job to refresh metrics every 5 minutes:
   ```bash
-  */5 * * * * cd /path/to/repo && ai-feature rate-limits --json > /dev/null
+  */5 * * * * cd /path/to/repo && codepipe rate-limits --json > /dev/null
   ```
 
 ---
@@ -402,7 +402,7 @@ groups:
     interval: 30s
     rules:
       - alert: RateLimitLow
-        expr: ai_feature_pipeline_rate_limit_remaining < 50
+        expr: codemachine_pipeline_rate_limit_remaining < 50
         for: 1m
         labels:
           severity: warning
@@ -418,7 +418,7 @@ groups:
 **Rule:**
 ```yaml
       - alert: RateLimitCooldown
-        expr: ai_feature_pipeline_rate_limit_cooldown_active == 1
+        expr: codemachine_pipeline_rate_limit_cooldown_active == 1
         for: 5m
         labels:
           severity: warning
@@ -434,7 +434,7 @@ groups:
 **Rule:**
 ```yaml
       - alert: RateLimitManualAck
-        expr: ai_feature_pipeline_rate_limit_manual_ack_required == 1
+        expr: codemachine_pipeline_rate_limit_manual_ack_required == 1
         for: 10m
         labels:
           severity: critical
@@ -447,13 +447,13 @@ groups:
 
 ---
 
-## Integration with `ai-feature status`
+## Integration with `codepipe status`
 
-The `ai-feature status` command surfaces rate limit highlights alongside other telemetry:
+The `codepipe status` command surfaces rate limit highlights alongside other telemetry:
 
 **Example Output:**
 ```bash
-$ ai-feature status --verbose
+$ codepipe status --verbose
 
 Feature: 01JFABCDEFGHIJKLMNOPQRSTUV
 Status: in_progress
@@ -490,7 +490,7 @@ Warnings:
 
 ### 3. Cross-Run Aggregation
 
-**Recommendation:** Use `ai-feature observe` to aggregate rate limit trends across multiple runs.
+**Recommendation:** Use `codepipe observe` to aggregate rate limit trends across multiple runs.
 
 **Rationale:** Identifies systemic issues (e.g., shared tokens across CI jobs) vs. one-off spikes.
 
@@ -507,7 +507,7 @@ Warnings:
 ### Planned Features (Not Yet Implemented)
 
 1. **Historical Trend Analysis:**
-   - CLI command: `ai-feature rate-limits history <provider>`
+   - CLI command: `codepipe rate-limits history <provider>`
    - Output: Time-series chart of remaining requests over past 24 hours
 
 2. **Automatic Throttling:**

@@ -265,7 +265,7 @@ main
 2. Begin Phase 3: Integration & Enhancement
    - Implement TaskMapper `step` command
    - Implement TaskMapper `status` command
-   - Wire CLIExecutionEngine into `ai-feature start` command
+   - Wire CLIExecutionEngine into `codepipe start` command
    - Create operational documentation and runbooks
 
 **Timeline Estimate**:

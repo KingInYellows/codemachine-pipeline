@@ -67,13 +67,13 @@ To create a repository-agnostic, AI-augmented pipeline that streamlines feature 
 
 **Suggested CLI “surface area” (still CLI-only, no UI dashboards):**
 
-* `ai-feature init` → create RepoConfig + integration sanity checks
-* `ai-feature start --prompt "..."` OR `ai-feature start --linear ISSUE-123` OR `ai-feature start --spec path/to/spec.md`
-* `ai-feature status <feature_id>` → show state machine + artifact links/paths
-* `ai-feature resume <feature_id>` → continue from last successful step
-* `ai-feature pr create <feature_id>` → create PR + request reviewers
-* `ai-feature deploy <feature_id>` → trigger merge/deploy path (when configured)
-* `ai-feature export <feature_id> --format json|md` → agent-consumable snapshot
+* `codepipe init` → create RepoConfig + integration sanity checks
+* `codepipe start --prompt "..."` OR `codepipe start --linear ISSUE-123` OR `codepipe start --spec path/to/spec.md`
+* `codepipe status <feature_id>` → show state machine + artifact links/paths
+* `codepipe resume <feature_id>` → continue from last successful step
+* `codepipe pr create <feature_id>` → create PR + request reviewers
+* `codepipe deploy <feature_id>` → trigger merge/deploy path (when configured)
+* `codepipe export <feature_id> --format json|md` → agent-consumable snapshot
 
 (These are requirements only if adopted in Section 6; otherwise treat as recommended ergonomics.)
 
@@ -363,7 +363,7 @@ The following architectural decisions resolve the ambiguities identified during 
 
 **Resolution:**
 * The system SHALL use SQLite with Write-Ahead Logging (WAL) mode for transactional state updates.
-* Database location: `.ai-feature-pipeline/state.db` within the repository root.
+* Database location: `.codepipe/state.db` within the repository root.
 * All state mutations (Feature, ExecutionTask, ResearchTask) SHALL be atomic transactions.
 * The system SHALL support concurrent reads from multiple processes.
 * JSON/markdown artifact files (prd.md, spec.md, etc.) SHALL remain as human-readable exports, with SQLite as the source of truth.
@@ -381,8 +381,8 @@ The following architectural decisions resolve the ambiguities identified during 
 
 **Resolution:**
 * The system SHALL NEVER enable auto-merge automatically.
-* The system SHALL poll status checks and report merge readiness via `ai-feature status <feature_id>`.
-* Human operators MUST manually execute merge via `ai-feature deploy <feature_id>` or GitHub UI.
+* The system SHALL poll status checks and report merge readiness via `codepipe status <feature_id>`.
+* Human operators MUST manually execute merge via `codepipe deploy <feature_id>` or GitHub UI.
 * The system SHALL provide clear reporting of:
   * Which required checks are passing/failing
   * Whether required reviews are satisfied
@@ -485,7 +485,7 @@ The following architectural decisions resolve the ambiguities identified during 
 * **FR-1 (Initialize)**: The system MUST support initializing RepoConfig in the current working directory, including:
 
   * Detect git repo root.
-  * Create a config file (format: JSON or YAML) under a tool-owned directory (RECOMMENDED: `.ai-feature-pipeline/`).
+  * Create a config file (format: JSON or YAML) under a tool-owned directory (RECOMMENDED: `.codepipe/`).
   * Validate required integrations (if enabled) by performing lightweight API calls (e.g., GitHub “get repo” and Linear “viewer” query).
 * **FR-2 (Run directory)**: For each Feature, the system MUST create a run directory containing:
 
@@ -680,7 +680,7 @@ The following architectural decisions resolve the ambiguities identified during 
 
 ### 8.3 Deployment Environment
 
-* Installation via `npm install -g ai-feature-pipeline` or as repo dependency 
+* Installation via `npm install -g codemachine-pipeline` or as repo dependency 
 * CLI accessible in any initialized repo via npm script or global cmd 
 * No required server—workflow handled by agents on demand and via ephemeral processes 
 

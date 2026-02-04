@@ -44,7 +44,7 @@ Context Gathering → Research Planning → PRD Drafting → Review → Approval
 
 ### Automated Generation
 
-When you run `ai-feature start`, the system automatically:
+When you run `codepipe start`, the system automatically:
 
 1. **Gathers Context:** Collects repository files, README, docs, and git history based on configured globs.
 2. **Runs Research Tasks:** Identifies unknowns (TODO/TBD markers, open questions) and queues research tasks.
@@ -53,10 +53,10 @@ When you run `ai-feature start`, the system automatically:
 **PRD Generation Steps:**
 
 ```typescript
-// Invoked by CLI during `ai-feature start`
+// Invoked by CLI during `codepipe start`
 const result = await draftPRD({
   repoRoot: '/path/to/repo',
-  runDir: '.ai-feature-pipeline/FEAT-12345',
+  runDir: '.codepipe/FEAT-12345',
   feature: featureMetadata,
   contextDocument: contextDoc,
   researchTasks: completedTasks,
@@ -66,11 +66,11 @@ const result = await draftPRD({
 
 **Output Artifacts:**
 
-- `.ai-feature-pipeline/<feature_id>/artifacts/prd.md` - Generated PRD markdown
-- `.ai-feature-pipeline/<feature_id>/artifacts/prd_metadata.json` - PRD metadata with hash and approval status
-- `.ai-feature-pipeline/<feature_id>/approvals/` - Directory for approval records
+- `.codepipe/<feature_id>/artifacts/prd.md` - Generated PRD markdown
+- `.codepipe/<feature_id>/artifacts/prd_metadata.json` - PRD metadata with hash and approval status
+- `.codepipe/<feature_id>/approvals/` - Directory for approval records
 
-When the CLI detects that PRD approval is required (per RepoConfig governance), `ai-feature start` pauses after authoring `prd.md`, prints review instructions, and exits with code `30` to signal human action is needed before downstream stages can continue.
+When the CLI detects that PRD approval is required (per RepoConfig governance), `codepipe start` pauses after authoring `prd.md`, prints review instructions, and exits with code `30` to signal human action is needed before downstream stages can continue.
 
 ### Template Structure
 
@@ -103,7 +103,7 @@ After PRD generation, reviewers should:
 
 1. **Locate the PRD:**
    ```bash
-   cd .ai-feature-pipeline/<feature_id>/docs
+   cd .codepipe/<feature_id>/docs
    cat prd.md
    ```
 
@@ -131,7 +131,7 @@ If changes are needed, you can edit the PRD directly:
 
 ```bash
 # Open PRD in your editor
-vim .ai-feature-pipeline/<feature_id>/artifacts/prd.md
+vim .codepipe/<feature_id>/artifacts/prd.md
 
 # After editing, update metadata to reflect changes
 # (This will be automated in future iterations)
@@ -142,7 +142,7 @@ vim .ai-feature-pipeline/<feature_id>/artifacts/prd.md
 - **Option 1:** Regenerate metadata using CLI (future feature)
 - **Option 2:** Manually update the hash:
   ```bash
-  sha256sum .ai-feature-pipeline/<feature_id>/artifacts/prd.md
+  sha256sum .codepipe/<feature_id>/artifacts/prd.md
   # Copy hash to prd_metadata.json -> prdHash field
   ```
 
@@ -167,17 +167,17 @@ Before approving a PRD, ensure:
 
 ```bash
 # Check PRD status
-ai-feature status --feature <feature_id>
+codepipe status --feature <feature_id>
 
 # Review PRD content
-cat .ai-feature-pipeline/<feature_id>/artifacts/prd.md
+cat .codepipe/<feature_id>/artifacts/prd.md
 ```
 
 **Step 2: Record Approval**
 
 ```bash
 # Approve the PRD
-ai-feature approve prd \
+codepipe approve prd \
   --feature <feature_id> \
   --signer "jane.doe@example.com" \
   --signer-name "Jane Doe" \
@@ -188,10 +188,10 @@ ai-feature approve prd \
 
 ```bash
 # Check updated status
-ai-feature status --feature <feature_id>
+codepipe status --feature <feature_id>
 
 # View approval record
-cat .ai-feature-pipeline/<feature_id>/approvals/APR-*.json
+cat .codepipe/<feature_id>/approvals/APR-*.json
 ```
 
 ### Approval Record Structure
@@ -232,7 +232,7 @@ If the PRD needs revisions:
 
 ```bash
 # Reject with requested changes
-ai-feature approve prd \
+codepipe approve prd \
   --feature <feature_id> \
   --signer "jane.doe@example.com" \
   --verdict "requested_changes" \
@@ -243,13 +243,13 @@ ai-feature approve prd \
 
 1. **Operator edits PRD:**
    ```bash
-   vim .ai-feature-pipeline/<feature_id>/artifacts/prd.md
+   vim .codepipe/<feature_id>/artifacts/prd.md
    ```
 
 2. **Update metadata hash:**
    ```bash
    # Compute new hash
-   NEW_HASH=$(sha256sum .ai-feature-pipeline/<feature_id>/artifacts/prd.md | awk '{print $1}')
+   NEW_HASH=$(sha256sum .codepipe/<feature_id>/artifacts/prd.md | awk '{print $1}')
 
    # Update prd_metadata.json manually or regenerate
    # (Automated tooling for this is planned)
@@ -257,7 +257,7 @@ ai-feature approve prd \
 
 3. **Re-submit for approval:**
    ```bash
-   ai-feature approve prd --feature <feature_id> --signer "jane.doe@example.com"
+   codepipe approve prd --feature <feature_id> --signer "jane.doe@example.com"
    ```
 
 ### Rejection
@@ -265,7 +265,7 @@ ai-feature approve prd \
 If the PRD is fundamentally misaligned:
 
 ```bash
-ai-feature approve prd \
+codepipe approve prd \
   --feature <feature_id> \
   --signer "jane.doe@example.com" \
   --verdict "rejected" \
@@ -303,7 +303,7 @@ Test: "test_csv_export_latency_under_2s"
 All PRD-related artifacts are stored in the run directory:
 
 ```
-.ai-feature-pipeline/<feature_id>/
+.codepipe/<feature_id>/
 ├── artifacts/
 │   ├── prd.md                      # Generated PRD markdown
 │   └── prd_metadata.json           # Metadata with hash and approvals
@@ -323,14 +323,14 @@ To audit PRD changes and approvals:
 
 ```bash
 # View all approvals for a feature
-cat .ai-feature-pipeline/<feature_id>/approvals/*.json | jq '.gate_type, .verdict, .signer, .approved_at'
+cat .codepipe/<feature_id>/approvals/*.json | jq '.gate_type, .verdict, .signer, .approved_at'
 
 # Check PRD hash history
-git log --follow .ai-feature-pipeline/<feature_id>/artifacts/prd.md
+git log --follow .codepipe/<feature_id>/artifacts/prd.md
 
 # Verify current hash matches approval
-sha256sum .ai-feature-pipeline/<feature_id>/artifacts/prd.md
-cat .ai-feature-pipeline/<feature_id>/artifacts/prd_metadata.json | jq '.prdHash'
+sha256sum .codepipe/<feature_id>/artifacts/prd.md
+cat .codepipe/<feature_id>/artifacts/prd_metadata.json | jq '.prdHash'
 ```
 
 ---
@@ -346,13 +346,13 @@ cat .ai-feature-pipeline/<feature_id>/artifacts/prd_metadata.json | jq '.prdHash
 1. Regenerate metadata:
    ```bash
    # (Automated tooling planned - manual for now)
-   NEW_HASH=$(sha256sum .ai-feature-pipeline/<feature_id>/artifacts/prd.md | awk '{print $1}')
+   NEW_HASH=$(sha256sum .codepipe/<feature_id>/artifacts/prd.md | awk '{print $1}')
    # Update prd_metadata.json -> prdHash with NEW_HASH
    ```
 
 2. Or revert changes to PRD:
    ```bash
-   git checkout .ai-feature-pipeline/<feature_id>/artifacts/prd.md
+   git checkout .codepipe/<feature_id>/artifacts/prd.md
    ```
 
 ### Error: "Some research tasks are not yet completed"
@@ -363,14 +363,14 @@ cat .ai-feature-pipeline/<feature_id>/artifacts/prd_metadata.json | jq '.prdHash
 
 1. Check research task status:
    ```bash
-   ai-feature research list --feature <feature_id>
+   codepipe research list --feature <feature_id>
    ```
 
 2. Wait for research tasks to complete or manually resolve unknowns.
 
 3. Regenerate PRD once research is done:
    ```bash
-   ai-feature prd regenerate --feature <feature_id>
+   codepipe prd regenerate --feature <feature_id>
    ```
 
 ### Warning: "Sections contain TODO markers"
@@ -391,10 +391,10 @@ cat .ai-feature-pipeline/<feature_id>/artifacts/prd_metadata.json | jq '.prdHash
 
 | Command | Description |
 |---------|-------------|
-| `ai-feature start` | Generates PRD as part of feature initialization |
-| `ai-feature status --feature <id>` | Shows PRD approval status |
-| `ai-feature approve prd --feature <id>` | Records PRD approval |
-| `ai-feature prd regenerate --feature <id>` | Regenerates PRD (future) |
+| `codepipe start` | Generates PRD as part of feature initialization |
+| `codepipe status --feature <id>` | Shows PRD approval status |
+| `codepipe approve prd --feature <id>` | Records PRD approval |
+| `codepipe prd regenerate --feature <id>` | Regenerates PRD (future) |
 
 ### Files and Artifacts
 

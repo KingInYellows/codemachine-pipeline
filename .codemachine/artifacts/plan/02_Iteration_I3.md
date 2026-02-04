@@ -40,7 +40,7 @@
     *   **Task 3.3:**
         *   **Task ID:** `I3.T3`
         *   **Description:** Implement Validation Command Registry (lint/test/typecheck/build) plus auto-fix loop per ADR-7, including configuration ingestion, command templating, retry/backoff policy, and error summarization piped into run logs.
-            Add CLI command `ai-feature validate` for manual re-runs and doc covering exit codes.
+            Add CLI command `codepipe validate` for manual re-runs and doc covering exit codes.
         *   **Agent Type Hint:** `BackendAgent`
         *   **Inputs:** Section 2 (Technology stack), Section 3 (Tests/ scripts), ADR-7, FR-14.
         *   **Input Files**: ["docs/requirements/validation_matrix.md", "docs/adr/ADR-7-validation-policy.md", "docs/ops/approval_playbook.md"]
@@ -134,8 +134,8 @@
     - Log smoke test duration and flake rate for context in PR automation planning.
 *   **Iteration Validation Hooks:**
     - Expand CI pipeline to run `npm run test:smoke-execution` nightly with fixtures.
-    - Add `ai-feature status --json | jq` schema validation to ensure CLI outputs remain backward compatible.
-    - Archive smoke artifacts in `.ai-feature-pipeline/templates/` to be reused by `I4` when simulating GitHub workflows.
+    - Add `codepipe status --json | jq` schema validation to ensure CLI outputs remain backward compatible.
+    - Archive smoke artifacts in `.codepipe/templates/` to be reused by `I4` when simulating GitHub workflows.
     - Capture git patch snapshots and validation transcripts in  so GitHub adapter tests inherit deterministic fixtures.
-    - Capture git patch snapshots and validation transcripts in .ai-feature-pipeline/samples/execution/ so GitHub adapter tests inherit deterministic fixtures.
+    - Capture git patch snapshots and validation transcripts in .codepipe/samples/execution/ so GitHub adapter tests inherit deterministic fixtures.
 

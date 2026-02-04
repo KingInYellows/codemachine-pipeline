@@ -32,7 +32,7 @@ The parallel execution system enables concurrent task execution with dependency-
 
 ### RepoConfig Settings
 
-Configure parallel execution in `.ai-feature-pipeline/config.json`:
+Configure parallel execution in `.codepipe/config.json`:
 
 ```json
 {
@@ -55,16 +55,16 @@ Override config values with environment variables:
 
 ```bash
 # Set maximum parallel tasks
-export AI_FEATURE_MAX_PARALLEL_TASKS=4
+export CODEPIPE_MAX_PARALLEL_TASKS=4
 
 # Set task timeout (5 minutes)
-export AI_FEATURE_TASK_TIMEOUT_MS=300000
+export CODEPIPE_TASK_TIMEOUT_MS=300000
 
 # Disable parallel execution
-export AI_FEATURE_ENABLE_PARALLEL_EXECUTION=false
+export CODEPIPE_ENABLE_PARALLEL_EXECUTION=false
 ```
 
-> **Not yet implemented.** This env var override is planned but not currently supported.
+> **Note:** The `CODEPIPE_ENABLE_PARALLEL_EXECUTION` environment variable override is not yet implemented. Use the `execution.max_parallel_tasks` config field instead.
 
 ### Runtime Override
 
@@ -72,10 +72,10 @@ Override parallelism at command execution:
 
 ```bash
 # Force sequential execution
-AI_FEATURE_MAX_PARALLEL_TASKS=1 ai-feature resume
+CODEPIPE_MAX_PARALLEL_TASKS=1 codepipe resume
 
 # Enable high parallelism
-AI_FEATURE_MAX_PARALLEL_TASKS=8 ai-feature resume
+CODEPIPE_MAX_PARALLEL_TASKS=8 codepipe resume
 ```
 
 ## How It Works
@@ -229,7 +229,7 @@ inFlightTasks.set(task.task_id, promise);
 **CPU Monitoring:**
 ```bash
 # Monitor CPU usage during execution
-top -b -n 1 | grep ai-feature
+top -b -n 1 | grep codepipe
 
 # Expected: <80% CPU utilization per worker
 # Alert: >90% sustained CPU (reduce parallelism)
@@ -238,7 +238,7 @@ top -b -n 1 | grep ai-feature
 **Memory Monitoring:**
 ```bash
 # Monitor memory usage
-ps aux | grep ai-feature | awk '{print $6/1024 " MB"}'
+ps aux | grep codepipe | awk '{print $6/1024 " MB"}'
 
 # Expected: <500MB per worker
 # Alert: >1GB per worker (check for leaks)
@@ -279,13 +279,13 @@ iostat -x 1
 **Telemetry Commands:**
 ```bash
 # View real-time execution status
-ai-feature status --verbose
+codepipe status --verbose
 
 # Show worker utilization
-grep "task_started" .ai-feature-pipeline/runs/*/logs/execution.ndjson | wc -l
+grep "task_started" .codepipe/runs/*/logs/execution.ndjson | wc -l
 
 # Calculate completion rate
-grep "task_completed" .ai-feature-pipeline/runs/*/logs/execution.ndjson | \
+grep "task_completed" .codepipe/runs/*/logs/execution.ndjson | \
   jq -r '.timestamp' | uniq -c
 ```
 
@@ -294,10 +294,10 @@ grep "task_completed" .ai-feature-pipeline/runs/*/logs/execution.ndjson | \
 **Measure Throughput Improvement:**
 ```bash
 # Sequential baseline
-time AI_FEATURE_MAX_PARALLEL_TASKS=1 ai-feature resume
+time CODEPIPE_MAX_PARALLEL_TASKS=1 codepipe resume
 
 # Parallel execution
-time AI_FEATURE_MAX_PARALLEL_TASKS=4 ai-feature resume
+time CODEPIPE_MAX_PARALLEL_TASKS=4 codepipe resume
 
 # Calculate speedup
 # Speedup = Sequential Time / Parallel Time
@@ -308,10 +308,10 @@ time AI_FEATURE_MAX_PARALLEL_TASKS=4 ai-feature resume
 ```bash
 # Find long-running tasks
 jq -s 'sort_by(.duration_ms) | reverse | .[0:5]' \
-  .ai-feature-pipeline/runs/*/logs/execution.ndjson
+  .codepipe/runs/*/logs/execution.ndjson
 
 # Check dependency chains
-ai-feature plan --verbose --show-diff
+codepipe plan --verbose --show-diff
 ```
 
 ## Troubleshooting
@@ -333,11 +333,11 @@ free -m      # Check memory usage
 iostat -x 1  # Check disk I/O
 
 # Step 2: Reduce parallelism
-export AI_FEATURE_MAX_PARALLEL_TASKS=2
-ai-feature resume
+export CODEPIPE_MAX_PARALLEL_TASKS=2
+codepipe resume
 
 # Step 3: Monitor improvement
-ai-feature status --verbose --show-costs
+codepipe status --verbose --show-costs
 ```
 
 **Prevention:**
@@ -357,18 +357,18 @@ ai-feature status --verbose --show-costs
 **Resolution:**
 ```bash
 # Step 1: Check dependency graph
-ai-feature plan --verbose
+codepipe plan --verbose
 
 # Step 2: Identify stuck tasks
-ai-feature status --verbose | grep "pending"
+codepipe status --verbose | grep "pending"
 
 # Step 3: Check for failed prerequisites
-grep "task_failed" .ai-feature-pipeline/runs/*/logs/execution.ndjson
+grep "task_failed" .codepipe/runs/*/logs/execution.ndjson
 
 # Step 4: Manual intervention
 # Edit execution plan to remove circular dependencies
 # Resume execution
-ai-feature resume
+codepipe resume
 ```
 
 **Prevention:**
@@ -388,14 +388,14 @@ ai-feature resume
 **Resolution:**
 ```bash
 # Step 1: Analyze task dependencies
-ai-feature plan --verbose --show-diff
+codepipe plan --verbose --show-diff
 
 # Step 2: Check task durations
-jq '.duration_ms' .ai-feature-pipeline/runs/*/logs/execution.ndjson | \
+jq '.duration_ms' .codepipe/runs/*/logs/execution.ndjson | \
   awk '{sum+=$1; count++} END {print sum/count " ms average"}'
 
 # Step 3: Profile external API calls
-grep "rate_limit" .ai-feature-pipeline/runs/*/logs/execution.ndjson
+grep "rate_limit" .codepipe/runs/*/logs/execution.ndjson
 
 # Step 4: Adjust strategy
 # If tasks are dependent: Accept sequential execution
@@ -429,7 +429,7 @@ updateDependentTasks(task.task_id);
 **Validation:**
 ```bash
 # Verify dependency order
-grep "task_completed" .ai-feature-pipeline/runs/*/logs/execution.ndjson | \
+grep "task_completed" .codepipe/runs/*/logs/execution.ndjson | \
   jq -r '[.task_id, .timestamp] | @tsv'
 ```
 
@@ -453,7 +453,7 @@ if (task.status === 'failed') {
 **Validation:**
 ```bash
 # Check for blocked tasks
-ai-feature status --verbose | grep "blocked"
+codepipe status --verbose | grep "blocked"
 ```
 
 ### Concurrency Limits
@@ -472,7 +472,7 @@ if (inFlightTasks.size >= maxParallelTasks) {
 **Validation:**
 ```bash
 # Monitor in-flight tasks (should never exceed limit)
-watch -n 1 "ai-feature status --json | jq '.in_progress_count'"
+watch -n 1 "codepipe status --json | jq '.in_progress_count'"
 ```
 
 ### State Consistency
@@ -487,7 +487,7 @@ watch -n 1 "ai-feature status --json | jq '.in_progress_count'"
 **Validation:**
 ```bash
 # Verify queue integrity
-ai-feature resume --validate-queue --dry-run
+codepipe resume --validate-queue --dry-run
 ```
 
 ## References

@@ -72,7 +72,7 @@ Each source specifies where to consult for information:
 
 **Command:**
 ```bash
-ai-feature research list [options]
+codepipe research list [options]
 ```
 
 **Options:**
@@ -84,13 +84,13 @@ ai-feature research list [options]
 **Example:**
 ```bash
 # List all pending tasks
-ai-feature research list --status pending
+codepipe research list --status pending
 
 # List stale cached tasks that need refresh
-ai-feature research list --stale
+codepipe research list --stale
 
 # Get diagnostics in JSON
-ai-feature research list --json
+codepipe research list --json
 ```
 
 **Output (Human-Readable):**
@@ -141,7 +141,7 @@ Total: 3 tasks (2 pending, 1 completed)
 
 **Command:**
 ```bash
-ai-feature research show <task-id> [options]
+codepipe research show <task-id> [options]
 ```
 
 **Options:**
@@ -149,7 +149,7 @@ ai-feature research show <task-id> [options]
 
 **Example:**
 ```bash
-ai-feature research show RT-123456-xyz
+codepipe research show RT-123456-xyz
 ```
 
 **Output:**
@@ -184,7 +184,7 @@ Freshness: max_age_hours=24, force_fresh=false
 
 **Command:**
 ```bash
-ai-feature research create [options]
+codepipe research create [options]
 ```
 
 **Options:**
@@ -199,7 +199,7 @@ Sources accept `type:identifier` or `type:identifier|description`. Allowed sourc
 
 **Example:**
 ```bash
-ai-feature research create \
+codepipe research create \
   --title "Clarify rate limit policies" \
   --objective "What is the GitHub API rate limit for authenticated requests?" \
   --objective "Are there ways to request higher limits?" \
@@ -214,7 +214,7 @@ Created research task: RT-123456-ghi
   Status: pending
   Cache Key: b2c3d4e5f6g7h8i9...
 
-Use 'ai-feature research show RT-123456-ghi' to view details.
+Use 'codepipe research show RT-123456-ghi' to view details.
 ```
 
 ### 3.4 Execute Research Tasks (Background)
@@ -223,7 +223,7 @@ Research tasks are typically executed automatically during the `start` workflow,
 
 **Command:**
 ```bash
-ai-feature research execute [options]
+codepipe research execute [options]
 ```
 
 **Options:**
@@ -367,8 +367,8 @@ When an external service is unreachable:
     Reason: Linear API unreachable (connection timeout)
 
 You can:
-  1. Retry later: ai-feature research execute --task-id RT-123456-ghi
-  2. Skip: ai-feature approve prd --skip-research
+  1. Retry later: codepipe research execute --task-id RT-123456-ghi
+  2. Skip: codepipe approve prd --skip-research
 ```
 
 ### 5.3 Mitigation Summary
@@ -386,10 +386,10 @@ You can:
 
 ### 6.1 Directory Structure
 
-All research artifacts are stored under `.ai-feature-pipeline/<feature_id>/research/`:
+All research artifacts are stored under `.codepipe/<feature_id>/research/`:
 
 ```
-.ai-feature-pipeline/
+.codepipe/
 └── <feature_id>/
     └── research/
         ├── tasks.jsonl           # JSONL append log of all task events
@@ -544,9 +544,9 @@ All coordinator operations emit structured logs to `logs/logs.ndjson`:
 - Missing required credentials
 
 **Resolution:**
-1. Check `ai-feature research show <task-id>` for metadata
-2. Verify credentials: `ai-feature config validate`
-3. Retry manually: `ai-feature research execute --task-id <task-id>`
+1. Check `codepipe research show <task-id>` for metadata
+2. Verify credentials: `codepipe config validate`
+3. Retry manually: `codepipe research execute --task-id <task-id>`
 
 ### 9.2 Cache Not Reusing Results
 

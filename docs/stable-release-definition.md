@@ -1,6 +1,6 @@
 # Stable Release v1.0.0 Definition
 
-**Project:** ai-feature-pipeline
+**Project:** codemachine-pipeline
 **Target Version:** 1.0.0
 **Context:** Personal homelab software (single maintainer)
 **Date:** 2026-01-27
@@ -22,9 +22,9 @@ This is **PERSONAL HOMELAB** software. Optimize for:
 
 | Method | Command | Status |
 |--------|---------|--------|
-| npx | `npx ai-feature-pipeline@1.0.0 --help` | Required |
-| Docker | `docker run ai-feature-pipeline:1.0.0 --help` | Required |
-| npm link | Clone repo, `npm link`, run `ai-feature` | Required |
+| npx | `npx codemachine-pipeline@1.0.0 --help` | Required |
+| Docker | `docker run codemachine-pipeline:1.0.0 --help` | Required |
+| npm link | Clone repo, `npm link`, run `codepipe` | Required |
 
 ### Not Supported (v1.0.0)
 
@@ -53,7 +53,7 @@ v1.0.0 **MUST** work with this minimal config (offline mode, no integrations):
     "enabled": false
   },
   "runtime": {
-    "run_directory": ".ai-feature-pipeline/runs"
+    "run_directory": ".codepipe/runs"
   },
   "safety": {
     "redact_secrets": true
@@ -71,19 +71,19 @@ v1.0.0 **MUST** work with this minimal config (offline mode, no integrations):
 
 ```bash
 # Action
-ai-feature init
+codepipe init
 
 # Expected Result
-- Creates .ai-feature-pipeline/config.json
-- Creates .ai-feature-pipeline/runs/ directory
+- Creates .codepipe/config.json
+- Creates .codepipe/runs/ directory
 - Exit code 0
 ```
 
 **Acceptance Test:**
 ```bash
-rm -rf .ai-feature-pipeline
-ai-feature init
-test -f .ai-feature-pipeline/config.json && echo "PASS" || echo "FAIL"
+rm -rf .codepipe
+codepipe init
+test -f .codepipe/config.json && echo "PASS" || echo "FAIL"
 ```
 
 ---
@@ -92,7 +92,7 @@ test -f .ai-feature-pipeline/config.json && echo "PASS" || echo "FAIL"
 
 ```bash
 # Action
-ai-feature start --prompt "Add a hello world endpoint" --skip-execution
+codepipe start --prompt "Add a hello world endpoint" --skip-execution
 
 # Expected Result
 - Creates run directory with unique ID
@@ -103,8 +103,8 @@ ai-feature start --prompt "Add a hello world endpoint" --skip-execution
 
 **Acceptance Test:**
 ```bash
-FEATURE_ID=$(ai-feature start --prompt "Test feature" --skip-execution --json | jq -r '.feature_id')
-test -f .ai-feature-pipeline/runs/$FEATURE_ID/manifest.json && echo "PASS" || echo "FAIL"
+FEATURE_ID=$(codepipe start --prompt "Test feature" --skip-execution --json | jq -r '.feature_id')
+test -f .codepipe/runs/$FEATURE_ID/manifest.json && echo "PASS" || echo "FAIL"
 ```
 
 ---
@@ -113,7 +113,7 @@ test -f .ai-feature-pipeline/runs/$FEATURE_ID/manifest.json && echo "PASS" || ec
 
 ```bash
 # Action
-ai-feature status --feature <feature_id>
+codepipe status --feature <feature_id>
 
 # Expected Result
 - Shows feature status (pending/in_progress/completed/failed)
@@ -124,7 +124,7 @@ ai-feature status --feature <feature_id>
 
 **Acceptance Test:**
 ```bash
-ai-feature status --feature $FEATURE_ID --json | jq -e '.status' && echo "PASS" || echo "FAIL"
+codepipe status --feature $FEATURE_ID --json | jq -e '.status' && echo "PASS" || echo "FAIL"
 ```
 
 ---
@@ -133,7 +133,7 @@ ai-feature status --feature $FEATURE_ID --json | jq -e '.status' && echo "PASS" 
 
 ```bash
 # Action
-ai-feature resume --feature <feature_id>
+codepipe resume --feature <feature_id>
 
 # Expected Result
 - Resumes from last successful step
@@ -144,9 +144,9 @@ ai-feature resume --feature <feature_id>
 **Acceptance Test:**
 ```bash
 # Simulate crash by creating stale lock
-touch .ai-feature-pipeline/runs/$FEATURE_ID/run.lock
+touch .codepipe/runs/$FEATURE_ID/run.lock
 sleep 65  # Wait for lock to become stale (60s threshold)
-ai-feature resume --feature $FEATURE_ID --dry-run && echo "PASS" || echo "FAIL"
+codepipe resume --feature $FEATURE_ID --dry-run && echo "PASS" || echo "FAIL"
 ```
 
 ---
@@ -155,7 +155,7 @@ ai-feature resume --feature $FEATURE_ID --dry-run && echo "PASS" || echo "FAIL"
 
 ```bash
 # Action
-ai-feature doctor
+codepipe doctor
 
 # Expected Result
 - Checks environment (Node.js version, Git)
@@ -166,7 +166,7 @@ ai-feature doctor
 
 **Acceptance Test:**
 ```bash
-ai-feature doctor --json | jq -e '.checks' && echo "PASS" || echo "FAIL"
+codepipe doctor --json | jq -e '.checks' && echo "PASS" || echo "FAIL"
 ```
 
 ---
@@ -178,11 +178,11 @@ The following are **NOT** requirements for v1.0.0:
 | Feature | Reason |
 |---------|--------|
 | Multi-user access control | Single maintainer, not needed |
-| `ai-feature deploy` command | Out of scope for v1 |
+| `codepipe deploy` command | Out of scope for v1 |
 | Linear sync (auto-enabled) | Disabled by default, optional |
 | Auto-merge | Disabled by default, risky |
 | Windows native support | Use WSL2 |
-| Support for Node.js < v24 | Only v24 LTS or higher supported |
+| Node.js < 24 support | Only v24 LTS or higher is supported; older versions are not a target |
 | Distributed execution | Single machine homelab |
 | High availability | Not a server, runs on demand |
 
@@ -271,7 +271,7 @@ v1.0.0 is successful when:
 1. **All 5 core journeys work** - Initialize, start, status, resume, doctor
 2. **No data loss on crash** - Fsync, integrity checks, tested rollback
 3. **Operator can diagnose issues** - Logs, troubleshooting guide, error messages
-4. **Single command install** - `npx ai-feature-pipeline@1.0.0` just works
+4. **Single command install** - `npx codemachine-pipeline@1.0.0` just works
 5. **Offline mode works** - No GitHub/Linear required
 
 ---

@@ -233,55 +233,55 @@
         "key": "3-10-1-init",
         "line": 201,
         "start_anchor": "<!-- anchor: 3-10-1-init -->",
-        "description": "3.10.1 `ai-feature init`"
+        "description": "3.10.1 `codepipe init`"
       },
       {
         "key": "3-10-2-start",
         "line": 211,
         "start_anchor": "<!-- anchor: 3-10-2-start -->",
-        "description": "3.10.2 `ai-feature start`"
+        "description": "3.10.2 `codepipe start`"
       },
       {
         "key": "3-10-3-resume",
         "line": 222,
         "start_anchor": "<!-- anchor: 3-10-3-resume -->",
-        "description": "3.10.3 `ai-feature resume`"
+        "description": "3.10.3 `codepipe resume`"
       },
       {
         "key": "3-10-4-pr",
         "line": 233,
         "start_anchor": "<!-- anchor: 3-10-4-pr -->",
-        "description": "3.10.4 `ai-feature pr ...`"
+        "description": "3.10.4 `codepipe pr ...`"
       },
       {
         "key": "3-10-5-deploy",
         "line": 244,
         "start_anchor": "<!-- anchor: 3-10-5-deploy -->",
-        "description": "3.10.5 `ai-feature deploy`"
+        "description": "3.10.5 `codepipe deploy`"
       },
       {
         "key": "3-10-6-status",
         "line": 254,
         "start_anchor": "<!-- anchor: 3-10-6-status -->",
-        "description": "3.10.6 `ai-feature status`"
+        "description": "3.10.6 `codepipe status`"
       },
       {
         "key": "3-10-7-export",
         "line": 261,
         "start_anchor": "<!-- anchor: 3-10-7-export -->",
-        "description": "3.10.7 `ai-feature export`"
+        "description": "3.10.7 `codepipe export`"
       },
       {
         "key": "3-10-8-cleanup",
         "line": 268,
         "start_anchor": "<!-- anchor: 3-10-8-cleanup -->",
-        "description": "3.10.8 `ai-feature cleanup`"
+        "description": "3.10.8 `codepipe cleanup`"
       },
       {
         "key": "3-10-9-observe",
         "line": 277,
         "start_anchor": "<!-- anchor: 3-10-9-observe -->",
-        "description": "3.10.9 `ai-feature observe`"
+        "description": "3.10.9 `codepipe observe`"
       },
       {
         "key": "3-11-disaster-recovery",
@@ -505,7 +505,7 @@
         "key": "4-1-11-observe-command",
         "line": 69,
         "start_anchor": "<!-- anchor: 4-1-11-observe-command -->",
-        "description": "4.1.11 Optional `ai-feature observe` Health Command"
+        "description": "4.1.11 Optional `codepipe observe` Health Command"
       },
       {
         "key": "4-2-alternatives",
@@ -751,7 +751,7 @@
         "key": "6-0-8-observe-report",
         "line": 252,
         "start_anchor": "<!-- anchor: 6-0-8-observe-report -->",
-        "description": "Observe Report:** Output of `ai-feature observe`, summarizing run health, KPIs, and anomalies for human review."
+        "description": "Observe Report:** Output of `codepipe observe`, summarizing run health, KPIs, and anomalies for human review."
       },
       {
         "key": "6-0-9-plan-json",

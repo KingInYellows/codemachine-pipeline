@@ -1,15 +1,15 @@
 # Sample Repository Configuration
 
-This directory contains a complete sample configuration for `ai-feature-pipeline`.
+This directory contains a complete sample configuration for `codemachine-pipeline`.
 
 ## Quick Start
 
 1. Initialize your repository:
    ```bash
-   ai-feature init
+   codepipe init
    ```
 
-2. Review the generated `.ai-feature-pipeline/config.json`
+2. Review the generated `.codepipe/config.json`
 
 3. Customize settings for your project
 
@@ -107,21 +107,21 @@ Resource limits and rate limiting.
 
 Configuration values can be overridden with environment variables following the pattern:
 ```
-AI_FEATURE_<SECTION>_<FIELD>
+CODEPIPE_<SECTION>_<FIELD>
 ```
 
 **Examples**:
 ```bash
-export AI_FEATURE_GITHUB_TOKEN=ghp_override_token
-export AI_FEATURE_LINEAR_API_KEY=lin_override_key
-export AI_FEATURE_RUNTIME_AGENT_ENDPOINT=https://override.com/v1
+export CODEPIPE_GITHUB_TOKEN=ghp_override_token
+export CODEPIPE_LINEAR_API_KEY=lin_override_key
+export CODEPIPE_RUNTIME_AGENT_ENDPOINT=https://override.com/v1
 ```
 
 ## Validation
 
 Validate your configuration:
 ```bash
-ai-feature init --validate-only
+codepipe init --validate-only
 ```
 
 This will:
@@ -224,8 +224,8 @@ Use format: `X.Y.Z` (e.g., "1.0.0")
 
 ## Next Steps
 
-1. Initialize: `ai-feature init`
-2. Validate: `ai-feature init --validate-only`
+1. Initialize: `codepipe init`
+2. Validate: `codepipe init --validate-only`
 3. Set credentials (see above)
-4. Start a feature: `ai-feature start --prompt "Add user authentication"`
-5. Check status: `ai-feature status <feature_id>`
+4. Start a feature: `codepipe start --prompt "Add user authentication"`
+5. Check status: `codepipe status <feature_id>`

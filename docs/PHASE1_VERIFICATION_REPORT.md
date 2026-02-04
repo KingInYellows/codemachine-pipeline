@@ -44,7 +44,7 @@
 - **Implementation**: 744 lines in `src/core/config/RepoConfig.ts`
 - **Features**:
   - Complete `ExecutionConfigSchema` with 11 execution fields
-  - Environment variable override support (`AI_FEATURE_*`)
+  - Environment variable override support (`CODEPIPE_*`)
   - Zod validation with TypeScript type inference
   - Integration with CLIExecutionEngine
 - **Key Settings**: CLI path, engine selection, timeouts, parallelism, retries, log rotation, environment filtering
@@ -431,7 +431,7 @@
 
 ### Phase 3 Actions (Integration & Enhancement)
 1. **Implement missing TaskMapper commands** - Add `step` and `status` support
-2. **Wire CLIExecutionEngine into CLI commands** - Integrate with `ai-feature start/resume`
+2. **Wire CLIExecutionEngine into CLI commands** - Integrate with `codepipe start/resume`
 3. **Create operational documentation** - Runbooks, troubleshooting guides, README updates
 
 ---

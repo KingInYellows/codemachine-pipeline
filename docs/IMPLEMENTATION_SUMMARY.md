@@ -241,7 +241,7 @@ Systematically resolved **12+ prioritized GitHub issues** using Graphite stacks,
 **Agent**: coder (aa981c5), just started
 **Model**: Sonnet (Tier-2, more complex integration work)
 
-**Task**: Wire CLIExecutionEngine into `ai-feature start` command
+**Task**: Wire CLIExecutionEngine into `codepipe start` command
 
 **Changes**:
 - Add execution step after PRD completion

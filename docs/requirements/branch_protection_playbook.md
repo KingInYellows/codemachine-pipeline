@@ -32,7 +32,7 @@ The Branch Protection Intelligence module provides comprehensive detection and r
 - **Review Requirement Tracking**: Ensure sufficient approvals are obtained
 - **Stale Commit Detection**: Identify when branches need rebasing
 - **Auto-Merge Eligibility**: Determine if auto-merge can be safely enabled
-- **CLI Integration**: Surface protection status in `ai-feature status` and `ai-feature deploy`
+- **CLI Integration**: Surface protection status in `codepipe status` and `codepipe deploy`
 
 ---
 
@@ -126,7 +126,7 @@ GET /repos/{owner}/{repo}/branches/{branch}/protection
 }
 ```
 
-Every invocation of `ai-feature status` refreshes `status/branch_protection.json` by calling the GitHub Branch Protection API, ensuring CLI and deployment flows always read current protection data without requiring manual refreshes.
+Every invocation of `codepipe status` refreshes `status/branch_protection.json` by calling the GitHub Branch Protection API, ensuring CLI and deployment flows always read current protection data without requiring manual refreshes.
 
 ### Unprotected Branches
 
@@ -185,13 +185,13 @@ The system compares GitHub required checks against the validation registry (`val
 
 ### Real-Time Head Commit Resolution
 
-`ai-feature status` refreshes branch protection data by loading the latest PR head/base references directly from GitHub before evaluating compliance. The persisted artifact therefore records:
+`codepipe status` refreshes branch protection data by loading the latest PR head/base references directly from GitHub before evaluating compliance. The persisted artifact therefore records:
 
 - `branch`: Current PR head ref (e.g., `feature/payments-updates`)
 - `sha`: Exact head commit SHA resolved at refresh time
 - `base_sha`: Base branch ref used for comparison
 
-By pinning to explicit SHAs the reporter avoids issues with feature branches that contain path separators (e.g., `feature/auth/login`), keeps check-run queries valid, and guarantees stale-commit detection works even if developers have not run `ai-feature pr status` after pushing new commits.
+By pinning to explicit SHAs the reporter avoids issues with feature branches that contain path separators (e.g., `feature/auth/login`), keeps check-run queries valid, and guarantees stale-commit detection works even if developers have not run `codepipe pr status` after pushing new commits.
 
 ---
 
@@ -262,17 +262,17 @@ Auto-merge is considered safe when:
 
 ```bash
 # Check if auto-merge is allowed
-ai-feature status --json | jq '.branch_protection.allows_auto_merge'
+codepipe status --json | jq '.branch_protection.allows_auto_merge'
 
 # Enable auto-merge if eligible
-ai-feature deploy --auto-merge
+codepipe deploy --auto-merge
 ```
 
 ---
 
 ## CLI Integration
 
-### `ai-feature status`
+### `codepipe status`
 
 Displays branch protection summary alongside other feature status:
 
@@ -310,7 +310,7 @@ Auto-merge:
 **JSON Output:**
 
 ```bash
-ai-feature status --json
+codepipe status --json
 ```
 
 ```json
@@ -347,7 +347,7 @@ ai-feature status --json
 }
 ```
 
-### `ai-feature deploy`
+### `codepipe deploy`
 
 Before deploying (merging), the command:
 1. Loads branch protection report from `status/branch_protection.json`
@@ -364,7 +364,7 @@ Required actions:
   1. Wait for 1 required check(s) to pass: security/scan
   2. Request 1 more approving review(s)
 
-Run 'ai-feature status' for detailed information.
+Run 'codepipe status' for detailed information.
 ```
 
 ### Recommended Actions
@@ -398,7 +398,7 @@ The system provides context-aware recommendations:
 **Cause:** Check context name mismatch between CI and branch protection.
 
 **Solution:**
-1. Run `ai-feature status --json` and inspect `branch_protection.required_checks`
+1. Run `codepipe status --json` and inspect `branch_protection.required_checks`
 2. Compare against actual check names in GitHub PR checks tab
 3. Update branch protection rules or CI workflow to align names
 
@@ -442,7 +442,7 @@ name: ci/build  # Must match branch protection rule
 
 **Solution:**
 1. Disable "Allow force pushes" in GitHub branch protection settings
-2. Re-fetch branch protection: `ai-feature status`
+2. Re-fetch branch protection: `codepipe status`
 3. Verify `allows_auto_merge: true` in report
 
 ---
@@ -455,16 +455,16 @@ name: ci/build  # Must match branch protection rule
 
 ```bash
 # Initialize validation registry
-ai-feature validate --init
+codepipe validate --init
 
 # Fetch branch protection
-ai-feature status --json > status.json
+codepipe status --json > status.json
 
 # Compare required checks
 jq '.branch_protection.required_checks' status.json
 
 # Update validation config to match
-vi .ai-feature-pipeline/config.json
+vi .codepipe/config.json
 ```
 
 Ensure every required check has a corresponding validation command.
@@ -504,7 +504,7 @@ Branch protection rules change infrequently. Cache reports and refresh only when
 Regularly audit validation registry alignment:
 
 ```bash
-ai-feature status --verbose | grep "validation mismatch"
+codepipe status --verbose | grep "validation mismatch"
 ```
 
 Address mismatches to avoid:
@@ -527,7 +527,7 @@ When branch protection is correctly configured:
 3. Enable auto-merge on PR creation:
 
 ```bash
-ai-feature pr create --auto-merge
+codepipe pr create --auto-merge
 ```
 
 ---
@@ -543,7 +543,7 @@ git rebase origin/main
 git push --force-with-lease
 
 # Verify up-to-date status
-ai-feature status
+codepipe status
 ```
 
 ---

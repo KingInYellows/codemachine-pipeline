@@ -1,4 +1,4 @@
-> **Historical snapshot (2025-12-30).** Codebase metrics are outdated (claimed 86 .ts files; actual: 117). See docs/audit/AUDIT_REPORT.md for current audit.
+> **Historical snapshot (2025-12-30).** Metrics below are outdated — the codebase now has 117 TypeScript files in src/ (was 86) and 99+ markdown files (was 47). See [docs/audit/AUDIT_REPORT.md](docs/audit/AUDIT_REPORT.md) for the current audit.
 
 # Codemachine Pipeline - Inline Documentation Report
 

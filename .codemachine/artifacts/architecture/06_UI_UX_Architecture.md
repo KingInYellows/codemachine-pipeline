@@ -56,10 +56,10 @@ The palette defines ANSI-friendly color pairings for both dark and light termina
 - Use `semantic-warning` for rate-limit delays or human approval gates; never for success states.
 - Within PlantUML diagrams, map `semantic-info` to notes and `semantic-success` to green states for parity.
 - Provide text fallbacks describing the color use for screen readers in documentation exports.
-- Document all palette tokens inside `.ai-feature-pipeline/design-tokens.json` for future automation.
+- Document all palette tokens inside `.codepipe/design-tokens.json` for future automation.
 - Ensure TUIs include toggles for "colorless" mode by disabling ANSI escapes.
 - Keep color usage deterministic by referencing tokens, not raw codes, within CLI rendering functions.
-- Provide sample color swatches in `ai-feature init` documentation to help new operators configure terminals.
+- Provide sample color swatches in `codepipe init` documentation to help new operators configure terminals.
 - Publish color usage guidelines inside `docs/ui/color.md` with before/after CLI captures for verification.
 
 <!-- anchor: 1-2-typography -->
@@ -236,7 +236,7 @@ Defines grammar for CLI prompts, responses, and doc exports.
 - Provide `diff summary block` with patch stats.
 - Provide `API ledger block` summarizing rate-limit state.
 - Provide `next actions block` instructing operator on gating decisions.
-- Provide `closing block` showing `ai-feature status <id>` hint for returning later.
+- Provide `closing block` showing `codepipe status <id>` hint for returning later.
 
 <!-- anchor: 1-7-accessibility-tokens -->
 ### 1.7 Accessibility Tokens
@@ -299,7 +299,7 @@ Defines grammar for CLI prompts, responses, and doc exports.
 - Provide `number formatting` following locale but keep CLI decimals dot-based for scripts.
 - Provide `glossary terms` ensuring consistent translation of blueprint vocabulary.
 - Provide `translation testing checklist` verifying placeholders remain intact.
-- Provide `automated extraction` command `ai-feature i18n sync` to update dictionaries.
+- Provide `automated extraction` command `codepipe i18n sync` to update dictionaries.
 - Provide `component-locale map` showing which CLI sections require translation.
 - Provide `localization context` comments for ambiguous phrases.
 
@@ -343,7 +343,7 @@ Atoms ensure consistent formatting for minimal units. Each entry lists purpose, 
 
 <!-- anchor: 2-2-1-1-atom-command-label -->
 ##### 2.2.1.1 Atom: Command Label
-- Purpose: display invoked CLI command, e.g., `ai-feature start`.
+- Purpose: display invoked CLI command, e.g., `codepipe start`.
 - Props: `command`, `args`, `flags`, `contextPath`.
 - States: `default`, `error`, `readonly` when command derived from script.
 - Accessibility: always enclosed in backticks with `Command:` prefix.
@@ -786,25 +786,25 @@ Routes correspond to CLI commands and optional subcommands.
 
 | Route/Command | Description | Primary Components | Access Level | Notes |
 | --- | --- | --- | --- | --- |
-| `ai-feature init` | Initialize repo config and validate integrations | InitializationWorkspace, CommandHeader, ValidationPanel | Maintainer | Requires git repo detection |
-| `ai-feature start --prompt` | Begin feature run from prompt | RunOverview, PRDLab, ContextWorkbench | Maintainer/Operator | Gating at PRD acceptance |
-| `ai-feature start --linear` | Start run from Linear issue | ContextWorkbench, ResearchWorkspace | Maintainer | Includes Linear snapshot |
-| `ai-feature start --spec` | Start from spec file | ContextWorkbench, SpecStudio | Maintainer | Preloads spec.md |
-| `ai-feature status <id>` | View run state machine | RunOverview, TaskPlanner, ExecutionMonitor | Maintainer/Reviewer | Supports `--json` |
-| `ai-feature resume <id>` | Resume failed run | ResumeWorkspace, ExecutionWorkspace | Maintainer | Enforces idempotent steps |
-| `ai-feature plan <id>` | Review/modify plan | TaskPlanner, ContextWorkbench | Maintainer | Exposes DAG editing |
-| `ai-feature pr create <id>` | Create PR | PRConsole, DeploymentGuard | Maintainer | Requires approvals |
-| `ai-feature pr reviewers <id>` | Request reviewers | PRConsole | Maintainer | Uses GitHub adapter |
-| `ai-feature pr disable-auto-merge <id>` | Manage auto-merge | DeploymentGuard | Maintainer | Logs governance notes |
-| `ai-feature deploy <id>` | Trigger deploy/merge | DeploymentWorkspace | Maintainer | Checks required statuses |
-| `ai-feature export <id>` | Build artifact bundle | ExportWorkspace | Maintainer/Compliance | Supports md/json |
-| `ai-feature observe` | Monitor merged PRs | TelemetryWorkspace | Maintainer/Ops | Cron-friendly |
-| `ai-feature cleanup` | Manage run dirs | TelemetryWorkspace | Maintainer | Provides dry-run |
+| `codepipe init` | Initialize repo config and validate integrations | InitializationWorkspace, CommandHeader, ValidationPanel | Maintainer | Requires git repo detection |
+| `codepipe start --prompt` | Begin feature run from prompt | RunOverview, PRDLab, ContextWorkbench | Maintainer/Operator | Gating at PRD acceptance |
+| `codepipe start --linear` | Start run from Linear issue | ContextWorkbench, ResearchWorkspace | Maintainer | Includes Linear snapshot |
+| `codepipe start --spec` | Start from spec file | ContextWorkbench, SpecStudio | Maintainer | Preloads spec.md |
+| `codepipe status <id>` | View run state machine | RunOverview, TaskPlanner, ExecutionMonitor | Maintainer/Reviewer | Supports `--json` |
+| `codepipe resume <id>` | Resume failed run | ResumeWorkspace, ExecutionWorkspace | Maintainer | Enforces idempotent steps |
+| `codepipe plan <id>` | Review/modify plan | TaskPlanner, ContextWorkbench | Maintainer | Exposes DAG editing |
+| `codepipe pr create <id>` | Create PR | PRConsole, DeploymentGuard | Maintainer | Requires approvals |
+| `codepipe pr reviewers <id>` | Request reviewers | PRConsole | Maintainer | Uses GitHub adapter |
+| `codepipe pr disable-auto-merge <id>` | Manage auto-merge | DeploymentGuard | Maintainer | Logs governance notes |
+| `codepipe deploy <id>` | Trigger deploy/merge | DeploymentWorkspace | Maintainer | Checks required statuses |
+| `codepipe export <id>` | Build artifact bundle | ExportWorkspace | Maintainer/Compliance | Supports md/json |
+| `codepipe observe` | Monitor merged PRs | TelemetryWorkspace | Maintainer/Ops | Cron-friendly |
+| `codepipe cleanup` | Manage run dirs | TelemetryWorkspace | Maintainer | Provides dry-run |
 
 <!-- anchor: 3-1-1-command-groups -->
 #### 3.1.1 Command Grouping Strategy
 - Group commands by pipeline stage to align documentation and CLI help.
-- Provide `ai-feature help` output listing groups: `init`, `start`, `status`, `plan`, `run`, `pr`, `deploy`, `export`, `ops`.
+- Provide `codepipe help` output listing groups: `init`, `start`, `status`, `plan`, `run`, `pr`, `deploy`, `export`, `ops`.
 - Provide subcommand help referencing anchors in docs.
 - Provide `--json` flag for commands returning structured data.
 - Provide `--yes` to skip prompts when automation safe and approvals recorded.
@@ -816,7 +816,7 @@ Routes correspond to CLI commands and optional subcommands.
 
 <!-- anchor: 3-1-2-context-handling -->
 #### 3.1.2 Context Handling per Route
-- `init` collects repo metadata, ensures config path `.ai-feature-pipeline/config.json` exists.
+- `init` collects repo metadata, ensures config path `.codepipe/config.json` exists.
 - `start` commands create new feature directories using ULID/UUIDv7, storing run context.
 - `status` fetches `feature.json`, `plan.json`, `logs.ndjson`, `approvals.json` for view.
 - `resume` checks `last_step`, `last_error`, ensures dependencies resolved before continuing.
@@ -852,7 +852,7 @@ skinparam activityArrowColor #F8FAFD
 skinparam noteBackgroundColor #0F172A
 skinparam noteBorderColor #38BDF8
 start
-:User runs `ai-feature start --prompt`;
+:User runs `codepipe start --prompt`;
 :CLI displays Command Header & Context Intake;
 if (RepoConfig valid?) then (yes)
   :Context Gathering w/ summaries;
@@ -937,7 +937,7 @@ stop
 - For human-action errors, CLI prints `[blocked]` along with task instructions and file references.
 - Resume flow ensures no repeated writes; uses file locks and step hashing.
 - CLI stores `failure.json` summarizing cause, stack trace, and recommended command.
-- Provide `ai-feature diagnose <id>` (future) referencing same architecture to gather logs.
+- Provide `codepipe diagnose <id>` (future) referencing same architecture to gather logs.
 - Provide `--force` guard rails require documented justification stored in `governance_notes`.
 - Provide `safe abort` instructions ensuring partial artifacts remain intact.
 - Provide `ratelimit fallback` script to pause and resume automatically after wait.
@@ -945,7 +945,7 @@ stop
 
 <!-- anchor: 3-5-user-education -->
 ### 3.5 User Education & Onboarding Flow
-- Provide onboarding script `ai-feature tour` showing sample command outputs referencing components.
+- Provide onboarding script `codepipe tour` showing sample command outputs referencing components.
 - Provide `docs/onboarding.md` linking to design system tokens.
 - Provide tutorial run with sample repo to illustrate full pipeline.
 - Provide CLI hints referencing `foundation` for design decisions.
@@ -1008,7 +1008,7 @@ Cross-cutting disciplines ensure the CLI remains coherent as features grow.
 - Memoization: store summarization results hashed by file path + commit SHA.
 - Pagination: chunk context tables into manageable sets with `--page` flag.
 - CLI caching: store config validation results for 15 minutes.
-- Logging: default to info-level; debug-level triggered by `AI_FEATURE_DEBUG=1` to reduce noise.
+- Logging: default to info-level; debug-level triggered by `CODEPIPE_DEBUG=1` to reduce noise.
 - Observability: track execution durations for each stage to detect regressions.
 - Performance testing: include `vitest` suites measuring render functions and plan generation.
 
@@ -1029,7 +1029,7 @@ Cross-cutting disciplines ensure the CLI remains coherent as features grow.
 ### 4.6 Security & Privacy Safeguards
 - Secrets environment detection ensures CLI refuses to run operations needing tokens when absent.
 - Redaction pipeline replaces tokens with `***REDACTED***` before display.
-- Audit logs record user identities per command invocation via `AI_FEATURE_ACTOR` env var.
+- Audit logs record user identities per command invocation via `CODEPIPE_ACTOR` env var.
 - Branch protection awareness ensures CLI does not merge until checks satisfied.
 - File access control ensures CLI respects `constraints.must_not_touch_paths`.
 - Run directory permission guidance ensures directories default to `700` on POSIX.
@@ -1045,10 +1045,10 @@ Cross-cutting disciplines ensure the CLI remains coherent as features grow.
 - Tracing: file-based OpenTelemetry traces linking CLI operations to API calls.
 - Dashboards: optional template for homelab Prometheus + Grafana mapping CLI metrics.
 - Alerts: CLI prints warnings when retries exceed thresholds, referencing docs.
-- Diagnostics command: `ai-feature observe` tail logs and summarises anomalies.
+- Diagnostics command: `codepipe observe` tail logs and summarises anomalies.
 - Rate-limit ledger: CLI updates `rate_limits.json` after each API call.
 - Replay: `logs.ndjson` includes event IDs enabling deterministic replay of flows.
-- Diagnostics bundler: `ai-feature export` can include optional `diagnostics/` folder.
+- Diagnostics bundler: `codepipe export` can include optional `diagnostics/` folder.
 - Telemetry privacy: data stays local-first; CLI warns when optional remote sink configured.
 
 <!-- anchor: 4-8-content-strategy -->
@@ -1073,7 +1073,7 @@ Tooling ensures consistent developer experience and CLI reliability.
 - Framework: `oclif` for CLI scaffolding, plugin support, testing.
 - Language: TypeScript with `ts-node` for development convenience.
 - HTTP: `undici` for adapters, ensuring `Accept` and `X-GitHub-Api-Version` headers enforced.
-- Config validation: `zod` for schema enforcement on `.ai-feature-pipeline/config.json`.
+- Config validation: `zod` for schema enforcement on `.codepipe/config.json`.
 - File system helpers: `fs-extra` for run directory creation and locking.
 - Git integration: `simple-git` or native CLI wrapper for branch, patch, diff operations.
 - Logging: custom JSON logger plus `pino` for structured piping.

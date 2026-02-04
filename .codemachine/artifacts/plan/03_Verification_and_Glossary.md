@@ -71,13 +71,13 @@
 
 * **Release Review:** Each release requires sign-off from Architecture (diagram/spec updates), Ops (observability + cleanup), Security (token/approval review), and Product (feature readiness). Sign-offs recorded in `plan/readiness_checklist.md`.
 * **Change Control:** Schema/CLI-breaking changes require new ADR or addendum; config migrations tracked in `docs/requirements/config_migrations.md`; plan_manifest updated accordingly.
-* **Rollback Strategy:** `ai-feature cleanup --archive` used to snapshot runs before upgrades; Docker images pinned to version tags; release notes identify upgrade steps.
+* **Rollback Strategy:** `codepipe cleanup --archive` used to snapshot runs before upgrades; Docker images pinned to version tags; release notes identify upgrade steps.
 
 <!-- anchor: verification-environment -->
 ### 6.9 Environmental Health Checks
 
 * **Doctor Command:** Validates Node version, git, Docker, required env vars, disk space, and CLI version; logs results to `docs/ops/doctor_reference.md`.
-* **Init Command Dry-Run:** `ai-feature init --dry-run` ensures repo ready before enabling automation; outputs stored for compliance.
+* **Init Command Dry-Run:** `codepipe init --dry-run` ensures repo ready before enabling automation; outputs stored for compliance.
 * **Observe/cleanup Cron:** Documented schedule ensures telemetry + storage budgets tracked; cron logs referenced by Ops.
 
 <!-- anchor: glossary -->
@@ -92,11 +92,11 @@
 7. **ExecutionTask:** DAG node describing work units (code generation, validation, PR automation, deployment) with dependencies, retry policies, telemetry, and traceability links.
 8. **Linear Snapshot:** Cached representation of Linear issue data captured via MCP adapter, including metadata, attachments, and retrieval timestamps for offline contexts.
 9. **Rate-Limit Ledger:** Persistent JSON record per provider storing limit, remaining, reset time, retry-after, backoff attempts, and last error to enforce cooldowns and support resume flows.
-10. **Run Directory:** `.ai-feature-pipeline/<feature_id>/` folder storing manifests, queue, approvals, logs, metrics, traces, context, ResearchTasks, PRD/spec, plan, deployment records, and exports.
+10. **Run Directory:** `.codepipe/<feature_id>/` folder storing manifests, queue, approvals, logs, metrics, traces, context, ResearchTasks, PRD/spec, plan, deployment records, and exports.
 11. **Traceability Map:** JSON + Markdown mapping PRD goals to spec requirements, ExecutionTasks, diffs, and deployment artifacts, ensuring audits can follow end-to-end lineage.
 12. **Validation Registry:** Configuration-driven catalog of lint/test/typecheck/build commands executed before PR creation or deployment, supporting auto-fix loops and CLI reporting.
 13. **Write Action Queue:** Throttled queue for GitHub write operations (PR creation, comments, labels) that enforces IR-7 and records telemetry to avoid abuse-rate limits.
-14. **Observe Report:** Output of `ai-feature observe` capturing run KPIs, rate-limit warnings, approval aging, and incident summaries for operators and homelab cron jobs.
+14. **Observe Report:** Output of `codepipe observe` capturing run KPIs, rate-limit warnings, approval aging, and incident summaries for operators and homelab cron jobs.
 15. **Cleanup Command:** CLI utility that enforces retention policies, verifies exports, archives artifacts, and deletes stale run directories only after compliance checks succeed.
 16. **Deployment Record:** Metadata describing PR number, merge SHA, required checks, reviews, workflow dispatch results, notifications, and timestamped outcomes stored under run directory for audit/export.
 17. **Plan Manifest:** JSON index mapping anchors to file locations (this plan), enabling automation agents to retrieve sections/tasks deterministically.

@@ -85,7 +85,7 @@ Chunk-level summaries capture provenance and redaction metadata:
 Context artifacts are stored under the run directory:
 
 ```
-.ai-feature-pipeline/runs/<feature_id>/context/
+.codepipe/runs/<feature_id>/context/
 ├── summary.json          # ContextDocument manifest
 ├── summarization.json    # Summarization run metadata
 └── file_hashes.json      # HashManifest for incremental updates
@@ -357,7 +357,7 @@ CLI commands can override configuration with explicit include/exclude patterns.
 Add specific files or patterns to context:
 
 ```bash
-ai-feature start --include "experimental/" --include "scripts/deploy.sh"
+codepipe start --include "experimental/" --include "scripts/deploy.sh"
 ```
 
 These patterns are **appended** to `context_paths` from configuration.
@@ -367,7 +367,7 @@ These patterns are **appended** to `context_paths` from configuration.
 Exclude specific files or patterns:
 
 ```bash
-ai-feature start --exclude "src/legacy/" --exclude "**/*.test.ts"
+codepipe start --exclude "src/legacy/" --exclude "**/*.test.ts"
 ```
 
 These patterns are **added** to default exclusions.
@@ -389,7 +389,7 @@ project:
 ```
 
 ```bash
-ai-feature start --include "experimental/" --exclude "src/legacy/"
+codepipe start --include "experimental/" --exclude "src/legacy/"
 ```
 
 **Effective patterns:**
@@ -465,7 +465,7 @@ Additionally, ranking results include:
 ### Basic Aggregation
 
 ```bash
-ai-feature start
+codepipe start
 ```
 
 Uses default `context_paths` from `.codemachine.yml`.
@@ -473,7 +473,7 @@ Uses default `context_paths` from `.codemachine.yml`.
 ### Custom Token Budget
 
 ```bash
-ai-feature start --token-budget 50000
+codepipe start --token-budget 50000
 ```
 
 Override the token budget for this run.
@@ -481,7 +481,7 @@ Override the token budget for this run.
 ### Manual Inclusions
 
 ```bash
-ai-feature start --include "experimental/" --include "migrations/"
+codepipe start --include "experimental/" --include "migrations/"
 ```
 
 Add specific directories to context.
@@ -489,7 +489,7 @@ Add specific directories to context.
 ### Exclusions
 
 ```bash
-ai-feature start --exclude "**/*.test.ts" --exclude "legacy/"
+codepipe start --exclude "**/*.test.ts" --exclude "legacy/"
 ```
 
 Exclude test files and legacy code.
@@ -497,7 +497,7 @@ Exclude test files and legacy code.
 ### Combined
 
 ```bash
-ai-feature start \
+codepipe start \
   --include "src/" \
   --include "docs/" \
   --exclude "src/deprecated/" \

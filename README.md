@@ -1,10 +1,10 @@
-# ai-feature-pipeline
+# codemachine-pipeline
 
 Autonomous AI-powered feature development pipeline CLI
 
 ## Overview
 
-`ai-feature-pipeline` is a command-line tool that automates the entire feature development lifecycle using AI agents. From initial specification to pull request creation, the pipeline manages PRD generation, technical specifications, task breakdown, implementation, testing, and deployment.
+`codemachine-pipeline` is a command-line tool that automates the entire feature development lifecycle using AI agents. From initial specification to pull request creation, the pipeline manages PRD generation, technical specifications, task breakdown, implementation, testing, and deployment.
 
 ## Features
 
@@ -61,7 +61,7 @@ Autonomous AI-powered feature development pipeline CLI
 ### From npm (when published)
 
 ```bash
-npm install -g ai-feature-pipeline
+npm install -g codemachine-pipeline
 ```
 
 ### From source
@@ -80,13 +80,13 @@ Build and run the CLI in a containerized environment for reproducible execution:
 
 ```bash
 # Build the Docker image (from project root)
-docker build -f docker/Dockerfile -t ai-feature-pipeline .
+docker build -f docker/Dockerfile -t codemachine-pipeline .
 
 # Run with help
-docker run --rm ai-feature-pipeline --help
+docker run --rm codemachine-pipeline --help
 
 # Run commands with mounted repository context
-docker run --rm -v $(pwd):/workspace -w /workspace ai-feature-pipeline init
+docker run --rm -v $(pwd):/workspace -w /workspace codemachine-pipeline init
 
 # Set environment variables for integrations
 docker run --rm \
@@ -94,7 +94,7 @@ docker run --rm \
   -e LINEAR_API_KEY=lin_xxx \
   -e AGENT_ENDPOINT=https://agent.example.com \
   -v $(pwd):/workspace -w /workspace \
-  ai-feature-pipeline start --prompt "Add feature"
+  codemachine-pipeline start --prompt "Add feature"
 ```
 
 The Dockerfile uses a multi-stage build with Node v24 Alpine for deterministic, reproducible builds.
@@ -127,10 +127,10 @@ git status
 
 ```bash
 cd your-project
-ai-feature init
+codepipe init
 ```
 
-This creates a `.ai-feature-pipeline/` directory with schema-validated configuration files.
+This creates a `.codepipe/` directory with schema-validated configuration files.
 
 ### 2. Configure integrations
 
@@ -142,7 +142,7 @@ export LINEAR_API_KEY=lin_api_your_key_here
 export AGENT_ENDPOINT=https://your-agent-service.com/v1
 ```
 
-Edit `.ai-feature-pipeline/config.json` to enable integrations:
+Edit `.codepipe/config.json` to enable integrations:
 
 ```json
 {
@@ -158,25 +158,25 @@ Edit `.ai-feature-pipeline/config.json` to enable integrations:
 ### 3. Validate configuration
 
 ```bash
-ai-feature init --validate-only
+codepipe init --validate-only
 ```
 
 ### 4. Start a feature
 
 ```bash
 # From a prompt
-ai-feature start --prompt "Add user authentication with OAuth"
+codepipe start --prompt "Add user authentication with OAuth"
 
 # From a Linear issue
-ai-feature start --linear ISSUE-123
+codepipe start --linear ISSUE-123
 
 # From a specification file
-ai-feature start --spec ./specs/new-feature.md
+codepipe start --spec ./specs/new-feature.md
 ```
 
 ## Available Commands
 
-### `ai-feature init`
+### `codepipe init`
 
 Initialize the pipeline in the current git repository with schema-validated configuration.
 
@@ -189,13 +189,13 @@ Initialize the pipeline in the current git repository with schema-validated conf
 
 ```bash
 # Initialize new configuration
-ai-feature init
+codepipe init
 
 # Force re-initialization
-ai-feature init --force
+codepipe init --force
 
 # Validate existing configuration
-ai-feature init --validate-only
+codepipe init --validate-only
 ```
 
 **Exit Codes:**
@@ -204,7 +204,7 @@ ai-feature init --validate-only
 - `1`: General error (not a git repository, etc.)
 - `10`: Configuration validation error
 
-### `ai-feature start`
+### `codepipe start`
 
 Start a new feature development pipeline from a prompt, Linear issue, or specification file.
 
@@ -220,16 +220,16 @@ Start a new feature development pipeline from a prompt, Linear issue, or specifi
 
 ```bash
 # Start from a text prompt
-ai-feature start --prompt "Add user authentication with OAuth"
+codepipe start --prompt "Add user authentication with OAuth"
 
 # Import from Linear issue
-ai-feature start --linear ISSUE-123
+codepipe start --linear ISSUE-123
 
 # Use existing specification file
-ai-feature start --spec ./specs/new-feature.md
+codepipe start --spec ./specs/new-feature.md
 
 # JSON output for automation
-ai-feature start --prompt "Add feature" --json
+codepipe start --prompt "Add feature" --json
 ```
 
 **Exit Codes:**
@@ -240,11 +240,11 @@ ai-feature start --prompt "Add feature" --json
 - `20`: External API error
 - `30`: Human action required
 
-**Behavior:** `ai-feature start` runs context aggregation, queues research tasks, and generates `artifacts/prd.md`. When PRD approval is required by RepoConfig, the command exits with code `30` after writing the PRD so you can review it and run `ai-feature approve prd` before the pipeline continues.
+**Behavior:** `codepipe start` runs context aggregation, queues research tasks, and generates `artifacts/prd.md`. When PRD approval is required by RepoConfig, the command exits with code `30` after writing the PRD so you can review it and run `codepipe approve prd` before the pipeline continues.
 
 ---
 
-### `ai-feature status`
+### `codepipe status`
 
 Show the current state of a feature development pipeline.
 
@@ -259,16 +259,16 @@ Show the current state of a feature development pipeline.
 
 ```bash
 # Show status of current feature
-ai-feature status
+codepipe status
 
 # Check specific feature by ID
-ai-feature status --feature feature-auth-123
+codepipe status --feature feature-auth-123
 
 # JSON output for automation
-ai-feature status --json
+codepipe status --json
 
 # Verbose output with detailed logs
-ai-feature status --verbose --show-costs
+codepipe status --verbose --show-costs
 ```
 
 **Exit Codes:**
@@ -277,7 +277,7 @@ ai-feature status --verbose --show-costs
 - `1`: General error
 - `10`: Validation error (feature not found)
 
-### `ai-feature doctor`
+### `codepipe doctor`
 
 Run environment diagnostics and readiness checks.
 
@@ -290,13 +290,13 @@ Run environment diagnostics and readiness checks.
 
 ```bash
 # Run environment checks
-ai-feature doctor
+codepipe doctor
 
 # JSON output for automation
-ai-feature doctor --json
+codepipe doctor --json
 
 # Verbose diagnostics
-ai-feature doctor --verbose
+codepipe doctor --verbose
 ```
 
 **Exit Codes:**
@@ -319,7 +319,7 @@ ai-feature doctor --verbose
 
 ---
 
-### `ai-feature approve`
+### `codepipe approve`
 
 Grant or deny approval for feature pipeline gates (PRD, Spec, Plan, Code, PR, Deploy).
 
@@ -338,13 +338,13 @@ Grant or deny approval for feature pipeline gates (PRD, Spec, Plan, Code, PR, De
 
 ```bash
 # Approve PRD gate
-ai-feature approve prd --approve --signer "user@example.com"
+codepipe approve prd --approve --signer "user@example.com"
 
 # Deny spec gate with rationale
-ai-feature approve spec --deny --signer "reviewer@example.com" --comment "Missing acceptance criteria"
+codepipe approve spec --deny --signer "reviewer@example.com" --comment "Missing acceptance criteria"
 
 # Approve specific feature
-ai-feature approve prd --approve --signer "user@example.com" --feature FEAT-abc123
+codepipe approve prd --approve --signer "user@example.com" --feature FEAT-abc123
 ```
 
 **Exit Codes:**
@@ -355,7 +355,7 @@ ai-feature approve prd --approve --signer "user@example.com" --feature FEAT-abc1
 
 ---
 
-### `ai-feature plan`
+### `codepipe plan`
 
 Display the execution plan DAG, task summaries, and dependency graph.
 
@@ -370,18 +370,18 @@ Display the execution plan DAG, task summaries, and dependency graph.
 
 ```bash
 # Show plan for current feature
-ai-feature plan
+codepipe plan
 
 # Check specific feature
-ai-feature plan --feature feature-auth-123
+codepipe plan --feature feature-auth-123
 
 # Verbose output with diff
-ai-feature plan --verbose --show-diff
+codepipe plan --verbose --show-diff
 ```
 
 ---
 
-### `ai-feature resume`
+### `codepipe resume`
 
 Resume a failed or paused feature pipeline execution with safety checks.
 
@@ -399,16 +399,16 @@ Resume a failed or paused feature pipeline execution with safety checks.
 
 ```bash
 # Resume current feature
-ai-feature resume
+codepipe resume
 
 # Dry-run analysis
-ai-feature resume --dry-run
+codepipe resume --dry-run
 
 # Force resume past blockers
-ai-feature resume --force
+codepipe resume --force
 
 # Resume specific feature with verbose output
-ai-feature resume --feature feature-auth-123 --verbose
+codepipe resume --feature feature-auth-123 --verbose
 ```
 
 **Exit Codes:**
@@ -420,7 +420,7 @@ ai-feature resume --feature feature-auth-123 --verbose
 
 ---
 
-### `ai-feature validate`
+### `codepipe validate`
 
 Execute validation commands (lint, test, typecheck, build) with auto-fix retry loops.
 
@@ -439,16 +439,16 @@ Execute validation commands (lint, test, typecheck, build) with auto-fix retry l
 
 ```bash
 # Run all validations
-ai-feature validate
+codepipe validate
 
 # Initialize validation registry
-ai-feature validate --init
+codepipe validate --init
 
 # Run only lint with auto-fix disabled
-ai-feature validate --command lint --no-auto-fix
+codepipe validate --command lint --no-auto-fix
 
 # Validate specific feature
-ai-feature validate --feature feature-auth-123
+codepipe validate --feature feature-auth-123
 ```
 
 **Exit Codes:**
@@ -460,7 +460,7 @@ ai-feature validate --feature feature-auth-123
 
 ---
 
-### `ai-feature rate-limits`
+### `codepipe rate-limits`
 
 Display rate limit status and telemetry for API providers.
 
@@ -476,16 +476,16 @@ Display rate limit status and telemetry for API providers.
 
 ```bash
 # Show rate limit status
-ai-feature rate-limits
+codepipe rate-limits
 
 # Filter to GitHub only
-ai-feature rate-limits --provider github
+codepipe rate-limits --provider github
 
 # Clear cooldown for a provider
-ai-feature rate-limits --clear github --feature feature-auth-123
+codepipe rate-limits --clear github --feature feature-auth-123
 
 # JSON output for monitoring
-ai-feature rate-limits --json
+codepipe rate-limits --json
 ```
 
 ---
@@ -494,17 +494,17 @@ ai-feature rate-limits --json
 
 Manage pull requests for completed features:
 
-- `ai-feature pr create`: Create a pull request for a completed feature
-- `ai-feature pr status`: Show PR status and check results
-- `ai-feature pr reviewers`: Manage PR reviewer assignments
-- `ai-feature pr disable-auto-merge`: Disable auto-merge on a pull request
+- `codepipe pr create`: Create a pull request for a completed feature
+- `codepipe pr status`: Show PR status and check results
+- `codepipe pr reviewers`: Manage PR reviewer assignments
+- `codepipe pr disable-auto-merge`: Disable auto-merge on a pull request
 
 ### Planned Commands
 
 The following commands are planned for future releases:
 
-- `ai-feature deploy`: Trigger deployment for a merged feature
-- `ai-feature export`: Export feature artifacts in JSON or Markdown format
+- `codepipe deploy`: Trigger deployment for a merged feature
+- `codepipe export`: Export feature artifacts in JSON or Markdown format
 
 ## Development
 
@@ -614,13 +614,13 @@ All commands support `--json` flag for machine-readable output, making them suit
 
 ```bash
 # Initialize with JSON output
-ai-feature init --validate-only --json
+codepipe init --validate-only --json
 
 # Start feature with JSON response
-ai-feature start --prompt "Add feature" --json
+codepipe start --prompt "Add feature" --json
 
 # Query status programmatically
-ai-feature status --json | jq '.current_state'
+codepipe status --json | jq '.current_state'
 ```
 
 JSON output follows a consistent schema with `status`, `message`, and command-specific fields for reliable parsing in automated workflows.
@@ -714,7 +714,7 @@ The pipeline operates on a state machine model with the following phases:
 5. **Review**: PR creation and review request
 6. **Deploy**: Merge and deployment automation
 
-Each phase is idempotent and resumable. Artifacts are stored in `.ai-feature-pipeline/runs/<feature-id>/`.
+Each phase is idempotent and resumable. Artifacts are stored in `.codepipe/runs/<feature-id>/`.
 
 ## Execution Engine
 
@@ -739,7 +739,7 @@ The pipeline supports multiple AI execution engines for task processing via the 
    npm install -g codemachine-cli
    ```
 
-2. **Configure execution settings** in `.ai-feature-pipeline/config.json`:
+2. **Configure execution settings** in `.codepipe/config.json`:
 
    ```json
    {
@@ -754,7 +754,7 @@ The pipeline supports multiple AI execution engines for task processing via the 
 
 3. **Verify installation**:
    ```bash
-   ai-feature doctor
+   codepipe doctor
    ```
    The doctor command will show CodeMachine CLI status (warning if not installed, pass if available).
 
@@ -764,17 +764,17 @@ Engines can be specified per-task or use the default:
 
 ```bash
 # Use default engine from config
-ai-feature start --prompt "Add feature"
+codepipe start --prompt "Add feature"
 
 # Specify engine explicitly (when supported)
-ai-feature start --prompt "Add feature" --engine codex
+codepipe start --prompt "Add feature" --engine codex
 ```
 
 For detailed configuration options, see [docs/ops/codemachine_adapter_guide.md](docs/ops/codemachine_adapter_guide.md).
 
 ## Configuration
 
-Configuration is stored in `.ai-feature-pipeline/config.json` and validated against a JSON Schema.
+Configuration is stored in `.codepipe/config.json` and validated against a JSON Schema.
 
 ### Schema Sections
 
@@ -850,14 +850,14 @@ The CLI validates that these are set when integrations are enabled.
 Environment variables can override config values using the pattern:
 
 ```
-AI_FEATURE_<SECTION>_<FIELD>
+CODEPIPE_<SECTION>_<FIELD>
 ```
 
 Examples:
 
 ```bash
-export AI_FEATURE_GITHUB_TOKEN=ghp_override
-export AI_FEATURE_RUNTIME_AGENT_ENDPOINT=https://override.com
+export CODEPIPE_GITHUB_TOKEN=ghp_override
+export CODEPIPE_RUNTIME_AGENT_ENDPOINT=https://override.com
 ```
 
 ### Schema Reference
@@ -878,9 +878,10 @@ Contributions are welcome! Please open an issue or submit a pull request.
 
 For issues and questions:
 
-- GitHub Issues: https://github.com/codemachine/ai-feature-pipeline/issues
+<!-- TODO: verify this URL — clone URL on line 70 uses KingInYellows/codemachine-pipeline -->
+- GitHub Issues: https://github.com/codemachine/codemachine-pipeline/issues
 - Documentation: See `specification.md` for detailed requirements
 
 ---
 
-**Note**: This project implements the core pipeline commands (`init`, `start`, `status`, `doctor`, `approve`, `plan`, `resume`, `validate`, `rate-limits`). Additional commands for PR creation and deployment are under development. See `specification.md` for the complete roadmap and [docs/README.md](docs/README.md) for detailed documentation.
+**Note**: This project implements the core pipeline commands (`init`, `start`, `status`, `doctor`, `approve`, `plan`, `resume`, `validate`, `rate-limits`, `pr create`, `pr status`, `pr reviewers`, `pr disable-auto-merge`). The `deploy` and `export` commands are planned for future releases. See `specification.md` for the complete roadmap and [docs/README.md](docs/README.md) for detailed documentation.

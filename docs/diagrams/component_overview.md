@@ -78,7 +78,7 @@ The diagram follows the **Modular Layered Orchestrator with Pluggable Adapters**
 
 **Responsibilities:**
 - Detect git repository root
-- Discover or scaffold `.ai-feature-pipeline/config.json`
+- Discover or scaffold `.codepipe/config.json`
 - Validate configuration schema using Zod
 - Store integration settings (GitHub, Linear, agent providers)
 - Perform sanity checks (repo accessibility, token validity, Node version)
@@ -562,7 +562,7 @@ The diagram follows the **Modular Layered Orchestrator with Pluggable Adapters**
 - File System (writes export bundles)
 
 **Downstream Dependencies:**
-- `ai-feature export` command
+- `codepipe export` command
 
 **Related ADRs:**
 - ADR-2: State Persistence (export schema)
@@ -577,7 +577,7 @@ The diagram follows the **Modular Layered Orchestrator with Pluggable Adapters**
 
 **Responsibilities:**
 - Physical storage of all artifacts
-- Maintain `.ai-feature-pipeline/` directory structure
+- Maintain `.codepipe/` directory structure
 - Store run directories under `runs/<feature_id>/`
 - Persist `config.json` at repository root
 - Provide logs, artifacts, telemetry subdirectories
@@ -947,7 +947,7 @@ When modifying the AI Feature Pipeline architecture, use this checklist to keep 
 - `run_directory_schema.md` - Run directory specification
 
 ### Schemas
-- RepoConfig schema (`.ai-feature-pipeline/config.json`)
+- RepoConfig schema (`.codepipe/config.json`)
 - Run manifest schema (`manifest.json`)
 - Rate limit ledger schema (`rate_limits.json`)
 

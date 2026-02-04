@@ -115,8 +115,8 @@ For each risk, propose mitigation strategies. -->
 2. Verify that goals are achievable and acceptance criteria are measurable
 3. Check that all open questions are captured (these will become ResearchTasks)
 4. Validate that risks are identified and mitigations are reasonable
-5. To request changes, use the CLI command: `ai-feature prd edit --request "your feedback"`
-6. To approve, use the CLI command: `ai-feature approve prd`
+5. To request changes, use the CLI command: `codepipe prd edit --request "your feedback"`
+6. To approve, use the CLI command: `codepipe approve prd`
 
 **Template Version:** 1.0.0
 **Last Updated:** 2024-01-15
