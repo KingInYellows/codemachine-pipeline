@@ -27,7 +27,7 @@ The summarization system enables the AI Feature Pipeline to work with repositori
    - Budget warnings and enforcement
    - Persistence to telemetry files
 
-3. **Cache Storage** (`.ai-feature-pipeline/<feature_id>/context/docs/`)
+3. **Cache Storage** (`.codepipe/<feature_id>/context/docs/`)
    - Chunk metadata stored as JSON files
    - Keyed by content hash for deduplication
    - Includes provenance and redaction flags
@@ -100,7 +100,7 @@ This ensures:
 
 Chunk metadata files are stored at:
 ```
-.ai-feature-pipeline/<feature_id>/context/docs/<chunkId>.json
+.codepipe/<feature_id>/context/docs/<chunkId>.json
 ```
 
 ### Cache Structure
@@ -311,13 +311,13 @@ Re-summarize specific files:
 
 ```bash
 # Re-summarize all TypeScript files
-ai-feature context summarize --path "src/**/*.ts"
+codepipe context summarize --path "src/**/*.ts"
 
 # Force re-summarization (ignore cache)
-ai-feature context summarize --path "src/workflows/*.ts" --force
+codepipe context summarize --path "src/workflows/*.ts" --force
 
 # Re-summarize single file
-ai-feature context summarize --path "README.md" --force
+codepipe context summarize --path "README.md" --force
 ```
 
 Without `--path`, the command refreshes the entire context manifest, reusing cached summaries unless `--force` is specified.
@@ -418,7 +418,7 @@ Passed to `summarizeDocument()`:
 ```typescript
 const config: SummarizerConfig = {
   repoRoot: "/path/to/repo",
-  runDir: ".ai-feature-pipeline/runs/01JFABCD...",
+  runDir: ".codepipe/runs/01JFABCD...",
   featureId: "01JFABCD...",
   maxTokensPerChunk: 4000,
   chunkOverlapPercent: 10,
@@ -575,7 +575,7 @@ Generate hierarchical summaries:
 Estimate costs before running:
 
 ```bash
-ai-feature context estimate --dry-run
+codepipe context estimate --dry-run
 # Estimated cost: $0.15 (5000 tokens, 12 files)
 ```
 

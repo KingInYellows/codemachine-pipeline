@@ -21,8 +21,8 @@
 *   **Key Assumptions:**
     - Execution environment supplies maintained Node.js LTS (v24 preferred, v20 acceptable), git CLI, npm/pnpm, local filesystem write access, and outbound HTTPS connectivity.
     - Operators hold least-privilege GitHub PATs or GitHub App credentials plus Linear API keys and can rotate them externally; CLI validates scopes before each workflow.
-    - Repositories expose baseline documentation (README, docs, ADRs) and allow creation of `.ai-feature-pipeline/` directories without conflicting repo policies.
-    - Homelab runners rely on CLI invocations (manual shells, cron, CI) rather than server daemons; watchers such as `ai-feature observe` must be schedulable and idempotent.
+    - Repositories expose baseline documentation (README, docs, ADRs) and allow creation of `.codepipe/` directories without conflicting repo policies.
+    - Homelab runners rely on CLI invocations (manual shells, cron, CI) rather than server daemons; watchers such as `codepipe observe` must be schedulable and idempotent.
     - Agents (OpenAI-compatible endpoints, local LLMs, CodeMachine, etc.) are reachable via manifest-defined adapters, and operators can provide manifests describing capabilities/costs.
     - External downstream consumers (Graphite, CodeMachine, governance bots) ingest export bundles rather than requiring direct DB/API access to the CLI runtime artifacts.
 
@@ -55,7 +55,7 @@
 ## 2.1. Key Architectural Artifacts Planned
 
 *   Component Diagram (PlantUML) – Visualizes CLI layers, adapters, persistence, and observability touchpoints so agents understand module boundaries (Created in `I1.T5` and stored at `docs/diagrams/component_overview.puml`).
-*   Run Directory Schema & State Machine Doc (Markdown + Mermaid) – Documents directory layout, file locks, and resumable transitions for `.ai-feature-pipeline/<feature_id>/` (Created in `I1.T3`).
+*   Run Directory Schema & State Machine Doc (Markdown + Mermaid) – Documents directory layout, file locks, and resumable transitions for `.codepipe/<feature_id>/` (Created in `I1.T3`).
 *   Data Model ERD (Mermaid) – Describes Feature/RepoConfig/Task/Artifact entities with keys, relationships, and schema versions (Created in `I1.T7`).
 *   Context & Research Sequence Diagram (Mermaid) – Shows context harvesting, caching, and ResearchTask orchestration (Created in `I2.T3`).
 *   PRD Template & Approval Playbook (Markdown) – Machine-actionable template for PRD sections plus gate instructions (Created in `I2.T4`).
@@ -63,7 +63,7 @@
 *   Execution Engine Flow Diagram (PlantUML) – Depicts queue orchestration, validation loops, auto-fix retries, and git patch pipeline (Created in `I3.T1`).
 *   Agent Adapter Contract + Capability Manifest Schema (JSON Schema) – Formalizes manifest fields and adapter interfaces (Created in `I3.T4`).
 *   GitHub Adapter & PR Automation Sequence Diagram (Mermaid) – Details PR creation, reviewer requests, branch protection analysis, and merge readiness (Created in `I4.T4`).
-*   OpenAPI v3 `ai-feature` Surface (YAML) – Documents future HTTP/CLI parity endpoints (Created in `I4.T1` under `api/ai_feature.yaml`).
+*   OpenAPI v3 `codepipe` Surface (YAML) – Documents future HTTP/CLI parity endpoints (Created in `I4.T1` under `api/codepipe.yaml`).
 *   Deployment & Resume State Diagram (PlantUML) – Captures merge gating, status-check polling, resume re-entry points (Created in `I5.T1`).
 *   Export Bundle Manifest Schema (JSON Schema) & Playbook (Markdown) – Defines artifact bundle contents, hashing, and compliance story (Created in `I5.T2`).
 *   Observability & Operations Runbook (Markdown) – Summarizes logging, metrics, cleanup, and `observe` command usage (Created in `I5.T3`).
@@ -71,10 +71,10 @@
 <!-- anchor: directory-structure -->
 ## 3. Directory Structure
 
-*   **Root Directory:** `ai-feature-pipeline/`
+*   **Root Directory:** `codemachine-pipeline/`
 *   **Structure Definition:**
     ~~~
-    ai-feature-pipeline/
+    codemachine-pipeline/
     ├── package.json
     ├── tsconfig.json
     ├── src/
@@ -96,7 +96,7 @@
     │   ├── ui/                      # CLI/UX guidelines, design tokens
     │   └── ops/                     # Runbooks for commands, rate-limit playbooks, cleanup instructions
     ├── api/
-    │   └── ai_feature.yaml          # OpenAPI contracts for remote control / CLI parity surfaces
+    │   └── codepipe.yaml          # OpenAPI contracts for remote control / CLI parity surfaces
     ├── plan/
     │   ├── milestone_notes.md       # Iteration retrospectives and dependency notes
     │   └── readiness_checklist.md   # Gate tracking per iteration
@@ -108,7 +108,7 @@
     │   └── tooling/                 # release automation, docs sync, PlantUML exporters
     ├── docker/
     │   └── Dockerfile               # Node v24 base, deterministic builds
-    ├── .ai-feature-pipeline/        # Sample config, agents manifests, templates for bootstrap
+    ├── .codepipe/        # Sample config, agents manifests, templates for bootstrap
     └── README.md
     ~~~
 *   The structure co-locates architecture artifacts under `docs/diagrams`, API contracts under `api/`, and CLI/adapter code under `src/` so agents can map plan directives to concrete locations. Dedicated folders for ops, ui, and plan artifacts ensure documentation, diagrams, and governance files exist before code is generated.

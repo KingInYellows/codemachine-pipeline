@@ -27,7 +27,7 @@ The CLI surface provides deterministic, automation-friendly outputs for observin
 
 <!-- anchor: cli-status-requirements -->
 
-## Command: `ai-feature status`
+## Command: `codepipe status`
 
 ### Purpose
 
@@ -250,7 +250,7 @@ Research Tasks:
 
 <!-- anchor: cli-resume-requirements -->
 
-## Command: `ai-feature resume`
+## Command: `codepipe resume`
 
 ### Purpose
 
@@ -326,7 +326,7 @@ Rate Limit Warnings:
   github:
     ⚠ In cooldown until 2025-12-17T12:30:00Z
     ⚠ Manual acknowledgement required
-       Use: ai-feature rate-limits clear github
+       Use: codepipe rate-limits clear github
 ```
 
 **Integration Blockers:**
@@ -361,7 +361,7 @@ Integration Blockers:
 
 **Check GitHub rate limit before triggering workflow:**
 ```bash
-STATUS=$(ai-feature status --feature "$FEATURE_ID" --json)
+STATUS=$(codepipe status --feature "$FEATURE_ID" --json)
 GITHUB_REMAINING=$(echo "$STATUS" | jq -r '.integrations.github.rate_limit.remaining // 5000')
 
 if [ "$GITHUB_REMAINING" -lt 100 ]; then
@@ -372,7 +372,7 @@ fi
 
 **Verify resume eligibility with rate-limit checks:**
 ```bash
-RESUME=$(ai-feature resume --feature "$FEATURE_ID" --dry-run --json)
+RESUME=$(codepipe resume --feature "$FEATURE_ID" --dry-run --json)
 CAN_RESUME=$(echo "$RESUME" | jq -r '.can_resume')
 HAS_RATE_WARNINGS=$(echo "$RESUME" | jq -r '.rate_limit_warnings | length > 0')
 
@@ -384,7 +384,7 @@ fi
 
 **Parse research task warnings:**
 ```bash
-STATUS=$(ai-feature status --feature "$FEATURE_ID" --json)
+STATUS=$(codepipe status --feature "$FEATURE_ID" --json)
 RESEARCH_WARNINGS=$(echo "$STATUS" | jq -r '.research.warnings | length')
 
 if [ "$RESEARCH_WARNINGS" -gt 0 ]; then

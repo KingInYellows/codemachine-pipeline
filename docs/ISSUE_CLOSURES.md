@@ -85,8 +85,8 @@ RepoConfig execution settings have been fully implemented with comprehensive Zod
    - Default: `^(PATH|HOME|USER|SHELL)$`
 
 8. **Environment Variable Overrides**
-   - All settings support `AI_FEATURE_*` environment variable overrides
-   - Example: `AI_FEATURE_MAX_PARALLEL_TASKS=5`
+   - All settings support `CODEPIPE_*` environment variable overrides
+   - Example: `CODEPIPE_MAX_PARALLEL_TASKS=5`
 
 ### Closing Comment
 ```markdown
@@ -99,7 +99,7 @@ RepoConfig execution settings have been fully implemented with comprehensive val
 **Features**:
 - ✅ Complete ExecutionConfigSchema with 11 settings
 - ✅ Zod validation with TypeScript type inference
-- ✅ Environment variable overrides (AI_FEATURE_*)
+- ✅ Environment variable overrides (CODEPIPE_*)
 - ✅ Full integration with CLIExecutionEngine
 - ✅ Test coverage in existing test suite
 

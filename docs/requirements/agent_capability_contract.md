@@ -49,7 +49,7 @@ ExecutionTask → AgentAdapter → ManifestLoader → Provider Manifests
 - Records session telemetry for auditability
 
 **ManifestLoader**
-- Loads and validates provider manifests from `.ai-feature-pipeline/agents/*.json`
+- Loads and validates provider manifests from `.codepipe/agents/*.json`
 - Caches manifests with SHA-256 hash-based change detection
 - Filters providers by capability requirements
 - Ranks candidates by cost-effectiveness
@@ -480,7 +480,7 @@ Per acceptance criteria, manifests MUST include:
 
 1. **Create Manifest File**:
    ```bash
-   touch .ai-feature-pipeline/agents/my-provider.json
+   touch .codepipe/agents/my-provider.json
    ```
 
 2. **Define Manifest**:
@@ -529,13 +529,13 @@ Per acceptance criteria, manifests MUST include:
 3. **Validate Schema**:
    ```bash
    npx ajv validate -s docs/requirements/agent_manifest_schema.json \
-                     -d .ai-feature-pipeline/agents/my-provider.json
+                     -d .codepipe/agents/my-provider.json
    ```
 
 4. **Test Integration**:
    ```typescript
    const loader = createManifestLoader(logger);
-   await loader.loadManifest('.ai-feature-pipeline/agents/my-provider.json');
+   await loader.loadManifest('.codepipe/agents/my-provider.json');
 
    const manifest = loader.getManifest('my-provider');
    console.log(manifest);
@@ -553,7 +553,7 @@ const costTracker = createCostTracker(logger);
 const manifestLoader = createManifestLoader(logger);
 manifestLoader.setCostTracker(costTracker);
 
-await manifestLoader.loadManifestsFromDirectory('.ai-feature-pipeline/agents');
+await manifestLoader.loadManifestsFromDirectory('.codepipe/agents');
 
 const adapter = createAgentAdapter({
   manifestLoader,

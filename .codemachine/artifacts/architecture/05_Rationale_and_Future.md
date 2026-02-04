@@ -14,9 +14,9 @@ The most critical architectural decisions anchor the solution to deterministic w
 
 <!-- anchor: 4-1-2-run-directories -->
 #### 4.1.2 Deterministic Run Directories
-- Decision: Persist every artifact within `.ai-feature-pipeline/<feature_id>/` including PRD, spec, plan, logs, metrics, traces, approvals, and exports.
+- Decision: Persist every artifact within `.codepipe/<feature_id>/` including PRD, spec, plan, logs, metrics, traces, approvals, and exports.
 - Rationale: Enables resumability, auditability, and portable debugging across devices or homelab runners.
-- Trade-off: Requires disciplined cleanup policies to avoid disk bloat; mitigated via `ai-feature cleanup` and export bundles.
+- Trade-off: Requires disciplined cleanup policies to avoid disk bloat; mitigated via `codepipe cleanup` and export bundles.
 
 <!-- anchor: 4-1-3-adapter-interfaces -->
 #### 4.1.3 Adapter Interfaces for Integrations
@@ -67,7 +67,7 @@ The most critical architectural decisions anchor the solution to deterministic w
 - Trade-off: Requires release governance; versioned docs mitigate confusion.
 
 <!-- anchor: 4-1-11-observe-command -->
-#### 4.1.11 Optional `ai-feature observe` Health Command
+#### 4.1.11 Optional `codepipe observe` Health Command
 - Decision: Provide scheduled command for monitoring run directories, KPIs, and anomalies without always-on services.
 - Rationale: Maintains local-first philosophy while delivering health insights.
 - Trade-off: Requires cron/scheduler integration; acceptable given homelab constraints.
@@ -148,7 +148,7 @@ The architecture anticipates several risks inherent to AI-assisted automation, a
 <!-- anchor: 4-3-7-risk-config-drift -->
 #### 4.3.7 Risk: Config Drift Across Repositories
 - Impact: CLI misbehavior or invalid assumptions.
-- Mitigation: `schema_version` enforcement, `config_history.json`, `ai-feature init` sanity checks, and `ai-feature doctor` diagnostics.
+- Mitigation: `schema_version` enforcement, `config_history.json`, `codepipe init` sanity checks, and `codepipe doctor` diagnostics.
 
 <!-- anchor: 4-3-8-risk-observability-gap -->
 #### 4.3.8 Risk: Observability Gaps
@@ -250,7 +250,7 @@ Definitions ensure shared understanding across human operators, AI agents, and a
 <!-- anchor: 6-0-7-linear-snapshot -->
 - **Linear Snapshot:** Cached representation of Linear issue payload stored in run directory for offline use and audit.
 <!-- anchor: 6-0-8-observe-report -->
-- **Observe Report:** Output of `ai-feature observe`, summarizing run health, KPIs, and anomalies for human review.
+- **Observe Report:** Output of `codepipe observe`, summarizing run health, KPIs, and anomalies for human review.
 <!-- anchor: 6-0-9-plan-json -->
 - **Plan.json:** Artifact describing ExecutionTasks, dependencies, and metadata powering the Execution Engine.
 <!-- anchor: 6-0-10-prd -->

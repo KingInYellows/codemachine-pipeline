@@ -75,7 +75,7 @@ Add CodeMachine settings to your `config.json`:
 The `doctor` command validates CodeMachine CLI availability:
 
 ```bash
-ai-feature doctor
+codepipe doctor
 ```
 
 Output includes:
@@ -231,7 +231,7 @@ After task completion, artifacts are captured from the workspace:
 Artifacts are stored in the run directory:
 
 ```
-.ai-feature-pipeline/runs/<feature_id>/artifacts/<task_id>/
+.codepipe/runs/<feature_id>/artifacts/<task_id>/
 ├── summary.md
 ├── changes.patch
 └── test-results.json
@@ -242,14 +242,14 @@ Artifacts are stored in the run directory:
 ### Task Stuck in Running State
 
 1. Check CLI process: `ps aux | grep codemachine`
-2. Review logs: `.ai-feature-pipeline/runs/<feature>/logs/`
+2. Review logs: `.codepipe/runs/<feature>/logs/`
 3. Kill orphaned process if needed
-4. Resume with: `ai-feature resume --feature <id>`
+4. Resume with: `codepipe resume --feature <id>`
 
 ### High Failure Rate
 
-1. Run diagnostics: `ai-feature doctor`
-2. Check rate limits: `ai-feature rate-limits`
+1. Run diagnostics: `codepipe doctor`
+2. Check rate limits: `codepipe rate-limits`
 3. Review recent failures in telemetry
 4. Consider reducing concurrency
 

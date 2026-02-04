@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft-07/schema#",
-  "$comment": "Run manifest template - describes the structure of .ai-feature-pipeline/runs/<feature_id>/manifest.json",
+  "$comment": "Run manifest template - describes the structure of .codepipe/runs/<feature_id>/manifest.json",
   "schema_version": "1.0.0",
   "feature_id": "01JFEXAMPLE123456789ABCDEF",
   "title": "Example feature implementation",

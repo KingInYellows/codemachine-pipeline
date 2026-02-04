@@ -45,7 +45,7 @@ The Execution Engine telemetry enables:
 
 ## Metrics Reference
 
-All metrics follow the namespace prefix `ai_feature_pipeline_`.
+All metrics follow the namespace prefix `codemachine_pipeline_`.
 
 ### Task Lifecycle Metrics
 
@@ -62,9 +62,9 @@ All metrics follow the namespace prefix `ai_feature_pipeline_`.
 ```promql
 # Task success rate by type
 sum by (task_type) (
-  ai_feature_pipeline_execution_tasks_total{status="completed"}
+  codemachine_pipeline_execution_tasks_total{status="completed"}
 ) / sum by (task_type) (
-  ai_feature_pipeline_execution_tasks_total{status=~"completed|failed"}
+  codemachine_pipeline_execution_tasks_total{status=~"completed|failed"}
 )
 ```
 
@@ -86,7 +86,7 @@ sum by (task_type) (
 # P95 validation duration
 histogram_quantile(0.95,
   sum by (le) (
-    rate(ai_feature_pipeline_validation_duration_seconds_bucket[5m])
+    rate(codemachine_pipeline_validation_duration_seconds_bucket[5m])
   )
 )
 ```
@@ -109,8 +109,8 @@ histogram_quantile(0.95,
 **Example Prometheus Query:**
 ```promql
 # Average files changed per diff
-sum(rate(ai_feature_pipeline_diff_files_changed_sum[5m])) /
-sum(rate(ai_feature_pipeline_diff_files_changed_count[5m]))
+sum(rate(codemachine_pipeline_diff_files_changed_sum[5m])) /
+sum(rate(codemachine_pipeline_diff_files_changed_count[5m]))
 ```
 
 ### Queue Depth Metrics
@@ -127,7 +127,7 @@ sum(rate(ai_feature_pipeline_diff_files_changed_count[5m]))
 **Example Prometheus Query:**
 ```promql
 # Queue completion rate
-rate(ai_feature_pipeline_execution_queue_completed[5m])
+rate(codemachine_pipeline_execution_queue_completed[5m])
 ```
 
 ### Agent Cost Metrics
@@ -146,8 +146,8 @@ rate(ai_feature_pipeline_execution_queue_completed[5m])
 **Example Prometheus Query:**
 ```promql
 # Cost per task (approximate)
-ai_feature_pipeline_agent_cost_usd_total /
-ai_feature_pipeline_execution_tasks_total{status="completed"}
+codemachine_pipeline_agent_cost_usd_total /
+codemachine_pipeline_execution_tasks_total{status="completed"}
 ```
 
 ---
@@ -502,27 +502,27 @@ Cost warnings are emitted when budget thresholds are breached:
 
 ```promql
 # Task throughput (tasks/sec)
-rate(ai_feature_pipeline_execution_tasks_total[5m])
+rate(codemachine_pipeline_execution_tasks_total[5m])
 
 # Task failure rate
 sum by (task_type) (
-  rate(ai_feature_pipeline_execution_tasks_total{status="failed"}[5m])
+  rate(codemachine_pipeline_execution_tasks_total{status="failed"}[5m])
 ) / sum by (task_type) (
-  rate(ai_feature_pipeline_execution_tasks_total[5m])
+  rate(codemachine_pipeline_execution_tasks_total[5m])
 )
 
 # P99 task duration
 histogram_quantile(0.99,
   sum by (le, task_type) (
-    rate(ai_feature_pipeline_execution_task_duration_ms_bucket[5m])
+    rate(codemachine_pipeline_execution_task_duration_ms_bucket[5m])
   )
 )
 
 # Current queue backlog
-ai_feature_pipeline_execution_queue_pending
+codemachine_pipeline_execution_queue_pending
 
 # Total cost trend
-delta(ai_feature_pipeline_agent_cost_usd_total[1h])
+delta(codemachine_pipeline_agent_cost_usd_total[1h])
 ```
 
 ---
@@ -602,10 +602,10 @@ const costTracker = createCostTracker(featureId, runDir, logger, metrics, {
 
 ### Status Command
 
-The `ai-feature status` command surfaces execution telemetry:
+The `codepipe status` command surfaces execution telemetry:
 
 ```bash
-ai-feature status --json
+codepipe status --json
 ```
 
 **Output:**
@@ -629,10 +629,10 @@ ai-feature status --json
 
 ### Export Command
 
-The `ai-feature export` command bundles execution telemetry:
+The `codepipe export` command bundles execution telemetry:
 
 ```bash
-ai-feature export --run-id 01JFABCDEFGHIJKLMNOPQRSTUV --output export.tar.gz
+codepipe export --run-id 01JFABCDEFGHIJKLMNOPQRSTUV --output export.tar.gz
 ```
 
 Includes:

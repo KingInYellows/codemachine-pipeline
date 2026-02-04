@@ -2,7 +2,7 @@
 
 > **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
 
-**Goal:** Complete all critical blockers to achieve alpha release readiness for `ai-feature-pipeline` v0.1.0
+**Goal:** Complete all critical blockers to achieve alpha release readiness for `codemachine-pipeline` v0.1.0
 
 **Architecture:** CLI completion + test coverage expansion + readiness verification
 
@@ -32,7 +32,7 @@
 
 ## Phase 1: CLI Command Completion (2-3 weeks)
 
-### Task 1: Implement `ai-feature pr create`
+### Task 1: Implement `codepipe pr create`
 
 **Files:**
 
@@ -105,7 +105,7 @@ git commit -m "feat(cli): add pr create command"
 
 ---
 
-### Task 2: Implement `ai-feature pr status`
+### Task 2: Implement `codepipe pr status`
 
 **Files:**
 
@@ -183,7 +183,7 @@ git commit -m "feat(cli): add pr status command"
 
 ---
 
-### Task 3: Implement `ai-feature research create`
+### Task 3: Implement `codepipe research create`
 
 **Files:**
 
@@ -264,7 +264,7 @@ git commit -m "feat(cli): add research create command"
 
 ---
 
-### Task 4: Implement `ai-feature context summarize`
+### Task 4: Implement `codepipe context summarize`
 
 **Files:**
 
@@ -282,7 +282,7 @@ Key implementation points:
 
 ---
 
-### Task 5: Implement `ai-feature rate-limits`
+### Task 5: Implement `codepipe rate-limits`
 
 **Files:**
 
@@ -420,8 +420,8 @@ git commit -m "docs(readiness): complete verification of 84 readiness checks"
 
 **Step 1: Search for non-existent command references**
 
-Run: `grep -r "ai-feature deploy" docs/ | wc -l`  
-Run: `grep -r "ai-feature export" docs/ | wc -l`
+Run: `grep -r "codepipe deploy" docs/ | wc -l`  
+Run: `grep -r "codepipe export" docs/ | wc -l`
 
 **Step 2: Update documentation**
 

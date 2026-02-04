@@ -48,7 +48,7 @@ The Validation Command Registry provides a deterministic, auditable framework fo
 │                                                                 │
 │  ┌──────────────────┐         ┌──────────────────┐            │
 │  │  CLI Command     │         │ Execution Engine │            │
-│  │  ai-feature      │────────▶│                  │            │
+│  │  codepipe      │────────▶│                  │            │
 │  │  validate        │         │                  │            │
 │  └──────────────────┘         └──────────────────┘            │
 │           │                            │                       │
@@ -238,7 +238,7 @@ Result: SUCCESS after 3 attempts (1 initial + 2 retries)
 Before first use, initialize the validation registry from your RepoConfig:
 
 ```bash
-ai-feature validate --init
+codepipe validate --init
 ```
 
 This reads your repository configuration and creates the validation registry in the current feature's run directory.
@@ -248,7 +248,7 @@ This reads your repository configuration and creates the validation registry in 
 Execute all required validation commands:
 
 ```bash
-ai-feature validate
+codepipe validate
 ```
 
 ### Run Specific Command
@@ -256,10 +256,10 @@ ai-feature validate
 Execute a single validation command:
 
 ```bash
-ai-feature validate --command lint
-ai-feature validate --command test
-ai-feature validate --command typecheck
-ai-feature validate --command build
+codepipe validate --command lint
+codepipe validate --command test
+codepipe validate --command typecheck
+codepipe validate --command build
 ```
 
 ### Disable Auto-Fix
@@ -267,7 +267,7 @@ ai-feature validate --command build
 Run validations without attempting auto-fix:
 
 ```bash
-ai-feature validate --no-auto-fix
+codepipe validate --no-auto-fix
 ```
 
 ### Override Retry Limits
@@ -275,7 +275,7 @@ ai-feature validate --no-auto-fix
 Bypass configured retry limits (useful for manual debugging):
 
 ```bash
-ai-feature validate --max-retries 5
+codepipe validate --max-retries 5
 ```
 
 ### Override Timeout
@@ -283,7 +283,7 @@ ai-feature validate --max-retries 5
 Increase timeout for slow commands:
 
 ```bash
-ai-feature validate --command test --timeout 600  # 600 seconds = 10 minutes
+codepipe validate --command test --timeout 600  # 600 seconds = 10 minutes
 ```
 
 ### Specify Feature
@@ -291,7 +291,7 @@ ai-feature validate --command test --timeout 600  # 600 seconds = 10 minutes
 Validate a specific feature:
 
 ```bash
-ai-feature validate --feature feature-auth-123
+codepipe validate --feature feature-auth-123
 ```
 
 ### JSON Output
@@ -299,7 +299,7 @@ ai-feature validate --feature feature-auth-123
 Get machine-readable output for automation:
 
 ```bash
-ai-feature validate --json
+codepipe validate --json
 ```
 
 **JSON Output Schema:**
@@ -340,7 +340,7 @@ ai-feature validate --json
 Show detailed execution logs:
 
 ```bash
-ai-feature validate --verbose
+codepipe validate --verbose
 ```
 
 ---
@@ -349,7 +349,7 @@ ai-feature validate --verbose
 
 ### RepoConfig Integration
 
-Validation commands are defined in `.ai-feature-pipeline/config.json` under the `validation` key. `ai-feature validate --init` ingests this section and persists the resolved commands (including template context and defaults) into the current run directory.
+Validation commands are defined in `.codepipe/config.json` under the `validation` key. `codepipe validate --init` ingests this section and persists the resolved commands (including template context and defaults) into the current run directory.
 
 ```json
 {
@@ -437,7 +437,7 @@ Define additional tokens in `validation.template_context` or per-command `templa
 Validation data is stored in the feature run directory:
 
 ```
-.ai-feature-pipeline/runs/<feature-id>/
+.codepipe/runs/<feature-id>/
 └── validation/
     ├── commands.json          # Registry of configured commands
     ├── ledger.json            # Complete attempt history
@@ -515,7 +515,7 @@ Validation data is stored in the feature run directory:
 
 ## Exit Codes
 
-The `ai-feature validate` command uses the following exit codes:
+The `codepipe validate` command uses the following exit codes:
 
 | Exit Code | Meaning | Automation Action |
 |-----------|---------|-------------------|
@@ -528,15 +528,15 @@ The `ai-feature validate` command uses the following exit codes:
 
 ```bash
 # Fail pipeline if validations don't pass
-ai-feature validate --json || exit $?
+codepipe validate --json || exit $?
 
 # Conditional logic based on exit code
-ai-feature validate --json
+codepipe validate --json
 EXIT_CODE=$?
 
 if [ $EXIT_CODE -eq 0 ]; then
   echo "✓ Validations passed - creating PR"
-  ai-feature pr
+  codepipe pr
 elif [ $EXIT_CODE -eq 10 ]; then
   echo "⚠ Validations failed - please fix code quality issues"
   exit 1
@@ -555,22 +555,22 @@ fi
 
 ### Skip Specific Commands
 
-Prefer editing `.ai-feature-pipeline/config.json` (`validation.commands`) and rerunning `ai-feature validate --init` to change which commands are required. Each command can set `required: false`, tweak retries, or adjust timeouts.
+Prefer editing `.codepipe/config.json` (`validation.commands`) and rerunning `codepipe validate --init` to change which commands are required. Each command can set `required: false`, tweak retries, or adjust timeouts.
 
 For one-off overrides without touching config history:
 
-1. Temporarily edit `.ai-feature-pipeline/runs/<feature-id>/validation/commands.json` to set `required: false`
+1. Temporarily edit `.codepipe/runs/<feature-id>/validation/commands.json` to set `required: false`
 2. Re-run validation
 
 **Example:**
 
 ```bash
 # Edit registry (advanced users only)
-vi .ai-feature-pipeline/runs/<feature-id>/validation/commands.json
+vi .codepipe/runs/<feature-id>/validation/commands.json
 
 # Set test.required = false
 # Then re-run
-ai-feature validate
+codepipe validate
 ```
 
 ### Force Re-run After Retry Limit
@@ -579,32 +579,32 @@ If retry limits are exceeded and you've fixed the underlying issue:
 
 ```bash
 # Clear ledger (resets attempt counts)
-rm .ai-feature-pipeline/runs/<feature-id>/validation/ledger.json
+rm .codepipe/runs/<feature-id>/validation/ledger.json
 
 # Re-run validation
-ai-feature validate
+codepipe validate
 ```
 
 **OR** use `--max-retries` override:
 
 ```bash
-ai-feature validate --max-retries 10
+codepipe validate --max-retries 10
 ```
 
-For a permanent change, increase `max_retries` inside `.ai-feature-pipeline/config.json` and run `ai-feature validate --init` so the registry picks up the new ceiling.
+For a permanent change, increase `max_retries` inside `.codepipe/config.json` and run `codepipe validate --init` so the registry picks up the new ceiling.
 
 ### Debugging Command Failures
 
 View full stdout/stderr output:
 
 ```bash
-cat .ai-feature-pipeline/runs/<feature-id>/validation/outputs/lint_abc123.stderr.txt
+cat .codepipe/runs/<feature-id>/validation/outputs/lint_abc123.stderr.txt
 ```
 
 View attempt history:
 
 ```bash
-cat .ai-feature-pipeline/runs/<feature-id>/validation/ledger.json | jq '.attempts'
+cat .codepipe/runs/<feature-id>/validation/ledger.json | jq '.attempts'
 ```
 
 ---
@@ -617,7 +617,7 @@ cat .ai-feature-pipeline/runs/<feature-id>/validation/ledger.json | jq '.attempt
 
 **Solution:**
 ```bash
-ai-feature validate --init
+codepipe validate --init
 ```
 
 ---
@@ -628,11 +628,11 @@ ai-feature validate --init
 
 **Solution:**
 1. Review error summary in CLI output
-2. Inspect stderr: `cat .ai-feature-pipeline/runs/<feature-id>/validation/outputs/<command>_*.stderr.txt`
+2. Inspect stderr: `cat .codepipe/runs/<feature-id>/validation/outputs/<command>_*.stderr.txt`
 3. Fix underlying code issue
 4. Clear ledger or use `--max-retries` override:
    ```bash
-   ai-feature validate --max-retries 5
+   codepipe validate --max-retries 5
    ```
 
 ---
@@ -645,7 +645,7 @@ ai-feature validate --init
 1. Check if timeout is too short for your environment
 2. Override timeout:
    ```bash
-   ai-feature validate --command test --timeout 600
+   codepipe validate --command test --timeout 600
    ```
 3. Update command configuration in registry (edit `commands.json`)
 
@@ -686,7 +686,7 @@ Add custom command to RepoConfig `validation.commands` array. For now, manually 
 
 ## Best Practices
 
-1. **Initialize Early**: Run `ai-feature validate --init` when starting a new feature
+1. **Initialize Early**: Run `codepipe validate --init` when starting a new feature
 2. **Use Auto-Fix**: Let the system automatically fix simple issues (e.g., formatting)
 3. **Monitor Retries**: If commands frequently exceed retry limits, adjust `max_retries` or fix flaky tests
 4. **Review Ledgers**: Periodically inspect `ledger.json` to identify patterns in validation failures
@@ -700,7 +700,7 @@ Add custom command to RepoConfig `validation.commands` array. For now, manually 
 
 - **ADR-7**: Validation Auto-Fix Loop (architecture decisions)
 - **FR-14**: Validation Command Registry (functional requirements)
-- **Run Directory Schema**: `.ai-feature-pipeline/runs/` structure
+- **Run Directory Schema**: `.codepipe/runs/` structure
 - **RepoConfig Schema**: Configuration reference
 
 ---

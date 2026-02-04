@@ -100,7 +100,7 @@
       "key": "task-i1-t8",
       "file": "02_Iteration_I1.md",
       "start_anchor": "<!-- anchor: task-i1-t8 -->",
-      "description": "Task I1.T8 implements `ai-feature init/doctor` and readiness checklist."
+      "description": "Task I1.T8 implements `codepipe init/doctor` and readiness checklist."
     },
     {
       "key": "iteration-2-plan",

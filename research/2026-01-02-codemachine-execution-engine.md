@@ -12,7 +12,7 @@ tags: [research, codemachine, execution-engine, cli, agents]
 
 ## Executive Summary
 
-This repository (codemachine-pipeline / ai-feature-pipeline) documents an execution engine, but the core runtime engine is explicitly marked as future work and is not implemented as a dedicated module. CodeMachine is referenced in architecture artifacts as an optional external automation/telemetry consumer and as a provider name in shared HTTP/rate-limit plumbing, not as an integrated execution backend. The separate CodeMachine CLI project (moazbuilds/CodeMachine-CLI) does support Claude Code and Codex CLI engines and documents that capability; this repo does not document native Claude Code/Codex CLI auth integration.
+This repository (codemachine-pipeline / codemachine-pipeline) documents an execution engine, but the core runtime engine is explicitly marked as future work and is not implemented as a dedicated module. CodeMachine is referenced in architecture artifacts as an optional external automation/telemetry consumer and as a provider name in shared HTTP/rate-limit plumbing, not as an integrated execution backend. The separate CodeMachine CLI project (moazbuilds/CodeMachine-CLI) does support Claude Code and Codex CLI engines and documents that capability; this repo does not document native Claude Code/Codex CLI auth integration.
 
 ## Original Query
 

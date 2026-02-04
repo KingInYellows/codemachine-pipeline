@@ -49,9 +49,9 @@ pids/
 oclif.manifest.json
 .oclif/
 
-# AI Feature Pipeline runtime
-.ai-feature-pipeline/runs/
-.ai-feature-pipeline/logs/
+# CodeMachine Pipeline runtime
+.codepipe/runs/
+.codepipe/logs/
 ISSUE_RESOLUTION_PLAN.md
 
 # Claude Code / Claude Flow - config (committed)

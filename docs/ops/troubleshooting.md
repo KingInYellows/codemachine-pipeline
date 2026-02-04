@@ -26,7 +26,7 @@ This guide provides solutions for common issues encountered when operating the A
 
 #### "Queue V1 format no longer supported"
 
-**Symptom:** Error message indicating the queue format is outdated when running `ai-feature resume` or `ai-feature status`.
+**Symptom:** Error message indicating the queue format is outdated when running `codepipe resume` or `codepipe status`.
 
 **Cause:** The queue system was upgraded from V1 (simple JSONL) to V2 (snapshot + WAL architecture) for O(1) performance. Old queue files need migration.
 
@@ -36,7 +36,7 @@ This guide provides solutions for common issues encountered when operating the A
 
    Migration happens automatically when you run any queue operation:
    ```bash
-   ai-feature resume <feature_id>
+   codepipe resume <feature_id>
    ```
 
    The system will:
@@ -49,14 +49,14 @@ This guide provides solutions for common issues encountered when operating the A
 
    ```bash
    # Check current queue format
-   ls -la .ai-feature-pipeline/runs/<feature_id>/queue/
+   ls -la .codepipe/runs/<feature_id>/queue/
 
    # If you see queue.jsonl without queue_snapshot.json, migration is needed
    # Force resume to trigger migration
-   ai-feature resume <feature_id> --validate-queue
+   codepipe resume <feature_id> --validate-queue
 
    # Verify migration succeeded
-   ls -la .ai-feature-pipeline/runs/<feature_id>/queue/
+   ls -la .codepipe/runs/<feature_id>/queue/
    # Should now see: queue_snapshot.json, queue_operations.log
    ```
 
@@ -64,13 +64,13 @@ This guide provides solutions for common issues encountered when operating the A
 
    If migration causes issues, restore V1 backup:
    ```bash
-   cd .ai-feature-pipeline/runs/<feature_id>/queue/
+   cd .codepipe/runs/<feature_id>/queue/
    rm queue_snapshot.json queue_operations.log queue_sequence.txt 2>/dev/null
    mv queue.jsonl.v1backup queue.jsonl
    ```
 
 **Prevention:**
-- Set `AI_FEATURE_QUEUE_BACKUP_V1=true` to always create backups before migration
+- Set `CODEPIPE_QUEUE_BACKUP_V1=true` to always create backups before migration
 - Test migration in development environments first
 
 ---
@@ -89,40 +89,40 @@ This guide provides solutions for common issues encountered when operating the A
 
 1. **Validate Queue Integrity**
    ```bash
-   ai-feature queue validate <feature_id>
+   codepipe queue validate <feature_id>
    ```
    This shows specific corruption details (line numbers, field errors).
 
 2. **Rebuild from Plan (Preferred)**
    ```bash
    # Create backup first
-   cp -r .ai-feature-pipeline/runs/<feature_id>/queue/ \
-         .ai-feature-pipeline/runs/<feature_id>/queue.corrupted.bak
+   cp -r .codepipe/runs/<feature_id>/queue/ \
+         .codepipe/runs/<feature_id>/queue.corrupted.bak
 
    # Rebuild queue from execution plan
-   ai-feature queue rebuild <feature_id> --from-plan
+   codepipe queue rebuild <feature_id> --from-plan
    ```
 
 3. **Restore from Snapshot (If Available)**
    ```bash
    # List available snapshots
-   ls -la .ai-feature-pipeline/runs/<feature_id>/queue/queue_snapshot.json*
+   ls -la .codepipe/runs/<feature_id>/queue/queue_snapshot.json*
 
    # Restore from most recent valid snapshot
    cp queue_snapshot.json.1705401234 queue_snapshot.json
 
    # Replay any WAL operations since snapshot
-   ai-feature resume <feature_id> --validate-queue
+   codepipe resume <feature_id> --validate-queue
    ```
 
 4. **Force Compaction to Clean WAL**
    ```bash
-   export AI_FEATURE_QUEUE_FORCE_COMPACT=true
-   ai-feature resume <feature_id>
+   export CODEPIPE_QUEUE_FORCE_COMPACT=true
+   codepipe resume <feature_id>
    ```
 
 **Prevention:**
-- Enable periodic snapshots: `AI_FEATURE_QUEUE_SNAPSHOT_INTERVAL=100`
+- Enable periodic snapshots: `CODEPIPE_QUEUE_SNAPSHOT_INTERVAL=100`
 - Monitor disk space before long runs
 - Never manually edit queue files
 
@@ -138,33 +138,33 @@ This guide provides solutions for common issues encountered when operating the A
 
 1. **Verify No Process is Running**
    ```bash
-   ps aux | grep ai-feature
-   pgrep -f "ai-feature"
+   ps aux | grep codepipe
+   pgrep -f "codepipe"
    ```
 
 2. **Check for Stale Lock Files**
    ```bash
-   ls -la .ai-feature-pipeline/runs/<feature_id>/run.lock
+   ls -la .codepipe/runs/<feature_id>/run.lock
 
    # If lock is older than 5 minutes and no process exists:
-   rm .ai-feature-pipeline/runs/<feature_id>/run.lock
+   rm .codepipe/runs/<feature_id>/run.lock
    ```
 
 3. **Reset Stuck Tasks to Pending**
    ```bash
    # List tasks in running state
-   ai-feature queue list <feature_id> --status running
+   codepipe queue list <feature_id> --status running
 
    # Reset individual task
-   ai-feature task reset <feature_id> <task_id>
+   codepipe task reset <feature_id> <task_id>
 
    # Or reset all stuck tasks
-   ai-feature queue reset-stuck <feature_id>
+   codepipe queue reset-stuck <feature_id>
    ```
 
 4. **Resume Execution**
    ```bash
-   ai-feature resume <feature_id>
+   codepipe resume <feature_id>
    ```
 
 **Prevention:**
@@ -189,7 +189,7 @@ This guide provides solutions for common issues encountered when operating the A
 
 1. **Check Current Rate Limit Status**
    ```bash
-   ai-feature status <feature_id> --verbose
+   codepipe status <feature_id> --verbose
 
    # Or directly query GitHub
    curl -H "Authorization: Bearer $GITHUB_TOKEN" \
@@ -199,7 +199,7 @@ This guide provides solutions for common issues encountered when operating the A
 2. **Wait for Rate Limit Reset**
    ```bash
    # Check when rate limit resets
-   cat .ai-feature-pipeline/runs/<feature_id>/rate_limits.json | \
+   cat .codepipe/runs/<feature_id>/rate_limits.json | \
      jq '.providers.github.state.reset' | xargs -I {} date -d @{}
    ```
 
@@ -208,13 +208,13 @@ This guide provides solutions for common issues encountered when operating the A
    # Manual cooldown clear (only after reset time has passed)
    jq '.providers.github.state.inCooldown = false |
        del(.providers.github.state.cooldownUntil)' \
-     .ai-feature-pipeline/runs/<feature_id>/rate_limits.json > temp.json && \
-     mv temp.json .ai-feature-pipeline/runs/<feature_id>/rate_limits.json
+     .codepipe/runs/<feature_id>/rate_limits.json > temp.json && \
+     mv temp.json .codepipe/runs/<feature_id>/rate_limits.json
    ```
 
 4. **Resume After Cooldown**
    ```bash
-   ai-feature resume <feature_id>
+   codepipe resume <feature_id>
    ```
 
 **Prevention:**
@@ -251,7 +251,7 @@ This guide provides solutions for common issues encountered when operating the A
    echo ${LINEAR_API_KEY:+set}
 
    # Run doctor to check credential status
-   ai-feature doctor
+   codepipe doctor
    ```
 
 2. **Test API Key Validity**
@@ -294,7 +294,7 @@ This guide provides solutions for common issues encountered when operating the A
 1. **Verify Endpoint Configuration**
    ```bash
    # Check config
-   cat .ai-feature-pipeline/config.json | jq '.runtime.agent_endpoint'
+   cat .codepipe/config.json | jq '.runtime.agent_endpoint'
 
    # Or environment variable
    echo $AGENT_ENDPOINT
@@ -326,8 +326,8 @@ This guide provides solutions for common issues encountered when operating the A
 
    # Or update config.json
    jq '.runtime.agent_endpoint = "https://new-agent-endpoint.example.com"' \
-     .ai-feature-pipeline/config.json > temp.json && \
-     mv temp.json .ai-feature-pipeline/config.json
+     .codepipe/config.json > temp.json && \
+     mv temp.json .codepipe/config.json
    ```
 
 **Prevention:**
@@ -349,29 +349,29 @@ This guide provides solutions for common issues encountered when operating the A
 
 1. **Check Timeout Configuration**
    ```bash
-   cat .ai-feature-pipeline/config.json | jq '.runtime.task_timeout_ms'
+   cat .codepipe/config.json | jq '.runtime.task_timeout_ms'
    ```
 
 2. **Increase Timeout for Long Tasks**
    ```bash
    # Via environment variable (milliseconds)
-   export AI_FEATURE_TASK_TIMEOUT_MS=3600000  # 1 hour
+   export CODEPIPE_EXECUTION_TIMEOUT_MS=3600000  # 1 hour
 
    # Or in config.json
    jq '.runtime.task_timeout_ms = 3600000' \
-     .ai-feature-pipeline/config.json > temp.json && \
-     mv temp.json .ai-feature-pipeline/config.json
+     .codepipe/config.json > temp.json && \
+     mv temp.json .codepipe/config.json
    ```
 
 3. **Retry Timed-Out Task**
    ```bash
-   ai-feature task retry <feature_id> <task_id>
+   codepipe task retry <feature_id> <task_id>
    ```
 
 4. **Investigate Slow Tasks**
    ```bash
    # Check task logs for bottlenecks
-   grep "<task_id>" .ai-feature-pipeline/runs/<feature_id>/logs/execution.ndjson | \
+   grep "<task_id>" .codepipe/runs/<feature_id>/logs/execution.ndjson | \
      jq -s 'sort_by(.timestamp)'
    ```
 
@@ -400,23 +400,23 @@ This guide provides solutions for common issues encountered when operating the A
 
 1. **Check Task Status and Error**
    ```bash
-   ai-feature task status <feature_id> <task_id>
+   codepipe task status <feature_id> <task_id>
    ```
 
 2. **Manual Retry**
    ```bash
-   ai-feature task retry <feature_id> <task_id>
+   codepipe task retry <feature_id> <task_id>
    ```
 
 3. **Skip Failed Task (If Non-Critical)**
    ```bash
-   ai-feature task skip <feature_id> <task_id>
+   codepipe task skip <feature_id> <task_id>
    ```
 
 4. **Mark Task Complete (After Manual Fix)**
    ```bash
    # If you manually completed the work
-   ai-feature task complete <feature_id> <task_id>
+   codepipe task complete <feature_id> <task_id>
    ```
 
 ---
@@ -429,12 +429,12 @@ This guide provides solutions for common issues encountered when operating the A
 
 1. **Visualize Dependency Graph**
    ```bash
-   ai-feature status <feature_id> --show-dag
+   codepipe status <feature_id> --show-dag
    ```
 
 2. **Check for Circular Dependencies**
    ```bash
-   ai-feature queue validate <feature_id>
+   codepipe queue validate <feature_id>
    # Will report circular dependency errors
    ```
 
@@ -442,13 +442,13 @@ This guide provides solutions for common issues encountered when operating the A
 
    If plan has circular dependencies, replan:
    ```bash
-   ai-feature replan <feature_id>
+   codepipe replan <feature_id>
    ```
 
 4. **Manually Unblock Tasks**
    ```bash
    # If dependency task cannot complete, mark it done
-   ai-feature task complete <feature_id> <blocking_task_id>
+   codepipe task complete <feature_id> <blocking_task_id>
    ```
 
 ---
@@ -463,7 +463,7 @@ This guide provides solutions for common issues encountered when operating the A
 
 1. **Run Validation with Details**
    ```bash
-   ai-feature init --validate-only
+   codepipe init --validate-only
    ```
 
 2. **Common Validation Errors**
@@ -478,16 +478,16 @@ This guide provides solutions for common issues encountered when operating the A
 
 3. **Validate JSON Syntax**
    ```bash
-   cat .ai-feature-pipeline/config.json | jq . > /dev/null && echo "Valid JSON" || echo "Invalid JSON"
+   cat .codepipe/config.json | jq . > /dev/null && echo "Valid JSON" || echo "Invalid JSON"
    ```
 
 4. **Reset to Default Config**
    ```bash
    # Backup current config
-   cp .ai-feature-pipeline/config.json .ai-feature-pipeline/config.json.bak
+   cp .codepipe/config.json .codepipe/config.json.bak
 
    # Re-initialize
-   ai-feature init --force
+   codepipe init --force
    ```
 
 ---
@@ -500,7 +500,7 @@ This guide provides solutions for common issues encountered when operating the A
 
 1. **Check Required Variables**
    ```bash
-   ai-feature doctor
+   codepipe doctor
    ```
 
 2. **Set Missing Variables**
@@ -527,7 +527,7 @@ This guide provides solutions for common issues encountered when operating the A
 
 4. **Verify Variables Are Set**
    ```bash
-   ai-feature doctor --verbose
+   codepipe doctor --verbose
    ```
 
 ---
@@ -541,10 +541,10 @@ This guide provides solutions for common issues encountered when operating the A
 1. **Identify Failed Schema**
    ```bash
    # Check manifest
-   ai-feature status <feature_id> --validate
+   codepipe status <feature_id> --validate
 
    # Check specific artifact
-   cat .ai-feature-pipeline/runs/<feature_id>/artifacts/spec.json | \
+   cat .codepipe/runs/<feature_id>/artifacts/spec.json | \
      npx ajv validate -s spec-schema.json -d -
    ```
 
@@ -560,8 +560,8 @@ This guide provides solutions for common issues encountered when operating the A
 3. **Regenerate Corrupted Artifacts**
    ```bash
    # If manifest is corrupted, may need to restart feature
-   ai-feature abort <feature_id>
-   ai-feature start <new_feature_id> --from-linear <issue_id>
+   codepipe abort <feature_id>
+   codepipe start <new_feature_id> --from-linear <issue_id>
    ```
 
 ---
@@ -572,34 +572,34 @@ Use these commands to diagnose issues:
 
 ```bash
 # Comprehensive environment check
-ai-feature doctor
+codepipe doctor
 
 # Verbose doctor with detailed output
-ai-feature doctor --verbose
+codepipe doctor --verbose
 
 # JSON output for automation
-ai-feature doctor --json
+codepipe doctor --json
 
 # Pipeline status with integration details
-ai-feature status <feature_id> --verbose
+codepipe status <feature_id> --verbose
 
 # Status with cost tracking
-ai-feature status <feature_id> --show-costs
+codepipe status <feature_id> --show-costs
 
 # Rate limit inspection
-ai-feature rate-limits
+codepipe rate-limits
 
 # Rate limit details for specific provider
-ai-feature rate-limits --provider github
+codepipe rate-limits --provider github
 
 # Configuration validation
-ai-feature validate --init
+codepipe validate --init
 
 # Queue validation
-ai-feature queue validate <feature_id>
+codepipe queue validate <feature_id>
 
 # Dry-run resume to check blockers
-ai-feature resume --dry-run <feature_id>
+codepipe resume --dry-run <feature_id>
 ```
 
 ### Exit Code Reference
@@ -619,7 +619,7 @@ ai-feature resume --dry-run <feature_id>
 
 Logs are stored in run directories:
 ```
-.ai-feature-pipeline/runs/<feature-id>/logs/
+.codepipe/runs/<feature-id>/logs/
 ```
 
 ### Log Files
@@ -668,24 +668,24 @@ Logs use NDJSON format (one JSON object per line):
 
 ```bash
 # Find all errors
-grep '"level":"error"' .ai-feature-pipeline/runs/<feature_id>/logs/execution.ndjson | jq .
+grep '"level":"error"' .codepipe/runs/<feature_id>/logs/execution.ndjson | jq .
 
 # Find rate limit events
-grep 'rate' .ai-feature-pipeline/runs/<feature_id>/logs/execution.ndjson | jq .
+grep 'rate' .codepipe/runs/<feature_id>/logs/execution.ndjson | jq .
 
 # Find events for specific task
-grep '<task_id>' .ai-feature-pipeline/runs/<feature_id>/logs/execution.ndjson | jq .
+grep '<task_id>' .codepipe/runs/<feature_id>/logs/execution.ndjson | jq .
 
 # Count errors by component
-grep '"level":"error"' .ai-feature-pipeline/runs/<feature_id>/logs/execution.ndjson | \
+grep '"level":"error"' .codepipe/runs/<feature_id>/logs/execution.ndjson | \
   jq -r '.component' | sort | uniq -c | sort -rn
 
 # Timeline of task state changes
-grep 'task_status_change' .ai-feature-pipeline/runs/<feature_id>/logs/execution.ndjson | \
+grep 'task_status_change' .codepipe/runs/<feature_id>/logs/execution.ndjson | \
   jq -s 'sort_by(.timestamp) | .[] | {time: .timestamp, task: .context.task_id, status: .context.new_status}'
 
 # Find failed requests with details
-grep '"level":"error"' .ai-feature-pipeline/runs/<feature_id>/logs/execution.ndjson | \
+grep '"level":"error"' .codepipe/runs/<feature_id>/logs/execution.ndjson | \
   jq 'select(.context.error_code != null) | {message, error: .context.error_code, details: .context.details}'
 ```
 
@@ -697,12 +697,12 @@ grep '"level":"error"' .ai-feature-pipeline/runs/<feature_id>/logs/execution.ndj
 
 1. **Diagnose the Failure**
    ```bash
-   ai-feature resume --dry-run <feature_id>
+   codepipe resume --dry-run <feature_id>
    ```
 
 2. **Review Blockers**
    ```bash
-   ai-feature status <feature_id> --verbose
+   codepipe status <feature_id> --verbose
    ```
 
 3. **Address Blockers by Type**
@@ -717,12 +717,12 @@ grep '"level":"error"' .ai-feature-pipeline/runs/<feature_id>/logs/execution.ndj
 
 4. **Resume Execution**
    ```bash
-   ai-feature resume <feature_id>
+   codepipe resume <feature_id>
    ```
 
 5. **Monitor Progress**
    ```bash
-   tail -f .ai-feature-pipeline/runs/<feature_id>/logs/execution.ndjson | jq .
+   tail -f .codepipe/runs/<feature_id>/logs/execution.ndjson | jq .
    ```
 
 ---
@@ -731,30 +731,30 @@ grep '"level":"error"' .ai-feature-pipeline/runs/<feature_id>/logs/execution.ndj
 
 1. **Backup Current State**
    ```bash
-   cp -r .ai-feature-pipeline/runs/<feature_id>/queue/ \
-         .ai-feature-pipeline/runs/<feature_id>/queue.backup/
+   cp -r .codepipe/runs/<feature_id>/queue/ \
+         .codepipe/runs/<feature_id>/queue.backup/
    ```
 
 2. **Validate Queue**
    ```bash
-   ai-feature queue validate <feature_id>
+   codepipe queue validate <feature_id>
    ```
 
 3. **Reset Stuck Tasks**
    ```bash
    # Reset tasks stuck in 'running' state
-   ai-feature queue reset-stuck <feature_id>
+   codepipe queue reset-stuck <feature_id>
    ```
 
 4. **If Queue is Corrupted, Rebuild**
    ```bash
-   ai-feature queue rebuild <feature_id> --from-plan
+   codepipe queue rebuild <feature_id> --from-plan
    ```
 
 5. **Force Compaction**
    ```bash
-   export AI_FEATURE_QUEUE_FORCE_COMPACT=true
-   ai-feature resume <feature_id>
+   export CODEPIPE_QUEUE_FORCE_COMPACT=true
+   codepipe resume <feature_id>
    ```
 
 ---
@@ -764,7 +764,7 @@ grep '"level":"error"' .ai-feature-pipeline/runs/<feature_id>/logs/execution.ndj
 1. **Verify Rate Limit Has Reset**
    ```bash
    # Check reset time
-   cat .ai-feature-pipeline/runs/<feature_id>/rate_limits.json | \
+   cat .codepipe/runs/<feature_id>/rate_limits.json | \
      jq '.providers.github.state.reset' | xargs -I {} date -d @{}
 
    # Compare to current time
@@ -776,19 +776,19 @@ grep '"level":"error"' .ai-feature-pipeline/runs/<feature_id>/logs/execution.ndj
    # Edit ledger to clear cooldown
    jq '.providers.github.state.inCooldown = false |
        del(.providers.github.state.cooldownUntil)' \
-     .ai-feature-pipeline/runs/<feature_id>/rate_limits.json > temp.json && \
-     mv temp.json .ai-feature-pipeline/runs/<feature_id>/rate_limits.json
+     .codepipe/runs/<feature_id>/rate_limits.json > temp.json && \
+     mv temp.json .codepipe/runs/<feature_id>/rate_limits.json
    ```
 
 3. **Verify Cooldown Cleared**
    ```bash
-   cat .ai-feature-pipeline/runs/<feature_id>/rate_limits.json | \
+   cat .codepipe/runs/<feature_id>/rate_limits.json | \
      jq '.providers.github.state'
    ```
 
 4. **Resume Pipeline**
    ```bash
-   ai-feature resume <feature_id>
+   codepipe resume <feature_id>
    ```
 
 ---
@@ -798,7 +798,7 @@ grep '"level":"error"' .ai-feature-pipeline/runs/<feature_id>/logs/execution.ndj
 ### GitHub Issues
 
 Report bugs and request features:
-https://github.com/your-org/ai-feature-pipeline/issues
+https://github.com/your-org/codemachine-pipeline/issues
 
 ### Log Files to Include When Reporting Bugs
 
@@ -806,26 +806,26 @@ When opening an issue, include:
 
 1. **Environment Information**
    ```bash
-   ai-feature doctor --json > doctor-report.json
+   codepipe doctor --json > doctor-report.json
    ```
 
 2. **Relevant Logs**
    ```bash
    # Last 100 error entries
-   grep '"level":"error"' .ai-feature-pipeline/runs/<feature_id>/logs/execution.ndjson | \
+   grep '"level":"error"' .codepipe/runs/<feature_id>/logs/execution.ndjson | \
      tail -100 > error-logs.ndjson
    ```
 
 3. **Configuration (Redacted)**
    ```bash
    # Remove sensitive values
-   cat .ai-feature-pipeline/config.json | \
+   cat .codepipe/config.json | \
      jq 'del(.credentials) | del(.tokens)' > config-redacted.json
    ```
 
 4. **Manifest State**
    ```bash
-   cat .ai-feature-pipeline/runs/<feature_id>/manifest.json | \
+   cat .codepipe/runs/<feature_id>/manifest.json | \
      jq '{status, current_step, last_error: .execution.last_error}'
    ```
 

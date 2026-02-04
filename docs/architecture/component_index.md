@@ -59,7 +59,7 @@ The Component Index serves as:
 
 **Documentation:** [`docs/requirements/run_directory_schema.md`](../requirements/run_directory_schema.md)
 
-**Description:** Mermaid diagram visualizing the `.ai-feature-pipeline/runs/<feature_id>/` directory structure, including manifest files, artifacts, queue, logs, telemetry, approvals, SQLite indexes, and context caches.
+**Description:** Mermaid diagram visualizing the `.codepipe/runs/<feature_id>/` directory structure, including manifest files, artifacts, queue, logs, telemetry, approvals, SQLite indexes, and context caches.
 
 **Format:** Mermaid (`.mmd`)
 
@@ -133,7 +133,7 @@ The Component Index serves as:
 
 **File:** `docs/requirements/repo_config_schema.md` (to be created)
 
-**Description:** Specification for `.ai-feature-pipeline/config.json` schema, including integration settings (GitHub, Linear, agents), validation policies, and governance metadata.
+**Description:** Specification for `.codepipe/config.json` schema, including integration settings (GitHub, Linear, agents), validation policies, and governance metadata.
 
 **Iteration:** I1 (pending creation)
 

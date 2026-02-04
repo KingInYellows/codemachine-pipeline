@@ -80,7 +80,7 @@ This document tracks findings, blockers, and remediation tasks discovered during
 - **Severity**: 🔵 Info
 - **Description**: Deterministic fixture repo established at `tests/fixtures/sample_repo/`
 - **Contents**:
-  - `.ai-feature-pipeline/config.json` - Validation commands, branch management config
+  - `.codepipe/config.json` - Validation commands, branch management config
   - `package.json` - Basic Node.js project structure
   - `src/index.ts` - Stub TypeScript module
   - `docs/overview.md` - Sample documentation

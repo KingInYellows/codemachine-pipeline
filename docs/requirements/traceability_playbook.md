@@ -46,7 +46,7 @@ This playbook provides comprehensive guidance for generating, maintaining, and v
 - **Architects:** Define trace schema and relationship semantics
 - **Implementers:** Generate and update trace maps via workflows
 - **Auditors:** Consume `trace.json` for compliance verification
-- **CLI Users:** View trace summaries via `ai-feature status`
+- **CLI Users:** View trace summaries via `codepipe status`
 
 ---
 
@@ -201,7 +201,7 @@ Before generating a trace map, ensure:
 
 **Automatic (Spec approval path):**
 
-`ai-feature approve spec --approve --signer <email>` now calls `updateTraceMapOnSpecChange()` immediately after the approval record is persisted. This ensures trace links exist before planning begins and ties every entry back to the approval gate that unlocked it (FR-9/FR-10).
+`codepipe approve spec --approve --signer <email>` now calls `updateTraceMapOnSpecChange()` immediately after the approval record is persisted. This ensures trace links exist before planning begins and ties every entry back to the approval gate that unlocked it (FR-9/FR-10).
 
 **Manual / Programmatic (force regeneration):**
 
@@ -360,12 +360,12 @@ logger.info(`Prevented ${duplicates} duplicate links`);
 
 ### Status Command Enhancement
 
-The `ai-feature status` command displays trace summary when `trace.json` exists.
+The `codepipe status` command displays trace summary when `trace.json` exists.
 
 **JSON Output:**
 
 ```bash
-ai-feature status --feature feat-abc123 --json
+codepipe status --feature feat-abc123 --json
 ```
 
 **Response (excerpt):**
@@ -432,7 +432,7 @@ if (traceSummary) {
 
 **Symptoms:**
 
-- `ai-feature approve spec --approve` completed but `trace.json` missing
+- `codepipe approve spec --approve` completed but `trace.json` missing
 - `status` output shows no traceability section
 
 **Diagnosis:**
@@ -503,7 +503,7 @@ if (traceSummary) {
 
 **Resolution:**
 
-- Generate plan if missing: `ai-feature plan`
+- Generate plan if missing: `codepipe plan`
 - Edit PRD/spec to include goals/requirements
 - Re-generate trace map after fixing artifacts
 
@@ -535,8 +535,8 @@ if (traceSummary) {
 
 ### CLI Commands
 
-- **Trace Generation Trigger:** `ai-feature approve spec --approve --signer <email>` (auto-generates `trace.json`)
-- **Status:** `ai-feature status [--feature <id>] [--json]`
+- **Trace Generation Trigger:** `codepipe approve spec --approve --signer <email>` (auto-generates `trace.json`)
+- **Status:** `codepipe status [--feature <id>] [--json]`
 
 ---
 

@@ -388,7 +388,7 @@ Benefits:
 
 ### Resume Triggers
 
-- **Manual Resume**: User runs `ai-feature resume` after fixing errors
+- **Manual Resume**: User runs `codepipe resume` after fixing errors
 - **Automatic Resume**: Future: Retry after transient failures (rate limits, network errors)
 
 ### Resume Workflow
@@ -426,7 +426,7 @@ Benefits:
 ### Generate Plan
 
 ```bash
-ai-feature plan generate --iteration I3
+codepipe plan generate --iteration I3
 ```
 
 **Effects:**
@@ -443,13 +443,13 @@ ai-feature plan generate --iteration I3
 ✓ Max depth: 2
 ✓ Parallel paths: 2
 
-Plan saved: .ai-feature-pipeline/FEAT-001/plan.json
+Plan saved: .codepipe/FEAT-001/plan.json
 ```
 
 ### View Plan (JSON)
 
 ```bash
-ai-feature plan --json
+codepipe plan --json
 ```
 
 **Output Example:**
@@ -482,7 +482,7 @@ ai-feature plan --json
 ### View Plan Summary
 
 ```bash
-ai-feature plan --summary
+codepipe plan --summary
 ```
 
 **Output Example:**
@@ -512,7 +512,7 @@ Dependency Graph:
 ### Status with Plan Context
 
 ```bash
-ai-feature status
+codepipe status
 ```
 
 **Output Example:**
@@ -530,7 +530,7 @@ Plan: 4 tasks total, 1 completed, 1 running, 2 pending
 ### Resume from Failure
 
 ```bash
-ai-feature resume
+codepipe resume
 ```
 
 **Output Example:**
@@ -756,10 +756,10 @@ The `ResultNormalizer` automatically redacts 18+ sensitive patterns:
 
 ### Doctor Integration
 
-The `ai-feature doctor` command validates CodeMachine availability:
+The `codepipe doctor` command validates CodeMachine availability:
 
 ```bash
-ai-feature doctor
+codepipe doctor
 ```
 
 **Successful Check:**

@@ -6,7 +6,7 @@
 
 ## Overview
 
-The Run Directory Schema defines the deterministic structure of `.ai-feature-pipeline/runs/<feature_id>/` directories that persist state for each feature pipeline execution. This specification implements ADR-2 (State Persistence) requirements and supports local-first, resumable, and auditable workflows.
+The Run Directory Schema defines the deterministic structure of `.codepipe/runs/<feature_id>/` directories that persist state for each feature pipeline execution. This specification implements ADR-2 (State Persistence) requirements and supports local-first, resumable, and auditable workflows.
 
 ## Purpose
 
@@ -20,7 +20,7 @@ Each run directory:
 ## Directory Structure
 
 ```
-.ai-feature-pipeline/runs/<feature_id>/
+.codepipe/runs/<feature_id>/
 ├── manifest.json              # Central run state and metadata
 ├── hash_manifest.json         # File integrity tracking (SHA-256)
 ├── run.lock                   # Concurrent access mutex (transient)
@@ -95,7 +95,7 @@ Each run directory:
 
 **Access Pattern:** Always acquire `run.lock` before writing; reads do not require locking but may see stale data during concurrent writes.
 
-**Example:** See `.ai-feature-pipeline/templates/run_manifest.json`
+**Example:** See `.codepipe/templates/run_manifest.json`
 
 ### hash_manifest.json
 
@@ -235,7 +235,7 @@ Approval workflow artifacts per ADR-5.
 
 ### sqlite/ (optional)
 
-SQLite queue indexes enable resumable observers (`ai-feature observe`, future `cleanup`) to inspect queue health without re-hashing every JSON file.
+SQLite queue indexes enable resumable observers (`codepipe observe`, future `cleanup`) to inspect queue health without re-hashing every JSON file.
 
 **Files:**
 - `run_queue.db` - Deterministic SQLite database containing queue pointers
@@ -312,7 +312,7 @@ Cleanup behavior is defined in `manifest.json` `metadata.cleanup_hook`:
 - `archive_artifacts` - Move `artifacts/` to archive location (future)
 - `remove_directory` - Delete entire run directory
 
-**Invocation:** Future `ai-feature cleanup` command will scan run directories and execute eligible hooks.
+**Invocation:** Future `codepipe cleanup` command will scan run directories and execute eligible hooks.
 
 **Safety:** Cleanup never removes runs with `status: in_progress` or `status: paused`.
 
@@ -365,9 +365,9 @@ Before resuming a run:
 ### init
 
 Creates base directories:
-- `.ai-feature-pipeline/runs/`
-- `.ai-feature-pipeline/logs/`
-- `.ai-feature-pipeline/artifacts/`
+- `.codepipe/runs/`
+- `.codepipe/logs/`
+- `.codepipe/artifacts/`
 
 ### start
 
@@ -427,10 +427,10 @@ Dry-run invocation `bin/run status --json` references this schema and always pri
 ## Related Documentation
 
 - **ADR-2: State Persistence** - Design rationale for run directory structure
-- **RepoConfig Schema** - Repository-level configuration (`.ai-feature-pipeline/config.json`)
+- **RepoConfig Schema** - Repository-level configuration (`.codepipe/config.json`)
 - **Section 2.3: Telemetry & Cost Tracking** - Telemetry file schemas
 - **Section 3: Directory Structure** - Overall pipeline directory layout
-- **Cleanup Command Spec** - Future `ai-feature cleanup` implementation
+- **Cleanup Command Spec** - Future `codepipe cleanup` implementation
 
 ## API Reference
 

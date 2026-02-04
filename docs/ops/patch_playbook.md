@@ -75,10 +75,10 @@ const patch: Patch = {
   description: 'Add new feature import',
 };
 
-const repoConfig = loadRepoConfig('.ai-feature-pipeline/config.json').config!;
+const repoConfig = loadRepoConfig('.codepipe/config.json').config!;
 
 const config: PatchConfig = {
-  runDir: '.ai-feature-pipeline/runs/feat-abc123',
+  runDir: '.codepipe/runs/feat-abc123',
   featureId: 'feat-abc123',
   taskId: 'I3.T2',
   repoConfig,
@@ -201,7 +201,7 @@ Patch violates file constraints: 2 violation(s)
 
 ### Customizing Constraints
 
-Edit `.ai-feature-pipeline/config.json`:
+Edit `.codepipe/config.json`:
 
 ```json
 {
@@ -233,7 +233,7 @@ Edit `.ai-feature-pipeline/config.json`:
 import { createBranch, type BranchConfig, type CreateBranchOptions } from './workflows/branchManager';
 
 const config: BranchConfig = {
-  runDir: '.ai-feature-pipeline/runs/feat-abc123',
+  runDir: '.codepipe/runs/feat-abc123',
   featureId: 'feat-abc123',
   workingDir: process.cwd(),
   repoConfig,
@@ -336,7 +336,7 @@ The Patch Manager automatically detects conflicts and marks tasks as `human-acti
 
 2. **Review the patch**
    ```bash
-   cat .ai-feature-pipeline/runs/feat-abc123/artifacts/patches/I3.T2-001.diff
+   cat .codepipe/runs/feat-abc123/artifacts/patches/I3.T2-001.diff
    ```
 
 3. **Manually resolve conflicts**
@@ -346,7 +346,7 @@ The Patch Manager automatically detects conflicts and marks tasks as `human-acti
 
 4. **Resume the workflow**
    ```bash
-   ai-feature resume --feature-id feat-abc123
+   codepipe resume --feature-id feat-abc123
    ```
 
 ### Manual Patch Application
@@ -357,7 +357,7 @@ If automatic application fails, apply patches manually:
 cd /path/to/repo
 
 # Apply the patch with conflict markers
-git apply --reject .ai-feature-pipeline/runs/feat-abc123/artifacts/patches/I3.T2-001.diff
+git apply --reject .codepipe/runs/feat-abc123/artifacts/patches/I3.T2-001.diff
 
 # Review reject files
 cat src/index.ts.rej
@@ -382,7 +382,7 @@ git commit -m "Manual patch application for I3.T2-001
 Rollback snapshots are created before each patch application:
 
 ```
-.ai-feature-pipeline/runs/feat-abc123/artifacts/patches/snapshots/
+.codepipe/runs/feat-abc123/artifacts/patches/snapshots/
 └── snapshot-I3.T2-I3.T2-001-1702823456789.json
 ```
 
@@ -447,13 +447,13 @@ Resume the workflow after:
 ### Resume Command
 
 ```bash
-ai-feature resume --feature-id <feature-id>
+codepipe resume --feature-id <feature-id>
 ```
 
 ### Resume Workflow
 
 1. **Load run manifest**
-   - Read `.ai-feature-pipeline/runs/<feature-id>/manifest.json`
+   - Read `.codepipe/runs/<feature-id>/manifest.json`
    - Check `status` and `execution.last_error`
 
 2. **Validate state**
@@ -473,14 +473,14 @@ If the CLI resume fails, manually continue:
 cd /path/to/repo
 
 # Check current queue state
-cat .ai-feature-pipeline/runs/feat-abc123/manifest.json | jq .queue
+cat .codepipe/runs/feat-abc123/manifest.json | jq .queue
 
 # List pending tasks
-ls .ai-feature-pipeline/runs/feat-abc123/queue/pending/
+ls .codepipe/runs/feat-abc123/queue/pending/
 
 # Mark task as completed
-mv .ai-feature-pipeline/runs/feat-abc123/queue/running/I3.T2.json \
-   .ai-feature-pipeline/runs/feat-abc123/queue/completed/
+mv .codepipe/runs/feat-abc123/queue/running/I3.T2.json \
+   .codepipe/runs/feat-abc123/queue/completed/
 ```
 
 ---
@@ -514,7 +514,7 @@ File matches blocked pattern "**/*.env" from RepoConfig.safety.blocked_file_patt
 
 **Solution:**
 - Remove sensitive files from the patch
-- Update `.ai-feature-pipeline/config.json` to adjust patterns
+- Update `.codepipe/config.json` to adjust patterns
 - Move sensitive configuration to environment variables
 
 #### 3. Patch Conflicts
@@ -584,10 +584,10 @@ git rev-list --left-right --count @{u}...HEAD
 
 ### Log Locations
 
-- **Patch Manager logs**: `.ai-feature-pipeline/runs/<feature-id>/logs/patch-manager.ndjson`
-- **Branch Manager logs**: `.ai-feature-pipeline/runs/<feature-id>/logs/branch-manager.ndjson`
-- **Diff summaries**: `.ai-feature-pipeline/runs/<feature-id>/artifacts/patches/<patch-id>-summary.json`
-- **Rollback snapshots**: `.ai-feature-pipeline/runs/<feature-id>/artifacts/patches/snapshots/`
+- **Patch Manager logs**: `.codepipe/runs/<feature-id>/logs/patch-manager.ndjson`
+- **Branch Manager logs**: `.codepipe/runs/<feature-id>/logs/branch-manager.ndjson`
+- **Diff summaries**: `.codepipe/runs/<feature-id>/artifacts/patches/<patch-id>-summary.json`
+- **Rollback snapshots**: `.codepipe/runs/<feature-id>/artifacts/patches/snapshots/`
 
 ---
 

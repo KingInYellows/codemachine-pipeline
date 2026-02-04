@@ -1,13 +1,13 @@
 <!-- anchor: 3-0-proposed-architecture -->
 ## 3. Proposed Architecture (Operational View)
 The operational blueprint extends the foundation mandates into executable guardrails for human operators and AI agents running the CLI. All wording, numbering, and responsibilities mirror the standard kit so downstream teams can trace requirements directly back to the foundation. The emphasis is on deterministic state management, adapter isolation, and observability artifacts that survive across laptops, homelab runners, and future CI containers.
-The CLI-centric nature forces every operational concern to resolve through portable scripts and repo-local files. This section therefore addresses how workflows, adapters, security, and scale characteristics materialize when the orchestrator is invoked with commands such as `ai-feature start`, `ai-feature resume`, or `ai-feature deploy`. Each subsection enumerates controls, automation hooks, and responsibilities of Ops, Infra, and Security personas.
+The CLI-centric nature forces every operational concern to resolve through portable scripts and repo-local files. This section therefore addresses how workflows, adapters, security, and scale characteristics materialize when the orchestrator is invoked with commands such as `codepipe start`, `codepipe resume`, or `codepipe deploy`. Each subsection enumerates controls, automation hooks, and responsibilities of Ops, Infra, and Security personas.
 
 <!-- anchor: 3-1-operational-posture -->
 ### 3.1 Operational Posture & Assumptions
 Operations prioritize local-first execution, rate-limit discipline, and adapter isolation. The following items document the operational stance required for reliable runs across varied environments.
-- Every command validates `.ai-feature-pipeline/config.json` using `zod` schemas before executing any external call. Any schema mismatch triggers exit code `10` (validation) with actionable remediation text referencing the config history entry.
-- Node.js LTS (v20 or v24) is auto-detected at `ai-feature init` time. If the runtime drifts, commands abort with a pointer to Ops docs describing `nvm`-based remediation and Docker fallbacks.
+- Every command validates `.codepipe/config.json` using `zod` schemas before executing any external call. Any schema mismatch triggers exit code `10` (validation) with actionable remediation text referencing the config history entry.
+- Node.js LTS (v20 or v24) is auto-detected at `codepipe init` time. If the runtime drifts, commands abort with a pointer to Ops docs describing `nvm`-based remediation and Docker fallbacks.
 - Repo detection occurs by walking up from the current directory until `.git` is found, ensuring commands operate at consistent roots and preventing accidental cross-repo writes.
 - Capability flags govern optional adapters (Linear Agents, CodeMachine telemetry, auto-merge). Operators must explicitly enable them via config or CLI overrides; default posture is conservative.
 - Deterministic state is enforced with ULID/UUIDv7 feature IDs and monotonic log entries. Each run directory contains the canonical timeline, ensuring cross-machine reproducibility.
@@ -34,7 +34,7 @@ The CLI orchestrator enforces a layered control plane even though it runs within
 <!-- anchor: 3-3-run-directories-and-resume -->
 ### 3.3 Run Directories & Resumability Mechanics
 Run directories implement the deterministic checkpointing mandated by the foundation. Key operational behaviors:
-- Directory Layout: `.ai-feature-pipeline/<feature_id>/` includes `feature.json`, `prd.md`, `spec.md`, `plan.json`, `logs.ndjson`, `context/`, `artifacts/`, `metrics/`, and `traces/` subfolders.
+- Directory Layout: `.codepipe/<feature_id>/` includes `feature.json`, `prd.md`, `spec.md`, `plan.json`, `logs.ndjson`, `context/`, `artifacts/`, `metrics/`, and `traces/` subfolders.
 - Hash Manifest: Each major artifact includes a SHA-256 entry in `hash_manifest.json`. When commands rerun, they compare file hashes to detect changes and skip idempotent steps.
 - Queue Files: Execution queues reside in `queue.jsonl` with each line describing `ExecutionTask` id, status, retry metadata, and dependencies. The orchestrator replays queue states on resume.
 - File Locks: `feature.lock` uses advisory locking to prevent concurrent modification. Locks drop cleanly on crash due to OS-level release.
@@ -43,7 +43,7 @@ Run directories implement the deterministic checkpointing mandated by the founda
 - Context Cache: Summaries stored under `context/docs/<id>.json` record origin path, commit SHA, summarization method, token counts, and redaction flags. Regeneration occurs when commit SHA changes or TTL expires.
 - Logs: `logs.ndjson` uses monotonic timestamp schema, run-scoped correlation IDs, and severity levels. Each step logs start/end events plus relevant metrics.
 - Traceability Map: `trace.json` links PRD goals → Spec requirements → ExecutionTasks → git commits, enabling deterministic audits and supporting export bundles.
-- Cleanup Policy: `ai-feature cleanup --before <date>` scans run directories, respects `expiration_at` metadata, archives artifacts into tarballs, and deletes obsolete directories only after verifying exported bundles.
+- Cleanup Policy: `codepipe cleanup --before <date>` scans run directories, respects `expiration_at` metadata, archives artifacts into tarballs, and deletes obsolete directories only after verifying exported bundles.
 
 <!-- anchor: 3-4-http-clients-and-adapters -->
 ### 3.4 HTTP Clients & Adapter Responsibilities
@@ -66,12 +66,12 @@ Observability ensures every feature run is auditable without external tooling.
 - Metrics: Prometheus-compatible textfiles under `metrics/prometheus.txt` capture queue depths, retry counters, API latency buckets, validation runtimes, agent token usage, and storage consumption. Files rotate per run ID to keep metrics deterministic.
 - Tracing: `@opentelemetry/sdk-trace-node` collects spans across orchestrator stages, adapters, and validations. Default exporter writes to `traces.json`; optional OTLP endpoints are configurable via RepoConfig for integration with remote collectors.
 - Alerting Hooks: Threshold breaches (e.g., repeated rate limit hits, validation flakiness, missing approvals) emit `NotificationEvent`s that can be surfaced via CLI output, log entries, or optional Slack/email adapters (future extension).
-- Run Dashboards: `ai-feature status --json` surfaces aggregated telemetry, enabling integration with other automation (Graphite, CodeMachine) without additional API calls.
+- Run Dashboards: `codepipe status --json` surfaces aggregated telemetry, enabling integration with other automation (Graphite, CodeMachine) without additional API calls.
 - Metrics Governance: Operators can set `metrics.retention_days` in RepoConfig to control cleanup schedules; cleanup command enforces retention alongside run directory expiration.
 - Failure Storytelling: When a stage fails, logs and traces include cross-links (via artifact-relative paths) so operators can open relevant files quickly.
-- Observability Hardening: `ai-feature observe` (cron job) inspects past run directories for anomalies (missing artifacts, incomplete exports) and produces aggregated reports for Ops leads.
+- Observability Hardening: `codepipe observe` (cron job) inspects past run directories for anomalies (missing artifacts, incomplete exports) and produces aggregated reports for Ops leads.
 - Privacy Controls: Logs avoid storing full file contents; context entries reference IDs and SHAs. Summaries record token counts and redaction flags to ensure sensitive data is not inadvertently exported.
-- Deterministic Export: `ai-feature export` bundles logs, metrics, traces, and rate-limit ledgers with a manifest referencing file hashes, enabling remote review without direct repo access.
+- Deterministic Export: `codepipe export` bundles logs, metrics, traces, and rate-limit ledgers with a manifest referencing file hashes, enabling remote review without direct repo access.
 
 <!-- anchor: 3-6-security-operations -->
 ### 3.6 Security Operations & Credential Governance
@@ -118,8 +118,8 @@ This subsection articulates operational strategies for key cross-cutting topics 
 #### 3.8.2 Logging & Monitoring
 - Structured logging across all commands ensures consistent ingestion into tools like `jq`, `Grafana Loki`, or future collectors. Each log entry includes run ID and component for fast filtering.
 - Metrics follow Prometheus textfile format, enabling node exporters or custom scrapers to ingest metrics from homelab machines. Standard metrics include `run_duration_seconds`, `github_requests_total`, `linear_requests_total`, and validation timings.
-- `ai-feature observe` can push summarized metrics to optional dashboards by tailing metrics files and publishing aggregated JSON via CLI. This remains optional to honor local-first constraints.
-- Health Checks: When invoked in automation, commands can run `ai-feature status --json` to confirm the latest step succeeded, acting as a health probe for resumed runs.
+- `codepipe observe` can push summarized metrics to optional dashboards by tailing metrics files and publishing aggregated JSON via CLI. This remains optional to honor local-first constraints.
+- Health Checks: When invoked in automation, commands can run `codepipe status --json` to confirm the latest step succeeded, acting as a health probe for resumed runs.
 - Log Retention: Operators configure retention policies to avoid disk bloat; cleanup tooling enforces retention while ensuring bundle exports remain intact for audit needs.
 - Monitoring of rate-limit behavior includes diffing `rate_limits.json` snapshots to highlight providers nearing exhaustion. CLI surfaces warnings to prompt manual pauses or token rotation.
 
@@ -143,7 +143,7 @@ This subsection articulates operational strategies for key cross-cutting topics 
 
 <!-- anchor: 3-8-5-reliability-availability -->
 #### 3.8.5 Reliability & Availability
-- Resumable state machine ensures 99% run recovery requirement by persisting `last_step`, `last_error`, queue statuses, and approvals. After crashes, operators invoke `ai-feature resume` to continue.
+- Resumable state machine ensures 99% run recovery requirement by persisting `last_step`, `last_error`, queue statuses, and approvals. After crashes, operators invoke `codepipe resume` to continue.
 - Rate limit handling prevents repeated failures; CLI waits per `retry-after` or `x-ratelimit-reset` and logs wait durations for transparency.
 - Validation of branch protection states prevents repeated merge attempts when required checks are pending. CLI surfaces actionable statuses rather than busy loops.
 - Deployment triggers rely on GitHub Actions or repo scripts, keeping operations stateless. CLI waits for statuses using backoff to avoid API thrashing.
@@ -161,11 +161,11 @@ Even though the CLI is local-first, deployment in CI or containerized environmen
 
 <!-- anchor: 3-9-2-deployment-strategy -->
 #### 3.9.2 Deployment Strategy
-- Distribution via npm: Operators install `@ai-feature/pipeline` globally or as a dev dependency. Version pinning ensures compatibility with RepoConfig `schema_version`.
-- Docker Usage: Provided `Dockerfile` packages CLI with dependencies. Scripts such as `docker run --rm -v $PWD:/workspace ai-feature start --prompt "..."` execute workflows in a controlled environment.
+- Distribution via npm: Operators install `@codepipe/pipeline` globally or as a dev dependency. Version pinning ensures compatibility with RepoConfig `schema_version`.
+- Docker Usage: Provided `Dockerfile` packages CLI with dependencies. Scripts such as `docker run --rm -v $PWD:/workspace codepipe start --prompt "..."` execute workflows in a controlled environment.
 - CI Integration: GitHub Actions or other CI systems call CLI commands within workflow steps. Secrets inject via environment variables, and run directories persist as build artifacts for audit.
-- Homelab Cron Jobs: Operators schedule commands like `ai-feature observe` or `ai-feature cleanup` via cron on self-hosted runners. File locks prevent overlapping operations.
-- Deployment to Production: `ai-feature deploy` triggers GitHub workflow dispatches or merge actions. CLI ensures status checks and approvals before merge, matching branch protection policies.
+- Homelab Cron Jobs: Operators schedule commands like `codepipe observe` or `codepipe cleanup` via cron on self-hosted runners. File locks prevent overlapping operations.
+- Deployment to Production: `codepipe deploy` triggers GitHub workflow dispatches or merge actions. CLI ensures status checks and approvals before merge, matching branch protection policies.
 - Disaster Recovery: Because artifacts live in repo directories, backup strategies rely on existing repo backup tooling plus optional archive exports to remote storage.
 
 <!-- anchor: 3-9-3-deployment-diagram -->
@@ -182,8 +182,8 @@ Node(repo, "Git Repository", "Git + Repo files")
 Node(github, "GitHub REST API", "api.github.com + required headers")
 Node(linear, "Linear API", "GraphQL endpoint")
 Node(agent, "Agent Providers", "OpenAI-compatible / Local LLMs")
-Node(storage, "Run Directory", "Deterministic artifacts under .ai-feature-pipeline")
-Rel(dev, laptop, "Invokes ai-feature commands", "CLI input")
+Node(storage, "Run Directory", "Deterministic artifacts under .codepipe")
+Rel(dev, laptop, "Invokes codepipe commands", "CLI input")
 Rel(laptop, repo, "Reads/writes repo + run dirs", "File operations")
 Rel(laptop, github, "REST calls", "HTTPS + headers")
 Rel(laptop, linear, "GraphQL calls", "HTTPS + Authorization")
@@ -199,17 +199,17 @@ Rel(repo, github, "Push branches / fetch status", "git over HTTPS")
 This section enumerates detailed operational procedures for each CLI command family. The intent is to make the system approachable for on-call engineers, automation scripts, and AI operators who need explicit sequences, prechecks, and rollback steps. Each playbook references relevant files in the run directory and indicates success evidence to capture in audit bundles.
 
 <!-- anchor: 3-10-1-init -->
-#### 3.10.1 `ai-feature init`
+#### 3.10.1 `codepipe init`
 - Prechecks: Confirm git repository is accessible, Node LTS is installed, and `GITHUB_TOKEN` plus optional `LINEAR_API_KEY` exist.
 - Execution Steps:
-  - CLI detects repo root and scaffolds `.ai-feature-pipeline/config.json` with defaults, including `schema_version`, `feature_flags`, `github`, `linear`, and `runtime` sections.
+  - CLI detects repo root and scaffolds `.codepipe/config.json` with defaults, including `schema_version`, `feature_flags`, `github`, `linear`, and `runtime` sections.
   - Performs lightweight API calls: GitHub `GET /repos/{owner}/{repo}` and Linear `viewer` query (if configured) to validate credentials.
   - Writes `config_history.json` entry describing author, timestamp, and CLI version.
-- Success Criteria: Config file exists, sanity checks succeed, and `ai-feature status` reports `init_complete=true`.
+- Success Criteria: Config file exists, sanity checks succeed, and `codepipe status` reports `init_complete=true`.
 - Failure Handling: Validation errors exit with code `10`; HTTP failures exit with `20`. Operators fix config or credentials and rerun. Logs capture provider responses sans secrets.
 
 <!-- anchor: 3-10-2-start -->
-#### 3.10.2 `ai-feature start`
+#### 3.10.2 `codepipe start`
 - Entry Points: `--prompt`, `--linear ISSUE-123`, `--spec path`. Each path stores input snapshots.
 - Workflow:
   - Generates feature ID and run directory, recording source metadata.
@@ -217,10 +217,10 @@ This section enumerates detailed operational procedures for each CLI command fam
   - Populates `plan.json` and seeds ExecutionTasks queue.
 - Operator Responsibilities: Provide approvals at PRD/spec gates, resolve unknowns flagged as ResearchTasks, ensure context_path configuration covers necessary files.
 - Success Evidence: `feature.json.status` transitions to `in_progress`, `prd.md` and `spec.md` exist with hashed entries, and `logs.ndjson` includes `start_complete` event.
-- Failure Modes: Rate limits, missing approvals, invalid spec sections. CLI records `last_error`; operator edits relevant artifacts and uses `ai-feature resume`.
+- Failure Modes: Rate limits, missing approvals, invalid spec sections. CLI records `last_error`; operator edits relevant artifacts and uses `codepipe resume`.
 
 <!-- anchor: 3-10-3-resume -->
-#### 3.10.3 `ai-feature resume`
+#### 3.10.3 `codepipe resume`
 - Purpose: Continue a run from the latest successful step, respecting idempotence.
 - Process:
   - CLI reads `feature.json.telemetry` to find `last_step` and `last_error`.
@@ -231,7 +231,7 @@ This section enumerates detailed operational procedures for each CLI command fam
 - Edge Cases: If run directory is corrupted, CLI attempts to repair by verifying backup bundle if available; otherwise, it instructs operator to clone run directory from VCS or backup.
 
 <!-- anchor: 3-10-4-pr -->
-#### 3.10.4 `ai-feature pr ...`
+#### 3.10.4 `codepipe pr ...`
 - Includes `pr create`, `pr status`, `pr disable-auto-merge` commands.
 - Preflight: Ensures working branch exists, validations passed (lint/test/build). CLI refuses to create PR if validations fail or approvals missing.
 - `pr create` Flow:
@@ -242,7 +242,7 @@ This section enumerates detailed operational procedures for each CLI command fam
 - Rollback: If PR creation must be undone, operator deletes branch/PR manually and updates run directory to reflect rollback, capturing notes in `approvals.json`.
 
 <!-- anchor: 3-10-5-deploy -->
-#### 3.10.5 `ai-feature deploy`
+#### 3.10.5 `codepipe deploy`
 - Objective: Merge PR and trigger deployment workflows without requiring persistent services.
 - Steps:
   - Verifies PR approvals, required checks, and branch protections. Surfaces missing conditions explicitly.
@@ -252,21 +252,21 @@ This section enumerates detailed operational procedures for each CLI command fam
 - Failure Handling: For blocked merges due to failing checks, CLI records the failing check names and instructs operators to inspect CI logs. Rate-limit errors trigger exponential backoff with jitter and `human-action` classification after repeated hits.
 
 <!-- anchor: 3-10-6-status -->
-#### 3.10.6 `ai-feature status`
+#### 3.10.6 `codepipe status`
 - Summarizes run progress via CLI or machine-readable JSON.
 - Data Sources: Reads `feature.json`, `plan.json`, queue files, approvals, metrics, and rate-limit ledger to present a consolidated status board.
 - Automation Usage: Scripts or AI agents can parse `--json` output to determine next actions, request approvals, or confirm completion before deployment.
 - Error Surfaces: Highlights blocking issues (missing approvals, failed validations, rate-limit cooldowns) with remediation steps.
 
 <!-- anchor: 3-10-7-export -->
-#### 3.10.7 `ai-feature export`
+#### 3.10.7 `codepipe export`
 - Formats: Markdown or JSON bundles stored under `bundle/` directory.
 - Contents: Manifest, inputs, context list with hashes, PRD, spec, plan, logs, metrics, traces, diff summaries, PR metadata, deployment results, and cost tracking.
 - Usage: Operators share bundles with auditors, AI assistants, or other tools (Graphite, CodeMachine). Bundles maintain deterministic structure for easy parsing.
 - Security: Export pipeline performs final redaction scan, verifying no secrets exist in artifacts. If redaction fails, command aborts with actionable instructions.
 
 <!-- anchor: 3-10-8-cleanup -->
-#### 3.10.8 `ai-feature cleanup`
+#### 3.10.8 `codepipe cleanup`
 - Purpose: Manage disk usage by archiving or deleting old runs beyond retention thresholds.
 - Behavior:
   - Scans run directories for `expiration_at` metadata and optional operator-provided cutoff date.
@@ -275,19 +275,19 @@ This section enumerates detailed operational procedures for each CLI command fam
 - Safety: Cleanup never deletes directories lacking manifest completeness or while locks exist. Logs include details for audit.
 
 <!-- anchor: 3-10-9-observe -->
-#### 3.10.9 `ai-feature observe`
+#### 3.10.9 `codepipe observe`
 - Optional cron-compatible command that inspects repo state, merged PRs, and run directories to produce health reports.
 - Capabilities:
   - Detects merged PRs lacking deployment records and prompts follow-up tasks.
   - Collects metrics across runs (retry counts, agent cost trends) and surfaces anomalies.
   - Ensures watchers operate without persistent daemons by relying on scheduled invocations.
-- Observability: Reports stored under `.ai-feature-pipeline/reports/<timestamp>.md` with summary tables and recommended actions.
+- Observability: Reports stored under `.codepipe/reports/<timestamp>.md` with summary tables and recommended actions.
 
 <!-- anchor: 3-11-disaster-recovery -->
 ### 3.11 Disaster Recovery & Continuity
 Local-first design reduces reliance on centralized infrastructure but still requires planning for machine loss, repo corruption, or credential incidents.
-- Backup Strategy: Operators include `.ai-feature-pipeline/` in repo commits or use git submodules to version control run directories when appropriate. Alternatively, export bundles stored in remote artifact storage guarantee recoverability.
-- Portable State: Run directories contain all necessary files to resume runs elsewhere. Operators can copy directories to another machine, update environment variables, and run `ai-feature resume` without additional setup.
+- Backup Strategy: Operators include `.codepipe/` in repo commits or use git submodules to version control run directories when appropriate. Alternatively, export bundles stored in remote artifact storage guarantee recoverability.
+- Portable State: Run directories contain all necessary files to resume runs elsewhere. Operators can copy directories to another machine, update environment variables, and run `codepipe resume` without additional setup.
 - Git Backups: Because code changes reside on feature branches in GitHub, standard git backup/clone procedures already cover code artifacts. Run directories provide supplemental context for audit.
 - Credential Loss: If tokens are revoked, CLI surfaces errors and preserves state until new credentials are configured. Operators resume once tokens restore, leveraging HTTP layer's idempotent design.
 - Disaster Drills: Ops teams should schedule periodic restoration exercises where run directories are restored from backups and resumes executed to verify documentation accuracy.
@@ -297,12 +297,12 @@ Local-first design reduces reliance on centralized infrastructure but still requ
 <!-- anchor: 3-12-compliance-audit -->
 ### 3.12 Compliance, Governance & Audit Alignment
 Large-scale programs demand rigorous audit trails even in CLI-first workflows.
-- Audit Artifacts: Each run directory acts as an audit pack containing spec, approvals, diffs, and API transcripts. `ai-feature export` signs manifests with CLI version and Node version metadata to ensure provenance.
+- Audit Artifacts: Each run directory acts as an audit pack containing spec, approvals, diffs, and API transcripts. `codepipe export` signs manifests with CLI version and Node version metadata to ensure provenance.
 - Change Control: Config revisions, feature flag toggles, and auto-merge authorizations require recorded approvals referencing the actor, reason, and affected artifacts.
 - Policy Hooks: RepoConfig `feature_flags` gate risky automation. Operators document policy rationale in `policy_notes.md`, enabling quick reviews by compliance teams.
 - Traceability: Mandatory `trace.json` ensures PRD goals map to spec requirements, tasks, and commits. Auditors can follow a single feature from prompt to deployment without additional tooling.
 - Documentation: Ops_Docs maintainers provide runbooks, troubleshooting guides, and security advisories within `.codemachine/docs/` or the repo wiki. CLI commands reference these docs when errors occur.
-- Reporting: `ai-feature export --format json` integrates with governance dashboards, enabling ingestion into BI tools for oversight of throughput, approval latency, and compliance posture.
+- Reporting: `codepipe export --format json` integrates with governance dashboards, enabling ingestion into BI tools for oversight of throughput, approval latency, and compliance posture.
 - Future Compliance Targets: Align with SOC 2 / ISO-style controls by demonstrating deterministic logging, change approvals, and secret management. CLI architecture already satisfies many prerequisites due to local artifact persistence.
 
 <!-- anchor: 3-13-future-ops-enhancements -->
@@ -323,9 +323,9 @@ Defining KPIs ensures administrators can evaluate system performance and plan im
 - Rate Limit Incidents: Count of GitHub/Linear rate-limit events per week, plus mean backoff durations.
 - Validation Reliability: Pass/fail ratios for configured validation commands, highlighting flaky tests or tooling gaps.
 - Approval Latency: Time between PRD/spec/code approvals, informing human-in-the-loop efficiency.
-- Storage Usage: Total size of `.ai-feature-pipeline/` directories, guiding cleanup schedules.
+- Storage Usage: Total size of `.codepipe/` directories, guiding cleanup schedules.
 - Deployment Lead Time: Duration from PR creation to merge/deploy completion, used to evaluate operational bottlenecks.
-- Reporting Process: `ai-feature observe` compiles KPI snapshots weekly, storing them under `.ai-feature-pipeline/reports/` and optionally exporting to markdown for leadership reviews.
+- Reporting Process: `codepipe observe` compiles KPI snapshots weekly, storing them under `.codepipe/reports/` and optionally exporting to markdown for leadership reviews.
 
 <!-- anchor: 3-15-operational-raci -->
 ### 3.15 Operational RACI Matrix (Sample)
@@ -349,17 +349,17 @@ To ensure the runbooks translate into predictable behavior, this section documen
 
 <!-- anchor: 3-17-1-scenario-prompt-to-deploy -->
 #### 3.17.1 Scenario: Prompt-Initiated Feature to Deployment
-1. Operator runs `ai-feature start --prompt "Add structured export command"`.
+1. Operator runs `codepipe start --prompt "Add structured export command"`.
 2. CLI creates run directory, gathers context (`README`, docs, configured globs), and drafts PRD/spec.
 3. Operator reviews `prd.md` and `spec.md`, edits sections, and records approval via CLI prompt.
 4. Execution Engine generates code patches, runs validations, and commits changes to feature branch.
-5. `ai-feature pr create` opens PR, requests reviewers, and waits for feedback.
-6. Once reviewers approve and status checks pass, operator runs `ai-feature deploy` to merge and optionally trigger GitHub Actions workflow.
-7. `ai-feature export --format md` packages artifacts for audit; cleanup scheduled once feature is marked `deployed`.
+5. `codepipe pr create` opens PR, requests reviewers, and waits for feedback.
+6. Once reviewers approve and status checks pass, operator runs `codepipe deploy` to merge and optionally trigger GitHub Actions workflow.
+7. `codepipe export --format md` packages artifacts for audit; cleanup scheduled once feature is marked `deployed`.
 
 <!-- anchor: 3-17-2-scenario-linear-outage -->
 #### 3.17.2 Scenario: Linear Outage During Issue Trigger
-1. Operator runs `ai-feature start --linear ENG-321` during Linear API outage.
+1. Operator runs `codepipe start --linear ENG-321` during Linear API outage.
 2. Linear adapter detects network failure, classifies as `transient`, and caches the most recent snapshot if available.
 3. CLI prompts operator to proceed with prompt/spec-only mode using cached data while continuing to retry Linear in the background according to rate-limit safe schedule.
 4. Resume command later refreshes Linear snapshot once API recovers, ensuring final artifacts capture accurate ticket data.
@@ -369,36 +369,36 @@ To ensure the runbooks translate into predictable behavior, this section documen
 1. Bulk automation triggers multiple PR-related commands, hitting secondary limits.
 2. HTTP layer processes `retry-after` header, logs event, and pauses new GitHub requests for the specified time plus jitter.
 3. CLI surfaces message instructing operator to wait; run remains resumable without corruption.
-4. Metrics capture incident for later analysis; `ai-feature observe` compiles weekly summary of rate-limit events.
+4. Metrics capture incident for later analysis; `codepipe observe` compiles weekly summary of rate-limit events.
 
 <!-- anchor: 3-17-4-scenario-validation-failure -->
 #### 3.17.4 Scenario: Validation Failure Before PR Creation
 1. Execution Engine runs `npm run lint` and `npm test`. Lint fails due to formatting issues.
 2. CLI records failure under `logs.ndjson`, updates `last_error`, and halts before PR creation.
-3. Operator reviews logs, runs formatting fix locally, and re-triggers `ai-feature resume`.
+3. Operator reviews logs, runs formatting fix locally, and re-triggers `codepipe resume`.
 4. CLI detects that validations now succeed and continues to PR creation stage without redoing PRD/spec steps, honoring idempotence.
 
 <!-- anchor: 3-17-5-scenario-approval-delay -->
 #### 3.17.5 Scenario: Approval Delay at Spec Stage
 1. After PRD is approved, spec generation completes but awaits human sign-off.
 2. CLI records `human-action-required` error, logs pending approval path, and exits with code `30`.
-3. Operator modifies `spec.md`, adds clarifications, and runs `ai-feature approve --artifact spec.md` (or uses manual JSON entry) referencing file hash.
+3. Operator modifies `spec.md`, adds clarifications, and runs `codepipe approve --artifact spec.md` (or uses manual JSON entry) referencing file hash.
 4. Resume picks up at task planning stage, ensuring no duplicate work occurs.
 
 <!-- anchor: 3-18-rate-limit-playbook -->
 ### 3.18 Rate-Limit Playbook & Ledger Management
 Because GitHub and Linear rate limits are critical reliability constraints, operators need an explicit playbook for interpreting ledger files and responding.
 - Ledger Structure: `rate_limits.json` contains entries per provider with fields for `limit`, `remaining`, `reset_at`, `retry_after`, `last_error`, and `backoff_attempts`.
-- Inspection: `ai-feature status --json` surfaces ledger highlights. Operators can also open file directly for debugging.
-- Manual Intervention: If repeated secondary limits occur, operators can throttle commands by setting `AI_FEATURE_HTTP_MAX_CONCURRENCY` env var or staggering workflows.
-- Automation: Cron-based `ai-feature observe` monitors ledger trends, generating warnings when remaining budgets fall below thresholds before business-critical steps (PR creation, merges).
+- Inspection: `codepipe status --json` surfaces ledger highlights. Operators can also open file directly for debugging.
+- Manual Intervention: If repeated secondary limits occur, operators can throttle commands by setting `CODEPIPE_HTTP_MAX_CONCURRENCY` env var or staggering workflows.
+- Automation: Cron-based `codepipe observe` monitors ledger trends, generating warnings when remaining budgets fall below thresholds before business-critical steps (PR creation, merges).
 - Linear Specifics: CLI enforces per-hour limits by tracking request timestamps; when near capacity, it defers non-essential operations and instructs operator to resume later.
 - Documentation: Ops team maintains knowledge base entries describing typical GitHub limit numbers for PATs vs GitHub Apps to guide token provisioning.
 
 <!-- anchor: 3-19-agent-management -->
 ### 3.19 Agent Management & Capability Governance
 Agent providers drive AI-assisted drafting and coding. Operations must manage capabilities, costs, and risk exposure.
-- Manifest Storage: `.ai-feature-pipeline/agents/<provider>.json` includes provider metadata, supported models, max tokens, tools (code editing, planning), streaming support, and rate-limit notes.
+- Manifest Storage: `.codepipe/agents/<provider>.json` includes provider metadata, supported models, max tokens, tools (code editing, planning), streaming support, and rate-limit notes.
 - Selection Rules: For each stage (PRD, spec, codegen), the orchestrator queries manifests and chooses the best fit based on required context size, determinism preference, and cost profile.
 - Cost Tracking: `telemetry/costs.json` accumulates estimated spend per run, broken down by provider and model. Operators analyze trends to tune defaults or apply budgets.
 - Provider Modes: BYO agents can be local (e.g., `llama.cpp` server) or remote (OpenAI-compatible). CLI ensures prompts and artifacts flow through sanitized paths, respecting constraints not to leak sensitive files.
@@ -417,7 +417,7 @@ Agent providers drive AI-assisted drafting and coding. Operations must manage ca
 <!-- anchor: 3-21-local-first-tooling -->
 ### 3.21 Local-First Tooling & Developer Ergonomics
 - Editor Integration: CLI respects `$EDITOR` for manual artifact edits. In absence, it defaults to a minimal TUI, but outputs changed files to facilitate external editing.
-- File Watching: Optional `ai-feature watch` (future) monitors run directories and surfaces notifications when approvals or tasks change, leveraging OS file events when available.
+- File Watching: Optional `codepipe watch` (future) monitors run directories and surfaces notifications when approvals or tasks change, leveraging OS file events when available.
 - Shell Autocomplete: `oclif`-generated completions help operators discover commands quickly, improving adoption without GUI requirements.
 - Templates: Repo includes sample PRD/spec templates under `.codemachine/templates/`, ensuring consistent structure when agents are offline.
 - Documentation Sync: Commands reference anchors in documentation (including this file) for quick jumps to relevant sections using CLI help output.
@@ -435,12 +435,12 @@ Agent providers drive AI-assisted drafting and coding. Operations must manage ca
 - External APIs: GitHub REST (version pinned), Linear GraphQL, optional agent endpoints.
 - Supply Chain Security: `package-lock.json` committed; release process includes `npm audit` reports stored under `.artifacts/tests` to ensure dependencies remain vetted.
 - Docker Image: Base image from official Node v24 release; Dockerfile uses deterministic installs with `npm ci` to ensure reproducible builds.
-- Updates: CLI includes `ai-feature doctor` (future) to check dependency versions, Node runtime status, and known CVEs.
+- Updates: CLI includes `codepipe doctor` (future) to check dependency versions, Node runtime status, and known CVEs.
 
 <!-- anchor: 3-24-operational-testing -->
 ### 3.24 Operational Testing & Validation
 - Unit Tests: `vitest` suite covers orchestrator logic, adapters, and artifact services.
-- Integration Tests: CLI smoke tests simulate `ai-feature start --prompt`, verifying run directory creation, context gathering, and state transitions.
+- Integration Tests: CLI smoke tests simulate `codepipe start --prompt`, verifying run directory creation, context gathering, and state transitions.
 - Contract Tests: HTTP fixtures validate GitHub/Linear headers, rate-limit handling, and error translations.
 - Load Tests: Optional scripts simulate multiple concurrent runs to evaluate concurrency settings, disk IO, and rate-limit management.
 - Disaster Recovery Tests: Periodic exercises restore run directories from backups and attempt resumes to ensure documentation accuracy.
@@ -450,32 +450,32 @@ Agent providers drive AI-assisted drafting and coding. Operations must manage ca
 ### 3.25 Tooling Roadmap for Operations Teams
 - CLI UX Enhancements: Add `--dry-run` previews for commands touching GitHub (PR creation, merges) to build operator confidence.
 - Policy Packs: Provide reusable configuration presets (e.g., strict branch protection rules) stored under `.codemachine/policies/`.
-- Knowledge Base Automation: Generate runbook snippets automatically from this documentation using `ai-feature docs sync` to ensure updates propagate.
+- Knowledge Base Automation: Generate runbook snippets automatically from this documentation using `codepipe docs sync` to ensure updates propagate.
 - Observability Connectors: Ship scripts for shipping logs to Loki or traces to Jaeger while preserving local files.
-- Self-Diagnostics: Extend `ai-feature doctor` to evaluate disk space, Node version, Docker availability, and config drift before operations begin.
+- Self-Diagnostics: Extend `codepipe doctor` to evaluate disk space, Node version, Docker availability, and config drift before operations begin.
 - Agent Sandboxing: Explore WASI or containerized agent runtimes to isolate codegen tasks when running untrusted provider models.
 <!-- anchor: 3-26-command-reference -->
 ### 3.26 Command Reference Snapshot
-- `ai-feature init`: scaffolds config, validates integrations, records schema version.
-- `ai-feature start`: entry point for new features; triggers context gathering, research, PRD/spec.
-- `ai-feature status`: summarizes run artifacts, queue states, rate-limit ledger.
-- `ai-feature resume`: restarts failed or paused runs from last checkpoint.
-- `ai-feature approve`: records approvals tied to artifact hashes.
-- `ai-feature pr create`: opens PRs, requests reviewers, records metadata.
-- `ai-feature pr status`: checks PR readiness, status checks, approvals, and potential blockers.
-- `ai-feature deploy`: merges PRs or triggers deployment workflows when protections satisfied.
-- `ai-feature export`: packages artifacts into deterministic bundles for external review.
-- `ai-feature cleanup`: archives or deletes run directories beyond retention windows.
-- `ai-feature observe`: scheduled health check summarizing run health, KPIs, and anomalies.
+- `codepipe init`: scaffolds config, validates integrations, records schema version.
+- `codepipe start`: entry point for new features; triggers context gathering, research, PRD/spec.
+- `codepipe status`: summarizes run artifacts, queue states, rate-limit ledger.
+- `codepipe resume`: restarts failed or paused runs from last checkpoint.
+- `codepipe approve`: records approvals tied to artifact hashes.
+- `codepipe pr create`: opens PRs, requests reviewers, records metadata.
+- `codepipe pr status`: checks PR readiness, status checks, approvals, and potential blockers.
+- `codepipe deploy`: merges PRs or triggers deployment workflows when protections satisfied.
+- `codepipe export`: packages artifacts into deterministic bundles for external review.
+- `codepipe cleanup`: archives or deletes run directories beyond retention windows.
+- `codepipe observe`: scheduled health check summarizing run health, KPIs, and anomalies.
 - Each command respects exit codes (0 success, 10 validation errors, 20 external API issues, 30 human action required) to aid automation.
 
 <!-- anchor: 3-27-operational-faq -->
 ### 3.27 Operational FAQ
-- **What happens if GitHub token expires mid-run?** CLI records error, stops external calls, and preserves state. After refreshing token, rerun `ai-feature resume` to continue without rerunning completed steps.
+- **What happens if GitHub token expires mid-run?** CLI records error, stops external calls, and preserves state. After refreshing token, rerun `codepipe resume` to continue without rerunning completed steps.
 - **How are secrets protected inside run directories?** Secrets never persist. Files only contain hashed fingerprints. Logs redact tokens automatically. Operators should still restrict repo access and consider `.gitignore` rules when run directories contain sensitive context summaries.
 - **Can I run multiple features simultaneously?** Yes. Each feature has its own run directory and lock file. Concurrency settings ensure ExecutionTasks within a single run avoid conflicts.
-- **How do I handle repo cleanups after abandoned runs?** Use `ai-feature cleanup --stale` to identify runs older than configured threshold, archive them, and optionally delete branches. CLI ensures exported bundles exist before deletion.
-- **What if I need to integrate a new agent provider?** Create manifest under `.ai-feature-pipeline/agents/`, register capabilities, update RepoConfig feature flag, and run `ai-feature doctor` to validate connectivity before using it in production runs.
+- **How do I handle repo cleanups after abandoned runs?** Use `codepipe cleanup --stale` to identify runs older than configured threshold, archive them, and optionally delete branches. CLI ensures exported bundles exist before deletion.
+- **What if I need to integrate a new agent provider?** Create manifest under `.codepipe/agents/`, register capabilities, update RepoConfig feature flag, and run `codepipe doctor` to validate connectivity before using it in production runs.
 - **Do I need Docker to use the CLI?** No. Docker is optional for reproducible CI. Local runs rely on installed Node LTS. However, shipping the Docker image ensures homelab or CI environments remain consistent with local machines.
 - **How are approvals enforced in headless automation?** Operators submit signed approval bundles referencing artifact hashes. CLI validates signatures (if configured) or accepts `--approved-by` flags logged into `approvals.json`.
 - **What telemetry is safe to share externally?** Export bundles already redact secrets and include hashed references. Operators should still review content for organization-specific policies before sharing outside the team.
@@ -489,7 +489,7 @@ Agent providers drive AI-assisted drafting and coding. Operations must manage ca
 - **ExecutionTask:** Entry in `plan.json` referencing code generation, validation, PR creation, or deployment steps with dependencies and retry policies.
 - **Feature Flag:** Configurable switch stored in RepoConfig controlling optional or risky automation (e.g., auto-merge, experimental adapters, telemetry exports).
 - **Rate-Limit Ledger:** Persistent record of API quotas, remaining tokens, reset times, and backoff attempts per provider to inform operational pacing.
-- **Run Directory:** Deterministic folder under `.ai-feature-pipeline/<feature_id>/` containing all artifacts, logs, metrics, and telemetry for a specific feature run.
+- **Run Directory:** Deterministic folder under `.codepipe/<feature_id>/` containing all artifacts, logs, metrics, and telemetry for a specific feature run.
 - **State Machine:** Finite-state workflow controlling stage transitions (`draft`, `in_progress`, `review`, `done`, `deployed`) with explicit events and approvals.
 - **Telemetry Hub:** Collection of logs, metrics, and traces ensuring observability within run directories without external dependencies.
 - **Trace Map:** `trace.json` linking PRD goals to spec requirements, ExecutionTasks, git commits, and deployment outcomes for auditability.
@@ -497,8 +497,8 @@ Agent providers drive AI-assisted drafting and coding. Operations must manage ca
 ### 3.29 Operator Preflight Checklist (Daily)
 - Confirm Node LTS version matches RepoConfig `runtime.min_node_version`.
 - Validate environment variables (`GITHUB_TOKEN`, `LINEAR_API_KEY`, agent keys) are present and unexpired.
-- Pull latest repo changes, including `.ai-feature-pipeline` templates and docs.
-- Review `ai-feature observe` report from previous day for outstanding actions.
+- Pull latest repo changes, including `.codepipe` templates and docs.
+- Review `codepipe observe` report from previous day for outstanding actions.
 - Ensure Docker image is rebuilt if dependencies changed (for CI parity).
 - Verify storage usage and run cleanup if approaching quota.
 - Check rate-limit ledger to ensure ample quotas before launching long sessions.

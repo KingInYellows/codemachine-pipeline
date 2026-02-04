@@ -12,7 +12,7 @@ Follow these steps for any schema version migration:
 
 ### 1. Pre-Migration Assessment
 
-- [ ] **Identify current version:** Check `schema_version` field in `.ai-feature-pipeline/config.json`
+- [ ] **Identify current version:** Check `schema_version` field in `.codepipe/config.json`
 - [ ] **Identify target version:** Determine the schema version you're upgrading to
 - [ ] **Review breaking changes:** Consult the version-specific migration guide below
 - [ ] **Check environment:** Ensure you have the correct CLI version installed
@@ -20,9 +20,9 @@ Follow these steps for any schema version migration:
 
 ### 2. Backup Configuration
 
-- [ ] **Create backup:** `cp .ai-feature-pipeline/config.json .ai-feature-pipeline/config.json.backup`
+- [ ] **Create backup:** `cp .codepipe/config.json .codepipe/config.json.backup`
 - [ ] **Record backup location:** Note the full path to backup file
-- [ ] **Verify backup:** `cat .ai-feature-pipeline/config.json.backup` to confirm content
+- [ ] **Verify backup:** `cat .codepipe/config.json.backup` to confirm content
 
 ### 3. Apply Migration
 
@@ -34,11 +34,11 @@ Follow these steps for any schema version migration:
 
 ### 4. Validation
 
-- [ ] **Syntax check:** Ensure JSON is valid: `jq . .ai-feature-pipeline/config.json`
-- [ ] **Schema validation:** Run `ai-feature init --validate-only`
+- [ ] **Syntax check:** Ensure JSON is valid: `jq . .codepipe/config.json`
+- [ ] **Schema validation:** Run `codepipe init --validate-only`
 - [ ] **Review warnings:** Address any deprecation warnings
 - [ ] **Check credentials:** Verify environment variables still work
-- [ ] **Test basic command:** Run `ai-feature --help` to ensure CLI works
+- [ ] **Test basic command:** Run `codepipe --help` to ensure CLI works
 
 ### 5. Post-Migration
 
@@ -60,7 +60,7 @@ When migrating, add an entry to the `config_history` array:
   "changed_by": "YOUR_EMAIL_OR_USERNAME",
   "change_description": "Migrated from X.Y.Z to TARGET_VERSION - [brief description of changes]",
   "migration_applied": true,
-  "backup_path": ".ai-feature-pipeline/config.json.backup"
+  "backup_path": ".codepipe/config.json.backup"
 }
 ```
 
@@ -72,7 +72,7 @@ When migrating, add an entry to the `config_history` array:
   "changed_by": "alice@example.com",
   "change_description": "Migrated from 1.0.0 to 2.0.0 - Added governance controls, migrated approval settings",
   "migration_applied": true,
-  "backup_path": ".ai-feature-pipeline/config.json.backup"
+  "backup_path": ".codepipe/config.json.backup"
 }
 ```
 
@@ -136,7 +136,7 @@ When migrating, add an entry to the `config_history` array:
        "changed_by": "YOUR_EMAIL",
        "change_description": "Migrated to 1.0.0 schema",
        "migration_applied": true,
-       "backup_path": ".ai-feature-pipeline/config.json.backup"
+       "backup_path": ".codepipe/config.json.backup"
      }
    ]
    ```
@@ -150,7 +150,7 @@ When migrating, add an entry to the `config_history` array:
    "schema_version": "1.0.0"
    ```
 
-5. **Validate:** Run `ai-feature init --validate-only`
+5. **Validate:** Run `codepipe init --validate-only`
 
 ---
 
@@ -168,7 +168,7 @@ When migrating, add an entry to the `config_history` array:
 ### Issue: Validation fails after migration
 
 **Symptoms:**
-- `ai-feature init --validate-only` reports errors
+- `codepipe init --validate-only` reports errors
 - Required fields missing
 
 **Resolution:**
@@ -196,7 +196,7 @@ When migrating, add an entry to the `config_history` array:
 - Config file won't load
 
 **Resolution:**
-1. Use `jq` to find syntax error: `jq . .ai-feature-pipeline/config.json`
+1. Use `jq` to find syntax error: `jq . .codepipe/config.json`
 2. Common issues: missing commas, trailing commas, unquoted strings
 3. Use JSON linter or editor with JSON validation
 4. If unfixable, restore from backup
@@ -219,9 +219,9 @@ When migrating, add an entry to the `config_history` array:
 
 If migration fails and you need to rollback:
 
-1. **Stop CLI:** Ensure no `ai-feature` commands are running
-2. **Restore backup:** `cp .ai-feature-pipeline/config.json.backup .ai-feature-pipeline/config.json`
-3. **Verify restoration:** `ai-feature init --validate-only`
+1. **Stop CLI:** Ensure no `codepipe` commands are running
+2. **Restore backup:** `cp .codepipe/config.json.backup .codepipe/config.json`
+3. **Verify restoration:** `codepipe init --validate-only`
 4. **Document issue:** Note what went wrong for future attempts
 5. **Seek help:** Consult documentation or open GitHub issue
 
@@ -239,7 +239,7 @@ Validates config without modifying it:
 
 set -e
 
-CONFIG_PATH=".ai-feature-pipeline/config.json"
+CONFIG_PATH=".codepipe/config.json"
 
 if [ ! -f "$CONFIG_PATH" ]; then
   echo "Error: Config file not found at $CONFIG_PATH"
@@ -255,7 +255,7 @@ jq empty "$CONFIG_PATH" || {
 
 # Validate schema
 echo "Validating schema..."
-ai-feature init --validate-only
+codepipe init --validate-only
 
 echo "✓ Configuration is valid"
 ```
@@ -270,9 +270,9 @@ Creates timestamped backup:
 
 set -e
 
-CONFIG_PATH=".ai-feature-pipeline/config.json"
+CONFIG_PATH=".codepipe/config.json"
 TIMESTAMP=$(date +%Y%m%d_%H%M%S)
-BACKUP_PATH=".ai-feature-pipeline/config.json.backup.$TIMESTAMP"
+BACKUP_PATH=".codepipe/config.json.backup.$TIMESTAMP"
 
 if [ ! -f "$CONFIG_PATH" ]; then
   echo "Error: Config file not found at $CONFIG_PATH"
@@ -303,16 +303,16 @@ If you encounter issues during migration:
 
 1. **Check documentation:**
    - `docs/requirements/RepoConfig_schema.md` - Full schema reference
-   - `.ai-feature-pipeline/templates/config.example.json` - Example config
+   - `.codepipe/templates/config.example.json` - Example config
 
 2. **Validation command:**
    ```bash
-   ai-feature init --validate-only
+   codepipe init --validate-only
    ```
 
 3. **Community support:**
-   - GitHub Issues: https://github.com/your-org/ai-feature-pipeline/issues
-   - Team Slack: #ai-feature-pipeline channel
+   - GitHub Issues: https://github.com/your-org/codemachine-pipeline/issues
+   - Team Slack: #codemachine-pipeline channel
 
 4. **Emergency rollback:**
    - Restore from backup immediately

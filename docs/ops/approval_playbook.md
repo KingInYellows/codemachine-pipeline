@@ -61,8 +61,8 @@ When a workflow step completes (e.g., PRD authoring), the CLI pauses and display
 ```
 ✅ PRD draft created. Approval required before continuing.
 Review the document at artifacts/prd.md, then run:
-  ai-feature approve prd --signer "<your-email>"
-Need edits? Request revisions via: ai-feature prd edit --request "<details>"
+  codepipe approve prd --signer "<your-email>"
+Need edits? Request revisions via: codepipe prd edit --request "<details>"
 ```
 
 **What happens:**
@@ -76,10 +76,10 @@ Navigate to the artifact location and review:
 
 ```bash
 # Example: Review PRD
-cat .ai-feature-pipeline/runs/FEAT-abc123/artifacts/prd.md
+cat .codepipe/runs/FEAT-abc123/artifacts/prd.md
 
 # Or open in editor
-vim .ai-feature-pipeline/runs/FEAT-abc123/artifacts/prd.md
+vim .codepipe/runs/FEAT-abc123/artifacts/prd.md
 ```
 
 **Review checklist:**
@@ -94,7 +94,7 @@ vim .ai-feature-pipeline/runs/FEAT-abc123/artifacts/prd.md
 #### Grant Approval
 
 ```bash
-ai-feature approve prd --signer "user@example.com" --comment "LGTM"
+codepipe approve prd --signer "user@example.com" --comment "LGTM"
 ```
 
 **Output:**
@@ -107,14 +107,14 @@ Hash: a3f5e8b...
 Timestamp: 2025-01-15T14:32:10Z
 
 Next steps:
-  • PRD approved. Continue to specification authoring with: ai-feature spec
-  • Or resume the pipeline with: ai-feature resume
+  • PRD approved. Continue to specification authoring with: codepipe spec
+  • Or resume the pipeline with: codepipe resume
 ```
 
 #### Deny Approval
 
 ```bash
-ai-feature approve prd --deny --signer "reviewer@example.com" \
+codepipe approve prd --deny --signer "reviewer@example.com" \
   --comment "Missing acceptance criteria for edge cases"
 ```
 
@@ -129,7 +129,7 @@ Timestamp: 2025-01-15T14:35:22Z
 
 Next steps:
   • PRD rejected. Address feedback and request approval again.
-  • Update the artifact and re-run the relevant command (e.g., ai-feature prd)
+  • Update the artifact and re-run the relevant command (e.g., codepipe prd)
   • Then request approval using this command again.
 ```
 
@@ -138,7 +138,7 @@ Next steps:
 Once approved, continue the pipeline:
 
 ```bash
-ai-feature resume
+codepipe resume
 ```
 
 The resume command validates that all pending approvals are completed before proceeding.
@@ -162,7 +162,7 @@ GATE="prd"
 SIGNER="ci-bot@example.com"
 
 # Check status
-STATUS=$(ai-feature status --feature "$FEATURE_ID" --json)
+STATUS=$(codepipe status --feature "$FEATURE_ID" --json)
 PENDING=$(echo "$STATUS" | jq -r '.approvals.pending[]' | grep "$GATE" || echo "")
 
 if [ -z "$PENDING" ]; then
@@ -176,7 +176,7 @@ VALIDATION_EXIT_CODE=$?
 
 if [ "$VALIDATION_EXIT_CODE" -eq 0 ]; then
   # Approve
-  RESULT=$(ai-feature approve "$GATE" \
+  RESULT=$(codepipe approve "$GATE" \
     --feature "$FEATURE_ID" \
     --signer "$SIGNER" \
     --approve \
@@ -187,7 +187,7 @@ if [ "$VALIDATION_EXIT_CODE" -eq 0 ]; then
   exit 0
 else
   # Deny
-  RESULT=$(ai-feature approve "$GATE" \
+  RESULT=$(codepipe approve "$GATE" \
     --feature "$FEATURE_ID" \
     --signer "$SIGNER" \
     --deny \
@@ -213,8 +213,8 @@ fi
   "approved_at": "2025-01-15T14:32:10Z",
   "rationale": "LGTM",
   "next_steps": [
-    "PRD approved. Continue to specification authoring with: ai-feature spec",
-    "Or resume the pipeline with: ai-feature resume"
+    "PRD approved. Continue to specification authoring with: codepipe spec",
+    "Or resume the pipeline with: codepipe resume"
   ]
 }
 ```
@@ -228,7 +228,7 @@ For advanced users who need to manually edit approval records (e.g., bulk import
 ### Approvals File Location
 
 ```
-.ai-feature-pipeline/runs/<feature_id>/approvals/approvals.json
+.codepipe/runs/<feature_id>/approvals/approvals.json
 ```
 
 ### Schema
@@ -271,7 +271,7 @@ For advanced users who need to manually edit approval records (e.g., bulk import
 
 1. **Compute artifact hash:**
    ```bash
-   sha256sum .ai-feature-pipeline/runs/FEAT-abc123/artifacts/prd.md
+   sha256sum .codepipe/runs/FEAT-abc123/artifacts/prd.md
    ```
 
 2. **Edit approvals.json:**
@@ -283,7 +283,7 @@ For advanced users who need to manually edit approval records (e.g., bulk import
 3. **Update manifest pending/completed arrays:**
    ```bash
    # Edit manifest.json
-   vim .ai-feature-pipeline/runs/FEAT-abc123/manifest.json
+   vim .codepipe/runs/FEAT-abc123/manifest.json
 
    # Move gate from approvals.pending to approvals.completed
    # Example:
@@ -293,7 +293,7 @@ For advanced users who need to manually edit approval records (e.g., bulk import
 
 4. **Validate:**
    ```bash
-   ai-feature status --feature FEAT-abc123
+   codepipe status --feature FEAT-abc123
    ```
 
 ---
@@ -333,14 +333,14 @@ To manually expire stale approvals:
 
 ```bash
 # 1. Check run age
-ai-feature status --feature FEAT-abc123
+codepipe status --feature FEAT-abc123
 
 # 2. If overdue, deny approval
-ai-feature approve prd --deny --signer "timeout-bot@example.com" \
+codepipe approve prd --deny --signer "timeout-bot@example.com" \
   --comment "Approval timed out after 72 hours"
 
 # 3. Update status to failed
-# (Requires manual manifest edit or future `ai-feature fail` command)
+# (Requires manual manifest edit or future `codepipe fail` command)
 ```
 
 ---
@@ -360,7 +360,7 @@ The `--signer` flag captures the approver's identity. Best practices:
 git config user.email
 # Output: user@example.com
 
-ai-feature approve prd --signer "$(git config user.email)"
+codepipe approve prd --signer "$(git config user.email)"
 ```
 
 ### Hash Integrity
@@ -386,7 +386,7 @@ Please review the updated artifact and request approval again.
 ⚠ **Dangerous:** Only use when hash validation incorrectly fails (e.g., line-ending changes).
 
 ```bash
-ai-feature approve prd --signer "user@example.com" --skip-hash-check
+codepipe approve prd --signer "user@example.com" --skip-hash-check
 ```
 
 **Warning logged to telemetry:**
@@ -410,10 +410,10 @@ No pending approval for gate prd. Current pending approvals: spec
 **Resolution:**
 ```bash
 # Check approval status
-ai-feature status --feature FEAT-abc123
+codepipe status --feature FEAT-abc123
 
 # If prd already approved, continue to next gate
-ai-feature resume
+codepipe resume
 ```
 
 ---
@@ -444,8 +444,8 @@ Artifact hash mismatch: expected a3f5e8b9... but got c1d2e3f4...
 1. Review changes to artifact
 2. If changes are intentional, request new approval:
    ```bash
-   ai-feature prd  # Re-generate PRD
-   ai-feature approve prd --signer "user@example.com"
+   codepipe prd  # Re-generate PRD
+   codepipe approve prd --signer "user@example.com"
    ```
 3. If changes are unintentional, revert artifact and approve
 
@@ -498,27 +498,27 @@ The `approve` command uses standardized exit codes:
 
 ### Grant Approval
 ```bash
-ai-feature approve <gate> --signer "<email>" [--comment "<text>"]
+codepipe approve <gate> --signer "<email>" [--comment "<text>"]
 ```
 
 ### Deny Approval
 ```bash
-ai-feature approve <gate> --deny --signer "<email>" --comment "<reason>"
+codepipe approve <gate> --deny --signer "<email>" --comment "<reason>"
 ```
 
 ### Check Status
 ```bash
-ai-feature status [--feature <id>]
+codepipe status [--feature <id>]
 ```
 
 ### Resume After Approval
 ```bash
-ai-feature resume [--feature <id>]
+codepipe resume [--feature <id>]
 ```
 
 ### JSON Output (Automation)
 ```bash
-ai-feature approve <gate> --signer "<email>" --json
+codepipe approve <gate> --signer "<email>" --json
 ```
 
 ---

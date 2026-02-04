@@ -50,7 +50,7 @@ To reduce complexity, the following are **deferred to v2**:
 
 ## Overview
 
-This plan implements the CodeMachine CLI Execution Engine Adapter, which bridges the existing ai-feature pipeline infrastructure (queue, resume, telemetry) with CodeMachine CLI for autonomous task execution. The adapter translates `ExecutionTask` types into CodeMachine CLI invocations, manages process lifecycle, and updates queue state based on execution results.
+This plan implements the CodeMachine CLI Execution Engine Adapter, which bridges the existing codepipe pipeline infrastructure (queue, resume, telemetry) with CodeMachine CLI for autonomous task execution. The adapter translates `ExecutionTask` types into CodeMachine CLI invocations, manages process lifecycle, and updates queue state based on execution results.
 
 ## Current State Analysis
 
@@ -86,12 +86,12 @@ This plan implements the CodeMachine CLI Execution Engine Adapter, which bridges
 
 After implementation:
 
-1. `ai-feature start <spec>` executes all queued tasks autonomously via CodeMachine CLI
+1. `codepipe start <spec>` executes all queued tasks autonomously via CodeMachine CLI
 2. Task status updates in real-time: `pending` → `running` → `completed`/`failed`
-3. Failed tasks are resumable via `ai-feature resume` with retry logic
+3. Failed tasks are resumable via `codepipe resume` with retry logic
 4. CLI output captured to `<runDir>/logs/<taskId>.log`
 5. Telemetry events emitted for all task lifecycle transitions
-6. `ai-feature doctor` validates CodeMachine CLI availability
+6. `codepipe doctor` validates CodeMachine CLI availability
 
 ### Verification Commands
 
@@ -176,9 +176,9 @@ execution: ExecutionConfigSchema,
 
 Update `createDefaultConfig()` and `applyEnvironmentOverrides()` for:
 
-- `AI_FEATURE_EXECUTION_CLI_PATH`
-- `AI_FEATURE_EXECUTION_DEFAULT_ENGINE`
-- `AI_FEATURE_EXECUTION_TIMEOUT_MS`
+- `CODEPIPE_EXECUTION_CLI_PATH`
+- `CODEPIPE_EXECUTION_DEFAULT_ENGINE`
+- `CODEPIPE_EXECUTION_TIMEOUT_MS`
 
 #### 1.2 Create CodeMachineRunner Utility
 
@@ -606,9 +606,9 @@ const result = await engine.execute();
 
 #### Manual Verification:
 
-- [ ] `ai-feature start` executes tasks end-to-end (DEFERRED - see Phase 2.3 deviation)
+- [ ] `codepipe start` executes tasks end-to-end (DEFERRED - see Phase 2.3 deviation)
 - [ ] Failed tasks remain in queue with correct retry count (DEFERRED)
-- [ ] `ai-feature resume` re-executes failed tasks (DEFERRED)
+- [ ] `codepipe resume` re-executes failed tasks (DEFERRED)
 
 ---
 
@@ -833,10 +833,10 @@ Add execution smoke test:
 
 ```bash
 # Test CodeMachine CLI availability
-ai-feature doctor --check codemachine
+codepipe doctor --check codemachine
 
 # Test basic execution (with mock spec)
-ai-feature start tests/fixtures/sample_spec.json --dry-run
+codepipe start tests/fixtures/sample_spec.json --dry-run
 ```
 
 ### Success Criteria:
@@ -918,7 +918,7 @@ Add check:
 #### Automated Verification:
 
 - [x] `npm run build` passes
-- [x] `ai-feature doctor` includes codemachine check
+- [x] `codepipe doctor` includes codemachine check
 - [x] Documentation renders correctly
 
 #### Manual Verification:
@@ -950,9 +950,9 @@ Add check:
 ### Manual Testing Steps
 
 1. Install CodeMachine CLI: `npm install -g codemachine`
-2. Run `ai-feature doctor` - verify codemachine check passes
-3. Run `ai-feature start` with sample spec - verify execution completes
-4. Kill process mid-execution - verify `ai-feature resume` works
+2. Run `codepipe doctor` - verify codemachine check passes
+3. Run `codepipe start` with sample spec - verify execution completes
+4. Kill process mid-execution - verify `codepipe resume` works
 5. Trigger timeout - verify graceful termination and retry
 6. Check logs for credential leakage - verify redaction works
 
@@ -977,9 +977,9 @@ Add check:
 
 ### Upgrade Path
 
-1. Update ai-feature CLI: `npm install -g @codemachine/ai-feature`
+1. Update codepipe CLI: `npm install -g @codemachine/codepipe`
 2. Install CodeMachine CLI: `npm install -g codemachine`
-3. Run `ai-feature doctor` to verify setup
+3. Run `codepipe doctor` to verify setup
 4. Update config.json with `execution` section if customization needed
 
 ---

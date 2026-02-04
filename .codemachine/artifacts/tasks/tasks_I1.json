@@ -26,14 +26,14 @@
     "task_id": "I1.T2",
     "iteration_id": "I1",
     "iteration_goal": "Bootstrap the Node.js/TypeScript CLI workspace, define RepoConfig schemas, implement deterministic run directory management, wire the HTTP/rate-limit layer, and capture initial architecture diagrams so every later iteration can build against stable contracts.",
-    "description": "Define the RepoConfig schema using `zod`, include governance fields, integration toggles, runtime safety defaults, and `config_history` tracking so future migrations can be reasoned about deterministically.\n            Provide typed helpers that load/validate `.ai-feature-pipeline/config.json`, emit actionable error messages, render default configs, and integrate with CLI commands needing config resolution.",
+    "description": "Define the RepoConfig schema using `zod`, include governance fields, integration toggles, runtime safety defaults, and `config_history` tracking so future migrations can be reasoned about deterministically.\n            Provide typed helpers that load/validate `.codepipe/config.json`, emit actionable error messages, render default configs, and integrate with CLI commands needing config resolution.",
     "agent_type_hint": "BackendAgent",
     "inputs": "Section 2 (Technology Stack & Key Components), Section 2.1 (Run Directory artifact), ADR-2 (State Persistence), ADR-5 (Approval workflow).",
     "target_files": [
       "src/core/config/RepoConfig.ts",
       "src/core/config/validator.ts",
       "docs/requirements/RepoConfig_schema.md",
-      ".ai-feature-pipeline/templates/config.example.json",
+      ".codepipe/templates/config.example.json",
       "docs/requirements/config_migrations.md"
     ],
     "input_files": [],
@@ -49,14 +49,14 @@
     "task_id": "I1.T3",
     "iteration_id": "I1",
     "iteration_goal": "Bootstrap the Node.js/TypeScript CLI workspace, define RepoConfig schemas, implement deterministic run directory management, wire the HTTP/rate-limit layer, and capture initial architecture diagrams so every later iteration can build against stable contracts.",
-    "description": "Implement the Run Directory Manager that provisions `.ai-feature-pipeline/<feature_id>/`, writes manifests, enforces file locks, and optionally seeds SQLite WAL indexes, then document the structure in Markdown + Mermaid per Section 2.1.\n            Include helpers for hash manifests, `last_step` tracking, `last_error`, approvals, queue storage, manifest integrity checks, and cleanup hooks invoked by future `cleanup` command.",
+    "description": "Implement the Run Directory Manager that provisions `.codepipe/<feature_id>/`, writes manifests, enforces file locks, and optionally seeds SQLite WAL indexes, then document the structure in Markdown + Mermaid per Section 2.1.\n            Include helpers for hash manifests, `last_step` tracking, `last_error`, approvals, queue storage, manifest integrity checks, and cleanup hooks invoked by future `cleanup` command.",
     "agent_type_hint": "BackendAgent",
     "inputs": "Section 3 (Directory Structure), Section 2 (Data Model overview), ADR-2 (State Persistence).",
     "target_files": [
       "src/persistence/runDirectoryManager.ts",
       "src/persistence/hashManifest.ts",
       "docs/diagrams/run_directory_schema.mmd",
-      ".ai-feature-pipeline/templates/run_manifest.json",
+      ".codepipe/templates/run_manifest.json",
       "docs/requirements/run_directory_schema.md"
     ],
     "input_files": [],
@@ -166,7 +166,7 @@
     "task_id": "I1.T8",
     "iteration_id": "I1",
     "iteration_goal": "Bootstrap the Node.js/TypeScript CLI workspace, define RepoConfig schemas, implement deterministic run directory management, wire the HTTP/rate-limit layer, and capture initial architecture diagrams so every later iteration can build against stable contracts.",
-    "description": "Implement `ai-feature init` (RepoConfig scaffolding + integration checks) and `ai-feature doctor` (environment diagnostics), including documentation of exact prompts, approvals, and safety nets so future runs start consistently.\n            Integrate telemetry to record command invocations, produce readiness checklist stored under `plan/readiness_checklist.md`, and describe exit codes for CI/homelab operators.",
+    "description": "Implement `codepipe init` (RepoConfig scaffolding + integration checks) and `codepipe doctor` (environment diagnostics), including documentation of exact prompts, approvals, and safety nets so future runs start consistently.\n            Integrate telemetry to record command invocations, produce readiness checklist stored under `plan/readiness_checklist.md`, and describe exit codes for CI/homelab operators.",
     "agent_type_hint": "DocumentationAgent",
     "inputs": "Section 1 (Key Assumptions), Section 3 (Directory Structure), ADR-5 (Approval workflow).",
     "target_files": [

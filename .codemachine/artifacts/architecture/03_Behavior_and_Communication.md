@@ -21,9 +21,9 @@
         - Auto-merge enablement uses the GraphQL mutation from GitHub, yet the HTTP client still wraps the call with REST-like envelope metadata to align logs across providers.
         - Linear snapshots rely on GraphQL queries for issues and comments, but each GraphQL call is stored as a RESTful RequestRecord with method POST and a hashed body for reproducibility.
         - Optional watchers that detect merged code run as CLI commands but talk to GitHub via GET /repos/{owner}/{repo}/pulls?state=closed, continuing the same restful flavor.
-        - Observability exports such as ai-feature status --json essentially mirror GET /runs/{id} and rely on the same DTO definitions described later in this section.
+        - Observability exports such as codepipe status --json essentially mirror GET /runs/{id} and rely on the same DTO definitions described later in this section.
         - Security posture demands Authorization headers to hold redacted tokens; the HTTP layer enforces this and rejects any call missing a sanitized credential descriptor.
-        - CLI-level approvals still route through RESTful artifacts; for example, ai-feature approve writes to approvals.json but also exposes POST /runs/{id}/approvals for remote triggers.
+        - CLI-level approvals still route through RESTful artifacts; for example, codepipe approve writes to approvals.json but also exposes POST /runs/{id}/approvals for remote triggers.
         - When the Execution Engine wishes to publish diffs, it calls POST /runs/{id}/artifacts/diff internally, giving a consistent interface to store zipped patch summaries.
         - Rate-limit friendly behavior is enforced by reading x-ratelimit-remaining and x-ratelimit-reset from every response before the HTTP layer resolves the promise back to the caller.
         - Secondary limit handling attaches Retry-After metadata to the DTO so resume operations honor cooling-off periods even across process restarts.
@@ -57,7 +57,7 @@
         - Each request/response pair is hashed and stored under run directories to make audit exports reproducible and tamper-evident.
         - The HTTP layer includes automatic compression toggles (Content-Encoding) but defaults to identity to avoid non-deterministic streaming artifacts.
         - CLI uses synchronous blocking for REST calls to keep control flow simple, but the HTTP module can still multiplex multiple requests thanks to async/await semantics.
-        - Artifact references in REST responses use relative paths within .ai-feature-pipeline to keep location independence across machines.
+        - Artifact references in REST responses use relative paths within .codepipe to keep location independence across machines.
         - Because the CLI may be invoked on air-gapped machines, REST interactions can be mocked by pointing the HTTP layer to recorded fixtures defined in RepoConfig runtime overrides.
         - Request payloads include srid (schema revision identifier) so old clients cannot accidentally submit incompatible Feature DTOs.
         - GitHub pagination is strictly sequential; the HTTP layer follows Link headers but caps page_count to avoid runaway loops when handling PR listings.
@@ -72,7 +72,7 @@
         - Observability includes health checks invoked via GET /health for each adapter, returning status_reasons that help operators diagnose integration failures.
         - CLI's local-run-only mode still honors the REST contract by writing pseudo-responses to logs, ensuring future remote orchestrators can parse the same shapes.
         - The CLI enforces TLS for all remote HTTP calls and rejects insecure endpoints unless explicitly flagged for development fixtures.
-        - Each request includes User-Agent: ai-feature-pipeline/<version> to make GitHub and Linear telemetry easier to analyze.
+        - Each request includes User-Agent: codemachine-pipeline/<version> to make GitHub and Linear telemetry easier to analyze.
         - When the CLI triggers GitHub workflow dispatches, it uses POST /repos/{owner}/{repo}/actions/workflows/{id}/dispatches with deterministic ref and inputs arrays.
         - GitHub comment creation, if enabled, aligns with POST /repos/{owner}/{repo}/issues/{number}/comments but respects IR-7's throttling requirements by placing writes into a queue.
         - CLI-run watchers use HEAD requests when verifying branch existence, reducing payload sizes while still following the same HTTP semantics.
@@ -84,7 +84,7 @@
         - Export bundle requests may include filter parameters (e.g., format=md) but still rely on query strings, with the HTTP layer sanitizing all user input before constructing URLs.
         - CLI ensures multi-tenant usage works by including repo_url and feature_id in every REST call, preventing cross-project contamination.
         - Retry policies for REST requests are encoded as part of each DTO, containing attempt counters, jitter settings, and the timestamp of the last retry.
-        - CLI orchestrator surfaces these retry plans to the user via ai-feature status --json, mapping the HTTP behavior to the state machine view.
+        - CLI orchestrator surfaces these retry plans to the user via codepipe status --json, mapping the HTTP behavior to the state machine view.
         - HTTP layer also annotates request_size bytes, enabling downstream cost accounting for providers that bill per payload size.
         - Observability hub publishes restful transcripts under run/logs/http.ndjson, each entry referencing run_id, component, method, url, status_code, and timeline data.
         - CLI ensures restful endpoints treat arrays deterministically by sorting fields like reviewers or required checks before sending them to GitHub APIs.
@@ -121,10 +121,10 @@
         - HTTP layer uses typed enums for HTTP verbs and status codes, preventing typographical mistakes when new adapters are added.
         - Observability hub aggregates restful throughput statistics, enabling future scaling decisions (parallelization) while respecting rate limits.
         - CLI ensures restful endpoints rely on standard JSON serialization, forbidding runtime-specific fields or prototypes, thus keeping exports portable.
-        - HTTP layer includes CLI version within a X-AI-Feature-Version header, allowing providers to deliver targeted guidance when features change.
+        - HTTP layer includes CLI version within a X-CodePipe-Version header, allowing providers to deliver targeted guidance when features change.
         - Because the CLI is local-first, restful calls are the only time network is touched; this clear boundary simplifies compliance reviews and threat assessments.
     *   **Communication Patterns:** The Behavior Architect view emphasizes how orchestrated request/response paths and asynchronous queues work together without violating local-first constraints.
-        - Synchronous CLI Orchestrator to RepoConfig Manager handshake occurs when commands like ai-feature start validate repository state before any work begins.
+        - Synchronous CLI Orchestrator to RepoConfig Manager handshake occurs when commands like codepipe start validate repository state before any work begins.
         - RepoConfig Manager responds with resolved paths, integration flags, and capability toggles, which the CLI Orchestrator caches for the remainder of the run.
         - CLI Orchestrator then issues a synchronous request to the Run Directory Manager to create or load the feature run directory, guaranteeing deterministic folder names via ULIDs.
         - Run Directory Manager returns file handles, path registries, and file locks, allowing the CLI Orchestrator to orchestrate subsequent writes safely.
@@ -149,7 +149,7 @@
         - Agent Adapter sessions maintain conversation context; CLI orchestrator tags each call with run_id, enabling asynchronous completions to be correlated with the correct feature.
         - Validation Command Registry stores configured commands; Execution Engine interacts synchronously when running lint or tests, capturing stdout/stderr and streaming them to Observability Hub.
         - When validations fail, Execution Engine records failure_response entries and notifies Resume Coordinator so the CLI can present actionable remediation instructions.
-        - Resume Coordinator maintains a state machine referencing last_step and last_error; when ai-feature resume is invoked, it consults plan.json and queue files to determine the next action synchronously.
+        - Resume Coordinator maintains a state machine referencing last_step and last_error; when codepipe resume is invoked, it consults plan.json and queue files to determine the next action synchronously.
         - Deployment Trigger Module only activates after ExecutionTasks and validations succeed; it communicates with GitHub Adapter to inspect branch protection rules and required status checks.
         - If required checks are pending, Deployment Trigger Module enters a wait loop with asynchronous polling intervals, each interval recorded to logs.ndjson to preserve determinism.
         - Observability Hub aggregates these polling events and surfaces them through metrics so operators can see how long merges or deployments remain blocked.
@@ -198,7 +198,7 @@
         - CLI orchestrator maintains concurrency budgets for remote API calls, so GitHub Adapter may queue operations internally when concurrency would exceed configured values.
         - Observability hub surfaces concurrency status in metrics/prometheus.txt, letting operators see pending_count or running_count per adapter.
         - Execution Engine uses asynchronous watchers to monitor git working tree state, ensuring no untracked files remain before validations run.
-        - CLI orchestrator ensures that when ai-feature status is invoked, it reads current states from feature.json, plan.json, and ExecutionTask files synchronously, presenting a cohesive snapshot.
+        - CLI orchestrator ensures that when codepipe status is invoked, it reads current states from feature.json, plan.json, and ExecutionTask files synchronously, presenting a cohesive snapshot.
         - Export command interacts with Artifact Bundle Service; once the export is ready, CLI prints manifest path while Observability hub records the action for audit.
         - Resume operations rely heavily on the queue file; each queue entry includes attempt_count and status, enabling CLI to re-run failed tasks or skip completed ones.
         - Notification events triggered by errors carry severity_level fields, and optional integrations decide how to display them (e.g., Slack warns vs email info).
@@ -212,14 +212,14 @@
         - If patch conflicts occur, Execution Engine logs conflict details, marks the task as human-action-required, and pauses the queue until manual resolution occurs.
         - CLI orchestrator surfaces these conflicts via status command and ensures Resume Coordinator expects a manual acknowledgement before continuing.
         - Observability hub stores conflict_info objects with file paths and hunk contexts for easier debugging.
-        - When optional watchers are run via ai-feature observe, they read multiple features' directories sequentially, ensuring no cross-run data leakage occurs.
+        - When optional watchers are run via codepipe observe, they read multiple features' directories sequentially, ensuring no cross-run data leakage occurs.
         - Watchers schedule asynchronous refresh tasks for features waiting on merges, enabling notifications when GitHub branch protections finally allow merges.
         - CLI orchestrator ensures watchers respect concurrency constraints by using file-based locks to avoid simultaneous manipulations of the same run directory.
         - Artifact Bundle Service hooks into watchers so exported bundles remain up-to-date if merges or deployments finish while watchers are active.
         - NotificationEvent system is optional; when disabled, CLI still records the would-be message in logs for audit without hitting external services.
         - Validation Command Registry supports command templating; Execution Engine renders templates with environment variables from RepoConfig or run-specific data before execution.
         - CLI orchestrator wires metrics from Observability hub to optional remote collectors by writing to file-based exporters, staying within local-first constraints.
-        - Run Directory Manager includes cleanup hooks invoked by ai-feature cleanup; this command communicates with Observability hub to ensure logs for archived runs remain accessible before deletion.
+        - Run Directory Manager includes cleanup hooks invoked by codepipe cleanup; this command communicates with Observability hub to ensure logs for archived runs remain accessible before deletion.
         - Security & Credential Vault stores metadata in integration_credentials.json, and CLI components read this file synchronously before making API requests.
         - When new credentials are added, the vault notifies Observability hub so audit logs record who made the change and when it takes effect.
         - CLI orchestrator uses dependency injection to give modules access to only the services they need, enforcing separation of concerns and simplifying testing.
@@ -237,7 +237,7 @@
         - Deployment Trigger Module requires approvals for code-to-PR and PR-to-deploy transitions, reading from approvals.json each time to confirm.
         - Observability hub logs the identity (user or agent) who granted approval, fulfilling audit requirements.
         - When Resumability requires manual cleanup, CLI orchestrator writes instructions to last_error field within feature.json, describing pending action items for operators.
-        - Resume Coordinator reads last_error messages to display them during ai-feature status or resume, ensuring human operators understand next steps.
+        - Resume Coordinator reads last_error messages to display them during codepipe status or resume, ensuring human operators understand next steps.
         - Execution Engine enforces patch-level allowlists defined in RepoConfig constraints.must_touch_paths by verifying the diff touches expected directories before committing.
         - CLI orchestrator ensures git commits reference ExecutionTask IDs in their messages, enabling traceability between code changes and plan.json entries.
         - GitHub Adapter surfaces commit SHAs back to Execution Engine so plan.json can record code artifacts for each task.
@@ -279,9 +279,9 @@
         - Observability hub records the interrupt event with stack traces for debugging.
         - CLI orchestrator ensures tasks referencing external storage (optional SQLite index) always flush transactions before acknowledging completion.
         - When GitHub or Linear respond with schema changes, HTTP layer surfaces them as validation errors; CLI orchestrator escalates to governance notes per foundation directives.
-        - Operators can record these escalations using ai-feature governance add, which writes to RepoConfig governance_notes and notifies relevant components.
+        - Operators can record these escalations using codepipe governance add, which writes to RepoConfig governance_notes and notifies relevant components.
         - Observability hub catalogs governance events separately for easier reporting.
-        - CLI orchestrator ensures ai-feature status includes a summary of outstanding governance questions, aligning ops with architecture directives.
+        - CLI orchestrator ensures codepipe status includes a summary of outstanding governance questions, aligning ops with architecture directives.
         - Execution Engine respects must_not_touch_paths by scanning diffs before committing; any violation results in immediate failure and log entry referencing the offending path.
         - CLI orchestrator enforces that plan.json includes must_touch_paths when specified, ensuring ExecutionTasks target required directories.
         - Observability hub monitors compliance metrics (percentage of required paths touched) and surfaces them in status output.
@@ -300,7 +300,7 @@
         - Deployment Trigger Module interacts with GitHub workflow dispatch endpoints only after verifying repo automation is configured, preventing spurious failures.
         - NotificationEvent system alerts operators when deployments start and finish, referencing workflow IDs and GitHub URLs.
         - Observability hub records workflow_run statuses, linking them to DeploymentRecord entries for future tracing.
-        - CLI orchestrator ensures ai-feature deploy commands fail fast if repo disallows direct merges, prompting operators to adjust configuration or approvals.
+        - CLI orchestrator ensures codepipe deploy commands fail fast if repo disallows direct merges, prompting operators to adjust configuration or approvals.
         - Execution Engine may call optional agent endpoints to propose deployment notes; these interactions follow the same DTO pattern as PRD/spec generation.
         - Artifact Bundle Service packages deployment notes alongside PR summaries to keep audit artifacts comprehensive.
         - Resume Coordinator ensures that if deployment fails mid-way, pipeline state returns to review status and logs reasons for manual follow-up.
@@ -342,7 +342,7 @@
             participant "Artifact Bundle Service" as Bundle
             participant "Resume Coordinator" as Resume
             ' Initialization phase ensures config + credentials are ready
-            Operator -> CLI: ai-feature start --prompt "<intent>"
+            Operator -> CLI: codepipe start --prompt "<intent>"
             CLI -> Obs: log(command_received, run_hint)
             CLI -> RCM: loadOrInitConfig()
             RCM --> CLI: RepoConfig snapshot
@@ -563,7 +563,7 @@
             CLI -> Obs: log(linear_throttling_enabled)
             end
             ' Resume command picks up after failure
-            Operator -> CLI: ai-feature resume <feature_id>
+            Operator -> CLI: codepipe resume <feature_id>
             CLI -> Obs: log(resume_requested)
             CLI -> Resume: inspectState(runDirectory)
             Resume --> CLI: resumePlan(lastStep, pendingTasks)
@@ -648,7 +648,7 @@
         - Field agents: array of capability references specifying which Agent Adapter profile to use for PRD/spec/code phases.
         - Field approvals: optional array referencing pre-approved gates for automation-heavy environments.
         - FeatureCreateResponse returns { featureId, runDirectory, initialState, repoSummary } for CLI or remote clients.
-        - runDirectory is a deterministic path inside .ai-feature-pipeline/<featureId>/ enabling offline navigation.
+        - runDirectory is a deterministic path inside .codepipe/<featureId>/ enabling offline navigation.
         - initialState includes last_step="context_gathering", last_error=null, and telemetry counters reset to zero.
         - repoSummary echoes RepoConfig fields plus integration flags, letting remote agents confirm capabilities.
         - ResearchTask DTOs include id, feature_id, title, objective, status, sources, cache_key, and freshness_required as per foundation spec.
@@ -693,7 +693,7 @@
         - Each stage_state includes status enum (pending|running|blocked|done), started_at, completed_at, blockers[], approvals_needed[], artifacts[].
         - RateLimitLedger DTO aggregates RateLimitEnvelope entries plus derived fields like percentage_used and estimated_reset_time.
         - HumanActionRequest DTO describes blocking events: {id, run_id, type, description, required_files[], due_to_rate_limit?, due_to_validation?}.
-        - CLI surfaces HumanActionRequest via ai-feature status, and remote systems can respond via POST /runs/{id}/actions/{actionId}/acknowledge.
+        - CLI surfaces HumanActionRequest via codepipe status, and remote systems can respond via POST /runs/{id}/actions/{actionId}/acknowledge.
         - ack payload includes actor_id, notes, and optional attachments referencing run directory paths.
         - ExecutionTaskOutput DTO includes stdout_path, stderr_path, exit_code, produced_artifacts[], and metric samples for Observability hub.
         - When ExecutionTask generates code, diff_summary_ref points to patch_file_path for bundling.
@@ -727,7 +727,7 @@
         - Hunk DTO contains header, added_lines[], removed_lines[], enabling downstream diff viewers or audits.
         - MergeEvent DTO includes pr_number, merged_by, merge_sha, merged_at, auto_merge_enabled, blocking_checks_summary.
         - DeploymentStatus DTO includes workflow_url, environment, status, started_at, completed_at, logs_path.
-        - CleanupPlan DTO produced by ai-feature cleanup lists run directories older than threshold, size_bytes, artifacts_to_archive.
+        - CleanupPlan DTO produced by codepipe cleanup lists run directories older than threshold, size_bytes, artifacts_to_archive.
         - AgentCapabilityManifest DTO includes provider, models[], tools[], limits, fallback_priority, environment_requirements.
         - BranchProtectionSnapshot DTO captures required_status_checks, required_reviewers, dismissal_restrictions, enforce_admins, recorded_at.
         - SecondaryRateLimitEvent DTO stores provider, triggered_at, retry_after_seconds, backoff_plan.

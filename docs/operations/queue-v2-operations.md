@@ -72,11 +72,11 @@ const COMPACTION_THRESHOLDS = {
 ```
 
 **Environment Variables:**
-- `AI_FEATURE_QUEUE_COMPACTION_MAX_OPS`: Override maxOperations threshold
-- `AI_FEATURE_QUEUE_COMPACTION_MAX_BYTES`: Override maxBytes threshold
-- `AI_FEATURE_QUEUE_COMPACTION_MIN_INTERVAL_MS`: Override minIntervalMs
+- `CODEPIPE_QUEUE_COMPACTION_MAX_OPS`: Override maxOperations threshold
+- `CODEPIPE_QUEUE_COMPACTION_MAX_BYTES`: Override maxBytes threshold
+- `CODEPIPE_QUEUE_COMPACTION_MIN_INTERVAL_MS`: Override minIntervalMs
 
-> **Not yet implemented.** These env var overrides are planned but not currently supported. Use config file settings instead.
+> **Note:** The `CODEPIPE_QUEUE_COMPACTION_MAX_OPS` and `CODEPIPE_QUEUE_COMPACTION_MAX_BYTES` environment variable overrides are not yet implemented. Queue behavior is controlled through the config file settings.
 
 **Tuning Guidelines:**
 - **High write volume**: Increase maxOperations (20000+) to reduce compaction frequency
@@ -95,10 +95,10 @@ const SNAPSHOT_CONFIG = {
 ```
 
 **Environment Variables:**
-- `AI_FEATURE_QUEUE_SNAPSHOT_INTERVAL`: Override snapshot frequency
-- `AI_FEATURE_QUEUE_SNAPSHOT_COMPRESS`: Enable gzip compression (true/false)
+- `CODEPIPE_QUEUE_SNAPSHOT_INTERVAL`: Override snapshot frequency
+- `CODEPIPE_QUEUE_SNAPSHOT_COMPRESS`: Enable gzip compression (true/false)
 
-> **Not yet implemented.** These env var overrides are planned but not currently supported. Use config file settings instead.
+> **Note:** The `CODEPIPE_QUEUE_SNAPSHOT_INTERVAL` environment variable override is not yet implemented. Queue behavior is controlled through the config file settings.
 
 ### Migration Settings
 
@@ -112,10 +112,10 @@ const MIGRATION_CONFIG = {
 ```
 
 **Environment Variables:**
-- `AI_FEATURE_QUEUE_AUTO_MIGRATE`: Disable automatic migration (false)
-- `AI_FEATURE_QUEUE_BACKUP_V1`: Disable backup creation (false)
+- `CODEPIPE_QUEUE_AUTO_MIGRATE`: Disable automatic migration (false)
+- `CODEPIPE_QUEUE_BACKUP_V1`: Disable backup creation (false)
 
-> **Not yet implemented.** These env var overrides are planned but not currently supported. Use config file settings instead.
+> **Note:** The `CODEPIPE_QUEUE_AUTO_MIGRATE` environment variable override is not yet implemented. Queue behavior is controlled through the config file settings.
 
 ## Monitoring
 
@@ -174,13 +174,13 @@ Key performance indicators from telemetry:
 
 ```bash
 # View queue statistics
-ai-feature status --verbose --show-costs
+codepipe status --verbose --show-costs
 
 # Check execution metrics
-grep "queue_operation" .ai-feature-pipeline/runs/*/logs/execution.ndjson
+grep "queue_operation" .codepipe/runs/*/logs/execution.ndjson
 
 # Analyze compaction frequency
-grep "queue_compaction" .ai-feature-pipeline/runs/*/logs/execution.ndjson
+grep "queue_compaction" .codepipe/runs/*/logs/execution.ndjson
 ```
 
 ## Troubleshooting
@@ -198,22 +198,22 @@ grep "queue_compaction" .ai-feature-pipeline/runs/*/logs/execution.ndjson
 
 ```bash
 # Step 1: Verify V1 queue integrity
-cat .ai-feature-pipeline/runs/FEATURE-ID/queue/queue.jsonl | jq .
+cat .codepipe/runs/FEATURE-ID/queue/queue.jsonl | jq .
 
 # Step 2: Check disk space
-df -h .ai-feature-pipeline/
+df -h .codepipe/
 
 # Step 3: Manual migration with backup
-export AI_FEATURE_QUEUE_BACKUP_V1=true
-ai-feature resume --feature FEATURE-ID --validate-queue
+export CODEPIPE_QUEUE_BACKUP_V1=true
+codepipe resume --feature FEATURE-ID --validate-queue
 
 # Step 4: Rollback if needed
-mv .ai-feature-pipeline/runs/FEATURE-ID/queue/queue.jsonl.v1.bak \
-   .ai-feature-pipeline/runs/FEATURE-ID/queue/queue.jsonl
+mv .codepipe/runs/FEATURE-ID/queue/queue.jsonl.v1.bak \
+   .codepipe/runs/FEATURE-ID/queue/queue.jsonl
 ```
 
 **Prevention:**
-- Enable automatic backups: `AI_FEATURE_QUEUE_BACKUP_V1=true`
+- Enable automatic backups: `CODEPIPE_QUEUE_BACKUP_V1=true`
 - Monitor disk space before migrations
 - Validate queue integrity with `--validate-queue` flag
 
@@ -230,18 +230,18 @@ mv .ai-feature-pipeline/runs/FEATURE-ID/queue/queue.jsonl.v1.bak \
 
 ```bash
 # Step 1: Check WAL file size
-ls -lh .ai-feature-pipeline/runs/*/queue/queue_operations.log
+ls -lh .codepipe/runs/*/queue/queue_operations.log
 
 # Step 2: Force compaction
-export AI_FEATURE_QUEUE_COMPACTION_MAX_OPS=5000
-ai-feature resume --feature FEATURE-ID
+export CODEPIPE_QUEUE_COMPACTION_MAX_OPS=5000
+codepipe resume --feature FEATURE-ID
 
 # Step 3: Monitor compaction
-tail -f .ai-feature-pipeline/runs/*/logs/execution.ndjson | \
+tail -f .codepipe/runs/*/logs/execution.ndjson | \
   grep "queue_compaction"
 
 # Step 4: Verify performance recovery
-ai-feature status --verbose
+codepipe status --verbose
 ```
 
 **Prevention:**
@@ -262,23 +262,23 @@ ai-feature status --verbose
 
 ```bash
 # Step 1: Disable snapshot loading
-export AI_FEATURE_QUEUE_USE_SNAPSHOTS=false
+export CODEPIPE_QUEUE_USE_SNAPSHOTS=false
 
 # Step 2: Replay from WAL (slower but safe)
-ai-feature resume --feature FEATURE-ID --validate-queue
+codepipe resume --feature FEATURE-ID --validate-queue
 
 # Step 3: Rebuild snapshot
-export AI_FEATURE_QUEUE_REBUILD_SNAPSHOT=true
-ai-feature status --feature FEATURE-ID
+export CODEPIPE_QUEUE_REBUILD_SNAPSHOT=true
+codepipe status --feature FEATURE-ID
 
 # Step 4: Re-enable snapshots
-unset AI_FEATURE_QUEUE_USE_SNAPSHOTS
+unset CODEPIPE_QUEUE_USE_SNAPSHOTS
 ```
 
 **Prevention:**
 - Use reliable filesystems (ext4, XFS)
 - Monitor disk space continuously
-- Enable snapshot compression for integrity: `AI_FEATURE_QUEUE_SNAPSHOT_COMPRESS=true`
+- Enable snapshot compression for integrity: `CODEPIPE_QUEUE_SNAPSHOT_COMPRESS=true`
 
 ### Memory Leaks
 
@@ -293,16 +293,16 @@ unset AI_FEATURE_QUEUE_USE_SNAPSHOTS
 
 ```bash
 # Step 1: Monitor memory usage
-ps aux | grep ai-feature
+ps aux | grep codepipe
 
 # Step 2: Force cache invalidation
 node -e "require('./src/workflows/queueStore.js').invalidateV2Cache()"
 
 # Step 3: Reduce snapshot retention
-export AI_FEATURE_QUEUE_SNAPSHOT_KEEP=1
+export CODEPIPE_QUEUE_SNAPSHOT_KEEP=1
 
 # Step 4: Restart with clean state
-ai-feature resume --feature FEATURE-ID
+codepipe resume --feature FEATURE-ID
 ```
 
 **Prevention:**
@@ -318,8 +318,8 @@ Force compaction without waiting for thresholds:
 
 ```bash
 # Trigger immediate compaction
-export AI_FEATURE_QUEUE_FORCE_COMPACT=true
-ai-feature resume --feature FEATURE-ID
+export CODEPIPE_QUEUE_FORCE_COMPACT=true
+codepipe resume --feature FEATURE-ID
 ```
 
 **When to Use:**
@@ -334,14 +334,14 @@ Remove old snapshots to free disk space:
 
 ```bash
 # List snapshots
-ls -lh .ai-feature-pipeline/runs/*/queue/queue_snapshot.json*
+ls -lh .codepipe/runs/*/queue/queue_snapshot.json*
 
 # Remove old snapshots (keep latest)
-find .ai-feature-pipeline/runs/*/queue/ -name "queue_snapshot.json.*" \
+find .codepipe/runs/*/queue/ -name "queue_snapshot.json.*" \
   -mtime +7 -delete
 
 # Verify current snapshot
-cat .ai-feature-pipeline/runs/FEATURE-ID/queue/queue_snapshot.json | \
+cat .codepipe/runs/FEATURE-ID/queue/queue_snapshot.json | \
   jq '.timestamp'
 ```
 
@@ -356,11 +356,11 @@ Rotate WAL logs for long-running features:
 
 ```bash
 # Archive old WAL
-gzip .ai-feature-pipeline/runs/FEATURE-ID/queue/queue_operations.log
+gzip .codepipe/runs/FEATURE-ID/queue/queue_operations.log
 
 # Trigger compaction to start fresh WAL
-export AI_FEATURE_QUEUE_FORCE_COMPACT=true
-ai-feature resume --feature FEATURE-ID
+export CODEPIPE_QUEUE_FORCE_COMPACT=true
+codepipe resume --feature FEATURE-ID
 ```
 
 **Rotation Schedule:**
@@ -374,23 +374,23 @@ Optimize queue performance for your workload:
 
 **High Throughput (1000+ tasks/hour):**
 ```bash
-export AI_FEATURE_QUEUE_COMPACTION_MAX_OPS=50000
-export AI_FEATURE_QUEUE_SNAPSHOT_INTERVAL=500
-export AI_FEATURE_QUEUE_SNAPSHOT_COMPRESS=false
+export CODEPIPE_QUEUE_COMPACTION_MAX_OPS=50000
+export CODEPIPE_QUEUE_SNAPSHOT_INTERVAL=500
+export CODEPIPE_QUEUE_SNAPSHOT_COMPRESS=false
 ```
 
 **Low Latency (< 10ms updates):**
 ```bash
-export AI_FEATURE_QUEUE_COMPACTION_MAX_OPS=5000
-export AI_FEATURE_QUEUE_SNAPSHOT_INTERVAL=100
-export AI_FEATURE_QUEUE_USE_SNAPSHOTS=true
+export CODEPIPE_QUEUE_COMPACTION_MAX_OPS=5000
+export CODEPIPE_QUEUE_SNAPSHOT_INTERVAL=100
+export CODEPIPE_QUEUE_USE_SNAPSHOTS=true
 ```
 
 **Disk Constrained (< 1GB available):**
 ```bash
-export AI_FEATURE_QUEUE_COMPACTION_MAX_BYTES=5242880  # 5MB
-export AI_FEATURE_QUEUE_SNAPSHOT_COMPRESS=true
-export AI_FEATURE_QUEUE_SNAPSHOT_KEEP=1
+export CODEPIPE_QUEUE_COMPACTION_MAX_BYTES=5242880  # 5MB
+export CODEPIPE_QUEUE_SNAPSHOT_COMPRESS=true
+export CODEPIPE_QUEUE_SNAPSHOT_KEEP=1
 ```
 
 ## References

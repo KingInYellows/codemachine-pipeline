@@ -80,7 +80,7 @@ Logs are written to `<run_dir>/logs/logs.ndjson` in NDJSON (newline-delimited JS
 
 Example path:
 ```
-.ai-feature-pipeline/runs/01JFABCDEFGHIJKLMNOPQRSTUV/logs/logs.ndjson
+.codepipe/runs/01JFABCDEFGHIJKLMNOPQRSTUV/logs/logs.ndjson
 ```
 
 ### Verbosity Control
@@ -147,7 +147,7 @@ To verify redaction is working:
 npm run test telemetry
 
 # Inspect logs for redaction markers
-cat .ai-feature-pipeline/runs/*/logs/logs.ndjson | grep REDACTED
+cat .codepipe/runs/*/logs/logs.ndjson | grep REDACTED
 ```
 
 ---
@@ -168,44 +168,44 @@ Metrics are exported in **Prometheus textfile format** to:
 
 | Metric | Type | Description | Labels |
 |--------|------|-------------|--------|
-| `ai_feature_pipeline_queue_depth` | Gauge | Total queue depth (pending + completed + failed) | `run_id` |
-| `ai_feature_pipeline_queue_pending_count` | Gauge | Number of pending tasks | `run_id` |
-| `ai_feature_pipeline_queue_completed_count` | Gauge | Number of completed tasks | `run_id` |
-| `ai_feature_pipeline_queue_failed_count` | Gauge | Number of failed tasks | `run_id` |
-| `ai_feature_pipeline_queue_processing_duration_ms` | Histogram | Task processing time distribution | `run_id`, `task_type` |
+| `codemachine_pipeline_queue_depth` | Gauge | Total queue depth (pending + completed + failed) | `run_id` |
+| `codemachine_pipeline_queue_pending_count` | Gauge | Number of pending tasks | `run_id` |
+| `codemachine_pipeline_queue_completed_count` | Gauge | Number of completed tasks | `run_id` |
+| `codemachine_pipeline_queue_failed_count` | Gauge | Number of failed tasks | `run_id` |
+| `codemachine_pipeline_queue_processing_duration_ms` | Histogram | Task processing time distribution | `run_id`, `task_type` |
 
 #### Rate Limit Metrics
 
 | Metric | Type | Description | Labels |
 |--------|------|-------------|--------|
-| `ai_feature_pipeline_rate_limit_remaining` | Gauge | Requests remaining before rate limit | `provider` (github, linear) |
-| `ai_feature_pipeline_rate_limit_reset_timestamp` | Gauge | Unix timestamp when rate limit resets | `provider` |
-| `ai_feature_pipeline_rate_limit_hits_total` | Counter | Total rate limit hits (HTTP 429) | `provider`, `endpoint` |
-| `ai_feature_pipeline_rate_limit_cooldown_active` | Gauge | Cooldown state (0=inactive, 1=active) | `provider` |
+| `codemachine_pipeline_rate_limit_remaining` | Gauge | Requests remaining before rate limit | `provider` (github, linear) |
+| `codemachine_pipeline_rate_limit_reset_timestamp` | Gauge | Unix timestamp when rate limit resets | `provider` |
+| `codemachine_pipeline_rate_limit_hits_total` | Counter | Total rate limit hits (HTTP 429) | `provider`, `endpoint` |
+| `codemachine_pipeline_rate_limit_cooldown_active` | Gauge | Cooldown state (0=inactive, 1=active) | `provider` |
 
 #### HTTP Metrics
 
 | Metric | Type | Description | Labels |
 |--------|------|-------------|--------|
-| `ai_feature_pipeline_http_requests_total` | Counter | Total HTTP requests | `provider`, `endpoint`, `status` |
-| `ai_feature_pipeline_http_errors_total` | Counter | Total HTTP errors | `provider`, `endpoint`, `status` |
-| `ai_feature_pipeline_http_request_duration_ms` | Histogram | HTTP request latency distribution | `provider`, `endpoint`, `status` |
-| `ai_feature_pipeline_http_retry_count` | Counter | HTTP retry attempts | `provider`, `endpoint`, `attempt` |
+| `codemachine_pipeline_http_requests_total` | Counter | Total HTTP requests | `provider`, `endpoint`, `status` |
+| `codemachine_pipeline_http_errors_total` | Counter | Total HTTP errors | `provider`, `endpoint`, `status` |
+| `codemachine_pipeline_http_request_duration_ms` | Histogram | HTTP request latency distribution | `provider`, `endpoint`, `status` |
+| `codemachine_pipeline_http_retry_count` | Counter | HTTP retry attempts | `provider`, `endpoint`, `attempt` |
 
 #### Token Usage Metrics
 
 | Metric | Type | Description | Labels |
 |--------|------|-------------|--------|
-| `ai_feature_pipeline_token_usage_prompt` | Counter | Prompt tokens consumed | `run_id`, `model` |
-| `ai_feature_pipeline_token_usage_completion` | Counter | Completion tokens consumed | `run_id`, `model` |
-| `ai_feature_pipeline_token_usage_total` | Counter | Total tokens consumed | `run_id`, `model` |
+| `codemachine_pipeline_token_usage_prompt` | Counter | Prompt tokens consumed | `run_id`, `model` |
+| `codemachine_pipeline_token_usage_completion` | Counter | Completion tokens consumed | `run_id`, `model` |
+| `codemachine_pipeline_token_usage_total` | Counter | Total tokens consumed | `run_id`, `model` |
 
 #### CLI Command Metrics
 
 | Metric | Type | Description | Labels |
 |--------|------|-------------|--------|
-| `ai_feature_pipeline_command_execution_duration_ms` | Histogram | Command execution time | `command` |
-| `ai_feature_pipeline_command_invocations_total` | Counter | Command invocation count | `command`, `exit_code` |
+| `codemachine_pipeline_command_execution_duration_ms` | Histogram | Command execution time | `command` |
+| `codemachine_pipeline_command_invocations_total` | Counter | Command invocation count | `command`, `exit_code` |
 
 ### Histogram Buckets
 
@@ -264,7 +264,7 @@ Each span record follows this schema:
     "message": "OK"
   },
   "attributes": {
-    "service.name": "ai-feature-pipeline",
+    "service.name": "codemachine-pipeline",
     "run_id": "01JFABCDEFGHIJKLMNOPQRSTUV",
     "http.method": "GET",
     "http.url": "/repos/owner/repo/pulls",
@@ -351,13 +351,13 @@ The `status --json` command includes telemetry file references:
 
 ```bash
 # Default (INFO level)
-ai-feature status
+codepipe status
 
 # Verbose (DEBUG level)
-ai-feature status --verbose
+codepipe status --verbose
 
 # JSON mode (no stderr mirroring)
-ai-feature status --json
+codepipe status --json
 ```
 
 ---
@@ -368,7 +368,7 @@ ai-feature status --json
 
 ```bash
 # View all logs for a run
-cat .ai-feature-pipeline/runs/01JFABCDEFGHIJKLMNOPQRSTUV/logs/logs.ndjson
+cat .codepipe/runs/01JFABCDEFGHIJKLMNOPQRSTUV/logs/logs.ndjson
 
 # Filter by level
 jq 'select(.level == "error")' < logs/logs.ndjson
@@ -384,7 +384,7 @@ jq -r '.level' < logs/logs.ndjson | sort | uniq -c
 
 ```bash
 # View current metrics snapshot
-cat .ai-feature-pipeline/runs/01JFABCDEFGHIJKLMNOPQRSTUV/metrics/prometheus.txt
+cat .codepipe/runs/01JFABCDEFGHIJKLMNOPQRSTUV/metrics/prometheus.txt
 
 # Extract specific metric
 grep "http_request_duration_ms" metrics/prometheus.txt
@@ -394,7 +394,7 @@ grep "http_request_duration_ms" metrics/prometheus.txt
 
 ```bash
 # View all spans
-cat .ai-feature-pipeline/runs/01JFABCDEFGHIJKLMNOPQRSTUV/telemetry/traces.json
+cat .codepipe/runs/01JFABCDEFGHIJKLMNOPQRSTUV/telemetry/traces.json
 
 # Find spans by trace ID
 jq 'select(.traceId == "a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6")' < telemetry/traces.json
@@ -412,7 +412,7 @@ jq 'select(.status.code == 2)' < telemetry/traces.json
 
 ### Logs Not Appearing
 
-1. **Check run directory exists**: `ls -la .ai-feature-pipeline/runs/<feature_id>/logs/`
+1. **Check run directory exists**: `ls -la .codepipe/runs/<feature_id>/logs/`
 2. **Verify log level**: Use `--verbose` flag to enable DEBUG logs
 3. **Check stderr mirroring**: Disable `--json` mode for interactive feedback
 4. **Inspect file permissions**: Ensure logs directory is writable
@@ -460,7 +460,7 @@ Add optional OpenTelemetry Protocol (OTLP) export to observability backends (Jae
 Implement real-time log streaming via WebSocket for remote monitoring:
 
 ```bash
-ai-feature observe --follow
+codepipe observe --follow
 ```
 
 ### Cost Tracking
@@ -468,7 +468,7 @@ ai-feature observe --follow
 Add cost estimation metrics based on token usage and API call counts:
 
 ```
-ai_feature_pipeline_estimated_cost_usd
+codemachine_pipeline_estimated_cost_usd
 ```
 
 ---

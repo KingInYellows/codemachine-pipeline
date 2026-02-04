@@ -15,9 +15,9 @@ Required (merge gate):
   - `npm test`
   - `npm run build`
 - `Docker Build`
-  - `docker build -t ai-feature-pipeline:test .`
-  - `docker run --rm ai-feature-pipeline:test --help`
-  - `docker run --rm ai-feature-pipeline:test doctor --json | node -e "JSON.parse(require('fs').readFileSync(0,'utf8'))"`
+  - `docker build -t codemachine-pipeline:test .`
+  - `docker run --rm codemachine-pipeline:test --help`
+  - `docker run --rm codemachine-pipeline:test doctor --json | node -e "JSON.parse(require('fs').readFileSync(0,'utf8'))"`
 
 Optional (non-blocking signal):
 - `security/scan` (only the `npm audit` step is non-blocking; the advisory guard is still required)
@@ -46,9 +46,9 @@ Smoke tests (non-blocking in CI):
 Docker checks:
 
 ```bash
-docker build -t ai-feature-pipeline:test .
-docker run --rm ai-feature-pipeline:test --help
-docker run --rm ai-feature-pipeline:test doctor --json | node -e "JSON.parse(require('fs').readFileSync(0,'utf8'))"
+docker build -t codemachine-pipeline:test .
+docker run --rm codemachine-pipeline:test --help
+docker run --rm codemachine-pipeline:test doctor --json | node -e "JSON.parse(require('fs').readFileSync(0,'utf8'))"
 ```
 
 If you need to reproduce CI determinism locally, use UTC:

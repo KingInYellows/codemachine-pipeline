@@ -1,8 +1,8 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "$id": "https://ai-feature-pipeline/schemas/repo_config.json",
+  "$id": "https://codemachine-pipeline/schemas/repo_config.json",
   "title": "RepoConfig",
-  "description": "Configuration schema for ai-feature-pipeline repository settings",
+  "description": "Configuration schema for codemachine-pipeline repository settings",
   "type": "object",
   "required": [
     "schema_version",
@@ -181,7 +181,7 @@
         "run_directory": {
           "type": "string",
           "description": "Base directory for feature runs",
-          "default": ".ai-feature-pipeline/runs"
+          "default": ".codepipe/runs"
         },
         "context_cost_budget_usd": {
           "type": "number",
@@ -276,10 +276,12 @@
     "validation": {
       "type": "object",
       "description": "Validation command registry configuration (ADR-7 / FR-14)",
+      "required": ["commands"],
       "properties": {
         "commands": {
           "type": "array",
           "description": "Validation command definitions",
+          "minItems": 1,
           "items": {
             "type": "object",
             "required": ["type", "command"],
@@ -292,76 +294,69 @@
               "command": {
                 "type": "string",
                 "minLength": 1,
-                "description": "Command to execute"
+                "description": "Shell command template"
               },
               "cwd": {
                 "type": "string",
-                "description": "Working directory for command execution",
+                "description": "Working directory (relative or absolute)",
                 "default": "."
               },
               "env": {
                 "type": "object",
-                "description": "Environment variables for command execution",
-                "additionalProperties": {
-                  "type": "string"
-                }
+                "description": "Additional environment variables",
+                "additionalProperties": { "type": "string" }
               },
               "required": {
                 "type": "boolean",
-                "description": "Whether command is required to pass",
+                "description": "Whether the command blocks PR/deploy",
                 "default": true
               },
               "timeout_ms": {
                 "type": "integer",
-                "description": "Command timeout in milliseconds",
+                "description": "Timeout per attempt in milliseconds",
                 "minimum": 1000,
                 "maximum": 600000,
                 "default": 120000
               },
               "max_retries": {
                 "type": "integer",
-                "description": "Maximum retry attempts",
+                "description": "Additional retries after the first attempt",
                 "minimum": 0,
                 "maximum": 10,
                 "default": 3
               },
               "backoff_ms": {
                 "type": "integer",
-                "description": "Backoff interval between retries in milliseconds",
+                "description": "Backoff multiplier between retries in milliseconds",
                 "minimum": 100,
                 "maximum": 10000,
                 "default": 1000
               },
               "supports_auto_fix": {
                 "type": "boolean",
-                "description": "Whether command supports auto-fix",
+                "description": "Enable auto-fix loop",
                 "default": false
               },
               "auto_fix_command": {
                 "type": "string",
-                "description": "Command to run for auto-fix"
+                "description": "Alternate command for auto-fix attempts"
               },
               "description": {
                 "type": "string",
-                "description": "Human-readable description of the validation command"
+                "description": "Human-friendly description"
               },
               "template_context": {
                 "type": "object",
-                "description": "Command-specific templating tokens",
-                "additionalProperties": {
-                  "type": "string"
-                }
+                "description": "Per-command templating tokens",
+                "additionalProperties": { "type": "string" }
               }
             }
-          },
-          "minItems": 1
+          }
         },
         "template_context": {
           "type": "object",
           "description": "Global templating tokens applied to each command",
-          "additionalProperties": {
-            "type": "string"
-          }
+          "additionalProperties": { "type": "string" }
         }
       }
     },

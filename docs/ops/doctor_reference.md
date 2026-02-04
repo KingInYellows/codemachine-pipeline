@@ -2,7 +2,7 @@
 
 ## Overview
 
-The `ai-feature doctor` command runs comprehensive environment diagnostics to verify that your system meets all prerequisites for ai-feature-pipeline operations. It validates:
+The `codepipe doctor` command runs comprehensive environment diagnostics to verify that your system meets all prerequisites for codemachine-pipeline operations. It validates:
 
 - Runtime environment (Node.js, git, npm, Docker)
 - Repository setup and permissions
@@ -17,7 +17,7 @@ This reference documents all diagnostic checks, exit codes, and remediation proc
 ## Command Synopsis
 
 ```bash
-ai-feature doctor [FLAGS]
+codepipe doctor [FLAGS]
 ```
 
 ### Flags
@@ -36,7 +36,7 @@ ai-feature doctor [FLAGS]
 Run all checks with human-readable output:
 
 ```bash
-ai-feature doctor
+codepipe doctor
 ```
 
 **Sample Output:**
@@ -88,7 +88,7 @@ For detailed documentation, see: docs/ops/doctor_reference.md
 Output structured JSON for CI/automation parsing:
 
 ```bash
-ai-feature doctor --json
+codepipe doctor --json
 ```
 
 **JSON Output:**
@@ -119,7 +119,7 @@ ai-feature doctor --json
     "warnings": 2,
     "failed": 2
   },
-  "config_path": "/path/to/repo/.ai-feature-pipeline/config.json",
+  "config_path": "/path/to/repo/.codepipe/config.json",
   "timestamp": "2025-01-15T10:30:00.000Z"
 }
 ```
@@ -129,7 +129,7 @@ ai-feature doctor --json
 Show detailed information for each check:
 
 ```bash
-ai-feature doctor --verbose
+codepipe doctor --verbose
 ```
 
 Verbose mode includes:
@@ -294,7 +294,7 @@ git status
 
 ### 6. Filesystem Permissions
 
-**Check:** Tests write permissions in `.ai-feature-pipeline/` directory.
+**Check:** Tests write permissions in `.codepipe/` directory.
 
 **Pass Criteria:**
 - Can create test directory
@@ -309,16 +309,16 @@ git status
 **Remediation:**
 ```bash
 # Check current permissions
-ls -la .ai-feature-pipeline/
+ls -la .codepipe/
 
 # Fix directory permissions (Unix/Linux)
-chmod u+w .ai-feature-pipeline/
+chmod u+w .codepipe/
 
 # Check disk space
 df -h .
 
 # Verify ownership
-ls -la | grep ai-feature-pipeline
+ls -la | grep codemachine-pipeline
 ```
 
 **Exit Code Impact:** Failure → 20 (Environment Issue)
@@ -363,7 +363,7 @@ nslookup api.github.com
 
 ### 8. RepoConfig Validation
 
-**Check:** Validates `.ai-feature-pipeline/config.json` against schema.
+**Check:** Validates `.codepipe/config.json` against schema.
 
 **Pass Criteria:**
 - Config file exists
@@ -382,19 +382,19 @@ nslookup api.github.com
 **Remediation:**
 ```bash
 # If config not found
-ai-feature init
+codepipe init
 
 # If config invalid
-ai-feature init --validate-only
+codepipe init --validate-only
 
 # View validation errors
-cat .ai-feature-pipeline/config.json | jq .
+cat .codepipe/config.json | jq .
 
 # Fix schema errors manually
-vim .ai-feature-pipeline/config.json
+vim .codepipe/config.json
 
 # Re-validate
-ai-feature init --validate-only
+codepipe init --validate-only
 ```
 
 **Exit Code Impact:** Failure → 10 (Validation Error)
@@ -428,7 +428,7 @@ echo 'export GITHUB_TOKEN=ghp_your_token_here' >> ~/.bashrc
 source ~/.bashrc
 
 # Verify
-ai-feature doctor
+codepipe doctor
 ```
 
 **Required Scopes:**
@@ -465,7 +465,7 @@ echo 'export LINEAR_API_KEY=lin_api_your_key_here' >> ~/.bashrc
 source ~/.bashrc
 
 # Verify
-ai-feature doctor
+codepipe doctor
 ```
 
 **Exit Code Impact:** Failure → 30 (Credential Issue)
@@ -489,11 +489,11 @@ ai-feature doctor
 export AGENT_ENDPOINT=https://agent.example.com
 
 # Option 2: Set in config.json
-vim .ai-feature-pipeline/config.json
+vim .codepipe/config.json
 # Add: "runtime": { "agent_endpoint": "https://agent.example.com" }
 
 # Verify
-ai-feature doctor
+codepipe doctor
 ```
 
 **Exit Code Impact:** Warning only (agent endpoint may not be needed for all operations)
@@ -505,7 +505,7 @@ ai-feature doctor
 | Exit Code | Meaning | Typical Causes | Remediation |
 |-----------|---------|----------------|-------------|
 | `0` | All Checks Passed | All diagnostics passed (warnings allowed) | None - system ready |
-| `10` | Validation Error | RepoConfig has schema errors or invalid JSON | Run `ai-feature init --validate-only` for details; fix config.json |
+| `10` | Validation Error | RepoConfig has schema errors or invalid JSON | Run `codepipe init --validate-only` for details; fix config.json |
 | `20` | Environment Issue | Missing Node.js, git, npm; filesystem permissions; git repo not found | Install required tools; check permissions; run from git repo |
 | `30` | Credential Issue | Missing GITHUB_TOKEN, LINEAR_API_KEY, or other required credentials | Set required environment variables; verify scopes |
 
@@ -522,21 +522,21 @@ ai-feature doctor
 
 **Command:**
 ```bash
-ai-feature doctor
+codepipe doctor
 ```
 
 **Output:**
 ```
 ⚠ RepoConfig: Configuration file not found
-  → Run "ai-feature init" to create configuration
+  → Run "codepipe init" to create configuration
 ```
 
 **Exit Code:** 0 (warning only)
 
 **Resolution:**
 ```bash
-ai-feature init
-ai-feature doctor
+codepipe init
+codepipe doctor
 ```
 
 ---
@@ -545,7 +545,7 @@ ai-feature doctor
 
 **Command:**
 ```bash
-ai-feature doctor
+codepipe doctor
 ```
 
 **Output:**
@@ -562,7 +562,7 @@ ai-feature doctor
 ```bash
 export GITHUB_TOKEN=ghp_your_token
 export LINEAR_API_KEY=lin_api_your_key
-ai-feature doctor
+codepipe doctor
 ```
 
 ---
@@ -571,7 +571,7 @@ ai-feature doctor
 
 **Command:**
 ```bash
-ai-feature doctor
+codepipe doctor
 ```
 
 **Output:**
@@ -586,7 +586,7 @@ ai-feature doctor
 ```bash
 nvm install 24
 nvm use 24
-ai-feature doctor
+codepipe doctor
 ```
 
 ---
@@ -595,7 +595,7 @@ ai-feature doctor
 
 **Command:**
 ```bash
-cd /tmp && ai-feature doctor
+cd /tmp && codepipe doctor
 ```
 
 **Output:**
@@ -609,7 +609,7 @@ cd /tmp && ai-feature doctor
 **Resolution:**
 ```bash
 cd /path/to/your/repo
-ai-feature doctor
+codepipe doctor
 ```
 
 ---
@@ -634,7 +634,7 @@ jobs:
           node-version: '24'
 
       - name: Install CLI
-        run: npm install -g ai-feature-pipeline
+        run: npm install -g codemachine-pipeline
 
       - name: Run Diagnostics
         env:
@@ -642,7 +642,7 @@ jobs:
           LINEAR_API_KEY: ${{ secrets.LINEAR_API_KEY }}
           AGENT_ENDPOINT: ${{ secrets.AGENT_ENDPOINT }}
         run: |
-          ai-feature doctor --json > doctor-report.json
+          codepipe doctor --json > doctor-report.json
           cat doctor-report.json
 
       - name: Upload Report
@@ -673,7 +673,7 @@ set -euo pipefail
 echo "Running environment diagnostics..."
 
 # Run doctor and capture output
-ai-feature doctor --json > /tmp/doctor-report.json
+codepipe doctor --json > /tmp/doctor-report.json
 
 # Parse results
 exit_code=$(jq -r '.exit_code' /tmp/doctor-report.json)
@@ -708,7 +708,7 @@ fi
 
 ## Telemetry
 
-The `doctor` command records telemetry to `.ai-feature-pipeline/logs/`:
+The `doctor` command records telemetry to `.codepipe/logs/`:
 
 - **Logs**: NDJSON format in `logs/doctor-YYYY-MM-DD.log`
 - **Metrics**: Prometheus format in `metrics/prometheus.txt`

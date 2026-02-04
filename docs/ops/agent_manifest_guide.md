@@ -30,7 +30,7 @@ The Agent Manifest system enables **bring-your-own-agent** workflows by supporti
 - Track and budget agent costs with integrated telemetry
 - Maintain deterministic prompt packaging across provider changes
 
-Manifests are stored as JSON files under `.ai-feature-pipeline/agents/` and are loaded at pipeline startup.
+Manifests are stored as JSON files under `.codepipe/agents/` and are loaded at pipeline startup.
 
 ### Key Design Principles
 
@@ -238,10 +238,10 @@ Create a JSON manifest file following the schema specification:
 
 ```bash
 # Create manifest directory if it doesn't exist
-mkdir -p .ai-feature-pipeline/agents
+mkdir -p .codepipe/agents
 
 # Create your manifest
-cat > .ai-feature-pipeline/agents/openai.json << 'EOF'
+cat > .codepipe/agents/openai.json << 'EOF'
 {
   "schema_version": "1.0.0",
   "providerId": "openai",
@@ -307,7 +307,7 @@ codemachine validate-manifests
 Commit manifests to version control alongside pipeline configuration:
 
 ```bash
-git add .ai-feature-pipeline/agents/
+git add .codepipe/agents/
 git commit -m "feat: add OpenAI GPT-4 Turbo provider manifest"
 ```
 
@@ -319,7 +319,7 @@ When the pipeline starts, manifests are automatically loaded and registered:
 codemachine start "Add user authentication"
 
 # Pipeline logs will show:
-# [INFO] Loading agent manifest: .ai-feature-pipeline/agents/openai.json
+# [INFO] Loading agent manifest: .codepipe/agents/openai.json
 # [INFO] Manifest loaded and registered: providerId=openai, version=1.0.0
 # [DEBUG] Registered cost config: provider=openai, model=gpt-4-turbo
 ```
@@ -614,13 +614,13 @@ If Ollama fails, requests automatically route to OpenAI.
 
 ### 2. No Manifests Available
 
-If `.ai-feature-pipeline/agents/` is empty or all manifests invalid:
+If `.codepipe/agents/` is empty or all manifests invalid:
 - **Action:** CLI exits with error (fail-fast)
 - **Behavior:** **No silent defaults** (prevents budget surprises)
 - **Message:**
   ```
   ERROR: No valid agent manifests found.
-  Please add manifests to .ai-feature-pipeline/agents/
+  Please add manifests to .codepipe/agents/
   See docs/ops/agent_manifest_guide.md for instructions.
   ```
 
@@ -644,7 +644,7 @@ If manifest lacks required `rateLimits.requestsPerMinute`:
 - **Behavior:** CLI fails validation immediately
 - **Message:**
   ```
-  ERROR: Invalid agent manifest at .ai-feature-pipeline/agents/bad.json:
+  ERROR: Invalid agent manifest at .codepipe/agents/bad.json:
     - rateLimits.requestsPerMinute: Required
 
   Manifests MUST include "rateLimits" per acceptance criteria.
@@ -725,7 +725,7 @@ If manifest lacks required `rateLimits.requestsPerMinute`:
 
 ```bash
 # Option 1: Rollback and resume
-git checkout HEAD -- .ai-feature-pipeline/agents/openai.json
+git checkout HEAD -- .codepipe/agents/openai.json
 codemachine resume feature_xyz_20250115_143022
 
 # Option 2: Re-run
@@ -743,7 +743,7 @@ codemachine start "Feature description"
 
 ```bash
 # Good
-git add .ai-feature-pipeline/agents/
+git add .codepipe/agents/
 git commit -m "chore: update OpenAI pricing to reflect 2025 rates"
 
 # Bad - changes will be lost
@@ -827,7 +827,7 @@ Prevents workflow halts when primary provider has outages.
 codemachine validate-manifests
 
 # Only commit if validation passes
-git add .ai-feature-pipeline/agents/
+git add .codepipe/agents/
 git commit -m "feat: add Azure OpenAI provider"
 ```
 

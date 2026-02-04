@@ -1,4 +1,4 @@
-> **Historical snapshot (2025-12-30).** File counts are outdated. See docs/README.md for current documentation index.
+> **Historical snapshot (2025-12-30).** File counts below are outdated — the project now has 99+ markdown files (was 47). See [docs/README.md](docs/README.md) for the current documentation index and [docs/audit/AUDIT_REPORT.md](docs/audit/AUDIT_REPORT.md) for the latest audit.
 
 # Complete Documentation Inventory Report
 ## ai-feature-pipeline (codemachine-pipeline)

@@ -32,7 +32,7 @@ Automatic log rotation prevents disk space exhaustion during long-running featur
 
 ### RepoConfig Settings
 
-Configure log rotation in `.ai-feature-pipeline/config.json`:
+Configure log rotation in `.codepipe/config.json`:
 
 ```json
 {
@@ -55,13 +55,13 @@ Override config values with environment variables:
 
 ```bash
 # Set rotation threshold to 50MB
-export AI_FEATURE_LOG_ROTATION_MB=50
+export CODEPIPE_LOG_ROTATION_MB=50
 
 # Keep 5 rotated files
-export AI_FEATURE_LOG_ROTATION_KEEP=5
+export CODEPIPE_LOG_ROTATION_KEEP=5
 
 # Enable compression
-export AI_FEATURE_LOG_ROTATION_COMPRESS=true
+export CODEPIPE_LOG_ROTATION_COMPRESS=true
 ```
 
 ### Runtime Defaults
@@ -184,13 +184,13 @@ After rotation with compression:
 **Monitor log directory size:**
 ```bash
 # Current log size
-ls -lh .ai-feature-pipeline/runs/*/logs/execution.log
+ls -lh .codepipe/runs/*/logs/execution.log
 
 # Total log directory size
-du -sh .ai-feature-pipeline/runs/*/logs/
+du -sh .codepipe/runs/*/logs/
 
 # Rotated files count
-ls -1 .ai-feature-pipeline/runs/*/logs/execution.log.* | wc -l
+ls -1 .codepipe/runs/*/logs/execution.log.* | wc -l
 ```
 
 **Expected disk usage:**
@@ -212,16 +212,16 @@ ls -1 .ai-feature-pipeline/runs/*/logs/execution.log.* | wc -l
 ```bash
 # Count rotations
 grep "Log rotation occurred" \
-  .ai-feature-pipeline/runs/*/logs/execution.ndjson | wc -l
+  .codepipe/runs/*/logs/execution.ndjson | wc -l
 
 # View rotation timeline
 grep "Log rotation occurred" \
-  .ai-feature-pipeline/runs/*/logs/execution.ndjson | \
+  .codepipe/runs/*/logs/execution.ndjson | \
   jq -r '[.timestamp, .file_size_bytes] | @tsv'
 
 # Check compression success rate
 grep "compression" \
-  .ai-feature-pipeline/runs/*/logs/execution.ndjson | \
+  .codepipe/runs/*/logs/execution.ndjson | \
   jq -s 'group_by(.level) | map({level: .[0].level, count: length})'
 ```
 
@@ -230,7 +230,7 @@ grep "compression" \
 **Measure compression effectiveness:**
 ```bash
 # Compare original vs compressed sizes
-for file in .ai-feature-pipeline/runs/*/logs/execution.log.*.gz; do
+for file in .codepipe/runs/*/logs/execution.log.*.gz; do
   original_size=$(stat -f%z "${file%.gz}" 2>/dev/null || echo "N/A")
   compressed_size=$(stat -f%z "$file")
   echo "Original: ${original_size}B, Compressed: ${compressed_size}B"
@@ -256,22 +256,22 @@ done
 **Resolution:**
 ```bash
 # Step 1: Check file permissions
-ls -la .ai-feature-pipeline/runs/*/logs/
+ls -la .codepipe/runs/*/logs/
 
 # Step 2: Fix permissions
-chmod 700 .ai-feature-pipeline/runs/
-chmod 600 .ai-feature-pipeline/runs/*/logs/*
+chmod 700 .codepipe/runs/
+chmod 600 .codepipe/runs/*/logs/*
 
 # Step 3: Check disk space
-df -h .ai-feature-pipeline/
+df -h .codepipe/
 
 # Step 4: Manually rotate
-mv .ai-feature-pipeline/runs/FEATURE-ID/logs/execution.log \
-   .ai-feature-pipeline/runs/FEATURE-ID/logs/execution.log.manual
+mv .codepipe/runs/FEATURE-ID/logs/execution.log \
+   .codepipe/runs/FEATURE-ID/logs/execution.log.manual
 
 # Step 5: Verify rotation in logs
 grep "Log rotation" \
-  .ai-feature-pipeline/runs/*/logs/execution.ndjson
+  .codepipe/runs/*/logs/execution.ndjson
 ```
 
 **Prevention:**
@@ -291,19 +291,19 @@ grep "Log rotation" \
 **Resolution:**
 ```bash
 # Step 1: Identify large log directories
-du -sh .ai-feature-pipeline/runs/*/logs/ | sort -h
+du -sh .codepipe/runs/*/logs/ | sort -h
 
 # Step 2: Reduce retention
-export AI_FEATURE_LOG_ROTATION_KEEP=1
-ai-feature resume
+export CODEPIPE_LOG_ROTATION_KEEP=1
+codepipe resume
 
 # Step 3: Enable compression
-export AI_FEATURE_LOG_ROTATION_COMPRESS=true
-ai-feature resume
+export CODEPIPE_LOG_ROTATION_COMPRESS=true
+codepipe resume
 
 # Step 4: Archive old features
-tar -czf old-features.tar.gz .ai-feature-pipeline/runs/FEATURE-*
-rm -rf .ai-feature-pipeline/runs/FEATURE-*
+tar -czf old-features.tar.gz .codepipe/runs/FEATURE-*
+rm -rf .codepipe/runs/FEATURE-*
 ```
 
 **Prevention:**
@@ -336,16 +336,16 @@ brew install gzip
 echo "test" | gzip -c > /tmp/test.gz && echo "gzip OK"
 
 # Step 4: Retry compression
-export AI_FEATURE_LOG_ROTATION_COMPRESS=true
-ai-feature resume
+export CODEPIPE_LOG_ROTATION_COMPRESS=true
+codepipe resume
 
 # Step 5: Check compression logs
 grep "compression failed" \
-  .ai-feature-pipeline/runs/*/logs/execution.ndjson
+  .codepipe/runs/*/logs/execution.ndjson
 ```
 
 **Prevention:**
-- Verify gzip installation in `ai-feature doctor`
+- Verify gzip installation in `codepipe doctor`
 - Monitor disk space before enabling compression
 - Test compression on smaller files first
 
@@ -361,20 +361,20 @@ grep "compression failed" \
 **Resolution:**
 ```bash
 # Step 1: Check ownership
-ls -la .ai-feature-pipeline/runs/*/logs/
+ls -la .codepipe/runs/*/logs/
 
 # Step 2: Fix ownership
-sudo chown -R $(whoami):$(id -gn) .ai-feature-pipeline/runs/
+sudo chown -R $(whoami):$(id -gn) .codepipe/runs/
 
 # Step 3: Set correct permissions
-chmod -R u+rwX .ai-feature-pipeline/runs/
+chmod -R u+rwX .codepipe/runs/
 
 # Step 4: Check for extended attributes
-ls -Z .ai-feature-pipeline/runs/*/logs/  # SELinux
-getfacl .ai-feature-pipeline/runs/*/logs/  # ACLs
+ls -Z .codepipe/runs/*/logs/  # SELinux
+getfacl .codepipe/runs/*/logs/  # ACLs
 
 # Step 5: Test rotation
-AI_FEATURE_LOG_ROTATION_MB=1 ai-feature resume
+CODEPIPE_LOG_ROTATION_MB=1 codepipe resume
 ```
 
 **Prevention:**
@@ -389,10 +389,10 @@ AI_FEATURE_LOG_ROTATION_MB=1 ai-feature resume
 **Force rotation for testing:**
 ```bash
 # Set low threshold to trigger rotation
-AI_FEATURE_LOG_ROTATION_MB=1 ai-feature resume
+CODEPIPE_LOG_ROTATION_MB=1 codepipe resume
 
 # Verify rotation occurred
-ls -lh .ai-feature-pipeline/runs/*/logs/execution.log.*
+ls -lh .codepipe/runs/*/logs/execution.log.*
 ```
 
 ### Archive Old Logs
@@ -401,10 +401,10 @@ ls -lh .ai-feature-pipeline/runs/*/logs/execution.log.*
 ```bash
 # Archive all rotated logs
 tar -czf logs-archive-$(date +%Y%m%d).tar.gz \
-  .ai-feature-pipeline/runs/*/logs/*.log.*
+  .codepipe/runs/*/logs/*.log.*
 
 # Remove archived logs
-find .ai-feature-pipeline/runs/*/logs/ -name "*.log.*" -delete
+find .codepipe/runs/*/logs/ -name "*.log.*" -delete
 
 # Verify archive
 tar -tzf logs-archive-*.tar.gz | head
@@ -423,12 +423,12 @@ tar -tzf logs-archive-*.tar.gz | head
 # cleanup-logs.sh
 
 # Remove logs from old completed features
-find .ai-feature-pipeline/runs/ -name "state.json" -mtime +1 \
+find .codepipe/runs/ -name "state.json" -mtime +1 \
   -exec grep -l '"phase":"completed"' {} \; | \
   xargs -I{} rm -rf "$(dirname {})/logs/"
 
 # Archive old rotated logs
-find .ai-feature-pipeline/runs/*/logs/ -name "*.log.*" -mtime +7 \
+find .codepipe/runs/*/logs/ -name "*.log.*" -mtime +7 \
   -exec tar -czf logs-archive-$(date +%Y%m%d).tar.gz {} +
 
 # Delete old archives
@@ -441,23 +441,23 @@ find . -name "logs-archive-*.tar.gz" -mtime +30 -delete
 
 **High-volume logging (>1GB/day):**
 ```bash
-export AI_FEATURE_LOG_ROTATION_MB=50
-export AI_FEATURE_LOG_ROTATION_KEEP=2
-export AI_FEATURE_LOG_ROTATION_COMPRESS=true
+export CODEPIPE_LOG_ROTATION_MB=50
+export CODEPIPE_LOG_ROTATION_KEEP=2
+export CODEPIPE_LOG_ROTATION_COMPRESS=true
 ```
 
 **Long-running features (>7 days):**
 ```bash
-export AI_FEATURE_LOG_ROTATION_MB=200
-export AI_FEATURE_LOG_ROTATION_KEEP=5
-export AI_FEATURE_LOG_ROTATION_COMPRESS=true
+export CODEPIPE_LOG_ROTATION_MB=200
+export CODEPIPE_LOG_ROTATION_KEEP=5
+export CODEPIPE_LOG_ROTATION_COMPRESS=true
 ```
 
 **Disk-constrained environments (<10GB available):**
 ```bash
-export AI_FEATURE_LOG_ROTATION_MB=25
-export AI_FEATURE_LOG_ROTATION_KEEP=1
-export AI_FEATURE_LOG_ROTATION_COMPRESS=true
+export CODEPIPE_LOG_ROTATION_MB=25
+export CODEPIPE_LOG_ROTATION_KEEP=1
+export CODEPIPE_LOG_ROTATION_COMPRESS=true
 ```
 
 ## References

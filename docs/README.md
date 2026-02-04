@@ -104,7 +104,7 @@ Runbooks and operational procedures for pipeline administration and troubleshoot
 
 | Document | Description |
 |----------|-------------|
-| [Init Playbook](ops/init_playbook.md) | Repository initialization with `ai-feature init` command |
+| [Init Playbook](ops/init_playbook.md) | Repository initialization with `codepipe init` command |
 | [Doctor Reference](ops/doctor_reference.md) | Environment diagnostics and prerequisite validation |
 | [CLI Reference](ops/cli-reference.md) | CLI command reference and usage guide |
 | [Troubleshooting](ops/troubleshooting.md) | Common issues and troubleshooting procedures |
