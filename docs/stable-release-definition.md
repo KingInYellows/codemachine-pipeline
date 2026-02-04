@@ -182,7 +182,7 @@ The following are **NOT** requirements for v1.0.0:
 | Linear sync (auto-enabled) | Disabled by default, optional |
 | Auto-merge | Disabled by default, risky |
 | Windows native support | Use WSL2 |
-| Node.js 24+ required | Only v24 LTS or higher supported |
+| Support for Node.js < v24 | Only v24 LTS or higher supported |
 | Distributed execution | Single machine homelab |
 | High availability | Not a server, runs on demand |
 
