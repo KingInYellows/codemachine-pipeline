@@ -249,7 +249,7 @@ export class TraceManager {
   constructor(options: TraceManagerOptions = {}) {
     this.options = {
       runDir: options.runDir ?? '',
-      serviceName: options.serviceName ?? 'ai-feature-pipeline',
+      serviceName: options.serviceName ?? 'codemachine-pipeline',
       defaultAttributes: options.defaultAttributes ?? {},
     };
     this.logger = options.logger ?? createLogger({

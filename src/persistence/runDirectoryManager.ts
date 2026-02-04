@@ -16,7 +16,7 @@ import {
 /**
  * Run Directory Manager
  *
- * Manages `.ai-feature-pipeline/<feature_id>/` directory lifecycle:
+ * Manages `.codepipe/<feature_id>/` directory lifecycle:
  * - Atomic directory provisioning
  * - File-based locking for concurrent access safety
  * - Manifest persistence and validation
@@ -254,7 +254,7 @@ function validateFeatureId(featureId: string): void {
 /**
  * Get the absolute path to a run directory
  *
- * @param baseDir - Base pipeline directory (.ai-feature-pipeline/runs)
+ * @param baseDir - Base pipeline directory (.codepipe/runs)
  * @param featureId - Feature identifier
  * @returns Absolute path to run directory
  * @throws Error if featureId contains path traversal sequences

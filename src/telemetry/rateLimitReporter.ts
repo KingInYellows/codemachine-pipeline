@@ -262,7 +262,7 @@ export class RateLimitReporter {
           '  • One or more providers require manual acknowledgement due to repeated rate limit hits.'
         );
         lines.push(
-          '    Review your rate limit strategy and use `ai-feature rate-limits clear <provider>` when ready.'
+          '    Review your rate limit strategy and use `codepipe rate-limits clear <provider>` when ready.'
         );
       }
       lines.push('');

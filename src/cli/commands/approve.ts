@@ -146,7 +146,7 @@ export default class Approve extends Command {
       const message =
         settings.errors.length > 0
           ? settings.errors.join('\n')
-          : 'Repository not initialized. Run "ai-feature init" first.';
+          : 'Repository not initialized. Run "codepipe init" first.';
       this.error(message, { exit: 10 });
     }
 
@@ -156,7 +156,7 @@ export default class Approve extends Command {
       this.error(
         typedFlags.feature
           ? `Feature run directory not found: ${typedFlags.feature}`
-          : 'No feature runs found. Run "ai-feature start" to create a feature.',
+          : 'No feature runs found. Run "codepipe start" to create a feature.',
         { exit: 10 }
       );
     }
@@ -408,35 +408,35 @@ export default class Approve extends Command {
       switch (gateType) {
         case 'prd':
           return [
-            'PRD approved. Continue to specification authoring with: ai-feature spec',
-            'Or resume the pipeline with: ai-feature resume',
+            'PRD approved. Continue to specification authoring with: codepipe spec',
+            'Or resume the pipeline with: codepipe resume',
           ];
         case 'spec':
           return [
-            'Spec approved. Continue to planning with: ai-feature plan',
-            'Or resume the pipeline with: ai-feature resume',
+            'Spec approved. Continue to planning with: codepipe plan',
+            'Or resume the pipeline with: codepipe resume',
           ];
         case 'plan':
           return [
-            'Plan approved. Continue to implementation with: ai-feature code',
-            'Or resume the pipeline with: ai-feature resume',
+            'Plan approved. Continue to implementation with: codepipe code',
+            'Or resume the pipeline with: codepipe resume',
           ];
         case 'code':
-          return ['Code approved. Create pull request with: ai-feature pr'];
+          return ['Code approved. Create pull request with: codepipe pr'];
         case 'pr':
-          return ['PR approved. Deploy changes with: ai-feature deploy'];
+          return ['PR approved. Deploy changes with: codepipe deploy'];
         case 'deploy':
           return [
             'Deployment approved. Feature pipeline completed!',
-            'Export artifacts with: ai-feature export',
+            'Export artifacts with: codepipe export',
           ];
         default:
-          return ['Approval completed. Check status with: ai-feature status'];
+          return ['Approval completed. Check status with: codepipe status'];
       }
     } else {
       return [
         `${gateType.toUpperCase()} rejected. Address feedback and request approval again.`,
-        `Update the artifact and re-run the relevant command (e.g., ai-feature ${gateType})`,
+        `Update the artifact and re-run the relevant command (e.g., codepipe ${gateType})`,
         'Then request approval using this command again.',
       ];
     }

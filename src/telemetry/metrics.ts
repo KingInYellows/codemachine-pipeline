@@ -354,7 +354,7 @@ export class MetricsCollector {
   constructor(options: MetricsCollectorOptions = {}) {
     this.options = {
       runDir: options.runDir ?? '',
-      namespace: options.namespace ?? 'ai_feature_pipeline',
+      namespace: options.namespace ?? 'codemachine_pipeline',
       defaultLabels: options.defaultLabels ?? {},
     };
 

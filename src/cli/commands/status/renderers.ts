@@ -54,7 +54,7 @@ export function renderHumanReadable(
       warn('\u26a0 Pending approvals required:');
       payload.approvals.pending.forEach((gate) => {
         warn(
-          `  \u2022 ${gate.toUpperCase()} - Review artifact and run: ai-feature approve ${gate} --signer "<your-email>"`
+          `  \u2022 ${gate.toUpperCase()} - Review artifact and run: codepipe approve ${gate} --signer "<your-email>"`
         );
       });
     }

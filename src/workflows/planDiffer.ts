@@ -100,7 +100,7 @@ export async function comparePlanDiff(runDir: string): Promise<PlanDiff> {
   if (hasChanges) {
     if (specHashChanged) {
       recommendation =
-        'Specification changed. Re-run plan generation with: ai-feature plan --regenerate';
+        'Specification changed. Re-run plan generation with: codepipe plan --regenerate';
     } else if (changedFields.includes('plan_checksum_mismatch')) {
       recommendation = 'Plan file modified externally. Verify integrity or regenerate plan.';
     } else if (changedFields.includes('plan_file_missing')) {

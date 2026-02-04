@@ -242,7 +242,7 @@ export async function examplePRWorkflow(
 
     if (result.message.includes('manual acknowledgement required')) {
       logger?.warn('Rate limit cooldown requires manual intervention');
-      logger?.warn('Run: ai-feature rate-limits clear github');
+      logger?.warn('Run: codepipe rate-limits clear github');
     }
   }
 

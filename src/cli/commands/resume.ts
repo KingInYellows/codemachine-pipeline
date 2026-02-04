@@ -308,7 +308,7 @@ export default class Resume extends Command {
       logger.info('Resume preparation completed', { feature_id: featureId });
 
       // Load repo config
-      const repoConfigPath = path.join(process.cwd(), '.ai-feature-pipeline', 'config.json');
+      const repoConfigPath = path.join(process.cwd(), '.codepipe', 'config.json');
       const repoConfigResult = loadRepoConfig(repoConfigPath);
       if (!repoConfigResult.success || !repoConfigResult.config) {
         const errorMessages = repoConfigResult.errors?.map((e) => e.message).join(', ') ?? 'unknown error';
@@ -405,13 +405,13 @@ export default class Resume extends Command {
         this.log(`  Duration: ${(executionDuration / 1000).toFixed(2)}s`);
         this.log('');
         this.log('Next steps:');
-        this.log('  • Monitor progress with: ai-feature status --feature ' + featureId);
+        this.log('  • Monitor progress with: codepipe status --feature ' + featureId);
         this.log('  • View logs in: ' + path.join(runDirPath, 'logs', 'logs.ndjson'));
         this.log('');
 
         if (executionResults.failedTasks > 0) {
           this.warn(
-            `Warning: ${executionResults.failedTasks} task(s) failed. Run 'ai-feature resume' to retry.`
+            `Warning: ${executionResults.failedTasks} task(s) failed. Run 'codepipe resume' to retry.`
           );
         }
       }
@@ -662,7 +662,7 @@ export default class Resume extends Command {
       if (analysis.pendingApprovals.length > 0) {
         this.log('  Pending approvals:');
         analysis.pendingApprovals.forEach((gate) => {
-          this.log(`    • ${gate.toUpperCase()} - Run: ai-feature approve ${gate}`);
+          this.log(`    • ${gate.toUpperCase()} - Run: codepipe approve ${gate}`);
         });
       }
     }
@@ -700,7 +700,7 @@ export default class Resume extends Command {
         }
         if (warning.manual_ack_required) {
           this.warn(`    ⚠ Manual acknowledgement required`);
-          this.log(`       Use: ai-feature rate-limits clear ${warning.provider}`);
+          this.log(`       Use: codepipe rate-limits clear ${warning.provider}`);
         }
       }
     }

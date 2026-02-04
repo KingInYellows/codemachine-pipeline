@@ -8,8 +8,8 @@ import {
 } from '../../persistence/runDirectoryManager';
 import { loadRepoConfig, type RepoConfig } from '../../core/config/RepoConfig';
 
-export const CONFIG_RELATIVE_PATH = path.join('.ai-feature-pipeline', 'config.json');
-export const DEFAULT_RUNS_DIR = path.join('.ai-feature-pipeline', 'runs');
+export const CONFIG_RELATIVE_PATH = path.join('.codepipe', 'config.json');
+export const DEFAULT_RUNS_DIR = path.join('.codepipe', 'runs');
 
 export interface RunDirectorySettings {
   baseDir: string;
