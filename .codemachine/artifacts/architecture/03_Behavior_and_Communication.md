@@ -121,7 +121,7 @@
         - HTTP layer uses typed enums for HTTP verbs and status codes, preventing typographical mistakes when new adapters are added.
         - Observability hub aggregates restful throughput statistics, enabling future scaling decisions (parallelization) while respecting rate limits.
         - CLI ensures restful endpoints rely on standard JSON serialization, forbidding runtime-specific fields or prototypes, thus keeping exports portable.
-        - HTTP layer includes CLI version within a X-AI-Feature-Version header, allowing providers to deliver targeted guidance when features change.
+        - HTTP layer includes CLI version within a X-CodePipe-Version header, allowing providers to deliver targeted guidance when features change.
         - Because the CLI is local-first, restful calls are the only time network is touched; this clear boundary simplifies compliance reviews and threat assessments.
     *   **Communication Patterns:** The Behavior Architect view emphasizes how orchestrated request/response paths and asynchronous queues work together without violating local-first constraints.
         - Synchronous CLI Orchestrator to RepoConfig Manager handshake occurs when commands like codepipe start validate repository state before any work begins.
