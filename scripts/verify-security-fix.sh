@@ -86,7 +86,7 @@ echo ""
 
 # Test 7: Run existing validation tests
 echo "7. Running existing validation tests..."
-if npx vitest run tests/commands/validate.spec.ts --silent > /dev/null 2>&1; then
+if npx vitest run tests/unit/commands/validate.spec.ts --silent > /dev/null 2>&1; then
     echo -e "${GREEN}✓ PASSED${NC}: All validation tests pass"
     PASSED=$((PASSED + 1))
 else
