@@ -44,7 +44,7 @@ The Resume Coordinator classifies failures into categories with specific recover
 
 **Human Actions**:
 - Wait for rate limit window to reset
-- Review rate limit budgets in `.ai-feature-pipeline/config.json`
+- Review rate limit budgets in `.codepipe/config.json`
 - Consider increasing retry delays in config
 
 **Agent Actions**:
@@ -76,7 +76,7 @@ The Resume Coordinator classifies failures into categories with specific recover
 
 **Human Actions**:
 - Inspect failed artifact in run directory (e.g., `artifacts/spec.md`)
-- Run `ai-feature validate <feature_id>` to identify issues
+- Run `codepipe validate <feature_id>` to identify issues
 - If input was manually edited, restore from hash manifest or regenerate
 
 **Agent Actions**:
@@ -95,13 +95,13 @@ The Resume Coordinator classifies failures into categories with specific recover
 **Recovery**: Manual restoration required
 
 **Human Actions**:
-1. Check integrity report: `ai-feature resume --dry-run <feature_id>`
+1. Check integrity report: `codepipe resume --dry-run <feature_id>`
 2. Review failed files in diagnostics output
 3. Restore from backup or regenerate:
    - If source artifacts (PRD, spec) were corrupted: restore from git history
    - If queue files corrupted: delete and rebuild from plan
-4. Run `ai-feature verify <feature_id>` to confirm integrity
-5. Resume with `ai-feature resume <feature_id>`
+4. Run `codepipe verify <feature_id>` to confirm integrity
+5. Resume with `codepipe resume <feature_id>`
 
 **Agent Actions**:
 - **HALT**: Do not proceed with corrupted state
@@ -125,8 +125,8 @@ The Resume Coordinator classifies failures into categories with specific recover
    - Check API key scopes/permissions
    - Rotate keys if expired
 4. For filesystem permissions:
-   - Check run directory ownership: `ls -la .ai-feature-pipeline/runs/<feature_id>`
-   - Fix with: `sudo chown -R $USER:$USER .ai-feature-pipeline`
+   - Check run directory ownership: `ls -la .codepipe/runs/<feature_id>`
+   - Fix with: `sudo chown -R $USER:$USER .codepipe`
 
 **Agent Actions**:
 - **HALT**: Do not retry without permission changes
@@ -140,13 +140,13 @@ The Resume Coordinator classifies failures into categories with specific recover
 **Recovery**: Manual approval required
 
 **Human Actions**:
-1. Review pending approvals: `ai-feature status <feature_id>`
+1. Review pending approvals: `codepipe status <feature_id>`
 2. Inspect approval details in `approvals/approvals.json`
 3. Grant approval:
    ```bash
-   ai-feature approve <feature_id> --type <approval_type>
+   codepipe approve <feature_id> --type <approval_type>
    ```
-4. Resume: `ai-feature resume <feature_id>`
+4. Resume: `codepipe resume <feature_id>`
 
 **Agent Actions**:
 - **HALT**: Cannot proceed without approval
@@ -178,7 +178,7 @@ The Resume Coordinator classifies failures into categories with specific recover
    git stash                     # Save WIP
    # Or commit changes
    ```
-6. Resume: `ai-feature resume <feature_id>`
+6. Resume: `codepipe resume <feature_id>`
 
 **Agent Actions**:
 - **HALT**: Git state must be clean before code generation
@@ -201,16 +201,16 @@ The Resume Coordinator classifies failures into categories with specific recover
 3. Decide recovery strategy:
    - **Option A**: Fix manually and mark task completed
      ```bash
-     ai-feature task complete <feature_id> <task_id>
+     codepipe task complete <feature_id> <task_id>
      ```
    - **Option B**: Regenerate plan
      ```bash
-     ai-feature replan <feature_id>
+     codepipe replan <feature_id>
      ```
    - **Option C**: Abort and restart
      ```bash
-     ai-feature abort <feature_id>
-     ai-feature start <new_feature_id> --from-linear <issue_id>
+     codepipe abort <feature_id>
+     codepipe start <new_feature_id> --from-linear <issue_id>
      ```
 
 **Agent Actions**:
@@ -227,8 +227,8 @@ The Resume Coordinator classifies failures into categories with specific recover
 **Recovery**: None needed (informational)
 
 **Human Actions**:
-- Verify completion: `ai-feature status <feature_id>`
-- If PR not created, manually trigger: `ai-feature pr create <feature_id>`
+- Verify completion: `codepipe status <feature_id>`
+- If PR not created, manually trigger: `codepipe pr create <feature_id>`
 
 ---
 
@@ -237,7 +237,7 @@ The Resume Coordinator classifies failures into categories with specific recover
 **Recovery**: Standard resume
 
 **Human Actions**:
-- Resume: `ai-feature resume <feature_id>`
+- Resume: `codepipe resume <feature_id>`
 
 ---
 
@@ -246,9 +246,9 @@ The Resume Coordinator classifies failures into categories with specific recover
 **Recovery**: Safe resume (checks for partial writes)
 
 **Human Actions**:
-1. Verify no other process is running: `ps aux | grep ai-feature`
-2. Check for stale lock: `ls -la .ai-feature-pipeline/runs/<feature_id>/run.lock`
-3. Resume (lock will auto-clear if stale): `ai-feature resume <feature_id>`
+1. Verify no other process is running: `ps aux | grep codepipe`
+2. Check for stale lock: `ls -la .codepipe/runs/<feature_id>/run.lock`
+3. Resume (lock will auto-clear if stale): `codepipe resume <feature_id>`
 
 **Agent Actions**:
 - Verify artifact integrity before resuming
@@ -263,7 +263,7 @@ The Resume Coordinator classifies failures into categories with specific recover
 
 ```mermaid
 graph TD
-    A[User runs: ai-feature resume] --> B[Lock run directory]
+    A[User runs: codepipe resume] --> B[Lock run directory]
     B --> C[Read manifest.json]
     C --> D[Analyze resume state]
     D --> E{Can resume?}
@@ -349,15 +349,15 @@ The Resume Coordinator emits diagnostic codes for playbook mapping:
 **Steps**:
 1. Check rate limit status:
    ```bash
-   ai-feature status <feature_id> --verbose
+   codepipe status <feature_id> --verbose
    ```
 2. Review telemetry for reset time:
    ```bash
-   cat .ai-feature-pipeline/runs/<feature_id>/telemetry/costs.json | jq '.rate_limits'
+   cat .codepipe/runs/<feature_id>/telemetry/costs.json | jq '.rate_limits'
    ```
 3. Wait for reset window or adjust config:
    ```json
-   // .ai-feature-pipeline/config.json
+   // .codepipe/config.json
    {
      "rate_limits": {
        "anthropic": {
@@ -369,7 +369,7 @@ The Resume Coordinator emits diagnostic codes for playbook mapping:
    ```
 4. Resume:
    ```bash
-   ai-feature resume <feature_id>
+   codepipe resume <feature_id>
    ```
 
 **Automation**: Agent auto-retries with exponential backoff
@@ -383,7 +383,7 @@ The Resume Coordinator emits diagnostic codes for playbook mapping:
 **Steps**:
 1. Inspect integrity report:
    ```bash
-   ai-feature resume --dry-run <feature_id>
+   codepipe resume --dry-run <feature_id>
    ```
 2. Identify failed artifacts in diagnostics output
 3. Restore options:
@@ -394,16 +394,16 @@ The Resume Coordinator emits diagnostic codes for playbook mapping:
      ```
    - **Option B**: Regenerate hash manifest (if changes are intentional)
      ```bash
-     ai-feature hash-manifest regenerate <feature_id>
+     codepipe hash-manifest regenerate <feature_id>
      ```
    - **Option C**: Force resume (dangerous)
      ```bash
-     ai-feature resume <feature_id> --force
+     codepipe resume <feature_id> --force
      ```
 4. Verify and resume:
    ```bash
-   ai-feature verify <feature_id>
-   ai-feature resume <feature_id>
+   codepipe verify <feature_id>
+   codepipe resume <feature_id>
    ```
 
 **When to use --force**:
@@ -419,20 +419,20 @@ The Resume Coordinator emits diagnostic codes for playbook mapping:
 **Steps**:
 1. Validate queue:
    ```bash
-   ai-feature queue validate <feature_id>
+   codepipe queue validate <feature_id>
    ```
 2. Review corruption report (shows line numbers and errors)
 3. Rebuild queue from plan:
    ```bash
-   ai-feature queue rebuild <feature_id> --from-plan
+   codepipe queue rebuild <feature_id> --from-plan
    ```
 4. Verify rebuild:
    ```bash
-   ai-feature queue validate <feature_id>
+   codepipe queue validate <feature_id>
    ```
 5. Resume:
    ```bash
-   ai-feature resume <feature_id>
+   codepipe resume <feature_id>
    ```
 
 **Prevention**:
@@ -449,19 +449,19 @@ The Resume Coordinator emits diagnostic codes for playbook mapping:
 **Steps**:
 1. List pending approvals:
    ```bash
-   ai-feature status <feature_id>
+   codepipe status <feature_id>
    ```
 2. Review approval context:
    ```bash
-   cat .ai-feature-pipeline/runs/<feature_id>/approvals/approvals.json
+   cat .codepipe/runs/<feature_id>/approvals/approvals.json
    ```
 3. Approve if satisfied:
    ```bash
-   ai-feature approve <feature_id> --type spec_review
+   codepipe approve <feature_id> --type spec_review
    ```
 4. Resume:
    ```bash
-   ai-feature resume <feature_id>
+   codepipe resume <feature_id>
    ```
 
 **Common Approval Types**:
@@ -479,7 +479,7 @@ The Resume Coordinator emits diagnostic codes for playbook mapping:
 
 #### Basic Resume
 ```bash
-ai-feature resume <feature_id>
+codepipe resume <feature_id>
 ```
 
 Resume execution from last checkpoint.
@@ -488,7 +488,7 @@ Resume execution from last checkpoint.
 
 #### Dry Run (Diagnostics Only)
 ```bash
-ai-feature resume --dry-run <feature_id>
+codepipe resume --dry-run <feature_id>
 ```
 
 Analyze resume eligibility without executing. Shows:
@@ -502,7 +502,7 @@ Analyze resume eligibility without executing. Shows:
 
 #### Force Resume
 ```bash
-ai-feature resume --force <feature_id>
+codepipe resume --force <feature_id>
 ```
 
 ⚠️  **Dangerous**: Override blockers (integrity failures, warnings). Use only when:
@@ -514,7 +514,7 @@ ai-feature resume --force <feature_id>
 
 #### Skip Hash Verification
 ```bash
-ai-feature resume --skip-hash-verification <feature_id>
+codepipe resume --skip-hash-verification <feature_id>
 ```
 
 ⚠️  **Dangerous**: Skip artifact integrity checks. Use only for debugging.
@@ -525,7 +525,7 @@ ai-feature resume --skip-hash-verification <feature_id>
 
 #### Verify Integrity
 ```bash
-ai-feature verify <feature_id>
+codepipe verify <feature_id>
 ```
 
 Check artifact integrity against hash manifest.
@@ -534,7 +534,7 @@ Check artifact integrity against hash manifest.
 
 #### Validate Queue
 ```bash
-ai-feature queue validate <feature_id>
+codepipe queue validate <feature_id>
 ```
 
 Validate queue file integrity and schema compliance.
@@ -543,7 +543,7 @@ Validate queue file integrity and schema compliance.
 
 #### Rebuild Queue
 ```bash
-ai-feature queue rebuild <feature_id> --from-plan
+codepipe queue rebuild <feature_id> --from-plan
 ```
 
 Rebuild queue from execution plan (discards current queue state).
@@ -552,7 +552,7 @@ Rebuild queue from execution plan (discards current queue state).
 
 #### Approve Checkpoint
 ```bash
-ai-feature approve <feature_id> --type <approval_type>
+codepipe approve <feature_id> --type <approval_type>
 ```
 
 Grant approval for pending checkpoint.
@@ -562,13 +562,13 @@ Grant approval for pending checkpoint.
 #### Task Management
 ```bash
 # Mark task completed manually
-ai-feature task complete <feature_id> <task_id>
+codepipe task complete <feature_id> <task_id>
 
 # Mark task failed
-ai-feature task fail <feature_id> <task_id> --reason "Manual intervention required"
+codepipe task fail <feature_id> <task_id> --reason "Manual intervention required"
 
 # Retry specific task
-ai-feature task retry <feature_id> <task_id>
+codepipe task retry <feature_id> <task_id>
 ```
 
 ---
@@ -582,17 +582,17 @@ ai-feature task retry <feature_id> <task_id>
 **Solution**:
 1. Check for running processes:
    ```bash
-   ps aux | grep ai-feature
+   ps aux | grep codepipe
    ```
 2. If no processes, check lock file:
    ```bash
-   cat .ai-feature-pipeline/runs/<feature_id>/run.lock
+   cat .codepipe/runs/<feature_id>/run.lock
    ```
 3. If lock is stale (>5 minutes old and process doesn't exist):
    - Lock will auto-clear on next attempt
    - Or manually remove (use with caution):
      ```bash
-     rm .ai-feature-pipeline/runs/<feature_id>/run.lock
+     rm .codepipe/runs/<feature_id>/run.lock
      ```
 
 ---
@@ -604,15 +604,15 @@ ai-feature task retry <feature_id> <task_id>
 **Solution**:
 1. Check queue for failed tasks:
    ```bash
-   ai-feature queue list <feature_id> --status failed
+   codepipe queue list <feature_id> --status failed
    ```
 2. If PR task failed, retry:
    ```bash
-   ai-feature task retry <feature_id> <pr_task_id>
+   codepipe task retry <feature_id> <pr_task_id>
    ```
 3. Or create PR manually:
    ```bash
-   ai-feature pr create <feature_id>
+   codepipe pr create <feature_id>
    ```
 
 ---
@@ -632,7 +632,7 @@ ai-feature task retry <feature_id> <task_id>
    ```
 3. Regenerate hash manifest:
    ```bash
-   ai-feature hash-manifest regenerate <feature_id>
+   codepipe hash-manifest regenerate <feature_id>
    ```
 
 ---
@@ -644,11 +644,11 @@ ai-feature task retry <feature_id> <task_id>
 **Solution**:
 1. Validate queue:
    ```bash
-   ai-feature queue validate <feature_id>
+   codepipe queue validate <feature_id>
    ```
 2. If corrupted, rebuild:
    ```bash
-   ai-feature queue rebuild <feature_id> --from-plan
+   codepipe queue rebuild <feature_id> --from-plan
    ```
 
 ---
@@ -659,24 +659,24 @@ ai-feature task retry <feature_id> <task_id>
 
 1. **Always use --dry-run first**
    ```bash
-   ai-feature resume --dry-run <feature_id>
+   codepipe resume --dry-run <feature_id>
    ```
    Review diagnostics before resuming.
 
 2. **Monitor telemetry during resume**
    ```bash
-   tail -f .ai-feature-pipeline/runs/<feature_id>/logs/logs.ndjson
+   tail -f .codepipe/runs/<feature_id>/logs/logs.ndjson
    ```
 
 3. **Create snapshots before risky operations**
    ```bash
-   ai-feature queue snapshot <feature_id>
+   codepipe queue snapshot <feature_id>
    ```
 
 4. **Document manual interventions**
    Add notes to run metadata:
    ```bash
-   ai-feature metadata set <feature_id> manual_fix "Resolved merge conflict in src/app.ts"
+   codepipe metadata set <feature_id> manual_fix "Resolved merge conflict in src/app.ts"
    ```
 
 ### For Developers
@@ -721,12 +721,12 @@ Track failure patterns to improve system resilience:
 
 ```bash
 # Aggregate failures by error code
-cat .ai-feature-pipeline/runs/*/manifest.json | \
+cat .codepipe/runs/*/manifest.json | \
   jq -r '.execution.last_error | select(. != null) | .message' | \
   sort | uniq -c | sort -rn
 
 # Identify most common blockers
-cat .ai-feature-pipeline/runs/*/manifest.json | \
+cat .codepipe/runs/*/manifest.json | \
   jq -r 'select(.status == "failed") | .execution.last_error.message'
 ```
 

@@ -2,14 +2,14 @@
 
 **Date:** 2026-01-27
 **Auditor:** Claude Code
-**Project:** ai-feature-pipeline
+**Project:** codemachine-pipeline
 **Version:** 0.1.0 (pre-alpha) -> 1.0.0 (target)
 
 ---
 
 ## Executive Summary
 
-This document provides a comprehensive tech debt audit for the ai-feature-pipeline project, identifying risks that must be addressed before the stable v1.0.0 release. The audit focuses on **data safety**, **crash recovery**, and **operator experience** for reliable homelab operation.
+This document provides a comprehensive tech debt audit for the codemachine-pipeline project, identifying risks that must be addressed before the stable v1.0.0 release. The audit focuses on **data safety**, **crash recovery**, and **operator experience** for reliable homelab operation.
 
 ### Key Findings
 
@@ -133,7 +133,7 @@ export async function loadQueue(runDir: string): Promise<Map<string, ExecutionTa
   if (!integrityResult.valid) {
     throw new QueueCorruptionError(
       `Queue integrity check failed: ${integrityResult.errors.join(', ')}. ` +
-      `Run 'ai-feature queue repair ${v2Cache.featureId}' to attempt recovery.`
+      `Run 'codepipe queue repair ${v2Cache.featureId}' to attempt recovery.`
     );
   }
   // ... rest of function

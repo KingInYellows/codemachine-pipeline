@@ -15,8 +15,8 @@
             Handle authentication (PAT or App), Accept/API version headers, error taxonomy, and logging.
         *   **Agent Type Hint:** `BackendAgent`
         *   **Inputs:** Section 2 (Key Components), Section 2.1 (OpenAPI artifact), IR-1..IR-7, FR-15.
-        *   **Input Files**: ["docs/requirements/github_endpoints.md", "docs/ops/rate_limit_reference.md", "api/ai_feature.yaml"]
-        *   **Target Files:** ["src/adapters/github/GitHubAdapter.ts", "api/ai_feature.yaml", "docs/requirements/github_adapter.md", "tests/integration/githubAdapter.spec.ts"]
+        *   **Input Files**: ["docs/requirements/github_endpoints.md", "docs/ops/rate_limit_reference.md", "api/codepipe.yaml"]
+        *   **Target Files:** ["src/adapters/github/GitHubAdapter.ts", "api/codepipe.yaml", "docs/requirements/github_adapter.md", "tests/integration/githubAdapter.spec.ts"]
         *   **Deliverables:** Adapter implementation, OpenAPI additions, documentation, and integration tests verifying PR creation/reviewer requests/merge readiness under mocked responses.
         *   **Acceptance Criteria:** REST calls include required headers; rate-limit retries invoked when headers indicate; tests assert correct payloads; doc explains configuration for Accept/Version, status-check endpoints, and branch creation.
         *   **Dependencies:** `I3.T2`, `I3.T6`
@@ -39,7 +39,7 @@
 <!-- anchor: task-i4-t3 -->
     *   **Task 4.3:**
         *   **Task ID:** `I4.T3`
-        *   **Description:** Expand rate-limit ledger + telemetry to surface integration-specific cooldown timers, backlog states, and CLI warnings; add Prometheus metrics for GitHub/Linear budgets, and CLI command `ai-feature rate-limits` for manual inspection.
+        *   **Description:** Expand rate-limit ledger + telemetry to surface integration-specific cooldown timers, backlog states, and CLI warnings; add Prometheus metrics for GitHub/Linear budgets, and CLI command `codepipe rate-limits` for manual inspection.
         *   **Agent Type Hint:** `BackendAgent`
         *   **Inputs:** Section 2 (Observability), Section 4 (Directives), outputs from `I3.T6`.
         *   **Input Files**: ["docs/ops/rate_limit_reference.md", "docs/ops/execution_telemetry.md"]
@@ -52,7 +52,7 @@
 <!-- anchor: task-i4-t4 -->
     *   **Task 4.4:**
         *   **Task ID:** `I4.T4`
-        *   **Description:** Implement PR automation CLI surfaces (`ai-feature pr create`, `pr status`, `pr reviewers`, `pr disable-auto-merge`) plus GitHub PR automation sequence diagram (Mermaid) detailing request flow, write action queue, and branch protection feedback loops.
+        *   **Description:** Implement PR automation CLI surfaces (`codepipe pr create`, `pr status`, `pr reviewers`, `pr disable-auto-merge`) plus GitHub PR automation sequence diagram (Mermaid) detailing request flow, write action queue, and branch protection feedback loops.
         *   **Agent Type Hint:** `FrontendAgent`
         *   **Inputs:** Section 2 (Communication Patterns), Section 2.1 (PR diagram), FR-15, ADR-3.
         *   **Input Files**: ["docs/requirements/github_endpoints.md", "docs/ops/approval_playbook.md", "docs/diagrams/execution_flow.puml"]
@@ -121,7 +121,7 @@
 *   **Iteration Risks & Mitigations:**
     - Risk: GitHub API schema changes; Mitigation: OpenAPI spec + contract tests highlight drift, and adapters log request IDs for support tickets.
     - Risk: Linear MCP downtime; Mitigation: offline snapshot cache + ResearchTask fallback documented in `linear_adapter.md`.
-    - Risk: Rate-limit storms; Mitigation: write action queue with telemetry/warnings plus `ai-feature rate-limits` command instructing operators to pause.
+    - Risk: Rate-limit storms; Mitigation: write action queue with telemetry/warnings plus `codepipe rate-limits` command instructing operators to pause.
 *   **Hand-off Checklist to I5:**
     - Provide working PR/resume/deploy transcripts, OpenAPI spec, and integration fixture bundles for deployment automation work.
     - Confirm CLI `status --json` schema updates documented and exported for Graphite/CodeMachine consumption.
@@ -133,7 +133,7 @@
 *   **Iteration Validation Hooks:**
     - Schedule nightly GitHub/Linear contract tests using recorded fixtures to catch API drift early.
     - Add CLI smoke script `scripts/tooling/smoke_pr.sh` verifying PR creation + reviewer assignment run end-to-end.
-    - Archive rate-limit ledger samples plus CLI transcripts in `.ai-feature-pipeline/templates/integration/` for deployment team reference.
+    - Archive rate-limit ledger samples plus CLI transcripts in `.codepipe/templates/integration/` for deployment team reference.
     - Provide example GitHub Action workflow file in docs/ops/pr_playbook.md demonstrating how CLI output feeds status checks, ensuring deployment iteration has reproducible references.
     - Capture write-action queue depth and GitHub/Linear latency histograms inside metrics/prometheus.txt so deployment auto-merge heuristics can reuse the data.
     - Store sanitized API transcripts for successful and rate-limited calls under run_directory/api/ so I5 export tooling has representative payloads.

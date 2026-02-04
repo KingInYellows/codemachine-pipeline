@@ -20,7 +20,7 @@ The HTTP client module implements zero-tolerance rate limit discipline by:
 
 Each run directory contains a rate limit ledger at:
 ```
-.ai-feature-pipeline/runs/<feature_id>/rate_limits.json
+.codepipe/runs/<feature_id>/rate_limits.json
 ```
 
 ### Schema Structure
@@ -203,7 +203,7 @@ If `retry-after` is absent but `x-ratelimit-reset` is present:
 - Suggest manual cooldown clearing or config review
 - Provide diagnostic commands (see [Operator Actions](#operator-actions))
 
-**Implementation Note:** Currently logged as critical warnings; future CLI commands (`ai-feature rate-limits clear`) will enable interactive acknowledgement.
+**Implementation Note:** Currently logged as critical warnings; future CLI commands (`codepipe rate-limits clear`) will enable interactive acknowledgement.
 
 ## Error Escalation Guidance
 
@@ -257,18 +257,18 @@ All HTTP errors are classified into three types:
 
 **View current rate limits for a run:**
 ```bash
-cat .ai-feature-pipeline/runs/<feature_id>/rate_limits.json | jq '.providers'
+cat .codepipe/runs/<feature_id>/rate_limits.json | jq '.providers'
 ```
 
 **Check GitHub remaining requests:**
 ```bash
-cat .ai-feature-pipeline/runs/<feature_id>/rate_limits.json | \
+cat .codepipe/runs/<feature_id>/rate_limits.json | \
   jq '.providers.github.state.remaining'
 ```
 
 **Check if in cooldown:**
 ```bash
-cat .ai-feature-pipeline/runs/<feature_id>/rate_limits.json | \
+cat .codepipe/runs/<feature_id>/rate_limits.json | \
   jq '.providers.github.state.inCooldown'
 ```
 
@@ -279,14 +279,14 @@ cat .ai-feature-pipeline/runs/<feature_id>/rate_limits.json | \
 ```bash
 # Edit ledger to clear cooldown
 jq '.providers.github.state.inCooldown = false | del(.providers.github.state.cooldownUntil)' \
-  .ai-feature-pipeline/runs/<feature_id>/rate_limits.json > temp.json && \
-  mv temp.json .ai-feature-pipeline/runs/<feature_id>/rate_limits.json
+  .codepipe/runs/<feature_id>/rate_limits.json > temp.json && \
+  mv temp.json .codepipe/runs/<feature_id>/rate_limits.json
 ```
 
 **Future CLI Command:**
 ```bash
 # Not yet implemented
-ai-feature rate-limits clear --provider github --run <feature_id>
+codepipe rate-limits clear --provider github --run <feature_id>
 ```
 
 ### Verifying Token Scopes
@@ -310,13 +310,13 @@ curl -H "Authorization: $LINEAR_API_KEY" \
 
 **Track envelope history:**
 ```bash
-cat .ai-feature-pipeline/runs/<feature_id>/rate_limits.json | \
+cat .codepipe/runs/<feature_id>/rate_limits.json | \
   jq '.providers.github.recentEnvelopes[] | {timestamp, remaining, endpoint}'
 ```
 
 **Identify high-consumption endpoints:**
 ```bash
-cat .ai-feature-pipeline/runs/<feature_id>/rate_limits.json | \
+cat .codepipe/runs/<feature_id>/rate_limits.json | \
   jq '.providers.github.recentEnvelopes | group_by(.endpoint) |
       map({endpoint: .[0].endpoint, count: length}) | sort_by(.count) | reverse'
 ```
@@ -366,7 +366,7 @@ const client = new HttpClient({
   baseUrl: 'https://api.github.com',
   provider: Provider.GITHUB,
   token: process.env.GITHUB_TOKEN,
-  runDir: '.ai-feature-pipeline/runs/feature-123',
+  runDir: '.codepipe/runs/feature-123',
   maxRetries: 3,
   initialBackoff: 1000,
   maxBackoff: 32000,
@@ -408,7 +408,7 @@ curl -I -H "Authorization: Bearer $GITHUB_TOKEN" https://api.github.com/user
 # Verify X-OAuth-Scopes header includes: repo, workflow
 
 # Check for concurrent usage
-ps aux | grep ai-feature
+ps aux | grep codepipe
 ```
 
 ### Symptom: Cooldown never clears
@@ -420,7 +420,7 @@ ps aux | grep ai-feature
 **Resolution:**
 ```bash
 # Check reset timestamp
-cat .ai-feature-pipeline/runs/<feature_id>/rate_limits.json | \
+cat .codepipe/runs/<feature_id>/rate_limits.json | \
   jq '.providers.github.state.reset' | \
   xargs -I {} date -d @{}
 
@@ -436,11 +436,11 @@ cat .ai-feature-pipeline/runs/<feature_id>/rate_limits.json | \
 **Resolution:**
 ```bash
 # Check run directory exists and is writable
-ls -ld .ai-feature-pipeline/runs/<feature_id>/
+ls -ld .codepipe/runs/<feature_id>/
 # Should show drwxr-xr-x or similar with write permission
 
 # Check client initialization in logs
-grep "runDir" .ai-feature-pipeline/runs/<feature_id>/logs/*.ndjson
+grep "runDir" .codepipe/runs/<feature_id>/logs/*.ndjson
 ```
 
 ## Security and Privacy
@@ -465,7 +465,7 @@ The HTTP client sanitizes all logs to prevent token leakage:
 
 Recommended permissions:
 ```bash
-chmod 600 .ai-feature-pipeline/runs/*/rate_limits.json
+chmod 600 .codepipe/runs/*/rate_limits.json
 ```
 
 Prevents other users from reading rate limit state.
@@ -475,9 +475,9 @@ Prevents other users from reading rate limit state.
 ### Planned Features (Not Yet Implemented)
 
 1. **CLI Commands:**
-   - `ai-feature rate-limits status`: View current state across all providers
-   - `ai-feature rate-limits clear <provider>`: Clear cooldown with confirmation
-   - `ai-feature rate-limits history <provider>`: Show envelope timeline
+   - `codepipe rate-limits status`: View current state across all providers
+   - `codepipe rate-limits clear <provider>`: Clear cooldown with confirmation
+   - `codepipe rate-limits history <provider>`: Show envelope timeline
 
 2. **Proactive Throttling:**
    - Pause task execution when `remaining < threshold`

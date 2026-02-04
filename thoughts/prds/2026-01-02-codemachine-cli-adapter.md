@@ -9,7 +9,7 @@
 
 ## 1. Executive Summary
 
-The ai-feature pipeline currently lacks a concrete execution engine implementation. This PRD defines the integration of CodeMachine CLI as the primary execution engine, enabling autonomous code generation, validation, and artifact management. The adapter will bridge the existing queue/resume infrastructure with CodeMachine's CLI-based workflow orchestration, providing a production-ready execution layer while preserving the pipeline's telemetry, resumability, and governance controls.
+The codepipe pipeline currently lacks a concrete execution engine implementation. This PRD defines the integration of CodeMachine CLI as the primary execution engine, enabling autonomous code generation, validation, and artifact management. The adapter will bridge the existing queue/resume infrastructure with CodeMachine's CLI-based workflow orchestration, providing a production-ready execution layer while preserving the pipeline's telemetry, resumability, and governance controls.
 
 **Expected Impact**: Enable end-to-end autonomous feature development with <5% manual intervention rate, reduce feature delivery time by 60%, and maintain 95%+ execution success rate with automatic retry and resume capabilities.
 
@@ -19,11 +19,11 @@ The ai-feature pipeline currently lacks a concrete execution engine implementati
 
 ### Current State
 
-The ai-feature pipeline has robust planning (`taskPlanner`), queue persistence (`queueStore`), resume logic (`resumeCoordinator`), and telemetry (`executionMetrics`), but no execution engine implementation. The `docs/requirements/execution_flow.md` describes an execution module that does not exist in `src/execution/`. Tasks are planned but never executed.
+The codepipe pipeline has robust planning (`taskPlanner`), queue persistence (`queueStore`), resume logic (`resumeCoordinator`), and telemetry (`executionMetrics`), but no execution engine implementation. The `docs/requirements/execution_flow.md` describes an execution module that does not exist in `src/execution/`. Tasks are planned but never executed.
 
 **Current Workflow**:
 
-1. User runs `ai-feature start <spec>`
+1. User runs `codepipe start <spec>`
 2. PRD generated → Plan created → Queue initialized
 3. **Pipeline stops** - no execution engine to consume queue
 
@@ -82,7 +82,7 @@ So that features are delivered without manual coding
 
 **Acceptance Criteria**:
 
-- [ ] [AC-01] `ai-feature start <spec>` executes all queued tasks without human intervention
+- [ ] [AC-01] `codepipe start <spec>` executes all queued tasks without human intervention
 - [ ] [AC-02] CLI invokes `codemachine start` with correct spec/workspace/engine parameters
 - [ ] [AC-03] Task status updates to `IN_PROGRESS` → `COMPLETED` or `FAILED` based on exit codes
 - [ ] [AC-04] Execution completes within 2x estimated duration or times out gracefully
@@ -113,7 +113,7 @@ So that transient errors don't require full pipeline restarts
 **Acceptance Criteria**:
 
 - [ ] [AC-09] Failed tasks remain in queue with `FAILED` status and retry count
-- [ ] [AC-10] `ai-feature resume` re-executes failed tasks with incremented retry count
+- [ ] [AC-10] `codepipe resume` re-executes failed tasks with incremented retry count
 - [ ] [AC-11] Retry limit (default: 3) prevents infinite retry loops
 - [ ] [AC-12] Resume validates queue integrity via SHA-256 hash manifest
 
@@ -325,11 +325,11 @@ So that I can reliably parse execution results
 | Risk                                                                                       | Likelihood | Impact   | Mitigation                                                                                                            |
 | ------------------------------------------------------------------------------------------ | ---------- | -------- | --------------------------------------------------------------------------------------------------------------------- |
 | **CLI Output Parsing Fragility**: CodeMachine output format changes break adapter          | High       | High     | Implement `ResultNormalizer` with regex fallbacks; log parsing failures as warnings; use exit codes as primary signal |
-| **Auth Drift**: CodeMachine CLI auth state diverges from pipeline provider manifests       | Medium     | Medium   | Document auth coordination; add `ai-feature doctor` check for auth consistency; fail fast on auth errors              |
+| **Auth Drift**: CodeMachine CLI auth state diverges from pipeline provider manifests       | Medium     | Medium   | Document auth coordination; add `codepipe doctor` check for auth consistency; fail fast on auth errors              |
 | **Workflow Semantic Mismatch**: CodeMachine workflows don't align with ExecutionTask types | Medium     | High     | Implement flexible `TaskMapper` with fallback workflows; allow custom workflow overrides in config                    |
 | **CLI Availability**: CodeMachine CLI not installed or wrong version                       | High       | High     | Add startup validation; provide clear installation instructions in error messages                                     |
 | **Timeout Tuning**: Default 30min timeout too short/long for some tasks                    | Medium     | Medium   | Make timeout configurable per task type; log timeout events for tuning                                                |
-| **Retry Exhaustion**: Transient failures exceed retry limit                                | Medium     | Medium   | Implement exponential backoff; allow manual retry via `ai-feature resume --force`                                     |
+| **Retry Exhaustion**: Transient failures exceed retry limit                                | Medium     | Medium   | Implement exponential backoff; allow manual retry via `codepipe resume --force`                                     |
 | **Queue Corruption**: Concurrent writes or crashes corrupt queue file                      | Low        | High     | Use atomic writes (`fs.rename`); validate hash manifest on every resume                                               |
 | **Resource Exhaustion**: Long-running tasks consume excessive memory/CPU                   | Low        | Medium   | Implement timeout enforcement; add resource monitoring to telemetry                                                   |
 | **Credential Leakage**: Secrets logged in CLI output                                       | Low        | Critical | Implement credential redaction in `ResultNormalizer`; audit logs in tests                                             |
@@ -378,7 +378,7 @@ So that I can reliably parse execution results
 - [ ] Update `docs/requirements/execution_flow.md` with adapter details
 - [ ] Add `docs/ops/codemachine_adapter_guide.md`
 - [ ] Update `README.md` with execution engine setup
-- [ ] Add `ai-feature doctor` check for CodeMachine CLI availability
+- [ ] Add `codepipe doctor` check for CodeMachine CLI availability
 - [ ] Update `CHANGELOG.md` with new execution engine feature
 - [ ] Create migration guide for existing runs
 

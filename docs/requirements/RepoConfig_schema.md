@@ -36,7 +36,9 @@ The configuration file must be located at:
 | `runtime` | `object` | ✓ | - | Runtime execution settings | ADR-2 |
 | `safety` | `object` | ✓ | - | Security and safety controls | ADR-5 |
 | `feature_flags` | `object` | ✓ | - | Feature flags for experimental functionality | - |
+| `validation` | `object` | ✗ | - | Validation command registry (ADR-7) | - |
 | `constraints` | `object` | ✗ | - | Resource constraints and limits | - |
+| `execution` | `object` | ✗ | - | CodeMachine CLI execution configuration | - |
 | `governance` | `object` | ✗ | - | Governance controls and accountability | ADR-5 |
 | `config_history` | `array` | ✗ | `[]` | Migration history tracking | ADR-2 |
 | `governance_notes` | `string` | ✗ | - | **DEPRECATED:** Use `governance.governance_notes` | - |
@@ -71,7 +73,7 @@ GitHub integration configuration and credentials.
 | Field | Type | Required | Default | Description | CLI Override |
 |-------|------|----------|---------|-------------|--------------|
 | `enabled` | `boolean` | ✓ | - | Enable GitHub integration | - |
-| `token_env_var` | `string` | ✗ | `"GITHUB_TOKEN"` | Environment variable name for GitHub PAT | `AI_FEATURE_GITHUB_TOKEN` |
+| `token_env_var` | `string` | ✗ | `"GITHUB_TOKEN"` | Environment variable name for GitHub PAT | `CODEPIPE_GITHUB_TOKEN` |
 | `api_base_url` | `string` | ✗ | `"https://api.github.com"` | GitHub API base URL (for Enterprise) | - |
 | `required_scopes` | `string[]` | ✗ | `["repo", "workflow"]` | Required PAT scopes | - |
 | `default_reviewers` | `string[]` | ✗ | `[]` | Default PR reviewers (GitHub usernames) | - |
@@ -93,7 +95,7 @@ Linear integration configuration.
 | Field | Type | Required | Default | Description | CLI Override |
 |-------|------|----------|---------|-------------|--------------|
 | `enabled` | `boolean` | ✓ | - | Enable Linear integration | - |
-| `api_key_env_var` | `string` | ✗ | `"LINEAR_API_KEY"` | Environment variable name for Linear API key | `AI_FEATURE_LINEAR_API_KEY` |
+| `api_key_env_var` | `string` | ✗ | `"LINEAR_API_KEY"` | Environment variable name for Linear API key | `CODEPIPE_LINEAR_API_KEY` |
 | `team_id` | `string` | ✗ | - | Linear team ID | - |
 | `project_id` | `string` | ✗ | - | Linear project ID | - |
 | `auto_link_issues` | `boolean` | ✗ | `true` | Automatically link Linear issues to PRs | - |
@@ -107,14 +109,14 @@ Runtime execution settings for agent orchestration.
 
 | Field | Type | Required | Default | Description | CLI Override |
 |-------|------|----------|---------|-------------|--------------|
-| `agent_endpoint` | `string` | ✗ | - | AI agent service endpoint URL | `AI_FEATURE_RUNTIME_AGENT_ENDPOINT` |
+| `agent_endpoint` | `string` | ✗ | - | AI agent service endpoint URL | `CODEPIPE_RUNTIME_AGENT_ENDPOINT` |
 | `agent_endpoint_env_var` | `string` | ✗ | `"AGENT_ENDPOINT"` | Environment variable for agent endpoint | - |
-| `max_concurrent_tasks` | `integer` | ✗ | `3` | Maximum concurrent execution tasks (1-10) | `AI_FEATURE_RUNTIME_MAX_CONCURRENT_TASKS` |
-| `timeout_minutes` | `integer` | ✗ | `30` | Task execution timeout in minutes (5-120) | `AI_FEATURE_RUNTIME_TIMEOUT_MINUTES` |
+| `max_concurrent_tasks` | `integer` | ✗ | `3` | Maximum concurrent execution tasks (1-10) | `CODEPIPE_RUNTIME_MAX_CONCURRENT_TASKS` |
+| `timeout_minutes` | `integer` | ✗ | `30` | Task execution timeout in minutes (5-120) | `CODEPIPE_RUNTIME_TIMEOUT_MINUTES` |
 | `context_token_budget` | `integer` | ✗ | `32000` | Token budget for context gathering (1000-100000) | - |
 | `context_cost_budget_usd` | `number` | ✗ | `5` | USD budget for context summarization | - |
 | `logs_format` | `string` | ✗ | `"ndjson"` | Log format: `"ndjson"`, `"json"`, or `"text"` | - |
-| `run_directory` | `string` | ✗ | `".ai-feature-pipeline/runs"` | Base directory for feature runs (ADR-2) | - |
+| `run_directory` | `string` | ✗ | `".codepipe/runs"` | Base directory for feature runs (ADR-2) | - |
 
 **Environment Variable:**
 Set `AGENT_ENDPOINT` or configure `agent_endpoint` in config.
@@ -177,15 +179,15 @@ Validation command registry configuration (ADR-7 / FR-14).
 
 ### execution
 
-CodeMachine CLI integration and execution settings.
+*(Optional)* CodeMachine CLI integration and execution settings. The entire `execution` block is optional in the config.
 
 | Field | Type | Required | Default | Description | CLI Override |
 |-------|------|----------|---------|-------------|--------------|
-| `codemachine_cli_path` | `string` | ✗ | `"codemachine"` | Path to the CodeMachine CLI binary | - |
-| `default_engine` | `enum("claude","codex","openai")` | ✗ | `"claude"` | Default execution engine | - |
+| `codemachine_cli_path` | `string` | ✗ | `"codemachine"` | Path to the CodeMachine CLI binary | `CODEPIPE_EXECUTION_CLI_PATH` |
+| `default_engine` | `enum("claude","codex","openai")` | ✗ | `"claude"` | Default execution engine | `CODEPIPE_EXECUTION_DEFAULT_ENGINE` |
 | `workspace_dir` | `string` | ✗ | - | Working directory for execution | - |
 | `spec_path` | `string` | ✗ | - | Path to specification file | - |
-| `task_timeout_ms` | `integer` | ✗ | `1800000` | Task timeout in milliseconds (60000-7200000) | - |
+| `task_timeout_ms` | `integer` | ✗ | `1800000` | Task timeout in milliseconds (60000-7200000) | `CODEPIPE_EXECUTION_TIMEOUT_MS` |
 | `max_parallel_tasks` | `integer` | ✗ | `1` | Maximum parallel task executions (1-10) | - |
 | `max_log_buffer_size` | `integer` | ✗ | `10485760` | Maximum log buffer size in bytes (1024-104857600) | - |
 | `env_allowlist` | `string[]` | ✗ | `[]` | Environment variables to pass through to tasks | - |
@@ -297,15 +299,18 @@ Array of history entries with the following structure:
 
 ## Environment Variable Overrides
 
-The CLI supports environment variable overrides following the `AI_FEATURE_<SECTION>_<FIELD>` naming convention:
+The CLI supports environment variable overrides following the `CODEPIPE_<SECTION>_<FIELD>` naming convention:
 
 | Environment Variable | Overrides | Example |
 |---------------------|-----------|---------|
-| `AI_FEATURE_GITHUB_TOKEN` | `github.token_env_var` | `export AI_FEATURE_GITHUB_TOKEN=ghp_xxx` |
-| `AI_FEATURE_LINEAR_API_KEY` | `linear.api_key_env_var` | `export AI_FEATURE_LINEAR_API_KEY=lin_xxx` |
-| `AI_FEATURE_RUNTIME_AGENT_ENDPOINT` | `runtime.agent_endpoint` | `export AI_FEATURE_RUNTIME_AGENT_ENDPOINT=https://...` |
-| `AI_FEATURE_RUNTIME_MAX_CONCURRENT_TASKS` | `runtime.max_concurrent_tasks` | `export AI_FEATURE_RUNTIME_MAX_CONCURRENT_TASKS=5` |
-| `AI_FEATURE_RUNTIME_TIMEOUT_MINUTES` | `runtime.timeout_minutes` | `export AI_FEATURE_RUNTIME_TIMEOUT_MINUTES=60` |
+| `CODEPIPE_GITHUB_TOKEN` | `github.token_env_var` | `export CODEPIPE_GITHUB_TOKEN=ghp_xxx` |
+| `CODEPIPE_LINEAR_API_KEY` | `linear.api_key_env_var` | `export CODEPIPE_LINEAR_API_KEY=lin_xxx` |
+| `CODEPIPE_RUNTIME_AGENT_ENDPOINT` | `runtime.agent_endpoint` | `export CODEPIPE_RUNTIME_AGENT_ENDPOINT=https://...` |
+| `CODEPIPE_RUNTIME_MAX_CONCURRENT_TASKS` | `runtime.max_concurrent_tasks` | `export CODEPIPE_RUNTIME_MAX_CONCURRENT_TASKS=5` |
+| `CODEPIPE_RUNTIME_TIMEOUT_MINUTES` | `runtime.timeout_minutes` | `export CODEPIPE_RUNTIME_TIMEOUT_MINUTES=60` |
+| `CODEPIPE_EXECUTION_CLI_PATH` | `execution.codemachine_cli_path` | `export CODEPIPE_EXECUTION_CLI_PATH=/usr/local/bin/codemachine` |
+| `CODEPIPE_EXECUTION_DEFAULT_ENGINE` | `execution.default_engine` | `export CODEPIPE_EXECUTION_DEFAULT_ENGINE=codex` |
+| `CODEPIPE_EXECUTION_TIMEOUT_MS` | `execution.task_timeout_ms` | `export CODEPIPE_EXECUTION_TIMEOUT_MS=3600000` |
 
 **Precedence:** Environment variables override config file values.
 
@@ -358,7 +363,7 @@ See `.codepipe/templates/config.example.json` for a complete annotated example.
 - **ADR-2:** State Persistence - Defines run directory structure and deterministic storage
 - **ADR-5:** Approval Workflow - Defines human-in-the-loop gates and accountability
 - **Migration Checklist:** `docs/requirements/config_migrations.md`
-- **Example Config:** `.ai-feature-pipeline/templates/config.example.json`
+- **Example Config:** `.codepipe/templates/config.example.json`
 
 ## Schema Version History
 

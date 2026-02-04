@@ -26,7 +26,7 @@
     "task_id": "I5.T2",
     "iteration_id": "I5",
     "iteration_goal": "Finalize deployment orchestration (status-check polling, auto-merge toggles, workflow dispatch), implement export bundles + manifest schemas, deliver observability/cleanup commands, codify ops/compliance documentation, and ensure glossary/verification sections remain current.",
-    "description": "Build Export Bundle service packaging prompts, context manifest, PRD/spec, plan, logs, metrics, diffs, approvals, rate-limit ledger, deployment records, and API transcripts; define JSON Schema + Markdown playbook per Section 2.1.\n            Support formats `json` and `md`, with CLI `ai-feature export` enhancements.",
+    "description": "Build Export Bundle service packaging prompts, context manifest, PRD/spec, plan, logs, metrics, diffs, approvals, rate-limit ledger, deployment records, and API transcripts; define JSON Schema + Markdown playbook per Section 2.1.\n            Support formats `json` and `md`, with CLI `codepipe export` enhancements.",
     "agent_type_hint": "BackendAgent",
     "inputs": "Section 2.1 (Export schema), Section 3 (Directory structure), NFR-10.",
     "target_files": [
@@ -50,7 +50,7 @@
     "task_id": "I5.T3",
     "iteration_id": "I5",
     "iteration_goal": "Finalize deployment orchestration (status-check polling, auto-merge toggles, workflow dispatch), implement export bundles + manifest schemas, deliver observability/cleanup commands, codify ops/compliance documentation, and ensure glossary/verification sections remain current.",
-    "description": "Deliver Observability operations: `ai-feature observe` command summarizing run health, KPIs, rate-limit events, plus operations runbook per Section 2.1; include metrics ingest instructions for homelab dashboards.\n            Integrate with telemetry files and schedule-friendly output.",
+    "description": "Deliver Observability operations: `codepipe observe` command summarizing run health, KPIs, rate-limit events, plus operations runbook per Section 2.1; include metrics ingest instructions for homelab dashboards.\n            Integrate with telemetry files and schedule-friendly output.",
     "agent_type_hint": "OpsAgent",
     "inputs": "Section 2 (Observability), docs from `I1.T6` and `I3.T6`.",
     "target_files": [
@@ -59,7 +59,7 @@
       "tests/integration/observe_command.spec.ts"
     ],
     "input_files": [],
-    "deliverables": "CLI command, documentation detailing KPIs and scheduling, tests verifying JSON output, and instructions for storing reports under `.ai-feature-pipeline/reports/`.",
+    "deliverables": "CLI command, documentation detailing KPIs and scheduling, tests verifying JSON output, and instructions for storing reports under `.codepipe/reports/`.",
     "acceptance_criteria": "Command enumerates active runs, blocked states, rate-limit warnings, KPIs; doc explains cron usage and retention; tests confirm deterministic JSON schema.",
     "dependencies": [
       "I3.T6",
@@ -72,7 +72,7 @@
     "task_id": "I5.T4",
     "iteration_id": "I5",
     "iteration_goal": "Finalize deployment orchestration (status-check polling, auto-merge toggles, workflow dispatch), implement export bundles + manifest schemas, deliver observability/cleanup commands, codify ops/compliance documentation, and ensure glossary/verification sections remain current.",
-    "description": "Implement `ai-feature cleanup` for run directories, honoring retention metadata, verifying export bundles before deletion, archiving artifacts optionally, and documenting safe usage with sample automation scripts.",
+    "description": "Implement `codepipe cleanup` for run directories, honoring retention metadata, verifying export bundles before deletion, archiving artifacts optionally, and documenting safe usage with sample automation scripts.",
     "agent_type_hint": "BackendAgent",
     "inputs": "Section 3 (Directory structure), Section 4 (Directives), ADR-2.",
     "target_files": [

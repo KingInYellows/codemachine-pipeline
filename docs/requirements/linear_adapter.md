@@ -78,7 +78,7 @@ The adapter uses the shared `HttpClient` with `Provider.LINEAR`, which automatic
 
 Snapshots are stored in the run directory:
 ```
-.ai-feature/runs/<feature-id>/inputs/linear_issue_<sanitized-id>.json
+.codepipe/runs/<feature-id>/inputs/linear_issue_<sanitized-id>.json
 ```
 
 ### Cache TTL
@@ -145,10 +145,10 @@ When the Linear API is unavailable:
 
 ```bash
 # Initial fetch (network available)
-ai-feature start --linear ENG-123
+codepipe start --linear ENG-123
 
 # Subsequent resume (offline)
-ai-feature resume --linear-refresh  # Attempts refresh, uses cache on failure
+codepipe resume --linear-refresh  # Attempts refresh, uses cache on failure
 ```
 
 ### Last Error Tracking
@@ -178,7 +178,7 @@ Mutating operations (updates, comment posting) are gated behind `enablePreviewFe
 const adapter = createLinearAdapter({
   apiKey: process.env.LINEAR_API_KEY!,
   enablePreviewFeatures: true,  // Opt-in required
-  runDir: '.ai-feature/runs/FEAT-123'
+  runDir: '.codepipe/runs/FEAT-123'
 });
 ```
 
@@ -307,7 +307,7 @@ mutation PostComment($issueId: String!, $body: String!) {
 ### Start Command
 
 ```bash
-ai-feature start --linear ENG-123
+codepipe start --linear ENG-123
 ```
 
 **Behavior**:
@@ -333,7 +333,7 @@ LINEAR_ENABLE_PREVIEW=true  # Enable mutating operations
 ### RepoConfig Integration
 
 ```typescript
-// .ai-feature/config.yml
+// .codepipe/config.yml
 integrations:
   linear:
     enabled: true

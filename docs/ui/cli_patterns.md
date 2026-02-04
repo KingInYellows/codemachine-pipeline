@@ -17,10 +17,10 @@ This document describes the CLI command surface, output formats, JSON schemas, a
 
 The CLI provides four primary commands for pipeline observability and control:
 
-1. **`ai-feature status`** - Display current pipeline state
-2. **`ai-feature plan`** - Show execution plan DAG and task summaries
-3. **`ai-feature resume`** - Resume failed/paused execution with safety checks
-4. **`ai-feature validate`** - Validate queue integrity and plan consistency
+1. **`codepipe status`** - Display current pipeline state
+2. **`codepipe plan`** - Show execution plan DAG and task summaries
+3. **`codepipe resume`** - Resume failed/paused execution with safety checks
+4. **`codepipe validate`** - Validate queue integrity and plan consistency
 
 All commands support:
 - **JSON mode** (`--json`) for automation and scripting
@@ -32,14 +32,14 @@ All commands support:
 
 <!-- anchor: cli-status-command -->
 
-## Command: `ai-feature status`
+## Command: `codepipe status`
 
 **Purpose:** Display current state of a feature pipeline including manifest, queue, approvals, context, traceability, plan, and validation states.
 
 ### Usage
 
 ```bash
-ai-feature status [--feature <id>] [--json] [--verbose] [--show-costs]
+codepipe status [--feature <id>] [--json] [--verbose] [--show-costs]
 ```
 
 ### Flags
@@ -226,7 +226,7 @@ Queue: pending=3 completed=5 failed=0
 Approvals: pending=1 completed=2
 
 ⚠ Pending approvals required:
-  • CODE - Review artifact and run: ai-feature approve code --signer "<your-email>"
+  • CODE - Review artifact and run: codepipe approve code --signer "<your-email>"
 
 Context: files=45 summaries=12 total_tokens=18500
 Plan: 8 tasks (2 entry, 6 blocked)
@@ -239,21 +239,21 @@ Last updated: 2025-12-17T10:30:00Z
 Outstanding gaps: 0
 
 • Manifest layout documented at docs/requirements/run_directory_schema.md
-• Template manifest available at .ai-feature-pipeline/templates/run_manifest.json
+• Template manifest available at .codepipe/templates/run_manifest.json
 ```
 
 ---
 
 <!-- anchor: cli-plan-command -->
 
-## Command: `ai-feature plan`
+## Command: `codepipe plan`
 
 **Purpose:** Display execution plan DAG, task summaries, and dependency graph.
 
 ### Usage
 
 ```bash
-ai-feature plan [--feature <id>] [--json] [--verbose] [--show-diff]
+codepipe plan [--feature <id>] [--json] [--verbose] [--show-diff]
 ```
 
 ### Flags
@@ -354,14 +354,14 @@ Specification:
 
 <!-- anchor: cli-resume-command -->
 
-## Command: `ai-feature resume`
+## Command: `codepipe resume`
 
 **Purpose:** Resume failed or paused execution with safety checks.
 
 ### Usage
 
 ```bash
-ai-feature resume [--feature <id>] [--dry-run] [--force] [--skip-hash-verification] [--validate-queue] [--json] [--verbose]
+codepipe resume [--feature <id>] [--dry-run] [--force] [--skip-hash-verification] [--validate-queue] [--json] [--verbose]
 ```
 
 ### Flags
@@ -472,7 +472,7 @@ Resume Instructions:
   Last checkpoint: code_generation
   Next step: testing
   Pending approvals:
-    • CODE - Run: ai-feature approve code
+    • CODE - Run: codepipe approve code
 
 Queue Validation:
   ✓ Queue is valid (8 tasks)
@@ -483,8 +483,8 @@ Diagnostics:
 
 Recommendations:
   • Review generated code before proceeding
-  • Run: ai-feature approve code --signer "<your-email>"
-  • Then resume with: ai-feature resume
+  • Run: codepipe approve code --signer "<your-email>"
+  • Then resume with: codepipe resume
 
 ═══════════════════════════════════════════════════════════
 
@@ -496,14 +496,14 @@ Recommendations:
 
 <!-- anchor: cli-validate-command -->
 
-## Command: `ai-feature validate`
+## Command: `codepipe validate`
 
 **Purpose:** Validate queue integrity and plan consistency (future implementation).
 
 ### Usage
 
 ```bash
-ai-feature validate [--feature <id>] [--json] [--verbose]
+codepipe validate [--feature <id>] [--json] [--verbose]
 ```
 
 ---
@@ -566,7 +566,7 @@ When `--json` is specified:
 # CI pipeline script
 
 # Check status in JSON mode
-STATUS=$(ai-feature status --feature "$FEATURE_ID" --json)
+STATUS=$(codepipe status --feature "$FEATURE_ID" --json)
 
 # Parse queue state
 PENDING=$(echo "$STATUS" | jq -r '.queue.pending_count')
@@ -574,7 +574,7 @@ FAILED=$(echo "$STATUS" | jq -r '.queue.failed_count')
 
 if [ "$FAILED" -gt 0 ]; then
   echo "Queue has failed tasks, attempting resume..."
-  ai-feature resume --feature "$FEATURE_ID" --dry-run --json
+  codepipe resume --feature "$FEATURE_ID" --dry-run --json
   exit 1
 fi
 

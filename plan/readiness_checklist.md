@@ -2,7 +2,7 @@
 
 ## Overview
 
-This checklist enumerates gating questions and verification steps to ensure the ai-feature-pipeline is properly configured and ready for operation. Each iteration should review and update this checklist to validate system readiness before proceeding with feature development workflows.
+This checklist enumerates gating questions and verification steps to ensure the codemachine-pipeline is properly configured and ready for operation. Each iteration should review and update this checklist to validate system readiness before proceeding with feature development workflows.
 
 **Last Updated:** 2025-01-15
 **Current Iteration:** I2 (Context, Research & PRD Authoring)
@@ -35,16 +35,16 @@ Validates that the execution environment meets minimum requirements per Section 
 
 | Check Name | Status | RepoConfig Field | Last Verified | Notes |
 |------------|--------|------------------|---------------|-------|
-| Node.js v24+ installed | ⏳ | N/A | Never | Run `ai-feature doctor` to verify (v24 LTS or higher required) |
+| Node.js v24+ installed | ⏳ | N/A | Never | Run `codepipe doctor` to verify (v24 LTS or higher required) |
 | git CLI installed | ⏳ | N/A | Never | Required for repository operations |
 | npm/pnpm installed | ⏳ | N/A | Never | Package manager for dependencies |
 | Docker installed (optional) | ⏳ | N/A | Never | Recommended for containerized agents |
 | Outbound HTTPS connectivity | ⏳ | N/A | Never | Required for GitHub/Linear/Agent APIs |
-| Filesystem write access | ⏳ | `runtime.run_directory` | Never | Must write to `.ai-feature-pipeline/` |
+| Filesystem write access | ⏳ | `runtime.run_directory` | Never | Must write to `.codepipe/` |
 
 **Verification Command:**
 ```bash
-ai-feature doctor
+codepipe doctor
 ```
 
 **Exit Criteria:**
@@ -64,7 +64,7 @@ Validates git repository structure and baseline documentation.
 | Default branch exists | ⏳ | `project.default_branch` | Never | Typically `main` or `master` |
 | README.md exists | ⏳ | `project.context_paths` | Never | Baseline documentation required |
 | docs/ directory exists | ⏳ | `project.context_paths` | Never | Architecture/design docs |
-| No conflicting `.ai-feature-pipeline/` | ⏳ | `runtime.run_directory` | Never | Directory must be clean or valid |
+| No conflicting `.codepipe/` | ⏳ | `runtime.run_directory` | Never | Directory must be clean or valid |
 
 **Verification Commands:**
 ```bash
@@ -86,7 +86,7 @@ Validates RepoConfig schema compliance and field correctness.
 
 | Check Name | Status | RepoConfig Field | Last Verified | Notes |
 |------------|--------|------------------|---------------|-------|
-| `config.json` exists | ⏳ | N/A | Never | Created by `ai-feature init` |
+| `config.json` exists | ⏳ | N/A | Never | Created by `codepipe init` |
 | Schema version valid | ⏳ | `schema_version` | Never | Must be semver (e.g., "1.0.0") |
 | Project ID set | ⏳ | `project.id` | Never | Typically derived from repo name |
 | Repo URL valid | ⏳ | `project.repo_url` | Never | Must be HTTPS or SSH git URL |
@@ -99,7 +99,7 @@ Validates RepoConfig schema compliance and field correctness.
 
 **Verification Command:**
 ```bash
-ai-feature init --validate-only
+codepipe init --validate-only
 ```
 
 **Exit Criteria:**
@@ -132,7 +132,7 @@ echo $LINEAR_API_KEY | wc -c
 echo $AGENT_ENDPOINT
 
 # Run doctor
-ai-feature doctor
+codepipe doctor
 ```
 
 **Exit Criteria:**
@@ -163,7 +163,7 @@ Validates approval workflow configuration per ADR-5.
 **Verification Commands:**
 ```bash
 # Check governance config
-cat .ai-feature-pipeline/config.json | jq '.governance'
+cat .codepipe/config.json | jq '.governance'
 ```
 
 **Exit Criteria:**
@@ -192,7 +192,7 @@ Validates safety settings and resource constraints.
 **Verification Commands:**
 ```bash
 # Check safety config
-cat .ai-feature-pipeline/config.json | jq '.safety, .constraints'
+cat .codepipe/config.json | jq '.safety, .constraints'
 ```
 
 **Exit Criteria:**
@@ -208,11 +208,11 @@ Validates that required directories exist and are writable per Section 3 (Direct
 
 | Check Name | Status | RepoConfig Field | Last Verified | Notes |
 |------------|--------|------------------|---------------|-------|
-| `.ai-feature-pipeline/` exists | ⏳ | N/A | Never | Root pipeline directory |
-| `.ai-feature-pipeline/runs/` exists | ⏳ | `runtime.run_directory` | Never | Run-specific state directories |
-| `.ai-feature-pipeline/logs/` exists | ⏳ | N/A | Never | Telemetry logs |
-| `.ai-feature-pipeline/artifacts/` exists | ⏳ | N/A | Never | Generated artifacts (PRDs, specs) |
-| `.ai-feature-pipeline/config.json` exists | ⏳ | N/A | Never | Validated configuration |
+| `.codepipe/` exists | ⏳ | N/A | Never | Root pipeline directory |
+| `.codepipe/runs/` exists | ⏳ | `runtime.run_directory` | Never | Run-specific state directories |
+| `.codepipe/logs/` exists | ⏳ | N/A | Never | Telemetry logs |
+| `.codepipe/artifacts/` exists | ⏳ | N/A | Never | Generated artifacts (PRDs, specs) |
+| `.codepipe/config.json` exists | ⏳ | N/A | Never | Validated configuration |
 | `docs/` directory exists | ⏳ | `project.context_paths` | Never | Architecture docs |
 | `docs/adr/` directory exists | ⏳ | N/A | Never | Architecture Decision Records |
 | `plan/` directory exists | ⏳ | N/A | Never | Iteration plans and checklists |
@@ -221,7 +221,7 @@ Validates that required directories exist and are writable per Section 3 (Direct
 **Verification Commands:**
 ```bash
 # List directory structure
-ls -la .ai-feature-pipeline/
+ls -la .codepipe/
 ls -la docs/ plan/
 ```
 
@@ -238,21 +238,21 @@ Validates telemetry infrastructure is operational.
 
 | Check Name | Status | RepoConfig Field | Last Verified | Notes |
 |------------|--------|------------------|---------------|-------|
-| Logs directory writable | ⏳ | N/A | Never | `.ai-feature-pipeline/logs/` |
+| Logs directory writable | ⏳ | N/A | Never | `.codepipe/logs/` |
 | Logs format configured | ⏳ | `runtime.logs_format` | Never | Default: ndjson |
 | Metrics directory exists | ⏳ | N/A | Never | For Prometheus exports |
 | Traces directory exists | ⏳ | N/A | Never | For OpenTelemetry traces |
-| Init command telemetry works | ⏳ | N/A | Never | Run `ai-feature init` and check logs |
-| Doctor command telemetry works | ⏳ | N/A | Never | Run `ai-feature doctor` and check logs |
+| Init command telemetry works | ⏳ | N/A | Never | Run `codepipe init` and check logs |
+| Doctor command telemetry works | ⏳ | N/A | Never | Run `codepipe doctor` and check logs |
 | Telemetry redaction enabled | ⏳ | `safety.redact_secrets` | Never | Prevents credential leakage |
 
 **Verification Commands:**
 ```bash
 # Run commands and check telemetry
-ai-feature init --dry-run
-ai-feature doctor
-ls -la .ai-feature-pipeline/logs/
-cat .ai-feature-pipeline/logs/*.log | head -20
+codepipe init --dry-run
+codepipe doctor
+ls -la .codepipe/logs/
+cat .codepipe/logs/*.log | head -20
 ```
 
 **Exit Criteria:**
@@ -278,7 +278,7 @@ Validates feature flag configuration for iteration-specific capabilities.
 **Verification Commands:**
 ```bash
 # Check feature flags
-cat .ai-feature-pipeline/config.json | jq '.feature_flags'
+cat .codepipe/config.json | jq '.feature_flags'
 ```
 
 **Exit Criteria:**
@@ -309,22 +309,22 @@ Additional checks specific to the current iteration (I2: Context, Research & PRD
 **Verification Commands:**
 ```bash
 # Check I2 task completion
-ai-feature status
+codepipe status
 
 # Test context aggregation
-ai-feature context aggregate --feature <id>
+codepipe context aggregate --feature <id>
 
 # Test research coordination
-ai-feature research list --feature <id>
+codepipe research list --feature <id>
 
 # Verify PRD template
 cat docs/templates/prd_template.md
 
 # Test PRD generation (when `start` is wired)
-ai-feature start --prompt "Test PRD generation"
+codepipe start --prompt "Test PRD generation"
 
 # Verify approval recording
-ai-feature approve prd --feature <id> --signer "test@example.com"
+codepipe approve prd --feature <id> --signer "test@example.com"
 ```
 
 **Exit Criteria:**
@@ -389,7 +389,7 @@ Once all checks pass, iteration lead should sign off:
 
 | Version | Date | Changes | Author |
 |---------|------|---------|--------|
-| 1.0.0 | 2025-01-XX | Initial checklist for I1 (Bootstrap) | ai-feature init (I1.T8) |
+| 1.0.0 | 2025-01-XX | Initial checklist for I1 (Bootstrap) | codepipe init (I1.T8) |
 | 1.1.0 | 2025-01-15 | Updated for I2 (Context, Research & PRD) | prdAuthoringEngine (I2.T4) |
 
 ---

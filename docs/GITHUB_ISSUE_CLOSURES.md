@@ -36,7 +36,7 @@ RepoConfig execution settings have been fully implemented with comprehensive val
 **Features**:
 - ✅ Complete ExecutionConfigSchema with 11 settings
 - ✅ Zod validation with TypeScript type inference
-- ✅ Environment variable overrides (AI_FEATURE_*)
+- ✅ Environment variable overrides (CODEPIPE_*)
 - ✅ Full integration with CLIExecutionEngine
 - ✅ Test coverage in existing test suite
 
@@ -251,7 +251,7 @@ RepoConfig execution settings have been fully implemented with comprehensive val
 **Features**:
 - ✅ Complete ExecutionConfigSchema with 11 settings
 - ✅ Zod validation with TypeScript type inference
-- ✅ Environment variable overrides (AI_FEATURE_*)
+- ✅ Environment variable overrides (CODEPIPE_*)
 - ✅ Full integration with CLIExecutionEngine
 - ✅ Test coverage in existing test suite
 
@@ -505,7 +505,7 @@ ResultNormalizer test coverage expanded from 65% to >90%.
 Closing as complete with >90% coverage achieved.
 ```
 
-### Issue #27: Wire CLIExecutionEngine into ai-feature commands
+### Issue #27: Wire CLIExecutionEngine into codepipe commands
 
 **Status**: ✅ COMPLETE (PR #157)
 **Action**: Close with comment
@@ -513,7 +513,7 @@ Closing as complete with >90% coverage achieved.
 ```markdown
 ## ✅ Complete
 
-CLIExecutionEngine has been fully integrated into ai-feature start and resume commands.
+CLIExecutionEngine has been fully integrated into codepipe start and resume commands.
 
 **Implementation**:
 - `src/cli/commands/start.ts` - Added execution step and runTaskExecution()

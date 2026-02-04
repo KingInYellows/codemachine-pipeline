@@ -65,7 +65,7 @@
   - Enforce `tsconfig.json` with `strict`, `noImplicitAny`, and `exactOptionalPropertyTypes`.
   - Lint with `eslint` + `@typescript-eslint` presets; format with `prettier`.
 - **Database(s):** Local-first storage.
-  - Primary store: structured files in `.ai-feature-pipeline/<feature_id>/`.
+  - Primary store: structured files in `.codepipe/<feature_id>/`.
   - Optional SQLite index (via `better-sqlite3`) for fast querying of runs; must be optional.
   - No external DB dependencies; remote persistence may be layered later via adapters.
 - **Cloud Platform:** None required during execution.
@@ -85,13 +85,13 @@
   - Injects `Accept`, `X-GitHub-Api-Version`, `Authorization`, `Idempotency-Key`, and custom tracing headers.
   - Implements retry/backoff policies and surfaces structured error objects with response metadata.
 - **Configuration Medium:** Repo-local configuration plus environment variables.
-  - Canonical path: `.ai-feature-pipeline/config.json` with `zod`-validated schema.
-  - Support `ai-feature init` to scaffold config and perform integration sanity checks.
-  - Environment overrides follow the naming convention `AI_FEATURE_<SECTION>_<FIELD>`.
+  - Canonical path: `.codepipe/config.json` with `zod`-validated schema.
+  - Support `codepipe init` to scaffold config and perform integration sanity checks.
+  - Environment overrides follow the naming convention `CODEPIPE_<SECTION>_<FIELD>`.
 - **Testing Toolchain:** Comprehensive automation.
   - Use `vitest` for fast unit/integration tests with coverage reports stored under `.artifacts/tests`.
   - Provide fixture-based contract tests for adapters using recorded HTTP fixtures (`nock` or `msw`).
-  - Add smoke-test scripts for CLI commands (`ai-feature start --prompt "test"`) running in CI.
+  - Add smoke-test scripts for CLI commands (`codepipe start --prompt "test"`) running in CI.
 - **Secret Management:** Environment-driven with redaction policies.
   - CLI warns when expected variables (`GITHUB_TOKEN`, `LINEAR_API_KEY`, `AGENT_ENDPOINT`) are missing.
   - Logger middleware scans outputs and replaces token substrings with `***REDACTED***`.
@@ -105,7 +105,7 @@
   - Graphite and CodeMachine integrations remain optional; capability flags determine availability.
   - Agent adapters (OpenAI, local LLM, external services) implement a standardized `AgentSession` contract.
 - **Package Distribution:** Delivered as an npm package.
-  - Publish under scoped name (e.g., `@ai-feature/pipeline`) with semantic versioning tied to blueprint revisions.
+  - Publish under scoped name (e.g., `@codepipe/pipeline`) with semantic versioning tied to blueprint revisions.
   - Provide installation instructions for both global (`npm install -g`) and project-local dependencies.
   - Release process emits changelog mapping features to blueprint version plus compatibility notes.
 
@@ -114,7 +114,7 @@
 
 - **Feature Flag Strategy:** Config-first gating.
   - Flags stored in RepoConfig `feature_flags` object with default values.
-  - CLI exposes `--enable-flag` overrides plus `.ai-feature-pipeline/flags.json` for persistent local toggles.
+  - CLI exposes `--enable-flag` overrides plus `.codepipe/flags.json` for persistent local toggles.
   - Incomplete user-facing behavior, risky git operations, and preview adapters MUST be behind flags disabled by default.
 - **Observability (Logging, Metrics, Tracing):** Structured, deterministic telemetry.
   - Logging uses JSON lines with `timestamp`, `level`, `run_id`, `component`, `message`, and `context`.
@@ -137,7 +137,7 @@
   - Approvals recorded in `approvals.json` with signer identity (user or agent) and timestamp.
   - Non-interactive mode accepts signed instruction bundles referencing exact artifact hashes.
 - **Compliance & Auditability:** Artifacts as truth.
-  - `ai-feature export` produces versioned bundles containing manifest, prompts, specs, diffs, and API transcripts.
+  - `codepipe export` produces versioned bundles containing manifest, prompts, specs, diffs, and API transcripts.
   - Bundles include SHA digests for referenced files to detect tampering.
   - Audit metadata includes CLI version, Node version, OS fingerprint, and adapter versions.
 - **Extensibility Contracts:** Explicit interfaces per capability.
@@ -179,7 +179,7 @@
     - Maintains in-memory run context referencing disk artifacts.
     - Exposes hooks for telemetry and user prompts.
   - **RepoConfig Manager:** Configuration discovery and validation.
-    - Detects git root, scaffolds `.ai-feature-pipeline/config.json`, and stores integration settings.
+    - Detects git root, scaffolds `.codepipe/config.json`, and stores integration settings.
     - Performs sanity checks (GitHub repo fetch, Linear viewer query, Node version validation).
     - Publishes read-only config snapshot to other modules.
   - **Run Directory Manager:** Deterministic artifact handler.
@@ -224,7 +224,7 @@
     - Handles retries, cost estimation, and deterministic prompting strategies.
   - **Artifact Bundle Service:** Export and audit module.
     - Packages prompts, tickets, context lists, PRD/spec, plan, logs, diffs, rate-limit ledger, and PR info.
-    - Supports `ai-feature export --format json|md`.
+    - Supports `codepipe export --format json|md`.
     - Validates completeness before marking run as archival-ready.
   - **Observability Hub:** Telemetry aggregator.
     - Collects logs/metrics/traces from all modules.
@@ -269,7 +269,7 @@
   - **RepoConfig:**
     - Attributes: `id`, `repo_url`, `default_branch`, `tool_integrations`, `context_paths`, `project_leads`, `github`, `linear`, `runtime`, `safety`, `feature_flags`, `governance_notes`.
     - Behaviors: versioned schema migrations stored alongside config with `schema_version`.
-    - Contracts: `ai-feature init` writes baseline; `ai-feature status` shows resolved configuration and validation hints.
+    - Contracts: `codepipe init` writes baseline; `codepipe status` shows resolved configuration and validation hints.
   - **RunArtifact:**
     - Attributes: `feature_id`, `prd_path`, `spec_path`, `plan_path`, `run_log_path`, `bundle_path`, `hash_manifest`.
     - Behaviors: ensures deterministic file naming and allows quick resumability checks.
@@ -343,15 +343,15 @@
 - **Governing Assumptions:**
   - CLI foundation standardizes on `oclif`.
     - Plugin registration uses `oclif` plugin mechanism; shared context is passed via dependency injection container.
-  - Watcher behavior executes through `ai-feature observe` invoked via cron or CI schedule.
+  - Watcher behavior executes through `codepipe observe` invoked via cron or CI schedule.
     - Command reads repo list from RepoConfig and runs idempotent checks; locking handled through file-based mutex.
-  - Agent providers advertise capability manifests stored under `.ai-feature-pipeline/agents/<provider>.json`.
+  - Agent providers advertise capability manifests stored under `.codepipe/agents/<provider>.json`.
     - Manifest includes `models`, `max_tokens`, `tools_supported`, `rate_limits`, `feature_flags`, and `cost_per_token`.
   - Artifact bundle layout follows `bundle/manifest.json`, `bundle/docs/`, `bundle/logs/`, `bundle/diffs/`.
     - Diff summaries stored as unified patches plus machine-readable JSON metadata.
   - Deployment automation triggers GitHub Actions workflow specified in RepoConfig (`workflow_id`, `ref`, `inputs`).
     - Auto-merge is enabled only when `safety.require_human_approval_for_merge` is false and approvals are recorded.
-  - Node.js version verification occurs during `ai-feature init`.
+  - Node.js version verification occurs during `codepipe init`.
     - If runtime < v20, CLI aborts with instructions to install Node v24 or configure `nvm` alias; Ops_Docs documents remediation.
   - Token rotation is managed externally, but CLI revalidates scopes on each run.
     - Cached Linear issue snapshots store `retrieved_at`; stale snapshots older than 24h trigger refetch attempts with exponential backoff.
@@ -360,7 +360,7 @@
   - Context summarization budgets default to 8k tokens per feature run.
     - Files larger than threshold are summarized with chunk metadata; binaries are hashed only.
   - Auto-merge authorization is recorded in `approvals.json`.
-    - Disabling auto-merge occurs via CLI command `ai-feature pr disable-auto-merge <feature_id>` which updates DeploymentRecord.
+    - Disabling auto-merge occurs via CLI command `codepipe pr disable-auto-merge <feature_id>` which updates DeploymentRecord.
   - Agent cost tracking writes spend estimates to `telemetry/costs.json`.
     - Resume operations reuse prior estimates unless new agent calls occur.
-  - Run directories are tagged with expiration metadata; Ops_Docs architect defines cleanup script triggered via `ai-feature cleanup --before <date>`.
+  - Run directories are tagged with expiration metadata; Ops_Docs architect defines cleanup script triggered via `codepipe cleanup --before <date>`.

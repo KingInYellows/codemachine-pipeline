@@ -9,7 +9,7 @@
 
 **Goals**:
 1. Implement missing TaskMapper commands (`step`, `status`)
-2. Wire CLIExecutionEngine into `ai-feature start/resume` commands
+2. Wire CLIExecutionEngine into `codepipe start/resume` commands
 3. Create comprehensive operational documentation
 4. Submit final Graphite stack with all enhancements
 
@@ -170,7 +170,7 @@ describe('status queries', () => {
 
 ---
 
-## Phase 3.3: Wire CLIExecutionEngine into ai-feature Commands
+## Phase 3.3: Wire CLIExecutionEngine into codepipe Commands
 
 ### Current State
 **Files to Modify**:
@@ -404,7 +404,7 @@ export default class Resume extends Command {
 ### Deliverables
 - [ ] TaskMapper `step` command implemented
 - [ ] TaskMapper `status` command implemented
-- [ ] CLIExecutionEngine wired into `ai-feature start`
+- [ ] CLIExecutionEngine wired into `codepipe start`
 - [ ] Resume command created/wired
 - [ ] 3 operational guides created
 - [ ] README updated

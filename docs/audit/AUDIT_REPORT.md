@@ -172,17 +172,17 @@ Operations docs (`docs/operations/`) document env vars that do not exist in code
 
 | Aspirational Env Var | Documented In |
 |---------------------|---------------|
-| `AI_FEATURE_LOG_ROTATION_MB` | log-rotation.md |
-| `AI_FEATURE_LOG_ROTATION_KEEP` | log-rotation.md |
-| `AI_FEATURE_LOG_ROTATION_COMPRESS` | log-rotation.md |
-| `AI_FEATURE_MAX_PARALLEL_TASKS` | parallel-execution.md |
-| `AI_FEATURE_TASK_TIMEOUT_MS` | parallel-execution.md |
-| `AI_FEATURE_ENABLE_PARALLEL_EXECUTION` | parallel-execution.md |
-| `AI_FEATURE_QUEUE_COMPACTION_MAX_OPS` | queue-v2-operations.md |
-| `AI_FEATURE_QUEUE_COMPACTION_MAX_BYTES` | queue-v2-operations.md |
-| `AI_FEATURE_QUEUE_SNAPSHOT_INTERVAL` | queue-v2-operations.md |
-| `AI_FEATURE_QUEUE_AUTO_MIGRATE` | queue-v2-operations.md |
-| `AI_FEATURE_TASK_TIMEOUT` | troubleshooting.md |
+| `CODEPIPE_LOG_ROTATION_MB` | log-rotation.md |
+| `CODEPIPE_LOG_ROTATION_KEEP` | log-rotation.md |
+| `CODEPIPE_LOG_ROTATION_COMPRESS` | log-rotation.md |
+| `CODEPIPE_MAX_PARALLEL_TASKS` | parallel-execution.md |
+| `CODEPIPE_TASK_TIMEOUT_MS` | parallel-execution.md |
+| `CODEPIPE_ENABLE_PARALLEL_EXECUTION` | parallel-execution.md |
+| `CODEPIPE_QUEUE_COMPACTION_MAX_OPS` | queue-v2-operations.md |
+| `CODEPIPE_QUEUE_COMPACTION_MAX_BYTES` | queue-v2-operations.md |
+| `CODEPIPE_QUEUE_SNAPSHOT_INTERVAL` | queue-v2-operations.md |
+| `CODEPIPE_QUEUE_AUTO_MIGRATE` | queue-v2-operations.md |
+| `CODEPIPE_TASK_TIMEOUT` | troubleshooting.md |
 
 These docs present aspirational features as if they're configurable today.
 
@@ -243,7 +243,7 @@ Identical or near-identical file exists at both `/PR_REVIEW_PLAN.md` and `/docs/
 |---|---------|-------|
 | W7 | `runtime.context_cost_budget_usd` missing from JSON schema | 2, 5 |
 | W8 | `project.default_branch` required in JSON schema but optional (with default) in Zod | 2 |
-| W9 | 4 env vars used in code but not documented (`AI_FEATURE_EXECUTION_CLI_PATH`, `AI_FEATURE_EXECUTION_DEFAULT_ENGINE`, `AI_FEATURE_EXECUTION_TIMEOUT_MS`, `DEBUG`) | 5 |
+| W9 | 4 env vars used in code but not documented (`CODEPIPE_EXECUTION_CLI_PATH`, `CODEPIPE_EXECUTION_DEFAULT_ENGINE`, `CODEPIPE_EXECUTION_TIMEOUT_MS`, `DEBUG`) | 5 |
 
 ### CI/Docker/Ops
 
@@ -283,7 +283,7 @@ Identical or near-identical file exists at both `/PR_REVIEW_PLAN.md` and `/docs/
 
 | # | Finding | Agent |
 |---|---------|-------|
-| W29 | Clone URL in README (`github.com/codemachine/ai-feature-pipeline`) may not match actual repo | 4 |
+| W29 | Clone URL in README (`github.com/codemachine/codemachine-pipeline`) may not match actual repo | 4 |
 | W30 | 16 npm scripts are undocumented -- new devs can't discover `test:smoke`, `test:telemetry`, etc. | 4 |
 
 ---

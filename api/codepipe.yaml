@@ -1,9 +1,9 @@
 openapi: 3.1.0
 info:
-  title: AI Feature Pipeline API
+  title: CodeMachine Pipeline API
   version: 1.0.0
   description: |
-    OpenAPI specification for AI Feature Pipeline adapters and remote endpoints.
+    OpenAPI specification for CodeMachine Pipeline adapters and remote endpoints.
 
     This specification documents the GitHub adapter operations and provides
     a contract for future remote endpoints that may wrap these adapters.
@@ -11,7 +11,7 @@ info:
     **Note:** This specification describes the adapter interface, not a REST API.
     Future iterations may expose these operations via HTTP endpoints.
   contact:
-    name: AI Feature Pipeline Team
+    name: CodeMachine Pipeline Team
   license:
     name: MIT
 

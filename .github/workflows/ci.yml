@@ -123,16 +123,16 @@ jobs:
 
       - name: Build Docker image
         run: |
-          docker build -t ai-feature-pipeline:test .
+          docker build -t codemachine-pipeline:test .
 
       - name: Test Docker image
         run: |
           set -o pipefail
-          docker run --rm ai-feature-pipeline:test --version || true
-          docker run --rm ai-feature-pipeline:test --help
-          docker run --rm ai-feature-pipeline:test doctor --json | node -e "const fs=require('fs');JSON.parse(fs.readFileSync(0,'utf8'))" > /dev/null && echo 'doctor --json: valid JSON'
+          docker run --rm codemachine-pipeline:test --version || true
+          docker run --rm codemachine-pipeline:test --help
+          docker run --rm codemachine-pipeline:test doctor --json | node -e "const fs=require('fs');JSON.parse(fs.readFileSync(0,'utf8'))" > /dev/null && echo 'doctor --json: valid JSON'
 
       - name: Cleanup
         if: always()
         run: |
-          docker rmi ai-feature-pipeline:test || true
+          docker rmi codemachine-pipeline:test || true

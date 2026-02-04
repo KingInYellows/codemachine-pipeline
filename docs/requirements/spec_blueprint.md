@@ -55,7 +55,7 @@ The Specification Composer converts an approved Product Requirements Document (P
 
 ```
 ┌─────────────┐
-│ CLI Command │ (ai-feature start --spec)
+│ CLI Command │ (codepipe start --spec)
 └──────┬──────┘
        │
        ▼
@@ -120,7 +120,7 @@ The Specification Composer converts an approved Product Requirements Document (P
        │
        ▼
 ┌─────────────────────────┐
-│ CLI Approval Command    │ (ai-feature approve spec)
+│ CLI Approval Command    │ (codepipe approve spec)
 └──────┬──────────────────┘
        │
        ▼
@@ -220,9 +220,9 @@ After spec approval, the Task Planner (I2.T6) consumes `spec.json` to generate `
 
 ### Generate Specification
 ```bash
-ai-feature start --spec
+codepipe start --spec
 # OR
-ai-feature spec draft
+codepipe spec draft
 ```
 
 **Effects:**
@@ -232,7 +232,7 @@ ai-feature spec draft
 
 ### Approve Specification
 ```bash
-ai-feature approve spec --signer <user> --rationale "Reviewed and approved"
+codepipe approve spec --signer <user> --rationale "Reviewed and approved"
 ```
 
 **Effects:**
@@ -243,7 +243,7 @@ ai-feature approve spec --signer <user> --rationale "Reviewed and approved"
 
 ### Edit Specification
 ```bash
-ai-feature spec edit --section constraints --add "New constraint"
+codepipe spec edit --section constraints --add "New constraint"
 ```
 
 **Effects:**
@@ -254,7 +254,7 @@ ai-feature spec edit --section constraints --add "New constraint"
 
 ### Status Check
 ```bash
-ai-feature status --json
+codepipe status --json
 ```
 
 **Output includes:**

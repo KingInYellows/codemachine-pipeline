@@ -23,20 +23,20 @@
       CLI commands must surface pending approvals explicitly to avoid hidden automation that could bypass branch protection or deployment policies.
     - Maintain resumable execution with state markers (`last_step`, `last_error`, queue files) so intermittent failures, power loss, or rate limits never corrupt ongoing runs.
       The resume coordinator cross-validates plan hashes, queue state, and approval checkpoints before restarting any stage, protecting against duplicate edits.
-      Operators can safely rerun `ai-feature resume <feature_id>` after outages without manual surgery on run directories.
+      Operators can safely rerun `codepipe resume <feature_id>` after outages without manual surgery on run directories.
     - Integrate GitHub and Linear through adapter contracts that respect rate limits, API version pinning, branch protections, and developer-preview instabilities.
       GitHub adapters must inject `Accept: application/vnd.github+json` and `X-GitHub-Api-Version: 2022-11-28` (configurable) on every request while honoring primary and secondary rate-limit envelopes.
       Linear adapters must apply Authorization headers, maintain sliding-window counters for 1,500 requests/hour, and isolate developer-preview Agents APIs behind feature flags with clear contracts.
     - Support bring-your-own-agent providers through declarative capability manifests, redacted logs, and deterministic prompt packaging so teams can swap providers without rewrites.
-      Manifests stored under `.ai-feature-pipeline/agents/` describe models, tools, context limits, rate guidance, and cost hints, allowing the AgentAdapter to negotiate features per task.
+      Manifests stored under `.codepipe/agents/` describe models, tools, context limits, rate guidance, and cost hints, allowing the AgentAdapter to negotiate features per task.
       Logs capture hashed context references rather than raw secrets, letting auditors validate prompts without exposing sensitive repo contents.
     - Export audit-grade bundles summarizing inputs, outputs, hash manifests, diffs, deployment outcomes, and API transcripts for downstream consumers (Graphite, CodeMachine, compliance teams).
       Bundles include `manifest.json`, `docs/` (PRD/spec/plan), `logs/`, `diffs/`, `api/` transcripts, and metadata such as CLI version, Node version, OS fingerprint, and adapter versions.
       Export tooling must support `--format json` for machine ingestion and `--format md` for human review, with consistent schema evolution tracked via semantic versioning.
     - Preserve local-first execution with optional offline cache fallback, ensuring productivity on laptops, homelab runners, or ephemeral containers without requiring a daemon.
-      Optional watcher behaviors (e.g., `ai-feature observe`) execute via cron/CI and rely on file locks to avoid conflicting with interactive sessions.
+      Optional watcher behaviors (e.g., `codepipe observe`) execute via cron/CI and rely on file locks to avoid conflicting with interactive sessions.
       Dependency on local filesystem ensures agents can resume runs even when disconnected from corporate networks, aligning with homelab reliability goals.
-*   **1.3. Scope:** This blueprint covers the CLI presentation layer, orchestration core, adapters (GitHub, Linear, Agent, Git, Deployment, Notification), deterministic storage structures under `.ai-feature-pipeline/<feature_id>/`, observability stack (logs/metrics/traces), validation command registry, export artifacts, and governance hooks; runtime services outside the CLI (e.g., GitHub, Linear, remote agents, Graphite, CodeMachine) are treated as external dependencies accessed via adapters and HTTP clients.
+*   **1.3. Scope:** This blueprint covers the CLI presentation layer, orchestration core, adapters (GitHub, Linear, Agent, Git, Deployment, Notification), deterministic storage structures under `.codepipe/<feature_id>/`, observability stack (logs/metrics/traces), validation command registry, export artifacts, and governance hooks; runtime services outside the CLI (e.g., GitHub, Linear, remote agents, Graphite, CodeMachine) are treated as external dependencies accessed via adapters and HTTP clients.
     Operational behaviors such as cron-driven observers or remote dashboards are outside the immediate scope but must integrate cleanly through exported bundles or future HTTP interfaces defined in the contract section of the foundation.
     All dynamic behaviors (retry loops, scheduling, human interaction) are specified elsewhere by Behavior or Ops_Docs architects; this document focuses strictly on the static structures enabling those flows.
 *   **1.4. Key Assumptions:**
@@ -47,12 +47,12 @@
       GitHub token guidance recommends fine-grained PATs or GitHub Apps; Linear authentication must respect API keys or OAuth flows documented in the foundation.
       Unauthorized tokens must cause explicit CLI failures (exit code 20 for external API issues) rather than silent degradation.
     - Homelab environments supply Node v24 (preferred) or v20, with `git`, `npm`, network egress, and filesystem write access available to the CLI.
-      `ai-feature init` must verify runtime prerequisites (Node version, git availability, docker optional) and emit actionable remediation steps when requirements are unmet.
+      `codepipe init` must verify runtime prerequisites (Node version, git availability, docker optional) and emit actionable remediation steps when requirements are unmet.
       Docker-based CI images reference Node v24 to align with Active LTS, enabling parity across developer machines and automation pipelines.
     - Optional watcher or scheduler behavior executes via ad-hoc CLI invocations (cron, CI) rather than background daemons, maintaining local-first determinism.
       Watcher scripts rely on file-based mutexes to avoid multiple processes mutating the same run directory simultaneously, preserving artifact integrity.
       Any remote callbacks are opt-in and must respect feature flags plus repository governance before enabling automation.
-    - Agent providers advertise manifests stored under `.ai-feature-pipeline/agents/`, allowing orchestration to negotiate capabilities (context windows, tools, rate limits, cost) without vendor lock-in.
+    - Agent providers advertise manifests stored under `.codepipe/agents/`, allowing orchestration to negotiate capabilities (context windows, tools, rate limits, cost) without vendor lock-in.
       Manifests also declare streaming/tool-support, fallback policies, and error taxonomies so the orchestrator can classify failures as transient/permanent/human-action-required.
       When providers change models, operators update manifests rather than editing code, reducing upgrade friction.
     - Repository context (README, docs, history) is discoverable through configured `context_paths`, and binary artifacts are hashed/summarized rather than ingested verbatim to stay within token budgets.
@@ -63,7 +63,7 @@
 ## 2. Architectural Drivers
 
 *   **2.1. Functional Requirements Summary:** The workflow must initialize repo configs, gather multi-source context, author PRDs/specs with agent assistance, build dependency-aware task plans, run patch-based execution with validations, perform GitHub PR/reviewer/merge actions, optionally interact with Linear issues, and package run artifacts/export bundles, all while supporting approvals, resumability, and deployment triggers defined in Sections 2–6 of the specification.
-    FR-1 through FR-3 form the foundation for initialization, run directory construction, and resumable state handling, forcing the orchestrator to treat each feature as an isolated deterministic state machine recorded under `.ai-feature-pipeline/<feature_id>/`.
+    FR-1 through FR-3 form the foundation for initialization, run directory construction, and resumable state handling, forcing the orchestrator to treat each feature as an isolated deterministic state machine recorded under `.codepipe/<feature_id>/`.
     FR-4 through FR-6 describe the three ingestion paths (prompt, Linear, spec) and require the CLI to normalize metadata, snapshot upstream payloads, and emit ResearchTasks when gaps appear.
     FR-7 and FR-8 govern context ingestion, requiring hash manifests, summarization, and token budgeting so agent prompts remain deterministic even as repository contents change between runs.
     FR-9 through FR-11 focus on authored artifacts and approvals, ensuring PRDs and specs map to traceable requirements and that human-in-the-loop gates prevent unsanctioned automation.
@@ -87,7 +87,7 @@
       GitHubAdapter, LinearAdapter, AgentAdapter, and DeploymentAdapter implement well-defined TypeScript interfaces so swapping providers (e.g., GitLab in the future) involves new adapters rather than rewrites.
       `nock`/`msw` fixtures capture HTTP interactions for regression tests, ensuring API drift is detected early.
     - **Auditability (NFR-10):** Every run emits manifest, hash lists, diff summaries, approval evidence, and deployment outcomes for downstream ingestion or compliance review.
-      Artifact Bundle Service packages `trace.json`, approvals, API transcripts, cost telemetry, and PR references, while `ai-feature export` exposes CLI options for JSON or Markdown outputs.
+      Artifact Bundle Service packages `trace.json`, approvals, API transcripts, cost telemetry, and PR references, while `codepipe export` exposes CLI options for JSON or Markdown outputs.
       Hash manifests ensure auditors can reproduce the exact context fed into agents, satisfying strict compliance requirements.
 *   **2.3. Constraints & Preferences:**
     - **Architectural Style:** Must be the modular layered orchestrator with pluggable adapters described in `01_Blueprint_Foundation`, ensuring separation between CLI presentation, orchestration core, adapters, and artifact persistence.
@@ -96,7 +96,7 @@
     - **Technology Stack:** Node.js + TypeScript CLI via `oclif`, `undici` HTTP layer, `zod` validation, `vitest` tests, `eslint` + `@typescript-eslint` linting, `prettier` formatting, and file-based storage with optional SQLite acceleration.
       Docker images standardize Node v24 builds, while `pnpm`/`npm` scripts run lint/test/build/format commands referenced by the validation registry.
       Observability relies on JSON logs, Prometheus textfiles, and OpenTelemetry traces, all stored locally unless optional OTLP endpoints are configured.
-    - **Operational Constraints:** Local-first execution, no persistent servers, deterministic artifact folders under `.ai-feature-pipeline/<feature_id>/`, append-only logs, and optional `ai-feature observe` via cron.
+    - **Operational Constraints:** Local-first execution, no persistent servers, deterministic artifact folders under `.codepipe/<feature_id>/`, append-only logs, and optional `codepipe observe` via cron.
       File locks guard run directories to prevent concurrent modification, while CLI commands provide `--json` outputs for automation pipelines.
       Absence of always-on services means any “watcher” runs must gracefully exit when no work exists, updating telemetry but leaving state untouched.
     - **Governance:** Feature flags default to safe settings; human approvals required before code, PR, or deploy actions unless explicitly lowered via `approvals.json` and `RepoConfig.safety` overrides.
@@ -128,11 +128,11 @@ Dependency inversion prevents CLI commands from calling HTTP clients directly; i
 | Orchestration Core | TypeScript services, dependency injection, `zod` schemas, `vitest` tests | Implements finite state machine, approvals, task planning, resumability checks, validation registry consumption, ResearchTask coordination, and gating logic tied to RepoConfig safety policies. |
 | HTTP / Integration Layer | `undici`, shared HTTP client, exponential backoff, structured logging, request/response interceptors | Centralizes GitHub, Linear, agent, Graphite, CodeMachine, notification HTTP calls; enforces headers (`Accept`, `X-GitHub-Api-Version`, `Authorization`, `Idempotency-Key`, tracing IDs) and persists rate-limit ledgers with jittered retries. |
 | Adapter Interfaces | GitHubAdapter, LinearAdapter, AgentAdapter, GitAdapter, DeploymentAdapter, NotificationAdapter with contract tests (`nock`, `msw`) | Encapsulate provider-specific logic, enable BYO providers, isolate developer-preview risk, support capability flags, and document retry/error taxonomies for each integration. |
-| Persistence & Storage | Deterministic filesystem `.ai-feature-pipeline/<feature_id>/`, optional SQLite (`better-sqlite3`), append-only JSONL queues, file locks, hash manifests | Stores `feature.json`, `plan.json`, `prd.md`, `spec.md`, `research/`, `logs.ndjson`, `metrics/prometheus.txt`, `traces.json`, `rate_limits.json`, `approvals.json`, `telemetry/costs.json`, `bundle/`, `trace.json`, ensuring resumability and auditability. |
+| Persistence & Storage | Deterministic filesystem `.codepipe/<feature_id>/`, optional SQLite (`better-sqlite3`), append-only JSONL queues, file locks, hash manifests | Stores `feature.json`, `plan.json`, `prd.md`, `spec.md`, `research/`, `logs.ndjson`, `metrics/prometheus.txt`, `traces.json`, `rate_limits.json`, `approvals.json`, `telemetry/costs.json`, `bundle/`, `trace.json`, ensuring resumability and auditability. |
 | Observability & Security | JSON logging, Prometheus textfile metrics, OpenTelemetry traces (`@opentelemetry/sdk-trace-node`), log redaction utilities, cost tracking | Provides local telemetry, redacts secrets, captures rate-limit/approval events, records agent spend estimates, optionally forwards OTLP traces when configured. |
 | Validation & Tooling | `eslint`, `@typescript-eslint`, `prettier`, `vitest`, CLI smoke tests, `Dockerfile` based on Node v24 | Ensures code quality, formatting, TypeScript health, and reproducible CI runs; validation registry references these commands before PR/deploy actions. |
 | Containerization | Docker image targeting Node v24, stateless entrypoint invoking CLI commands, optional `docker compose` for tests | Supports CI smoke tests and reproducible environments without background services, aligning with local-first philosophy. |
-| Distribution & Governance | npm package (`@ai-feature/pipeline`), semantic versioning tied to blueprint revisions, feature flags via RepoConfig/CLI overrides, config migrations tracked in `config_history.json` | Enables global or project-local installation, ensures compatibility with RepoConfig schema versions, documents change control, and surfaces governance notes for auditors. |
+| Distribution & Governance | npm package (`@codepipe/pipeline`), semantic versioning tied to blueprint revisions, feature flags via RepoConfig/CLI overrides, config migrations tracked in `config_history.json` | Enables global or project-local installation, ensures compatibility with RepoConfig schema versions, documents change control, and surfaces governance notes for auditors. |
 
 <!-- anchor: 3-3-system-context -->
 ### 3.3. System Context Diagram (C4 Level 1)
@@ -213,7 +213,7 @@ Dependency inversion prevents CLI commands from calling HTTP clients directly; i
         Rel(systemCli, deploymentWorkflow, "Enables auto-merge, triggers workflow_dispatch, polls status outcomes, records deployment.json.", "REST calls with rate awareness.")
         Rel(systemCli, graphiteService, "Shares export bundles, telemetry, queue stats for analytics when configured.", "HTTPS adapter with throttled queue.")
         Rel(systemCli, codeMachineService, "Feeds agent-of-agents ecosystems with deterministic artifacts.", "HTTPS/gRPC per adapter design.")
-        Rel(systemCli, storageArchive, "Runs `ai-feature export` to produce machine-ingestible bundles.", "Filesystem + optional upload.")
+        Rel(systemCli, storageArchive, "Runs `codepipe export` to produce machine-ingestible bundles.", "Filesystem + optional upload.")
         Rel(systemCli, notificationChannel, "Optional manual-gated notifications when runs start/finish/block.", "Adapter-managed HTTP calls.")
         Rel(systemCli, autoMergeRegistry, "Reads branch protection requirements to inform merge/auto-merge gating.", "GitHub REST branch-protection endpoints.")
         Rel(humanOperator, githubUi, "Reviews PRs, merges when automation gated, inspects CI outcomes.", "Browser + SaaS UI.")
@@ -267,10 +267,10 @@ Dependency inversion prevents CLI commands from calling HTTP clients directly; i
             Container(gitAdapter, "Git Adapter", "TypeScript wrapper over git CLI", "Branch creation, patch dry runs, commit creation, diff summaries, stash handling.") <<Adapter>>
             Container(httpClient, "HTTP Client", "`undici` wrapper", "Injects headers, manages retries/backoff, logs requests/responses, updates rate ledgers.") <<Core>>
             Container(rateLedgerStore, "Rate Limit Ledger", "JSON (rate_limits.json)", "Records per-provider remaining/reset/backoff attempts for resumable pacing.") <<Persistence>>
-            Container(runStorage, "Deterministic Run Storage", "Filesystem (.ai-feature-pipeline/<feature_id>/)", "feature.json, prd.md, spec.md, plan.json, logs.ndjson, metrics, traces, telemetry, bundles.") <<Persistence>>
+            Container(runStorage, "Deterministic Run Storage", "Filesystem (.codepipe/<feature_id>/)", "feature.json, prd.md, spec.md, plan.json, logs.ndjson, metrics, traces, telemetry, bundles.") <<Persistence>>
             Container(optionalSqlite, "Optional Run Index", "SQLite (`better-sqlite3`)", "Accelerates run listing/status queries without being mandatory.") <<Persistence>>
             Container(observabilityHub, "Observability Hub", "JSON logs + Prometheus + traces", "Structured logging, metrics, traces, rate-limit alerts, redaction enforcement.") <<Observability>>
-            Container(exporter, "Export & Bundle Service", "TypeScript + archiving libs", "Creates ai-feature export bundles (json/md) with manifest, docs, logs, diffs, API transcripts.") <<Core>>
+            Container(exporter, "Export & Bundle Service", "TypeScript + archiving libs", "Creates codepipe export bundles (json/md) with manifest, docs, logs, diffs, API transcripts.") <<Core>>
             Container(validationRegistry, "Validation Command Registry", "TypeScript config", "Stores lint/test/typecheck/build commands, env vars, gating rules, exit code expectations.") <<Core>>
             Container(agentManifestStore, "Agent Manifest Store", "JSON files", "Holds BYO agent capability manifests with model IDs, rate limits, cost estimates, feature flags.") <<Persistence>>
             Container(contextAggregator, "Context Aggregator", "TypeScript module", "Collects README/docs/history, summarizes large files, records hash manifests, enforces token budgets.") <<Core>>
@@ -376,7 +376,7 @@ Dependency inversion prevents CLI commands from calling HTTP clients directly; i
             Component(repoConfigManager, "RepoConfig Manager", "Service", "Detects git root, scaffolds config, enforces schema versions, loads feature flags.") <<Service>>
             Component(configValidator, "Config Validator", "Service", "Applies zod schemas, verifies Node version, git availability, token presence.") <<Service>>
             Component(featureIdGenerator, "Feature ID Generator", "Service", "Creates ULID/UUIDv7 identifiers, seeds run directories.") <<Service>>
-            Component(runDirectoryManager, "Run Directory Manager", "Service", "Creates `.ai-feature-pipeline/<feature_id>/`, manages file locks, writes manifests.") <<Service>>
+            Component(runDirectoryManager, "Run Directory Manager", "Service", "Creates `.codepipe/<feature_id>/`, manages file locks, writes manifests.") <<Service>>
             Component(contextAggregator, "Context Aggregator", "Service", "Collects README/docs/history, summarizes files, records hashes and token budgets.") <<Service>>
             Component(researchTaskGenerator, "Research Task Generator", "Service", "Identifies unknowns, spawns ResearchTasks, caches sources, tracks freshness.") <<Service>>
             Component(prdAuthoringEngine, "PRD Authoring Engine", "Service", "Drafts PRDs with agent assistance, supports human edits, captures traceability to goals.") <<Service>>
@@ -786,10 +786,10 @@ Dependency inversion prevents CLI commands from calling HTTP clients directly; i
         },
         "working_branch": "feature/ai-pipeline-2025-12-15",
         "artifacts": {
-          "prd_path": ".ai-feature-pipeline/01HNZ9Z6QM5/prd.md",
-          "spec_path": ".ai-feature-pipeline/01HNZ9Z6QM5/spec.md",
-          "plan_path": ".ai-feature-pipeline/01HNZ9Z6QM5/plan.json",
-          "run_log_path": ".ai-feature-pipeline/01HNZ9Z6QM5/logs.ndjson"
+          "prd_path": ".codepipe/01HNZ9Z6QM5/prd.md",
+          "spec_path": ".codepipe/01HNZ9Z6QM5/spec.md",
+          "plan_path": ".codepipe/01HNZ9Z6QM5/plan.json",
+          "run_log_path": ".codepipe/01HNZ9Z6QM5/logs.ndjson"
         },
         "external_links": {
           "linear_issue_id": "LIN-2048",
@@ -799,7 +799,7 @@ Dependency inversion prevents CLI commands from calling HTTP clients directly; i
         "acceptance_criteria": [
           "Run directories must resume after transient network failures.",
           "GitHub PRs include reviewer assignments and status-check evidence.",
-          "Export bundles pass validation via ai-feature export --format json."
+          "Export bundles pass validation via codepipe export --format json."
         ],
         "constraints": {
           "must_not_touch_paths": ["infra/secrets/**", "third_party/licensed/**"],
@@ -978,7 +978,7 @@ Dependency inversion prevents CLI commands from calling HTTP clients directly; i
         }
       ],
       "queue_state": {
-        "queue_snapshot_path": ".ai-feature-pipeline/01HNZ9Z6QM5/queue.jsonl",
+        "queue_snapshot_path": ".codepipe/01HNZ9Z6QM5/queue.jsonl",
         "queued_count": 2,
         "running_count": 1,
         "failed_count": 0,
@@ -1057,7 +1057,7 @@ Dependency inversion prevents CLI commands from calling HTTP clients directly; i
           "max_tokens": 128000,
           "rate_limit_guidance": "60 rpm",
           "feature_flags": {"enable_patch_proposals": true},
-          "manifest_path": ".ai-feature-pipeline/agents/openai-router.json"
+          "manifest_path": ".codepipe/agents/openai-router.json"
         },
         {
           "provider": "local-llama3",
@@ -1068,7 +1068,7 @@ Dependency inversion prevents CLI commands from calling HTTP clients directly; i
           "max_tokens": 8000,
           "rate_limit_guidance": "unlimited-local",
           "feature_flags": {"enable_offline_mode": true},
-          "manifest_path": ".ai-feature-pipeline/agents/local-llama3.json"
+          "manifest_path": ".codepipe/agents/local-llama3.json"
         }
       ],
       "deployment_record": {
@@ -1097,7 +1097,7 @@ Dependency inversion prevents CLI commands from calling HTTP clients directly; i
       ],
       "artifact_bundle": {
         "format": "json",
-        "manifest_path": ".ai-feature-pipeline/01HNZ9Z6QM5/bundle/manifest.json",
+        "manifest_path": ".codepipe/01HNZ9Z6QM5/bundle/manifest.json",
         "docs_path": ".../bundle/docs",
         "logs_path": ".../bundle/logs",
         "diffs_path": ".../bundle/diffs",

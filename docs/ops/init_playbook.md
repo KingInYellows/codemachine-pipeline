@@ -2,9 +2,9 @@
 
 ## Overview
 
-The `ai-feature init` command initializes the ai-feature-pipeline in a repository by:
+The `codepipe init` command initializes the codemachine-pipeline in a repository by:
 - Detecting the git repository root
-- Creating the `.ai-feature-pipeline/` directory structure
+- Creating the `.codepipe/` directory structure
 - Generating a schema-validated `config.json` with defaults
 - Validating credentials and environment setup
 - Recording initialization telemetry
@@ -15,11 +15,11 @@ This playbook documents exact command usage, approval workflows, and operational
 
 ## Prerequisites
 
-Before running `ai-feature init`, ensure:
+Before running `codepipe init`, ensure:
 
 1. **Git Repository**: Current directory must be within a git repository
 2. **Node.js**: v24 LTS or higher (required)
-3. **Filesystem Permissions**: Write access to create `.ai-feature-pipeline/` directory
+3. **Filesystem Permissions**: Write access to create `.codepipe/` directory
 4. **Environment Variables** (optional but recommended):
    - `GITHUB_TOKEN` - GitHub Personal Access Token with `repo`, `workflow` scopes
    - `LINEAR_API_KEY` - Linear API key for issue tracking integration
@@ -30,7 +30,7 @@ Before running `ai-feature init`, ensure:
 ## Command Synopsis
 
 ```bash
-ai-feature init [FLAGS]
+codepipe init [FLAGS]
 ```
 
 ### Flags
@@ -52,33 +52,33 @@ ai-feature init [FLAGS]
 Initialize with interactive prompts:
 
 ```bash
-ai-feature init
+codepipe init
 ```
 
 **Output:**
 ```
 ✓ Git repository detected at: /path/to/repo
-✓ Created directory: .ai-feature-pipeline
-✓ Created directory: .ai-feature-pipeline/runs
-✓ Created directory: .ai-feature-pipeline/logs
-✓ Created directory: .ai-feature-pipeline/artifacts
-✓ Created configuration file: .ai-feature-pipeline/config.json
+✓ Created directory: .codepipe
+✓ Created directory: .codepipe/runs
+✓ Created directory: .codepipe/logs
+✓ Created directory: .codepipe/artifacts
+✓ Created configuration file: .codepipe/config.json
 
 ⚠ Configuration created with warnings:
 ⚠ GitHub integration enabled but GITHUB_TOKEN not set. Set GITHUB_TOKEN with scopes: repo, workflow
 ⚠ Linear integration enabled but LINEAR_API_KEY not set
 ⚠ Agent endpoint not configured. Set AGENT_ENDPOINT or add runtime.agent_endpoint to config
 
-✓ ai-feature-pipeline initialized successfully!
+✓ codemachine-pipeline initialized successfully!
 
-Configuration file: .ai-feature-pipeline/config.json
+Configuration file: .codepipe/config.json
 
 Next steps:
-  • Review and edit: .ai-feature-pipeline/config.json
+  • Review and edit: .codepipe/config.json
   • Enable integrations and set credentials (GITHUB_TOKEN, LINEAR_API_KEY, AGENT_ENDPOINT)
-  • Validate configuration: ai-feature init --validate-only
-  • Check environment: ai-feature doctor
-  • Start a feature: ai-feature start --prompt "your feature description"
+  • Validate configuration: codepipe init --validate-only
+  • Check environment: codepipe doctor
+  • Start a feature: codepipe start --prompt "your feature description"
 ```
 
 ### Non-Interactive Initialization (CI/Automation)
@@ -86,7 +86,7 @@ Next steps:
 Skip confirmations for automated workflows:
 
 ```bash
-ai-feature init --yes
+codepipe init --yes
 ```
 
 ### Dry Run (Test Without Changes)
@@ -94,14 +94,14 @@ ai-feature init --yes
 Preview what would be created without writing files:
 
 ```bash
-ai-feature init --dry-run --json
+codepipe init --dry-run --json
 ```
 
 **JSON Output:**
 ```json
 {
   "status": "dry_run_success",
-  "config_path": "/path/to/repo/.ai-feature-pipeline/config.json",
+  "config_path": "/path/to/repo/.codepipe/config.json",
   "exit_code": 0,
   "config": {
     "schema_version": "1.0.0",
@@ -120,11 +120,11 @@ ai-feature init --dry-run --json
   "manifest_schema_doc": "docs/requirements/run_directory_schema.md",
   "readiness_checklist": "plan/readiness_checklist.md",
   "next_steps": [
-    "Review and edit: .ai-feature-pipeline/config.json",
+    "Review and edit: .codepipe/config.json",
     "Enable integrations and set credentials (GITHUB_TOKEN, LINEAR_API_KEY, AGENT_ENDPOINT)",
-    "Validate configuration: ai-feature init --validate-only",
-    "Check environment: ai-feature doctor",
-    "Start a feature: ai-feature start --prompt \"your feature description\""
+    "Validate configuration: codepipe init --validate-only",
+    "Check environment: codepipe doctor",
+    "Start a feature: codepipe start --prompt \"your feature description\""
   ]
 }
 ```
@@ -134,7 +134,7 @@ ai-feature init --dry-run --json
 Overwrite existing configuration:
 
 ```bash
-ai-feature init --force
+codepipe init --force
 ```
 
 ⚠ **Warning:** This will replace your existing `config.json`. Back up custom settings first.
@@ -144,7 +144,7 @@ ai-feature init --force
 Check configuration validity without modifying files:
 
 ```bash
-ai-feature init --validate-only
+codepipe init --validate-only
 ```
 
 **Output (Success):**
@@ -175,7 +175,7 @@ Validating existing configuration...
 
 For detailed schema documentation, see:
   docs/requirements/RepoConfig_schema.md
-  .ai-feature-pipeline/templates/config.example.json
+  .codepipe/templates/config.example.json
 ```
 
 ---
@@ -188,23 +188,23 @@ The `init` command uses standardized exit codes for automation and CI integratio
 |-----------|---------|-------------|-------------|
 | `0` | Success | Initialization completed successfully | None |
 | `10` | Validation Error | Config schema validation failed or missing required fields | Review error messages; check schema documentation |
-| `20` | Environment Issue | Missing tools, version mismatches, or filesystem permission errors | Install required tools; check permissions; run `ai-feature doctor` |
+| `20` | Environment Issue | Missing tools, version mismatches, or filesystem permission errors | Install required tools; check permissions; run `codepipe doctor` |
 | `30` | Credential Issue | Missing tokens or invalid API credentials | Set required environment variables (GITHUB_TOKEN, LINEAR_API_KEY, etc.) |
 
 ### Exit Code Examples
 
 **Validation Error (10):**
 ```bash
-ai-feature init --validate-only
+codepipe init --validate-only
 # Exit code: 10
 # Reason: config.json has schema errors
 ```
 
 **Environment Issue (20):**
 ```bash
-cd /read-only-filesystem && ai-feature init
+cd /read-only-filesystem && codepipe init
 # Exit code: 20
-# Reason: Cannot create .ai-feature-pipeline directory
+# Reason: Cannot create .codepipe directory
 ```
 
 **Credential Issue (30):**
@@ -253,7 +253,7 @@ The `init` command creates configuration with governance controls per ADR-5. By 
 }
 ```
 
-To adjust approval requirements, edit `.ai-feature-pipeline/config.json` after initialization.
+To adjust approval requirements, edit `.codepipe/config.json` after initialization.
 
 ---
 
@@ -265,7 +265,7 @@ The `init` command includes multiple safety mechanisms:
 2. **Validation**: Schema validation runs before and after config creation
 3. **Warnings**: Missing credentials generate warnings but do not block initialization
 4. **Dry Run**: `--dry-run` allows testing without filesystem changes
-5. **Telemetry**: All invocations logged to `.ai-feature-pipeline/logs` for audit
+5. **Telemetry**: All invocations logged to `.codepipe/logs` for audit
 6. **Rollback**: Original config not modified unless `--force` provided
 
 ---
@@ -296,7 +296,7 @@ cd /path/to/your/repo
 
 **Symptom:**
 ```
-⚠ Configuration already exists at: .ai-feature-pipeline/config.json
+⚠ Configuration already exists at: .codepipe/config.json
 ⚠ Use --force to re-initialize or --validate-only to check configuration
 
 ✓ Configuration is valid
@@ -305,13 +305,13 @@ cd /path/to/your/repo
 **Remediation:**
 ```bash
 # Validate existing config
-ai-feature init --validate-only
+codepipe init --validate-only
 
 # Force re-initialization (backs up existing config)
-ai-feature init --force
+codepipe init --force
 
 # Or manually edit config
-vim .ai-feature-pipeline/config.json
+vim .codepipe/config.json
 ```
 
 **Exit Code:** 0 (warning only)
@@ -322,7 +322,7 @@ vim .ai-feature-pipeline/config.json
 
 **Symptom:**
 ```
-Initialization failed: EACCES: permission denied, mkdir '.ai-feature-pipeline'
+Initialization failed: EACCES: permission denied, mkdir '.codepipe'
 ```
 
 **Remediation:**
@@ -334,7 +334,7 @@ ls -la
 chmod u+w .
 
 # Or run with appropriate permissions
-sudo ai-feature init  # Not recommended
+sudo codepipe init  # Not recommended
 ```
 
 **Exit Code:** 20
@@ -354,7 +354,7 @@ sudo ai-feature init  # Not recommended
 export GITHUB_TOKEN=ghp_your_token_here
 
 # Verify
-ai-feature init --validate-only
+codepipe init --validate-only
 ```
 
 **Exit Code:** 0 (warning does not fail initialization)
@@ -363,11 +363,11 @@ ai-feature init --validate-only
 
 ## Next Steps After Initialization
 
-After running `ai-feature init`, follow these steps:
+After running `codepipe init`, follow these steps:
 
 1. **Verify Environment**
    ```bash
-   ai-feature doctor
+   codepipe doctor
    ```
 
 2. **Set Credentials**
@@ -379,23 +379,23 @@ After running `ai-feature init`, follow these steps:
 
 3. **Validate Configuration**
    ```bash
-   ai-feature init --validate-only
+   codepipe init --validate-only
    ```
 
 4. **Review Config**
    ```bash
-   cat .ai-feature-pipeline/config.json
+   cat .codepipe/config.json
    ```
 
 5. **Customize Settings** (Optional)
-   - Edit `.ai-feature-pipeline/config.json`
+   - Edit `.codepipe/config.json`
    - Adjust governance controls
    - Configure integration toggles
    - Set runtime constraints
 
 6. **Start First Feature**
    ```bash
-   ai-feature start --prompt "Add user authentication"
+   codepipe start --prompt "Add user authentication"
    ```
 
 ---
@@ -421,7 +421,7 @@ jobs:
           node-version: '24'
 
       - name: Install CLI
-        run: npm install -g ai-feature-pipeline
+        run: npm install -g codemachine-pipeline
 
       - name: Initialize Pipeline
         env:
@@ -429,7 +429,7 @@ jobs:
           LINEAR_API_KEY: ${{ secrets.LINEAR_API_KEY }}
           AGENT_ENDPOINT: ${{ secrets.AGENT_ENDPOINT }}
         run: |
-          ai-feature init --yes --json > init-result.json
+          codepipe init --yes --json > init-result.json
           cat init-result.json
 
       - name: Check Exit Code
@@ -457,7 +457,7 @@ export LINEAR_API_KEY="${LINEAR_API_KEY:-}"
 export AGENT_ENDPOINT="${AGENT_ENDPOINT:-}"
 
 # Initialize (idempotent - safe to run multiple times)
-ai-feature init --yes --json > /tmp/init-result.json
+codepipe init --yes --json > /tmp/init-result.json
 
 # Check exit code
 exit_code=$(jq -r '.exit_code' /tmp/init-result.json)
@@ -470,7 +470,7 @@ elif [ "$exit_code" -eq 10 ]; then
   exit 10
 elif [ "$exit_code" -eq 20 ]; then
   echo "Environment issue - run doctor for diagnostics"
-  ai-feature doctor
+  codepipe doctor
   exit 20
 elif [ "$exit_code" -eq 30 ]; then
   echo "Credential issue - check environment variables"
@@ -495,7 +495,7 @@ fi
 
 ## Telemetry
 
-The `init` command records telemetry to `.ai-feature-pipeline/logs/`:
+The `init` command records telemetry to `.codepipe/logs/`:
 
 - **Logs**: NDJSON format in `logs/init-YYYY-MM-DD.log`
 - **Metrics**: Prometheus format in `metrics/prometheus.txt`

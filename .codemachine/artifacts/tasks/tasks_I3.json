@@ -48,7 +48,7 @@
     "task_id": "I3.T3",
     "iteration_id": "I3",
     "iteration_goal": "Translate specifications into actionable ExecutionTasks, build the queue/plan orchestration engine, manage patch application + git safety rails, codify validation and auto-fix loops, and extend resume/status commands so code generation is deterministic and auditable.",
-    "description": "Implement Validation Command Registry (lint/test/typecheck/build) plus auto-fix loop per ADR-7, including configuration ingestion, command templating, retry/backoff policy, and error summarization piped into run logs.\n            Add CLI command `ai-feature validate` for manual re-runs and doc covering exit codes.",
+    "description": "Implement Validation Command Registry (lint/test/typecheck/build) plus auto-fix loop per ADR-7, including configuration ingestion, command templating, retry/backoff policy, and error summarization piped into run logs.\n            Add CLI command `codepipe validate` for manual re-runs and doc covering exit codes.",
     "agent_type_hint": "BackendAgent",
     "inputs": "Section 2 (Technology stack), Section 3 (Tests/ scripts), ADR-7, FR-14.",
     "target_files": [

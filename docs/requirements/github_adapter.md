@@ -468,7 +468,7 @@ const adapter = createGitHubAdapter({
   repo: 'my-repo',
   token: process.env.GITHUB_TOKEN!,
   baseUrl: 'https://github.company.com/api/v3', // GitHub Enterprise
-  runDir: '.ai-feature-pipeline/runs/feature-123', // Rate limit ledger
+  runDir: '.codepipe/runs/feature-123', // Rate limit ledger
   logger: customLogger, // Custom logger
   timeout: 60000, // 60 second timeout
   maxRetries: 5, // More aggressive retries
@@ -499,7 +499,7 @@ The GitHub adapter integrates with `RepoConfig` for centralized configuration:
 ```typescript
 import { loadRepoConfig } from './core/config/RepoConfig';
 
-const config = loadRepoConfig('.ai-feature-pipeline/config.json');
+const config = loadRepoConfig('.codepipe/config.json');
 if (!config.success) {
   throw new Error('Invalid config');
 }
@@ -625,7 +625,7 @@ See `tests/integration/githubAdapter.spec.ts` for comprehensive integration test
 
 ## OpenAPI Specification
 
-The adapter operations are documented in OpenAPI 3.1 format at `api/ai_feature.yaml`. This specification:
+The adapter operations are documented in OpenAPI 3.1 format at `api/codepipe.yaml`. This specification:
 
 - Documents all adapter methods with request/response schemas
 - Provides contract for future remote endpoints
@@ -634,7 +634,7 @@ The adapter operations are documented in OpenAPI 3.1 format at `api/ai_feature.y
 
 **Viewing the Spec:**
 ```bash
-npx @redocly/cli preview-docs api/ai_feature.yaml
+npx @redocly/cli preview-docs api/codepipe.yaml
 ```
 
 ## Security Considerations
@@ -691,7 +691,7 @@ curl -I -H "Authorization: Bearer $GITHUB_TOKEN" https://api.github.com/user | g
 **Resolution:**
 1. Check rate limit state:
    ```bash
-   cat .ai-feature-pipeline/runs/<feature_id>/rate_limits.json | jq '.providers.github'
+   cat .codepipe/runs/<feature_id>/rate_limits.json | jq '.providers.github'
    ```
 2. Wait for reset window (shown in `cooldownUntil`)
 3. Reduce concurrent operations in `config.json`:
@@ -720,7 +720,7 @@ console.log('Merge blocked:', reasons);
 - **Behavioral Contracts:** `.codemachine/artifacts/architecture/03_Behavior_and_Communication.md` (GitHub HTTP Contract)
 - **Rate Limit Reference:** `docs/ops/rate_limit_reference.md`
 - **HTTP Client:** `src/adapters/http/client.ts`
-- **OpenAPI Spec:** `api/ai_feature.yaml`
+- **OpenAPI Spec:** `api/codepipe.yaml`
 - **GitHub API Docs:** https://docs.github.com/en/rest
 - **GitHub GraphQL API:** https://docs.github.com/en/graphql
 

@@ -6,7 +6,7 @@
 
 ## OVERVIEW
 
-AI-powered feature pipeline CLI (`ai-feature`) - enterprise-grade autonomous development orchestrator. Not a typical CLI tool. Orchestrates PRD authoring, task planning, research, PR automation with resumable execution. Built with TypeScript, oclif framework, Node.js 24+.
+AI-powered feature pipeline CLI (`codepipe`) - enterprise-grade autonomous development orchestrator. Not a typical CLI tool. Orchestrates PRD authoring, task planning, research, PR automation with resumable execution. Built with TypeScript, oclif framework, Node.js 24+.
 
 ## STRUCTURE
 
@@ -21,13 +21,13 @@ codemachine-pipeline/
 │   ├── persistence/     # Run directory & hash manifest (resumable state)
 │   └── core/config/     # Schema-driven config with migration support
 ├── bin/
-│   ├── run.js           # Production entry (npm bin: ai-feature)
+│   ├── run.js           # Production entry (npm bin: codepipe)
 │   └── dev.js           # Development entry (ts-node bypass compilation)
 ├── tests/               # Vitest unit/integration tests
 ├── test/                # Jest CLI command tests (dual framework)
 ├── docs/                # Requirements (20+), ops guides, diagrams
 ├── .codemachine/        # Generated artifacts (plans, tasks, PRDs)
-└── .ai-feature-pipeline/ # Telemetry, templates, runs/ (stateful execution)
+└── .codepipe/ # Telemetry, templates, runs/ (stateful execution)
 ```
 
 ## WHERE TO LOOK
@@ -154,27 +154,27 @@ npm run format               # Prettier
 npm run format:check         # Validate
 
 # Docker
-docker build -f docker/Dockerfile -t ai-feature-pipeline .
-docker run --rm -v $(pwd):/workspace ai-feature-pipeline init
+docker build -f docker/Dockerfile -t codemachine-pipeline .
+docker run --rm -v $(pwd):/workspace codemachine-pipeline init
 ```
 
 ## CLI COMMANDS
 
 | Command                        | Description                   |
 | ------------------------------ | ----------------------------- |
-| `ai-feature init`              | Initialize repo configuration |
-| `ai-feature start`             | Start new feature pipeline    |
-| `ai-feature plan`              | Generate/view execution plan  |
-| `ai-feature status`            | Pipeline status               |
-| `ai-feature resume`            | Resume interrupted feature    |
-| `ai-feature approve`           | Approval management           |
-| `ai-feature doctor`            | Diagnostics/health checks     |
-| `ai-feature validate`          | Configuration validation      |
-| `ai-feature rate-limits`       | Rate limit monitoring         |
-| `ai-feature pr create`         | Create pull request           |
-| `ai-feature pr status`         | PR status checks              |
-| `ai-feature research create`   | Create research task          |
-| `ai-feature context summarize` | Summarize context             |
+| `codepipe init`              | Initialize repo configuration |
+| `codepipe start`             | Start new feature pipeline    |
+| `codepipe plan`              | Generate/view execution plan  |
+| `codepipe status`            | Pipeline status               |
+| `codepipe resume`            | Resume interrupted feature    |
+| `codepipe approve`           | Approval management           |
+| `codepipe doctor`            | Diagnostics/health checks     |
+| `codepipe validate`          | Configuration validation      |
+| `codepipe rate-limits`       | Rate limit monitoring         |
+| `codepipe pr create`         | Create pull request           |
+| `codepipe pr status`         | PR status checks              |
+| `codepipe research create`   | Create research task          |
+| `codepipe context summarize` | Summarize context             |
 
 ## BRANCHING STRATEGY (GitHub Flow + Graphite)
 

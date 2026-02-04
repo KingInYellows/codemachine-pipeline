@@ -35,7 +35,7 @@ Approval gates are checkpoints in the AI Feature Pipeline where human review and
 
 **Approval Command:**
 ```bash
-ai-feature approve prd --signer "<your-email>" --comment "LGTM"
+codepipe approve prd --signer "<your-email>" --comment "LGTM"
 ```
 
 **Typical Turnaround:** 24 hours
@@ -65,7 +65,7 @@ ai-feature approve prd --signer "<your-email>" --comment "LGTM"
 
 **Approval Command:**
 ```bash
-ai-feature approve spec --signer "<your-email>" --comment "Architecture approved"
+codepipe approve spec --signer "<your-email>" --comment "Architecture approved"
 ```
 
 **Typical Turnaround:** 48 hours
@@ -93,7 +93,7 @@ ai-feature approve spec --signer "<your-email>" --comment "Architecture approved
 
 **Approval Command:**
 ```bash
-ai-feature approve plan --signer "<your-email>"
+codepipe approve plan --signer "<your-email>"
 ```
 
 **Typical Turnaround:** 12 hours
@@ -122,7 +122,7 @@ ai-feature approve plan --signer "<your-email>"
 
 **Approval Command:**
 ```bash
-ai-feature approve code --signer "<your-email>" --comment "Code review passed"
+codepipe approve code --signer "<your-email>" --comment "Code review passed"
 ```
 
 **Typical Turnaround:** 4 hours
@@ -150,7 +150,7 @@ ai-feature approve code --signer "<your-email>" --comment "Code review passed"
 
 **Approval Command:**
 ```bash
-ai-feature approve pr --signer "<your-email>"
+codepipe approve pr --signer "<your-email>"
 ```
 
 **Typical Turnaround:** 2 hours
@@ -179,7 +179,7 @@ ai-feature approve pr --signer "<your-email>"
 
 **Approval Command:**
 ```bash
-ai-feature approve deploy --signer "<your-email>" --comment "Approved for production"
+codepipe approve deploy --signer "<your-email>" --comment "Approved for production"
 ```
 
 **Typical Turnaround:** 1 hour
@@ -192,7 +192,7 @@ ai-feature approve deploy --signer "<your-email>" --comment "Approved for produc
 
 By default, all gates are **mandatory** and must receive explicit approval before the pipeline proceeds. This ensures human oversight at every critical transition.
 
-To disable specific gates, edit `.ai-feature-pipeline/config.json`:
+To disable specific gates, edit `.codepipe/config.json`:
 
 ```json
 {
@@ -230,7 +230,7 @@ Delayed approvals block the entire pipeline. Aim to review within the typical tu
 When denying approval, include **specific, actionable feedback**:
 
 ```bash
-ai-feature approve prd --deny --signer "reviewer@example.com" \
+codepipe approve prd --deny --signer "reviewer@example.com" \
   --comment "Missing acceptance criteria for error cases. Please add criteria for invalid input, network failures, and timeout scenarios."
 ```
 
@@ -239,7 +239,7 @@ ai-feature approve prd --deny --signer "reviewer@example.com" \
 The CLI automatically validates artifact hashes, but you can manually verify:
 
 ```bash
-sha256sum .ai-feature-pipeline/runs/<feature-id>/artifacts/prd.md
+sha256sum .codepipe/runs/<feature-id>/artifacts/prd.md
 ```
 
 ### 4. Use Version Control for Approvals
@@ -265,7 +265,7 @@ For routine approvals, consider automation:
 
 **Resolution:**
 ```bash
-ai-feature status --feature <feature-id>
+codepipe status --feature <feature-id>
 ```
 
 ### "Artifact hash mismatch"

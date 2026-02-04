@@ -75,7 +75,7 @@ The deployment trigger supports four strategies, selected automatically based on
 
 **CLI Example:**
 ```bash
-ai-feature deploy --feature-id feature-auth-123
+codepipe deploy --feature-id feature-auth-123
 ```
 
 ---
@@ -106,7 +106,7 @@ ai-feature deploy --feature-id feature-auth-123
 
 **CLI Example:**
 ```bash
-ai-feature deploy --feature-id feature-auth-123 --merge-method squash
+codepipe deploy --feature-id feature-auth-123 --merge-method squash
 ```
 
 ---
@@ -152,7 +152,7 @@ ai-feature deploy --feature-id feature-auth-123 --merge-method squash
 
 **CLI Example:**
 ```bash
-ai-feature deploy --feature-id feature-auth-123 \
+codepipe deploy --feature-id feature-auth-123 \
   --workflow-inputs '{"environment":"staging","rollback_sha":"abc123"}'
 ```
 
@@ -189,7 +189,7 @@ ai-feature deploy --feature-id feature-auth-123 \
 
 **CLI Example:**
 ```bash
-$ ai-feature deploy --feature-id feature-auth-123
+$ codepipe deploy --feature-id feature-auth-123
 ❌ Deployment blocked
 
 Blockers (2):
@@ -209,14 +209,14 @@ Before triggering deployment, ensure:
 
 ### 1. PR Created
 ```bash
-ai-feature pr create --feature-id <feature-id>
+codepipe pr create --feature-id <feature-id>
 ```
 
 PR metadata must exist in `<run-dir>/pr.json`.
 
 ### 2. Branch Protection Report (Recommended)
 ```bash
-ai-feature status --feature-id <feature-id>
+codepipe status --feature-id <feature-id>
 ```
 
 Generates `<run-dir>/status/branch_protection.json` for detailed validation.
@@ -260,14 +260,14 @@ Token must have `repo` scope (and `workflow` if using workflow_dispatch).
 
 ### 5. Deployment Approval
 
-If governance requires deployment approvals (`governance.approval_workflow.require_approval_for_deploy = true`), ensure the deploy gate is approved before running `ai-feature deploy`.
+If governance requires deployment approvals (`governance.approval_workflow.require_approval_for_deploy = true`), ensure the deploy gate is approved before running `codepipe deploy`.
 
 ```bash
 # Request deployment approval (records pending gate)
-ai-feature approve deploy --signer "approver@example.com" --comment "Ready for production"
+codepipe approve deploy --signer "approver@example.com" --comment "Ready for production"
 
 # Verify approvals
-ai-feature status --feature-id <feature-id> --json | jq '.approvals'
+codepipe status --feature-id <feature-id> --json | jq '.approvals'
 ```
 
 The CLI will block deployment until the deploy gate is completed. Use `--force` only when your emergency procedures allow bypassing approvals.
@@ -282,10 +282,10 @@ The CLI will block deployment until the deploy gate is completed. Use `--force` 
 
 ```bash
 # Step 1: Ensure status report is fresh
-ai-feature status --feature-id feature-auth-123
+codepipe status --feature-id feature-auth-123
 
 # Step 2: Trigger deployment
-ai-feature deploy --feature-id feature-auth-123
+codepipe deploy --feature-id feature-auth-123
 
 # Output:
 # ✓ Merge readiness assessed: eligible
@@ -327,7 +327,7 @@ ai-feature deploy --feature-id feature-auth-123
 **Scenario:** Auto-merge disabled, immediate merge desired
 
 ```bash
-ai-feature deploy --feature-id feature-auth-123 --merge-method squash
+codepipe deploy --feature-id feature-auth-123 --merge-method squash
 
 # Output:
 # ✓ Merge readiness assessed: eligible
@@ -344,7 +344,7 @@ ai-feature deploy --feature-id feature-auth-123 --merge-method squash
 **Scenario:** Custom deployment workflow
 
 ```bash
-ai-feature deploy --feature-id feature-auth-123 \
+codepipe deploy --feature-id feature-auth-123 \
   --workflow-inputs '{"environment":"production","notify_slack":"true"}'
 
 # Output:
@@ -364,7 +364,7 @@ ai-feature deploy --feature-id feature-auth-123 \
 **Use Case:** Administrator needs to merge despite blockers (emergency fix, hotfix)
 
 ```bash
-ai-feature deploy --feature-id feature-auth-123 --force
+codepipe deploy --feature-id feature-auth-123 --force
 
 # ⚠️  WARNING: Forcing deployment despite blockers
 # Blockers bypassed:
@@ -386,7 +386,7 @@ ai-feature deploy --feature-id feature-auth-123 --force
 **Use Case:** Check deployment readiness without executing
 
 ```bash
-ai-feature deploy --feature-id feature-auth-123 --dry-run
+codepipe deploy --feature-id feature-auth-123 --dry-run
 
 # Deployment readiness assessment:
 # ✓ PR state: open
@@ -406,10 +406,10 @@ ai-feature deploy --feature-id feature-auth-123 --dry-run
 
 ```bash
 # Squash commits into single commit
-ai-feature deploy --feature-id feature-auth-123 --merge-method squash
+codepipe deploy --feature-id feature-auth-123 --merge-method squash
 
 # Rebase and fast-forward
-ai-feature deploy --feature-id feature-auth-123 --merge-method rebase
+codepipe deploy --feature-id feature-auth-123 --merge-method rebase
 ```
 
 ---
@@ -429,7 +429,7 @@ ai-feature deploy --feature-id feature-auth-123 --merge-method rebase
 2. Fix failing tests/lints in code
 3. Push fixes to branch
 4. Wait for checks to re-run
-5. Retry deployment: `ai-feature deploy --feature-id <feature-id>`
+5. Retry deployment: `codepipe deploy --feature-id <feature-id>`
 
 **Manual Investigation:**
 ```bash
@@ -454,12 +454,12 @@ gh run rerun <run-id>
 1. Request reviews: `gh pr review <pr-number> --request-reviewer @username`
 2. Notify reviewers via Slack/email
 3. Wait for approvals
-4. Retry deployment: `ai-feature deploy --feature-id <feature-id>`
+4. Retry deployment: `codepipe deploy --feature-id <feature-id>`
 
 **Bypass (if admin):**
 ```bash
 # Force merge (emergency only)
-ai-feature deploy --feature-id <feature-id> --force
+codepipe deploy --feature-id <feature-id> --force
 ```
 
 ---
@@ -485,7 +485,7 @@ git rebase origin/main
 git push --force-with-lease
 
 # Retry deployment
-ai-feature deploy --feature-id <feature-id>
+codepipe deploy --feature-id <feature-id>
 ```
 
 ---
@@ -512,7 +512,7 @@ git commit
 git push
 
 # Retry deployment
-ai-feature deploy --feature-id <feature-id>
+codepipe deploy --feature-id <feature-id>
 ```
 
 ---
@@ -522,18 +522,18 @@ ai-feature deploy --feature-id <feature-id>
 **Symptom:**
 ```
 ❌ [approvals] 1 approval(s) pending: deploy
-   → Collect required approvals with "ai-feature approve <gate>" or rerun with --force when authorized
+   → Collect required approvals with "codepipe approve <gate>" or rerun with --force when authorized
 ```
 
 **Resolution:**
-1. Identify pending gates: `ai-feature status --feature-id <feature-id>`
+1. Identify pending gates: `codepipe status --feature-id <feature-id>`
 2. Request or grant the necessary approval:
    ```bash
-   ai-feature approve deploy --signer "ops@example.com" \
+   codepipe approve deploy --signer "ops@example.com" \
      --comment "Deployment window confirmed"
    ```
 3. Confirm that `deploy` moves from `pending` to `completed` in `manifest.json`
-4. Retry deployment: `ai-feature deploy --feature-id <feature-id>`
+4. Retry deployment: `codepipe deploy --feature-id <feature-id>`
 
 **Note:** `--force` bypasses approvals but should only be used for emergency remediation with documented sign-off.
 
@@ -644,10 +644,10 @@ Error type: VALIDATION_ERROR
 **Resolution:**
 ```bash
 # Create PR first
-ai-feature pr create --feature-id <feature-id>
+codepipe pr create --feature-id <feature-id>
 
 # Then retry deployment
-ai-feature deploy --feature-id <feature-id>
+codepipe deploy --feature-id <feature-id>
 ```
 
 ---
@@ -665,10 +665,10 @@ Error type: AUTO_MERGE_FAILED
 **Resolution:**
 ```bash
 # Refresh PR metadata
-ai-feature status --feature-id <feature-id>
+codepipe status --feature-id <feature-id>
 
 # Retry deployment
-ai-feature deploy --feature-id <feature-id>
+codepipe deploy --feature-id <feature-id>
 ```
 
 ---
@@ -679,7 +679,7 @@ ai-feature deploy --feature-id <feature-id>
 
 **Initial Attempt:**
 ```bash
-$ ai-feature deploy --feature-id feature-auth-123
+$ codepipe deploy --feature-id feature-auth-123
 ❌ Deployment blocked
 Blockers:
   1. [status_checks] 1 required status check(s) failing
@@ -693,7 +693,7 @@ Exit code: 30
 
 **Resume:**
 ```bash
-$ ai-feature deploy --feature-id feature-auth-123
+$ codepipe deploy --feature-id feature-auth-123
 ✓ Merge readiness assessed: eligible
 ✓ Strategy selected: AUTO_MERGE
 ✓ Auto-merge enabled on PR #42
@@ -725,7 +725,7 @@ $ ai-feature deploy --feature-id feature-auth-123
 
 **Initial Attempt:**
 ```bash
-$ ai-feature deploy --feature-id feature-auth-123
+$ codepipe deploy --feature-id feature-auth-123
 ✓ Strategy selected: AUTO_MERGE
 ❌ Failed to enable auto-merge: Repository auto-merge feature disabled
 Exit code: 1
@@ -738,7 +738,7 @@ Exit code: 1
 **Resume:**
 ```bash
 # Update RepoConfig: set enable_auto_merge = false
-$ ai-feature deploy --feature-id feature-auth-123
+$ codepipe deploy --feature-id feature-auth-123
 ✓ Strategy selected: MANUAL_MERGE
 ✓ PR #42 merged successfully
 ```
@@ -778,13 +778,13 @@ set -e
 FEATURE_ID="feature-auth-123"
 
 # Step 1: Ensure PR created
-ai-feature pr create --feature-id "$FEATURE_ID"
+codepipe pr create --feature-id "$FEATURE_ID"
 
 # Step 2: Check status (generates branch protection report)
-ai-feature status --feature-id "$FEATURE_ID"
+codepipe status --feature-id "$FEATURE_ID"
 
 # Step 3: Trigger deployment
-ai-feature deploy --feature-id "$FEATURE_ID"
+codepipe deploy --feature-id "$FEATURE_ID"
 
 echo "✓ Deployment initiated"
 ```
@@ -794,7 +794,7 @@ echo "✓ Deployment initiated"
 ### Example 2: CI/CD Pipeline Integration
 
 ```yaml
-# .github/workflows/ai-feature-deploy.yml
+# .github/workflows/codepipe-deploy.yml
 name: AI Feature Deploy
 
 on:
@@ -816,13 +816,13 @@ jobs:
           node-version: '24'
 
       - name: Install CLI
-        run: npm install -g @ai-feature/pipeline
+        run: npm install -g @codepipe/pipeline
 
       - name: Trigger Deployment
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          ai-feature deploy \
+          codepipe deploy \
             --feature-id "${{ github.event.inputs.feature_id }}" \
             --json > deployment-result.json
 
@@ -844,14 +844,14 @@ jobs:
 FEATURE_ID="hotfix-security-patch"
 
 # Deploy immediately, bypassing blockers
-ai-feature deploy \
+codepipe deploy \
   --feature-id "$FEATURE_ID" \
   --force \
   --merge-method squash
 
 # Notify team
 echo "⚠️  Emergency deployment completed"
-echo "Review audit trail: .ai-feature-pipeline/runs/$FEATURE_ID/deployment.json"
+echo "Review audit trail: .codepipe/runs/$FEATURE_ID/deployment.json"
 ```
 
 ---

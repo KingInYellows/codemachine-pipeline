@@ -513,7 +513,7 @@ const adapter = createBranchProtectionAdapter({
   owner: 'acme-corp',
   repo: 'api-service',
   token: process.env.GITHUB_TOKEN!,
-  runDir: '.ai-feature-pipeline/runs/feature-auth-123',
+  runDir: '.codepipe/runs/feature-auth-123',
 });
 
 const compliance = await adapter.evaluateCompliance({
@@ -586,7 +586,7 @@ console.log('Approved reviews:', approvedCount);
 Refresh branch protection report on:
 - PR creation
 - Pre-deployment checks
-- Manual `ai-feature status` invocation
+- Manual `codepipe status` invocation
 
 **Implementation:**
 
@@ -619,7 +619,7 @@ import { canProceedWithDeployment } from './workflows/branchProtectionReporter';
 
 const report = await loadReport(runDir);
 if (!report) {
-  throw new Error('Branch protection report not found. Run "ai-feature status" first.');
+  throw new Error('Branch protection report not found. Run "codepipe status" first.');
 }
 
 const { proceed, reason } = canProceedWithDeployment(report);

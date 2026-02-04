@@ -1,5 +1,5 @@
 {
-  "_comment": "Example RepoConfig for ai-feature-pipeline CLI - See docs/requirements/RepoConfig_schema.md for full documentation",
+  "_comment": "Example RepoConfig for codemachine-pipeline CLI - See docs/requirements/RepoConfig_schema.md for full documentation",
 
   "schema_version": "1.0.0",
 
@@ -55,7 +55,7 @@
     "timeout_minutes": 30,
     "context_token_budget": 32000,
     "logs_format": "ndjson",
-    "run_directory": ".ai-feature-pipeline/runs"
+    "run_directory": ".codepipe/runs"
   },
 
   "safety": {

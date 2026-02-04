@@ -60,7 +60,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 #### Doctor Command Enhancement
 
-- Added CodeMachine CLI availability check to `ai-feature doctor`
+- Added CodeMachine CLI availability check to `codepipe doctor`
   - Shows version when installed
   - Warns (non-blocking) when not installed with installation instructions
   - Respects custom `execution.codemachine_cli_path` configuration

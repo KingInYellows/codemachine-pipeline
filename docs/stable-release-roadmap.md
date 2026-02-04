@@ -1,6 +1,6 @@
 # Stable Release v1.0.0 Roadmap
 
-**Project:** ai-feature-pipeline
+**Project:** codemachine-pipeline
 **Timeline:** 6 weeks (3 milestones)
 **Linear Project:** [Stable Release](https://linear.app/kinginyellow/project/stable-release-27784972aa31)
 
@@ -144,7 +144,7 @@ CDMCH-81 (Docker CI) - Independent
 
 ### Success Criteria
 
-- [ ] `ai-feature health` executes in <1 second
+- [ ] `codepipe health` executes in <1 second
 - [ ] Quickstart guide completable in 5 minutes
 - [ ] All readiness checks pass
 - [ ] CHANGELOG updated with all changes
