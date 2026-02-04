@@ -15,7 +15,7 @@ This repository serves as a deterministic test environment for validating:
 
 ## Structure
 
-- `.ai-feature-pipeline/config.json` - Repository configuration
+- `.codepipe/config.json` - Repository configuration
 - `package.json` - Basic Node.js project manifest
 - `src/` - Stub source code directory
 - `docs/` - Stub documentation directory

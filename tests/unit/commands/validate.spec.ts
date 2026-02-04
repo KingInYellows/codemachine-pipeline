@@ -4,7 +4,7 @@ import { execSync } from 'node:child_process';
 
 describe('validate command', () => {
   const testDir = path.join(__dirname, '../../../.test-temp-validate');
-  const pipelineDir = path.join(testDir, '.ai-feature-pipeline');
+  const pipelineDir = path.join(testDir, '.codepipe');
   const binPath = path.join(__dirname, '../../../bin/run.js');
 
   beforeEach(() => {

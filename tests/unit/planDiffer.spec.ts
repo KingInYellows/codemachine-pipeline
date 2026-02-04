@@ -207,7 +207,7 @@ describe('comparePlanDiff', () => {
     const result = await comparePlanDiff(runDir);
 
     expect(result.recommendation).toBe(
-      'Specification changed. Re-run plan generation with: ai-feature plan --regenerate'
+      'Specification changed. Re-run plan generation with: codepipe plan --regenerate'
     );
   });
 
@@ -259,7 +259,7 @@ describe('comparePlanDiff', () => {
     expect(result.changed_fields).toHaveLength(2);
     // spec_hash_changed takes priority in recommendation
     expect(result.recommendation).toBe(
-      'Specification changed. Re-run plan generation with: ai-feature plan --regenerate'
+      'Specification changed. Re-run plan generation with: codepipe plan --regenerate'
     );
   });
 

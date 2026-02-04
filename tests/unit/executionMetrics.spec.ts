@@ -41,7 +41,7 @@ async function readNdjsonFile(filePath: string): Promise<LogEntry[]> {
 }
 
 function parsePrometheusMetric(content: string, metricName: string): number | null {
-  const fullMetricName = `ai_feature_pipeline_${metricName}`;
+  const fullMetricName = `codemachine_pipeline_${metricName}`;
   const lines = content.split('\n');
 
   for (const line of lines) {
@@ -57,7 +57,7 @@ function parsePrometheusMetric(content: string, metricName: string): number | nu
 }
 
 function countPrometheusMetricSamples(content: string, metricName: string): number {
-  const fullMetricName = `ai_feature_pipeline_${metricName}`;
+  const fullMetricName = `codemachine_pipeline_${metricName}`;
   const lines = content.split('\n');
   let count = 0;
 
@@ -199,9 +199,9 @@ describe('ExecutionMetricsHelper', () => {
       const metricsPath = path.join(tempDir, 'metrics', 'prometheus.txt');
       const content = await readPrometheusFile(metricsPath);
 
-      const expectedTotalMetric = 'ai_feature_pipeline_codemachine_execution_total{component="execution",engine="claude",run_id="test-run-123",status="success"} 1';
-      const expectedDurationCountMetric = 'ai_feature_pipeline_codemachine_execution_duration_ms_count{component="execution",engine="claude",run_id="test-run-123"} 1';
-      const expectedDurationSumMetric = 'ai_feature_pipeline_codemachine_execution_duration_ms_sum{component="execution",engine="claude",run_id="test-run-123"} 1234';
+      const expectedTotalMetric = 'codemachine_pipeline_codemachine_execution_total{component="execution",engine="claude",run_id="test-run-123",status="success"} 1';
+      const expectedDurationCountMetric = 'codemachine_pipeline_codemachine_execution_duration_ms_count{component="execution",engine="claude",run_id="test-run-123"} 1';
+      const expectedDurationSumMetric = 'codemachine_pipeline_codemachine_execution_duration_ms_sum{component="execution",engine="claude",run_id="test-run-123"} 1234';
 
       expect(content).toContain(expectedTotalMetric);
       expect(content).toContain(expectedDurationCountMetric);
@@ -221,7 +221,7 @@ describe('ExecutionMetricsHelper', () => {
       const metricsPath = path.join(tempDir, 'metrics', 'prometheus.txt');
       const content = await readPrometheusFile(metricsPath);
 
-      const expectedMetric = 'ai_feature_pipeline_codemachine_retry_total{component="execution",engine="codex",run_id="test-run-123"} 1';
+      const expectedMetric = 'codemachine_pipeline_codemachine_retry_total{component="execution",engine="codex",run_id="test-run-123"} 1';
       expect(content).toContain(expectedMetric);
     });
   });

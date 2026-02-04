@@ -47,7 +47,7 @@ describe('Smoke Test: Execution Flow Integration', () => {
   beforeEach(async () => {
     featureId = `smoke-test-${Date.now()}`;
     workspaceDir = await fs.mkdtemp(path.join(os.tmpdir(), 'smoke-exec-'));
-    pipelineDir = path.join(workspaceDir, '.ai-feature-pipeline');
+    pipelineDir = path.join(workspaceDir, '.codepipe');
     runsDir = path.join(pipelineDir, 'runs');
 
     await fs.mkdir(runsDir, { recursive: true });
@@ -427,7 +427,7 @@ index 0000000..abcdef1
 // Helper Functions
 
 async function copyFixtureConfig(targetDir: string): Promise<void> {
-  const fixtureConfigPath = path.join(FIXTURE_REPO, '.ai-feature-pipeline', 'config.json');
+  const fixtureConfigPath = path.join(FIXTURE_REPO, '.codepipe', 'config.json');
   const configContent = await fs.readFile(fixtureConfigPath, 'utf-8');
   await fs.mkdir(targetDir, { recursive: true });
   await fs.writeFile(path.join(targetDir, 'config.json'), configContent, 'utf-8');

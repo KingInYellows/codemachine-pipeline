@@ -4,7 +4,7 @@ import { execSync } from 'node:child_process';
 
 describe('status command', () => {
   const testDir = path.join(__dirname, '../../../.test-temp-status');
-  const pipelineDir = path.join(testDir, '.ai-feature-pipeline');
+  const pipelineDir = path.join(testDir, '.codepipe');
   const configPath = path.join(pipelineDir, 'config.json');
   const binPath = path.join(__dirname, '../../../bin/run.js');
 
@@ -176,7 +176,7 @@ describe('status command', () => {
   });
 
   describe('no run directory scenario', () => {
-    test('handles missing .ai-feature-pipeline directory gracefully', () => {
+    test('handles missing .codepipe directory gracefully', () => {
       try {
         execSync(`node ${binPath} status`, {
           cwd: testDir,

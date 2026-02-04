@@ -376,8 +376,8 @@ describe('MetricsCollector', () => {
       const metricsPath = path.join(tempDir, 'metrics', 'prometheus.txt');
       const content = await fs.readFile(metricsPath, 'utf-8');
 
-      expect(content).toContain('# TYPE ai_feature_pipeline_test_counter counter');
-      expect(content).toContain('ai_feature_pipeline_test_counter{label="value",run_id="run-123"} 8');
+      expect(content).toContain('# TYPE codemachine_pipeline_test_counter counter');
+      expect(content).toContain('codemachine_pipeline_test_counter{label="value",run_id="run-123"} 8');
     });
 
     it('should collect gauge metrics', async () => {
@@ -389,8 +389,8 @@ describe('MetricsCollector', () => {
       const metricsPath = path.join(tempDir, 'metrics', 'prometheus.txt');
       const content = await fs.readFile(metricsPath, 'utf-8');
 
-      expect(content).toContain('# TYPE ai_feature_pipeline_queue_depth gauge');
-      expect(content).toContain('ai_feature_pipeline_queue_depth{queue="main"} 42');
+      expect(content).toContain('# TYPE codemachine_pipeline_queue_depth gauge');
+      expect(content).toContain('codemachine_pipeline_queue_depth{queue="main"} 42');
     });
 
     it('should collect histogram metrics', async () => {
@@ -403,11 +403,11 @@ describe('MetricsCollector', () => {
       const metricsPath = path.join(tempDir, 'metrics', 'prometheus.txt');
       const content = await fs.readFile(metricsPath, 'utf-8');
 
-      expect(content).toContain('# TYPE ai_feature_pipeline_http_latency_bucket histogram');
-      expect(content).toContain('ai_feature_pipeline_http_latency_bucket{endpoint="/api/v1",le="250"} 1');
-      expect(content).toContain('ai_feature_pipeline_http_latency_bucket{endpoint="/api/v1",le="500"} 2');
-      expect(content).toContain('ai_feature_pipeline_http_latency_sum{endpoint="/api/v1"} 500');
-      expect(content).toContain('ai_feature_pipeline_http_latency_count{endpoint="/api/v1"} 2');
+      expect(content).toContain('# TYPE codemachine_pipeline_http_latency_bucket histogram');
+      expect(content).toContain('codemachine_pipeline_http_latency_bucket{endpoint="/api/v1",le="250"} 1');
+      expect(content).toContain('codemachine_pipeline_http_latency_bucket{endpoint="/api/v1",le="500"} 2');
+      expect(content).toContain('codemachine_pipeline_http_latency_sum{endpoint="/api/v1"} 500');
+      expect(content).toContain('codemachine_pipeline_http_latency_count{endpoint="/api/v1"} 2');
     });
   });
 
@@ -421,10 +421,10 @@ describe('MetricsCollector', () => {
       const metricsPath = path.join(tempDir, 'metrics', 'prometheus.txt');
       const content = await fs.readFile(metricsPath, 'utf-8');
 
-      expect(content).toContain('ai_feature_pipeline_queue_pending_count 10');
-      expect(content).toContain('ai_feature_pipeline_queue_completed_count 20');
-      expect(content).toContain('ai_feature_pipeline_queue_failed_count 3');
-      expect(content).toContain('ai_feature_pipeline_queue_depth 33');
+      expect(content).toContain('codemachine_pipeline_queue_pending_count 10');
+      expect(content).toContain('codemachine_pipeline_queue_completed_count 20');
+      expect(content).toContain('codemachine_pipeline_queue_failed_count 3');
+      expect(content).toContain('codemachine_pipeline_queue_depth 33');
     });
 
     it('should record rate limit metrics', async () => {
@@ -436,8 +436,8 @@ describe('MetricsCollector', () => {
       const metricsPath = path.join(tempDir, 'metrics', 'prometheus.txt');
       const content = await fs.readFile(metricsPath, 'utf-8');
 
-      expect(content).toContain('ai_feature_pipeline_rate_limit_remaining{provider="github"} 4500');
-      expect(content).toContain('ai_feature_pipeline_rate_limit_reset_timestamp{provider="github"} 1734256800');
+      expect(content).toContain('codemachine_pipeline_rate_limit_remaining{provider="github"} 4500');
+      expect(content).toContain('codemachine_pipeline_rate_limit_reset_timestamp{provider="github"} 1734256800');
     });
 
     it('should record HTTP request metrics', async () => {
@@ -450,9 +450,9 @@ describe('MetricsCollector', () => {
       const metricsPath = path.join(tempDir, 'metrics', 'prometheus.txt');
       const content = await fs.readFile(metricsPath, 'utf-8');
 
-      expect(content).toContain('ai_feature_pipeline_http_requests_total');
-      expect(content).toContain('ai_feature_pipeline_http_request_duration_ms_sum');
-      expect(content).toContain('ai_feature_pipeline_http_errors_total');
+      expect(content).toContain('codemachine_pipeline_http_requests_total');
+      expect(content).toContain('codemachine_pipeline_http_request_duration_ms_sum');
+      expect(content).toContain('codemachine_pipeline_http_errors_total');
     });
 
     it('should record token usage metrics', async () => {
@@ -464,9 +464,9 @@ describe('MetricsCollector', () => {
       const metricsPath = path.join(tempDir, 'metrics', 'prometheus.txt');
       const content = await fs.readFile(metricsPath, 'utf-8');
 
-      expect(content).toContain('ai_feature_pipeline_token_usage_prompt{model="gpt-4"');
-      expect(content).toContain('ai_feature_pipeline_token_usage_completion{model="gpt-4"');
-      expect(content).toContain('ai_feature_pipeline_token_usage_total{model="gpt-4"');
+      expect(content).toContain('codemachine_pipeline_token_usage_prompt{model="gpt-4"');
+      expect(content).toContain('codemachine_pipeline_token_usage_completion{model="gpt-4"');
+      expect(content).toContain('codemachine_pipeline_token_usage_total{model="gpt-4"');
     });
   });
 
@@ -480,8 +480,8 @@ describe('MetricsCollector', () => {
       const metricsPath = path.join(tempDir, 'metrics', 'prometheus.txt');
       const content = await fs.readFile(metricsPath, 'utf-8');
 
-      expect(content).toContain('# HELP ai_feature_pipeline_custom_counter A custom counter metric');
-      expect(content).toContain('# TYPE ai_feature_pipeline_custom_counter counter');
+      expect(content).toContain('# HELP codemachine_pipeline_custom_counter A custom counter metric');
+      expect(content).toContain('# TYPE codemachine_pipeline_custom_counter counter');
     });
 
     it('should escape label values', async () => {
@@ -582,7 +582,7 @@ describe('TraceManager', () => {
       const tracesPath = path.join(tempDir, 'telemetry', 'traces.json');
       const spans = await readTraceFile(tracesPath);
 
-      expect(spans[0].attributes['service.name']).toBe('ai-feature-pipeline');
+      expect(spans[0].attributes['service.name']).toBe('codemachine-pipeline');
       expect(spans[0].attributes.run_id).toBe('run-456');
     });
 

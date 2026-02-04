@@ -51,7 +51,7 @@ describe('Run Directory Manager', () => {
   let testFeatureId: string;
 
   beforeEach(async () => {
-    testBaseDir = await fs.mkdtemp(path.join(os.tmpdir(), 'ai-feature-test-'));
+    testBaseDir = await fs.mkdtemp(path.join(os.tmpdir(), 'codepipe-test-'));
     testFeatureId = `01JFTEST${Date.now()}`;
   });
 
