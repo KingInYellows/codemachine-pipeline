@@ -589,7 +589,7 @@ CLAUDE_FLOW_MEMORY_PATH=./data/memory
 ## 🔍 Doctor Health Checks
 
 Run `npx @claude-flow/cli@latest doctor` to check:
-- Node.js version (20+)
+- Node.js version (24+)
 - npm version (9+)
 - Git installation
 - Config file validity
