@@ -355,7 +355,7 @@ This guide provides solutions for common issues encountered when operating the A
 2. **Increase Timeout for Long Tasks**
    ```bash
    # Via environment variable (milliseconds)
-   export AI_FEATURE_TASK_TIMEOUT=3600000  # 1 hour
+   export AI_FEATURE_TASK_TIMEOUT_MS=3600000  # 1 hour
 
    # Or in config.json
    jq '.runtime.task_timeout_ms = 3600000' \
