@@ -52,5 +52,5 @@ CMD ["--help"]
 # Metadata
 LABEL maintainer="CodeMachine Team"
 LABEL description="Autonomous AI-powered feature development pipeline CLI"
-LABEL version="0.1.0"
+LABEL version="1.0.0"
 LABEL org.opencontainers.image.source="https://github.com/codemachine/ai-feature-pipeline"

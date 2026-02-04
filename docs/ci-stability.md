@@ -17,7 +17,7 @@ Required (merge gate):
 - `Docker Build`
   - `docker build -t ai-feature-pipeline:test .`
   - `docker run --rm ai-feature-pipeline:test --help`
-  - `docker run --rm ai-feature-pipeline:test doctor --json | python3 -m json.tool`
+  - `docker run --rm ai-feature-pipeline:test doctor --json | node -e "JSON.parse(require('fs').readFileSync(0,'utf8'))"`
 
 Optional (non-blocking signal):
 - `security/scan` (only the `npm audit` step is non-blocking; the advisory guard is still required)
@@ -48,7 +48,7 @@ Docker checks:
 ```bash
 docker build -t ai-feature-pipeline:test .
 docker run --rm ai-feature-pipeline:test --help
-docker run --rm ai-feature-pipeline:test doctor --json | python3 -m json.tool
+docker run --rm ai-feature-pipeline:test doctor --json | node -e "JSON.parse(require('fs').readFileSync(0,'utf8'))"
 ```
 
 If you need to reproduce CI determinism locally, use UTC:
@@ -81,6 +81,18 @@ TZ=UTC LANG=C.UTF-8 LC_ALL=C.UTF-8 npm test
 
 - Node.js 24+ and npm available.
 - Docker available and usable without elevated privileges.
-- Python 3 available for JSON validation in docker smoke test.
+- Node.js used for JSON validation in docker smoke test (no Python dependency).
 
 If any of the above are missing, CI should fail fast with a clear error.
+
+## Additional CI Features
+
+- **`workflow_dispatch` manual trigger**: The CI workflow can be triggered manually from the
+  GitHub Actions UI via the `workflow_dispatch` event. This is useful for re-running CI
+  without pushing a new commit.
+- **Graphite `optimize_ci` job**: The `optimize_ci` job uses the Graphite CI action
+  (`withgraphite/graphite-ci-action`) to skip redundant CI runs on stacked PRs. Downstream
+  jobs check `needs.optimize_ci.outputs.skip` and only run when the value is `'false'`.
+- **Codecov upload step**: After tests pass, coverage data (`./coverage/lcov.info`) is
+  uploaded to Codecov via `codecov/codecov-action@v4`. The upload is non-blocking
+  (`fail_ci_if_error: false`) and only runs on success.
