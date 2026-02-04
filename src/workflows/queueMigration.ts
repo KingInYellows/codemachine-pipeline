@@ -442,7 +442,7 @@ export async function ensureV2Format(
   logger.warn('⚠️ V1 queue format detected - auto-migration will be performed', {
     queue_dir: queueDir,
     feature_id: featureId,
-    recommendation: "Run 'ai-feature queue verify' after migration to confirm integrity",
+    recommendation: "Run 'codepipe queue verify' after migration to confirm integrity",
   });
   const result = await migrateV1ToV2(queueDir, featureId);
 

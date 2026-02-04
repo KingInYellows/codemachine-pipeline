@@ -75,7 +75,7 @@ export async function getV2IndexCache(runDir: string): Promise<V2IndexCache> {
       backup_path: migrationResult.result.backupPath,
       from_version: migrationResult.result.fromVersion,
       to_version: migrationResult.result.toVersion,
-      message: "Run 'ai-feature queue verify' to confirm migration integrity",
+      message: "Run 'codepipe queue verify' to confirm migration integrity",
     });
   }
 

@@ -331,7 +331,7 @@ export function loadRepoConfig(configPath: string): ValidationResult {
           {
             path: 'file',
             message: `Config file not found: ${configPath}`,
-            suggestion: 'Run "ai-feature init" to create the configuration file',
+            suggestion: 'Run "codepipe init" to create the configuration file',
           },
         ],
       };
@@ -715,7 +715,7 @@ export function formatValidationErrors(errors: ValidationError[]): string {
   lines.push('');
   lines.push('For detailed schema documentation, see:');
   lines.push('  docs/requirements/RepoConfig_schema.md');
-  lines.push('  .ai-feature-pipeline/templates/config.example.json');
+  lines.push('  .codepipe/templates/config.example.json');
 
   return lines.join('\n');
 }

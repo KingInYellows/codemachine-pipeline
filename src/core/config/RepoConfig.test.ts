@@ -267,8 +267,8 @@ describe('loadRepoConfig', () => {
   });
 
   it('should apply environment overrides', () => {
-    const originalEnv = process.env.AI_FEATURE_RUNTIME_MAX_CONCURRENT_TASKS;
-    process.env.AI_FEATURE_RUNTIME_MAX_CONCURRENT_TASKS = '7';
+    const originalEnv = process.env.CODEPIPE_RUNTIME_MAX_CONCURRENT_TASKS;
+    process.env.CODEPIPE_RUNTIME_MAX_CONCURRENT_TASKS = '7';
 
     const config = createDefaultConfig('https://github.com/org/repo.git');
     fs.writeFileSync(configPath, JSON.stringify(config, null, 2));
@@ -279,9 +279,9 @@ describe('loadRepoConfig', () => {
 
     // Cleanup
     if (originalEnv !== undefined) {
-      process.env.AI_FEATURE_RUNTIME_MAX_CONCURRENT_TASKS = originalEnv;
+      process.env.CODEPIPE_RUNTIME_MAX_CONCURRENT_TASKS = originalEnv;
     } else {
-      delete process.env.AI_FEATURE_RUNTIME_MAX_CONCURRENT_TASKS;
+      delete process.env.CODEPIPE_RUNTIME_MAX_CONCURRENT_TASKS;
     }
   });
 
@@ -367,11 +367,11 @@ describe('applyEnvironmentOverrides', () => {
 
   beforeEach(() => {
     originalEnv = {
-      AI_FEATURE_GITHUB_TOKEN: process.env.AI_FEATURE_GITHUB_TOKEN,
-      AI_FEATURE_LINEAR_API_KEY: process.env.AI_FEATURE_LINEAR_API_KEY,
-      AI_FEATURE_RUNTIME_AGENT_ENDPOINT: process.env.AI_FEATURE_RUNTIME_AGENT_ENDPOINT,
-      AI_FEATURE_RUNTIME_MAX_CONCURRENT_TASKS: process.env.AI_FEATURE_RUNTIME_MAX_CONCURRENT_TASKS,
-      AI_FEATURE_RUNTIME_TIMEOUT_MINUTES: process.env.AI_FEATURE_RUNTIME_TIMEOUT_MINUTES,
+      CODEPIPE_GITHUB_TOKEN: process.env.CODEPIPE_GITHUB_TOKEN,
+      CODEPIPE_LINEAR_API_KEY: process.env.CODEPIPE_LINEAR_API_KEY,
+      CODEPIPE_RUNTIME_AGENT_ENDPOINT: process.env.CODEPIPE_RUNTIME_AGENT_ENDPOINT,
+      CODEPIPE_RUNTIME_MAX_CONCURRENT_TASKS: process.env.CODEPIPE_RUNTIME_MAX_CONCURRENT_TASKS,
+      CODEPIPE_RUNTIME_TIMEOUT_MINUTES: process.env.CODEPIPE_RUNTIME_TIMEOUT_MINUTES,
     };
   });
 
@@ -386,23 +386,23 @@ describe('applyEnvironmentOverrides', () => {
   });
 
   it('should override GitHub token env var', () => {
-    process.env.AI_FEATURE_GITHUB_TOKEN = 'test-token';
+    process.env.CODEPIPE_GITHUB_TOKEN = 'test-token';
     const config = createDefaultConfig('https://github.com/org/repo.git');
     const overridden = applyEnvironmentOverrides(config);
 
-    expect(overridden.github.token_env_var).toBe('AI_FEATURE_GITHUB_TOKEN');
+    expect(overridden.github.token_env_var).toBe('CODEPIPE_GITHUB_TOKEN');
   });
 
   it('should override Linear API key env var', () => {
-    process.env.AI_FEATURE_LINEAR_API_KEY = 'test-key';
+    process.env.CODEPIPE_LINEAR_API_KEY = 'test-key';
     const config = createDefaultConfig('https://github.com/org/repo.git');
     const overridden = applyEnvironmentOverrides(config);
 
-    expect(overridden.linear.api_key_env_var).toBe('AI_FEATURE_LINEAR_API_KEY');
+    expect(overridden.linear.api_key_env_var).toBe('CODEPIPE_LINEAR_API_KEY');
   });
 
   it('should override agent endpoint', () => {
-    process.env.AI_FEATURE_RUNTIME_AGENT_ENDPOINT = 'https://agent.example.com';
+    process.env.CODEPIPE_RUNTIME_AGENT_ENDPOINT = 'https://agent.example.com';
     const config = createDefaultConfig('https://github.com/org/repo.git');
     const overridden = applyEnvironmentOverrides(config);
 
@@ -410,7 +410,7 @@ describe('applyEnvironmentOverrides', () => {
   });
 
   it('should override max concurrent tasks', () => {
-    process.env.AI_FEATURE_RUNTIME_MAX_CONCURRENT_TASKS = '5';
+    process.env.CODEPIPE_RUNTIME_MAX_CONCURRENT_TASKS = '5';
     const config = createDefaultConfig('https://github.com/org/repo.git');
     const overridden = applyEnvironmentOverrides(config);
 
@@ -418,7 +418,7 @@ describe('applyEnvironmentOverrides', () => {
   });
 
   it('should override timeout minutes', () => {
-    process.env.AI_FEATURE_RUNTIME_TIMEOUT_MINUTES = '60';
+    process.env.CODEPIPE_RUNTIME_TIMEOUT_MINUTES = '60';
     const config = createDefaultConfig('https://github.com/org/repo.git');
     const overridden = applyEnvironmentOverrides(config);
 
@@ -426,7 +426,7 @@ describe('applyEnvironmentOverrides', () => {
   });
 
   it('should handle invalid numeric env vars gracefully', () => {
-    process.env.AI_FEATURE_RUNTIME_MAX_CONCURRENT_TASKS = 'invalid';
+    process.env.CODEPIPE_RUNTIME_MAX_CONCURRENT_TASKS = 'invalid';
     const config = createDefaultConfig('https://github.com/org/repo.git');
     const overridden = applyEnvironmentOverrides(config);
 

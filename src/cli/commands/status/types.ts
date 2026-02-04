@@ -3,7 +3,7 @@ export type { ValidationMismatch } from '../../../workflows/branchProtectionRepo
 
 export const MANIFEST_FILE = 'manifest.json';
 export const MANIFEST_SCHEMA_DOC = 'docs/requirements/run_directory_schema.md';
-export const MANIFEST_TEMPLATE = '.ai-feature-pipeline/templates/run_manifest.json';
+export const MANIFEST_TEMPLATE = '.codepipe/templates/run_manifest.json';
 
 export type StatusFlags = {
   feature?: string;

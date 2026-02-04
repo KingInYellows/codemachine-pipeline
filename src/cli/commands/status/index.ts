@@ -131,7 +131,7 @@ export default class Status extends Command {
         throw new CliError(
           `Feature run directory not found: ${typedFlags.feature}`,
           CliErrorCode.RUN_DIR_NOT_FOUND,
-          { remediation: 'Check the feature ID with "ai-feature status" or start a new run with "ai-feature start".' }
+          { remediation: 'Check the feature ID with "codepipe status" or start a new run with "codepipe start".' }
         );
       }
 
@@ -371,7 +371,7 @@ export default class Status extends Command {
 
     if (!manifest) {
       payload.notes.push(
-        'No manifest found. Run "ai-feature start" to provision a new feature run directory.'
+        'No manifest found. Run "codepipe start" to provision a new feature run directory.'
       );
     }
 

@@ -90,7 +90,7 @@ export default class ResearchCreate extends Command {
     const featureId = await selectFeatureId(settings.baseDir, typedFlags.feature);
 
     if (!featureId) {
-      this.error('No feature run directory found. Use `ai-feature start` first.', { exit: 10 });
+      this.error('No feature run directory found. Use `codepipe start` first.', { exit: 10 });
     }
 
     if (typedFlags.feature && featureId !== typedFlags.feature) {

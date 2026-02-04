@@ -6,7 +6,7 @@
  * Implements:
  * - FR-15: PR automation
  * - Section 2: Communication Patterns (PR orchestration, reviewer assignment)
- * - Section 3.10.4: `ai-feature pr reviewers` command flow
+ * - Section 3.10.4: `codepipe pr reviewers` command flow
  */
 
 import { Command, Flags } from '@oclif/core';
@@ -81,7 +81,7 @@ export default class PRReviewers extends Command {
       const featureId = await selectFeatureId(settings.baseDir, typedFlags.feature);
 
       if (!featureId) {
-        this.error('No feature run directory found. Run "ai-feature start" first.', {
+        this.error('No feature run directory found. Run "codepipe start" first.', {
           exit: PRExitCode.VALIDATION_ERROR,
         });
       }
@@ -111,7 +111,7 @@ export default class PRReviewers extends Command {
         // Check if PR exists
         if (!prMetadata) {
           logger.error('No PR found for feature', { feature_id: featureId });
-          this.error('No pull request found for this feature. Run "ai-feature pr create" first.', {
+          this.error('No pull request found for this feature. Run "codepipe pr create" first.', {
             exit: PRExitCode.VALIDATION_ERROR,
           });
         }

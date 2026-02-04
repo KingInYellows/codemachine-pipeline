@@ -175,11 +175,11 @@ export default class Start extends Command {
       const message =
         settings.errors.length > 0
           ? settings.errors.join('\n')
-          : 'Repository not initialized. Run "ai-feature init" first.';
+          : 'Repository not initialized. Run "codepipe init" first.';
       const cliErr = new CliError(
         message,
         CliErrorCode.CONFIG_NOT_FOUND,
-        { remediation: 'Run "ai-feature init" to initialize the repository configuration.' }
+        { remediation: 'Run "codepipe init" to initialize the repository configuration.' }
       );
       if (typedFlags.json) {
         this.log(JSON.stringify(formatErrorJson(cliErr), null, 2));
@@ -715,7 +715,7 @@ export default class Start extends Command {
 
       if (payload.execution.failed > 0) {
         this.warn(
-          `  Warning: ${payload.execution.failed} task(s) failed. Use 'ai-feature resume' to retry.`
+          `  Warning: ${payload.execution.failed} task(s) failed. Use 'codepipe resume' to retry.`
         );
       }
     }
@@ -723,8 +723,8 @@ export default class Start extends Command {
     if (payload.approvals.required) {
       this.log('\n✅ PRD draft created. Approval required before continuing.');
       this.log(`Review the document at ${payload.prd.path}, then run:`);
-      this.log(`  ai-feature approve prd --feature ${payload.feature_id} --signer "<email>"`);
-      this.log('Need edits? Request revisions via: ai-feature prd edit --request "<details>"');
+      this.log(`  codepipe approve prd --feature ${payload.feature_id} --signer "<email>"`);
+      this.log('Need edits? Request revisions via: codepipe prd edit --request "<details>"');
       this.log('');
     } else if (!payload.execution) {
       this.log('\nPRD approved automatically based on configuration.');

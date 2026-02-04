@@ -6,7 +6,7 @@
  * Implements:
  * - FR-15: PR automation
  * - Section 2: Communication Patterns (auto-merge management)
- * - Section 3.10.4: `ai-feature pr disable-auto-merge` command flow
+ * - Section 3.10.4: `codepipe pr disable-auto-merge` command flow
  */
 
 import { Command, Flags } from '@oclif/core';
@@ -81,7 +81,7 @@ export default class PRDisableAutoMerge extends Command {
       const featureId = await selectFeatureId(settings.baseDir, typedFlags.feature);
 
       if (!featureId) {
-        this.error('No feature run directory found. Run "ai-feature start" first.', {
+        this.error('No feature run directory found. Run "codepipe start" first.', {
           exit: PRExitCode.VALIDATION_ERROR,
         });
       }
@@ -111,7 +111,7 @@ export default class PRDisableAutoMerge extends Command {
         // Check if PR exists
         if (!prMetadata) {
           logger.error('No PR found for feature', { feature_id: featureId });
-          this.error('No pull request found for this feature. Run "ai-feature pr create" first.', {
+          this.error('No pull request found for this feature. Run "codepipe pr create" first.', {
             exit: PRExitCode.VALIDATION_ERROR,
           });
         }

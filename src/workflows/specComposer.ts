@@ -174,14 +174,14 @@ export async function composeSpecification(
   if (!prdApproved) {
     throw new Error(
       'PRD must be approved before generating specification. ' +
-        'Use `ai-feature approve prd` to approve the PRD first. (Exit code: 30)'
+        'Use `codepipe approve prd` to approve the PRD first. (Exit code: 30)'
     );
   }
 
   // Step 2: Load PRD metadata and document
   const prdMetadata = await loadPRDMetadata(config.runDir);
   if (!prdMetadata) {
-    throw new Error('PRD metadata not found. Generate PRD first using `ai-feature start`.');
+    throw new Error('PRD metadata not found. Generate PRD first using `codepipe start`.');
   }
 
   const artifactsDir = getSubdirectoryPath(config.runDir, 'artifacts');

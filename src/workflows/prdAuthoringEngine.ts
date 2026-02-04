@@ -401,7 +401,7 @@ export async function draftPRD(
   const prdDocument: PRDDocument = {
     featureId: config.feature.feature_id,
     title: config.feature.title ?? 'Untitled Feature',
-    author: 'ai-feature-pipeline',
+    author: 'codemachine-pipeline',
     createdAt: now,
     updatedAt: now,
     status: 'draft',

@@ -503,7 +503,7 @@ function generateRecommendations(analysis: ResumeAnalysis): void {
         );
       } else if (blocker.code === 'QUEUE_CORRUPTED') {
         analysis.recommendations.push(
-          `   • Queue files are corrupted. Run 'ai-feature queue validate --feature ${analysis.featureId}' and rebuild with 'ai-feature queue rebuild --feature ${analysis.featureId} --from-plan'`
+          `   • Queue files are corrupted. Run 'codepipe queue validate --feature ${analysis.featureId}' and rebuild with 'codepipe queue rebuild --feature ${analysis.featureId} --from-plan'`
         );
       } else {
         analysis.recommendations.push(`   • ${blocker.message}`);
@@ -529,7 +529,7 @@ function generateRecommendations(analysis: ResumeAnalysis): void {
         analysis.recommendations.push('   • Review failed tasks in queue before resuming');
       } else if (warning.code === 'QUEUE_VALIDATION_WARNINGS') {
         analysis.recommendations.push(
-          `   • Inspect queue warnings with 'ai-feature queue validate --feature ${analysis.featureId} --verbose'`
+          `   • Inspect queue warnings with 'codepipe queue validate --feature ${analysis.featureId} --verbose'`
         );
       }
     }
