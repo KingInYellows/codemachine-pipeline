@@ -50,7 +50,7 @@ Autonomous AI-powered feature development pipeline CLI
 - See [Log Rotation Guide](docs/operations/log-rotation.md) for details
 
 ### Developer Experience
-- **868 unit tests** with 100% pass rate across all modules
+- **Comprehensive test suite** with 100% pass rate across all modules
 - **Performance benchmarks**: Automated regression detection for O(1) guarantees
 - **Detailed documentation**: Operational guides, troubleshooting, best practices
 - **Automated verification**: Security scanning, test coverage, code quality checks
@@ -67,8 +67,8 @@ npm install -g ai-feature-pipeline
 ### From source
 
 ```bash
-git clone https://github.com/codemachine/ai-feature-pipeline.git
-cd ai-feature-pipeline
+git clone https://github.com/KingInYellows/codemachine-pipeline.git
+cd codemachine-pipeline
 npm install
 npm run build
 npm link
@@ -308,7 +308,7 @@ ai-feature doctor --verbose
 
 **Checks Performed:**
 
-- Node.js version (v20+ required, v24 preferred)
+- Node.js version (v24.0.0 or higher required)
 - Git installation and repository detection
 - npm installation
 - Docker availability (optional)
@@ -490,11 +490,19 @@ ai-feature rate-limits --json
 
 ---
 
+### PR Commands
+
+Manage pull requests for completed features:
+
+- `ai-feature pr create`: Create a pull request for a completed feature
+- `ai-feature pr status`: Show PR status and check results
+- `ai-feature pr reviewers`: Manage PR reviewer assignments
+- `ai-feature pr disable-auto-merge`: Disable auto-merge on a pull request
+
 ### Planned Commands
 
 The following commands are planned for future releases:
 
-- `ai-feature pr create`: Create a pull request for a completed feature
 - `ai-feature deploy`: Trigger deployment for a merged feature
 - `ai-feature export`: Export feature artifacts in JSON or Markdown format
 
@@ -516,8 +524,8 @@ npm run build
 
 ```bash
 npm test
-npm run test:watch
-npm run test:coverage
+npm run test:config:watch    # Config-scoped test watcher
+npm run test:config:coverage  # Config-scoped coverage report
 ```
 
 ### Linting
@@ -620,7 +628,7 @@ JSON output follows a consistent schema with `status`, `message`, and command-sp
 ## Project Structure
 
 ```
-ai-feature-pipeline/
+codemachine-pipeline/
 ├── src/
 │   ├── cli/               # CLI presentation layer
 │   │   ├── commands/      # oclif command implementations
@@ -679,7 +687,7 @@ ai-feature-pipeline/
 The project uses GitHub Actions for continuous integration:
 
 - **Linting**: ESLint with TypeScript support
-- **Testing**: Jest with coverage reporting
+- **Testing**: Vitest with coverage reporting
 - **Building**: TypeScript compilation
 - **Docker**: Multi-stage build verification
 

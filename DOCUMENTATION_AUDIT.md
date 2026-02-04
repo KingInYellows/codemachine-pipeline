@@ -1,3 +1,5 @@
+> **Historical snapshot (2025-12-30).** Codebase metrics are outdated (claimed 86 .ts files; actual: 117). See docs/audit/AUDIT_REPORT.md for current audit.
+
 # Codemachine Pipeline - Inline Documentation Report
 
 **Date:** December 30, 2025

@@ -1,3 +1,5 @@
+> **Historical snapshot (2025-12-30).** File counts are outdated. See docs/README.md for current documentation index.
+
 # Complete Documentation Inventory Report
 ## ai-feature-pipeline (codemachine-pipeline)
 
