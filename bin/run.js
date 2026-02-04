@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-// Production entry point for ai-feature CLI
+// Production entry point for codepipe CLI
 // Force compiled sources even in test/dev NODE_ENV to avoid ts-node auto-transpile.
 globalThis.oclif = globalThis.oclif ?? {};
 globalThis.oclif.enableAutoTranspile = false;
