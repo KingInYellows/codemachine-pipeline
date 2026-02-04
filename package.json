@@ -1,5 +1,5 @@
 {
-  "name": "ai-feature-pipeline",
+  "name": "codemachine-pipeline",
   "version": "1.0.0",
   "description": "Autonomous AI-powered feature development pipeline CLI",
   "author": "CodeMachine Team",
@@ -7,7 +7,7 @@
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "bin": {
-    "ai-feature": "./bin/run.js"
+    "codepipe": "./bin/run.js"
   },
   "engines": {
     "node": ">=24.0.0"
@@ -36,7 +36,7 @@
     "smoke:help": "./bin/run.js --help",
     "smoke:init": "./bin/run.js init --help",
     "dev": "./bin/dev.js",
-    "validate:config": "node -e \"require('./dist/core/config/RepoConfig').loadRepoConfig('.ai-feature-pipeline/config.json')\"",
+    "validate:config": "node -e \"require('./dist/core/config/RepoConfig').loadRepoConfig('.codepipe/config.json')\"",
     "prepack": "npm run clean && npm run build",
     "postpack": "npm run clean",
     "prepare": "npm run build"
@@ -72,8 +72,8 @@
     "test-exclude": "^7.0.1"
   },
   "oclif": {
-    "bin": "ai-feature",
-    "dirname": "ai-feature",
+    "bin": "codepipe",
+    "dirname": "codepipe",
     "commands": "./dist/cli/commands",
     "topicSeparator": " "
   },

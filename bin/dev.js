@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-// Development entry point for ai-feature CLI
+// Development entry point for codepipe CLI
 // Uses ts-node to run TypeScript source directly without building
 
 const path = require('path');

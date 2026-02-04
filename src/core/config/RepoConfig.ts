@@ -146,7 +146,7 @@ const RuntimeSchema = z.object({
     .default(5)
     .describe('Maximum USD spend for context summarization'),
   logs_format: z.enum(['ndjson', 'json', 'text']).default('ndjson'),
-  run_directory: z.string().default('.ai-feature-pipeline/runs'),
+  run_directory: z.string().default('.codepipe/runs'),
 });
 
 export type Runtime = z.infer<typeof RuntimeSchema>;
@@ -477,17 +477,17 @@ function generateSuggestion(path: string, message: string): string | undefined {
 
 /**
  * Apply environment variable overrides to config
- * Follows AI_FEATURE_<SECTION>_<FIELD> naming convention
+ * Follows CODEPIPE_<SECTION>_<FIELD> naming convention
  *
  * Supported overrides:
- * - AI_FEATURE_GITHUB_TOKEN -> github.token_env_var
- * - AI_FEATURE_LINEAR_API_KEY -> linear.api_key_env_var
- * - AI_FEATURE_RUNTIME_AGENT_ENDPOINT -> runtime.agent_endpoint
- * - AI_FEATURE_RUNTIME_MAX_CONCURRENT_TASKS -> runtime.max_concurrent_tasks
- * - AI_FEATURE_RUNTIME_TIMEOUT_MINUTES -> runtime.timeout_minutes
- * - AI_FEATURE_EXECUTION_CLI_PATH -> execution.codemachine_cli_path
- * - AI_FEATURE_EXECUTION_DEFAULT_ENGINE -> execution.default_engine
- * - AI_FEATURE_EXECUTION_TIMEOUT_MS -> execution.task_timeout_ms
+ * - CODEPIPE_GITHUB_TOKEN -> github.token_env_var
+ * - CODEPIPE_LINEAR_API_KEY -> linear.api_key_env_var
+ * - CODEPIPE_RUNTIME_AGENT_ENDPOINT -> runtime.agent_endpoint
+ * - CODEPIPE_RUNTIME_MAX_CONCURRENT_TASKS -> runtime.max_concurrent_tasks
+ * - CODEPIPE_RUNTIME_TIMEOUT_MINUTES -> runtime.timeout_minutes
+ * - CODEPIPE_EXECUTION_CLI_PATH -> execution.codemachine_cli_path
+ * - CODEPIPE_EXECUTION_DEFAULT_ENGINE -> execution.default_engine
+ * - CODEPIPE_EXECUTION_TIMEOUT_MS -> execution.task_timeout_ms
  *
  * @param config Base configuration
  * @returns Config with environment overrides applied
@@ -496,24 +496,24 @@ export function applyEnvironmentOverrides(config: RepoConfig): RepoConfig {
   const overridden = { ...config };
 
   // GitHub overrides
-  const githubToken = process.env.AI_FEATURE_GITHUB_TOKEN;
+  const githubToken = process.env.CODEPIPE_GITHUB_TOKEN;
   if (githubToken) {
-    overridden.github = { ...overridden.github, token_env_var: 'AI_FEATURE_GITHUB_TOKEN' };
+    overridden.github = { ...overridden.github, token_env_var: 'CODEPIPE_GITHUB_TOKEN' };
   }
 
   // Linear overrides
-  const linearKey = process.env.AI_FEATURE_LINEAR_API_KEY;
+  const linearKey = process.env.CODEPIPE_LINEAR_API_KEY;
   if (linearKey) {
-    overridden.linear = { ...overridden.linear, api_key_env_var: 'AI_FEATURE_LINEAR_API_KEY' };
+    overridden.linear = { ...overridden.linear, api_key_env_var: 'CODEPIPE_LINEAR_API_KEY' };
   }
 
   // Runtime overrides
-  const agentEndpoint = process.env.AI_FEATURE_RUNTIME_AGENT_ENDPOINT;
+  const agentEndpoint = process.env.CODEPIPE_RUNTIME_AGENT_ENDPOINT;
   if (agentEndpoint) {
     overridden.runtime = { ...overridden.runtime, agent_endpoint: agentEndpoint };
   }
 
-  const maxConcurrentTasks = process.env.AI_FEATURE_RUNTIME_MAX_CONCURRENT_TASKS;
+  const maxConcurrentTasks = process.env.CODEPIPE_RUNTIME_MAX_CONCURRENT_TASKS;
   if (maxConcurrentTasks) {
     const parsed = parseInt(maxConcurrentTasks, 10);
     if (!isNaN(parsed)) {
@@ -521,7 +521,7 @@ export function applyEnvironmentOverrides(config: RepoConfig): RepoConfig {
     }
   }
 
-  const timeoutMinutes = process.env.AI_FEATURE_RUNTIME_TIMEOUT_MINUTES;
+  const timeoutMinutes = process.env.CODEPIPE_RUNTIME_TIMEOUT_MINUTES;
   if (timeoutMinutes) {
     const parsed = parseInt(timeoutMinutes, 10);
     if (!isNaN(parsed)) {
@@ -529,12 +529,12 @@ export function applyEnvironmentOverrides(config: RepoConfig): RepoConfig {
     }
   }
 
-  const codemachineCliPath = process.env.AI_FEATURE_EXECUTION_CLI_PATH;
+  const codemachineCliPath = process.env.CODEPIPE_EXECUTION_CLI_PATH;
   if (codemachineCliPath && overridden.execution) {
     overridden.execution = { ...overridden.execution, codemachine_cli_path: codemachineCliPath };
   }
 
-  const defaultEngine = process.env.AI_FEATURE_EXECUTION_DEFAULT_ENGINE;
+  const defaultEngine = process.env.CODEPIPE_EXECUTION_DEFAULT_ENGINE;
   if (defaultEngine && overridden.execution) {
     if (ExecutionEngineType.safeParse(defaultEngine).success) {
       overridden.execution = {
@@ -544,7 +544,7 @@ export function applyEnvironmentOverrides(config: RepoConfig): RepoConfig {
     }
   }
 
-  const taskTimeoutMs = process.env.AI_FEATURE_EXECUTION_TIMEOUT_MS;
+  const taskTimeoutMs = process.env.CODEPIPE_EXECUTION_TIMEOUT_MS;
   if (taskTimeoutMs && overridden.execution) {
     const parsed = parseInt(taskTimeoutMs, 10);
     if (!isNaN(parsed) && parsed >= 60000) {
@@ -573,7 +573,7 @@ export function createDefaultConfig(
   repoUrl: string,
   options?: { includeGovernance?: boolean; changedBy?: string }
 ): RepoConfig {
-  const { includeGovernance = true, changedBy = 'ai-feature init' } = options || {};
+  const { includeGovernance = true, changedBy = 'codepipe init' } = options || {};
 
   // Extract project ID from repo URL
   const projectId = repoUrl.split('/').pop()?.replace('.git', '') || 'unknown-project';
@@ -610,7 +610,7 @@ export function createDefaultConfig(
       context_token_budget: 32000,
       context_cost_budget_usd: 5,
       logs_format: 'ndjson',
-      run_directory: '.ai-feature-pipeline/runs',
+      run_directory: '.codepipe/runs',
     },
     safety: {
       redact_secrets: true,
