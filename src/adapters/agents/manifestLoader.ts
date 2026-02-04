@@ -703,7 +703,7 @@ export async function loadManifestLoaderFromRepo(
     loader.setCostTracker(costTracker);
   }
 
-  const manifestDir = path.join(repoRoot, '.ai-feature-pipeline', 'agents');
+  const manifestDir = path.join(repoRoot, '.codepipe', 'agents');
   const { errors } = await loader.loadManifestsFromDirectory(manifestDir);
 
   return { loader, errors };

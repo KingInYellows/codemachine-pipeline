@@ -43,7 +43,7 @@ interface ConfigValidationPayload {
 }
 
 /**
- * Init command - Initialize ai-feature-pipeline in the current repository
+ * Init command - Initialize codemachine-pipeline in the current repository
  * Implements FR-1: Initialize RepoConfig with git detection and directory setup
  * Implements FR-17: Schema-backed configuration with credentials validation
  *
@@ -54,7 +54,7 @@ interface ConfigValidationPayload {
  * - 30: Credential issue (missing tokens, invalid scopes)
  */
 export default class Init extends Command {
-  static description = 'Initialize ai-feature-pipeline with schema-validated configuration';
+  static description = 'Initialize codemachine-pipeline with schema-validated configuration';
 
   static examples = [
     '<%= config.bin %> <%= command.id %>',
@@ -108,7 +108,7 @@ export default class Init extends Command {
     try {
       // Step 1: Detect git repository root
       const gitRoot = this.findGitRoot();
-      const pipelineDir = path.join(gitRoot, '.ai-feature-pipeline');
+      const pipelineDir = path.join(gitRoot, '.codepipe');
       const configPath = path.join(pipelineDir, 'config.json');
       const logsDir = path.join(pipelineDir, 'logs');
       const telemetryEnabled = !flags['dry-run'];
@@ -245,8 +245,8 @@ export default class Init extends Command {
         process.stdout.isTTY
       ) {
         const promptMessage = flags.force
-          ? 'This will overwrite existing .ai-feature-pipeline/config.json. Continue?'
-          : `Proceed with creating .ai-feature-pipeline scaffolding at ${pipelineDir}?`;
+          ? 'This will overwrite existing .codepipe/config.json. Continue?'
+          : `Proceed with creating .codepipe scaffolding at ${pipelineDir}?`;
         const confirmed = await this.promptForConfirmation(promptMessage);
 
         if (!confirmed) {
@@ -318,11 +318,11 @@ export default class Init extends Command {
         manifest_schema_doc: 'docs/requirements/run_directory_schema.md',
         readiness_checklist: 'plan/readiness_checklist.md',
         next_steps: [
-          'Review and edit: .ai-feature-pipeline/config.json',
+          'Review and edit: .codepipe/config.json',
           'Enable integrations and set credentials (GITHUB_TOKEN, LINEAR_API_KEY, AGENT_ENDPOINT)',
-          'Validate configuration: ai-feature init --validate-only',
-          'Check environment: ai-feature doctor',
-          'Start a feature: ai-feature start --prompt "your feature description"',
+          'Validate configuration: codepipe init --validate-only',
+          'Check environment: codepipe doctor',
+          'Start a feature: codepipe start --prompt "your feature description"',
         ],
       };
 
@@ -344,7 +344,7 @@ export default class Init extends Command {
         if (flags['dry-run']) {
           this.log('✓ Dry run completed successfully (no files written)');
         } else {
-          this.log('✓ ai-feature-pipeline initialized successfully!');
+          this.log('✓ codemachine-pipeline initialized successfully!');
         }
         this.log('');
         this.log('Configuration file: ' + configPath);
@@ -659,12 +659,12 @@ export default class Init extends Command {
         config_path: configPath,
         exit_code: 10,
         message: `Configuration file not found: ${configPath}`,
-        suggestion: 'Run "ai-feature init" first to create configuration.',
+        suggestion: 'Run "codepipe init" first to create configuration.',
       };
 
       if (!jsonMode) {
         this.log(`\n❌ Configuration file not found: ${configPath}\n`);
-        this.log('Run "ai-feature init" first to create configuration.\n');
+        this.log('Run "codepipe init" first to create configuration.\n');
       }
 
       return payload;

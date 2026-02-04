@@ -115,7 +115,7 @@ export default class Validate extends Command {
 
       if (!featureId) {
         this.error(
-          'No feature run directory found. Run "ai-feature start" to create a feature, or specify --feature <feature-id>',
+          'No feature run directory found. Run "codepipe start" to create a feature, or specify --feature <feature-id>',
           { exit: 1 }
         );
       }
@@ -163,7 +163,7 @@ export default class Validate extends Command {
       if (!registry) {
         logger.error('Validation registry not initialized');
         this.error(
-          'Validation registry not found. Run "ai-feature validate --init" to initialize from config.',
+          'Validation registry not found. Run "codepipe validate --init" to initialize from config.',
           { exit: 1 }
         );
       }
@@ -361,7 +361,7 @@ export default class Validate extends Command {
       this.log(`    Max retries: ${cmd.max_retries}, Timeout: ${cmd.timeout_ms}ms`);
     }
     this.log('');
-    this.log('Run "ai-feature validate" to execute validation commands.');
+    this.log('Run "codepipe validate" to execute validation commands.');
     this.log('');
 
     metrics.increment(StandardMetrics.COMMAND_INVOCATIONS_TOTAL, {

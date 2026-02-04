@@ -413,7 +413,7 @@ export async function assessMergeReadiness(
       blockers.push({
         type: 'protection',
         message: 'PR is blocked by branch protection rules',
-        recommended_action: 'Run "ai-feature status" to check specific protection requirements',
+        recommended_action: 'Run "codepipe status" to check specific protection requirements',
       });
     }
   }
@@ -430,7 +430,7 @@ export async function assessMergeReadiness(
       type: 'approvals',
       message: `${pendingList.length} approval(s) pending: ${pendingList.join(', ')}`,
       recommended_action:
-        'Collect required approvals with "ai-feature approve <gate>" or rerun with --force when authorized',
+        'Collect required approvals with "codepipe approve <gate>" or rerun with --force when authorized',
       metadata: {
         pending_approvals: pendingList,
       },

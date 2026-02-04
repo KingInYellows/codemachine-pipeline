@@ -10,7 +10,7 @@ import type { StructuredLogger } from '../../telemetry/logger';
 import type { MetricsCollector } from '../../telemetry/metrics';
 import type { TraceManager, ActiveSpan } from '../../telemetry/traces';
 
-const CONFIG_RELATIVE_PATH = path.join('.ai-feature-pipeline', 'config.json');
+const CONFIG_RELATIVE_PATH = path.join('.codepipe', 'config.json');
 
 /**
  * Diagnostic check result
@@ -90,7 +90,7 @@ export default class Doctor extends Command {
 
     try {
       // Try to initialize telemetry. Create local directories if missing.
-      const pipelineDir = path.join(process.cwd(), '.ai-feature-pipeline');
+      const pipelineDir = path.join(process.cwd(), '.codepipe');
       const logsDir = path.join(pipelineDir, 'logs');
       let telemetryReady = false;
 
@@ -484,7 +484,7 @@ export default class Doctor extends Command {
    */
   private checkFilesystemPermissions(): DiagnosticCheck {
     try {
-      const testDir = path.join(process.cwd(), '.ai-feature-pipeline', '.doctor-test');
+      const testDir = path.join(process.cwd(), '.codepipe', '.doctor-test');
       fs.mkdirSync(testDir, { recursive: true });
       const testFile = path.join(testDir, 'test.txt');
       fs.writeFileSync(testFile, 'test', 'utf-8');
@@ -500,7 +500,7 @@ export default class Doctor extends Command {
       return {
         name: 'Filesystem Permissions',
         status: 'fail',
-        message: 'Unable to write to .ai-feature-pipeline directory',
+        message: 'Unable to write to .codepipe directory',
         remediation: 'Check directory permissions and ensure write access',
       };
     }
@@ -570,7 +570,7 @@ export default class Doctor extends Command {
         name: 'RepoConfig',
         status: 'warn',
         message: 'Configuration file not found',
-        remediation: 'Run "ai-feature init" to create configuration',
+        remediation: 'Run "codepipe init" to create configuration',
         details: { config_path: configPath },
       };
     }
@@ -582,7 +582,7 @@ export default class Doctor extends Command {
         name: 'RepoConfig',
         status: 'fail',
         message: 'Configuration validation failed',
-        remediation: 'Run "ai-feature init --validate-only" for details',
+        remediation: 'Run "codepipe init --validate-only" for details',
         details: {
           config_path: configPath,
           error_count: result.errors?.length || 0,
@@ -595,7 +595,7 @@ export default class Doctor extends Command {
         name: 'RepoConfig',
         status: 'warn',
         message: `Configuration valid with ${result.warnings.length} warning(s)`,
-        remediation: 'Review warnings with "ai-feature init --validate-only"',
+        remediation: 'Review warnings with "codepipe init --validate-only"',
         details: {
           config_path: configPath,
           warning_count: result.warnings.length,
@@ -668,7 +668,7 @@ export default class Doctor extends Command {
         name: 'Environment Variables',
         status: 'warn',
         message: 'Cannot check environment variables (config not found)',
-        remediation: 'Run "ai-feature init" first',
+        remediation: 'Run "codepipe init" first',
       });
       return checks;
     }
@@ -818,7 +818,7 @@ export default class Doctor extends Command {
 
     // Overall status
     if (payload.status === 'healthy') {
-      this.log('✓ System is ready for ai-feature-pipeline operations');
+      this.log('✓ System is ready for codemachine-pipeline operations');
     } else if (payload.status === 'issues_detected') {
       this.log('⚠ System is operational but has warnings that should be addressed');
     } else {

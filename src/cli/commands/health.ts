@@ -3,7 +3,7 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { loadRepoConfig } from '../../core/config/repo_config';
 
-const CONFIG_RELATIVE_PATH = path.join('.ai-feature-pipeline', 'config.json');
+const CONFIG_RELATIVE_PATH = path.join('.codepipe', 'config.json');
 const MIN_FREE_DISK_MB = 100;
 
 /**
@@ -124,7 +124,7 @@ export default class Health extends Command {
   }
 
   private checkRunDirWritable(): HealthCheck {
-    const runsDir = path.resolve(process.cwd(), '.ai-feature-pipeline', 'runs');
+    const runsDir = path.resolve(process.cwd(), '.codepipe', 'runs');
 
     try {
       // Ensure directory exists

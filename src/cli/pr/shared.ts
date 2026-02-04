@@ -114,10 +114,10 @@ export async function loadPRContext(
   // Validate GitHub integration is enabled
   if (!config.github.enabled) {
     logger.error('GitHub integration disabled', {
-      config_path: '.ai-feature-pipeline/config.json',
+      config_path: '.codepipe/config.json',
     });
     throw new Error(
-      'GitHub integration is disabled. Enable it in .ai-feature-pipeline/config.json'
+      'GitHub integration is disabled. Enable it in .codepipe/config.json'
     );
   }
 

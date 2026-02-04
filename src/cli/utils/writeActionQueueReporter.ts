@@ -277,8 +277,8 @@ function generateRecommendations(report: WriteActionQueueReport): string[] {
   // High backlog
   if (report.backlog >= BACKLOG_WARNING_THRESHOLD) {
     recommendations.push('Consider increasing concurrency limit if no rate limits are active');
-    recommendations.push('Check rate limit status: ai-feature rate-limits');
-    recommendations.push('Drain queue: ai-feature resume (will process pending actions)');
+    recommendations.push('Check rate limit status: codepipe rate-limits');
+    recommendations.push('Drain queue: codepipe resume (will process pending actions)');
   }
 
   // Many failures
@@ -286,7 +286,7 @@ function generateRecommendations(report: WriteActionQueueReport): string[] {
     recommendations.push('Review failed actions in queue logs');
     recommendations.push('Check for auth errors or API permission issues');
     recommendations.push(
-      'Clear failed actions after resolving: ai-feature queue clear-failed (if implemented)'
+      'Clear failed actions after resolving: codepipe queue clear-failed (if implemented)'
     );
   }
 
@@ -299,7 +299,7 @@ function generateRecommendations(report: WriteActionQueueReport): string[] {
   // Pending with no in-progress
   if (report.pendingCount > 0 && report.inProgressCount === 0) {
     recommendations.push('Pending actions not draining - check for rate limit cooldown');
-    recommendations.push('Run: ai-feature rate-limits to inspect cooldown state');
+    recommendations.push('Run: codepipe rate-limits to inspect cooldown state');
   }
 
   return recommendations;
