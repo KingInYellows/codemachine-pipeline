@@ -1,19 +1,19 @@
 # CLI Reference
 
-This document provides comprehensive documentation for the `ai-feature` command-line interface.
+This document provides comprehensive documentation for the `codepipe` command-line interface.
 
 ## Overview
 
-The `ai-feature` CLI is the primary interface for managing feature development pipelines. It provides commands for initializing projects, starting features, checking status, managing approvals, and more.
+The `codepipe` CLI is the primary interface for managing feature development pipelines. It provides commands for initializing projects, starting features, checking status, managing approvals, and more.
 
 ## Installation
 
 ```bash
 # Install globally
-npm install -g ai-feature-pipeline
+npm install -g codemachine-pipeline
 
 # Or run via npx
-npx ai-feature-pipeline <command>
+npx codemachine-pipeline <command>
 ```
 
 ---
