@@ -351,7 +351,9 @@ export class QueueIntegrityError extends Error {
     this.name = 'QueueIntegrityError';
     this.kind = options.kind;
     this.location = options.location;
-    this.sequenceRange = options.sequenceRange;
+    if (options.sequenceRange) {
+      this.sequenceRange = options.sequenceRange;
+    }
     this.recoveryGuidance = options.recoveryGuidance;
   }
 }
