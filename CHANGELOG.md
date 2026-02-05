@@ -11,9 +11,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Phase 2.3 (start command wiring) deferred until plan generation is implemented
 
-## [1.0.0] - 2026-01-28
+## [1.0.0] - 2026-02-05
 
 ### Added
+
+#### Queue Integrity Verification (CDMCH-69)
+- Fail-fast/warn-only integrity modes via `QUEUE_INTEGRITY_MODE` env var
+- `QueueIntegrityError` with structured fields: `kind`, `location`, `sequenceRange`, `recoveryGuidance`
+- WAL checksum validation with accurate failure counting via `readOperationsWithStats()`
+- Snapshot-to-WAL sequence gap detection
+- `loadQueue()` blocks on corruption in fail-fast mode (default)
+
+#### CLI Error Handling (CDMCH-53)
+- Extended `CliError` with `howToFix` and `commonFixes` fields
+- Added `NETWORK_ERROR` and `LINEAR_API_FAILED` error codes
+- Enriched JSON error output with `how_to_fix`, `common_fixes`, `docs_url`
+- Wrapped all error paths in `start.ts` and `status.ts` with actionable `CliError`
+
+### Fixed
+
+- Orphaned code fragment in `start.ts` causing build failures
+- `exactOptionalPropertyTypes` issues in error constructors
 
 #### Queue V2 System
 - Queue V2 optimization with O(1) task operations (previously O(n²))
