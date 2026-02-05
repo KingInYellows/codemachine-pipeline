@@ -10,6 +10,8 @@ import {
   loadQueue,
   updateTaskInQueue,
   verifyQueueIntegrity,
+  invalidateV2Cache,
+  QueueIntegrityError,
 } from '../../src/workflows/queueStore.js';
 import { createRunDirectory, writeManifest } from '../../src/persistence/runDirectoryManager.js';
 import { type ExecutionTask } from '../../src/core/models/ExecutionTask.js';
@@ -586,7 +588,7 @@ describe('queueStore - verifyQueueIntegrity (CDMCH-69)', () => {
       // Snapshot may not exist for this queue type - that's OK
     }
 
-    const result = await verifyQueueIntegrity(runDir);
+    const result = await verifyQueueIntegrity(runDir, 'warn-only');
     // Snapshot invalid means valid should be false
     expect(result.snapshotValid).toBe(false);
     expect(result.valid).toBe(false);
@@ -620,8 +622,8 @@ describe('queueStore - verifyQueueIntegrity (CDMCH-69)', () => {
     expect(result.valid).toBe(true);
   });
 
-  it('should handle invalid runDir gracefully without throwing', async () => {
-    const result = await verifyQueueIntegrity('/nonexistent/directory/path');
+  it('should handle invalid runDir gracefully without throwing in warn-only mode', async () => {
+    const result = await verifyQueueIntegrity('/nonexistent/directory/path', 'warn-only');
     expect(result.valid).toBe(false);
     expect(result.errors.length).toBeGreaterThan(0);
   });
@@ -642,16 +644,211 @@ describe('queueStore - verifyQueueIntegrity (CDMCH-69)', () => {
 
     const walContent = await fs.readFile(walPath, 'utf-8');
     const lines = walContent.trim().split('\n');
-    
+
     // Create a gap by removing the second line (operation)
     const newWalContent = [lines[0], lines[2]].join('\n') + '\n';
     await fs.writeFile(walPath, newWalContent, 'utf-8');
 
-    const result = await verifyQueueIntegrity(runDir);
+    const result = await verifyQueueIntegrity(runDir, 'warn-only');
 
     expect(result.valid).toBe(false);
     expect(result.sequenceGaps.length).toBeGreaterThan(0);
     expect(result.errors.some(e => e.includes('Sequence gap'))).toBe(true);
+  });
+
+  it('should throw QueueIntegrityError in fail-fast mode on snapshot corruption', async () => {
+    await initializeQueueFromPlan(runDir, {
+      feature_id: 'FEATURE-INTEGRITY',
+      tasks: [{ id: 'T1', title: 'Task 1', task_type: 'code_generation' }],
+    } as TaskPlan);
+
+    await createQueueSnapshot(runDir);
+
+    const { readManifest } = await import('../../src/persistence/runDirectoryManager.js');
+    const manifest = await readManifest(runDir);
+    const queueDir = path.join(runDir, manifest.queue.queue_dir);
+    const snapshotPath = path.join(queueDir, 'queue_snapshot.json');
+
+    const content = await fs.readFile(snapshotPath, 'utf-8');
+    const snapshot = JSON.parse(content);
+    snapshot.checksum = 'corrupted';
+    await fs.writeFile(snapshotPath, JSON.stringify(snapshot), 'utf-8');
+
+    await expect(verifyQueueIntegrity(runDir, 'fail-fast')).rejects.toThrow(QueueIntegrityError);
+    try {
+      await verifyQueueIntegrity(runDir, 'fail-fast');
+    } catch (err) {
+      expect(err).toBeInstanceOf(QueueIntegrityError);
+      const intErr = err as InstanceType<typeof QueueIntegrityError>;
+      expect(intErr.kind).toBe('snapshot-checksum-mismatch');
+      expect(intErr.recoveryGuidance).toBeTruthy();
+      expect(intErr.location).toContain('queue_snapshot.json');
+    }
+  });
+
+  it('should NOT throw in warn-only mode on snapshot corruption', async () => {
+    await initializeQueueFromPlan(runDir, {
+      feature_id: 'FEATURE-INTEGRITY',
+      tasks: [{ id: 'T1', title: 'Task 1', task_type: 'code_generation' }],
+    } as TaskPlan);
+
+    await createQueueSnapshot(runDir);
+
+    const { readManifest } = await import('../../src/persistence/runDirectoryManager.js');
+    const manifest = await readManifest(runDir);
+    const queueDir = path.join(runDir, manifest.queue.queue_dir);
+    const snapshotPath = path.join(queueDir, 'queue_snapshot.json');
+
+    const content = await fs.readFile(snapshotPath, 'utf-8');
+    const snapshot = JSON.parse(content);
+    snapshot.checksum = 'corrupted';
+    await fs.writeFile(snapshotPath, JSON.stringify(snapshot), 'utf-8');
+
+    const result = await verifyQueueIntegrity(runDir, 'warn-only');
+    expect(result.valid).toBe(false);
+    expect(result.snapshotValid).toBe(false);
+    expect(result.errors.length).toBeGreaterThan(0);
+  });
+
+  it('should throw QueueIntegrityError in fail-fast mode on sequence gap', async () => {
+    await initializeQueueFromPlan(runDir, {
+      feature_id: 'FEATURE-INTEGRITY',
+      tasks: [{ id: 'T1', title: 'Task 1', task_type: 'code_generation' }],
+    });
+    await updateTaskInQueue(runDir, 'T1', { status: 'running' });
+    await updateTaskInQueue(runDir, 'T1', { status: 'completed' });
+
+    const { readManifest } = await import('../../src/persistence/runDirectoryManager.js');
+    const manifest = await readManifest(runDir);
+    const queueDir = path.join(runDir, manifest.queue.queue_dir);
+    const walPath = path.join(queueDir, 'queue_operations.log');
+
+    const walContent = await fs.readFile(walPath, 'utf-8');
+    const lines = walContent.trim().split('\n');
+    // Remove middle entry to create gap
+    await fs.writeFile(walPath, [lines[0], lines[2]].join('\n') + '\n', 'utf-8');
+
+    await expect(verifyQueueIntegrity(runDir, 'fail-fast')).rejects.toThrow(QueueIntegrityError);
+    try {
+      await verifyQueueIntegrity(runDir, 'fail-fast');
+    } catch (err) {
+      const intErr = err as InstanceType<typeof QueueIntegrityError>;
+      expect(intErr.kind).toBe('sequence-gap');
+      expect(intErr.sequenceRange).toBeDefined();
+      expect(intErr.recoveryGuidance).toBeTruthy();
+    }
+  });
+
+  it('should count WAL checksum failures accurately', async () => {
+    await initializeQueueFromPlan(runDir, {
+      feature_id: 'FEATURE-INTEGRITY',
+      tasks: [
+        { id: 'T1', title: 'Task 1', task_type: 'code_generation' },
+        { id: 'T2', title: 'Task 2', task_type: 'code_generation' },
+      ],
+    });
+
+    const { readManifest } = await import('../../src/persistence/runDirectoryManager.js');
+    const manifest = await readManifest(runDir);
+    const queueDir = path.join(runDir, manifest.queue.queue_dir);
+    const walPath = path.join(queueDir, 'queue_operations.log');
+
+    // Corrupt one entry's checksum
+    const walContent = await fs.readFile(walPath, 'utf-8');
+    const lines = walContent.trim().split('\n');
+    const entry = JSON.parse(lines[0]);
+    entry.checksum = 'badchecksum';
+    lines[0] = JSON.stringify(entry);
+    await fs.writeFile(walPath, lines.join('\n') + '\n', 'utf-8');
+
+    const result = await verifyQueueIntegrity(runDir, 'warn-only');
+    expect(result.walChecksumFailures).toBeGreaterThanOrEqual(1);
+    expect(result.valid).toBe(false);
+  });
+
+  it('should throw QueueIntegrityError for WAL checksum failure in fail-fast mode', async () => {
+    await initializeQueueFromPlan(runDir, {
+      feature_id: 'FEATURE-INTEGRITY',
+      tasks: [{ id: 'T1', title: 'Task 1', task_type: 'code_generation' }],
+    });
+
+    const { readManifest } = await import('../../src/persistence/runDirectoryManager.js');
+    const manifest = await readManifest(runDir);
+    const queueDir = path.join(runDir, manifest.queue.queue_dir);
+    const walPath = path.join(queueDir, 'queue_operations.log');
+
+    const walContent = await fs.readFile(walPath, 'utf-8');
+    const lines = walContent.trim().split('\n');
+    const entry = JSON.parse(lines[0]);
+    entry.checksum = 'badchecksum';
+    lines[0] = JSON.stringify(entry);
+    await fs.writeFile(walPath, lines.join('\n') + '\n', 'utf-8');
+
+    await expect(verifyQueueIntegrity(runDir, 'fail-fast')).rejects.toThrow(QueueIntegrityError);
+    try {
+      await verifyQueueIntegrity(runDir, 'fail-fast');
+    } catch (err) {
+      const intErr = err as InstanceType<typeof QueueIntegrityError>;
+      expect(intErr.kind).toBe('wal-checksum-mismatch');
+    }
+  });
+
+  it('loadQueue should throw QueueIntegrityError when integrity fails in fail-fast mode', async () => {
+    await initializeQueueFromPlan(runDir, {
+      feature_id: 'FEATURE-INTEGRITY',
+      tasks: [{ id: 'T1', title: 'Task 1', task_type: 'code_generation' }],
+    });
+
+    // Corrupt WAL checksum
+    const { readManifest } = await import('../../src/persistence/runDirectoryManager.js');
+    const manifest = await readManifest(runDir);
+    const queueDir = path.join(runDir, manifest.queue.queue_dir);
+    const walPath = path.join(queueDir, 'queue_operations.log');
+    const walContent = await fs.readFile(walPath, 'utf-8');
+    const lines = walContent.trim().split('\n');
+    const entry = JSON.parse(lines[0]);
+    entry.checksum = 'badchecksum';
+    lines[0] = JSON.stringify(entry);
+    await fs.writeFile(walPath, lines.join('\n') + '\n', 'utf-8');
+
+    // Reset integrity cache so it re-checks
+    invalidateV2Cache(runDir);
+
+    // fail-fast is the default mode; loadQueue calls verifyQueueIntegrity
+    await expect(loadQueue(runDir)).rejects.toThrow(QueueIntegrityError);
+  });
+
+  it('loadQueue should succeed in warn-only mode despite corruption', async () => {
+    await initializeQueueFromPlan(runDir, {
+      feature_id: 'FEATURE-INTEGRITY',
+      tasks: [
+        { id: 'T1', title: 'Task 1', task_type: 'code_generation' },
+        { id: 'T2', title: 'Task 2', task_type: 'code_generation' },
+      ],
+    });
+
+    const { readManifest } = await import('../../src/persistence/runDirectoryManager.js');
+    const manifest = await readManifest(runDir);
+    const queueDir = path.join(runDir, manifest.queue.queue_dir);
+    const walPath = path.join(queueDir, 'queue_operations.log');
+    const walContent = await fs.readFile(walPath, 'utf-8');
+    const lines = walContent.trim().split('\n');
+    // Corrupt first entry
+    const entry = JSON.parse(lines[0]);
+    entry.checksum = 'badchecksum';
+    lines[0] = JSON.stringify(entry);
+    await fs.writeFile(walPath, lines.join('\n') + '\n', 'utf-8');
+
+    invalidateV2Cache(runDir);
+    process.env.QUEUE_INTEGRITY_MODE = 'warn-only';
+    try {
+      // Should not throw - warn-only mode loads despite corruption
+      const tasks = await loadQueue(runDir);
+      // At least the uncorrupted task should load
+      expect(tasks.size).toBeGreaterThanOrEqual(1);
+    } finally {
+      delete process.env.QUEUE_INTEGRITY_MODE;
+    }
   });
 });
 
