@@ -120,18 +120,19 @@ export default class Doctor extends Command {
         });
       }
 
-      // Run diagnostic checks
+      // Run diagnostic checks (sync checks first, then async)
       checks.push(this.checkNodeVersion());
       checks.push(this.checkGitInstalled());
       checks.push(this.checkNpmInstalled());
       checks.push(this.checkDockerInstalled());
-      checks.push(this.checkCodeMachineCli());
       checks.push(this.checkGitRepository());
       checks.push(this.checkFilesystemPermissions());
       checks.push(this.checkOutboundConnectivity());
-      checks.push(this.checkRepoConfig());
-      checks.push(this.checkCodeMachineCli());
-      checks.push(...this.checkEnvironmentVariables());
+
+      // Async checks
+      checks.push(await this.checkRepoConfig());
+      checks.push(await this.checkCodeMachineCli());
+      checks.push(...(await this.checkEnvironmentVariables()));
 
       // Compute summary
       const summary = {
@@ -562,7 +563,7 @@ export default class Doctor extends Command {
   /**
    * Check RepoConfig validity
    */
-  private checkRepoConfig(): DiagnosticCheck {
+  private async checkRepoConfig(): Promise<DiagnosticCheck> {
     const configPath = path.resolve(process.cwd(), CONFIG_RELATIVE_PATH);
 
     if (!fs.existsSync(configPath)) {
@@ -575,7 +576,7 @@ export default class Doctor extends Command {
       };
     }
 
-    const result = loadRepoConfig(configPath);
+    const result = await loadRepoConfig(configPath);
 
     if (!result.success) {
       return {
@@ -611,12 +612,12 @@ export default class Doctor extends Command {
     };
   }
 
-  private checkCodeMachineCli(): DiagnosticCheck {
+  private async checkCodeMachineCli(): Promise<DiagnosticCheck> {
     const configPath = path.resolve(process.cwd(), CONFIG_RELATIVE_PATH);
     let cliPath = 'codemachine-cli';
 
     if (fs.existsSync(configPath)) {
-      const result = loadRepoConfig(configPath);
+      const result = await loadRepoConfig(configPath);
       if (result.success && result.config?.execution?.codemachine_cli_path) {
         cliPath = result.config.execution.codemachine_cli_path;
       }
@@ -658,7 +659,7 @@ export default class Doctor extends Command {
     }
   }
 
-  private checkEnvironmentVariables(): DiagnosticCheck[] {
+  private async checkEnvironmentVariables(): Promise<DiagnosticCheck[]> {
     const configPath = path.resolve(process.cwd(), CONFIG_RELATIVE_PATH);
     const checks: DiagnosticCheck[] = [];
 
@@ -673,7 +674,7 @@ export default class Doctor extends Command {
       return checks;
     }
 
-    const result = loadRepoConfig(configPath);
+    const result = await loadRepoConfig(configPath);
     if (!result.success || !result.config) {
       checks.push({
         name: 'Environment Variables',

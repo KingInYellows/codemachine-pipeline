@@ -69,7 +69,7 @@ export default class ResearchList extends Command {
     }
 
     const startTime = Date.now();
-    const settings = resolveRunDirectorySettings();
+    const settings = await resolveRunDirectorySettings();
     const featureId = await selectFeatureId(settings.baseDir, typedFlags.feature);
 
     if (!featureId) {

@@ -28,11 +28,11 @@ describe('validateRepoConfig', () => {
     fs.rmSync(tempDir, { recursive: true, force: true });
   });
 
-  it('should validate config with all checks disabled', () => {
+  it('should validate config with all checks disabled', async () => {
     const config = createDefaultConfig('https://github.com/org/repo.git');
     fs.writeFileSync(configPath, JSON.stringify(config, null, 2));
 
-    const result = validateRepoConfig(configPath, {
+    const result = await validateRepoConfig(configPath, {
       checkCredentials: false,
       checkDirectories: false,
       enforceGovernance: false,
@@ -44,30 +44,30 @@ describe('validateRepoConfig', () => {
     expect(result.metadata).toBeDefined();
   });
 
-  it('should return metadata about validation', () => {
+  it('should return metadata about validation', async () => {
     const config = createDefaultConfig('https://github.com/org/repo.git');
     fs.writeFileSync(configPath, JSON.stringify(config, null, 2));
 
-    const result = validateRepoConfig(configPath);
+    const result = await validateRepoConfig(configPath);
 
     expect(result.metadata).toBeDefined();
     expect(result.metadata!.validation_time_ms).toBeGreaterThanOrEqual(0);
     expect(result.metadata!.config_file_size_bytes).toBeGreaterThan(0);
   });
 
-  it('should fail when config file missing', () => {
-    const result = validateRepoConfig('/nonexistent/config.json');
+  it('should fail when config file missing', async () => {
+    const result = await validateRepoConfig('/nonexistent/config.json');
 
     expect(result.success).toBe(false);
     expect(result.errors).toBeDefined();
   });
 
-  it('should check directories when enabled', () => {
+  it('should check directories when enabled', async () => {
     const config = createDefaultConfig('https://github.com/org/repo.git');
     config.runtime.run_directory = '/nonexistent/directory';
     fs.writeFileSync(configPath, JSON.stringify(config, null, 2));
 
-    const result = validateRepoConfig(configPath, {
+    const result = await validateRepoConfig(configPath, {
       checkDirectories: true,
     });
 
@@ -76,27 +76,27 @@ describe('validateRepoConfig', () => {
     expect(result.errors!.some((e) => e.path.includes('run_directory'))).toBe(true);
   });
 
-  it('should pass directory checks when directory exists', () => {
+  it('should pass directory checks when directory exists', async () => {
     const config = createDefaultConfig('https://github.com/org/repo.git');
     const runDir = path.join(tempDir, 'runs');
     fs.mkdirSync(runDir, { recursive: true });
     config.runtime.run_directory = runDir;
     fs.writeFileSync(configPath, JSON.stringify(config, null, 2));
 
-    const result = validateRepoConfig(configPath, {
+    const result = await validateRepoConfig(configPath, {
       checkDirectories: true,
     });
 
     expect(result.success).toBe(true);
   });
 
-  it('should enforce governance when enabled', () => {
+  it('should enforce governance when enabled', async () => {
     const config = createDefaultConfig('https://github.com/org/repo.git', {
       includeGovernance: false, // No governance section
     });
     fs.writeFileSync(configPath, JSON.stringify(config, null, 2));
 
-    const result = validateRepoConfig(configPath, {
+    const result = await validateRepoConfig(configPath, {
       enforceGovernance: true,
     });
 
@@ -105,13 +105,13 @@ describe('validateRepoConfig', () => {
     expect(result.errors!.some((e) => e.path === 'governance')).toBe(true);
   });
 
-  it('should pass governance checks with valid governance', () => {
+  it('should pass governance checks with valid governance', async () => {
     const config = createDefaultConfig('https://github.com/org/repo.git', {
       includeGovernance: true,
     });
     fs.writeFileSync(configPath, JSON.stringify(config, null, 2));
 
-    const result = validateRepoConfig(configPath, {
+    const result = await validateRepoConfig(configPath, {
       enforceGovernance: true,
       checkCredentials: false,
       checkDirectories: false,
@@ -120,7 +120,7 @@ describe('validateRepoConfig', () => {
     expect(result.success).toBe(true);
   });
 
-  it('should fail governance when all approvals disabled', () => {
+  it('should fail governance when all approvals disabled', async () => {
     const config = createDefaultConfig('https://github.com/org/repo.git', {
       includeGovernance: true,
     });
@@ -135,7 +135,7 @@ describe('validateRepoConfig', () => {
     };
     fs.writeFileSync(configPath, JSON.stringify(config, null, 2));
 
-    const result = validateRepoConfig(configPath, {
+    const result = await validateRepoConfig(configPath, {
       enforceGovernance: true,
     });
 
@@ -145,7 +145,7 @@ describe('validateRepoConfig', () => {
     );
   });
 
-  it('should warn about disabled security controls', () => {
+  it('should warn about disabled security controls', async () => {
     const config = createDefaultConfig('https://github.com/org/repo.git', {
       includeGovernance: true,
     });
@@ -154,7 +154,7 @@ describe('validateRepoConfig', () => {
     config.governance!.accountability.record_approver_identity = false;
     fs.writeFileSync(configPath, JSON.stringify(config, null, 2));
 
-    const result = validateRepoConfig(configPath, {
+    const result = await validateRepoConfig(configPath, {
       enforceGovernance: true,
     });
 
@@ -162,12 +162,12 @@ describe('validateRepoConfig', () => {
     expect(result.errors!.length).toBeGreaterThan(0);
   });
 
-  it('should fail in strict mode with warnings', () => {
+  it('should fail in strict mode with warnings', async () => {
     const config = createDefaultConfig('https://github.com/org/repo.git');
     config.github.enabled = true; // This will generate warning about missing GITHUB_TOKEN
     fs.writeFileSync(configPath, JSON.stringify(config, null, 2));
 
-    const result = validateRepoConfig(configPath, {
+    const result = await validateRepoConfig(configPath, {
       strictMode: true,
     });
 
@@ -176,12 +176,12 @@ describe('validateRepoConfig', () => {
     expect(result.warnings!.length).toBeGreaterThan(0);
   });
 
-  it('should pass in non-strict mode with warnings', () => {
+  it('should pass in non-strict mode with warnings', async () => {
     const config = createDefaultConfig('https://github.com/org/repo.git');
     config.github.enabled = true;
     fs.writeFileSync(configPath, JSON.stringify(config, null, 2));
 
-    const result = validateRepoConfig(configPath, {
+    const result = await validateRepoConfig(configPath, {
       strictMode: false,
       checkCredentials: false,
       checkDirectories: false,
@@ -557,7 +557,7 @@ describe('Integration Tests', () => {
     fs.rmSync(tempDir, { recursive: true, force: true });
   });
 
-  it('should perform full validation with all checks', () => {
+  it('should perform full validation with all checks', async () => {
     const config = createDefaultConfig('https://github.com/org/repo.git', {
       includeGovernance: true,
     });
@@ -569,7 +569,7 @@ describe('Integration Tests', () => {
 
     fs.writeFileSync(configPath, JSON.stringify(config, null, 2));
 
-    const result = validateRepoConfig(configPath, {
+    const result = await validateRepoConfig(configPath, {
       checkCredentials: true,
       checkDirectories: true,
       enforceGovernance: true,
@@ -584,12 +584,12 @@ describe('Integration Tests', () => {
     expect(result.checks?.permissions).toBe(true);
   });
 
-  it('should provide actionable errors for common issues', () => {
+  it('should provide actionable errors for common issues', async () => {
     const config = createDefaultConfig('https://github.com/org/repo.git');
     config.runtime.run_directory = '/nonexistent/path';
     fs.writeFileSync(configPath, JSON.stringify(config, null, 2));
 
-    const result = validateRepoConfig(configPath, {
+    const result = await validateRepoConfig(configPath, {
       checkDirectories: true,
     });
 

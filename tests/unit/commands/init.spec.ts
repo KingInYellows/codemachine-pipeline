@@ -62,10 +62,10 @@ describe('init command', () => {
       expect(config.schema_version).toMatch(/^\d+\.\d+\.\d+$/);
     });
 
-    test('creates valid config that passes schema validation', () => {
+    test('creates valid config that passes schema validation', async () => {
       execSync(`node ${binPath} init`, { cwd: testDir, stdio: 'pipe' });
 
-      const result = loadRepoConfig(configPath);
+      const result = await loadRepoConfig(configPath);
       expect(result.success).toBe(true);
       expect(result.config).toBeDefined();
     });
@@ -192,7 +192,7 @@ describe('init command', () => {
       }
     });
 
-    test('missing required fields produces validation error', () => {
+    test('missing required fields produces validation error', async () => {
       fs.mkdirSync(pipelineDir, { recursive: true });
       fs.writeFileSync(
         configPath,
@@ -203,24 +203,24 @@ describe('init command', () => {
         'utf-8'
       );
 
-      const result = loadRepoConfig(configPath);
+      const result = await loadRepoConfig(configPath);
       expect(result.success).toBe(false);
       expect(result.errors).toBeDefined();
       expect(result.errors!.length).toBeGreaterThan(0);
     });
 
-    test('invalid JSON produces parse error', () => {
+    test('invalid JSON produces parse error', async () => {
       fs.mkdirSync(pipelineDir, { recursive: true });
       fs.writeFileSync(configPath, '{ invalid json }', 'utf-8');
 
-      const result = loadRepoConfig(configPath);
+      const result = await loadRepoConfig(configPath);
       expect(result.success).toBe(false);
       expect(result.errors).toBeDefined();
       expect(result.errors![0].path).toBe('json');
     });
 
-    test('non-existent config file produces file error', () => {
-      const result = loadRepoConfig(configPath);
+    test('non-existent config file produces file error', async () => {
+      const result = await loadRepoConfig(configPath);
       expect(result.success).toBe(false);
       expect(result.errors).toBeDefined();
       expect(result.errors![0].path).toBe('file');

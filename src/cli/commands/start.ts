@@ -175,7 +175,7 @@ export default class Start extends Command {
       return;
     }
 
-    const settings = resolveRunDirectorySettings();
+    const settings = await resolveRunDirectorySettings();
 
     if (settings.errors.length > 0 || !settings.config) {
       const message =

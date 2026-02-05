@@ -102,7 +102,7 @@ export default class PRCreate extends Command {
     const startTime = Date.now();
 
     try {
-      const settings = resolveRunDirectorySettings();
+      const settings = await resolveRunDirectorySettings();
       const featureId = await selectFeatureId(settings.baseDir, typedFlags.feature);
 
       if (!featureId) {

@@ -193,7 +193,7 @@ export default class Resume extends Command {
     const startTime = Date.now();
 
     try {
-      const settings = resolveRunDirectorySettings();
+      const settings = await resolveRunDirectorySettings();
       const featureId = await selectFeatureId(settings.baseDir, typedFlags.feature);
 
       if (!featureId) {
@@ -309,7 +309,7 @@ export default class Resume extends Command {
 
       // Load repo config
       const repoConfigPath = path.join(process.cwd(), '.codepipe', 'config.json');
-      const repoConfigResult = loadRepoConfig(repoConfigPath);
+      const repoConfigResult = await loadRepoConfig(repoConfigPath);
       if (!repoConfigResult.success || !repoConfigResult.config) {
         const errorMessages =
           repoConfigResult.errors?.map((e) => e.message).join(', ') ?? 'unknown error';
