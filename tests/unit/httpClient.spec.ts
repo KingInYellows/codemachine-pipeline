@@ -109,11 +109,21 @@ describe('HttpClient', () => {
       await client.get('/repos/test/repo');
 
       // Verify headers (headers may be lowercase)
-      expect(capturedHeaders['accept'] || capturedHeaders['Accept']).toBe('application/vnd.github+json');
-      expect(capturedHeaders['x-github-api-version'] || capturedHeaders['X-GitHub-Api-Version']).toBe('2022-11-28');
-      expect(capturedHeaders['authorization'] || capturedHeaders['Authorization']).toBe('Bearer test-token');
-      expect(capturedHeaders['x-request-id'] || capturedHeaders['X-Request-ID']).toMatch(/^req_[a-f0-9]{32}$/);
-      expect(capturedHeaders['content-type'] || capturedHeaders['Content-Type']).toBe('application/json');
+      expect(capturedHeaders['accept'] || capturedHeaders['Accept']).toBe(
+        'application/vnd.github+json'
+      );
+      expect(
+        capturedHeaders['x-github-api-version'] || capturedHeaders['X-GitHub-Api-Version']
+      ).toBe('2022-11-28');
+      expect(capturedHeaders['authorization'] || capturedHeaders['Authorization']).toBe(
+        'Bearer test-token'
+      );
+      expect(capturedHeaders['x-request-id'] || capturedHeaders['X-Request-ID']).toMatch(
+        /^req_[a-f0-9]{32}$/
+      );
+      expect(capturedHeaders['content-type'] || capturedHeaders['Content-Type']).toBe(
+        'application/json'
+      );
     });
 
     it('should inject idempotency key for POST requests', async () => {
@@ -156,7 +166,8 @@ describe('HttpClient', () => {
 
       await client.post('/repos/test/repo/issues', { title: 'Test Issue' });
 
-      const idempotencyKey = capturedHeaders['idempotency-key'] || capturedHeaders['Idempotency-Key'];
+      const idempotencyKey =
+        capturedHeaders['idempotency-key'] || capturedHeaders['Idempotency-Key'];
       expect(idempotencyKey).toBeDefined();
       expect(idempotencyKey).toMatch(/^idem_[a-f0-9]{32}$/);
     });
@@ -205,7 +216,9 @@ describe('HttpClient', () => {
         },
       });
 
-      expect(capturedHeaders['x-custom-header'] || capturedHeaders['X-Custom-Header']).toBe('custom-value');
+      expect(capturedHeaders['x-custom-header'] || capturedHeaders['X-Custom-Header']).toBe(
+        'custom-value'
+      );
       expect(capturedHeaders['accept'] || capturedHeaders['Accept']).toBe('application/json');
     });
   });
@@ -226,13 +239,17 @@ describe('HttpClient', () => {
           path: '/test',
           method: 'GET',
         })
-        .reply(200, { data: 'test' }, {
-          headers: {
-            'content-type': 'application/json',
-            'x-ratelimit-remaining': '4999',
-            'x-ratelimit-reset': '1234567890',
-          },
-        });
+        .reply(
+          200,
+          { data: 'test' },
+          {
+            headers: {
+              'content-type': 'application/json',
+              'x-ratelimit-remaining': '4999',
+              'x-ratelimit-reset': '1234567890',
+            },
+          }
+        );
 
       const response = await client.get('/test');
 
@@ -257,22 +274,29 @@ describe('HttpClient', () => {
           path: '/test',
           method: 'GET',
         })
-        .reply(200, { data: 'test' }, {
-          headers: {
-            'content-type': 'application/json',
-            'x-ratelimit-remaining': '100',
-            'x-ratelimit-reset': '1234567890',
-          },
-        });
+        .reply(
+          200,
+          { data: 'test' },
+          {
+            headers: {
+              'content-type': 'application/json',
+              'x-ratelimit-remaining': '100',
+              'x-ratelimit-reset': '1234567890',
+            },
+          }
+        );
 
       await client.get('/test');
 
       // Wait for async ledger write
-      await new Promise(resolve => setTimeout(resolve, 100));
+      await new Promise((resolve) => setTimeout(resolve, 100));
 
       // Verify ledger file was created
       const ledgerPath = path.join(testRunDir, 'rate_limits.json');
-      const ledgerExists = await fs.access(ledgerPath).then(() => true).catch(() => false);
+      const ledgerExists = await fs
+        .access(ledgerPath)
+        .then(() => true)
+        .catch(() => false);
       expect(ledgerExists).toBe(true);
 
       // Verify ledger content
@@ -303,13 +327,17 @@ describe('HttpClient', () => {
           path: '/test',
           method: 'GET',
         })
-        .reply(429, { message: 'Rate limit exceeded' }, {
-          headers: {
-            'content-type': 'application/json',
-            'retry-after': '1', // 1 second
-            'x-ratelimit-remaining': '0',
-          },
-        });
+        .reply(
+          429,
+          { message: 'Rate limit exceeded' },
+          {
+            headers: {
+              'content-type': 'application/json',
+              'retry-after': '1', // 1 second
+              'x-ratelimit-remaining': '0',
+            },
+          }
+        );
 
       // Second request succeeds
       pool
@@ -317,12 +345,16 @@ describe('HttpClient', () => {
           path: '/test',
           method: 'GET',
         })
-        .reply(200, { data: 'success' }, {
-          headers: {
-            'content-type': 'application/json',
-            'x-ratelimit-remaining': '4999',
-          },
-        });
+        .reply(
+          200,
+          { data: 'success' },
+          {
+            headers: {
+              'content-type': 'application/json',
+              'x-ratelimit-remaining': '4999',
+            },
+          }
+        );
 
       const response = await client.get('/test');
 
@@ -356,11 +388,15 @@ describe('HttpClient', () => {
           path: '/test',
           method: 'GET',
         })
-        .reply(429, { message: 'Rate limit exceeded' }, {
-          headers: {
-            'content-type': 'application/json',
-          },
-        });
+        .reply(
+          429,
+          { message: 'Rate limit exceeded' },
+          {
+            headers: {
+              'content-type': 'application/json',
+            },
+          }
+        );
 
       try {
         await client.get('/test');
@@ -388,11 +424,15 @@ describe('HttpClient', () => {
           path: '/test',
           method: 'GET',
         })
-        .reply(401, { message: 'Bad credentials' }, {
-          headers: {
-            'content-type': 'application/json',
-          },
-        });
+        .reply(
+          401,
+          { message: 'Bad credentials' },
+          {
+            headers: {
+              'content-type': 'application/json',
+            },
+          }
+        );
 
       try {
         await client.get('/test');
@@ -421,11 +461,15 @@ describe('HttpClient', () => {
           path: '/test',
           method: 'GET',
         })
-        .reply(404, { message: 'Not Found' }, {
-          headers: {
-            'content-type': 'application/json',
-          },
-        });
+        .reply(
+          404,
+          { message: 'Not Found' },
+          {
+            headers: {
+              'content-type': 'application/json',
+            },
+          }
+        );
 
       try {
         await client.get('/test');
@@ -454,11 +498,15 @@ describe('HttpClient', () => {
           path: '/test',
           method: 'GET',
         })
-        .reply(503, { message: 'Service Unavailable' }, {
-          headers: {
-            'content-type': 'application/json',
-          },
-        });
+        .reply(
+          503,
+          { message: 'Service Unavailable' },
+          {
+            headers: {
+              'content-type': 'application/json',
+            },
+          }
+        );
 
       try {
         await client.get('/test');
@@ -499,11 +547,15 @@ describe('HttpClient', () => {
           path: '/test',
           method: 'GET',
         })
-        .reply(200, { data: 'success' }, {
-          headers: {
-            'content-type': 'application/json',
-          },
-        });
+        .reply(
+          200,
+          { data: 'success' },
+          {
+            headers: {
+              'content-type': 'application/json',
+            },
+          }
+        );
 
       const startTime = Date.now();
       const response = await client.get('/test');
@@ -586,12 +638,16 @@ describe('HttpClient', () => {
           path: '/test',
           method: 'GET',
         })
-        .reply(401, { message: 'Unauthorized' }, {
-          headers: {
-            'www-authenticate': 'Bearer',
-            'authorization': 'Bearer should-be-redacted',
-          },
-        });
+        .reply(
+          401,
+          { message: 'Unauthorized' },
+          {
+            headers: {
+              'www-authenticate': 'Bearer',
+              authorization: 'Bearer should-be-redacted',
+            },
+          }
+        );
 
       try {
         await client.get('/test');
@@ -617,20 +673,15 @@ describe('HttpClient', () => {
     });
 
     it('should redact set-cookie, proxy-authorization, and secret-bearing headers', () => {
-      const error = new HttpError(
-        'Bad Gateway',
-        ErrorType.TRANSIENT,
-        502,
-        {
-          'content-type': 'application/json',
-          'set-cookie': 'session=abc123; HttpOnly; Secure',
-          'proxy-authorization': 'Basic dXNlcjpwYXNz',
-          'x-csrf-token': 'csrf-value-here',
-          'x-custom-secret': 'my-secret-value',
-          'x-request-id': 'req-999',
-          'authorization': 'Bearer tok-redact-me',
-        },
-      );
+      const error = new HttpError('Bad Gateway', ErrorType.TRANSIENT, 502, {
+        'content-type': 'application/json',
+        'set-cookie': 'session=abc123; HttpOnly; Secure',
+        'proxy-authorization': 'Basic dXNlcjpwYXNz',
+        'x-csrf-token': 'csrf-value-here',
+        'x-custom-secret': 'my-secret-value',
+        'x-request-id': 'req-999',
+        authorization: 'Bearer tok-redact-me',
+      });
 
       const json = error.toJSON();
       const headers = json.headers as Record<string, string>;
@@ -661,11 +712,15 @@ describe('HttpClient', () => {
           path: '/test?access_token=secret123',
           method: 'GET',
         })
-        .reply(200, { data: 'test' }, {
-          headers: {
-            'content-type': 'application/json',
-          },
-        });
+        .reply(
+          200,
+          { data: 'test' },
+          {
+            headers: {
+              'content-type': 'application/json',
+            },
+          }
+        );
 
       await client.get('/test?access_token=secret123');
 
@@ -704,9 +759,13 @@ describe('HttpClient', () => {
           path: '/data',
           method: 'GET',
         })
-        .reply(200, { result: 'success' }, {
-          headers: { 'content-type': 'application/json' },
-        });
+        .reply(
+          200,
+          { result: 'success' },
+          {
+            headers: { 'content-type': 'application/json' },
+          }
+        );
 
       const response = await client.get('/data');
 
@@ -754,16 +813,17 @@ describe('HttpClient', () => {
       const pool = mockAgent.get('https://api.test.com');
 
       // PUT
-      pool.intercept({ path: '/items/1', method: 'PUT' })
+      pool
+        .intercept({ path: '/items/1', method: 'PUT' })
         .reply(200, { updated: true }, { headers: { 'content-type': 'application/json' } });
 
       // PATCH
-      pool.intercept({ path: '/items/1', method: 'PATCH' })
+      pool
+        .intercept({ path: '/items/1', method: 'PATCH' })
         .reply(200, { patched: true }, { headers: { 'content-type': 'application/json' } });
 
       // DELETE
-      pool.intercept({ path: '/items/1', method: 'DELETE' })
-        .reply(204, '', { headers: {} });
+      pool.intercept({ path: '/items/1', method: 'DELETE' }).reply(204, '', { headers: {} });
 
       const putResponse = await client.put('/items/1', { name: 'Updated' });
       const patchResponse = await client.patch('/items/1', { name: 'Patched' });
@@ -815,8 +875,6 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null;
 }
 
-function getMockCalls<TArgs extends unknown[]>(
-  mockFn: Mock
-): TArgs[] {
+function getMockCalls<TArgs extends unknown[]>(mockFn: Mock): TArgs[] {
   return mockFn.mock.calls as TArgs[];
 }

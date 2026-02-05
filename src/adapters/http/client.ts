@@ -2,7 +2,12 @@ import type { RequestInit, Response, HeadersInit, Headers } from 'undici-types';
 import type { LogContext } from '../../core/sharedTypes';
 import * as crypto from 'node:crypto';
 import { RateLimitLedger, RateLimitEnvelope } from '../../telemetry/rateLimitLedger';
-import { createLogger, type StructuredLogger, type LoggerInterface, LogLevel } from '../../telemetry/logger';
+import {
+  createLogger,
+  type StructuredLogger,
+  type LoggerInterface,
+  LogLevel,
+} from '../../telemetry/logger';
 
 /**
  * HTTP Client Module
@@ -746,10 +751,7 @@ function sanitizeHeaders(headers: Record<string, string>): Record<string, string
   for (const [key, value] of Object.entries(headers)) {
     const lowerKey = key.toLowerCase();
 
-    if (
-      SENSITIVE_HEADERS.has(lowerKey) ||
-      SENSITIVE_KEYWORDS.some((kw) => lowerKey.includes(kw))
-    ) {
+    if (SENSITIVE_HEADERS.has(lowerKey) || SENSITIVE_KEYWORDS.some((kw) => lowerKey.includes(kw))) {
       sanitized[key] = '***REDACTED***';
     } else {
       sanitized[key] = value;

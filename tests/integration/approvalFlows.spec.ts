@@ -116,9 +116,7 @@ describe('Approval Flows Integration Tests', () => {
       // Assert: Verify approval history
       const history = await getApprovalHistory(runDir);
       expect(history.length).toBeGreaterThanOrEqual(2); // Request + approval
-      const approvedRecord = history.find(
-        r => r.gate_type === 'prd' && r.verdict === 'approved'
-      );
+      const approvedRecord = history.find((r) => r.gate_type === 'prd' && r.verdict === 'approved');
       expect(approvedRecord).toBeDefined();
       expect(approvedRecord?.signer).toBe('test@example.com');
     });
@@ -319,7 +317,7 @@ describe('Approval Flows Integration Tests', () => {
       // Assert: History contains both approvals
       const history = await getApprovalHistory(runDir);
       const approvedRecords = history.filter(
-        r => r.gate_type === 'prd' && r.verdict === 'approved'
+        (r) => r.gate_type === 'prd' && r.verdict === 'approved'
       );
       expect(approvedRecords.length).toBe(2);
     });
@@ -403,9 +401,7 @@ describe('Approval Flows Integration Tests', () => {
 
       // Verify metadata preserved
       const history = await getApprovalHistory(runDir);
-      const approvalRecord = history.find(
-        r => r.gate_type === 'prd' && r.verdict === 'approved'
-      );
+      const approvalRecord = history.find((r) => r.gate_type === 'prd' && r.verdict === 'approved');
 
       expect(approvalRecord?.metadata?.review_duration_minutes).toBe(15);
       expect(approvalRecord?.metadata?.reviewed_sections).toEqual([

@@ -8,7 +8,10 @@ import { createCliLogger, LogLevel } from '../../telemetry/logger';
 import type { MetricsCollector } from '../../telemetry/metrics';
 import { createRunMetricsCollector, StandardMetrics } from '../../telemetry/metrics';
 import { createRunTraceManager, SpanStatusCode } from '../../telemetry/traces';
-import { createExecutionTelemetry, type ExecutionTelemetry } from '../../telemetry/executionTelemetry';
+import {
+  createExecutionTelemetry,
+  type ExecutionTelemetry,
+} from '../../telemetry/executionTelemetry';
 import {
   createRunDirectory,
   setCurrentStep,
@@ -155,7 +158,10 @@ export default class Start extends Command {
       const cliErr = new CliError(
         'Must provide one of: --prompt, --linear, or --spec',
         CliErrorCode.CONFIG_INVALID,
-        { remediation: 'Provide an input source: --prompt "description", --linear ISSUE-ID, or --spec path/to/spec.md' }
+        {
+          remediation:
+            'Provide an input source: --prompt "description", --linear ISSUE-ID, or --spec path/to/spec.md',
+        }
       );
       if (typedFlags.json) {
         this.log(JSON.stringify(formatErrorJson(cliErr), null, 2));
@@ -176,11 +182,9 @@ export default class Start extends Command {
         settings.errors.length > 0
           ? settings.errors.join('\n')
           : 'Repository not initialized. Run "codepipe init" first.';
-      const cliErr = new CliError(
-        message,
-        CliErrorCode.CONFIG_NOT_FOUND,
-        { remediation: 'Run "codepipe init" to initialize the repository configuration.' }
-      );
+      const cliErr = new CliError(message, CliErrorCode.CONFIG_NOT_FOUND, {
+        remediation: 'Run "codepipe init" to initialize the repository configuration.',
+      });
       if (typedFlags.json) {
         this.log(JSON.stringify(formatErrorJson(cliErr), null, 2));
         this.exit(cliErr.exitCode);
@@ -399,11 +403,14 @@ export default class Start extends Command {
 
       await setLastError(runDir, currentStepLabel ?? 'start', formatErrorMessage(error), true);
 
-      const cliErr = error instanceof CliError ? error : new CliError(
-        `Start command failed: ${formatErrorMessage(error)}`,
-        CliErrorCode.GENERAL,
-        error instanceof Error ? { cause: error } : {}
-      );
+      const cliErr =
+        error instanceof CliError
+          ? error
+          : new CliError(
+              `Start command failed: ${formatErrorMessage(error)}`,
+              CliErrorCode.GENERAL,
+              error instanceof Error ? { cause: error } : {}
+            );
       if (typedFlags.json) {
         this.log(JSON.stringify(formatErrorJson(cliErr), null, 2));
         this.exit(cliErr.exitCode);

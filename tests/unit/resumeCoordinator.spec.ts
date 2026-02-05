@@ -31,9 +31,8 @@ describe('ResumeCoordinator', () => {
   let runDir: string;
   const featureId = 'test-feature-001';
   type ResumeState = Awaited<ReturnType<typeof analyzeResumeState>>;
-  const runAnalysis = (
-    options?: Parameters<typeof analyzeResumeState>[1]
-  ): Promise<ResumeState> => analyzeResumeState(runDir, options);
+  const runAnalysis = (options?: Parameters<typeof analyzeResumeState>[1]): Promise<ResumeState> =>
+    analyzeResumeState(runDir, options);
 
   beforeEach(async () => {
     // Create temporary test directory
@@ -208,9 +207,7 @@ describe('ResumeCoordinator', () => {
     });
 
     it('should block resume when queue validation fails', async () => {
-      const tasks = [
-        createExecutionTask('task-1', featureId, 'Generate code', 'code_generation'),
-      ];
+      const tasks = [createExecutionTask('task-1', featureId, 'Generate code', 'code_generation')];
       await appendToQueue(runDir, tasks);
 
       const queuePath = path.join(runDir, 'queue', 'queue.jsonl');
@@ -320,11 +317,13 @@ describe('ResumeCoordinator', () => {
 
       const analysis = await runAnalysis();
 
-      expect(analysis.recommendations.some(rec => rec.includes('Resume is blocked'))).toBe(true);
-      expect(analysis.recommendations.some(
-        rec => rec.includes('Complete pending approvals: spec_review')
-      )).toBe(true);
-      expect(analysis.recommendations.some(rec => rec.includes('resume_playbook.md'))).toBe(true);
+      expect(analysis.recommendations.some((rec) => rec.includes('Resume is blocked'))).toBe(true);
+      expect(
+        analysis.recommendations.some((rec) =>
+          rec.includes('Complete pending approvals: spec_review')
+        )
+      ).toBe(true);
+      expect(analysis.recommendations.some((rec) => rec.includes('resume_playbook.md'))).toBe(true);
     });
 
     it('should provide recovery hints for rate limit errors', async () => {
@@ -332,7 +331,9 @@ describe('ResumeCoordinator', () => {
 
       const analysis = await runAnalysis();
 
-      expect(analysis.recommendations.some(rec => rec.includes('Wait for rate limit reset'))).toBe(true);
+      expect(
+        analysis.recommendations.some((rec) => rec.includes('Wait for rate limit reset'))
+      ).toBe(true);
     });
 
     it('should provide recovery hints for network errors', async () => {
@@ -340,7 +341,9 @@ describe('ResumeCoordinator', () => {
 
       const analysis = await runAnalysis();
 
-      expect(analysis.recommendations.some(rec => rec.includes('Check network connectivity'))).toBe(true);
+      expect(
+        analysis.recommendations.some((rec) => rec.includes('Check network connectivity'))
+      ).toBe(true);
     });
   });
 
@@ -443,13 +446,14 @@ describe('ResumeCoordinator', () => {
   describe('validateQueueSnapshot', () => {
     it('should validate valid queue snapshot', async () => {
       // Create snapshot
-      const tasks = [
-        createExecutionTask('task-1', featureId, 'Task 1', 'code_generation'),
-      ];
+      const tasks = [createExecutionTask('task-1', featureId, 'Task 1', 'code_generation')];
       await appendToQueue(runDir, tasks);
       await createQueueSnapshot(runDir);
 
-      const snapshotRaw = await fs.readFile(path.join(runDir, 'queue', 'queue_snapshot.json'), 'utf-8');
+      const snapshotRaw = await fs.readFile(
+        path.join(runDir, 'queue', 'queue_snapshot.json'),
+        'utf-8'
+      );
       const snapshotData = JSON.parse(snapshotRaw) as {
         tasks: Record<string, unknown>;
         checksum: string;
@@ -500,7 +504,7 @@ describe('ResumeCoordinator', () => {
       });
 
       const resumable = await getResumableTasks(runDir);
-      expect(resumable.map(task => task.task_id)).toEqual(['task-1', 'task-2', 'task-3']);
+      expect(resumable.map((task) => task.task_id)).toEqual(['task-1', 'task-2', 'task-3']);
     });
   });
 
@@ -520,7 +524,7 @@ describe('ResumeCoordinator', () => {
 
       const analysis = await runAnalysis();
 
-      const blockers = analysis.diagnostics.filter(d => d.severity === 'blocker');
+      const blockers = analysis.diagnostics.filter((d) => d.severity === 'blocker');
       expect(blockers.length).toBeGreaterThanOrEqual(2);
       expect(analysis.canResume).toBe(false);
     });

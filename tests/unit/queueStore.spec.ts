@@ -429,7 +429,7 @@ describe('queueStore - initializeQueueFromPlan', () => {
 describe('queueStore - fsync durability (CDMCH-67)', () => {
   let tempDir: string;
   let runDir: string;
-  
+
   beforeEach(async () => {
     tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'queue-fsync-test-'));
     runDir = path.join(tempDir, 'run-001');
@@ -552,8 +552,8 @@ describe('queueStore - verifyQueueIntegrity (CDMCH-69)', () => {
     await initializeQueueFromPlan(runDir, {
       feature_id: 'FEATURE-INTEGRITY',
       tasks: [
-        { id: 'T1', title: 'Task 1', task_type: 'code_generation', },
-        { id: 'T2', title: 'Task 2', task_type: 'code_generation', },
+        { id: 'T1', title: 'Task 1', task_type: 'code_generation' },
+        { id: 'T2', title: 'Task 2', task_type: 'code_generation' },
       ],
     } as TaskPlan);
 
@@ -566,9 +566,7 @@ describe('queueStore - verifyQueueIntegrity (CDMCH-69)', () => {
   it('should detect corrupted snapshot', async () => {
     await initializeQueueFromPlan(runDir, {
       feature_id: 'FEATURE-INTEGRITY',
-      tasks: [
-        { id: 'T1', title: 'Task 1', task_type: 'code_generation', },
-      ],
+      tasks: [{ id: 'T1', title: 'Task 1', task_type: 'code_generation' }],
     } as TaskPlan);
 
     // Create a snapshot then corrupt it
@@ -599,9 +597,9 @@ describe('queueStore - verifyQueueIntegrity (CDMCH-69)', () => {
     await initializeQueueFromPlan(runDir, {
       feature_id: 'FEATURE-INTEGRITY',
       tasks: [
-        { id: 'T1', title: 'Task 1', task_type: 'code_generation', },
-        { id: 'T2', title: 'Task 2', task_type: 'code_generation', },
-        { id: 'T3', title: 'Task 3', task_type: 'code_generation', },
+        { id: 'T1', title: 'Task 1', task_type: 'code_generation' },
+        { id: 'T2', title: 'Task 2', task_type: 'code_generation' },
+        { id: 'T3', title: 'Task 3', task_type: 'code_generation' },
       ],
     } as TaskPlan);
 
@@ -612,9 +610,7 @@ describe('queueStore - verifyQueueIntegrity (CDMCH-69)', () => {
   it('should return valid with null snapshotValid when no snapshot exists', async () => {
     await initializeQueueFromPlan(runDir, {
       feature_id: 'FEATURE-INTEGRITY',
-      tasks: [
-        { id: 'T1', title: 'Task 1', task_type: 'code_generation', },
-      ],
+      tasks: [{ id: 'T1', title: 'Task 1', task_type: 'code_generation' }],
     } as TaskPlan);
 
     const result = await verifyQueueIntegrity(runDir);
@@ -653,7 +649,7 @@ describe('queueStore - verifyQueueIntegrity (CDMCH-69)', () => {
 
     expect(result.valid).toBe(false);
     expect(result.sequenceGaps.length).toBeGreaterThan(0);
-    expect(result.errors.some(e => e.includes('Sequence gap'))).toBe(true);
+    expect(result.errors.some((e) => e.includes('Sequence gap'))).toBe(true);
   });
 
   it('should throw QueueIntegrityError in fail-fast mode on snapshot corruption', async () => {
@@ -853,4 +849,3 @@ describe('queueStore - verifyQueueIntegrity (CDMCH-69)', () => {
     }
   });
 });
-

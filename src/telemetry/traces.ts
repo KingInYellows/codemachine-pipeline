@@ -252,11 +252,13 @@ export class TraceManager {
       serviceName: options.serviceName ?? 'codemachine-pipeline',
       defaultAttributes: options.defaultAttributes ?? {},
     };
-    this.logger = options.logger ?? createLogger({
-      component: 'trace-manager',
-      minLevel: LogLevel.DEBUG,
-      mirrorToStderr: true,
-    });
+    this.logger =
+      options.logger ??
+      createLogger({
+        component: 'trace-manager',
+        minLevel: LogLevel.DEBUG,
+        mirrorToStderr: true,
+      });
 
     // Determine traces file path if run directory is provided
     if (this.options.runDir) {

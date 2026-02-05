@@ -29,7 +29,9 @@ async function cleanupTempDir(dir: string): Promise<void> {
   }
 }
 
-function createTestManifest(overrides: Partial<WriteActionQueueManifest> = {}): WriteActionQueueManifest {
+function createTestManifest(
+  overrides: Partial<WriteActionQueueManifest> = {}
+): WriteActionQueueManifest {
   return {
     schema_version: '1.0.0',
     feature_id: 'test-feature-123',
@@ -46,7 +48,10 @@ function createTestManifest(overrides: Partial<WriteActionQueueManifest> = {}): 
   };
 }
 
-async function writeQueueManifest(runDir: string, manifest: WriteActionQueueManifest): Promise<void> {
+async function writeQueueManifest(
+  runDir: string,
+  manifest: WriteActionQueueManifest
+): Promise<void> {
   const queueDir = path.join(runDir, 'write_actions');
   await fs.mkdir(queueDir, { recursive: true });
   await fs.writeFile(path.join(queueDir, 'manifest.json'), JSON.stringify(manifest), 'utf-8');

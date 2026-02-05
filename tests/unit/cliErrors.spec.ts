@@ -128,7 +128,9 @@ describe('formatErrorJson', () => {
   it('should include docs_url for mapped codes', () => {
     const err = new CliError('msg', CliErrorCode.CONFIG_INVALID);
     const json = formatErrorJson(err);
-    expect(json.docs_url).toBe('https://github.com/KingInYellows/codemachine-pipeline#configuration');
+    expect(json.docs_url).toBe(
+      'https://github.com/KingInYellows/codemachine-pipeline#configuration'
+    );
   });
 
   it('should omit docs_url for unmapped codes', () => {

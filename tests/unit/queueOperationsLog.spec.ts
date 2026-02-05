@@ -160,7 +160,10 @@ describe('queueOperationsLog', () => {
       expect(result.seq).toBe(1);
 
       const logPath = path.join(testDir, 'queue_operations.log');
-      const exists = await fs.access(logPath).then(() => true).catch(() => false);
+      const exists = await fs
+        .access(logPath)
+        .then(() => true)
+        .catch(() => false);
       expect(exists).toBe(true);
     });
 
@@ -382,9 +385,24 @@ describe('queueOperationsLog', () => {
       await initializeOperationsLog(testDir);
 
       const ops = [
-        { op: 'create' as const, ts: new Date().toISOString(), taskId: 'task-1', task: createTaskData('task-1') },
-        { op: 'create' as const, ts: new Date().toISOString(), taskId: 'task-2', task: createTaskData('task-2') },
-        { op: 'create' as const, ts: new Date().toISOString(), taskId: 'task-3', task: createTaskData('task-3') },
+        {
+          op: 'create' as const,
+          ts: new Date().toISOString(),
+          taskId: 'task-1',
+          task: createTaskData('task-1'),
+        },
+        {
+          op: 'create' as const,
+          ts: new Date().toISOString(),
+          taskId: 'task-2',
+          task: createTaskData('task-2'),
+        },
+        {
+          op: 'create' as const,
+          ts: new Date().toISOString(),
+          taskId: 'task-3',
+          task: createTaskData('task-3'),
+        },
       ];
 
       const results = await appendOperationsBatch(testDir, ops);
@@ -478,7 +496,7 @@ describe('queueOperationsLog', () => {
 
       // Should skip the bad checksum operation
       expect(operations).toHaveLength(2);
-      expect(operations.map(o => o.taskId)).toEqual(['task-1', 'task-3']);
+      expect(operations.map((o) => o.taskId)).toEqual(['task-1', 'task-3']);
     });
 
     it('should recover sequence from WAL when counter file is corrupted', async () => {

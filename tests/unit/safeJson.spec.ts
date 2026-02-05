@@ -87,10 +87,7 @@ describe('safeJson utilities', () => {
     };
 
     it('should return success for valid JSON matching validator', () => {
-      const result = safeJsonParseValidated<User>(
-        '{"name": "Alice", "age": 30}',
-        isUser
-      );
+      const result = safeJsonParseValidated<User>('{"name": "Alice", "age": 30}', isUser);
       expect(result.success).toBe(true);
       expect(result.data).toEqual({ name: 'Alice', age: 30 });
     });

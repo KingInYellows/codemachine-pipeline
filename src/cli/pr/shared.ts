@@ -116,9 +116,7 @@ export async function loadPRContext(
     logger.error('GitHub integration disabled', {
       config_path: '.codepipe/config.json',
     });
-    throw new Error(
-      'GitHub integration is disabled. Enable it in .codepipe/config.json'
-    );
+    throw new Error('GitHub integration is disabled. Enable it in .codepipe/config.json');
   }
 
   // Load existing PR metadata if available

@@ -471,7 +471,10 @@ export async function assessMergeReadiness(
  * @param readiness Merge readiness assessment
  * @returns Deployment outcome
  */
-export function handleBlocked(context: DeploymentContext, readiness: MergeReadiness): DeploymentOutcome {
+export function handleBlocked(
+  context: DeploymentContext,
+  readiness: MergeReadiness
+): DeploymentOutcome {
   const { pr, logger, featureId } = context;
 
   logger.warn('Deployment blocked', {

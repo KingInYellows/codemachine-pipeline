@@ -11,7 +11,12 @@ import {
   type LogEntry,
 } from '../../src/telemetry/logger';
 import { createRunMetricsCollector } from '../../src/telemetry/metrics';
-import { createRunTraceManager, withSpan, SpanKind, SpanStatusCode } from '../../src/telemetry/traces';
+import {
+  createRunTraceManager,
+  withSpan,
+  SpanKind,
+  SpanStatusCode,
+} from '../../src/telemetry/traces';
 import type { Span } from '../../src/telemetry/traces';
 
 // ============================================================================
@@ -32,14 +37,20 @@ async function cleanupTempDir(dir: string): Promise<void> {
 
 async function readNdjsonFile(filePath: string): Promise<LogEntry[]> {
   const content = await fs.readFile(filePath, 'utf-8');
-  const lines = content.trim().split('\n').filter(line => line);
-  return lines.map(line => JSON.parse(line) as LogEntry);
+  const lines = content
+    .trim()
+    .split('\n')
+    .filter((line) => line);
+  return lines.map((line) => JSON.parse(line) as LogEntry);
 }
 
 async function readTraceFile(filePath: string): Promise<Span[]> {
   const content = await fs.readFile(filePath, 'utf-8');
-  const lines = content.trim().split('\n').filter(line => line);
-  return lines.map(line => JSON.parse(line) as Span);
+  const lines = content
+    .trim()
+    .split('\n')
+    .filter((line) => line);
+  return lines.map((line) => JSON.parse(line) as Span);
 }
 
 // ============================================================================
@@ -100,7 +111,7 @@ describe('StructuredLogger', () => {
       const logs = await readNdjsonFile(logPath);
 
       expect(logs).toHaveLength(5);
-      expect(logs.map(l => l.level)).toEqual([
+      expect(logs.map((l) => l.level)).toEqual([
         LogLevel.DEBUG,
         LogLevel.INFO,
         LogLevel.WARN,
@@ -126,7 +137,7 @@ describe('StructuredLogger', () => {
       const logs = await readNdjsonFile(logPath);
 
       expect(logs).toHaveLength(2);
-      expect(logs.map(l => l.level)).toEqual([LogLevel.WARN, LogLevel.ERROR]);
+      expect(logs.map((l) => l.level)).toEqual([LogLevel.WARN, LogLevel.ERROR]);
     });
 
     it('should include base context in all logs', async () => {
@@ -271,7 +282,8 @@ describe('StructuredLogger', () => {
   describe('RedactionEngine', () => {
     it('should redact multiple secret types in one string', () => {
       const redactor = new RedactionEngine();
-      const input = 'Tokens: ghp_abc1234567890abcdefghijklmnopqrstuvwxyzABCD and gho_xyz1234567890abcdefghijklmnopqrstuvwxyzXYZ, JWT: eyJhbGc...';
+      const input =
+        'Tokens: ghp_abc1234567890abcdefghijklmnopqrstuvwxyzABCD and gho_xyz1234567890abcdefghijklmnopqrstuvwxyzXYZ, JWT: eyJhbGc...';
       const output = redactor.redact(input);
 
       expect(output).toContain('[REDACTED_GITHUB_TOKEN]');
@@ -377,7 +389,9 @@ describe('MetricsCollector', () => {
       const content = await fs.readFile(metricsPath, 'utf-8');
 
       expect(content).toContain('# TYPE codemachine_pipeline_test_counter counter');
-      expect(content).toContain('codemachine_pipeline_test_counter{label="value",run_id="run-123"} 8');
+      expect(content).toContain(
+        'codemachine_pipeline_test_counter{label="value",run_id="run-123"} 8'
+      );
     });
 
     it('should collect gauge metrics', async () => {
@@ -404,8 +418,12 @@ describe('MetricsCollector', () => {
       const content = await fs.readFile(metricsPath, 'utf-8');
 
       expect(content).toContain('# TYPE codemachine_pipeline_http_latency_bucket histogram');
-      expect(content).toContain('codemachine_pipeline_http_latency_bucket{endpoint="/api/v1",le="250"} 1');
-      expect(content).toContain('codemachine_pipeline_http_latency_bucket{endpoint="/api/v1",le="500"} 2');
+      expect(content).toContain(
+        'codemachine_pipeline_http_latency_bucket{endpoint="/api/v1",le="250"} 1'
+      );
+      expect(content).toContain(
+        'codemachine_pipeline_http_latency_bucket{endpoint="/api/v1",le="500"} 2'
+      );
       expect(content).toContain('codemachine_pipeline_http_latency_sum{endpoint="/api/v1"} 500');
       expect(content).toContain('codemachine_pipeline_http_latency_count{endpoint="/api/v1"} 2');
     });
@@ -436,8 +454,12 @@ describe('MetricsCollector', () => {
       const metricsPath = path.join(tempDir, 'metrics', 'prometheus.txt');
       const content = await fs.readFile(metricsPath, 'utf-8');
 
-      expect(content).toContain('codemachine_pipeline_rate_limit_remaining{provider="github"} 4500');
-      expect(content).toContain('codemachine_pipeline_rate_limit_reset_timestamp{provider="github"} 1734256800');
+      expect(content).toContain(
+        'codemachine_pipeline_rate_limit_remaining{provider="github"} 4500'
+      );
+      expect(content).toContain(
+        'codemachine_pipeline_rate_limit_reset_timestamp{provider="github"} 1734256800'
+      );
     });
 
     it('should record HTTP request metrics', async () => {
@@ -480,7 +502,9 @@ describe('MetricsCollector', () => {
       const metricsPath = path.join(tempDir, 'metrics', 'prometheus.txt');
       const content = await fs.readFile(metricsPath, 'utf-8');
 
-      expect(content).toContain('# HELP codemachine_pipeline_custom_counter A custom counter metric');
+      expect(content).toContain(
+        '# HELP codemachine_pipeline_custom_counter A custom counter metric'
+      );
       expect(content).toContain('# TYPE codemachine_pipeline_custom_counter counter');
     });
 
@@ -557,7 +581,7 @@ describe('TraceManager', () => {
       const traceManager = createRunTraceManager(tempDir);
 
       const span = traceManager.startSpan('timed_operation');
-      await new Promise(resolve => setTimeout(resolve, 75)); // Wait for measurable duration
+      await new Promise((resolve) => setTimeout(resolve, 75)); // Wait for measurable duration
       span.end();
 
       await traceManager.flush();

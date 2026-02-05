@@ -519,4 +519,3 @@ export default class Approve extends Command {
     }
   }
 }
-

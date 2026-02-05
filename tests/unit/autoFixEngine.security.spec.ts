@@ -20,10 +20,14 @@ const executeShellCommandForTesting = async (
     cwd: string;
     env: Record<string, string | undefined>;
     timeout: number;
-    logger?: { warn: (...args: unknown[]) => void; error: (...args: unknown[]) => void; info: (...args: unknown[]) => void; debug: (...args: unknown[]) => void };
+    logger?: {
+      warn: (...args: unknown[]) => void;
+      error: (...args: unknown[]) => void;
+      info: (...args: unknown[]) => void;
+      debug: (...args: unknown[]) => void;
+    };
   }
 ): Promise<{ exitCode: number; stdout: string; stderr: string; durationMs: number }> => {
-
   const startTime = Date.now();
 
   // Shell metacharacters detection (matching implementation)
@@ -229,14 +233,11 @@ describe('autoFixEngine security - command execution', () => {
     test('should prevent command injection via semicolon', async () => {
       const maliciousFile = path.join(testRunDir, 'INJECTED.txt');
 
-      const result = await executeShellCommandForTesting(
-        `echo safe; touch ${maliciousFile}`,
-        {
-          cwd: testRunDir,
-          env: process.env,
-          timeout: 5000,
-        }
-      );
+      const result = await executeShellCommandForTesting(`echo safe; touch ${maliciousFile}`, {
+        cwd: testRunDir,
+        env: process.env,
+        timeout: 5000,
+      });
 
       expect(result.exitCode).toBe(0);
       expect(result.stdout).toContain(';');
@@ -391,4 +392,3 @@ describe('autoFixEngine - exported function signatures', () => {
     expect(typeof mod.executeAllValidations).toBe('function');
   });
 });
-

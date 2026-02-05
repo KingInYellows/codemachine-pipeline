@@ -24,7 +24,11 @@ describe('queueMigration', () => {
   let testDir: string;
 
   // Helper to create a valid V1 task for JSONL format
-  const createV1Task = (id: string, status: ExecutionTask['status'] = 'pending', deps: string[] = []): ExecutionTask => ({
+  const createV1Task = (
+    id: string,
+    status: ExecutionTask['status'] = 'pending',
+    deps: string[] = []
+  ): ExecutionTask => ({
     schema_version: '1.0.0',
     task_id: id,
     feature_id: 'feature-123',
@@ -92,8 +96,16 @@ describe('queueMigration', () => {
 
     it('should return "v1" if snapshot exists but has wrong schema version', async () => {
       const badSnapshot = { schemaVersion: '1.0.0', featureId: 'test' };
-      await fs.writeFile(path.join(testDir, 'queue_snapshot.json'), JSON.stringify(badSnapshot), 'utf-8');
-      await fs.writeFile(path.join(testDir, 'queue.jsonl'), createV1QueueContent([createV1Task('task-1')]), 'utf-8');
+      await fs.writeFile(
+        path.join(testDir, 'queue_snapshot.json'),
+        JSON.stringify(badSnapshot),
+        'utf-8'
+      );
+      await fs.writeFile(
+        path.join(testDir, 'queue.jsonl'),
+        createV1QueueContent([createV1Task('task-1')]),
+        'utf-8'
+      );
 
       const version = await detectQueueVersion(testDir);
       expect(version).toBe('v1');
@@ -113,7 +125,11 @@ describe('queueMigration', () => {
     });
 
     it('should return true for V1 format', async () => {
-      await fs.writeFile(path.join(testDir, 'queue.jsonl'), createV1QueueContent([createV1Task('task-1')]), 'utf-8');
+      await fs.writeFile(
+        path.join(testDir, 'queue.jsonl'),
+        createV1QueueContent([createV1Task('task-1')]),
+        'utf-8'
+      );
 
       const result = await needsMigration(testDir);
       expect(result).toBe(true);
@@ -172,7 +188,11 @@ describe('queueMigration', () => {
       await fs.writeFile(path.join(testDir, 'queue.jsonl'), createV1QueueContent([task1]), 'utf-8');
 
       const updatedTask1 = { ...task1, status: 'completed' as const };
-      await fs.writeFile(path.join(testDir, 'queue_updates.jsonl'), createV1QueueContent([updatedTask1]), 'utf-8');
+      await fs.writeFile(
+        path.join(testDir, 'queue_updates.jsonl'),
+        createV1QueueContent([updatedTask1]),
+        'utf-8'
+      );
 
       const loaded = await loadV1Queue(testDir);
       expect(loaded).toHaveLength(1);
@@ -264,7 +284,10 @@ describe('queueMigration', () => {
       expect(result.backupPath).toContain('.v1backup');
 
       // Verify backups exist
-      const backupExists = await fs.access(path.join(testDir, 'queue.jsonl.v1backup')).then(() => true).catch(() => false);
+      const backupExists = await fs
+        .access(path.join(testDir, 'queue.jsonl.v1backup'))
+        .then(() => true)
+        .catch(() => false);
       expect(backupExists).toBe(true);
     });
 
@@ -309,7 +332,10 @@ describe('queueMigration', () => {
       await migrateV1ToV2(testDir, 'feature-123');
 
       // Verify V1 file is gone
-      const v1ExistsBefore = await fs.access(path.join(testDir, 'queue.jsonl')).then(() => true).catch(() => false);
+      const v1ExistsBefore = await fs
+        .access(path.join(testDir, 'queue.jsonl'))
+        .then(() => true)
+        .catch(() => false);
       expect(v1ExistsBefore).toBe(false);
 
       // Rollback
@@ -317,7 +343,10 @@ describe('queueMigration', () => {
       expect(success).toBe(true);
 
       // Verify V1 file is restored
-      const v1ExistsAfter = await fs.access(path.join(testDir, 'queue.jsonl')).then(() => true).catch(() => false);
+      const v1ExistsAfter = await fs
+        .access(path.join(testDir, 'queue.jsonl'))
+        .then(() => true)
+        .catch(() => false);
       expect(v1ExistsAfter).toBe(true);
 
       // Verify content preserved
@@ -338,7 +367,10 @@ describe('queueMigration', () => {
 
       await rollbackMigration(testDir);
 
-      const snapshotExists = await fs.access(path.join(testDir, 'queue_snapshot.json')).then(() => true).catch(() => false);
+      const snapshotExists = await fs
+        .access(path.join(testDir, 'queue_snapshot.json'))
+        .then(() => true)
+        .catch(() => false);
       expect(snapshotExists).toBe(false);
     });
   });
@@ -378,7 +410,10 @@ describe('queueMigration', () => {
     it('should initialize empty operations log for new queue', async () => {
       await ensureV2Format(testDir, 'feature-123');
 
-      const opsLogExists = await fs.access(path.join(testDir, 'queue_operations.log')).then(() => true).catch(() => false);
+      const opsLogExists = await fs
+        .access(path.join(testDir, 'queue_operations.log'))
+        .then(() => true)
+        .catch(() => false);
       expect(opsLogExists).toBe(true);
     });
 

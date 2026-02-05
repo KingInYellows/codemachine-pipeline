@@ -215,7 +215,13 @@ describe('queueCompactionEngine', () => {
         task: createTaskData('task-1'),
       });
 
-      const result = await maybeCompact(testDir, queueDir, 'feature-test', {}, { maxUpdates: 1000 });
+      const result = await maybeCompact(
+        testDir,
+        queueDir,
+        'feature-test',
+        {},
+        { maxUpdates: 1000 }
+      );
 
       expect(result.compacted).toBe(false);
     });
@@ -223,7 +229,13 @@ describe('queueCompactionEngine', () => {
     it('should return compacted: false when skipped', async () => {
       await initializeOperationsLog(queueDir);
 
-      const result = await maybeCompact(testDir, queueDir, 'feature-test', {}, { maxUpdates: 1000 });
+      const result = await maybeCompact(
+        testDir,
+        queueDir,
+        'feature-test',
+        {},
+        { maxUpdates: 1000 }
+      );
 
       expect(result.compacted).toBe(false);
       expect(result.snapshotSeq).toBe(0);
@@ -237,7 +249,15 @@ describe('queueCompactionEngine', () => {
           ['task-1', createTaskData('task-1', 'completed')],
           ['task-2', createTaskData('task-2', 'pending')],
         ]),
-        counts: { total: 2, pending: 1, running: 0, completed: 1, failed: 0, skipped: 0, cancelled: 0 },
+        counts: {
+          total: 2,
+          pending: 1,
+          running: 0,
+          completed: 1,
+          failed: 0,
+          skipped: 0,
+          cancelled: 0,
+        },
         lastSeq: 2,
         snapshotSeq: 0,
         dirty: false,
@@ -258,7 +278,15 @@ describe('queueCompactionEngine', () => {
           ['task-1', createTaskData('task-1', 'completed')],
           ['task-2', createTaskData('task-2', 'pending')],
         ]),
-        counts: { total: 2, pending: 1, running: 0, completed: 1, failed: 0, skipped: 0, cancelled: 0 },
+        counts: {
+          total: 2,
+          pending: 1,
+          running: 0,
+          completed: 1,
+          failed: 0,
+          skipped: 0,
+          cancelled: 0,
+        },
         lastSeq: 2,
         snapshotSeq: 0,
         dirty: false,
@@ -278,7 +306,15 @@ describe('queueCompactionEngine', () => {
           ['task-2', createTaskData('task-2', 'failed')],
           ['task-3', createTaskData('task-3', 'pending')],
         ]),
-        counts: { total: 3, pending: 1, running: 0, completed: 1, failed: 1, skipped: 0, cancelled: 0 },
+        counts: {
+          total: 3,
+          pending: 1,
+          running: 0,
+          completed: 1,
+          failed: 1,
+          skipped: 0,
+          cancelled: 0,
+        },
         lastSeq: 3,
         snapshotSeq: 0,
         dirty: false,
@@ -296,7 +332,15 @@ describe('queueCompactionEngine', () => {
           ['task-1', createTaskData('task-1', 'completed')],
           ['task-2', createTaskData('task-2', 'completed')],
         ]),
-        counts: { total: 2, pending: 0, running: 0, completed: 2, failed: 0, skipped: 0, cancelled: 0 },
+        counts: {
+          total: 2,
+          pending: 0,
+          running: 0,
+          completed: 2,
+          failed: 0,
+          skipped: 0,
+          cancelled: 0,
+        },
         lastSeq: 2,
         snapshotSeq: 0,
         dirty: false,
@@ -346,7 +390,10 @@ describe('queueCompactionEngine', () => {
       expect(result.compacted).toBe(true);
 
       const lockFile = path.join(testDir, '.codemachine.lock');
-      const lockExists = await fs.access(lockFile).then(() => true).catch(() => false);
+      const lockExists = await fs
+        .access(lockFile)
+        .then(() => true)
+        .catch(() => false);
       expect(lockExists).toBe(false);
     });
   });
@@ -356,7 +403,15 @@ describe('queueCompactionEngine', () => {
       await initializeOperationsLog(queueDir);
       const state: QueueIndexState = {
         tasks: new Map([['task-1', createTaskData('task-1')]]),
-        counts: { total: 1, pending: 1, running: 0, completed: 0, failed: 0, skipped: 0, cancelled: 0 },
+        counts: {
+          total: 1,
+          pending: 1,
+          running: 0,
+          completed: 0,
+          failed: 0,
+          skipped: 0,
+          cancelled: 0,
+        },
         lastSeq: 1,
         snapshotSeq: 0,
         dirty: true,
@@ -379,13 +434,28 @@ describe('queueCompactionEngine', () => {
           ['task-1', createTaskData('task-1', 'completed')],
           ['task-2', createTaskData('task-2', 'pending')],
         ]),
-        counts: { total: 2, pending: 1, running: 0, completed: 1, failed: 0, skipped: 0, cancelled: 0 },
+        counts: {
+          total: 2,
+          pending: 1,
+          running: 0,
+          completed: 1,
+          failed: 0,
+          skipped: 0,
+          cancelled: 0,
+        },
         lastSeq: 2,
         snapshotSeq: 0,
         dirty: true,
       };
 
-      const result = await compactWithState(testDir, queueDir, 'feature-test', state, {}, { pruneCompleted: true });
+      const result = await compactWithState(
+        testDir,
+        queueDir,
+        'feature-test',
+        state,
+        {},
+        { pruneCompleted: true }
+      );
 
       expect(result.prunedTasks).toBe(1);
       expect(state.tasks.size).toBe(1);

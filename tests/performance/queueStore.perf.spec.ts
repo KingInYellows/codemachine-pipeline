@@ -152,7 +152,9 @@ describe('Queue V2 Performance', () => {
       const avgUpdate = updateTimes.reduce((a, b) => a + b, 0) / updateTimes.length;
       const maxUpdate = Math.max(...updateTimes);
 
-      console.log(`Update times (10 ops): avg=${avgUpdate.toFixed(2)}ms, max=${maxUpdate.toFixed(2)}ms`);
+      console.log(
+        `Update times (10 ops): avg=${avgUpdate.toFixed(2)}ms, max=${maxUpdate.toFixed(2)}ms`
+      );
 
       // Average update should be <100ms (including I/O)
       expect(avgUpdate).toBeLessThan(UPDATE_MAX_MS);
@@ -174,7 +176,9 @@ describe('Queue V2 Performance', () => {
         updateTaskInQueue(runDir, 'task-00499', { status: 'running' })
       );
 
-      console.log(`Update position times: begin=${beginTime.toFixed(2)}ms, middle=${middleTime.toFixed(2)}ms, end=${endTime.toFixed(2)}ms`);
+      console.log(
+        `Update position times: begin=${beginTime.toFixed(2)}ms, middle=${middleTime.toFixed(2)}ms, end=${endTime.toFixed(2)}ms`
+      );
 
       // All positions should have similar times (O(1) access)
       // Allow 5x variance for filesystem jitter
@@ -243,11 +247,12 @@ describe('Queue V2 Scaling', () => {
       await teardownBenchmark(large.runDir, large.tempDir);
     }
 
-    console.log(`Scaling test: 100 tasks=${avgSmall.toFixed(2)}ms, 500 tasks=${avgLarge.toFixed(2)}ms`);
+    console.log(
+      `Scaling test: 100 tasks=${avgSmall.toFixed(2)}ms, 500 tasks=${avgLarge.toFixed(2)}ms`
+    );
 
     // 5x more tasks should NOT result in 25x more time (O(n²))
     // O(1) means it should be similar; allow 3x for variance
     expect(avgLarge).toBeLessThan(avgSmall * SCALING_TOLERANCE_FACTOR + JITTER_ALLOWANCE_MS);
   }, 60000);
 });
-

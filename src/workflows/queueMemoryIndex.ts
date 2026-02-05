@@ -16,12 +16,7 @@
  * - Dirty tracking for snapshot coordination
  */
 
-import type {
-  QueueIndexState,
-  QueueCounts,
-  ExecutionTaskData,
-  QueueOperation,
-} from './queueTypes';
+import type { QueueIndexState, QueueCounts, ExecutionTaskData, QueueOperation } from './queueTypes';
 import { createEmptyQueueCounts, createEmptyIndexState } from './queueTypes';
 import { loadSnapshot } from './queueSnapshotManager';
 import { readOperations } from './queueOperationsLog';
@@ -198,7 +193,10 @@ export function getTask(state: QueueIndexState, taskId: string): ExecutionTaskDa
  * @param status - Status to filter by
  * @returns Array of matching tasks
  */
-export function getTasksByStatus(state: QueueIndexState, status: ExecutionTaskStatus): ExecutionTaskData[] {
+export function getTasksByStatus(
+  state: QueueIndexState,
+  status: ExecutionTaskStatus
+): ExecutionTaskData[] {
   const results: ExecutionTaskData[] = [];
 
   for (const task of state.tasks.values()) {

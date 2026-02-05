@@ -24,7 +24,11 @@ import {
   type DeploymentHistory,
   type MergeReadiness,
 } from '../../src/workflows/deploymentTrigger';
-import type { GitHubAdapter, PullRequest, MergeResult } from '../../src/adapters/github/GitHubAdapter';
+import type {
+  GitHubAdapter,
+  PullRequest,
+  MergeResult,
+} from '../../src/adapters/github/GitHubAdapter';
 import type { BranchProtectionReport } from '../../src/workflows/branchProtectionReporter';
 import type { PRMetadata } from '../../src/cli/pr/shared';
 import type { RepoConfig } from '../../src/core/config/RepoConfig';
@@ -44,12 +48,13 @@ type RepoConfigWithDeployment = RepoConfig & {
 // Test Fixtures
 // ============================================================================
 
-const createMockLogger = (): LoggerInterface & Record<'debug' | 'info' | 'warn' | 'error', Mock> => ({
-  debug: vi.fn(),
-  info: vi.fn(),
-  warn: vi.fn(),
-  error: vi.fn(),
-}) as LoggerInterface & Record<'debug' | 'info' | 'warn' | 'error', Mock>;
+const createMockLogger = (): LoggerInterface & Record<'debug' | 'info' | 'warn' | 'error', Mock> =>
+  ({
+    debug: vi.fn(),
+    info: vi.fn(),
+    warn: vi.fn(),
+    error: vi.fn(),
+  }) as LoggerInterface & Record<'debug' | 'info' | 'warn' | 'error', Mock>;
 
 const createMockPRMetadata = (overrides?: Partial<PRMetadata>): PRMetadata => ({
   pr_number: 42,
@@ -188,20 +193,30 @@ const createMockRepoConfig = (overrides?: Partial<RepoConfig>): RepoConfig => ({
   ...overrides,
 });
 
-const createMockGitHubAdapter = (): GitHubAdapter & Record<
-  'getPullRequest' | 'mergePullRequest' | 'enableAutoMerge' | 'triggerWorkflow' | 'getStatusChecks',
-  Mock
-> => {
+const createMockGitHubAdapter = (): GitHubAdapter &
+  Record<
+    | 'getPullRequest'
+    | 'mergePullRequest'
+    | 'enableAutoMerge'
+    | 'triggerWorkflow'
+    | 'getStatusChecks',
+    Mock
+  > => {
   return {
     getPullRequest: vi.fn(),
     mergePullRequest: vi.fn(),
     enableAutoMerge: vi.fn(),
     triggerWorkflow: vi.fn(),
     getStatusChecks: vi.fn(),
-  } as unknown as GitHubAdapter & Record<
-    'getPullRequest' | 'mergePullRequest' | 'enableAutoMerge' | 'triggerWorkflow' | 'getStatusChecks',
-    Mock
-  >;
+  } as unknown as GitHubAdapter &
+    Record<
+      | 'getPullRequest'
+      | 'mergePullRequest'
+      | 'enableAutoMerge'
+      | 'triggerWorkflow'
+      | 'getStatusChecks',
+      Mock
+    >;
 };
 
 const createMockManifest = (overrides?: Partial<RunManifest>): RunManifest => {
@@ -312,10 +327,7 @@ describe('Deployment Trigger Module', () => {
     it('should load deployment context with pr.json and branch protection', async () => {
       // Setup: Create pr.json
       const prMetadata = createMockPRMetadata();
-      await fs.writeFile(
-        path.join(runDirectory, 'pr.json'),
-        JSON.stringify(prMetadata, null, 2)
-      );
+      await fs.writeFile(path.join(runDirectory, 'pr.json'), JSON.stringify(prMetadata, null, 2));
 
       // Setup: Create branch_protection.json
       const branchProtection = createMockBranchProtectionReport();
@@ -344,10 +356,7 @@ describe('Deployment Trigger Module', () => {
     it('should handle missing branch_protection.json gracefully', async () => {
       // Setup: Create only pr.json
       const prMetadata = createMockPRMetadata();
-      await fs.writeFile(
-        path.join(runDirectory, 'pr.json'),
-        JSON.stringify(prMetadata, null, 2)
-      );
+      await fs.writeFile(path.join(runDirectory, 'pr.json'), JSON.stringify(prMetadata, null, 2));
 
       // Execute
       const context = await loadDeploymentContext(
@@ -380,10 +389,7 @@ describe('Deployment Trigger Module', () => {
     beforeEach(async () => {
       // Setup base context
       const prMetadata = createMockPRMetadata();
-      await fs.writeFile(
-        path.join(runDirectory, 'pr.json'),
-        JSON.stringify(prMetadata, null, 2)
-      );
+      await fs.writeFile(path.join(runDirectory, 'pr.json'), JSON.stringify(prMetadata, null, 2));
 
       const branchProtection = createMockBranchProtectionReport();
       await fs.writeFile(
@@ -673,10 +679,7 @@ describe('Deployment Trigger Module', () => {
 
     beforeEach(async () => {
       const prMetadata = createMockPRMetadata();
-      await fs.writeFile(
-        path.join(runDirectory, 'pr.json'),
-        JSON.stringify(prMetadata, null, 2)
-      );
+      await fs.writeFile(path.join(runDirectory, 'pr.json'), JSON.stringify(prMetadata, null, 2));
 
       const branchProtection = createMockBranchProtectionReport();
       await fs.writeFile(
@@ -817,10 +820,7 @@ describe('Deployment Trigger Module', () => {
     it('should successfully trigger auto-merge deployment', async () => {
       // Setup
       const prMetadata = createMockPRMetadata();
-      await fs.writeFile(
-        path.join(runDirectory, 'pr.json'),
-        JSON.stringify(prMetadata, null, 2)
-      );
+      await fs.writeFile(path.join(runDirectory, 'pr.json'), JSON.stringify(prMetadata, null, 2));
 
       const branchProtection = createMockBranchProtectionReport();
       await fs.writeFile(
@@ -870,10 +870,7 @@ describe('Deployment Trigger Module', () => {
     it('should successfully trigger manual merge deployment', async () => {
       // Setup
       const prMetadata = createMockPRMetadata();
-      await fs.writeFile(
-        path.join(runDirectory, 'pr.json'),
-        JSON.stringify(prMetadata, null, 2)
-      );
+      await fs.writeFile(path.join(runDirectory, 'pr.json'), JSON.stringify(prMetadata, null, 2));
 
       const branchProtection = createMockBranchProtectionReport({
         allows_auto_merge: false, // Force manual merge
@@ -926,10 +923,7 @@ describe('Deployment Trigger Module', () => {
     it('should successfully trigger workflow dispatch', async () => {
       // Setup
       const prMetadata = createMockPRMetadata();
-      await fs.writeFile(
-        path.join(runDirectory, 'pr.json'),
-        JSON.stringify(prMetadata, null, 2)
-      );
+      await fs.writeFile(path.join(runDirectory, 'pr.json'), JSON.stringify(prMetadata, null, 2));
 
       const branchProtection = createMockBranchProtectionReport();
       await fs.writeFile(
@@ -981,10 +975,7 @@ describe('Deployment Trigger Module', () => {
     it('should return blocked outcome when checks failing', async () => {
       // Setup
       const prMetadata = createMockPRMetadata();
-      await fs.writeFile(
-        path.join(runDirectory, 'pr.json'),
-        JSON.stringify(prMetadata, null, 2)
-      );
+      await fs.writeFile(path.join(runDirectory, 'pr.json'), JSON.stringify(prMetadata, null, 2));
 
       const branchProtection = createMockBranchProtectionReport({
         checks_passing: false,
@@ -1036,10 +1027,7 @@ describe('Deployment Trigger Module', () => {
       });
 
       const prMetadata = createMockPRMetadata();
-      await fs.writeFile(
-        path.join(runDirectory, 'pr.json'),
-        JSON.stringify(prMetadata, null, 2)
-      );
+      await fs.writeFile(path.join(runDirectory, 'pr.json'), JSON.stringify(prMetadata, null, 2));
 
       const branchProtection = createMockBranchProtectionReport();
       await fs.writeFile(
@@ -1076,10 +1064,7 @@ describe('Deployment Trigger Module', () => {
     it('should assess readiness without executing in dry run mode', async () => {
       // Setup
       const prMetadata = createMockPRMetadata();
-      await fs.writeFile(
-        path.join(runDirectory, 'pr.json'),
-        JSON.stringify(prMetadata, null, 2)
-      );
+      await fs.writeFile(path.join(runDirectory, 'pr.json'), JSON.stringify(prMetadata, null, 2));
 
       const branchProtection = createMockBranchProtectionReport();
       await fs.writeFile(
@@ -1122,10 +1107,7 @@ describe('Deployment Trigger Module', () => {
     it('should support resume after blocked deployment', async () => {
       // Setup
       const prMetadata = createMockPRMetadata();
-      await fs.writeFile(
-        path.join(runDirectory, 'pr.json'),
-        JSON.stringify(prMetadata, null, 2)
-      );
+      await fs.writeFile(path.join(runDirectory, 'pr.json'), JSON.stringify(prMetadata, null, 2));
 
       // Initial attempt: Blocked by failing checks
       const branchProtectionBlocked = createMockBranchProtectionReport({

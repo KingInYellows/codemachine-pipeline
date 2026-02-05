@@ -139,7 +139,10 @@ export async function listTaskIds(runDir: string): Promise<string[]> {
 /**
  * Find existing task with matching cache key
  */
-export async function findCachedTask(runDir: string, cacheKey: string): Promise<ResearchTask | null> {
+export async function findCachedTask(
+  runDir: string,
+  cacheKey: string
+): Promise<ResearchTask | null> {
   const taskIds = await listTaskIds(runDir);
 
   for (const taskId of taskIds) {

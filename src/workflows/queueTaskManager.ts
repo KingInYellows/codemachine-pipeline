@@ -28,11 +28,7 @@ import { shouldCompact, compactWithState } from './queueCompactionEngine.js';
 import type { QueueOperation, ExecutionTaskData, QueueOperationResult } from './queueTypes.js';
 
 // Shared cache and helpers (avoids circular dependency with queueStore)
-import {
-  getV2IndexCache,
-  buildDependencyGraph,
-  toExecutionTask,
-} from './queueCache.js';
+import { getV2IndexCache, buildDependencyGraph, toExecutionTask } from './queueCache.js';
 
 // loadQueue helper - still from queueStore for now (only used in filter functions)
 import { loadQueue } from './queueStore.js';

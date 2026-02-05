@@ -168,7 +168,10 @@ export function extractConstraints(
 /**
  * Derive referenced file globs from context and repo configuration
  */
-export function deriveReferencedFileGlobs(contextDoc: ContextDocument, repoConfig: RepoConfig): string[] {
+export function deriveReferencedFileGlobs(
+  contextDoc: ContextDocument,
+  repoConfig: RepoConfig
+): string[] {
   const globs = new Set<string>();
 
   if (Array.isArray(repoConfig.project?.context_paths)) {

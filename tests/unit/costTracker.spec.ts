@@ -75,20 +75,14 @@ describe('CostTracker', () => {
         provider: 'custom-provider',
         model: 'custom-model',
         inputCostPer1kTokens: 0.05,
-        outputCostPer1kTokens: 0.10,
+        outputCostPer1kTokens: 0.1,
       };
 
       tracker.registerCostConfig(customConfig);
 
       // Record usage with custom provider to verify config was applied
       // recordUsage(provider, operation, promptTokens, completionTokens, model?, metadata?)
-      await tracker.recordUsage(
-        'custom-provider',
-        'test',
-        1000,
-        1000,
-        'custom-model'
-      );
+      await tracker.recordUsage('custom-provider', 'test', 1000, 1000, 'custom-model');
 
       const summary = tracker.getProviderSummary('custom-provider');
       expect(summary).toBeDefined();
