@@ -20,7 +20,15 @@ Required (merge gate):
   - `docker run --rm codemachine-pipeline:test doctor --json | node -e "JSON.parse(require('fs').readFileSync(0,'utf8'))"`
 
 Optional (non-blocking signal):
-- `security/scan` (only the `npm audit` step is non-blocking; the advisory guard is still required)
+- smoke tests (run with `./scripts/tooling/smoke_execution.sh`)
+- Codecov upload (`fail_ci_if_error: false`)
+
+## Security Scan Cadence
+
+Security scanning runs in a dedicated workflow (`.github/workflows/security-scan.yml`) on a
+scheduled basis and can be triggered manually via `workflow_dispatch`. The scan executes
+`npm audit --audit-level=high` and the advisory guard to surface actionable issues without
+impacting PR gating.
 
 ## Local Reproduction
 
@@ -71,7 +79,7 @@ TZ=UTC LANG=C.UTF-8 LC_ALL=C.UTF-8 npm test
 - `no-useless-escape` / lint errors:
   - ESLint config is strict; fix the source file and re-run `npm run lint`.
 - `npm audit --audit-level=high`:
-  - Advisory signal only. Investigate, but it should not block merges.
+  - Advisory signal only in the scheduled security scan. Investigate, but it should not block merges.
 - Docker build fails during `npm ci`:
   - Ensure Dockerfile build context includes required files (e.g., `scripts/`).
 - `doctor --json` failure:
@@ -96,3 +104,12 @@ If any of the above are missing, CI should fail fast with a clear error.
 - **Codecov upload step**: After tests pass, coverage data (`./coverage/lcov.info`) is
   uploaded to Codecov via `codecov/codecov-action@v4`. The upload is non-blocking
   (`fail_ci_if_error: false`) and only runs on success.
+
+## Escalation
+
+If the scheduled scan reports a high-severity issue:
+
+1. Open a tracking issue with the advisory details and affected package versions.
+2. Triage within the next business day and plan the remediation release.
+3. If the issue is actively exploited or critical to production, trigger an emergency patch and
+   communicate in the release notes.

@@ -1,0 +1,31 @@
+name: Security Scan
+
+on:
+  schedule:
+    - cron: '0 3 * * 1'
+  workflow_dispatch:
+
+jobs:
+  security_scan:
+    name: security/scan
+    runs-on: self-hosted
+    env:
+      OCLIF_SKIP_MANIFEST: '1'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run npm audit (high+)
+        run: npm audit --audit-level=high
+
+      - name: Run security advisory guard
+        run: npm run security:glob-guard
