@@ -10,7 +10,7 @@ import { createLogger, type StructuredLogger, LogLevel } from '../telemetry/logg
 
 // V2 WAL Components
 import { getCounts, addTask as addTaskToIndex } from './queueMemoryIndex.js';
-import { appendOperationsBatch, readOperations, readOperationsWithStats } from './queueOperationsLog.js';
+import { appendOperationsBatch, readOperationsWithStats } from './queueOperationsLog.js';
 import { loadSnapshot } from './queueSnapshotManager.js';
 import { compact } from './queueCompactionEngine.js';
 import { QUEUE_FILE, QUEUE_MANIFEST_FILE, QUEUE_SNAPSHOT_FILE } from './queueConstants.js';
