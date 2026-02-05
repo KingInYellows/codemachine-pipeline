@@ -674,9 +674,9 @@ describe('queueStore - verifyQueueIntegrity (CDMCH-69)', () => {
     snapshot.checksum = 'corrupted';
     await fs.writeFile(snapshotPath, JSON.stringify(snapshot), 'utf-8');
 
-    await expect(verifyQueueIntegrity(runDir, 'fail-fast')).rejects.toThrow(QueueIntegrityError);
     try {
       await verifyQueueIntegrity(runDir, 'fail-fast');
+      expect.fail('Should have thrown QueueIntegrityError');
     } catch (err) {
       expect(err).toBeInstanceOf(QueueIntegrityError);
       const intErr = err as InstanceType<typeof QueueIntegrityError>;
@@ -728,10 +728,11 @@ describe('queueStore - verifyQueueIntegrity (CDMCH-69)', () => {
     // Remove middle entry to create gap
     await fs.writeFile(walPath, [lines[0], lines[2]].join('\n') + '\n', 'utf-8');
 
-    await expect(verifyQueueIntegrity(runDir, 'fail-fast')).rejects.toThrow(QueueIntegrityError);
     try {
       await verifyQueueIntegrity(runDir, 'fail-fast');
+      expect.fail('Should have thrown QueueIntegrityError');
     } catch (err) {
+      expect(err).toBeInstanceOf(QueueIntegrityError);
       const intErr = err as InstanceType<typeof QueueIntegrityError>;
       expect(intErr.kind).toBe('sequence-gap');
       expect(intErr.sequenceRange).toBeDefined();
@@ -784,10 +785,11 @@ describe('queueStore - verifyQueueIntegrity (CDMCH-69)', () => {
     lines[0] = JSON.stringify(entry);
     await fs.writeFile(walPath, lines.join('\n') + '\n', 'utf-8');
 
-    await expect(verifyQueueIntegrity(runDir, 'fail-fast')).rejects.toThrow(QueueIntegrityError);
     try {
       await verifyQueueIntegrity(runDir, 'fail-fast');
+      expect.fail('Should have thrown QueueIntegrityError');
     } catch (err) {
+      expect(err).toBeInstanceOf(QueueIntegrityError);
       const intErr = err as InstanceType<typeof QueueIntegrityError>;
       expect(intErr.kind).toBe('wal-checksum-mismatch');
     }
