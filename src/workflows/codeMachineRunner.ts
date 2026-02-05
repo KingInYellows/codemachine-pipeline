@@ -261,10 +261,9 @@ export async function runCodeMachine(
   }
 
   const args = buildArgs(options, engine);
-  const envAllowlist = [
-    ...(config.env_allowlist ?? []),
-    ...(options.envAllowlist ?? []),
-  ].filter((value) => value.length > 0);
+  const envAllowlist = [...(config.env_allowlist ?? []), ...(options.envAllowlist ?? [])].filter(
+    (value) => value.length > 0
+  );
   const env = filterEnvironment(envAllowlist);
 
   options.logger?.info('Starting CodeMachine execution', {
@@ -472,7 +471,9 @@ export async function runCodeMachine(
           taskId: options.taskId,
           exitCode,
           stdout,
-          stderr: timedOut ? `${stderr}\n\nExecution timed out after ${options.timeoutMs}ms` : stderr,
+          stderr: timedOut
+            ? `${stderr}\n\nExecution timed out after ${options.timeoutMs}ms`
+            : stderr,
           durationMs,
           timedOut,
           killed,

@@ -716,7 +716,10 @@ function isValidationCommandSchema(value: unknown): value is ValidationCommandsS
   }
 
   return (value as { commands: unknown[] }).commands.every(
-    (command) => typeof command === 'object' && command !== null && typeof (command as { type?: unknown }).type === 'string'
+    (command) =>
+      typeof command === 'object' &&
+      command !== null &&
+      typeof (command as { type?: unknown }).type === 'string'
   );
 }
 

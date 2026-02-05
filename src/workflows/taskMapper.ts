@@ -194,7 +194,12 @@ export function validateCommandStructure(structure: CommandStructure): void {
   }
 
   // Validate that 'start', 'step', and 'status' commands don't have subcommands
-  if ((structure.command === 'start' || structure.command === 'step' || structure.command === 'status') && structure.subcommand !== undefined) {
+  if (
+    (structure.command === 'start' ||
+      structure.command === 'step' ||
+      structure.command === 'status') &&
+    structure.subcommand !== undefined
+  ) {
     const error = new Error(`Command '${structure.command}' does not support subcommands`);
     (error as { code?: string }).code = 'EC-EXEC-010';
     throw error;

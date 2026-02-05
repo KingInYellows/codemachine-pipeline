@@ -1,10 +1,7 @@
 import * as fs from 'node:fs/promises';
 import * as crypto from 'node:crypto';
 import * as path from 'node:path';
-import {
-  type ExecutionTask,
-  serializeExecutionTask,
-} from '../core/models/ExecutionTask';
+import { type ExecutionTask, serializeExecutionTask } from '../core/models/ExecutionTask';
 import { readManifest, writeManifest, withLock } from '../persistence/runDirectoryManager';
 import { createLogger, type StructuredLogger, LogLevel } from '../telemetry/logger';
 
@@ -439,7 +436,8 @@ export async function verifyQueueIntegrity(
             kind: 'snapshot-checksum-mismatch',
             message: errorMsg,
             location: path.join(queueDir, QUEUE_SNAPSHOT_FILE),
-            recoveryGuidance: 'Delete the snapshot file and replay from WAL, or restore from backup.',
+            recoveryGuidance:
+              'Delete the snapshot file and replay from WAL, or restore from backup.',
           });
         }
       } catch (err) {
@@ -490,7 +488,8 @@ export async function verifyQueueIntegrity(
               message: errorMsg,
               location: path.join(queueDir, 'queue_operations.log'),
               sequenceRange: { expected: expectedFirstSeq, actual: firstSeq },
-              recoveryGuidance: 'Re-snapshot from current state or restore missing WAL entries from backup.',
+              recoveryGuidance:
+                'Re-snapshot from current state or restore missing WAL entries from backup.',
             });
           }
         }
@@ -514,7 +513,8 @@ export async function verifyQueueIntegrity(
               message: errorMsg,
               location: path.join(queueDir, 'queue_operations.log'),
               sequenceRange: { expected: expectedSeq + 1, actual: nextSeq },
-              recoveryGuidance: 'Investigate missing WAL entries. Restore from backup or re-initialize queue.',
+              recoveryGuidance:
+                'Investigate missing WAL entries. Restore from backup or re-initialize queue.',
             });
           }
         } else if (nextSeq <= expectedSeq) {
@@ -528,7 +528,8 @@ export async function verifyQueueIntegrity(
               message: errorMsg,
               location: path.join(queueDir, 'queue_operations.log'),
               sequenceRange: { expected: expectedSeq + 1, actual: nextSeq },
-              recoveryGuidance: 'WAL is severely corrupted. Re-initialize queue from last valid snapshot.',
+              recoveryGuidance:
+                'WAL is severely corrupted. Re-initialize queue from last valid snapshot.',
             });
           }
         }
@@ -583,8 +584,18 @@ export async function createQueueSnapshot(runDir: string): Promise<QueueOperatio
 // --- Re-exports from companion modules for backward compatibility ---
 
 export {
-  getNextTask, getPendingTasks, getFailedTasks, getTaskById, updateTaskInQueue, updateTaskInQueueV2 } from './queueTaskManager.js';
+  getNextTask,
+  getPendingTasks,
+  getFailedTasks,
+  getTaskById,
+  updateTaskInQueue,
+  updateTaskInQueueV2,
+} from './queueTaskManager.js';
 export {
-  getQueueCountsV2, getReadyTasksV2, getV2IndexState, forceCompactV2, exportV2State } from './queueV2Api.js';
-export {
-  validateQueue } from './queueValidation.js';
+  getQueueCountsV2,
+  getReadyTasksV2,
+  getV2IndexState,
+  forceCompactV2,
+  exportV2State,
+} from './queueV2Api.js';
+export { validateQueue } from './queueValidation.js';

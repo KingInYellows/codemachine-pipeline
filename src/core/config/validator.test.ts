@@ -344,22 +344,25 @@ describe('checkSchemaCompatibility', () => {
       },
     ];
 
-    it.each(testCases)('should detect safety.$field and suggest migration', ({ field, newPath }) => {
-      const config = createDefaultConfig('https://github.com/org/repo.git');
-      const rawConfig = {
-        schema_version: '1.0.0',
-        safety: {
-          [field]: true,
-        },
-      };
-      const result = checkSchemaCompatibility(config, '1.1.0', rawConfig);
+    it.each(testCases)(
+      'should detect safety.$field and suggest migration',
+      ({ field, newPath }) => {
+        const config = createDefaultConfig('https://github.com/org/repo.git');
+        const rawConfig = {
+          schema_version: '1.0.0',
+          safety: {
+            [field]: true,
+          },
+        };
+        const result = checkSchemaCompatibility(config, '1.1.0', rawConfig);
 
-      expect(
-        result.migration_notes.some(
-          (note) => note.includes(`safety.${field}`) && note.includes(newPath)
-        )
-      ).toBe(true);
-    });
+        expect(
+          result.migration_notes.some(
+            (note) => note.includes(`safety.${field}`) && note.includes(newPath)
+          )
+        ).toBe(true);
+      }
+    );
 
     it('should detect governance_notes at root and suggest migration', () => {
       const config = createDefaultConfig('https://github.com/org/repo.git', {

@@ -137,7 +137,11 @@ export default class Health extends Command {
       try {
         fs.writeFileSync(probePath, 'probe', 'utf-8');
       } finally {
-        try { fs.unlinkSync(probePath); } catch { /* probe may not exist */ }
+        try {
+          fs.unlinkSync(probePath);
+        } catch {
+          /* probe may not exist */
+        }
       }
 
       return {

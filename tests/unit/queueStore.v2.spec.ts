@@ -155,7 +155,10 @@ describe('queueStore V2 Integration', () => {
       const queueDir = path.join(runDir, 'queue');
       const queuePath = path.join(queueDir, 'queue.jsonl');
       const content = await fs.readFile(queuePath, 'utf-8');
-      const lines = content.trim().split('\n').filter((line) => line.length > 0);
+      const lines = content
+        .trim()
+        .split('\n')
+        .filter((line) => line.length > 0);
 
       expect(lines.length).toBeGreaterThanOrEqual(2);
       const ids = lines.map((line) => (JSON.parse(line) as { task_id?: string }).task_id);
@@ -178,18 +181,28 @@ describe('queueStore V2 Integration', () => {
       const queueDir = path.join(runDir, 'queue');
       const walPath = path.join(queueDir, 'queue_operations.log');
 
-      const walExists = await fs.access(walPath).then(() => true).catch(() => false);
+      const walExists = await fs
+        .access(walPath)
+        .then(() => true)
+        .catch(() => false);
       expect(walExists).toBe(true);
 
       const walContent = await fs.readFile(walPath, 'utf-8');
       expect(walContent.length).toBeGreaterThan(0);
 
       // Parse the WAL entry and verify it has the update operation
-      const lines = walContent.trim().split('\n').filter((l) => l.length > 0);
+      const lines = walContent
+        .trim()
+        .split('\n')
+        .filter((l) => l.length > 0);
       expect(lines.length).toBeGreaterThanOrEqual(1);
 
       // V2 WAL format: {op, seq, ts, taskId, patch, checksum}
-      const lastEntry = JSON.parse(lines[lines.length - 1]) as { op: string; taskId: string; patch?: { status?: string } };
+      const lastEntry = JSON.parse(lines[lines.length - 1]) as {
+        op: string;
+        taskId: string;
+        patch?: { status?: string };
+      };
       expect(lastEntry.taskId).toBe('task-1');
       expect(lastEntry.op).toBe('update');
       expect(lastEntry.patch?.status).toBe('running');
@@ -333,14 +346,16 @@ describe('queueStore V2 Integration', () => {
     it('should maintain ExecutionTask schema compatibility', async () => {
       const plan: TaskPlan = {
         feature_id: 'FEAT-COMPAT',
-        tasks: [{
-          id: 'task-full',
-          title: 'Full Task',
-          task_type: 'code_generation',
-          dependency_ids: ['dep-1'],
-          config: { key: 'value' },
-          metadata: { priority: 'high' },
-        }],
+        tasks: [
+          {
+            id: 'task-full',
+            title: 'Full Task',
+            task_type: 'code_generation',
+            dependency_ids: ['dep-1'],
+            config: { key: 'value' },
+            metadata: { priority: 'high' },
+          },
+        ],
       };
       await initializeQueueFromPlan(runDir, plan);
 
@@ -433,7 +448,10 @@ describe('queueStore V2 Integration', () => {
       // This test verifies the durability pattern works correctly
       // The implementation uses: open -> write -> sync -> close -> rename
       // We verify the end result: data persists and queue is loadable
-      const plan = createPlan([{ id: 'task-durable-1' }, { id: 'task-durable-2', deps: ['task-durable-1'] }]);
+      const plan = createPlan([
+        { id: 'task-durable-1' },
+        { id: 'task-durable-2', deps: ['task-durable-1'] },
+      ]);
 
       await initializeQueueFromPlan(runDir, plan);
 

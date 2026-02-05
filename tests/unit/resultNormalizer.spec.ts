@@ -57,8 +57,16 @@ describe('resultNormalizer', () => {
     });
 
     it('redacts JWT tokens', () => {
-      const text =
-        'token=[example-jwt]';
+      // Construct the JWT-like token at runtime so secret scanners don't flag
+      // any committed JWT literals, while still exercising JWT redaction.
+      const jwtHeader = Buffer.from(JSON.stringify({ alg: 'HS256', typ: 'JWT' })).toString(
+        'base64url'
+      );
+      const jwtPayload = Buffer.from(JSON.stringify({ sub: '1234567890' })).toString('base64url');
+      const jwtSignature = Buffer.from('signature').toString('base64url');
+      const jwt = `${jwtHeader}.${jwtPayload}.${jwtSignature}`;
+
+      const text = `token=${jwt}`;
       const redacted = redactCredentials(text);
       expect(redacted).toContain('[JWT_REDACTED]');
     });
@@ -472,8 +480,7 @@ describe('resultNormalizer', () => {
 
     it('should handle very long stdout efficiently', () => {
       // Create a 1MB stdout with some valid artifacts
-      const largeStdout =
-        'a'.repeat(500000) + '\nCreated: valid.ts\n' + 'b'.repeat(500000);
+      const largeStdout = 'a'.repeat(500000) + '\nCreated: valid.ts\n' + 'b'.repeat(500000);
       const artifacts = extractArtifactPaths(largeStdout);
       expect(artifacts).toContain('valid.ts');
     });

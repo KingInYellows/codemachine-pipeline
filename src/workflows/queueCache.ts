@@ -65,9 +65,7 @@ export async function getV2IndexCache(runDir: string): Promise<V2IndexCache> {
   // Ensure V2 format (auto-migrate from V1 if needed)
   const migrationResult = await ensureV2Format(queueDir, featureId);
   if (migrationResult.result && !migrationResult.result.success) {
-    throw new Error(
-      `Queue migration failed: ${migrationResult.result.error ?? 'Unknown error'}`
-    );
+    throw new Error(`Queue migration failed: ${migrationResult.result.error ?? 'Unknown error'}`);
   }
   if (migrationResult.migrated && migrationResult.result) {
     logger.warn('⚠️ V1 queue format detected - auto-migrated to V2', {

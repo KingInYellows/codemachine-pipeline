@@ -319,12 +319,7 @@ export class StructuredLogger implements LoggerInterface {
   /**
    * Log with explicit error object
    */
-  logError(
-    level: LogLevel,
-    message: string,
-    error: Error,
-    context?: LogContext
-  ): void {
+  logError(level: LogLevel, message: string, error: Error, context?: LogContext): void {
     const errorContext = {
       ...context,
       error: {
@@ -386,11 +381,7 @@ export class StructuredLogger implements LoggerInterface {
   /**
    * Build structured log entry
    */
-  private buildLogEntry(
-    level: LogLevel,
-    message: string,
-    context?: LogContext
-  ): LogEntry {
+  private buildLogEntry(level: LogLevel, message: string, context?: LogContext): LogEntry {
     const entry: LogEntry = {
       timestamp: new Date().toISOString(),
       level,

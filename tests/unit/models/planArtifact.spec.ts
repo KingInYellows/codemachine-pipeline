@@ -173,11 +173,7 @@ describe('validateDAG', () => {
   });
 
   it('detects cycles', () => {
-    const plan = makePlan([
-      makeTask('a', ['c']),
-      makeTask('b', ['a']),
-      makeTask('c', ['b']),
-    ]);
+    const plan = makePlan([makeTask('a', ['c']), makeTask('b', ['a']), makeTask('c', ['b'])]);
 
     const result = validateDAG(plan);
 
@@ -186,10 +182,7 @@ describe('validateDAG', () => {
   });
 
   it('detects duplicate task IDs', () => {
-    const plan = makePlan([
-      makeTask('dup'),
-      makeTask('dup'),
-    ]);
+    const plan = makePlan([makeTask('dup'), makeTask('dup')]);
 
     const result = validateDAG(plan);
 
@@ -198,9 +191,7 @@ describe('validateDAG', () => {
   });
 
   it('detects invalid dependency references', () => {
-    const plan = makePlan([
-      makeTask('a', ['nonexistent']),
-    ]);
+    const plan = makePlan([makeTask('a', ['nonexistent'])]);
 
     const result = validateDAG(plan);
 
@@ -237,10 +228,7 @@ describe('getEntryTasks', () => {
   });
 
   it('returns empty array when all tasks have dependencies', () => {
-    const plan = makePlan([
-      makeTask('a', ['b']),
-      makeTask('b', ['a']),
-    ]);
+    const plan = makePlan([makeTask('a', ['b']), makeTask('b', ['a'])]);
 
     const entries = getEntryTasks(plan);
 
@@ -248,11 +236,7 @@ describe('getEntryTasks', () => {
   });
 
   it('returns all task IDs when none have dependencies', () => {
-    const plan = makePlan([
-      makeTask('x'),
-      makeTask('y'),
-      makeTask('z'),
-    ]);
+    const plan = makePlan([makeTask('x'), makeTask('y'), makeTask('z')]);
 
     const entries = getEntryTasks(plan);
 
@@ -282,10 +266,7 @@ describe('getDependentTasks', () => {
   });
 
   it('returns empty array when no tasks depend on the given task', () => {
-    const plan = makePlan([
-      makeTask('a'),
-      makeTask('b', ['a']),
-    ]);
+    const plan = makePlan([makeTask('a'), makeTask('b', ['a'])]);
 
     const dependents = getDependentTasks(plan, 'b');
 

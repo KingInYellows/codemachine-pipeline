@@ -337,8 +337,18 @@ describe('matchesRequirements', () => {
       costConfig: {
         currency: 'USD',
         models: [
-          { modelId: 'small', inputCostPer1kTokens: 0.001, outputCostPer1kTokens: 0.002, contextWindow: 8000 },
-          { modelId: 'large', inputCostPer1kTokens: 0.01, outputCostPer1kTokens: 0.02, contextWindow: 128000 },
+          {
+            modelId: 'small',
+            inputCostPer1kTokens: 0.001,
+            outputCostPer1kTokens: 0.002,
+            contextWindow: 8000,
+          },
+          {
+            modelId: 'large',
+            inputCostPer1kTokens: 0.01,
+            outputCostPer1kTokens: 0.02,
+            contextWindow: 128000,
+          },
         ],
       },
     });
@@ -624,16 +634,8 @@ describe('ManifestLoader', () => {
       const manifest1 = createValidManifest({ providerId: 'provider-1' });
       const manifest2 = createValidManifest({ providerId: 'provider-2' });
 
-      await fs.writeFile(
-        path.join(tempDir, 'provider1.json'),
-        JSON.stringify(manifest1),
-        'utf-8'
-      );
-      await fs.writeFile(
-        path.join(tempDir, 'provider2.json'),
-        JSON.stringify(manifest2),
-        'utf-8'
-      );
+      await fs.writeFile(path.join(tempDir, 'provider1.json'), JSON.stringify(manifest1), 'utf-8');
+      await fs.writeFile(path.join(tempDir, 'provider2.json'), JSON.stringify(manifest2), 'utf-8');
 
       const { loaded, errors } = await loader.loadManifestsFromDirectory(tempDir);
 

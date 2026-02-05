@@ -171,11 +171,12 @@ function createFixtureMockClient(fixture: HttpFixture): {
 
   // For error fixtures, reject with HttpError
   if (fixture.status >= 400) {
-    const errorType = fixture.status === 429 || fixture.status === 503
-      ? ErrorType.TRANSIENT
-      : fixture.status === 401 || fixture.status === 403
-      ? ErrorType.HUMAN_ACTION_REQUIRED
-      : ErrorType.PERMANENT;
+    const errorType =
+      fixture.status === 429 || fixture.status === 503
+        ? ErrorType.TRANSIENT
+        : fixture.status === 401 || fixture.status === 403
+          ? ErrorType.HUMAN_ACTION_REQUIRED
+          : ErrorType.PERMANENT;
 
     const httpError = new HttpError(
       (fixture.data as { message?: string })?.message || 'HTTP Error',
@@ -252,7 +253,11 @@ describe('GitHub Adapter Regression Tests', () => {
       const fixture = await loadFixture('github', 'success_repository.json');
       const mockClient = createFixtureMockClient(fixture);
 
-      Reflect.set(adapter as unknown as { client: HttpClient }, 'client', mockClient as unknown as HttpClient);
+      Reflect.set(
+        adapter as unknown as { client: HttpClient },
+        'client',
+        mockClient as unknown as HttpClient
+      );
 
       await expect(adapterContract.getRepository()).resolves.toMatchObject({
         full_name: 'test-org/test-repo',
@@ -273,7 +278,11 @@ describe('GitHub Adapter Regression Tests', () => {
       const fixture = await loadFixture('github', 'success_pull_request.json');
       const mockClient = createFixtureMockClient(fixture);
 
-      Reflect.set(adapter as unknown as { client: HttpClient }, 'client', mockClient as unknown as HttpClient);
+      Reflect.set(
+        adapter as unknown as { client: HttpClient },
+        'client',
+        mockClient as unknown as HttpClient
+      );
 
       await expect(
         adapterContract.createPullRequest({
@@ -305,7 +314,11 @@ describe('GitHub Adapter Regression Tests', () => {
       const fixture = await loadFixture('github', 'ratelimit_429_primary.json');
       const mockClient = createFixtureMockClient(fixture);
 
-      Reflect.set(adapter as unknown as { client: HttpClient }, 'client', mockClient as unknown as HttpClient);
+      Reflect.set(
+        adapter as unknown as { client: HttpClient },
+        'client',
+        mockClient as unknown as HttpClient
+      );
 
       await expect(adapterContract.getRepository()).rejects.toThrow();
 
@@ -327,7 +340,11 @@ describe('GitHub Adapter Regression Tests', () => {
       const fixture = await loadFixture('github', 'error_403_secondary.json');
       const mockClient = createFixtureMockClient(fixture);
 
-      Reflect.set(adapter as unknown as { client: HttpClient }, 'client', mockClient as unknown as HttpClient);
+      Reflect.set(
+        adapter as unknown as { client: HttpClient },
+        'client',
+        mockClient as unknown as HttpClient
+      );
 
       await expect(adapterContract.getRepository()).rejects.toThrow();
 
@@ -349,7 +366,11 @@ describe('GitHub Adapter Regression Tests', () => {
       const fixture = await loadFixture('github', 'error_missing_scopes.json');
       const mockClient = createFixtureMockClient(fixture);
 
-      Reflect.set(adapter as unknown as { client: HttpClient }, 'client', mockClient as unknown as HttpClient);
+      Reflect.set(
+        adapter as unknown as { client: HttpClient },
+        'client',
+        mockClient as unknown as HttpClient
+      );
 
       await expect(
         adapterContract.triggerWorkflow({
@@ -436,14 +457,20 @@ describe('Linear Adapter Regression Tests', () => {
       const fixture = await loadFixture('linear', 'success_issue.json');
       const mockClient = createFixtureMockClient(fixture);
 
-      Reflect.set(adapter as unknown as { client: HttpClient }, 'client', mockClient as unknown as HttpClient);
+      Reflect.set(
+        adapter as unknown as { client: HttpClient },
+        'client',
+        mockClient as unknown as HttpClient
+      );
 
-      await expect(adapterContract.fetchIssue('linear-uuid-1234-5678-abcd')).resolves.toMatchObject({
-        identifier: 'ENG-123',
-        title: stringMatcher('regression tests'),
-        state: { name: 'In Progress' },
-        priority: 2,
-      });
+      await expect(adapterContract.fetchIssue('linear-uuid-1234-5678-abcd')).resolves.toMatchObject(
+        {
+          identifier: 'ENG-123',
+          title: stringMatcher('regression tests'),
+          state: { name: 'In Progress' },
+          priority: 2,
+        }
+      );
       expect(mockClient.post).toHaveBeenCalledWith(
         '/graphql',
         expect.objectContaining({
@@ -458,7 +485,11 @@ describe('Linear Adapter Regression Tests', () => {
       const fixture = await loadFixture('linear', 'success_comments.json');
       const mockClient = createFixtureMockClient(fixture);
 
-      Reflect.set(adapter as unknown as { client: HttpClient }, 'client', mockClient as unknown as HttpClient);
+      Reflect.set(
+        adapter as unknown as { client: HttpClient },
+        'client',
+        mockClient as unknown as HttpClient
+      );
 
       await adapterContract.fetchComments('linear-uuid-1234-5678-abcd').then((result) => {
         expect(result).toHaveLength(2);
@@ -488,7 +519,11 @@ describe('Linear Adapter Regression Tests', () => {
       const fixture = await loadFixture('linear', 'success_update_issue.json');
       const mockClient = createFixtureMockClient(fixture);
 
-      Reflect.set(previewAdapter as unknown as { client: HttpClient }, 'client', mockClient as unknown as HttpClient);
+      Reflect.set(
+        previewAdapter as unknown as { client: HttpClient },
+        'client',
+        mockClient as unknown as HttpClient
+      );
 
       await previewAdapterContract.updateIssue({
         issueId: 'linear-uuid-1234-5678-abcd',
@@ -517,7 +552,11 @@ describe('Linear Adapter Regression Tests', () => {
       const fixture = await loadFixture('linear', 'ratelimit_429_primary.json');
       const mockClient = createFixtureMockClient(fixture);
 
-      Reflect.set(adapter as unknown as { client: HttpClient }, 'client', mockClient as unknown as HttpClient);
+      Reflect.set(
+        adapter as unknown as { client: HttpClient },
+        'client',
+        mockClient as unknown as HttpClient
+      );
 
       await expect(adapterContract.fetchIssue('linear-uuid-test')).rejects.toThrow();
 
@@ -541,7 +580,11 @@ describe('Linear Adapter Regression Tests', () => {
       const fixture = await loadFixture('linear', 'error_403_invalid_token.json');
       const mockClient = createFixtureMockClient(fixture);
 
-      Reflect.set(adapter as unknown as { client: HttpClient }, 'client', mockClient as unknown as HttpClient);
+      Reflect.set(
+        adapter as unknown as { client: HttpClient },
+        'client',
+        mockClient as unknown as HttpClient
+      );
 
       await expect(adapterContract.fetchIssue('linear-uuid-test')).rejects.toThrow();
 
@@ -569,7 +612,11 @@ describe('Linear Adapter Regression Tests', () => {
       const fixture = await loadFixture('linear', 'error_missing_scopes.json');
       const mockClient = createFixtureMockClient(fixture);
 
-      Reflect.set(previewAdapter as unknown as { client: HttpClient }, 'client', mockClient as unknown as HttpClient);
+      Reflect.set(
+        previewAdapter as unknown as { client: HttpClient },
+        'client',
+        mockClient as unknown as HttpClient
+      );
 
       await expect(
         previewAdapterContract.updateIssue({

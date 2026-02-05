@@ -35,7 +35,9 @@ import { computeFileHash } from '../../src/persistence/hashManifest';
 
 vi.mock('node:fs/promises');
 vi.mock('../../src/persistence/hashManifest', () => ({
-  computeFileHash: vi.fn().mockResolvedValue('abcd1234567890abcd1234567890abcd1234567890abcd1234567890abcd1234'),
+  computeFileHash: vi
+    .fn()
+    .mockResolvedValue('abcd1234567890abcd1234567890abcd1234567890abcd1234567890abcd1234'),
 }));
 vi.mock('../../src/persistence/runDirectoryManager', () => ({
   withLock: vi.fn(async (_runDir: string, fn: () => Promise<unknown>) => await fn()),
@@ -252,9 +254,9 @@ describe('Specification Composer', () => {
         repoConfig: createMockRepoConfig(),
       };
 
-      await expect(
-        composeSpecification(config, mockLogger, mockMetrics)
-      ).rejects.toThrow('PRD must be approved');
+      await expect(composeSpecification(config, mockLogger, mockMetrics)).rejects.toThrow(
+        'PRD must be approved'
+      );
     });
 
     it('should generate spec with all required sections', async () => {
@@ -319,7 +321,7 @@ describe('Specification Composer', () => {
 
       expect(result.specification.risks.length).toBeGreaterThan(0);
 
-      const highRisk = result.specification.risks.find(r => r.severity === 'high');
+      const highRisk = result.specification.risks.find((r) => r.severity === 'high');
       expect(highRisk).toBeDefined();
       expect(highRisk?.description).toContain('Scalability');
     });
@@ -338,9 +340,11 @@ describe('Specification Composer', () => {
 
       expect(result.specification.test_plan.length).toBeGreaterThan(0);
 
-      const unitTests = result.specification.test_plan.filter(t => t.test_type === 'unit');
-      const integrationTests = result.specification.test_plan.filter(t => t.test_type === 'integration');
-      const e2eTests = result.specification.test_plan.filter(t => t.test_type === 'e2e');
+      const unitTests = result.specification.test_plan.filter((t) => t.test_type === 'unit');
+      const integrationTests = result.specification.test_plan.filter(
+        (t) => t.test_type === 'integration'
+      );
+      const e2eTests = result.specification.test_plan.filter((t) => t.test_type === 'e2e');
 
       expect(unitTests.length).toBeGreaterThan(0);
       expect(integrationTests.length).toBeGreaterThan(0);
@@ -348,10 +352,7 @@ describe('Specification Composer', () => {
     });
 
     it('should use canary rollout strategy for high-risk features', async () => {
-      const highRiskPRD = mockPRDMarkdown.replace(
-        'High Risk:',
-        'Critical Risk:'
-      );
+      const highRiskPRD = mockPRDMarkdown.replace('High Risk:', 'Critical Risk:');
 
       vi.mocked(fs.readFile).mockImplementation((filePath: string) => {
         if (filePath.includes('prd_metadata.json')) {
@@ -380,7 +381,9 @@ describe('Specification Composer', () => {
     });
 
     it('should detect unknowns from TODO markers', async () => {
-      const prdWithTodos = mockPRDMarkdown + '\n\nTODO: Define performance benchmarks\nTBD: Clarify authentication requirements';
+      const prdWithTodos =
+        mockPRDMarkdown +
+        '\n\nTODO: Define performance benchmarks\nTBD: Clarify authentication requirements';
 
       vi.mocked(fs.readFile).mockImplementation((filePath: string) => {
         if (filePath.includes('prd_metadata.json')) {
@@ -406,7 +409,7 @@ describe('Specification Composer', () => {
       expect(result.diagnostics.unknowns.length).toBeGreaterThan(0);
       expect(result.diagnostics.warnings.length).toBeGreaterThan(0);
 
-      const todoUnknown = result.diagnostics.unknowns.find(u =>
+      const todoUnknown = result.diagnostics.unknowns.find((u) =>
         u.description.includes('performance benchmarks')
       );
       expect(todoUnknown).toBeDefined();
@@ -455,9 +458,11 @@ describe('Specification Composer', () => {
 
       await composeSpecification(config, mockLogger, mockMetrics);
 
-      const specWriteCall = vi.mocked(fs.writeFile).mock.calls.find(
-        ([filePath]) => typeof filePath === 'string' && filePath.includes('spec.md')
-      );
+      const specWriteCall = vi
+        .mocked(fs.writeFile)
+        .mock.calls.find(
+          ([filePath]) => typeof filePath === 'string' && filePath.includes('spec.md')
+        );
 
       expect(specWriteCall).toBeDefined();
       const [, markdown] = specWriteCall!;
@@ -548,9 +553,11 @@ describe('Specification Composer', () => {
       expect(record.signer).toBe('test-user');
       expect(record.rationale).toBe('Looks good');
 
-      const approvalsIndexWrite = vi.mocked(fs.writeFile).mock.calls.find(
-        ([filePath]) => typeof filePath === 'string' && filePath.endsWith('approvals.json')
-      );
+      const approvalsIndexWrite = vi
+        .mocked(fs.writeFile)
+        .mock.calls.find(
+          ([filePath]) => typeof filePath === 'string' && filePath.endsWith('approvals.json')
+        );
       expect(approvalsIndexWrite).toBeDefined();
     });
 
@@ -560,22 +567,21 @@ describe('Specification Composer', () => {
         verdict: 'approved',
       };
 
-      await recordSpecApproval(
-        '/test/runs/feat-123',
-        'feat-123',
-        options,
-        mockLogger,
-        mockMetrics
-      );
+      await recordSpecApproval('/test/runs/feat-123', 'feat-123', options, mockLogger, mockMetrics);
 
-      const writeCall = vi.mocked(fs.writeFile).mock.calls.find(
-        ([filePath]) => typeof filePath === 'string' && filePath.includes('spec_metadata.json')
-      );
+      const writeCall = vi
+        .mocked(fs.writeFile)
+        .mock.calls.find(
+          ([filePath]) => typeof filePath === 'string' && filePath.includes('spec_metadata.json')
+        );
 
       expect(writeCall).toBeDefined();
       const [, metadataPayload] = writeCall!;
       expect(typeof metadataPayload).toBe('string');
-      const parsedMetadata = JSON.parse(metadataPayload as string) as { approvalStatus: string; approvals: unknown[] };
+      const parsedMetadata = JSON.parse(metadataPayload as string) as {
+        approvalStatus: string;
+        approvals: unknown[];
+      };
       expect(parsedMetadata.approvalStatus).toBe('approved');
       expect(parsedMetadata.approvals).toHaveLength(1);
     });
@@ -590,13 +596,7 @@ describe('Specification Composer', () => {
       };
 
       await expect(
-        recordSpecApproval(
-          '/test/runs/feat-123',
-          'feat-123',
-          options,
-          mockLogger,
-          mockMetrics
-        )
+        recordSpecApproval('/test/runs/feat-123', 'feat-123', options, mockLogger, mockMetrics)
       ).rejects.toThrow('Spec content has changed');
     });
 
@@ -617,9 +617,11 @@ describe('Specification Composer', () => {
 
       expect(record.verdict).toBe('rejected');
 
-      const writeCall = vi.mocked(fs.writeFile).mock.calls.find(
-        ([filePath]) => typeof filePath === 'string' && filePath.includes('spec_metadata.json')
-      );
+      const writeCall = vi
+        .mocked(fs.writeFile)
+        .mock.calls.find(
+          ([filePath]) => typeof filePath === 'string' && filePath.includes('spec_metadata.json')
+        );
 
       expect(writeCall).toBeDefined();
       const [, metadataPayload] = writeCall!;
@@ -645,9 +647,11 @@ describe('Specification Composer', () => {
 
       expect(record.verdict).toBe('requested_changes');
 
-      const writeCall = vi.mocked(fs.writeFile).mock.calls.find(
-        ([filePath]) => typeof filePath === 'string' && filePath.includes('spec_metadata.json')
-      );
+      const writeCall = vi
+        .mocked(fs.writeFile)
+        .mock.calls.find(
+          ([filePath]) => typeof filePath === 'string' && filePath.includes('spec_metadata.json')
+        );
 
       expect(writeCall).toBeDefined();
       const [, metadataPayload] = writeCall!;

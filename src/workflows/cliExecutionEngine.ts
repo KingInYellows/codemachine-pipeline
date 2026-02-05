@@ -76,7 +76,10 @@ async function captureArtifacts(
   try {
     await fs.mkdir(artifactDir, { recursive: true, mode: 0o700 });
   } catch (err) {
-    logger?.warn('Failed to create artifact directory', { error: getErrorMessage(err), taskId: task.task_id });
+    logger?.warn('Failed to create artifact directory', {
+      error: getErrorMessage(err),
+      taskId: task.task_id,
+    });
     return [];
   }
 
@@ -316,7 +319,12 @@ export class CLIExecutionEngine {
       }
 
       // Update queue depth metrics after each task completion
-      const pending = result.totalTasks - result.completedTasks - result.failedTasks - result.permanentlyFailedTasks - result.skippedTasks;
+      const pending =
+        result.totalTasks -
+        result.completedTasks -
+        result.failedTasks -
+        result.permanentlyFailedTasks -
+        result.skippedTasks;
       this.telemetry?.metrics?.setQueueDepth(
         pending,
         result.completedTasks,
@@ -484,7 +492,7 @@ export class CLIExecutionEngine {
     } catch (err) {
       this.logger?.warn('Failed to capture failure artifacts', {
         error: getErrorMessage(err),
-        taskId: task.task_id
+        taskId: task.task_id,
       });
     }
 
@@ -537,10 +545,7 @@ export class CLIExecutionEngine {
     this.logger?.info('Execution stop requested');
   }
 
-  private async getReadyTasks(
-    inFlight: Set<string>,
-    limit: number
-  ): Promise<ExecutionTask[]> {
+  private async getReadyTasks(inFlight: Set<string>, limit: number): Promise<ExecutionTask[]> {
     const tasks = await loadQueue(this.runDir);
     const ready: ExecutionTask[] = [];
     const seen = new Set<string>();

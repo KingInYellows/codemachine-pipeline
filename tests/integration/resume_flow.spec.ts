@@ -2,10 +2,7 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 import * as os from 'node:os';
-import {
-  analyzeResumeState,
-  prepareResume,
-} from '../../src/workflows/resumeCoordinator';
+import { analyzeResumeState, prepareResume } from '../../src/workflows/resumeCoordinator';
 import {
   createRunDirectory,
   setLastError,
@@ -25,9 +22,7 @@ import {
   updateTaskInQueue,
   loadQueue,
 } from '../../src/workflows/queueStore';
-import {
-  createExecutionTask,
-} from '../../src/core/models/ExecutionTask';
+import { createExecutionTask } from '../../src/core/models/ExecutionTask';
 
 type ResumeState = Awaited<ReturnType<typeof analyzeResumeState>>;
 
@@ -227,12 +222,15 @@ describe('Resume Flow Integration Tests', () => {
       const hashManifestPath = path.join(runDir, 'hash_manifest.json');
       const hashManifestContent = await fs.readFile(hashManifestPath, 'utf-8');
       const hashManifest = JSON.parse(hashManifestContent) as {
-        files: Record<string, {
-          path: string;
-          hash: string;
-          size: number;
-          timestamp: string;
-        }>;
+        files: Record<
+          string,
+          {
+            path: string;
+            hash: string;
+            size: number;
+            timestamp: string;
+          }
+        >;
       };
       hashManifest.files['artifacts/missing.md'] = {
         path: 'artifacts/missing.md',

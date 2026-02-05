@@ -23,11 +23,7 @@ import { compact } from './queueCompactionEngine.js';
 import type { QueueIndexState, ExecutionTaskData, QueueCounts } from './queueTypes.js';
 
 // Shared cache and helpers (avoids circular dependency with queueStore)
-import {
-  getV2IndexCache,
-  buildDependencyGraph,
-  toExecutionTask,
-} from './queueCache.js';
+import { getV2IndexCache, buildDependencyGraph, toExecutionTask } from './queueCache.js';
 
 // ============================================================================
 // V2 Queue API (Direct Access)
@@ -79,16 +75,13 @@ export async function getV2IndexState(runDir: string): Promise<QueueIndexState> 
  * @param runDir - Run directory path
  * @returns Compaction result
  */
-export async function forceCompactV2(runDir: string): Promise<{ compacted: boolean; snapshotSeq: number }> {
+export async function forceCompactV2(
+  runDir: string
+): Promise<{ compacted: boolean; snapshotSeq: number }> {
   const v2Cache = await getV2IndexCache(runDir);
   const dependencyGraph = buildDependencyGraph(v2Cache.state);
 
-  const result = await compact(
-    runDir,
-    v2Cache.queueDir,
-    v2Cache.featureId,
-    dependencyGraph
-  );
+  const result = await compact(runDir, v2Cache.queueDir, v2Cache.featureId, dependencyGraph);
 
   if (result.compacted) {
     v2Cache.state.snapshotSeq = result.snapshotSeq;

@@ -126,8 +126,8 @@ const validManifestExpensive: AgentManifest = {
     models: [
       {
         modelId: 'expensive-model',
-        inputCostPer1kTokens: 0.10,
-        outputCostPer1kTokens: 0.20,
+        inputCostPer1kTokens: 0.1,
+        outputCostPer1kTokens: 0.2,
         contextWindow: 32768,
         maxOutputTokens: 8192,
       },
@@ -579,9 +579,7 @@ describe('AgentAdapter - Error Classification', () => {
   });
 
   it('should classify ambiguous input as humanAction', async () => {
-    providerInvoker.mockRejectedValue(
-      new Error('Ambiguous requirements - clarification needed')
-    );
+    providerInvoker.mockRejectedValue(new Error('Ambiguous requirements - clarification needed'));
 
     const request: AgentSessionRequest = {
       context: 'code_generation',
@@ -716,9 +714,9 @@ describe('AgentAdapter - Fallback Logic', () => {
   });
 
   it('should not attempt fallback if disabled', async () => {
-    const noFallbackInvoker = vi.fn<ProviderInvoker>().mockRejectedValue(
-      new Error('Rate limit exceeded - 429')
-    );
+    const noFallbackInvoker = vi
+      .fn<ProviderInvoker>()
+      .mockRejectedValue(new Error('Rate limit exceeded - 429'));
 
     const noFallbackAdapter = createAgentAdapter({
       manifestLoader,
@@ -751,9 +749,9 @@ describe('AgentAdapter - Fallback Logic', () => {
     };
 
     const limitedLoader = createMockManifestLoader(logger.instance, [manifestNoFallback]);
-    const limitedProviderInvoker = vi.fn<ProviderInvoker>().mockRejectedValue(
-      new Error('Rate limit exceeded - 429')
-    );
+    const limitedProviderInvoker = vi
+      .fn<ProviderInvoker>()
+      .mockRejectedValue(new Error('Rate limit exceeded - 429'));
     const limitedAdapter = createAgentAdapter({
       manifestLoader: limitedLoader,
       logger: logger.instance,
@@ -823,9 +821,7 @@ describe('AgentAdapter - Session Telemetry', () => {
     const failingAdapter = createAgentAdapter({
       manifestLoader,
       logger: logger.instance,
-      providerInvoker: vi.fn<ProviderInvoker>().mockRejectedValue(
-        new Error('Invalid API key')
-      ),
+      providerInvoker: vi.fn<ProviderInvoker>().mockRejectedValue(new Error('Invalid API key')),
     });
 
     const request: AgentSessionRequest = {
@@ -971,8 +967,9 @@ describe('AgentAdapter - Statistics', () => {
       validManifestPrimary,
       validManifestFallback,
     ]);
-    providerInvoker = vi.fn<ProviderInvoker>((manifest, _request, sessionId, _startTime, fallbackAttempts) =>
-      Promise.resolve(createProviderResponse(manifest, sessionId, fallbackAttempts))
+    providerInvoker = vi.fn<ProviderInvoker>(
+      (manifest, _request, sessionId, _startTime, fallbackAttempts) =>
+        Promise.resolve(createProviderResponse(manifest, sessionId, fallbackAttempts))
     );
     adapter = createAgentAdapter({
       manifestLoader,
@@ -994,12 +991,14 @@ describe('AgentAdapter - Statistics', () => {
     // Failed session
     providerInvoker.mockRejectedValueOnce(new Error('Invalid API key'));
 
-    await expect(adapter.executeSession({
-      context: 'code_generation',
-      prompt: { instruction: 'Test 2' },
-      taskId: 'task-2',
-      featureId: 'FEAT-2',
-    })).rejects.toMatchObject({ category: 'permanent' });
+    await expect(
+      adapter.executeSession({
+        context: 'code_generation',
+        prompt: { instruction: 'Test 2' },
+        taskId: 'task-2',
+        featureId: 'FEAT-2',
+      })
+    ).rejects.toMatchObject({ category: 'permanent' });
 
     const stats = adapter.getStatistics();
 
@@ -1012,17 +1011,19 @@ describe('AgentAdapter - Statistics', () => {
 
   it('should track fallback usage in statistics', async () => {
     let invokeCount = 0;
-    providerInvoker.mockImplementation((manifest, request, sessionId, startTime, fallbackAttempts) => {
-      invokeCount++;
-      if (invokeCount === 1) {
-        return Promise.reject(new Error('Rate limit exceeded - 429'));
+    providerInvoker.mockImplementation(
+      (manifest, request, sessionId, startTime, fallbackAttempts) => {
+        invokeCount++;
+        if (invokeCount === 1) {
+          return Promise.reject(new Error('Rate limit exceeded - 429'));
+        }
+        return Promise.resolve(
+          createProviderResponse(manifest, sessionId, fallbackAttempts, {
+            usedFallback: invokeCount > 1,
+          })
+        );
       }
-      return Promise.resolve(
-        createProviderResponse(manifest, sessionId, fallbackAttempts, {
-          usedFallback: invokeCount > 1,
-        })
-      );
-    });
+    );
 
     await adapter.executeSession({
       context: 'code_generation',
@@ -1081,9 +1082,7 @@ describe('AgentAdapter - Contract Enforcement', () => {
     const erroringAdapter = createAgentAdapter({
       manifestLoader,
       logger: logger.instance,
-      providerInvoker: vi.fn<ProviderInvoker>().mockRejectedValue(
-        new Error('Test error')
-      ),
+      providerInvoker: vi.fn<ProviderInvoker>().mockRejectedValue(new Error('Test error')),
     });
 
     const request: AgentSessionRequest = {

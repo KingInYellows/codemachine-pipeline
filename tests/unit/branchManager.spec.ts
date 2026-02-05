@@ -348,10 +348,18 @@ describe('branchManager', () => {
       const { createBranch } = await import('../../src/workflows/branchManager');
       const vi = await import('vitest');
       const mockLogger = {
-        info: vi.vi.fn(), debug: vi.vi.fn(), warn: vi.vi.fn(), error: vi.vi.fn(),
-        child: vi.vi.fn(), flush: vi.vi.fn(),
+        info: vi.vi.fn(),
+        debug: vi.vi.fn(),
+        warn: vi.vi.fn(),
+        error: vi.vi.fn(),
+        child: vi.vi.fn(),
+        flush: vi.vi.fn(),
       } as unknown as import('../../src/telemetry/logger').StructuredLogger;
-      const mockMetrics = { recordCounter: vi.vi.fn(), recordGauge: vi.vi.fn(), recordHistogram: vi.vi.fn() } as unknown as import('../../src/telemetry/metrics').MetricsCollector;
+      const mockMetrics = {
+        recordCounter: vi.vi.fn(),
+        recordGauge: vi.vi.fn(),
+        recordHistogram: vi.vi.fn(),
+      } as unknown as import('../../src/telemetry/metrics').MetricsCollector;
 
       const config = {
         runDir: '/tmp',
@@ -361,7 +369,12 @@ describe('branchManager', () => {
       };
 
       // Using an invalid branch name (contains invalid chars)
-      const result = await createBranch(config, { branchName: '../../../etc/passwd' }, mockLogger, mockMetrics);
+      const result = await createBranch(
+        config,
+        { branchName: '../../../etc/passwd' },
+        mockLogger,
+        mockMetrics
+      );
       expect(result.success).toBe(false);
     });
   });
@@ -371,10 +384,18 @@ describe('branchManager', () => {
       const { pushBranch } = await import('../../src/workflows/branchManager');
       const vi = await import('vitest');
       const mockLogger = {
-        info: vi.vi.fn(), debug: vi.vi.fn(), warn: vi.vi.fn(), error: vi.vi.fn(),
-        child: vi.vi.fn(), flush: vi.vi.fn(),
+        info: vi.vi.fn(),
+        debug: vi.vi.fn(),
+        warn: vi.vi.fn(),
+        error: vi.vi.fn(),
+        child: vi.vi.fn(),
+        flush: vi.vi.fn(),
       } as unknown as import('../../src/telemetry/logger').StructuredLogger;
-      const mockMetrics = { recordCounter: vi.vi.fn(), recordGauge: vi.vi.fn(), recordHistogram: vi.vi.fn() } as unknown as import('../../src/telemetry/metrics').MetricsCollector;
+      const mockMetrics = {
+        recordCounter: vi.vi.fn(),
+        recordGauge: vi.vi.fn(),
+        recordHistogram: vi.vi.fn(),
+      } as unknown as import('../../src/telemetry/metrics').MetricsCollector;
 
       const config = {
         runDir: '/tmp',

@@ -122,10 +122,7 @@ function createTestCompliance(
     checks_passing: true,
     failing_checks: [],
     reviews_required: 2,
-    reviews: [
-      createTestReview(),
-      createTestReview({ user: { login: 'reviewer2', id: 67890 } }),
-    ],
+    reviews: [createTestReview(), createTestReview({ user: { login: 'reviewer2', id: 67890 } })],
     reviews_satisfied: true,
     up_to_date: true,
     stale_commit: false,

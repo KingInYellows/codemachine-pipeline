@@ -1043,6 +1043,13 @@ describe('CodeMachineRunner', () => {
         logPath: '/tmp/test.log',
       };
 
+      // `runCodeMachine` probes the existing log file size via `fs.stat()` before spawning.
+      // In CI / heavily loaded environments, relying on real filesystem timing can be flaky.
+      // Force a synchronous "not found" path so the spawn + event handlers are attached immediately.
+      vi.spyOn(fs, 'stat').mockImplementation(() => {
+        throw new Error('ENOENT');
+      });
+
       const mockStream = createMockWriteStream();
       mockCreateWriteStream.mockReturnValue(mockStream);
 
@@ -1051,9 +1058,7 @@ describe('CodeMachineRunner', () => {
 
       const promise = runCodeMachine(config, options);
 
-      setTimeout(() => {
-        childProcess.emit('close', 0);
-      }, 10);
+      childProcess.emit('close', 0, null);
 
       await promise;
 

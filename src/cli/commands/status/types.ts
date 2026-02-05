@@ -27,7 +27,9 @@ export interface StatusPayload {
   manifest_schema_doc: string;
   manifest_template: string;
   last_step: string | null;
-  last_error: import('../../../persistence/runDirectoryManager').RunManifest['execution']['last_error'] | null;
+  last_error:
+    | import('../../../persistence/runDirectoryManager').RunManifest['execution']['last_error']
+    | null;
   queue: import('../../../persistence/runDirectoryManager').RunManifest['queue'] | null;
   approvals: import('../../../persistence/runDirectoryManager').RunManifest['approvals'] | null;
   telemetry: import('../../../persistence/runDirectoryManager').RunManifest['telemetry'] | null;

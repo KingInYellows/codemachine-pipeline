@@ -89,13 +89,16 @@ interface StatusCommandPayload {
     };
   };
   rate_limits?: {
-    providers: Record<string, {
-      remaining: number;
-      reset_at: string;
-      in_cooldown: boolean;
-      manual_ack_required: boolean;
-      recent_hit_count: number;
-    }>;
+    providers: Record<
+      string,
+      {
+        remaining: number;
+        reset_at: string;
+        in_cooldown: boolean;
+        manual_ack_required: boolean;
+        recent_hit_count: number;
+      }
+    >;
     summary: {
       any_in_cooldown: boolean;
       any_requires_ack: boolean;
@@ -206,7 +209,7 @@ describe('CLI Status/Plan/Resume Surfaces', () => {
     expect(payload.plan_diff?.spec_hash_changed).toBe(true);
     expect(payload.plan_diff?.changed_fields).toContain('spec_hash');
 
-    const hasDagNote = payload.notes.some(note => note.includes('Plan DAG contains'));
+    const hasDagNote = payload.notes.some((note) => note.includes('Plan DAG contains'));
     expect(hasDagNote).toBe(true);
   });
 
@@ -239,14 +242,18 @@ describe('CLI Status/Plan/Resume Surfaces', () => {
     expect(payload.integrations?.github?.enabled).toBe(true);
     expect(payload.integrations?.github?.rate_limit?.in_cooldown).toBe(true);
     expect(payload.integrations?.github?.pr_status?.number).toBe(42);
-    expect(payload.integrations?.github?.warnings.some(msg => msg.includes('cooldown'))).toBe(true);
+    expect(payload.integrations?.github?.warnings.some((msg) => msg.includes('cooldown'))).toBe(
+      true
+    );
 
     expect(payload.integrations?.linear?.enabled).toBe(true);
     expect(payload.integrations?.linear?.issue_status?.identifier).toBe('ENG-456');
 
     expect(payload.rate_limits?.summary.any_in_cooldown).toBe(true);
     expect(payload.rate_limits?.providers.github.manual_ack_required).toBe(true);
-    expect(payload.rate_limits?.warnings.some(msg => msg.toLowerCase().includes('github'))).toBe(true);
+    expect(payload.rate_limits?.warnings.some((msg) => msg.toLowerCase().includes('github'))).toBe(
+      true
+    );
 
     expect(payload.research?.total_tasks).toBe(3);
     expect(payload.research?.pending_tasks).toBe(1);
@@ -299,8 +306,16 @@ describe('CLI Status/Plan/Resume Surfaces', () => {
     expect(payload.resume_instructions?.pending_approvals).toContain('code');
     expect(payload.pending_approvals).toContain('code');
 
-    expect(payload.rate_limit_warnings?.some(warning => warning.provider === 'github' && warning.manual_ack_required)).toBe(true);
-    expect(payload.integration_blockers?.github?.some(blocker => blocker.toLowerCase().includes('cooldown'))).toBe(true);
+    expect(
+      payload.rate_limit_warnings?.some(
+        (warning) => warning.provider === 'github' && warning.manual_ack_required
+      )
+    ).toBe(true);
+    expect(
+      payload.integration_blockers?.github?.some((blocker) =>
+        blocker.toLowerCase().includes('cooldown')
+      )
+    ).toBe(true);
     expect(payload.branch_protection_blockers).toContain('Missing required check: lint');
   });
 });
@@ -431,11 +446,7 @@ async function seedRateLimitLedger(runDir: string, featureId: string): Promise<v
   const nowIso = new Date().toISOString();
   const cooldownUntil = new Date(Date.now() + 10 * 60 * 1000).toISOString();
 
-  const githubEnvelopes = [
-    0,
-    1,
-    2,
-  ].map(index => ({
+  const githubEnvelopes = [0, 1, 2].map((index) => ({
     provider: 'github',
     remaining: 0,
     reset: nowSeconds + 3600,

@@ -11,7 +11,11 @@ import {
   snapshotExists,
   getSnapshotMetadata,
 } from '../../src/workflows/queueSnapshotManager.js';
-import type { QueueSnapshotV2, QueueCounts, ExecutionTaskData } from '../../src/workflows/queueTypes.js';
+import type {
+  QueueSnapshotV2,
+  QueueCounts,
+  ExecutionTaskData,
+} from '../../src/workflows/queueTypes.js';
 import { createEmptyQueueCounts } from '../../src/workflows/queueTypes.js';
 import type { ExecutionTask } from '../../src/core/models/ExecutionTask.js';
 
@@ -130,7 +134,14 @@ describe('queueSnapshotManager', () => {
       const tasks = { 'task-1': createTaskData('task-1') };
       const counts = createCounts({ total: 1, pending: 1 });
 
-      await saveSnapshot(testDir, 'feature-123', tasks as Record<string, ExecutionTask>, counts, 10, {});
+      await saveSnapshot(
+        testDir,
+        'feature-123',
+        tasks as Record<string, ExecutionTask>,
+        counts,
+        10,
+        {}
+      );
 
       const result = await loadSnapshot(testDir);
 
@@ -212,7 +223,7 @@ describe('queueSnapshotManager', () => {
 
       // After save, no temp files should remain
       const files = await fs.readdir(testDir);
-      const tempFiles = files.filter(f => f.includes('.tmp'));
+      const tempFiles = files.filter((f) => f.includes('.tmp'));
       expect(tempFiles).toHaveLength(0);
     });
 
@@ -220,7 +231,9 @@ describe('queueSnapshotManager', () => {
       const tasks = { 'task-1': createTaskData('task-1') } as Record<string, ExecutionTask>;
       const counts = createCounts({ total: 1, pending: 1 });
 
-      const snapshot = await saveSnapshot(testDir, 'feature-123', tasks, counts, 5, { 'task-1': [] });
+      const snapshot = await saveSnapshot(testDir, 'feature-123', tasks, counts, 5, {
+        'task-1': [],
+      });
 
       expect(verifySnapshotChecksum(snapshot)).toBe(true);
     });
@@ -241,7 +254,9 @@ describe('queueSnapshotManager', () => {
       const tasks = { 'task-1': taskData } as Record<string, ExecutionTask>;
       const counts = createCounts({ total: 1, running: 1 });
 
-      const snapshot = await saveSnapshot(testDir, 'feature-123', tasks, counts, 10, { 'task-1': ['dep-1'] });
+      const snapshot = await saveSnapshot(testDir, 'feature-123', tasks, counts, 10, {
+        'task-1': ['dep-1'],
+      });
 
       expect(snapshot.tasks['task-1'].status).toBe('running');
       expect(snapshot.tasks['task-1'].priority).toBe(5);
@@ -256,7 +271,9 @@ describe('queueSnapshotManager', () => {
       const counts = createCounts({ total: 1, pending: 1 });
 
       // Save snapshot
-      const savedSnapshot = await saveSnapshot(testDir, 'feature-123', tasks, counts, 5, { 'task-1': [] });
+      const savedSnapshot = await saveSnapshot(testDir, 'feature-123', tasks, counts, 5, {
+        'task-1': [],
+      });
 
       // Verify snapshot was persisted correctly
       const loadedSnapshot = await loadSnapshot(testDir);
@@ -358,7 +375,7 @@ describe('queueSnapshotManager', () => {
       try {
         const tasks = { 'task-1': createTaskData('task-1') } as Record<string, ExecutionTask>;
         const counts = createCounts({ total: 1, pending: 1 });
-        
+
         await saveSnapshot(testDir, 'feature-123', tasks, counts, 5, { 'task-1': [] });
 
         // Verify handle.sync() was called for durability

@@ -227,7 +227,10 @@ export function resolveRepoPath(repoRoot: string, relativePath: string): string 
 /**
  * Read text file relative to repo root
  */
-export async function readContextFile(repoRoot: string, relativePath: string): Promise<string | null> {
+export async function readContextFile(
+  repoRoot: string,
+  relativePath: string
+): Promise<string | null> {
   const absolutePath = resolveRepoPath(repoRoot, relativePath);
   if (!absolutePath) {
     return null;

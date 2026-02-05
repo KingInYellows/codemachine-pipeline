@@ -47,7 +47,12 @@ import {
   type ApprovalVerdict,
 } from '../core/models/ApprovalRecord';
 import { isFileNotFound } from '../utils/safeJson';
-import { extractPRDSections, extractConstraints, deriveReferencedFileGlobs, detectUnknowns } from './specParsing';
+import {
+  extractPRDSections,
+  extractConstraints,
+  deriveReferencedFileGlobs,
+  detectUnknowns,
+} from './specParsing';
 import { generateRiskAssessments, generateTestPlan, generateRolloutPlan } from './specGenerators';
 import { generateSpecMarkdown } from './specRendering';
 

@@ -1,9 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import {
-  createFeature,
-  parseFeature,
-  serializeFeature,
-} from '../../../src/core/models/Feature';
+import { createFeature, parseFeature, serializeFeature } from '../../../src/core/models/Feature';
 
 describe('Feature', () => {
   const validRepoUrl = 'https://github.com/org/repo.git';

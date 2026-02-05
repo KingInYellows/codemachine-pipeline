@@ -869,10 +869,7 @@ export async function refreshBranchProtectionArtifact(
 
     if (report.required_checks.length > 0) {
       try {
-        report.validation_mismatch = await detectValidationMismatch(
-          runDir,
-          report.required_checks
-        );
+        report.validation_mismatch = await detectValidationMismatch(runDir, report.required_checks);
       } catch (error) {
         logger?.warn('Failed to compare ExecutionTask validations with required checks', {
           error: error instanceof Error ? error.message : 'unknown error',

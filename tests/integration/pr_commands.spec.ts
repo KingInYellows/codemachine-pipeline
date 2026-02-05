@@ -121,10 +121,7 @@ describe('PR Commands Integration Tests', () => {
     await fs.mkdir(path.join(runDir, 'logs'), { recursive: true });
 
     // Write manifest
-    await fs.writeFile(
-      path.join(runDir, 'manifest.json'),
-      JSON.stringify(mockManifest, null, 2)
-    );
+    await fs.writeFile(path.join(runDir, 'manifest.json'), JSON.stringify(mockManifest, null, 2));
 
     // Write validation.json (success)
     await fs.writeFile(
@@ -145,12 +142,7 @@ describe('PR Commands Integration Tests', () => {
 
   describe('loadPRContext', () => {
     it('should load PR context successfully', async () => {
-      const context = await loadPRContext(
-        TEST_BASE_DIR,
-        TEST_FEATURE_ID,
-        mockRepoConfig,
-        false
-      );
+      const context = await loadPRContext(TEST_BASE_DIR, TEST_FEATURE_ID, mockRepoConfig, false);
 
       expect(context.featureId).toBe(TEST_FEATURE_ID);
       expect(context.manifest.feature_id).toBe(TEST_FEATURE_ID);
@@ -173,12 +165,7 @@ describe('PR Commands Integration Tests', () => {
 
       await fs.writeFile(path.join(runDir, 'pr.json'), JSON.stringify(prMetadata, null, 2));
 
-      const context = await loadPRContext(
-        TEST_BASE_DIR,
-        TEST_FEATURE_ID,
-        mockRepoConfig,
-        false
-      );
+      const context = await loadPRContext(TEST_BASE_DIR, TEST_FEATURE_ID, mockRepoConfig, false);
 
       expect(context.prMetadata).toEqual(prMetadata);
     });
@@ -197,12 +184,7 @@ describe('PR Commands Integration Tests', () => {
 
   describe('persistPRData', () => {
     it('should persist PR metadata to pr.json atomically', async () => {
-      const context = await loadPRContext(
-        TEST_BASE_DIR,
-        TEST_FEATURE_ID,
-        mockRepoConfig,
-        false
-      );
+      const context = await loadPRContext(TEST_BASE_DIR, TEST_FEATURE_ID, mockRepoConfig, false);
 
       const prMetadata: PRMetadata = {
         pr_number: 42,
@@ -230,12 +212,7 @@ describe('PR Commands Integration Tests', () => {
       const featureJson = { external_links: {} };
       await fs.writeFile(path.join(runDir, 'feature.json'), JSON.stringify(featureJson, null, 2));
 
-      const context = await loadPRContext(
-        TEST_BASE_DIR,
-        TEST_FEATURE_ID,
-        mockRepoConfig,
-        false
-      );
+      const context = await loadPRContext(TEST_BASE_DIR, TEST_FEATURE_ID, mockRepoConfig, false);
 
       const prMetadata: PRMetadata = {
         pr_number: 42,
@@ -361,12 +338,7 @@ describe('PR Commands Integration Tests', () => {
         JSON.stringify(manifestWithoutCodeApproval, null, 2)
       );
 
-      const context = await loadPRContext(
-        TEST_BASE_DIR,
-        TEST_FEATURE_ID,
-        mockRepoConfig,
-        false
-      );
+      const context = await loadPRContext(TEST_BASE_DIR, TEST_FEATURE_ID, mockRepoConfig, false);
 
       expect(isCodeApproved(context.manifest)).toBe(false);
       // In actual command, this would trigger exit(30)
@@ -405,7 +377,10 @@ describe('PR Commands Integration Tests', () => {
       const data = {
         pr_number: 42,
         merge_ready: false,
-        blockers: ['PR is blocked by required status checks or reviews', '1 status check(s) failed'],
+        blockers: [
+          'PR is blocked by required status checks or reviews',
+          '1 status check(s) failed',
+        ],
         status_checks: [
           { context: 'lint', state: 'completed', conclusion: 'success' },
           { context: 'build', state: 'completed', conclusion: 'failure' },

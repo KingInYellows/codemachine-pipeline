@@ -74,7 +74,10 @@ describe('ValidationRegistry', () => {
       await initializeValidationRegistry(testRunDir, testConfig);
 
       const registryPath = path.join(testRunDir, 'validation', 'commands.json');
-      const exists = await fs.access(registryPath).then(() => true).catch(() => false);
+      const exists = await fs
+        .access(registryPath)
+        .then(() => true)
+        .catch(() => false);
 
       expect(exists).toBe(true);
     });
@@ -220,7 +223,10 @@ describe('ValidationRegistry', () => {
       await recordValidationAttempt(testRunDir, attempt);
 
       const ledgerPath = path.join(testRunDir, 'validation', 'ledger.json');
-      const exists = await fs.access(ledgerPath).then(() => true).catch(() => false);
+      const exists = await fs
+        .access(ledgerPath)
+        .then(() => true)
+        .catch(() => false);
 
       expect(exists).toBe(true);
     });

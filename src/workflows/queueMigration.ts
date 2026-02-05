@@ -122,7 +122,10 @@ export async function loadV1Queue(queueDir: string): Promise<ExecutionTask[]> {
   const queuePath = path.join(queueDir, V1_QUEUE_FILENAME);
   try {
     const content = await fs.readFile(queuePath, 'utf-8');
-    const lines = content.trim().split('\n').filter((line) => line.length > 0);
+    const lines = content
+      .trim()
+      .split('\n')
+      .filter((line) => line.length > 0);
 
     for (const line of lines) {
       try {
@@ -145,7 +148,10 @@ export async function loadV1Queue(queueDir: string): Promise<ExecutionTask[]> {
   const updatesPath = path.join(queueDir, V1_UPDATES_FILENAME);
   try {
     const content = await fs.readFile(updatesPath, 'utf-8');
-    const lines = content.trim().split('\n').filter((line) => line.length > 0);
+    const lines = content
+      .trim()
+      .split('\n')
+      .filter((line) => line.length > 0);
 
     for (const line of lines) {
       try {
@@ -177,9 +183,7 @@ export async function loadV1Queue(queueDir: string): Promise<ExecutionTask[]> {
  * @param tasks - Array of tasks from V1 queue
  * @returns Snapshot data components (tasks record, counts, dependency graph)
  */
-export function buildInitialSnapshot(
-  tasks: ExecutionTask[]
-): {
+export function buildInitialSnapshot(tasks: ExecutionTask[]): {
   tasks: Record<string, ExecutionTaskData>;
   counts: QueueCounts;
   dependencyGraph: Record<string, string[]>;
@@ -241,10 +245,7 @@ export function buildInitialSnapshot(
  * @param featureId - Feature identifier for the queue
  * @returns Migration result with success status and details
  */
-export async function migrateV1ToV2(
-  queueDir: string,
-  featureId: string
-): Promise<MigrationResult> {
+export async function migrateV1ToV2(queueDir: string, featureId: string): Promise<MigrationResult> {
   const v1QueuePath = path.join(queueDir, V1_QUEUE_FILENAME);
   const v1UpdatesPath = path.join(queueDir, V1_UPDATES_FILENAME);
   const v1QueueBackup = `${v1QueuePath}${V1_BACKUP_SUFFIX}`;

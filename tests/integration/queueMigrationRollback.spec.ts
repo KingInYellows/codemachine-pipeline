@@ -28,7 +28,7 @@ describe('Queue Migration Rollback Integration', () => {
   const createV1Task = (
     id: string,
     status: ExecutionTask['status'] = 'pending',
-    deps: string[] = [],
+    deps: string[] = []
   ): ExecutionTask => ({
     schema_version: '1.0.0',
     task_id: id,
@@ -91,11 +91,17 @@ describe('Queue Migration Rollback Integration', () => {
       expect(await detectQueueVersion(testDir)).toBe('v2');
 
       // V1 file should be gone (backed up)
-      const v1Exists = await fs.access(path.join(testDir, 'queue.jsonl')).then(() => true).catch(() => false);
+      const v1Exists = await fs
+        .access(path.join(testDir, 'queue.jsonl'))
+        .then(() => true)
+        .catch(() => false);
       expect(v1Exists).toBe(false);
 
       // Backup should exist
-      const backupExists = await fs.access(path.join(testDir, 'queue.jsonl.v1backup')).then(() => true).catch(() => false);
+      const backupExists = await fs
+        .access(path.join(testDir, 'queue.jsonl.v1backup'))
+        .then(() => true)
+        .catch(() => false);
       expect(backupExists).toBe(true);
 
       // Rollback to V1
@@ -137,7 +143,10 @@ describe('Queue Migration Rollback Integration', () => {
 
       const v2Files = ['queue_snapshot.json', 'queue_operations.log', 'queue_sequence.txt'];
       for (const file of v2Files) {
-        const exists = await fs.access(path.join(testDir, file)).then(() => true).catch(() => false);
+        const exists = await fs
+          .access(path.join(testDir, file))
+          .then(() => true)
+          .catch(() => false);
         expect(exists, `${file} should be removed after rollback`).toBe(false);
       }
     });
@@ -160,7 +169,7 @@ describe('Queue Migration Rollback Integration', () => {
       await fs.writeFile(
         path.join(testDir, 'queue_snapshot.json'),
         '{"corrupted": true, "invalid_schema": "not_a_valid_snapshot"}',
-        'utf-8',
+        'utf-8'
       );
 
       // Rollback should still work (restores V1 from backup)
@@ -199,8 +208,14 @@ describe('Queue Migration Rollback Integration', () => {
       // Migration may succeed (skipping invalid lines) or fail gracefully.
       // Either way, the original data must remain accessible.
       if (!result.success) {
-        const v1Exists = await fs.access(path.join(testDir, 'queue.jsonl')).then(() => true).catch(() => false);
-        const backupExists = await fs.access(path.join(testDir, 'queue.jsonl.v1backup')).then(() => true).catch(() => false);
+        const v1Exists = await fs
+          .access(path.join(testDir, 'queue.jsonl'))
+          .then(() => true)
+          .catch(() => false);
+        const backupExists = await fs
+          .access(path.join(testDir, 'queue.jsonl.v1backup'))
+          .then(() => true)
+          .catch(() => false);
         expect(v1Exists || backupExists).toBe(true);
       } else {
         expect(result.tasksConverted).toBeGreaterThanOrEqual(1);
