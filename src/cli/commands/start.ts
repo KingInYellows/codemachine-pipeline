@@ -190,9 +190,6 @@ export default class Start extends Command {
 
     const startTime = Date.now();
     let currentStepLabel: string | undefined;
-        this.warn(warn);
-      }
-    }
 
     const repoConfig = settings.config;
     const repoRoot = this.findGitRoot();
@@ -797,7 +794,7 @@ export default class Start extends Command {
             'Initialize a new repo with "git init"',
             'Check that .git directory exists in parent directories',
           ],
-          cause: error instanceof Error ? error : undefined,
+          ...(error instanceof Error && { cause: error }),
         }
       );
     }
@@ -865,7 +862,7 @@ export default class Start extends Command {
             'Check that LINEAR_API_KEY has not expired',
             'Ensure network connectivity to api.linear.app',
           ],
-          cause: error instanceof Error ? error : undefined,
+          ...(error instanceof Error && { cause: error }),
         }
       );
     }
