@@ -10,7 +10,7 @@ import { createLogger, type StructuredLogger, LogLevel } from '../telemetry/logg
 
 // V2 WAL Components
 import { getCounts, addTask as addTaskToIndex } from './queueMemoryIndex.js';
-import { appendOperationsBatch, readOperations } from './queueOperationsLog.js';
+import { appendOperationsBatch, readOperationsWithStats } from './queueOperationsLog.js';
 import { loadSnapshot } from './queueSnapshotManager.js';
 import { compact } from './queueCompactionEngine.js';
 import { QUEUE_FILE, QUEUE_MANIFEST_FILE, QUEUE_SNAPSHOT_FILE } from './queueConstants.js';
@@ -19,7 +19,9 @@ import type {
   QueueManifest,
   QueueSnapshot,
   QueueOperationResult,
+  QueueIntegrityMode,
 } from './queueTypes.js';
+import { QueueIntegrityError } from './queueTypes.js';
 
 // V2 Cache and helpers (shared with other queue modules to avoid circular dependencies)
 import {
@@ -64,7 +66,10 @@ export type {
   QueueSnapshot,
   QueueOperationResult,
   QueueValidationResult,
+  QueueIntegrityMode,
+  QueueIntegrityErrorKind,
 } from './queueTypes.js';
+export { QueueIntegrityError } from './queueTypes.js';
 
 // Module-level logger for queue store operations
 const logger: StructuredLogger = createLogger({
@@ -302,6 +307,8 @@ async function writeQueueManifest(queueDir: string, manifest: QueueManifest): Pr
 export async function loadQueue(runDir: string): Promise<Map<string, ExecutionTask>> {
   // Verify queue integrity only on first (cold) load per runDir (CDMCH-69)
   if (!integrityVerifiedDirs.has(runDir)) {
+    // In fail-fast mode, verifyQueueIntegrity throws QueueIntegrityError on corruption.
+    // In warn-only mode, it returns a result with valid=false but does not throw.
     const integrity = await verifyQueueIntegrity(runDir);
     if (!integrity.valid) {
       logger.warn('Queue integrity check found issues', {
@@ -365,14 +372,18 @@ export async function loadQueueSnapshot(runDir: string): Promise<QueueSnapshot |
 
 // --- Queue Integrity Verification (CDMCH-69) ---
 
+/** Read the integrity mode from environment, defaulting to fail-fast. */
+export function getQueueIntegrityMode(): QueueIntegrityMode {
+  const env = process.env.QUEUE_INTEGRITY_MODE;
+  if (env === 'warn-only') return 'warn-only';
+  return 'fail-fast';
+}
+
 /** Result of queue integrity verification. */
 export interface QueueIntegrityResult {
   valid: boolean;
   snapshotValid: boolean | null; // null if no snapshot
   walEntriesChecked: number;
-  /** Number of WAL entries with checksum failures. Currently always 0 since readOperations() 
-   * silently skips invalid entries without returning a count. Future enhancement: modify 
-   * readOperations() to return both valid entries and failure count. */
   walChecksumFailures: number;
   sequenceGaps: number[];
   errors: string[];
@@ -381,19 +392,25 @@ export interface QueueIntegrityResult {
 /**
  * Verify queue integrity by checking snapshot checksum and WAL sequence continuity.
  *
- * This function is a read-only check that loads the snapshot and WAL operations,
- * validates checksums, and checks for sequence number gaps. It does NOT modify
- * any state and returns a structured result instead of throwing.
+ * Validates checksums on both snapshot and individual WAL entries, and checks
+ * for sequence number gaps. In fail-fast mode, throws QueueIntegrityError on
+ * the first critical failure. In warn-only mode, logs warnings and continues.
  *
  * @param runDir - Path to the run directory
+ * @param mode - Integrity mode override (defaults to env/fail-fast)
  * @returns Integrity verification result
  */
-export async function verifyQueueIntegrity(runDir: string): Promise<QueueIntegrityResult> {
+export async function verifyQueueIntegrity(
+  runDir: string,
+  mode?: QueueIntegrityMode
+): Promise<QueueIntegrityResult> {
+  const integrityMode = mode ?? getQueueIntegrityMode();
+
   const result: QueueIntegrityResult = {
     valid: true,
     snapshotValid: null,
     walEntriesChecked: 0,
-    walChecksumFailures: 0, // Always 0: readOperations() skips invalid entries without reporting count
+    walChecksumFailures: 0,
     sequenceGaps: [],
     errors: [],
   };
@@ -414,17 +431,44 @@ export async function verifyQueueIntegrity(runDir: string): Promise<QueueIntegri
         // File exists but loadSnapshot returned null => invalid
         result.snapshotValid = false;
         result.valid = false;
-        result.errors.push('Snapshot file exists but failed validation (schema or checksum)');
-      } catch {
+        const errorMsg = 'Snapshot file exists but failed validation (schema or checksum)';
+        result.errors.push(errorMsg);
+
+        if (integrityMode === 'fail-fast') {
+          throw new QueueIntegrityError({
+            kind: 'snapshot-checksum-mismatch',
+            message: errorMsg,
+            location: path.join(queueDir, QUEUE_SNAPSHOT_FILE),
+            recoveryGuidance: 'Delete the snapshot file and replay from WAL, or restore from backup.',
+          });
+        }
+      } catch (err) {
+        if (err instanceof QueueIntegrityError) throw err;
         // File does not exist - that's fine, snapshotValid stays null
       }
     }
 
-    // 2. Read and verify WAL operations (readOperations already skips bad checksums)
-    // We read all operations (afterSeq = -1) to do a full integrity check
+    // 2. Read and verify WAL operations with stats (counts checksum failures)
     const afterSeq = snapshot?.snapshotSeq ?? -1;
-    const operations = await readOperations(queueDir, afterSeq);
+    const walResult = await readOperationsWithStats(queueDir, afterSeq);
+    const operations = walResult.operations;
     result.walEntriesChecked = operations.length;
+    result.walChecksumFailures = walResult.checksumFailures;
+
+    if (walResult.checksumFailures > 0) {
+      result.valid = false;
+      const errorMsg = `${walResult.checksumFailures} WAL entry checksum failure(s) detected`;
+      result.errors.push(errorMsg);
+
+      if (integrityMode === 'fail-fast') {
+        throw new QueueIntegrityError({
+          kind: 'wal-checksum-mismatch',
+          message: errorMsg,
+          location: path.join(queueDir, 'queue_operations.log'),
+          recoveryGuidance: 'Restore WAL from backup or re-snapshot from last known good state.',
+        });
+      }
+    }
 
     // 3. Check sequence continuity
     if (operations.length > 0) {
@@ -434,12 +478,20 @@ export async function verifyQueueIntegrity(runDir: string): Promise<QueueIntegri
         const expectedFirstSeq = snapshot.snapshotSeq + 1;
         if (firstSeq !== expectedFirstSeq) {
           result.valid = false;
-          result.errors.push(
-            `Gap between snapshot and WAL: snapshot ends at ${snapshot.snapshotSeq}, WAL starts at ${firstSeq}`
-          );
-          // Report all missing sequence numbers in the gap
+          const errorMsg = `Gap between snapshot and WAL: snapshot ends at seq ${snapshot.snapshotSeq}, WAL starts at seq ${firstSeq}`;
+          result.errors.push(errorMsg);
           for (let missingSeq = expectedFirstSeq; missingSeq < firstSeq; missingSeq++) {
             result.sequenceGaps.push(missingSeq);
+          }
+
+          if (integrityMode === 'fail-fast') {
+            throw new QueueIntegrityError({
+              kind: 'sequence-gap',
+              message: errorMsg,
+              location: path.join(queueDir, 'queue_operations.log'),
+              sequenceRange: { expected: expectedFirstSeq, actual: firstSeq },
+              recoveryGuidance: 'Re-snapshot from current state or restore missing WAL entries from backup.',
+            });
           }
         }
       }
@@ -449,20 +501,36 @@ export async function verifyQueueIntegrity(runDir: string): Promise<QueueIntegri
       for (let i = 1; i < operations.length; i++) {
         const nextSeq = operations[i].seq;
         if (nextSeq > expectedSeq + 1) {
-          // Gap detected - report all missing sequence numbers
           result.valid = false;
-          result.errors.push(
-            `Sequence gap: expected ${expectedSeq + 1}, got ${nextSeq}`
-          );
+          const errorMsg = `Sequence gap: expected ${expectedSeq + 1}, got ${nextSeq}`;
+          result.errors.push(errorMsg);
           for (let missingSeq = expectedSeq + 1; missingSeq < nextSeq; missingSeq++) {
             result.sequenceGaps.push(missingSeq);
           }
+
+          if (integrityMode === 'fail-fast') {
+            throw new QueueIntegrityError({
+              kind: 'sequence-gap',
+              message: errorMsg,
+              location: path.join(queueDir, 'queue_operations.log'),
+              sequenceRange: { expected: expectedSeq + 1, actual: nextSeq },
+              recoveryGuidance: 'Investigate missing WAL entries. Restore from backup or re-initialize queue.',
+            });
+          }
         } else if (nextSeq <= expectedSeq) {
-          // Non-monotonic sequence - severe integrity issue
           result.valid = false;
-          result.errors.push(
-            `Sequence not monotonic: expected > ${expectedSeq}, got ${nextSeq}`
-          );
+          const errorMsg = `Sequence not monotonic: expected > ${expectedSeq}, got ${nextSeq}`;
+          result.errors.push(errorMsg);
+
+          if (integrityMode === 'fail-fast') {
+            throw new QueueIntegrityError({
+              kind: 'sequence-non-monotonic',
+              message: errorMsg,
+              location: path.join(queueDir, 'queue_operations.log'),
+              sequenceRange: { expected: expectedSeq + 1, actual: nextSeq },
+              recoveryGuidance: 'WAL is severely corrupted. Re-initialize queue from last valid snapshot.',
+            });
+          }
         }
         expectedSeq = nextSeq;
       }
@@ -470,6 +538,7 @@ export async function verifyQueueIntegrity(runDir: string): Promise<QueueIntegri
 
     return result;
   } catch (error) {
+    if (error instanceof QueueIntegrityError) throw error;
     result.valid = false;
     result.errors.push(error instanceof Error ? error.message : String(error));
     return result;

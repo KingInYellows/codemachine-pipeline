@@ -315,3 +315,43 @@ export function createEmptyIndexState(): QueueIndexState {
     dirty: false,
   };
 }
+
+// ============================================================================
+// Queue Integrity Types (CDMCH-69)
+// ============================================================================
+
+/** Integrity check mode: fail-fast throws on corruption, warn-only logs and continues. */
+export type QueueIntegrityMode = 'fail-fast' | 'warn-only';
+
+/** Kind of integrity failure detected. */
+export type QueueIntegrityErrorKind =
+  | 'snapshot-checksum-mismatch'
+  | 'wal-checksum-mismatch'
+  | 'sequence-gap'
+  | 'sequence-non-monotonic';
+
+/**
+ * Typed error thrown when queue integrity verification fails in fail-fast mode.
+ * Includes structured fields for programmatic recovery decisions.
+ */
+export class QueueIntegrityError extends Error {
+  readonly kind: QueueIntegrityErrorKind;
+  readonly location: string;
+  readonly sequenceRange?: { expected: number; actual: number };
+  readonly recoveryGuidance: string;
+
+  constructor(options: {
+    kind: QueueIntegrityErrorKind;
+    message: string;
+    location: string;
+    sequenceRange?: { expected: number; actual: number };
+    recoveryGuidance: string;
+  }) {
+    super(options.message);
+    this.name = 'QueueIntegrityError';
+    this.kind = options.kind;
+    this.location = options.location;
+    this.sequenceRange = options.sequenceRange;
+    this.recoveryGuidance = options.recoveryGuidance;
+  }
+}

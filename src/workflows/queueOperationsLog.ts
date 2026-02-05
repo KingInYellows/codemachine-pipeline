@@ -237,23 +237,32 @@ export async function appendOperationLocked(
   );
 }
 
+/** Result of reading WAL operations, including corruption metrics. */
+export interface ReadOperationsResult {
+  operations: QueueOperation[];
+  checksumFailures: number;
+  parseErrors: number;
+}
+
 /**
- * Read all operations from the WAL.
+ * Read all operations from the WAL, returning corruption metrics.
  *
  * Gracefully handles corrupted entries by logging warnings and skipping them.
- * Optionally filters to operations after a given sequence number.
+ * Returns both valid operations and counts of failures for integrity reporting.
  *
  * @param queueDir - Queue directory path
  * @param afterSeq - Only return operations with seq > afterSeq (for incremental replay)
- * @returns Array of valid operations, ordered by sequence number
+ * @returns Operations and failure counts
  */
-export async function readOperations(
+export async function readOperationsWithStats(
   queueDir: string,
   afterSeq?: number
-): Promise<QueueOperation[]> {
+): Promise<ReadOperationsResult> {
   const logPath = getOperationsLogPath(queueDir);
   const operations: QueueOperation[] = [];
   const seqFilter = afterSeq ?? -1;
+  let checksumFailures = 0;
+  let parseErrors = 0;
 
   try {
     const content = await fs.readFile(logPath, 'utf-8');
@@ -270,12 +279,14 @@ export async function readOperations(
 
         if (!isQueueOperation(parsed)) {
           console.warn(`[WAL] Line ${lineNum + 1}: Invalid operation structure, skipping`);
+          parseErrors++;
           continue;
         }
 
         // Verify checksum
         if (!verifyOperationChecksum(parsed)) {
           console.warn(`[WAL] Line ${lineNum + 1}: Checksum mismatch for seq ${parsed.seq}, skipping`);
+          checksumFailures++;
           continue;
         }
 
@@ -285,20 +296,38 @@ export async function readOperations(
         }
       } catch (parseError) {
         console.warn(`[WAL] Line ${lineNum + 1}: JSON parse error, skipping - ${parseError instanceof Error ? parseError.message : String(parseError)}`);
+        parseErrors++;
       }
     }
 
     // Sort by sequence number (should already be ordered, but ensure consistency)
     operations.sort((a, b) => a.seq - b.seq);
 
-    return operations;
+    return { operations, checksumFailures, parseErrors };
   } catch (error) {
     if (error && typeof error === 'object' && 'code' in error && error.code === 'ENOENT') {
-      // WAL doesn't exist yet - return empty array
-      return [];
+      return { operations: [], checksumFailures: 0, parseErrors: 0 };
     }
     throw error;
   }
+}
+
+/**
+ * Read all operations from the WAL.
+ *
+ * Gracefully handles corrupted entries by logging warnings and skipping them.
+ * Optionally filters to operations after a given sequence number.
+ *
+ * @param queueDir - Queue directory path
+ * @param afterSeq - Only return operations with seq > afterSeq (for incremental replay)
+ * @returns Array of valid operations, ordered by sequence number
+ */
+export async function readOperations(
+  queueDir: string,
+  afterSeq?: number
+): Promise<QueueOperation[]> {
+  const result = await readOperationsWithStats(queueDir, afterSeq);
+  return result.operations;
 }
 
 /**
