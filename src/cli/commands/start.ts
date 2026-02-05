@@ -619,7 +619,15 @@ export default class Start extends Command {
     // Validate prerequisites
     const prereqResult = await executionEngine.validatePrerequisites();
     if (!prereqResult.valid) {
-      throw new Error(`Execution prerequisites failed: ${prereqResult.errors.join(', ')}`);
+      throw new CliError(
+        `Execution prerequisites failed: ${prereqResult.errors.join(', ')}`,
+        CliErrorCode.CONFIG_INVALID,
+        {
+          remediation: 'Fix the prerequisite issues and retry.',
+          howToFix: 'Review the errors above and ensure all required tools are installed.',
+          commonFixes: prereqResult.errors,
+        }
+      );
     }
 
     if (prereqResult.warnings.length > 0) {
@@ -778,8 +786,19 @@ export default class Start extends Command {
         stdio: ['pipe', 'pipe', 'pipe'],
       }).trim();
     } catch (error) {
-      throw new Error(
-        `Failed to determine git repository root. Ensure you are running inside a git repo. (${formatErrorMessage(error)})`
+      throw new CliError(
+        `Failed to determine git repository root: ${formatErrorMessage(error)}`,
+        CliErrorCode.GIT_NOT_REPO,
+        {
+          remediation: 'Ensure you are running inside a git repository.',
+          howToFix: 'Run "git init" to initialize a repository, or cd into an existing repo.',
+          commonFixes: [
+            'Run the command from within a git repository',
+            'Initialize a new repo with "git init"',
+            'Check that .git directory exists in parent directories',
+          ],
+          cause: error instanceof Error ? error : undefined,
+        }
       );
     }
   }
@@ -800,7 +819,18 @@ export default class Start extends Command {
 
     const apiKey = process.env.LINEAR_API_KEY;
     if (!apiKey) {
-      throw new Error('LINEAR_API_KEY environment variable is required when using --linear flag');
+      throw new CliError(
+        'LINEAR_API_KEY environment variable is required when using --linear flag',
+        CliErrorCode.TOKEN_MISSING,
+        {
+          remediation: 'Set the LINEAR_API_KEY environment variable.',
+          howToFix: 'Export your Linear API key: export LINEAR_API_KEY="lin_api_..."',
+          commonFixes: [
+            'Create a Linear API key at https://linear.app/settings/api',
+            'Add LINEAR_API_KEY to your .env or shell profile',
+          ],
+        }
+      );
     }
 
     const adapter = createLinearAdapter({
@@ -824,8 +854,19 @@ export default class Start extends Command {
         issueId,
         error: error instanceof Error ? error.message : String(error),
       });
-      throw new Error(
-        `Failed to fetch Linear issue ${issueId}: ${error instanceof Error ? error.message : String(error)}`
+      throw new CliError(
+        `Failed to fetch Linear issue ${issueId}: ${error instanceof Error ? error.message : String(error)}`,
+        CliErrorCode.LINEAR_API_FAILED,
+        {
+          remediation: 'Check your LINEAR_API_KEY and network connectivity.',
+          howToFix: 'Verify the issue ID exists and your API key has read access.',
+          commonFixes: [
+            'Verify the Linear issue ID is correct',
+            'Check that LINEAR_API_KEY has not expired',
+            'Ensure network connectivity to api.linear.app',
+          ],
+          cause: error instanceof Error ? error : undefined,
+        }
       );
     }
   }

@@ -131,7 +131,15 @@ export default class Status extends Command {
         throw new CliError(
           `Feature run directory not found: ${typedFlags.feature}`,
           CliErrorCode.RUN_DIR_NOT_FOUND,
-          { remediation: 'Check the feature ID with "codepipe status" or start a new run with "codepipe start".' }
+          {
+            remediation: 'Check the feature ID with "codepipe status" or start a new run with "codepipe start".',
+            howToFix: 'List available features with "codepipe status" (no --feature flag) to see existing runs.',
+            commonFixes: [
+              'Verify the feature ID spelling',
+              'Run "codepipe status" without --feature to see available runs',
+              'Start a new run with "codepipe start"',
+            ],
+          }
         );
       }
 

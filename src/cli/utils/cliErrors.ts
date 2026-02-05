@@ -6,6 +6,7 @@
  * - Human-readable and JSON error formatting
  * - Consistent error code registry
  * - Documentation link helper
+ * - Actionable remediation with howToFix and commonFixes
  */
 
 /**
@@ -30,6 +31,8 @@ export enum CliErrorCode {
   AGENT_TIMEOUT = 'AGENT_TIMEOUT',
   QUEUE_CORRUPTED = 'QUEUE_CORRUPTED',
   DISK_FULL = 'DISK_FULL',
+  NETWORK_ERROR = 'NETWORK_ERROR',
+  LINEAR_API_FAILED = 'LINEAR_API_FAILED',
 }
 
 /** Map error codes to exit codes */
@@ -45,6 +48,8 @@ const EXIT_CODE_MAP: Record<CliErrorCode, number> = {
   [CliErrorCode.QUEUE_CORRUPTED]: 1,
   [CliErrorCode.TOKEN_MISSING]: 30,
   [CliErrorCode.DISK_FULL]: 20,
+  [CliErrorCode.NETWORK_ERROR]: 1,
+  [CliErrorCode.LINEAR_API_FAILED]: 1,
 };
 
 /** Map error codes to documentation anchors */
@@ -53,9 +58,22 @@ const DOCS_ANCHOR_MAP: Partial<Record<CliErrorCode, string>> = {
   [CliErrorCode.CONFIG_NOT_FOUND]: 'configuration',
   [CliErrorCode.GIT_NOT_FOUND]: 'prerequisites',
   [CliErrorCode.TOKEN_MISSING]: 'authentication',
+  [CliErrorCode.QUEUE_CORRUPTED]: 'troubleshooting',
+  [CliErrorCode.MANIFEST_READ_FAILED]: 'troubleshooting',
+  [CliErrorCode.RUN_DIR_NOT_FOUND]: 'troubleshooting',
+  [CliErrorCode.LINEAR_API_FAILED]: 'integrations',
+  [CliErrorCode.NETWORK_ERROR]: 'troubleshooting',
 };
 
 const DOCS_BASE_URL = 'https://github.com/KingInYellows/codemachine-pipeline#';
+
+/** Options for constructing a CliError. */
+export interface CliErrorOptions {
+  remediation?: string;
+  howToFix?: string;
+  commonFixes?: string[];
+  cause?: Error;
+}
 
 /**
  * Structured CLI error with typed code and exit code.
@@ -64,11 +82,13 @@ export class CliError extends Error {
   readonly code: CliErrorCode;
   readonly exitCode: number;
   readonly remediation?: string;
+  readonly howToFix?: string;
+  readonly commonFixes?: string[];
 
   constructor(
     message: string,
     code: CliErrorCode = CliErrorCode.GENERAL,
-    options?: { remediation?: string; cause?: Error }
+    options?: CliErrorOptions
   ) {
     super(message);
     this.name = 'CliError';
@@ -76,6 +96,12 @@ export class CliError extends Error {
     this.exitCode = EXIT_CODE_MAP[code];
     if (options?.remediation) {
       this.remediation = options.remediation;
+    }
+    if (options?.howToFix) {
+      this.howToFix = options.howToFix;
+    }
+    if (options?.commonFixes) {
+      this.commonFixes = options.commonFixes;
     }
     if (options?.cause) {
       this.cause = options.cause;
@@ -120,9 +146,17 @@ export function formatErrorJson(error: CliError): Record<string, unknown> {
     result.remediation = error.remediation;
   }
 
-  const docsAnchor = DOCS_ANCHOR_MAP[error.code];
-  if (docsAnchor) {
-    result.docs_url = `${DOCS_BASE_URL}${docsAnchor}`;
+  if (error.howToFix) {
+    result.how_to_fix = error.howToFix;
+  }
+
+  if (error.commonFixes && error.commonFixes.length > 0) {
+    result.common_fixes = error.commonFixes;
+  }
+
+  const docsUrl = getDocsUrl(error.code);
+  if (docsUrl) {
+    result.docs_url = docsUrl;
   }
 
   return result;
