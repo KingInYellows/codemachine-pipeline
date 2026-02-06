@@ -110,7 +110,7 @@ export default class Validate extends Command {
     const startTime = Date.now();
 
     try {
-      const settings = resolveRunDirectorySettings();
+      const settings = await resolveRunDirectorySettings();
       const featureId = await selectFeatureId(settings.baseDir, flags.feature);
 
       if (!featureId) {
@@ -331,7 +331,7 @@ export default class Validate extends Command {
     logger.info('Initializing validation registry from config');
 
     // Load repo config
-    const configResult = loadRepoConfig(configPath);
+    const configResult = await loadRepoConfig(configPath);
     if (!configResult.success || !configResult.config) {
       logger.error('Failed to load repo config', { errors: configResult.errors });
       this.error(

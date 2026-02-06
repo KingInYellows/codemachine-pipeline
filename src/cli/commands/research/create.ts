@@ -86,7 +86,7 @@ export default class ResearchCreate extends Command {
       this.error('At least one --objective flag is required', { exit: 2 });
     }
 
-    const settings = resolveRunDirectorySettings();
+    const settings = await resolveRunDirectorySettings();
     const featureId = await selectFeatureId(settings.baseDir, typedFlags.feature);
 
     if (!featureId) {

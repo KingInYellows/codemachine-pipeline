@@ -58,7 +58,7 @@ export default class Health extends Command {
     const checks: HealthCheck[] = [];
 
     // Check 1: Config validity
-    checks.push(this.checkConfig());
+    checks.push(await this.checkConfig());
 
     // Check 2: Run directory writable
     checks.push(this.checkRunDirWritable());
@@ -91,7 +91,7 @@ export default class Health extends Command {
     }
   }
 
-  private checkConfig(): HealthCheck {
+  private async checkConfig(): Promise<HealthCheck> {
     const configPath = path.resolve(process.cwd(), CONFIG_RELATIVE_PATH);
 
     try {
@@ -107,7 +107,7 @@ export default class Health extends Command {
       JSON.parse(content);
 
       // Attempt full config validation
-      loadRepoConfig(configPath);
+      await loadRepoConfig(configPath);
 
       return {
         name: 'config',

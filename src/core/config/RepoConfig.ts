@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import * as fs from 'node:fs';
+import * as fsPromises from 'node:fs/promises';
 import {
   DEFAULT_VALIDATION_COMMANDS,
   ValidationCommandConfigSchema,
@@ -321,10 +322,25 @@ export interface ValidationResult {
  * @param configPath Path to config.json file
  * @returns Validation result with parsed config or actionable errors
  */
-export function loadRepoConfig(configPath: string): ValidationResult {
+export async function loadRepoConfig(configPath: string): Promise<ValidationResult> {
   try {
-    // Check if file exists
-    if (!fs.existsSync(configPath)) {
+    // Check if file exists and is readable
+    try {
+      await fsPromises.access(configPath, fs.constants.R_OK);
+    } catch (error: unknown) {
+      const nodeError = error as NodeJS.ErrnoException;
+      if (nodeError.code === 'EACCES') {
+        return {
+          success: false,
+          errors: [
+            {
+              path: 'file',
+              message: `Config file exists but is not readable: ${configPath}`,
+              suggestion: 'Check file permissions. Run: chmod +r ' + configPath,
+            },
+          ],
+        };
+      }
       return {
         success: false,
         errors: [
@@ -338,7 +354,7 @@ export function loadRepoConfig(configPath: string): ValidationResult {
     }
 
     // Read and parse JSON
-    const rawContent = fs.readFileSync(configPath, 'utf-8');
+    const rawContent = await fsPromises.readFile(configPath, 'utf-8');
     let rawConfig: unknown;
 
     try {

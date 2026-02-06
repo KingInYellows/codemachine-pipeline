@@ -89,10 +89,10 @@ export interface ExtendedValidationResult extends ValidationResult {
  * @param options Validation options
  * @returns Extended validation result with check metadata
  */
-export function validateRepoConfig(
+export async function validateRepoConfig(
   configPath: string,
   options: ValidatorOptions = {}
-): ExtendedValidationResult {
+): Promise<ExtendedValidationResult> {
   const startTime = Date.now();
 
   // Set defaults
@@ -105,7 +105,7 @@ export function validateRepoConfig(
   };
 
   // Load and validate schema
-  const baseResult = loadRepoConfig(configPath);
+  const baseResult = await loadRepoConfig(configPath);
 
   if (!baseResult.success) {
     return {
