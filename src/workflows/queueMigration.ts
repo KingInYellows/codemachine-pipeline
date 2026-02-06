@@ -25,7 +25,7 @@ import type { ExecutionTask } from '../core/models/ExecutionTask';
 import { parseExecutionTask } from '../core/models/ExecutionTask';
 import { loadSnapshot, saveSnapshot } from './queueSnapshotManager';
 import { initializeOperationsLog } from './queueOperationsLog';
-import { invalidateV2Cache } from './queueStore';
+import { invalidateQueueRunState } from './queueStore';
 import { createLogger, LogLevel } from '../telemetry/logger';
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
@@ -451,7 +451,7 @@ export async function ensureV2Format(
   if (result.success) {
     // Find the run directory (parent of queue directory)
     const runDir = path.dirname(queueDir);
-    invalidateV2Cache(runDir);
+    invalidateQueueRunState(runDir);
     logger.debug('V2 index cache invalidated after successful migration', { run_dir: runDir });
   }
 
