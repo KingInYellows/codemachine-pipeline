@@ -1,13 +1,29 @@
-import type { RequestInit, Response, HeadersInit, Headers } from 'undici-types';
+import type { Response, HeadersInit, Headers } from 'undici-types';
 import type { LogContext } from '../../core/sharedTypes';
 import * as crypto from 'node:crypto';
 import { RateLimitLedger, RateLimitEnvelope } from '../../telemetry/rateLimitLedger';
 import {
   createLogger,
   type StructuredLogger,
-  type LoggerInterface,
   LogLevel,
 } from '../../telemetry/logger';
+import {
+  ErrorType,
+  Provider,
+  DEFAULT_TIMEOUT,
+  DEFAULT_MAX_RETRIES,
+  DEFAULT_INITIAL_BACKOFF,
+  DEFAULT_MAX_BACKOFF,
+  JITTER_FACTOR,
+  ACCEPT_HEADER,
+  GITHUB_API_VERSION,
+} from './httpTypes.js';
+import type {
+  HttpClientConfig,
+  HttpRequestOptions,
+  HttpResponse,
+  LoggerInterface,
+} from './httpTypes.js';
 
 /**
  * HTTP Client Module
@@ -22,21 +38,9 @@ import {
  * Implements Technology Stack requirements and Rate Limit Discipline from the Rulebook.
  */
 
-// ============================================================================
-// Types & Constants
-// ============================================================================
-
-/**
- * Error taxonomy for structured error handling
- */
-export enum ErrorType {
-  /** Transient errors that should trigger retries (429, 503, network resets) */
-  TRANSIENT = 'transient',
-  /** Permanent errors that fail fast (validation, missing config, 404) */
-  PERMANENT = 'permanent',
-  /** Errors requiring human intervention (approval needed, token expired) */
-  HUMAN_ACTION_REQUIRED = 'human_action_required',
-}
+// Re-export types and enums for backward compatibility
+export { ErrorType, Provider } from './httpTypes.js';
+export type { HttpClientConfig, HttpRequestOptions, HttpResponse, LoggerInterface } from './httpTypes.js';
 
 /**
  * Structured HTTP error with metadata
@@ -72,89 +76,6 @@ export class HttpError extends Error {
     };
   }
 }
-
-/**
- * HTTP provider type (GitHub, Linear, etc.)
- */
-export enum Provider {
-  GITHUB = 'github',
-  LINEAR = 'linear',
-  GRAPHITE = 'graphite',
-  CODEMACHINE = 'codemachine',
-  CUSTOM = 'custom',
-}
-
-/**
- * HTTP client configuration
- */
-export interface HttpClientConfig {
-  /** Base URL for API requests */
-  baseUrl: string;
-  /** Provider type for rate limit tracking */
-  provider: Provider;
-  /** Authorization token (will be injected as Bearer token) */
-  token?: string;
-  /** Run directory path for ledger persistence */
-  runDir?: string;
-  /** Custom headers to inject on every request */
-  defaultHeaders?: Record<string, string>;
-  /** Request timeout in milliseconds */
-  timeout?: number;
-  /** Maximum retry attempts */
-  maxRetries?: number;
-  /** Initial backoff delay in milliseconds */
-  initialBackoff?: number;
-  /** Maximum backoff delay in milliseconds */
-  maxBackoff?: number;
-  /** Logger interface for observability */
-  logger?: LoggerInterface;
-}
-
-export type { LoggerInterface };
-
-/**
- * HTTP request options
- */
-export interface HttpRequestOptions extends Omit<RequestInit, 'headers'> {
-  /** Custom headers for this request */
-  headers?: Record<string, string>;
-  /** Whether to generate an idempotency key */
-  idempotent?: boolean;
-  /** Override retry behavior for this request */
-  retry?: {
-    enabled: boolean;
-    maxAttempts?: number;
-  };
-  /** Request metadata for logging */
-  metadata?: Record<string, unknown>;
-}
-
-/**
- * HTTP response wrapper
- */
-export interface HttpResponse<T = unknown> {
-  /** Response status code */
-  status: number;
-  /** Response headers */
-  headers: Record<string, string>;
-  /** Parsed response body */
-  data: T;
-  /** Request ID for tracing */
-  requestId: string;
-  /** Rate limit envelope if applicable */
-  rateLimitEnvelope?: RateLimitEnvelope;
-}
-
-// Default configuration values
-const DEFAULT_TIMEOUT = 30000; // 30 seconds
-const DEFAULT_MAX_RETRIES = 3;
-const DEFAULT_INITIAL_BACKOFF = 1000; // 1 second
-const DEFAULT_MAX_BACKOFF = 32000; // 32 seconds
-const JITTER_FACTOR = 0.1; // 10% jitter
-
-// Standard headers
-const ACCEPT_HEADER = 'application/vnd.github+json';
-const GITHUB_API_VERSION = '2022-11-28';
 
 // ============================================================================
 // HTTP Client

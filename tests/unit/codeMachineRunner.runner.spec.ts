@@ -97,7 +97,12 @@ describe('CodeMachineRunner', () => {
   const mockCreateWriteStream = vi.mocked(createWriteStream);
 
   beforeEach(() => {
+    // Avoid leaking `mock*Once()` queues / implementations across tests without replacing the
+    // mocked module function identities (which would break our cached `vi.mocked(...)` refs).
     vi.clearAllMocks();
+    mockSpawn.mockReset();
+    mockFsAccess.mockReset();
+    mockCreateWriteStream.mockReset();
     vi.useRealTimers();
   });
 
@@ -1098,13 +1103,24 @@ describe('CodeMachineRunner', () => {
 
       const promise = runCodeMachine(config, options);
 
-      setTimeout(() => {
-        const stdoutChunk = Buffer.from('stdout line\n');
-        const stderrChunk = Buffer.from('stderr line\n');
-        childProcess.stdout?.emit('data', stdoutChunk);
-        childProcess.stderr?.emit('data', stderrChunk);
-        childProcess.emit('close', 0);
-      }, 10);
+      // `runCodeMachine` awaits `fs.stat(logPath)` before calling `spawn`, so make sure the
+      // spawn call (and event handlers) are attached before emitting process events.
+      await new Promise<void>((resolve) => {
+        const poll = (): void => {
+          if (mockSpawn.mock.calls.length > 0) {
+            resolve();
+            return;
+          }
+          setTimeout(poll, 0);
+        };
+        poll();
+      });
+
+      const stdoutChunk = Buffer.from('stdout line\n');
+      const stderrChunk = Buffer.from('stderr line\n');
+      childProcess.stdout?.emit('data', stdoutChunk);
+      childProcess.stderr?.emit('data', stderrChunk);
+      childProcess.emit('close', 0);
 
       await promise;
 
@@ -1146,10 +1162,19 @@ describe('CodeMachineRunner', () => {
 
       const promise = runCodeMachine(config, options);
 
-      setTimeout(() => {
-        mockStream.emit('error', new Error('Disk full'));
-        childProcess.emit('close', 0);
-      }, 10);
+      await new Promise<void>((resolve) => {
+        const poll = (): void => {
+          if (mockSpawn.mock.calls.length > 0) {
+            resolve();
+            return;
+          }
+          setTimeout(poll, 0);
+        };
+        poll();
+      });
+
+      mockStream.emit('error', new Error('Disk full'));
+      childProcess.emit('close', 0);
 
       const result = await promise;
 
@@ -1206,14 +1231,25 @@ describe('CodeMachineRunner', () => {
 
       const promise = runCodeMachine(config, options);
 
-      setTimeout(() => {
-        const largeChunk = Buffer.alloc(1024 * 1024 + 1, 'a');
-        childProcess.stdout?.emit('data', largeChunk);
-        childProcess.emit('close', 0);
-      }, 10);
+      // `runCodeMachine` awaits an initial `fs.stat(logPath)` before calling `spawn`,
+      // so wait until the spawn call is observed before emitting process events.
+      await new Promise<void>((resolve) => {
+        const poll = (): void => {
+          if (mockSpawn.mock.calls.length > 0) {
+            resolve();
+            return;
+          }
+          setTimeout(poll, 0);
+        };
+        poll();
+      });
+
+      const spawnedProcess = mockSpawn.mock.results[0]?.value as ChildProcess;
+      const largeChunk = Buffer.alloc(1024 * 1024 + 1, 'a');
+      spawnedProcess.stdout?.emit('data', largeChunk);
+      spawnedProcess.emit('close', 0);
 
       await promise;
-      await new Promise((resolve) => setTimeout(resolve, 0));
 
       expect(mockCreateWriteStream).toHaveBeenCalledTimes(2);
       expect(renameSpy).toHaveBeenCalledWith('/tmp/test.log', '/tmp/test.log.1');
