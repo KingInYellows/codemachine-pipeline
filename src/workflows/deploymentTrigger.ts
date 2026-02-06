@@ -19,29 +19,16 @@
  * - Audit trail persistence in deployment.json
  */
 
-import * as fs from 'node:fs/promises';
-import * as path from 'node:path';
 import type { GitHubAdapter } from '../adapters/github/GitHubAdapter';
-import type { BranchProtectionReport } from './branchProtectionReporter';
-import { loadReport as loadBranchProtectionReport } from './branchProtectionReporter';
 import type { RepoConfig } from '../core/config/RepoConfig';
-import type { PRMetadata } from '../cli/pr/shared';
 import type { LoggerInterface } from '../adapters/http/client';
-import { readManifest, type RunManifest } from '../persistence/runDirectoryManager';
-import { computeContentHash } from './approvalRegistry';
 
 // Import from companion modules (also re-exported for backward compatibility)
 import {
   DEPLOYMENT_SCHEMA_VERSION,
   DeploymentStrategy,
-  DeploymentOutcomeSchema,
-  DeploymentHistorySchema,
-  type WorkflowDispatchConfig,
-  type DeploymentConfig,
-  type ApprovalState,
   type DeploymentContext,
   type DeploymentOutcome,
-  type DeploymentHistory,
   type DeploymentOptions,
   type MergeReadiness,
 } from './deploymentTriggerTypes';
@@ -76,173 +63,14 @@ import {
 
 export { assessMergeReadiness } from './deploymentTriggerExecution';
 
-// ============================================================================
-// Constants
-// ============================================================================
+// Import context loading and persistence from companion module
+import {
+  loadDeploymentContext,
+  persistDeploymentOutcome,
+} from './deploymentTriggerContext.js';
 
-const DEPLOYMENT_FILE = 'deployment.json';
-const APPROVALS_FILE = path.join('approvals', 'approvals.json');
-
-// ============================================================================
-// Data Loading Layer
-// ============================================================================
-
-/**
- * Load deployment context from run directory artifacts
- *
- * Reads and validates:
- * - pr.json (required)
- * - status/branch_protection.json (optional, may not exist for unprotected branches)
- * - RepoConfig deployment settings
- *
- * @param runDirectory Run directory path
- * @param featureId Feature ID
- * @param config Repository configuration
- * @param logger Logger instance
- * @returns Deployment context
- * @throws Error if required artifacts are missing or invalid
- */
-export async function loadDeploymentContext(
-  runDirectory: string,
-  featureId: string,
-  config: RepoConfig,
-  logger: LoggerInterface
-): Promise<DeploymentContext> {
-  logger.debug('Loading deployment context', { feature_id: featureId, run_dir: runDirectory });
-
-  // Load manifest for approvals and audit context
-  let manifest: RunManifest;
-  try {
-    manifest = await readManifest(runDirectory);
-    logger.debug('Loaded run manifest', {
-      approvals_pending: manifest.approvals.pending.length,
-      approvals_completed: manifest.approvals.completed.length,
-    });
-  } catch (error) {
-    logger.error('Failed to load run manifest', {
-      path: path.join(runDirectory, 'manifest.json'),
-      error: error instanceof Error ? error.message : String(error),
-    });
-    throw new Error(
-      `Run manifest not found. Ensure the feature run directory exists and is initialized (run directory: ${runDirectory})`
-    );
-  }
-
-  // Load PR metadata (required)
-  const prJsonPath = path.join(runDirectory, 'pr.json');
-  let pr: PRMetadata;
-  try {
-    const prContent = await fs.readFile(prJsonPath, 'utf-8');
-    pr = JSON.parse(prContent) as PRMetadata;
-    logger.debug('Loaded PR metadata', { pr_number: pr.pr_number, branch: pr.branch });
-  } catch (error) {
-    logger.error('Failed to load pr.json', {
-      path: prJsonPath,
-      error: error instanceof Error ? error.message : String(error),
-    });
-    throw new Error(
-      `PR metadata not found. Ensure PR has been created first (run directory: ${runDirectory})`
-    );
-  }
-
-  // Load branch protection report (optional - may not exist for unprotected branches)
-  let branchProtection: BranchProtectionReport | null = null;
-  try {
-    branchProtection = await loadBranchProtectionReport(runDirectory);
-    if (branchProtection) {
-      logger.debug('Loaded branch protection report', {
-        protected: branchProtection.protected,
-        compliant: branchProtection.compliant,
-        blockers: branchProtection.blockers.length,
-      });
-    }
-  } catch (error) {
-    logger.warn('Branch protection report not found or invalid', {
-      error: error instanceof Error ? error.message : String(error),
-    });
-  }
-  const branchProtectionHash = branchProtection
-    ? computeContentHash(JSON.stringify(branchProtection))
-    : undefined;
-
-  // Extract deployment configuration from RepoConfig
-  const deploymentSection = (
-    config as RepoConfig & {
-      deployment?: {
-        workflow_dispatch?: WorkflowDispatchConfig;
-      };
-    }
-  ).deployment;
-  const deploymentConfig: DeploymentConfig = {
-    enable_auto_merge: config.feature_flags?.enable_auto_merge ?? false,
-    enable_deployment_triggers: config.feature_flags?.enable_deployment_triggers ?? false,
-    merge_method: 'merge', // Default, can be overridden
-    respect_branch_protection: config.github.branch_protection?.respect_status_checks ?? true,
-    prevent_auto_merge: config.governance?.risk_controls?.prevent_auto_merge ?? true,
-    require_deploy_approval:
-      config.governance?.approval_workflow?.require_approval_for_deploy ?? true,
-  };
-  if (deploymentSection?.workflow_dispatch) {
-    deploymentConfig.workflow_dispatch = deploymentSection.workflow_dispatch;
-  }
-
-  const approvalsHash = await computeApprovalsHash(runDirectory, logger);
-  const deployApprovalRequired = deploymentConfig.require_deploy_approval;
-  const deployApprovalGranted =
-    !deployApprovalRequired || manifest.approvals.completed.includes('deploy');
-
-  logger.debug(
-    'Deployment configuration loaded',
-    deploymentConfig as unknown as Record<string, unknown>
-  );
-
-  const approvalsState: ApprovalState = {
-    pending: manifest.approvals.pending,
-    completed: manifest.approvals.completed,
-    deployApprovalRequired,
-    deployApprovalGranted,
-  };
-  if (approvalsHash) {
-    approvalsState.approvalsHash = approvalsHash;
-  }
-
-  const context: DeploymentContext = {
-    pr,
-    branchProtection,
-    config: deploymentConfig,
-    manifest,
-    approvals: approvalsState,
-    runDirectory,
-    featureId,
-    logger,
-  };
-
-  if (branchProtectionHash) {
-    context.branchProtectionHash = branchProtectionHash;
-  }
-
-  return context;
-}
-
-async function computeApprovalsHash(
-  runDirectory: string,
-  logger: LoggerInterface
-): Promise<string | undefined> {
-  const approvalsPath = path.join(runDirectory, APPROVALS_FILE);
-
-  try {
-    const content = await fs.readFile(approvalsPath, 'utf-8');
-    return computeContentHash(content);
-  } catch (error) {
-    if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
-      logger.warn('Failed to compute approvals hash', {
-        path: approvalsPath,
-        error: error instanceof Error ? error.message : String(error),
-      });
-    }
-    return undefined;
-  }
-}
+// Re-export context API for backward compatibility
+export { loadDeploymentContext, persistDeploymentOutcome } from './deploymentTriggerContext.js';
 
 // ============================================================================
 // Strategy Selection
@@ -325,54 +153,6 @@ export function selectDeploymentStrategy(
     reason: 'All requirements met and auto-merge enabled',
   });
   return DeploymentStrategy.AUTO_MERGE;
-}
-
-// ============================================================================
-// State Persistence
-// ============================================================================
-
-/**
- * Persist deployment outcome to deployment.json
- *
- * Appends outcome to deployment history for audit trail.
- * Supports multiple deployment attempts (e.g., blocked → resolved → success).
- *
- * @param outcome Deployment outcome
- * @param runDirectory Run directory path
- */
-export async function persistDeploymentOutcome(
-  outcome: DeploymentOutcome,
-  runDirectory: string
-): Promise<void> {
-  const deploymentPath = path.join(runDirectory, DEPLOYMENT_FILE);
-  const tempPath = `${deploymentPath}.tmp`;
-
-  // Load existing deployment history if it exists
-  let history: DeploymentHistory;
-  try {
-    const content = await fs.readFile(deploymentPath, 'utf-8');
-    const parsed: unknown = JSON.parse(content);
-    history = DeploymentHistorySchema.parse(parsed);
-  } catch {
-    // deployment.json doesn't exist or is invalid - create new
-    history = {
-      schema_version: DEPLOYMENT_SCHEMA_VERSION,
-      feature_id: outcome.feature_id,
-      outcomes: [],
-      last_updated: new Date().toISOString(),
-    };
-  }
-
-  // Validate outcome
-  const validatedOutcome = DeploymentOutcomeSchema.parse(outcome);
-
-  // Append outcome to history
-  history.outcomes.push(validatedOutcome);
-  history.last_updated = new Date().toISOString();
-
-  // Write atomically
-  await fs.writeFile(tempPath, JSON.stringify(history, null, 2), 'utf-8');
-  await fs.rename(tempPath, deploymentPath);
 }
 
 // ============================================================================
