@@ -9,12 +9,13 @@
 
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
+import * as crypto from 'node:crypto';
 import type { BranchProtectionReport } from './branchProtectionReporter';
 import { loadReport as loadBranchProtectionReport } from './branchProtectionReporter';
 import type { RepoConfig } from '../core/config/RepoConfig';
 import type { PRMetadata } from '../cli/pr/shared';
 import type { LoggerInterface } from '../adapters/http/client';
-import { readManifest, type RunManifest } from '../persistence/runDirectoryManager';
+import { readManifest, withLock, type RunManifest } from '../persistence/runDirectoryManager';
 import { computeContentHash } from './approvalRegistry';
 
 import {
@@ -33,8 +34,8 @@ import {
 // Constants
 // ============================================================================
 
-export const DEPLOYMENT_FILE = 'deployment.json';
-export const APPROVALS_FILE = path.join('approvals', 'approvals.json');
+const DEPLOYMENT_FILE = 'deployment.json';
+const APPROVALS_FILE = path.join('approvals', 'approvals.json');
 
 // ============================================================================
 // Data Loading Layer
@@ -177,7 +178,7 @@ export async function loadDeploymentContext(
   return context;
 }
 
-export async function computeApprovalsHash(
+async function computeApprovalsHash(
   runDirectory: string,
   logger: LoggerInterface
 ): Promise<string | undefined> {
@@ -206,6 +207,7 @@ export async function computeApprovalsHash(
  *
  * Appends outcome to deployment history for audit trail.
  * Supports multiple deployment attempts (e.g., blocked -> resolved -> success).
+ * Uses file locking to prevent race conditions during concurrent deployments.
  *
  * @param outcome Deployment outcome
  * @param runDirectory Run directory path
@@ -214,33 +216,55 @@ export async function persistDeploymentOutcome(
   outcome: DeploymentOutcome,
   runDirectory: string
 ): Promise<void> {
-  const deploymentPath = path.join(runDirectory, DEPLOYMENT_FILE);
-  const tempPath = `${deploymentPath}.tmp`;
+  await withLock(runDirectory, async () => {
+    const deploymentPath = path.join(runDirectory, DEPLOYMENT_FILE);
+    // Use unpredictable temp file path to prevent symlink attacks
+    const tempPath = `${deploymentPath}.tmp.${crypto.randomBytes(8).toString('hex')}`;
 
-  // Load existing deployment history if it exists
-  let history: DeploymentHistory;
-  try {
-    const content = await fs.readFile(deploymentPath, 'utf-8');
-    const parsed: unknown = JSON.parse(content);
-    history = DeploymentHistorySchema.parse(parsed);
-  } catch {
-    // deployment.json doesn't exist or is invalid - create new
-    history = {
-      schema_version: DEPLOYMENT_SCHEMA_VERSION,
-      feature_id: outcome.feature_id,
-      outcomes: [],
-      last_updated: new Date().toISOString(),
-    };
-  }
+    try {
+      // Load existing deployment history if it exists
+      let history: DeploymentHistory;
+      try {
+        const content = await fs.readFile(deploymentPath, 'utf-8');
+        const parsed: unknown = JSON.parse(content);
+        history = DeploymentHistorySchema.parse(parsed);
+      } catch {
+        // deployment.json doesn't exist or is invalid - create new
+        history = {
+          schema_version: DEPLOYMENT_SCHEMA_VERSION,
+          feature_id: outcome.feature_id,
+          outcomes: [],
+          last_updated: new Date().toISOString(),
+        };
+      }
 
-  // Validate outcome
-  const validatedOutcome = DeploymentOutcomeSchema.parse(outcome);
+      // Validate outcome
+      const validatedOutcome = DeploymentOutcomeSchema.parse(outcome);
 
-  // Append outcome to history
-  history.outcomes.push(validatedOutcome);
-  history.last_updated = new Date().toISOString();
+      // Append outcome to history
+      history.outcomes.push(validatedOutcome);
+      history.last_updated = new Date().toISOString();
 
-  // Write atomically
-  await fs.writeFile(tempPath, JSON.stringify(history, null, 2), 'utf-8');
-  await fs.rename(tempPath, deploymentPath);
+      // Write atomically with fsync for durability
+      const handle = await fs.open(tempPath, 'w');
+      try {
+        await handle.writeFile(JSON.stringify(history, null, 2), 'utf-8');
+        await handle.sync(); // Ensure data is on disk before rename
+      } finally {
+        await handle.close();
+      }
+
+      // Atomic rename
+      await fs.rename(tempPath, deploymentPath);
+    } catch (error) {
+      // Clean up temp file on error
+      try {
+        await fs.unlink(tempPath);
+      } catch {
+        // Ignore cleanup errors
+      }
+      throw error;
+    }
+  });
 }
+

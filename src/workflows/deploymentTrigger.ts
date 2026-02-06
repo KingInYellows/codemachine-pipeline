@@ -70,13 +70,7 @@ import {
 } from './deploymentTriggerContext.js';
 
 // Re-export context API for backward compatibility
-export {
-  loadDeploymentContext,
-  persistDeploymentOutcome,
-  computeApprovalsHash,
-  DEPLOYMENT_FILE,
-  APPROVALS_FILE,
-} from './deploymentTriggerContext.js';
+export { loadDeploymentContext, persistDeploymentOutcome } from './deploymentTriggerContext.js';
 
 // ============================================================================
 // Strategy Selection
