@@ -324,10 +324,23 @@ export interface ValidationResult {
  */
 export async function loadRepoConfig(configPath: string): Promise<ValidationResult> {
   try {
-    // Check if file exists
+    // Check if file exists and is readable
     try {
       await fsPromises.access(configPath, fs.constants.R_OK);
-    } catch {
+    } catch (error: unknown) {
+      const nodeError = error as NodeJS.ErrnoException;
+      if (nodeError.code === 'EACCES') {
+        return {
+          success: false,
+          errors: [
+            {
+              path: 'file',
+              message: `Config file exists but is not readable: ${configPath}`,
+              suggestion: 'Check file permissions. Run: chmod +r ' + configPath,
+            },
+          ],
+        };
+      }
       return {
         success: false,
         errors: [
