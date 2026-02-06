@@ -155,6 +155,7 @@ Contributor guidelines, workflows, and development best practices.
 
 | Document | Description |
 |----------|-------------|
+| [Testing Practices](development/testing.md) | Test framework (Vitest), patterns, mocking, CI integration |
 | [Submission Workflow](development/submission-workflow.md) | PR submission workflow using Graphite (`gt`) commands |
 | [NPM Warnings](development/npm-warnings.md) | Common npm warning resolutions and package management |
 
