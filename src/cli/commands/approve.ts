@@ -140,7 +140,7 @@ export default class Approve extends Command {
     }
 
     const startTime = Date.now();
-    const settings = resolveRunDirectorySettings();
+    const settings = await resolveRunDirectorySettings();
 
     if (settings.errors.length > 0 || !settings.config) {
       const message =

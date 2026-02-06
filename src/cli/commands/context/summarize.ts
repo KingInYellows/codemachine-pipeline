@@ -129,7 +129,7 @@ export default class ContextSummarize extends Command {
     let commandSpan: ActiveSpan | undefined;
 
     try {
-      const settings = resolveRunDirectorySettings();
+      const settings = await resolveRunDirectorySettings();
       this.ensureConfigReady(settings);
 
       const featureId = await selectFeatureId(settings.baseDir, typedFlags.feature);

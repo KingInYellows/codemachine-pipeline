@@ -145,7 +145,7 @@ export default class Init extends Command {
         if (!flags.json) {
           this.log('Validating existing configuration...');
         }
-        const validationPayload = this.validateExistingConfig(configPath, flags.json);
+        const validationPayload = await this.validateExistingConfig(configPath, flags.json);
         exitCode = validationPayload.exit_code;
 
         if (flags.json) {
@@ -173,7 +173,7 @@ export default class Init extends Command {
 
       // Step 2: Check if already initialized
       if (fs.existsSync(configPath) && !flags.force && !flags['dry-run']) {
-        const result = loadRepoConfig(configPath);
+        const result = await loadRepoConfig(configPath);
 
         if (!flags.json) {
           this.warn(`Configuration already exists at: ${configPath}`);
@@ -284,7 +284,7 @@ export default class Init extends Command {
       // Step 7: Validate the created/computed configuration
       const validationResult = flags['dry-run']
         ? this.validateInMemoryConfig(config)
-        : loadRepoConfig(configPath);
+        : await loadRepoConfig(configPath);
 
       if (!validationResult.success) {
         exitCode = 10;
@@ -652,7 +652,10 @@ export default class Init extends Command {
    * @param jsonMode Whether to output JSON or display human-readable results
    * @returns Validation payload with exit code
    */
-  private validateExistingConfig(configPath: string, jsonMode: boolean): ConfigValidationPayload {
+  private async validateExistingConfig(
+    configPath: string,
+    jsonMode: boolean
+  ): Promise<ConfigValidationPayload> {
     if (!fs.existsSync(configPath)) {
       const payload: ConfigValidationPayload = {
         status: 'not_found',
@@ -670,7 +673,7 @@ export default class Init extends Command {
       return payload;
     }
 
-    const result = loadRepoConfig(configPath);
+    const result = await loadRepoConfig(configPath);
 
     if (!result.success) {
       const payload: ConfigValidationPayload = {

@@ -19,9 +19,9 @@ export interface RunDirectorySettings {
   config?: RepoConfig;
 }
 
-export function resolveRunDirectorySettings(): RunDirectorySettings {
+export async function resolveRunDirectorySettings(): Promise<RunDirectorySettings> {
   const configPath = path.resolve(process.cwd(), CONFIG_RELATIVE_PATH);
-  const validation = loadRepoConfig(configPath);
+  const validation = await loadRepoConfig(configPath);
 
   if (!validation.success || !validation.config) {
     return {

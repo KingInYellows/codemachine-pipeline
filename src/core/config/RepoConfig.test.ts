@@ -216,64 +216,64 @@ describe('loadRepoConfig', () => {
     fs.rmSync(tempDir, { recursive: true, force: true });
   });
 
-  it('should load valid config successfully', () => {
+  it('should load valid config successfully', async () => {
     const config = createDefaultConfig('https://github.com/org/repo.git');
     fs.writeFileSync(configPath, JSON.stringify(config, null, 2));
 
-    const result = loadRepoConfig(configPath);
+    const result = await loadRepoConfig(configPath);
     expect(result.success).toBe(true);
     expect(result.config).toBeDefined();
     expect(result.config?.project.id).toBe('repo');
   });
 
-  it('should return error for missing file', () => {
-    const result = loadRepoConfig('/nonexistent/config.json');
+  it('should return error for missing file', async () => {
+    const result = await loadRepoConfig('/nonexistent/config.json');
     expect(result.success).toBe(false);
     expect(result.errors).toBeDefined();
     expect(result.errors![0].path).toBe('file');
   });
 
-  it('should return error for invalid JSON', () => {
+  it('should return error for invalid JSON', async () => {
     fs.writeFileSync(configPath, '{ invalid json }');
 
-    const result = loadRepoConfig(configPath);
+    const result = await loadRepoConfig(configPath);
     expect(result.success).toBe(false);
     expect(result.errors).toBeDefined();
     expect(result.errors![0].path).toBe('json');
   });
 
-  it('should return errors for invalid schema', () => {
+  it('should return errors for invalid schema', async () => {
     const invalidConfig = {
       schema_version: 'invalid',
       project: {},
     };
     fs.writeFileSync(configPath, JSON.stringify(invalidConfig));
 
-    const result = loadRepoConfig(configPath);
+    const result = await loadRepoConfig(configPath);
     expect(result.success).toBe(false);
     expect(result.errors).toBeDefined();
     expect(result.errors!.length).toBeGreaterThan(0);
   });
 
-  it('should include warnings for missing credentials', () => {
+  it('should include warnings for missing credentials', async () => {
     const config = createDefaultConfig('https://github.com/org/repo.git');
     config.github.enabled = true;
     fs.writeFileSync(configPath, JSON.stringify(config, null, 2));
 
-    const result = loadRepoConfig(configPath);
+    const result = await loadRepoConfig(configPath);
     expect(result.success).toBe(true);
     expect(result.warnings).toBeDefined();
     expect(result.warnings!.some((w) => w.includes('GITHUB_TOKEN'))).toBe(true);
   });
 
-  it('should apply environment overrides', () => {
+  it('should apply environment overrides', async () => {
     const originalEnv = process.env.CODEPIPE_RUNTIME_MAX_CONCURRENT_TASKS;
     process.env.CODEPIPE_RUNTIME_MAX_CONCURRENT_TASKS = '7';
 
     const config = createDefaultConfig('https://github.com/org/repo.git');
     fs.writeFileSync(configPath, JSON.stringify(config, null, 2));
 
-    const result = loadRepoConfig(configPath);
+    const result = await loadRepoConfig(configPath);
     expect(result.success).toBe(true);
     expect(result.config?.runtime.max_concurrent_tasks).toBe(7);
 
@@ -285,7 +285,7 @@ describe('loadRepoConfig', () => {
     }
   });
 
-  it('should generate helpful suggestions for errors', () => {
+  it('should generate helpful suggestions for errors', async () => {
     const invalidConfig = {
       schema_version: 'invalid',
       project: {
@@ -300,7 +300,7 @@ describe('loadRepoConfig', () => {
     };
     fs.writeFileSync(configPath, JSON.stringify(invalidConfig));
 
-    const result = loadRepoConfig(configPath);
+    const result = await loadRepoConfig(configPath);
     expect(result.success).toBe(false);
     expect(result.errors).toBeDefined();
 
