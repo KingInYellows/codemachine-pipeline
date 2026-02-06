@@ -76,7 +76,7 @@ describe('Smoke Tests: No Credentials Required', () => {
       config.linear.enabled = false;
       await fs.writeFile(configPath, JSON.stringify(config, null, 2));
 
-      const result = validateRepoConfig(configPath, {
+      const result = await validateRepoConfig(configPath, {
         checkCredentials: false,
         checkDirectories: false,
         enforceGovernance: false,
@@ -94,7 +94,7 @@ describe('Smoke Tests: No Credentials Required', () => {
       config.linear.enabled = true;
       await fs.writeFile(configPath, JSON.stringify(config, null, 2));
 
-      const result = validateRepoConfig(configPath, {
+      const result = await validateRepoConfig(configPath, {
         checkCredentials: false,
         checkDirectories: false,
       });
@@ -145,7 +145,7 @@ describe('Smoke Tests: No Credentials Required', () => {
       config.linear.enabled = false;
       await fs.writeFile(configPath, JSON.stringify(config, null, 2));
 
-      const result = validateRepoConfig(configPath, {
+      const result = await validateRepoConfig(configPath, {
         checkCredentials: false,
         checkDirectories: false,
         enforceGovernance: true,
@@ -163,7 +163,7 @@ describe('Smoke Tests: No Credentials Required', () => {
       config.github.enabled = false;
       await fs.writeFile(configPath, JSON.stringify(config, null, 2));
 
-      const result = validateRepoConfig(configPath, {
+      const result = await validateRepoConfig(configPath, {
         checkCredentials: false,
         checkDirectories: false,
         enforceGovernance: true,
