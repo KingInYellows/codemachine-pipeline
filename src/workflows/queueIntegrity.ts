@@ -117,6 +117,11 @@ export async function verifyQueueIntegrity(
         }
       } catch (err) {
         if (err instanceof QueueIntegrityError) throw err;
+        // Only ignore 'file not found' errors (ENOENT). Other filesystem errors
+        // should be treated as integrity failures.
+        if (err instanceof Error && 'code' in err && err.code !== 'ENOENT') {
+          throw err;
+        }
         // File does not exist - that's fine, snapshotValid stays null
       }
     }
