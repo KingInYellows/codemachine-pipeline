@@ -6,7 +6,7 @@ This guide documents testing practices for the codemachine-pipeline project.
 
 | Component | Framework | Location |
 |-----------|-----------|----------|
-| Test Runner | Vitest v4.0.15 | `vitest.config.ts` |
+| Test Runner | Vitest v4 | `vitest.config.ts` |
 | Unit Tests | Vitest | `tests/unit/` |
 | Integration Tests | Vitest | `tests/integration/` |
 | Coverage | V8 | `coverage/` |
@@ -22,7 +22,7 @@ This guide documents testing practices for the codemachine-pipeline project.
 
 ```
 tests/
-├── unit/           # Unit tests (flat structure, ~80 files)
+├── unit/           # Unit tests (flat structure, ~60–65 files)
 ├── integration/    # Integration tests (~15 files)
 ├── performance/    # Performance benchmarks
 └── fixtures/       # Test fixtures and mocks
@@ -52,7 +52,7 @@ npm test
 # Run specific test suites
 npm run test:config          # Core config tests
 npm run test:http            # HTTP client and unit tests
-npm run test:integration     # Integration tests
+npm run test:integration     # Core integration tests (resume, status, engine)
 npm run test:commands        # CLI command tests
 npm run test:telemetry       # Logger/telemetry tests
 npm run test:smoke           # Smoke execution test
@@ -86,7 +86,7 @@ npm run test:config:coverage
 ```
 
 Reports are generated in:
-- `coverage/text` - Terminal summary
+- Text reporter - coverage summary printed to terminal/stdout (no output directory)
 - `coverage/html` - Interactive HTML report
 - `coverage/lcov.info` - LCOV format for CI
 
@@ -275,10 +275,17 @@ pool
     const body = JSON.parse(opts.body as string);
 
     // Capture headers
-    const headers = Array.isArray(opts.headers)
-      ? Object.fromEntries(opts.headers.reduce((acc, val, i, arr) =>
-          i % 2 === 0 ? [...acc, [val, arr[i + 1]]] : acc, []))
-      : opts.headers;
+    let headers: Record<string, string>;
+    if (Array.isArray(opts.headers)) {
+      headers = {};
+      for (let i = 0; i < opts.headers.length; i += 2) {
+        const key = opts.headers[i] as string;
+        const value = opts.headers[i + 1] as string;
+        headers[key] = value;
+      }
+    } else {
+      headers = opts.headers as Record<string, string>;
+    }
 
     return {
       statusCode: 201,
@@ -311,6 +318,7 @@ jobs:
       - run: npm run build
 ```
 
+> Note: In the actual GitHub Actions workflow configuration (for example, `.github/workflows/ci.yml`), all actions are pinned to specific commit SHAs for security and reproducibility. The example above uses major-version tags (`@v4`) for readability only.
 ### Coverage Uploads
 
 Coverage reports are uploaded to Codecov on successful test runs:
