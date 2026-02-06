@@ -19,7 +19,7 @@
  */
 
 import { HttpClient, Provider, ErrorType } from '../http/client';
-import type { HttpClientConfig } from '../http/client';
+import type { HttpClientConfig, LoggerInterface } from '../http/client';
 import { serializeError, createErrorNormalizer } from '../../utils/errors';
 import { createLogger, LogLevel } from '../../telemetry/logger';
 import type {
@@ -34,8 +34,7 @@ import type {
   MergeResult,
   WorkflowDispatchParams,
   CreateBranchParams,
-} from './gitHubAdapterTypes.js';
-import type { LoggerInterface } from '../http/client';
+} from './GitHubAdapterTypes.js';
 
 // Re-export types for backward compatibility
 export type {
@@ -50,7 +49,7 @@ export type {
   MergeResult,
   WorkflowDispatchParams,
   CreateBranchParams,
-} from './gitHubAdapterTypes.js';
+} from './GitHubAdapterTypes.js';
 
 // ============================================================================
 // GitHub Adapter
