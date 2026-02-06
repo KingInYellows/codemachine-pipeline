@@ -1,12 +1,5 @@
-import type { Response, HeadersInit, Headers } from 'undici-types';
-import type { LogContext } from '../../core/sharedTypes';
-import * as crypto from 'node:crypto';
+import type { RequestInit, Response, HeadersInit } from 'undici-types';
 import { RateLimitLedger, RateLimitEnvelope } from '../../telemetry/rateLimitLedger';
-import {
-  createLogger,
-  type StructuredLogger,
-  LogLevel,
-} from '../../telemetry/logger';
 import {
   ErrorType,
   Provider,
@@ -24,6 +17,16 @@ import type {
   HttpResponse,
   LoggerInterface,
 } from './httpTypes.js';
+import {
+  generateRequestId,
+  generateIdempotencyKey,
+  extractHeaders,
+  sanitizeUrl,
+  sanitizeHeaders,
+  truncate,
+  sleep,
+  createConsoleLogger,
+} from './httpUtils.js';
 
 /**
  * HTTP Client Module
@@ -38,9 +41,21 @@ import type {
  * Implements Technology Stack requirements and Rate Limit Discipline from the Rulebook.
  */
 
-// Re-export types and enums for backward compatibility
+// Re-export types, enums, and utils for backward compatibility
 export { ErrorType, Provider } from './httpTypes.js';
 export type { HttpClientConfig, HttpRequestOptions, HttpResponse, LoggerInterface } from './httpTypes.js';
+export {
+  generateRequestId,
+  generateIdempotencyKey,
+  extractHeaders,
+  sanitizeUrl,
+  sanitizeHeaders,
+  truncate,
+  sleep,
+  createConsoleLogger,
+  SENSITIVE_HEADERS,
+  SENSITIVE_KEYWORDS,
+} from './httpUtils.js';
 
 /**
  * Structured HTTP error with metadata
@@ -607,120 +622,3 @@ export class HttpClient {
   }
 }
 
-// ============================================================================
-// Utility Functions
-// ============================================================================
-
-/**
- * Generate unique request ID for tracing
- */
-function generateRequestId(): string {
-  return `req_${crypto.randomBytes(16).toString('hex')}`;
-}
-
-/**
- * Generate idempotency key for request deduplication
- */
-function generateIdempotencyKey(): string {
-  return `idem_${crypto.randomBytes(16).toString('hex')}`;
-}
-
-/**
- * Extract headers from Headers object to plain object
- */
-function extractHeaders(headers: Headers): Record<string, string> {
-  const result: Record<string, string> = {};
-  headers.forEach((value, key) => {
-    result[key] = value;
-  });
-  return result;
-}
-
-/**
- * Sanitize URL by removing query parameters that might contain secrets
- */
-function sanitizeUrl(url: string): string {
-  try {
-    const parsed = new URL(url);
-    // Remove sensitive query parameters
-    parsed.searchParams.delete('token');
-    parsed.searchParams.delete('access_token');
-    parsed.searchParams.delete('api_key');
-    return parsed.toString();
-  } catch {
-    return url;
-  }
-}
-
-/**
- * Sanitize headers by redacting authorization and sensitive values
- */
-const SENSITIVE_HEADERS = new Set([
-  'authorization',
-  'proxy-authorization',
-  'cookie',
-  'set-cookie',
-  'x-api-key',
-  'x-csrf-token',
-]);
-
-const SENSITIVE_KEYWORDS = ['token', 'secret', 'password', 'credential'];
-
-function sanitizeHeaders(headers: Record<string, string>): Record<string, string> {
-  const sanitized: Record<string, string> = {};
-
-  for (const [key, value] of Object.entries(headers)) {
-    const lowerKey = key.toLowerCase();
-
-    if (SENSITIVE_HEADERS.has(lowerKey) || SENSITIVE_KEYWORDS.some((kw) => lowerKey.includes(kw))) {
-      sanitized[key] = '***REDACTED***';
-    } else {
-      sanitized[key] = value;
-    }
-  }
-
-  return sanitized;
-}
-
-/**
- * Truncate string to maximum length
- */
-function truncate(str: string, maxLength: number): string {
-  if (str.length <= maxLength) {
-    return str;
-  }
-  return str.substring(0, maxLength) + '... (truncated)';
-}
-
-/**
- * Sleep for specified milliseconds
- */
-function sleep(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
-/**
- * Create a default logger implementation using StructuredLogger
- */
-function createConsoleLogger(): LoggerInterface {
-  const logger: StructuredLogger = createLogger({
-    component: 'http-client',
-    minLevel: LogLevel.DEBUG,
-    mirrorToStderr: true,
-  });
-
-  return {
-    debug: (message: string, context?: LogContext) => {
-      logger.debug(message, context);
-    },
-    info: (message: string, context?: LogContext) => {
-      logger.info(message, context);
-    },
-    warn: (message: string, context?: LogContext) => {
-      logger.warn(message, context);
-    },
-    error: (message: string, context?: LogContext) => {
-      logger.error(message, context);
-    },
-  };
-}
