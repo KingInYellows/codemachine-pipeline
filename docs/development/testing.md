@@ -49,11 +49,13 @@ import { createRunDirectory } from '../../src/persistence/runDirectoryManager.js
 # Run all tests (config → http → integration → commands)
 npm test
 
-# Run specific test suites
+# Run specific test suites (included in npm test)
 npm run test:config          # Core config tests
 npm run test:http            # HTTP client and unit tests
 npm run test:integration     # Core integration tests (resume, status, engine)
 npm run test:commands        # CLI command tests
+
+# Optional test suites (not included in npm test)
 npm run test:telemetry       # Logger/telemetry tests
 npm run test:smoke           # Smoke execution test
 
@@ -156,10 +158,8 @@ describe('QueueTests', () => {
     tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'queuestore-test-'));
     runDir = await createRunDirectory(tempDir, 'FEATURE-TEST', {
       title: 'Test Feature',
-      repo: {
-        url: 'https://github.com/test/repo',
-        default_branch: 'main',
-      },
+      repoUrl: 'https://github.com/test/repo',
+      defaultBranch: 'main',
     });
   });
 
@@ -248,6 +248,7 @@ describe('HttpClient', () => {
   });
 
   it('should handle API responses', async () => {
+    // Assuming 'client' is your HTTP client instance (e.g., from src/clients/)
     const pool = mockAgent.get('https://api.github.com');
 
     pool
@@ -306,6 +307,7 @@ Tests run automatically in GitHub Actions on:
 ```yaml
 jobs:
   test:
+    runs-on: self-hosted
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -383,6 +385,7 @@ export default defineConfig({
     globals: true,
     environment: 'node',
     testTimeout: 30000,
+    // Tests are discovered in both src/ (for config tests) and tests/
     include: [
       'src/**/*.test.ts',
       'src/**/*.spec.ts',
@@ -398,3 +401,4 @@ export default defineConfig({
   },
 });
 ```
+
