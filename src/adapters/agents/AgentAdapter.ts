@@ -221,7 +221,7 @@ export interface AgentSessionRequest {
   modelId?: string;
   /** Optional context window override */
   maxTokens?: number;
-  /** Session-specific metadata */
+  /** Intentional: agent session metadata varies by provider and use case */
   metadata?: Record<string, unknown>;
 }
 

@@ -118,7 +118,9 @@ export interface PlanTask {
   title: string;
   task_type: ExecutionTask['task_type'];
   dependency_ids?: string[];
+  /** Intentional: task config shape varies by task_type */
   config?: Record<string, unknown>;
+  /** Intentional: task metadata varies by consumer */
   metadata?: Record<string, unknown>;
 }
 

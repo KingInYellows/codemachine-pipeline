@@ -80,7 +80,7 @@ export interface CreateResearchTaskOptions {
   sources?: ResearchSource[];
   /** Freshness requirements */
   freshnessRequirements?: FreshnessRequirement;
-  /** Additional metadata */
+  /** Intentional: research task metadata varies by source and objective */
   metadata?: Record<string, unknown>;
 }
 

@@ -87,7 +87,13 @@ export interface ResumeDiagnostic {
   /** Classification code for mapping to playbook */
   code?: string;
   /** Additional context data */
-  context?: Record<string, unknown>;
+  context?: {
+    step?: string;
+    timestamp?: string;
+    recoverable?: boolean;
+    errorCode?: string;
+    [key: string]: unknown;
+  };
 }
 
 /**
@@ -340,7 +346,13 @@ function analyzeLastError(
   analysis: ResumeAnalysis,
   lastError: NonNullable<RunManifest['execution']['last_error']>
 ): void {
-  const errorContext: Record<string, unknown> = {
+  const errorContext: {
+    step: string;
+    timestamp: string;
+    recoverable: boolean;
+    errorCode?: string;
+    [key: string]: unknown;
+  } = {
     step: lastError.step,
     timestamp: lastError.timestamp,
     recoverable: lastError.recoverable,

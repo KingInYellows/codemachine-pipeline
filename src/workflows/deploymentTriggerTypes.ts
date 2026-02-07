@@ -54,7 +54,7 @@ export interface Blocker {
   message: string;
   /** Recommended action to resolve blocker */
   recommended_action: string;
-  /** Additional metadata about the blocker */
+  /** Intentional: blocker metadata varies by blocker type (config, protection, approvals, etc.) */
   metadata?: Record<string, unknown>;
 }
 

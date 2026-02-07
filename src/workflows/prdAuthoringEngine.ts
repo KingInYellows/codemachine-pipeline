@@ -91,7 +91,7 @@ export interface PRDDocument {
   traceId?: string;
   /** Structured sections */
   sections: Record<PRDSectionType, PRDSection>;
-  /** Overall document metadata */
+  /** Intentional: PRD document metadata varies by authoring context */
   metadata?: Record<string, unknown>;
 }
 
@@ -176,7 +176,7 @@ export interface RecordApprovalOptions {
   verdict: ApprovalVerdict;
   /** Rationale or comments */
   rationale?: string;
-  /** Additional metadata */
+  /** Intentional: approval metadata varies by workflow */
   metadata?: Record<string, unknown>;
 }
 
