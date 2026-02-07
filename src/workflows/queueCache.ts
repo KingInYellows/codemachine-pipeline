@@ -12,18 +12,9 @@
 
 import * as path from 'node:path';
 import { readManifest } from '../persistence/runDirectoryManager';
-import { createLogger, type StructuredLogger, LogLevel } from '../telemetry/logger';
-import { ensureV2Format } from './queueMigration.js';
 import { hydrateIndex } from './queueMemoryIndex.js';
 import type { QueueIndexState, ExecutionTaskData } from './queueTypes.js';
 import type { ExecutionTask } from '../core/models/ExecutionTask';
-
-// Module-level logger
-const logger: StructuredLogger = createLogger({
-  component: 'queue-cache',
-  minLevel: LogLevel.DEBUG,
-  mirrorToStderr: true,
-});
 
 // ============================================================================
 // V2 Index Cache Management
@@ -48,7 +39,7 @@ const v2IndexCache = new Map<string, V2IndexCache>();
 
 /**
  * Get or create V2 index cache entry.
- * Hydrates index state from V2 WAL format, auto-migrating V1 queues.
+ * Hydrates index state from V2 WAL format.
  */
 export async function getV2IndexCache(runDir: string): Promise<V2IndexCache> {
   const manifest = await readManifest(runDir);
@@ -60,21 +51,6 @@ export async function getV2IndexCache(runDir: string): Promise<V2IndexCache> {
   // Return existing cache if available and fresh
   if (existing && existing.queueDir === queueDir && existing.migrationChecked) {
     return existing;
-  }
-
-  // Ensure V2 format (auto-migrate from V1 if needed)
-  const migrationResult = await ensureV2Format(queueDir, featureId);
-  if (migrationResult.result && !migrationResult.result.success) {
-    throw new Error(`Queue migration failed: ${migrationResult.result.error ?? 'Unknown error'}`);
-  }
-  if (migrationResult.migrated && migrationResult.result) {
-    logger.warn('⚠️ V1 queue format detected - auto-migrated to V2', {
-      tasks_converted: migrationResult.result.tasksConverted,
-      backup_path: migrationResult.result.backupPath,
-      from_version: migrationResult.result.fromVersion,
-      to_version: migrationResult.result.toVersion,
-      message: "Run 'codepipe queue verify' to confirm migration integrity",
-    });
   }
 
   // Hydrate index from snapshot + WAL

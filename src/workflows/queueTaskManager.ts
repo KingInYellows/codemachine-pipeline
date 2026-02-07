@@ -42,7 +42,6 @@ import { loadQueue } from './queueStore.js';
  *
  * Uses V2 memory index for efficient task selection.
  * Priority order: running tasks (crash recovery) > pending tasks > retryable failures
- * Automatically migrates V1 queues to V2 when detected.
  *
  * @param runDir - Run directory path
  * @returns Next task to execute, or null if none available
@@ -112,7 +111,6 @@ export async function getFailedTasks(runDir: string): Promise<ExecutionTask[]> {
  * Get task by ID
  *
  * Uses V2 memory index for O(1) lookup.
- * Automatically migrates V1 queues to V2 when detected.
  *
  * @param runDir - Run directory path
  * @param taskId - Task ID
@@ -132,7 +130,6 @@ export async function getTaskById(runDir: string, taskId: string): Promise<Execu
  * Update task status in queue
  *
  * Uses V2 WAL for atomic updates with O(1) appends.
- * Automatically migrates V1 queues to V2 when detected.
  *
  * @param runDir - Run directory path
  * @param taskId - Task ID to update
