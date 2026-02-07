@@ -65,8 +65,6 @@ export interface HttpClientConfig {
   logger?: LoggerInterface;
 }
 
-export type { LoggerInterface };
-
 /**
  * HTTP request options
  */

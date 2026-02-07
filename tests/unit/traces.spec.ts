@@ -6,8 +6,8 @@ import {
   TraceManager,
   createTraceManager,
   createRunTraceManager,
-  type LoggerInterface,
 } from '../../src/telemetry/traces';
+import type { LoggerInterface } from '../../src/telemetry/logger';
 import type { LogContext } from '../../src/core/sharedTypes';
 
 // ============================================================================

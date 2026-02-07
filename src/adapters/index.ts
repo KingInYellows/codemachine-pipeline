@@ -101,5 +101,4 @@ export {
   type HttpClientConfig,
   type HttpRequestOptions,
   type HttpResponse,
-  type LoggerInterface,
 } from './http/client.js';
