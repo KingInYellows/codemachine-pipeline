@@ -6,7 +6,7 @@ Queue V2 delivers O(1) task operations (previously O(n²)) with 150x-12,500x sea
 
 ## Architecture
 
-The V2 queue system implements an 8-layer architecture for high-performance task management:
+The V2 queue system implements a 7-layer architecture for high-performance task management:
 
 ### Layer 1: WAL (Write-Ahead Log)
 - **Purpose**: O(1) append-only operations for task state changes
@@ -32,25 +32,19 @@ The V2 queue system implements an 8-layer architecture for high-performance task
 - **Behavior**: Consolidates WAL operations when thresholds are exceeded
 - **Performance**: Automatic cleanup with minimal performance impact
 
-### Layer 5: Migration Layer
-- **Purpose**: Automatic V1→V2 migration
-- **Implementation**: `queueMigration.ts`
-- **Behavior**: Transparent upgrade with rollback support
-- **Performance**: One-time migration cost, then V2 benefits
-
-### Layer 6: Unified API
-- **Purpose**: Single interface for V1/V2 queues
+### Layer 5: Unified API
+- **Purpose**: Single interface for queue operations
 - **Implementation**: `queueStore.ts` - Public API functions
-- **Behavior**: Auto-detects format and routes to appropriate handler
-- **Performance**: Zero overhead format detection
+- **Behavior**: Consistent API for all queue operations
+- **Performance**: Zero overhead operation routing
 
-### Layer 7: Type System
+### Layer 6: Type System
 - **Purpose**: Comprehensive Zod validation
 - **Implementation**: `queueTypes.ts` - Type definitions and schemas
 - **Behavior**: Runtime validation of all queue operations
 - **Performance**: Fast validation with schema caching
 
-### Layer 8: Performance Monitoring
+### Layer 7: Performance Monitoring
 - **Purpose**: Regression detection and benchmarking
 - **Implementation**: `tests/performance/queueStore.perf.spec.ts`
 - **Behavior**: Continuous validation of O(1) guarantees
@@ -99,23 +93,6 @@ const SNAPSHOT_CONFIG = {
 - `CODEPIPE_QUEUE_SNAPSHOT_COMPRESS`: Enable gzip compression (true/false)
 
 > **Note:** The `CODEPIPE_QUEUE_SNAPSHOT_INTERVAL` environment variable override is not yet implemented. Queue behavior is controlled through the config file settings.
-
-### Migration Settings
-
-```typescript
-// Migration behavior
-const MIGRATION_CONFIG = {
-  autoMigrate: true,        // Automatically upgrade V1→V2
-  backupOnMigrate: true,    // Create V1 backup before migration
-  validateAfterMigrate: true // Verify migration integrity
-};
-```
-
-**Environment Variables:**
-- `CODEPIPE_QUEUE_AUTO_MIGRATE`: Disable automatic migration (false)
-- `CODEPIPE_QUEUE_BACKUP_V1`: Disable backup creation (false)
-
-> **Note:** The `CODEPIPE_QUEUE_AUTO_MIGRATE` environment variable override is not yet implemented. Queue behavior is controlled through the config file settings.
 
 ## Monitoring
 
@@ -184,38 +161,6 @@ grep "queue_compaction" .codepipe/runs/*/logs/execution.ndjson
 ```
 
 ## Troubleshooting
-
-### Migration Failures
-
-**Symptom**: Queue migration fails with validation errors
-
-**Common Causes:**
-1. Corrupted V1 queue file (invalid JSON)
-2. Missing required task fields
-3. Disk space exhaustion during migration
-
-**Resolution:**
-
-```bash
-# Step 1: Verify V1 queue integrity
-cat .codepipe/runs/FEATURE-ID/queue/queue.jsonl | jq .
-
-# Step 2: Check disk space
-df -h .codepipe/
-
-# Step 3: Manual migration with backup
-export CODEPIPE_QUEUE_BACKUP_V1=true
-codepipe resume --feature FEATURE-ID --validate-queue
-
-# Step 4: Rollback if needed
-mv .codepipe/runs/FEATURE-ID/queue/queue.jsonl.v1.bak \
-   .codepipe/runs/FEATURE-ID/queue/queue.jsonl
-```
-
-**Prevention:**
-- Enable automatic backups: `CODEPIPE_QUEUE_BACKUP_V1=true`
-- Monitor disk space before migrations
-- Validate queue integrity with `--validate-queue` flag
 
 ### Performance Degradation
 
@@ -400,13 +345,11 @@ export CODEPIPE_QUEUE_SNAPSHOT_KEEP=1
 - **WAL Operations**: `src/workflows/queueOperationsLog.ts`
 - **Memory Index**: `src/workflows/queueMemoryIndex.ts`
 - **Compaction**: `src/workflows/queueCompactionEngine.ts`
-- **Migration**: `src/workflows/queueMigration.ts`
 - **Type Definitions**: `src/workflows/queueTypes.ts`
 
 ### Test Files
 - **Performance Tests**: `tests/performance/queueStore.perf.spec.ts`
 - **Integration Tests**: `tests/integration/queueStore.spec.ts`
-- **Migration Tests**: `tests/unit/queueMigration.spec.ts`
 
 ### Benchmarks
 - **O(1) operations**: 0.43ms for 500 tasks (validated)
