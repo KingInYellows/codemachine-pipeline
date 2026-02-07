@@ -42,7 +42,7 @@ import type { ExecutionTaskType } from '../../core/models/ExecutionTask';
  * Error classification for deterministic failure handling
  * Per acceptance criteria: error taxonomy alignment for orchestration
  */
-export const AgentErrorCategorySchema = z.enum([
+const AgentErrorCategorySchema = z.enum([
   'transient', // Retry automatically (network, rate-limit, timeout)
   'permanent', // Do not retry (invalid input, unsupported feature, auth failure)
   'humanAction', // Requires human intervention (ambiguous requirements, policy violation)
@@ -53,7 +53,7 @@ export type AgentErrorCategory = z.infer<typeof AgentErrorCategorySchema>;
 /**
  * Structured agent error with taxonomy classification
  */
-export const AgentErrorSchema = z
+const AgentErrorSchema = z
   .object({
     category: AgentErrorCategorySchema,
     message: z.string().min(1),
@@ -102,7 +102,7 @@ export class AgentAdapterError extends Error implements AgentError {
  * Execution context classification for capability negotiation
  * Maps ExecutionTask types to provider capability requirements
  */
-export const ExecutionContextSchema = z.enum([
+const ExecutionContextSchema = z.enum([
   'code_generation',
   'code_review',
   'test_generation',
@@ -131,7 +131,7 @@ export interface ContextCapabilityRequirements {
  * Map execution context to capability requirements
  * Per acceptance criteria: execution tasks specify capability needs
  */
-export const CONTEXT_REQUIREMENTS: Record<ExecutionContext, ContextCapabilityRequirements> = {
+const CONTEXT_REQUIREMENTS: Record<ExecutionContext, ContextCapabilityRequirements> = {
   code_generation: {
     minContextWindow: 8000,
     requiredFeatures: { codeGeneration: true },
@@ -265,7 +265,8 @@ export type ProviderInvoker = (
 /**
  * Session telemetry record for audit trails
  */
-export const SessionTelemetrySchema = z
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+const _SessionTelemetrySchema = z
   .object({
     sessionId: z.string().min(1),
     taskId: z.string().min(1),
@@ -286,7 +287,7 @@ export const SessionTelemetrySchema = z
   })
   .strict();
 
-export type SessionTelemetry = z.infer<typeof SessionTelemetrySchema>;
+export type SessionTelemetry = z.infer<typeof _SessionTelemetrySchema>;
 
 const TELEMETRY_FILENAME = 'agent_sessions.jsonl';
 
