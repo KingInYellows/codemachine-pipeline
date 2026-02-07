@@ -23,6 +23,7 @@ import * as crypto from 'node:crypto';
 import * as path from 'node:path';
 import type { LoggerInterface } from '../adapters/http/client';
 import { createLogger, LogLevel } from '../telemetry/logger';
+import { getErrorMessage } from '../utils/errors.js';
 import { RateLimitLedger } from '../telemetry/rateLimitLedger';
 import type { MetricsCollector } from '../telemetry/metrics';
 import { withLock } from '../persistence/runDirectoryManager';
@@ -508,7 +509,7 @@ export class WriteActionQueue {
           successCount++;
         } catch (error) {
           failureCount++;
-          const errorMessage = error instanceof Error ? error.message : String(error);
+          const errorMessage = getErrorMessage(error);
           errors.push(`${action.action_id}: ${errorMessage}`);
         }
       }
@@ -526,12 +527,12 @@ export class WriteActionQueue {
       return result;
     } catch (error) {
       this.logger.error('Failed to drain queue', {
-        error: error instanceof Error ? error.message : String(error),
+        error: getErrorMessage(error),
       });
 
       return {
         success: false,
-        message: error instanceof Error ? error.message : 'Unknown error',
+        message: getErrorMessage(error),
         actionsAffected: 0,
         errors: [error instanceof Error ? error.stack || error.message : String(error)],
       };
@@ -578,7 +579,7 @@ export class WriteActionQueue {
             'Write actions completed successfully'
           );
         } catch (error) {
-          const errorMessage = error instanceof Error ? error.message : String(error);
+          const errorMessage = getErrorMessage(error);
 
           this.logger.error('Action execution failed', {
             action_id: action.action_id,

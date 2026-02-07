@@ -27,6 +27,7 @@ import type { StructuredLogger } from '../telemetry/logger';
 import type { MetricsCollector } from '../telemetry/metrics';
 import { computeFileHash } from '../persistence/hashManifest';
 import { isFileNotFound } from '../utils/safeJson';
+import { getErrorMessage } from '../utils/errors.js';
 
 // ============================================================================
 // Types
@@ -431,7 +432,7 @@ export async function generateTraceMap(
         // File exists but failed to read or parse - log warning and regenerate
         logger.warn('Failed to read existing trace.json, regenerating', {
           tracePath,
-          error: error instanceof Error ? error.message : String(error),
+          error: getErrorMessage(error),
         });
       }
       // File doesn't exist or is corrupted, continue with generation

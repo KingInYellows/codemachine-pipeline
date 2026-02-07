@@ -68,6 +68,7 @@ import {
   loadDeploymentContext,
   persistDeploymentOutcome,
 } from './deploymentTriggerContext.js';
+import { getErrorMessage } from '../utils/errors.js';
 
 // Re-export context API for backward compatibility
 export { loadDeploymentContext, persistDeploymentOutcome } from './deploymentTriggerContext.js';
@@ -264,7 +265,7 @@ export async function triggerDeployment(
     return outcome;
   } catch (error) {
     logger.error('Deployment failed with unexpected error', {
-      error: error instanceof Error ? error.message : String(error),
+      error: getErrorMessage(error),
     });
 
     // Create failure outcome
@@ -279,7 +280,7 @@ export async function triggerDeployment(
       blockers: [
         {
           type: 'config',
-          message: error instanceof Error ? error.message : String(error),
+          message: getErrorMessage(error),
           recommended_action: 'Check logs and verify run directory artifacts',
         },
       ],
@@ -292,7 +293,7 @@ export async function triggerDeployment(
         deploy_approval_required: false,
       },
       error: {
-        message: error instanceof Error ? error.message : String(error),
+        message: getErrorMessage(error),
         type: 'UNEXPECTED_ERROR',
         stack: error instanceof Error ? error.stack : undefined,
       },

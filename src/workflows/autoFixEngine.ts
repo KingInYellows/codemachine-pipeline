@@ -27,6 +27,7 @@ import {
   summarizeError,
   getRequiredCommands,
 } from './validationRegistry';
+import { getErrorMessage } from '../utils/errors.js';
 
 /**
  * Auto-Fix Engine
@@ -638,7 +639,7 @@ async function executeShellCommand(
   try {
     [executable, args] = parseCommandString(command);
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : String(error);
+    const errorMessage = getErrorMessage(error);
     return {
       exitCode: 1,
       stdout: '',
@@ -702,7 +703,7 @@ async function executeShellCommand(
     }
 
     // Handle other errors
-    const errorMessage = error instanceof Error ? error.message : String(error);
+    const errorMessage = getErrorMessage(error);
     options.logger?.error('Command execution error', {
       command,
       error: errorMessage,

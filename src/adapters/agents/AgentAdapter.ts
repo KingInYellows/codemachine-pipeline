@@ -33,6 +33,7 @@ import type {
   Tools,
 } from './manifestLoader';
 import type { ExecutionTaskType } from '../../core/models/ExecutionTask';
+import { getErrorMessage } from '../../utils/errors.js';
 
 // ============================================================================
 // Error Taxonomy
@@ -747,7 +748,7 @@ export class AgentAdapter {
     }
 
     const category = this.classifyError(error);
-    const message = error instanceof Error ? error.message : String(error);
+    const message = getErrorMessage(error);
     const details = error instanceof Error ? error.stack : undefined;
 
     return this.createError(category, message, undefined, details);
@@ -762,7 +763,7 @@ export class AgentAdapter {
       return crypto.createHash('sha256').update(content).digest('hex');
     } catch (error) {
       this.logger.warn('Failed to stringify prompt for hashing', {
-        error: error instanceof Error ? error.message : String(error),
+        error: getErrorMessage(error),
       });
       return crypto.createHash('sha256').update(String(prompt)).digest('hex');
     }
@@ -792,7 +793,7 @@ export class AgentAdapter {
       await fs.appendFile(filePath, `${JSON.stringify(telemetry)}\n`, 'utf-8');
     } catch (error) {
       this.logger.warn('Failed to persist session telemetry', {
-        error: error instanceof Error ? error.message : String(error),
+        error: getErrorMessage(error),
       });
     } finally {
       this.logger.debug('Session telemetry recorded', telemetry);

@@ -19,6 +19,7 @@ import type { MetricsCollector, Labels } from './metrics';
 import type { LogContext } from '../core/sharedTypes';
 import type { LoggerInterface } from './logger';
 import { LATENCY_BUCKETS } from './metrics';
+import { getErrorMessage } from '../utils/errors.js';
 
 // ============================================================================
 // Types & Interfaces
@@ -236,7 +237,7 @@ export class ExecutionMetricsHelper {
     } catch (error) {
       // Never throw from instrumentation code
       this.logError('[ExecutionMetrics] Failed to record task lifecycle', {
-        error: error instanceof Error ? error.message : String(error),
+        error: getErrorMessage(error),
         taskId,
         taskType,
         status,
@@ -269,7 +270,7 @@ export class ExecutionMetricsHelper {
       );
     } catch (error) {
       this.logError('[ExecutionMetrics] Failed to record CodeMachine execution', {
-        error: error instanceof Error ? error.message : String(error),
+        error: getErrorMessage(error),
         engine,
         status,
       });
@@ -289,7 +290,7 @@ export class ExecutionMetricsHelper {
       );
     } catch (error) {
       this.logError('[ExecutionMetrics] Failed to record CodeMachine retry', {
-        error: error instanceof Error ? error.message : String(error),
+        error: getErrorMessage(error),
         engine,
       });
     }
@@ -338,7 +339,7 @@ export class ExecutionMetricsHelper {
       }
     } catch (error) {
       this.logError('[ExecutionMetrics] Failed to record validation run', {
-        error: error instanceof Error ? error.message : String(error),
+        error: getErrorMessage(error),
         passed: result.passed,
       });
     }
@@ -390,7 +391,7 @@ export class ExecutionMetricsHelper {
       );
     } catch (error) {
       this.logError('[ExecutionMetrics] Failed to record diff stats', {
-        error: error instanceof Error ? error.message : String(error),
+        error: getErrorMessage(error),
         filesChanged: stats.filesChanged,
       });
     }
@@ -432,7 +433,7 @@ export class ExecutionMetricsHelper {
       );
     } catch (error) {
       this.logError('[ExecutionMetrics] Failed to set queue depth', {
-        error: error instanceof Error ? error.message : String(error),
+        error: getErrorMessage(error),
         pending,
         completed,
         failed,
@@ -470,7 +471,7 @@ export class ExecutionMetricsHelper {
       );
     } catch (error) {
       this.logError('[ExecutionMetrics] Failed to record agent cost', {
-        error: error instanceof Error ? error.message : String(error),
+        error: getErrorMessage(error),
         model,
       });
     }
@@ -489,7 +490,7 @@ export class ExecutionMetricsHelper {
       );
     } catch (error) {
       this.logError('[ExecutionMetrics] Failed to set agent cost USD', {
-        error: error instanceof Error ? error.message : String(error),
+        error: getErrorMessage(error),
         totalCostUsd,
       });
     }
@@ -504,7 +505,7 @@ export class ExecutionMetricsHelper {
     } catch (error) {
       // Log the failure but don't throw - metrics collection should not crash the application
       this.logError('[ExecutionMetrics] Failed to flush metrics to disk', {
-        error: error instanceof Error ? error.message : String(error),
+        error: getErrorMessage(error),
       });
     }
   }

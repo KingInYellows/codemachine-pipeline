@@ -17,6 +17,7 @@ import type { PRMetadata } from '../cli/pr/shared';
 import type { LoggerInterface } from '../adapters/http/client';
 import { readManifest, withLock, type RunManifest } from '../persistence/runDirectoryManager';
 import { computeContentHash } from './approvalRegistry';
+import { getErrorMessage } from '../utils/errors.js';
 
 import {
   DEPLOYMENT_SCHEMA_VERSION,
@@ -75,7 +76,7 @@ export async function loadDeploymentContext(
   } catch (error) {
     logger.error('Failed to load run manifest', {
       path: path.join(runDirectory, 'manifest.json'),
-      error: error instanceof Error ? error.message : String(error),
+      error: getErrorMessage(error),
     });
     throw new Error(
       `Run manifest not found. Ensure the feature run directory exists and is initialized (run directory: ${runDirectory})`
@@ -92,7 +93,7 @@ export async function loadDeploymentContext(
   } catch (error) {
     logger.error('Failed to load pr.json', {
       path: prJsonPath,
-      error: error instanceof Error ? error.message : String(error),
+      error: getErrorMessage(error),
     });
     throw new Error(
       `PR metadata not found. Ensure PR has been created first (run directory: ${runDirectory})`
@@ -112,7 +113,7 @@ export async function loadDeploymentContext(
     }
   } catch (error) {
     logger.warn('Branch protection report not found or invalid', {
-      error: error instanceof Error ? error.message : String(error),
+      error: getErrorMessage(error),
     });
   }
   const branchProtectionHash = branchProtection
@@ -191,7 +192,7 @@ async function computeApprovalsHash(
     if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
       logger.warn('Failed to compute approvals hash', {
         path: approvalsPath,
-        error: error instanceof Error ? error.message : String(error),
+        error: getErrorMessage(error),
       });
     }
     return undefined;
