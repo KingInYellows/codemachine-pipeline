@@ -25,6 +25,7 @@ import { RateLimitReporter } from '../../../telemetry/rateLimitReporter';
 import { createResearchCoordinator } from '../../../workflows/researchCoordinator';
 import { withSpan } from '../../../telemetry/traces';
 import type { StructuredLogger } from '../../../telemetry/logger';
+import type { LogContext } from '../../../core/sharedTypes.js';
 import type { MetricsCollector } from '../../../telemetry/metrics';
 import type { TraceManager, ActiveSpan } from '../../../telemetry/traces';
 import type { RunDirectorySettings } from '../../utils/runDirectory';
@@ -44,9 +45,9 @@ import {
 
 /** Simple logger interface accepted by data-loading functions. */
 export interface DataLogger {
-  debug: (msg: string, meta?: Record<string, unknown>) => void;
-  info: (msg: string, meta?: Record<string, unknown>) => void;
-  warn: (msg: string, meta?: Record<string, unknown>) => void;
+  debug: (msg: string, meta?: LogContext) => void;
+  info: (msg: string, meta?: LogContext) => void;
+  warn: (msg: string, meta?: LogContext) => void;
 }
 
 export async function loadManifestSnapshot(

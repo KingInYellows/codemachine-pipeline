@@ -33,7 +33,7 @@ export interface RequestApprovalOptions {
   artifactPath: string;
   /** SHA-256 hash of artifact content */
   artifactHash: string;
-  /** Optional metadata */
+  /** Intentional: approval request metadata varies by workflow */
   metadata?: Record<string, unknown>;
 }
 
@@ -46,7 +46,7 @@ export interface GrantApprovalOptions {
   rationale?: string;
   /** Artifact path associated with approval */
   artifactPath?: string;
-  /** Optional metadata */
+  /** Intentional: approval grant metadata varies by workflow */
   metadata?: Record<string, unknown>;
 }
 
@@ -59,7 +59,7 @@ export interface DenyApprovalOptions {
   reason: string;
   /** Artifact path associated with denial */
   artifactPath?: string;
-  /** Optional metadata */
+  /** Intentional: approval denial metadata varies by workflow */
   metadata?: Record<string, unknown>;
 }
 
@@ -79,7 +79,7 @@ export interface ApprovalsFile {
   feature_id: string;
   /** List of approval records */
   approvals: ApprovalRecord[];
-  /** Metadata */
+  /** Intentional: approvals-file metadata is consumer-defined */
   metadata?: Record<string, unknown>;
 }
 

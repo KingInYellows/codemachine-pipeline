@@ -153,7 +153,7 @@ export interface RecordSpecApprovalOptions {
   verdict: ApprovalVerdict;
   /** Rationale or comments */
   rationale?: string;
-  /** Additional metadata */
+  /** Intentional: spec approval metadata varies by workflow */
   metadata?: Record<string, unknown>;
 }
 

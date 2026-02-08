@@ -545,7 +545,14 @@ export class LinearAdapter {
     });
 
     try {
-      const variables: Record<string, unknown> = { issueId: params.issueId };
+      const variables: {
+        issueId: string;
+        title?: string;
+        description?: string;
+        stateId?: string;
+        priority?: number;
+        assigneeId?: string;
+      } = { issueId: params.issueId };
       if (params.title !== undefined) variables.title = params.title;
       if (params.description !== undefined) variables.description = params.description;
       if (params.stateId !== undefined) variables.stateId = params.stateId;
@@ -868,7 +875,14 @@ export class LinearAdapterError extends Error {
     Object.setPrototypeOf(this, LinearAdapterError.prototype);
   }
 
-  toJSON(): Record<string, unknown> {
+  toJSON(): {
+    name: string;
+    message: string;
+    errorType: ErrorType;
+    statusCode?: number | undefined;
+    requestId?: string | undefined;
+    operation?: string | undefined;
+  } {
     return {
       name: this.name,
       message: this.message,
