@@ -20,6 +20,7 @@ interface DiagnosticCheck {
   status: 'pass' | 'fail' | 'warn';
   message: string;
   remediation?: string;
+  /** Intentional: details vary per diagnostic check type (version, path, counts, etc.) */
   details?: Record<string, unknown>;
 }
 

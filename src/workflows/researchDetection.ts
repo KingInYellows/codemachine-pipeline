@@ -27,7 +27,7 @@ interface ManualUnknownObject {
   objective: string;
   /** Custom sources */
   sources?: ResearchSource[];
-  /** Additional metadata */
+  /** Intentional: manual unknown metadata varies by detection source */
   metadata?: Record<string, unknown>;
 }
 
@@ -37,6 +37,7 @@ export interface UnknownDetectionHint {
   title: string;
   objectives: string[];
   sources: ResearchSource[];
+  /** Intentional: detection hint metadata varies by origin type */
   metadata?: Record<string, unknown>;
 }
 

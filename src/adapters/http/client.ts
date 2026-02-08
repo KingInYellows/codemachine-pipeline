@@ -78,7 +78,16 @@ export class HttpError extends Error {
   /**
    * Convert to JSON-serializable object for logging
    */
-  toJSON(): Record<string, unknown> {
+  toJSON(): {
+    name: string;
+    message: string;
+    type: ErrorType;
+    statusCode?: number | undefined;
+    requestId?: string | undefined;
+    retryable: boolean;
+    headers?: Record<string, string> | undefined;
+    responseBody?: string | undefined;
+  } {
     return {
       name: this.name,
       message: this.message,

@@ -118,7 +118,7 @@ export interface RunManifest {
   rate_limits?: {
     rate_limits_file?: string;
   };
-  /** Optional metadata */
+  /** Intentional: run manifest metadata is consumer-defined */
   metadata?: Record<string, unknown>;
 }
 
@@ -164,7 +164,7 @@ export interface CreateRunDirectoryOptions {
   repoUrl: string;
   /** Default branch */
   defaultBranch?: string;
-  /** Additional metadata */
+  /** Intentional: run directory metadata varies by creation context */
   metadata?: Record<string, unknown>;
   /** Whether to seed SQLite WAL indexes (future enhancement) */
   seedSqlite?: boolean;

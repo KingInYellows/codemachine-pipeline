@@ -45,7 +45,7 @@ export interface CostEntry {
   timestamp: string;
   /** Optional model identifier */
   model?: string;
-  /** Optional additional metadata */
+  /** Intentional: cost entry metadata varies by operation type */
   metadata?: Record<string, unknown>;
 }
 

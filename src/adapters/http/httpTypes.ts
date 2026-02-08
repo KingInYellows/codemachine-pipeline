@@ -80,7 +80,7 @@ export interface HttpRequestOptions extends Omit<RequestInit, 'headers'> {
     enabled: boolean;
     maxAttempts?: number;
   };
-  /** Request metadata for logging */
+  /** Intentional: request metadata for logging — varies per caller */
   metadata?: Record<string, unknown>;
 }
 

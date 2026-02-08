@@ -51,6 +51,31 @@ export interface WriteActionQueueReport {
   healthReasons: string[];
 }
 
+/** JSON payload returned by {@link formatWriteActionQueueJSON}. */
+export interface WriteActionQueueJsonPayload {
+  initialized: boolean;
+  message?: string;
+  feature_id?: string;
+  queue_dir?: string;
+  total_actions?: number;
+  pending_count?: number;
+  in_progress_count?: number;
+  completed_count?: number;
+  failed_count?: number;
+  skipped_count?: number;
+  concurrency_limit?: number;
+  backlog?: number;
+  utilization_percent?: number;
+  has_failures?: boolean;
+  has_pending?: boolean;
+  updated_at?: string;
+  health?: {
+    status: 'healthy' | 'warning' | 'critical';
+    reasons: string[];
+  };
+  recommendations?: string[];
+}
+
 /**
  * CLI output options
  */
@@ -310,7 +335,7 @@ function generateRecommendations(report: WriteActionQueueReport): string[] {
  */
 export function formatWriteActionQueueJSON(
   report: WriteActionQueueReport | null
-): Record<string, unknown> {
+): WriteActionQueueJsonPayload {
   if (!report) {
     return {
       initialized: false,
@@ -385,6 +410,6 @@ export function formatQueueStatusForCLI(
  */
 export function formatQueueStatusAsJSON(
   report: WriteActionQueueReport | null
-): Record<string, unknown> {
+): WriteActionQueueJsonPayload {
   return formatWriteActionQueueJSON(report);
 }

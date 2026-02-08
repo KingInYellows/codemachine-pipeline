@@ -134,8 +134,20 @@ export function formatErrorMessage(error: unknown): string {
 /**
  * Format a CliError as a JSON payload for --json output.
  */
-export function formatErrorJson(error: CliError): Record<string, unknown> {
-  const result: Record<string, unknown> = {
+/** Typed JSON payload returned by {@link formatErrorJson}. */
+export interface CliErrorJsonPayload {
+  error: true;
+  code: CliErrorCode;
+  exit_code: number;
+  message: string;
+  remediation?: string;
+  how_to_fix?: string;
+  common_fixes?: string[];
+  docs_url?: string;
+}
+
+export function formatErrorJson(error: CliError): CliErrorJsonPayload {
+  const result: CliErrorJsonPayload = {
     error: true,
     code: error.code,
     exit_code: error.exitCode,

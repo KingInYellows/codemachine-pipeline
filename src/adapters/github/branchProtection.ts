@@ -757,7 +757,14 @@ export class BranchProtectionError extends Error {
     Object.setPrototypeOf(this, BranchProtectionError.prototype);
   }
 
-  toJSON(): Record<string, unknown> {
+  toJSON(): {
+    name: string;
+    message: string;
+    errorType: ErrorType;
+    statusCode?: number | undefined;
+    requestId?: string | undefined;
+    operation?: string | undefined;
+  } {
     return {
       name: this.name,
       message: this.message,

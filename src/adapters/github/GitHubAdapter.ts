@@ -265,7 +265,7 @@ export class GitHubAdapter {
     });
 
     try {
-      const payload: Record<string, unknown> = {};
+      const payload: { reviewers?: string[]; team_reviewers?: string[] } = {};
       if (params.reviewers && params.reviewers.length > 0) {
         payload.reviewers = params.reviewers;
       }
@@ -400,7 +400,12 @@ export class GitHubAdapter {
     });
 
     try {
-      const payload: Record<string, unknown> = {
+      const payload: {
+        merge_method: string;
+        commit_title?: string;
+        commit_message?: string;
+        sha?: string;
+      } = {
         merge_method: params.merge_method ?? 'merge',
       };
 
@@ -647,7 +652,14 @@ export class GitHubAdapterError extends Error {
     Object.setPrototypeOf(this, GitHubAdapterError.prototype);
   }
 
-  toJSON(): Record<string, unknown> {
+  toJSON(): {
+    name: string;
+    message: string;
+    errorType: ErrorType;
+    statusCode?: number | undefined;
+    requestId?: string | undefined;
+    operation?: string | undefined;
+  } {
     return {
       name: this.name,
       message: this.message,

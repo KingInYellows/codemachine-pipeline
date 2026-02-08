@@ -31,7 +31,7 @@ export interface FileHashRecord {
   size: number;
   /** Timestamp when hash was computed (ISO 8601) */
   timestamp: string;
-  /** Optional metadata for file type or purpose */
+  /** Intentional: file-level metadata varies by consumer (file type, purpose, tags, etc.) */
   metadata?: Record<string, unknown>;
 }
 
@@ -47,7 +47,7 @@ export interface HashManifest {
   updated_at: string;
   /** Map of file paths to hash records */
   files: Record<string, FileHashRecord>;
-  /** Optional manifest-level metadata */
+  /** Intentional: manifest-level metadata varies by consumer */
   metadata?: Record<string, unknown>;
 }
 

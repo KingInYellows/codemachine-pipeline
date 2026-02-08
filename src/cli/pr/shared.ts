@@ -263,7 +263,7 @@ export async function persistPRData(context: PRContext, prMetadata: PRMetadata):
 /**
  * Render PR output in human or JSON format
  *
- * @param data Output data (must be JSON-serializable)
+ * @param data Output data — intentionally `Record<string, unknown>` since callers pass varying PR-related shapes
  * @param jsonMode Whether to render as JSON
  * @returns Formatted output string
  */
@@ -428,7 +428,7 @@ export async function isBranchLocal(branchName: string): Promise<boolean> {
 export async function logDeploymentAction(
   context: PRContext,
   action: string,
-  metadata: Record<string, unknown>
+  metadata: Record<string, unknown> // Intentional: deployment action metadata varies per action type
 ): Promise<void> {
   const { runDir, logger } = context;
   const deploymentPath = path.join(runDir, 'deployment.json');
@@ -503,6 +503,7 @@ function isStatusCheckShape(
 }
 
 type DeploymentLog = {
+  /** Intentional: action metadata varies per deployment action type */
   actions?: Array<{ timestamp: string; action: string; metadata: Record<string, unknown> }>;
 };
 
