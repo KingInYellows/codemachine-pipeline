@@ -51,11 +51,11 @@
     "@oclif/core": "^4.0.30",
     "@oclif/plugin-help": "^6.2.37",
     "picomatch": "^4.0.3",
-    "undici": "^7.20.0",
+    "undici": "^7.21.0",
     "zod": "^4.3.6"
   },
   "devDependencies": {
-    "@types/node": "^25.2.0",
+    "@types/node": "^25.2.2",
     "@types/picomatch": "^4.0.2",
     "@typescript-eslint/eslint-plugin": "^8.54.0",
     "@typescript-eslint/parser": "^8.54.0",
