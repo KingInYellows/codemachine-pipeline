@@ -4,8 +4,9 @@
 /**
  * Circular Dependency CI Check (CDMCH-66)
  *
- * Compares current circular dependencies against the baseline.
- * Fails if NEW cycles are introduced (exit 1), passes if count <= baseline.
+ * Compares current circular dependencies against the baseline using set-based comparison.
+ * Fails if NEW cycles are introduced (exit 1). Passes as long as all current cycles
+ * are present in the baseline (no new cycles), even if the total count differs.
  */
 
 const { execSync } = require('node:child_process');
@@ -18,7 +19,7 @@ const BASELINE_PATH = resolve(ROOT, '.deps', 'cycles-baseline.json');
 // Get current cycles
 let currentCycles;
 try {
-  const output = execSync('npx madge --circular --json --extensions ts src', {
+  const output = execSync('npm exec -- madge --circular --json --extensions ts src', {
     cwd: ROOT,
     encoding: 'utf-8',
     stdio: ['pipe', 'pipe', 'pipe'],
@@ -55,16 +56,15 @@ if (newCycles.length > 0) {
   for (const cycle of newCycles) {
     console.error(`  → ${cycle.join(' → ')}`);
   }
-  console.error('\nFix the new cycles or update the baseline with: npm run deps:check');
+  console.error('\nFix the new cycles or update the baseline with: npm run deps:baseline');
   process.exit(1);
 }
 
 if (currentCount < baselineCount) {
   console.log(`✔ ${baselineCount - currentCount} cycle(s) resolved! Consider updating the baseline.`);
-} else if (currentCount === baselineCount) {
-  console.log('✔ No new circular dependencies introduced.');
 } else {
-  console.log('✔ No new circular dependencies introduced (count shifted but no new cycles).');
+  console.log('✔ No new circular dependencies introduced.');
 }
 
 process.exit(0);
+

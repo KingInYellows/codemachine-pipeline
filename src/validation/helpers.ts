@@ -7,7 +7,7 @@
  *   - validateOrResult: returns a discriminated union (for soft boundaries)
  */
 
-import type { ZodSchema, ZodError } from 'zod';
+import type { ZodSchema } from 'zod';
 import { ValidationError, fromZodError } from './errors.js';
 
 /**
@@ -77,4 +77,3 @@ export function validateOrResult<T>(
   }
   return { success: false, error: fromZodError(boundary, result.error) };
 }
-

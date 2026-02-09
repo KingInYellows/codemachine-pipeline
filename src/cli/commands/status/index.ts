@@ -28,7 +28,7 @@ import {
   type StatusIntegrationsPayload,
   type StatusRateLimitsPayload,
   type StatusResearchPayload,
-} from './types';
+} from '../../status/types';
 import {
   loadManifestWithTracing,
   loadContextStatus,
@@ -40,8 +40,8 @@ import {
   loadRateLimitsStatus,
   loadResearchStatus,
   refreshBranchProtectionArtifact,
-} from './data';
-import { renderHumanReadable } from './renderers';
+} from '../../status/data';
+import { renderHumanReadable } from '../../status/renderers';
 import { CliError, CliErrorCode, formatErrorMessage, formatErrorJson } from '../../utils/cliErrors';
 
 /**
@@ -404,6 +404,6 @@ export type {
   StatusIntegrationsPayload,
   StatusRateLimitsPayload,
   StatusResearchPayload,
-} from './types';
+} from '../../status/types';
 
-export type { RunManifest, ValidationMismatch } from './types';
+export type { RunManifest, ValidationMismatch } from '../../status/types';

@@ -1,5 +1,5 @@
-export type { RunManifest } from '../../../persistence/runDirectoryManager';
-export type { ValidationMismatch } from '../../../workflows/branchProtectionReporter';
+export type { RunManifest } from '../../persistence/runDirectoryManager';
+export type { ValidationMismatch } from '../../workflows/branchProtectionReporter';
 
 export const MANIFEST_FILE = 'manifest.json';
 export const MANIFEST_SCHEMA_DOC = 'docs/requirements/run_directory_schema.md';
@@ -13,7 +13,7 @@ export type StatusFlags = {
 };
 
 export interface ManifestLoadResult {
-  manifest?: import('../../../persistence/runDirectoryManager').RunManifest;
+  manifest?: import('../../persistence/runDirectoryManager').RunManifest;
   manifestPath: string;
   error?: string;
 }
@@ -22,18 +22,18 @@ export interface StatusPayload {
   feature_id: string | null;
   title?: string;
   source?: string;
-  status: import('../../../persistence/runDirectoryManager').RunManifest['status'] | 'unknown';
+  status: import('../../persistence/runDirectoryManager').RunManifest['status'] | 'unknown';
   manifest_path: string;
   manifest_schema_doc: string;
   manifest_template: string;
   last_step: string | null;
   last_error:
-    | import('../../../persistence/runDirectoryManager').RunManifest['execution']['last_error']
+    | import('../../persistence/runDirectoryManager').RunManifest['execution']['last_error']
     | null;
-  queue: import('../../../persistence/runDirectoryManager').RunManifest['queue'] | null;
-  approvals: import('../../../persistence/runDirectoryManager').RunManifest['approvals'] | null;
-  telemetry: import('../../../persistence/runDirectoryManager').RunManifest['telemetry'] | null;
-  timestamps: import('../../../persistence/runDirectoryManager').RunManifest['timestamps'] | null;
+  queue: import('../../persistence/runDirectoryManager').RunManifest['queue'] | null;
+  approvals: import('../../persistence/runDirectoryManager').RunManifest['approvals'] | null;
+  telemetry: import('../../persistence/runDirectoryManager').RunManifest['telemetry'] | null;
+  timestamps: import('../../persistence/runDirectoryManager').RunManifest['timestamps'] | null;
   config_reference: string;
   config_errors: string[];
   config_warnings: string[];
@@ -128,7 +128,7 @@ export interface StatusBranchProtectionPayload {
     enabled: boolean;
   };
   evaluated_at?: string;
-  validation_mismatch?: import('../../../workflows/branchProtectionReporter').ValidationMismatch;
+  validation_mismatch?: import('../../workflows/branchProtectionReporter').ValidationMismatch;
 }
 
 export interface StatusIntegrationsPayload {
