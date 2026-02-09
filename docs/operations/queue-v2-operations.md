@@ -33,9 +33,9 @@ The V2 queue system implements a 7-layer architecture for high-performance task 
 - **Performance**: Automatic cleanup with minimal performance impact
 
 ### Layer 5: Unified API
-- **Purpose**: Single interface for queue operations
+- **Purpose**: Provides a stable, high-level API for all queue interactions.
 - **Implementation**: `queueStore.ts` - Public API functions
-- **Behavior**: Consistent API for all queue operations
+- **Behavior**: Abstracts the underlying WAL and snapshot mechanism from the caller.
 - **Performance**: Zero overhead operation routing
 
 ### Layer 6: Type System
