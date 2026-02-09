@@ -534,7 +534,7 @@ export class WriteActionQueue {
         success: false,
         message: getErrorMessage(error),
         actionsAffected: 0,
-        errors: [error instanceof Error ? error.stack || error.message : String(error)],
+        errors: [error instanceof Error && error.stack ? error.stack : getErrorMessage(error)],
       };
     }
   }
