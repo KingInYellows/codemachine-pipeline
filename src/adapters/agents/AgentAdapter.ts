@@ -131,7 +131,7 @@ export interface ContextCapabilityRequirements {
  * Map execution context to capability requirements
  * Per acceptance criteria: execution tasks specify capability needs
  */
-const CONTEXT_REQUIREMENTS: Record<ExecutionContext, ContextCapabilityRequirements> = {
+export const CONTEXT_REQUIREMENTS: Record<ExecutionContext, ContextCapabilityRequirements> = {
   code_generation: {
     minContextWindow: 8000,
     requiredFeatures: { codeGeneration: true },
@@ -264,9 +264,10 @@ export type ProviderInvoker = (
 
 /**
  * Session telemetry record for audit trails
+ * Schema is used for type inference only; runtime validation is not required for internal telemetry
  */
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-const _SessionTelemetrySchema = z
+// Note: Schema appears unused but is required for type inference via z.infer
+const SessionTelemetrySchema = z
   .object({
     sessionId: z.string().min(1),
     taskId: z.string().min(1),
@@ -287,7 +288,7 @@ const _SessionTelemetrySchema = z
   })
   .strict();
 
-export type SessionTelemetry = z.infer<typeof _SessionTelemetrySchema>;
+export type SessionTelemetry = z.infer<typeof SessionTelemetrySchema>;
 
 const TELEMETRY_FILENAME = 'agent_sessions.jsonl';
 
