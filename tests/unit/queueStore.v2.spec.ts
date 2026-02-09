@@ -19,7 +19,7 @@ import type { ExecutionTask } from '../../src/core/models/ExecutionTask.js';
  * Tests Issue #45: Queue Store V2 Integration (Layer 7)
  *
  * Verifies:
- * - V2 format detection and auto-migration
+ * - V2 format detection
  * - WAL (Write-Ahead Log) integration
  * - Compaction triggers and snapshot updates
  * - Backward compatibility with existing APIs
@@ -37,25 +37,6 @@ describe('queueStore V2 Integration', () => {
       task_type: 'code_generation' as const,
       dependency_ids: t.deps ?? [],
     })),
-  });
-
-  // Helper to create a V1-format task for migration tests
-  const createV1Task = (
-    id: string,
-    status: ExecutionTask['status'] = 'pending',
-    deps: string[] = []
-  ): ExecutionTask => ({
-    schema_version: '1.0.0',
-    task_id: id,
-    feature_id: 'FEATURE-V2-TEST',
-    title: `Task ${id}`,
-    task_type: 'code_generation',
-    status,
-    dependency_ids: deps,
-    retry_count: 0,
-    max_retries: 3,
-    created_at: '2025-01-01T00:00:00.000Z',
-    updated_at: '2025-01-01T00:00:00.000Z',
   });
 
   beforeEach(async () => {
@@ -109,38 +90,6 @@ describe('queueStore V2 Integration', () => {
       expect(tasksAgain.size).toBe(1);
     });
 
-    it('should auto-migrate V1 queue on access', async () => {
-      const queueDir = path.join(runDir, 'queue');
-      await fs.mkdir(queueDir, { recursive: true });
-
-      const v1Tasks = [createV1Task('task-1'), createV1Task('task-2')];
-      const v1Content = v1Tasks.map((task) => JSON.stringify(task)).join('\n') + '\n';
-      await fs.writeFile(path.join(queueDir, 'queue.jsonl'), v1Content, 'utf-8');
-
-      invalidateV2Cache(runDir);
-      const tasks = await loadQueue(runDir);
-
-      expect(tasks.size).toBe(2);
-      expect(tasks.get('task-1')).toBeDefined();
-      expect(tasks.get('task-2')).toBeDefined();
-
-      const snapshotExists = await fs
-        .access(path.join(queueDir, 'queue_snapshot.json'))
-        .then(() => true)
-        .catch(() => false);
-      const walExists = await fs
-        .access(path.join(queueDir, 'queue_operations.log'))
-        .then(() => true)
-        .catch(() => false);
-      const backupExists = await fs
-        .access(path.join(queueDir, 'queue.jsonl.v1backup'))
-        .then(() => true)
-        .catch(() => false);
-
-      expect(snapshotExists).toBe(true);
-      expect(walExists).toBe(true);
-      expect(backupExists).toBe(true);
-    });
   });
 
   // ==========================================================================

@@ -24,57 +24,6 @@ This guide provides solutions for common issues encountered when operating the A
 
 ### Queue Problems
 
-#### "Queue V1 format no longer supported"
-
-**Symptom:** Error message indicating the queue format is outdated when running `codepipe resume` or `codepipe status`.
-
-**Cause:** The queue system was upgraded from V1 (simple JSONL) to V2 (snapshot + WAL architecture) for O(1) performance. Old queue files need migration.
-
-**Resolution:**
-
-1. **Automatic Migration (Recommended)**
-
-   Migration happens automatically when you run any queue operation:
-   ```bash
-   codepipe resume <feature_id>
-   ```
-
-   The system will:
-   - Detect V1 format (`queue.jsonl`)
-   - Create V2 snapshot (`queue_snapshot.json`) and WAL (`queue_operations.log`)
-   - Backup V1 files as `queue.jsonl.v1backup`
-   - Log migration details
-
-2. **Manual Migration (If Automatic Fails)**
-
-   ```bash
-   # Check current queue format
-   ls -la .codepipe/runs/<feature_id>/queue/
-
-   # If you see queue.jsonl without queue_snapshot.json, migration is needed
-   # Force resume to trigger migration
-   codepipe resume <feature_id> --validate-queue
-
-   # Verify migration succeeded
-   ls -la .codepipe/runs/<feature_id>/queue/
-   # Should now see: queue_snapshot.json, queue_operations.log
-   ```
-
-3. **Rollback If Migration Fails**
-
-   If migration causes issues, restore V1 backup:
-   ```bash
-   cd .codepipe/runs/<feature_id>/queue/
-   rm queue_snapshot.json queue_operations.log queue_sequence.txt 2>/dev/null
-   mv queue.jsonl.v1backup queue.jsonl
-   ```
-
-**Prevention:**
-- Set `CODEPIPE_QUEUE_BACKUP_V1=true` to always create backups before migration
-- Test migration in development environments first
-
----
-
 #### Queue Corruption Recovery
 
 **Symptom:** Queue operations fail with validation errors, checksum mismatches, or "corrupted JSON" messages.
