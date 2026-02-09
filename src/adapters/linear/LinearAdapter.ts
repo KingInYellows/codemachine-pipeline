@@ -24,10 +24,9 @@ import * as path from 'node:path';
 import * as crypto from 'node:crypto';
 import { HttpClient, Provider, HttpError, ErrorType } from '../http/client';
 import type { HttpClientConfig } from '../http/client';
-import type { LoggerInterface } from '../../telemetry/logger';
 import { RateLimitLedger } from '../../telemetry/rateLimitLedger';
 import { serializeError, createErrorNormalizer } from '../../utils/errors';
-import { createLogger, LogLevel } from '../../telemetry/logger';
+import { createLogger, LogLevel, type LoggerInterface } from '../../telemetry/logger';
 
 // ============================================================================
 // Types & Schemas

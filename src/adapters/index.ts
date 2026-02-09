@@ -102,3 +102,6 @@ export {
   type HttpRequestOptions,
   type HttpResponse,
 } from './http/client.js';
+
+// Telemetry exports (legacy / for backward compatibility)
+export { type LoggerInterface } from '../telemetry/logger.js';
