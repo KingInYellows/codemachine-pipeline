@@ -42,7 +42,7 @@ import type { ExecutionTaskType } from '../../core/models/ExecutionTask';
  * Error classification for deterministic failure handling
  * Per acceptance criteria: error taxonomy alignment for orchestration
  */
-export const AgentErrorCategorySchema = z.enum([
+const AgentErrorCategorySchema = z.enum([
   'transient', // Retry automatically (network, rate-limit, timeout)
   'permanent', // Do not retry (invalid input, unsupported feature, auth failure)
   'humanAction', // Requires human intervention (ambiguous requirements, policy violation)
@@ -53,7 +53,7 @@ export type AgentErrorCategory = z.infer<typeof AgentErrorCategorySchema>;
 /**
  * Structured agent error with taxonomy classification
  */
-export const AgentErrorSchema = z
+const AgentErrorSchema = z
   .object({
     category: AgentErrorCategorySchema,
     message: z.string().min(1),
@@ -102,7 +102,7 @@ export class AgentAdapterError extends Error implements AgentError {
  * Execution context classification for capability negotiation
  * Maps ExecutionTask types to provider capability requirements
  */
-export const ExecutionContextSchema = z.enum([
+const ExecutionContextSchema = z.enum([
   'code_generation',
   'code_review',
   'test_generation',
@@ -264,8 +264,10 @@ export type ProviderInvoker = (
 
 /**
  * Session telemetry record for audit trails
+ * Schema is used for type inference only; runtime validation is not required for internal telemetry
  */
-export const SessionTelemetrySchema = z
+// Note: Schema appears unused but is required for type inference via z.infer
+const SessionTelemetrySchema = z
   .object({
     sessionId: z.string().min(1),
     taskId: z.string().min(1),
