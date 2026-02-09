@@ -20,6 +20,7 @@ import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 import { createHash } from 'node:crypto';
 import { withLock } from '../persistence/runDirectoryManager';
+import { getErrorMessage } from '../utils/errors.js';
 
 // ============================================================================
 // Constants
@@ -297,7 +298,7 @@ export async function readOperationsWithStats(
         }
       } catch (parseError) {
         console.warn(
-          `[WAL] Line ${lineNum + 1}: JSON parse error, skipping - ${parseError instanceof Error ? parseError.message : String(parseError)}`
+          `[WAL] Line ${lineNum + 1}: JSON parse error, skipping - ${getErrorMessage(parseError)}`
         );
         parseErrors++;
       }

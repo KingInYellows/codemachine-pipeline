@@ -23,6 +23,7 @@ import * as crypto from 'node:crypto';
 import { z } from 'zod';
 import type { CostTracker, ProviderCostConfig } from '../../telemetry/costTracker';
 import type { StructuredLogger } from '../../telemetry/logger';
+import { getErrorMessage } from '../../utils/errors.js';
 
 // ============================================================================
 // Zod Schema Definitions
@@ -561,7 +562,7 @@ export class ManifestLoader {
         } catch (error) {
           errors.push({
             path: manifestPath,
-            error: error instanceof Error ? error.message : String(error),
+            error: getErrorMessage(error),
           });
         }
       }

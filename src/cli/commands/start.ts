@@ -35,6 +35,7 @@ import { CLIExecutionEngine } from '../../workflows/cliExecutionEngine';
 import { loadQueue } from '../../workflows/queueStore';
 import { createCodeMachineStrategy } from '../../workflows/codeMachineStrategy';
 import { CliError, CliErrorCode, formatErrorMessage, formatErrorJson } from '../utils/cliErrors';
+import { getErrorMessage } from '../../utils/errors.js';
 
 const EXECUTION_STEPS = {
   Context: 'context_aggregation',
@@ -856,10 +857,10 @@ export default class Start extends Command {
     } catch (error) {
       logger.error('Failed to fetch Linear issue', {
         issueId,
-        error: error instanceof Error ? error.message : String(error),
+        error: getErrorMessage(error),
       });
       throw new CliError(
-        `Failed to fetch Linear issue ${issueId}: ${error instanceof Error ? error.message : String(error)}`,
+        `Failed to fetch Linear issue ${issueId}: ${getErrorMessage(error)}`,
         CliErrorCode.LINEAR_API_FAILED,
         {
           remediation: 'Check your LINEAR_API_KEY and network connectivity.',

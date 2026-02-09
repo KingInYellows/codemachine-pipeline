@@ -14,6 +14,7 @@ import { readOperationsWithStats } from './queueOperationsLog.js';
 import { QUEUE_SNAPSHOT_FILE } from './queueConstants.js';
 import type { QueueIntegrityMode } from './queueTypes.js';
 import { QueueIntegrityError } from './queueTypes.js';
+import { getErrorMessage } from '../utils/errors.js';
 
 // ============================================================================
 // Integrity State
@@ -221,7 +222,7 @@ export async function verifyQueueIntegrity(
   } catch (error) {
     if (error instanceof QueueIntegrityError) throw error;
     result.valid = false;
-    result.errors.push(error instanceof Error ? error.message : String(error));
+    result.errors.push(getErrorMessage(error));
     return result;
   }
 }

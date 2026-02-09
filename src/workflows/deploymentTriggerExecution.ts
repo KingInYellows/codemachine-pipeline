@@ -20,6 +20,7 @@ import {
   type DeploymentOptions,
   type MergeReadiness,
 } from './deploymentTriggerTypes';
+import { getErrorMessage } from '../utils/errors.js';
 
 // ============================================================================
 // Execution Handlers
@@ -93,7 +94,7 @@ export async function executeAutoMerge(
   } catch (error) {
     logger.error('Failed to enable auto-merge', {
       pr_number: pr.pr_number,
-      error: error instanceof Error ? error.message : String(error),
+      error: getErrorMessage(error),
     });
 
     return {
@@ -109,7 +110,7 @@ export async function executeAutoMerge(
       blockers: [],
       metadata: buildMetadata(context, readiness),
       error: {
-        message: error instanceof Error ? error.message : String(error),
+        message: getErrorMessage(error),
         type: 'AUTO_MERGE_FAILED',
         stack: error instanceof Error ? error.stack : undefined,
       },
@@ -174,7 +175,7 @@ export async function executeManualMerge(
   } catch (error) {
     logger.error('Failed to merge PR', {
       pr_number: pr.pr_number,
-      error: error instanceof Error ? error.message : String(error),
+      error: getErrorMessage(error),
     });
 
     return {
@@ -190,7 +191,7 @@ export async function executeManualMerge(
       blockers: [],
       metadata: buildMetadata(context, readiness),
       error: {
-        message: error instanceof Error ? error.message : String(error),
+        message: getErrorMessage(error),
         type: 'MERGE_FAILED',
         stack: error instanceof Error ? error.stack : undefined,
       },
@@ -277,7 +278,7 @@ export async function executeWorkflowDispatch(
   } catch (error) {
     logger.error('Failed to trigger workflow dispatch', {
       workflow_id: workflowId,
-      error: error instanceof Error ? error.message : String(error),
+      error: getErrorMessage(error),
     });
 
     return {
@@ -293,7 +294,7 @@ export async function executeWorkflowDispatch(
       blockers: [],
       metadata: buildMetadata(context, readiness),
       error: {
-        message: error instanceof Error ? error.message : String(error),
+        message: getErrorMessage(error),
         type: 'WORKFLOW_DISPATCH_FAILED',
         stack: error instanceof Error ? error.stack : undefined,
       },

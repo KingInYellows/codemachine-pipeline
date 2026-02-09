@@ -3,6 +3,7 @@ import * as path from 'node:path';
 import * as crypto from 'node:crypto';
 import type { LogContext } from '../core/sharedTypes';
 import { createLogger, LogLevel, type LoggerInterface } from './logger';
+import { getErrorMessage } from '../utils/errors.js';
 
 /**
  * Trace Instrumentation (File-Based)
@@ -349,7 +350,7 @@ export class TraceManager {
         } catch (error) {
           // Log the failure
           this.logError('[TRACE_ERROR] Failed to write span to disk', {
-            error: error instanceof Error ? error.message : String(error),
+            error: getErrorMessage(error),
             spanName: span.name,
           });
           // Store in memory as fallback
@@ -454,7 +455,7 @@ export class TraceManager {
           await this.flushPendingSpans();
         } catch (error) {
           this.logError('[TRACE_ERROR] Failed to flush pending spans on shutdown', {
-            error: error instanceof Error ? error.message : String(error),
+            error: getErrorMessage(error),
           });
           this.logError('[TRACE_ERROR] Spans remain unflushed (available via getPendingSpans())', {
             unflushedCount: this.pendingSpans.length,
@@ -464,7 +465,7 @@ export class TraceManager {
     } catch (error) {
       // Never throw from flush - trace collection should not crash the application
       this.logError('[TRACE_ERROR] Error during trace flush', {
-        error: error instanceof Error ? error.message : String(error),
+        error: getErrorMessage(error),
       });
     }
   }
