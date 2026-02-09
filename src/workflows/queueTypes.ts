@@ -193,29 +193,6 @@ export interface CompactionConfig {
 }
 
 // ============================================================================
-// Migration Types
-// ============================================================================
-
-/**
- * Result of queue format migration.
- * Tracks conversion details and backup location.
- */
-export interface MigrationResult {
-  /** Whether migration completed successfully */
-  success: boolean;
-  /** Source schema version */
-  fromVersion: string;
-  /** Target schema version */
-  toVersion: string;
-  /** Number of tasks converted */
-  tasksConverted: number;
-  /** Path to pre-migration backup (if created) */
-  backupPath?: string;
-  /** Error message if migration failed */
-  error?: string;
-}
-
-// ============================================================================
 // Type Guards
 // ============================================================================
 
