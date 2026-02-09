@@ -39,6 +39,7 @@ export class ValidationError extends Error {
     this.name = 'ValidationError';
     this.boundary = boundary;
     this.issues = issues;
+    Object.setPrototypeOf(this, new.target.prototype);
   }
 
   /** Format issues for CLI output. */
@@ -52,7 +53,12 @@ export class ValidationError extends Error {
   toJSON(): { boundary: string; issues: ValidationIssue[]; message: string } {
     return {
       boundary: this.boundary,
-      issues: this.issues,
+      issues: this.issues.map((i) => ({
+        path: i.path,
+        message: i.message,
+        code: i.code,
+        // Redact expected/received to prevent leaking sensitive data
+      })),
       message: this.message,
     };
   }
@@ -68,17 +74,18 @@ export function fromZodError(boundary: string, zodError: ZodError): ValidationEr
 
 function mapZodIssue(issue: ZodIssue): ValidationIssue {
   const base: ValidationIssue = {
-    path: issue.path.join('.'),
+    path: issue.path.join('.') || 'root',
     message: issue.message,
     code: issue.code,
   };
 
   if ('expected' in issue && issue.expected !== undefined) {
-    base.expected = typeof issue.expected === 'string' ? issue.expected : JSON.stringify(issue.expected);
+    base.expected = typeof issue.expected === 'string' ? issue.expected : String(issue.expected);
   }
   if ('received' in issue && issue.received !== undefined) {
-    base.received = typeof issue.received === 'string' ? issue.received : JSON.stringify(issue.received);
+    base.received = typeof issue.received === 'string' ? issue.received : String(issue.received);
   }
 
   return base;
 }
+

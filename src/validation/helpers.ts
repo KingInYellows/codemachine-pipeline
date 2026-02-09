@@ -52,7 +52,7 @@ export function validateOrThrow<T>(
   if (result.success) {
     return result.data;
   }
-  throw fromZodError(boundary, result.error as ZodError);
+  throw fromZodError(boundary, result.error);
 }
 
 /**
@@ -75,5 +75,6 @@ export function validateOrResult<T>(
   if (result.success) {
     return { success: true, data: result.data };
   }
-  return { success: false, error: fromZodError(boundary, result.error as ZodError) };
+  return { success: false, error: fromZodError(boundary, result.error) };
 }
+
