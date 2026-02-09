@@ -163,7 +163,7 @@ const ExecutionContextsSchema = z
 /**
  * Complete agent manifest schema
  */
-export const AgentManifestSchema = z
+const AgentManifestSchema = z
   .object({
     schema_version: z.string().regex(/^[0-9]+\.[0-9]+\.[0-9]+$/, {
       message: 'schema_version must be valid semver (e.g., "1.0.0")',

@@ -142,17 +142,17 @@ export const ExecutionMetrics = {
 /**
  * Histogram buckets for diff size measurements (file counts)
  */
-export const DIFF_SIZE_BUCKETS = [1, 2, 5, 10, 20, 50, 100, 200, 500];
+const DIFF_SIZE_BUCKETS = [1, 2, 5, 10, 20, 50, 100, 200, 500];
 
 /**
  * Histogram buckets for line count measurements
  */
-export const LINE_COUNT_BUCKETS = [10, 50, 100, 250, 500, 1000, 2500, 5000, 10000];
+const LINE_COUNT_BUCKETS = [10, 50, 100, 250, 500, 1000, 2500, 5000, 10000];
 
 /**
  * Histogram buckets for validation durations (seconds)
  */
-export const VALIDATION_DURATION_BUCKETS = [0.1, 0.5, 1, 2.5, 5, 10, 30, 60, 120];
+const VALIDATION_DURATION_BUCKETS = [0.1, 0.5, 1, 2.5, 5, 10, 30, 60, 120];
 
 // ============================================================================
 // Execution Metrics Helper

@@ -41,21 +41,9 @@ import {
  * Implements Technology Stack requirements and Rate Limit Discipline from the Rulebook.
  */
 
-// Re-export types, enums, and utils for backward compatibility
+// Re-export types and enums for backward compatibility
 export { ErrorType, Provider } from './httpTypes.js';
 export type { HttpClientConfig, HttpRequestOptions, HttpResponse, LoggerInterface } from './httpTypes.js';
-export {
-  generateRequestId,
-  generateIdempotencyKey,
-  extractHeaders,
-  sanitizeUrl,
-  sanitizeHeaders,
-  truncate,
-  sleep,
-  createConsoleLogger,
-  SENSITIVE_HEADERS,
-  SENSITIVE_KEYWORDS,
-} from './httpUtils.js';
 
 /**
  * Structured HTTP error with metadata
@@ -630,4 +618,3 @@ export class HttpClient {
     }
   }
 }
-
