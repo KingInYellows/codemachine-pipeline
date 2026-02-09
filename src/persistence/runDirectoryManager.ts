@@ -4,7 +4,7 @@ import * as path from 'node:path';
 import * as crypto from 'node:crypto';
 import * as os from 'node:os';
 import { Buffer } from 'node:buffer';
-import { wrapError } from '../utils/errors';
+import { wrapError, getErrorMessage } from '../utils/errors.js';
 import {
   createHashManifest,
   verifyHashManifest,
@@ -709,9 +709,7 @@ export async function writeManifest(runDir: string, manifest: RunManifest): Prom
     } catch (cleanupError) {
       // Log cleanup failure but don't mask the original error
       console.warn(
-        `[runDirectoryManager] Failed to clean up temp file ${tempPath}: ${
-          cleanupError instanceof Error ? cleanupError.message : String(cleanupError)
-        }`
+        `[runDirectoryManager] Failed to clean up temp file ${tempPath}: ${getErrorMessage(cleanupError)}`
       );
     }
     throw wrapError(error, `write manifest to ${runDir}`);

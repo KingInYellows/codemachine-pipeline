@@ -2,6 +2,7 @@ import { Command, Flags } from '@oclif/core';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { loadRepoConfig } from '../../core/config/repo_config';
+import { getErrorMessage } from '../../utils/errors.js';
 
 const CONFIG_RELATIVE_PATH = path.join('.codepipe', 'config.json');
 const MIN_FREE_DISK_MB = 100;
@@ -118,7 +119,7 @@ export default class Health extends Command {
       return {
         name: 'config',
         status: 'fail',
-        message: `Invalid config: ${error instanceof Error ? error.message : String(error)}`,
+        message: `Invalid config: ${getErrorMessage(error)}`,
       };
     }
   }
@@ -153,7 +154,7 @@ export default class Health extends Command {
       return {
         name: 'run_dir',
         status: 'fail',
-        message: `Run directory not writable: ${error instanceof Error ? error.message : String(error)}`,
+        message: `Run directory not writable: ${getErrorMessage(error)}`,
       };
     }
   }
@@ -181,7 +182,7 @@ export default class Health extends Command {
       return {
         name: 'disk_space',
         status: 'fail',
-        message: `Cannot check disk space: ${error instanceof Error ? error.message : String(error)}`,
+        message: `Cannot check disk space: ${getErrorMessage(error)}`,
       };
     }
   }

@@ -31,6 +31,7 @@ import type { Feature } from '../core/models/Feature';
 import type { RepoConfig } from '../core/config/RepoConfig';
 import type { PRDDocument } from './prdAuthoringEngine';
 import { isPRDApproved, loadPRDMetadata } from './prdAuthoringEngine';
+import { getErrorMessage } from '../utils/errors.js';
 import {
   createSpecification,
   addChangeLogEntry,
@@ -461,7 +462,7 @@ export async function recordSpecApproval(
         // Log non-ENOENT errors (e.g., JSON parse failures) but continue with empty index
         logger.warn('Failed to parse existing approvals.json, starting fresh', {
           featureId,
-          error: error instanceof Error ? error.message : String(error),
+          error: getErrorMessage(error),
         });
       }
       // Index file may not exist yet - continue with empty index

@@ -18,6 +18,7 @@ import { safeJsonParse } from '../../utils/safeJson';
 import { createGitHubAdapter, GitHubAdapter } from '../../adapters/github/GitHubAdapter';
 import { createCliLogger, LogLevel, type StructuredLogger } from '../../telemetry/logger';
 import type { RepoConfig } from '../../core/config/RepoConfig';
+import { getErrorMessage } from '../../utils/errors.js';
 
 /**
  * Pull request metadata (persisted to pr.json)
@@ -104,10 +105,10 @@ export async function loadPRContext(
     manifest = await readManifest(runDir);
   } catch (error) {
     logger.error('Failed to read manifest', {
-      error: error instanceof Error ? error.message : String(error),
+      error: getErrorMessage(error),
     });
     throw new Error(
-      `Failed to read manifest for feature ${featureId}: ${error instanceof Error ? error.message : String(error)}`
+      `Failed to read manifest for feature ${featureId}: ${getErrorMessage(error)}`
     );
   }
 
@@ -247,15 +248,15 @@ export async function persistPRData(context: PRContext, prMetadata: PRMetadata):
     } catch (error) {
       // feature.json may not exist yet - log warning but don't fail
       logger.warn('Failed to update feature.json external_links', {
-        error: error instanceof Error ? error.message : String(error),
+        error: getErrorMessage(error),
       });
     }
   } catch (error) {
     logger.error('Failed to persist PR metadata', {
-      error: error instanceof Error ? error.message : String(error),
+      error: getErrorMessage(error),
     });
     throw new Error(
-      `Failed to persist PR metadata: ${error instanceof Error ? error.message : String(error)}`
+      `Failed to persist PR metadata: ${getErrorMessage(error)}`
     );
   }
 }
@@ -472,7 +473,7 @@ export async function logDeploymentAction(
   } catch (error) {
     logger.warn('Failed to log deployment action', {
       action,
-      error: error instanceof Error ? error.message : String(error),
+      error: getErrorMessage(error),
     });
     // Don't fail the command if logging fails
   }

@@ -30,6 +30,7 @@ import type { StructuredLogger } from '../telemetry/logger';
 import type { MetricsCollector } from '../telemetry/metrics';
 import type { ExecutionTelemetry } from '../telemetry/executionTelemetry';
 import type { DiffStats } from '../telemetry/executionMetrics';
+import { getErrorMessage } from '../utils/errors.js';
 
 const execAsync = promisify(exec);
 
@@ -584,7 +585,7 @@ export async function applyPatch(
             } catch (error) {
               logger.debug('Failed to record patch application telemetry', {
                 patchId: patch.patchId,
-                error: error instanceof Error ? error.message : String(error),
+                error: getErrorMessage(error),
               });
             }
           }

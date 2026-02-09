@@ -5,6 +5,7 @@ import * as path from 'node:path';
 import * as zlib from 'node:zlib';
 import type { ExecutionConfig, ExecutionEngineType } from '../core/config/RepoConfig.js';
 import type { StructuredLogger } from '../telemetry/logger.js';
+import { getErrorMessage } from '../utils/errors.js';
 
 export const EXIT_CODES = {
   SUCCESS: 0,
@@ -90,7 +91,7 @@ async function rotateLogFiles(
       logger?.warn('Log rotation compression failed', {
         task_id: taskId,
         log_path: rotatedPath,
-        error: error instanceof Error ? error.message : String(error),
+        error: getErrorMessage(error),
       });
     });
   }
@@ -144,7 +145,7 @@ export async function validateCliAvailability(
     try {
       await fs.access(cliPath, fs.constants.X_OK);
     } catch (err) {
-      const errorDetail = err instanceof Error ? err.message : String(err);
+      const errorDetail = getErrorMessage(err);
       return { available: false, error: `CLI not accessible at ${cliPath}: ${errorDetail}` };
     }
   }
@@ -299,7 +300,7 @@ export async function runCodeMachine(
         stdio: ['ignore', 'pipe', 'pipe'],
       });
     } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
+      const message = getErrorMessage(error);
       resolve({
         taskId: options.taskId,
         exitCode: EXIT_CODES.FAILURE,

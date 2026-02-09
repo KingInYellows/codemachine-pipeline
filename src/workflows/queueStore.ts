@@ -4,6 +4,7 @@ import * as path from 'node:path';
 import { type ExecutionTask, serializeExecutionTask } from '../core/models/ExecutionTask';
 import { readManifest, writeManifest, withLock } from '../persistence/runDirectoryManager';
 import { createLogger, type StructuredLogger, LogLevel } from '../telemetry/logger';
+import { getErrorMessage } from '../utils/errors.js';
 
 // V2 WAL Components
 import { getCounts, addTask as addTaskToIndex } from './queueMemoryIndex.js';
@@ -301,7 +302,7 @@ async function writeQueueManifest(queueDir: string, manifest: QueueManifest): Pr
       // Log cleanup failure but don't mask the original error
       logger.debug('Failed to clean up temp file during error recovery', {
         temp_path: tempPath,
-        cleanup_error: cleanupError instanceof Error ? cleanupError.message : String(cleanupError),
+        cleanup_error: getErrorMessage(cleanupError),
       });
     }
     throw error;
