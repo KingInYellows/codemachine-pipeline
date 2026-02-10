@@ -6,11 +6,6 @@
   ],
   [
     "workflows/queueStore.ts",
-    "workflows/queueCache.ts",
-    "workflows/queueMigration.ts"
-  ],
-  [
-    "workflows/queueStore.ts",
     "workflows/queueTaskManager.ts"
   ]
 ]
