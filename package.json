@@ -32,7 +32,7 @@
     "test:config:watch": "vitest watch src/core/config",
     "test:config:coverage": "vitest run src/core/config --coverage",
     "test:http": "vitest run tests/unit",
-    "test:integration": "vitest run tests/integration/resume_flow.spec.ts tests/integration/cli_status_plan.spec.ts tests/integration/cliExecutionEngine.spec.ts",
+    "test:integration": "vitest run tests/integration/resume_flow.spec.ts tests/integration/cli_status_plan.spec.ts tests/integration/cliExecutionEngine.spec.ts tests/integration/commands_approve_resume_ratelimits.spec.ts tests/integration/commands_pr_create_reviewers_automerge.spec.ts tests/integration/commands_research_context.spec.ts",
     "test:smoke": "vitest run tests/integration/smoke_execution.spec.ts",
     "test:telemetry": "vitest run tests/unit/logger.spec.ts",
     "test:commands": "vitest run tests/unit/commands tests/unit/autoFixEngine.security.spec.ts tests/unit/persistence",
