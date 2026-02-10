@@ -54,6 +54,9 @@ jobs:
       - name: Lint
         run: npm run lint
 
+      - name: Check circular dependencies
+        run: npm run deps:check:ci
+
       - name: Run tests
         run: npm test
 
