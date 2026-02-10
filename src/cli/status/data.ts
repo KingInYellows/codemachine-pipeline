@@ -4,31 +4,31 @@ import {
   getRunDirectoryPath,
   readManifest,
   type RunManifest,
-} from '../../../persistence/runDirectoryManager';
-import { safeJsonParse } from '../../../utils/safeJson';
-import { parseContextDocument } from '../../../core/models/ContextDocument';
-import { loadTraceSummary } from '../../../workflows/traceabilityMapper';
-import { loadPlanSummary } from '../../../workflows/taskPlanner';
+} from '../../persistence/runDirectoryManager';
+import { safeJsonParse } from '../../utils/safeJson';
+import { parseContextDocument } from '../../core/models/ContextDocument';
+import { loadTraceSummary } from '../../workflows/traceabilityMapper';
+import { loadPlanSummary } from '../../workflows/taskPlanner';
 import {
   createBranchProtectionAdapter,
   type BranchProtectionConfig,
-} from '../../../adapters/github/branchProtection';
+} from '../../adapters/github/branchProtection';
 import {
   loadReport as loadBranchProtectionReport,
   generateSummary as generateBranchProtectionSummary,
   generateReport as buildBranchProtectionReport,
   persistReport as persistBranchProtectionReport,
   detectValidationMismatch,
-} from '../../../workflows/branchProtectionReporter';
-import type { PRMetadata } from '../../pr/shared';
-import { RateLimitReporter } from '../../../telemetry/rateLimitReporter';
-import { createResearchCoordinator } from '../../../workflows/researchCoordinator';
-import { withSpan } from '../../../telemetry/traces';
-import type { StructuredLogger } from '../../../telemetry/logger';
-import type { LogContext } from '../../../core/sharedTypes.js';
-import type { MetricsCollector } from '../../../telemetry/metrics';
-import type { TraceManager, ActiveSpan } from '../../../telemetry/traces';
-import type { RunDirectorySettings } from '../../utils/runDirectory';
+} from '../../workflows/branchProtectionReporter';
+import type { PRMetadata } from '../pr/shared';
+import { RateLimitReporter } from '../../telemetry/rateLimitReporter';
+import { createResearchCoordinator } from '../../workflows/researchCoordinator';
+import { withSpan } from '../../telemetry/traces';
+import type { StructuredLogger } from '../../telemetry/logger';
+import type { LogContext } from '../../core/sharedTypes.js';
+import type { MetricsCollector } from '../../telemetry/metrics';
+import type { TraceManager, ActiveSpan } from '../../telemetry/traces';
+import type { RunDirectorySettings } from '../utils/runDirectory';
 import { truncateSummary } from './renderers';
 import {
   MANIFEST_FILE,
@@ -623,7 +623,7 @@ export async function loadResearchStatus(
 
     // Count stale tasks
     const allTasks = await coordinator.listTasks({});
-    const { isCachedResultFresh } = await import('../../../core/models/ResearchTask.js');
+    const { isCachedResultFresh } = await import('../../core/models/ResearchTask.js');
     const staleTasks = allTasks.filter((task) => {
       if (task.status !== 'completed' || !task.results) return false;
       const freshnessReq = task.freshness_requirements ?? {
