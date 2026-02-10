@@ -386,7 +386,8 @@ export async function recordSpecApproval(
       metadata = JSON.parse(metadataContent) as SpecMetadata;
     } catch (error) {
       throw new Error(
-        `Failed to load spec metadata: ${error instanceof Error ? error.message : 'Unknown error'}`
+        `Failed to load spec metadata: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        { cause: error }
       );
     }
 

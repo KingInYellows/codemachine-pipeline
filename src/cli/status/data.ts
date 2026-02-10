@@ -116,7 +116,6 @@ export async function loadContextStatus(
     };
   }
 
-  let docPayload: StatusContextPayload = {};
   const jsonData = safeJsonParse<unknown>(content);
   if (!jsonData) {
     return {
@@ -132,7 +131,7 @@ export async function loadContextStatus(
   }
 
   const contextDoc = parsed.data;
-  docPayload = {
+  const docPayload: StatusContextPayload = {
     files: Object.keys(contextDoc.files).length,
     total_tokens: contextDoc.total_token_count,
     summaries: contextDoc.summaries.length,
