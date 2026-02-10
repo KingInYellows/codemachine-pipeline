@@ -5,9 +5,9 @@ import * as os from 'node:os';
 import {
   RateLimitLedger,
   createRateLimitLedger,
-  type LoggerInterface,
   type RateLimitEnvelope,
 } from '../../src/telemetry/rateLimitLedger';
+import type { LoggerInterface } from '../../src/telemetry/logger';
 import type { LogContext } from '../../src/core/sharedTypes';
 
 // ============================================================================

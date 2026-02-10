@@ -5,7 +5,7 @@
  * Extracted from GitHubAdapter.ts for single-responsibility.
  */
 
-import type { LoggerInterface } from '../http/client';
+import type { LoggerInterface } from '../../telemetry/logger';
 
 // ============================================================================
 // Types & Schemas

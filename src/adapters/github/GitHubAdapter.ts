@@ -19,9 +19,9 @@
  */
 
 import { HttpClient, Provider, ErrorType } from '../http/client';
-import type { HttpClientConfig, LoggerInterface } from '../http/client';
+import type { HttpClientConfig } from '../http/client';
 import { serializeError, createErrorNormalizer } from '../../utils/errors';
-import { createLogger, LogLevel } from '../../telemetry/logger';
+import { createLogger, LogLevel, type LoggerInterface } from '../../telemetry/logger';
 import type {
   GitHubAdapterConfig,
   RepositoryInfo,

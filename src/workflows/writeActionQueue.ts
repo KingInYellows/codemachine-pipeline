@@ -21,8 +21,7 @@
 import * as fs from 'node:fs/promises';
 import * as crypto from 'node:crypto';
 import * as path from 'node:path';
-import type { LoggerInterface } from '../adapters/http/client';
-import { createLogger, LogLevel } from '../telemetry/logger';
+import { createLogger, LogLevel, type LoggerInterface } from '../telemetry/logger';
 import { getErrorMessage } from '../utils/errors.js';
 import { RateLimitLedger } from '../telemetry/rateLimitLedger';
 import type { MetricsCollector } from '../telemetry/metrics';

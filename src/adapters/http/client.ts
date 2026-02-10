@@ -15,8 +15,8 @@ import type {
   HttpClientConfig,
   HttpRequestOptions,
   HttpResponse,
-  LoggerInterface,
 } from './httpTypes.js';
+import type { LoggerInterface } from '../../telemetry/logger';
 import {
   generateRequestId,
   generateIdempotencyKey,
@@ -43,7 +43,20 @@ import {
 
 // Re-export types and enums for backward compatibility
 export { ErrorType, Provider } from './httpTypes.js';
-export type { HttpClientConfig, HttpRequestOptions, HttpResponse, LoggerInterface } from './httpTypes.js';
+export type { HttpClientConfig, HttpRequestOptions, HttpResponse } from './httpTypes.js';
+export type { LoggerInterface } from '../../telemetry/logger';
+export {
+  generateRequestId,
+  generateIdempotencyKey,
+  extractHeaders,
+  sanitizeUrl,
+  sanitizeHeaders,
+  truncate,
+  sleep,
+  createConsoleLogger,
+  SENSITIVE_HEADERS,
+  SENSITIVE_KEYWORDS,
+} from './httpUtils.js';
 
 /**
  * Structured HTTP error with metadata

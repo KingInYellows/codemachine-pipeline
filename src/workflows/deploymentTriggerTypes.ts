@@ -8,7 +8,7 @@
 import { z } from 'zod';
 import type { BranchProtectionReport } from './branchProtectionReporter';
 import type { PRMetadata } from '../cli/pr/shared';
-import type { LoggerInterface } from '../adapters/http/client';
+import type { LoggerInterface } from '../telemetry/logger';
 import type { RunManifest } from '../persistence/runDirectoryManager';
 
 // ============================================================================

@@ -86,8 +86,6 @@ export interface ValidationResult {
   errorTypes?: string[];
 }
 
-export type { LoggerInterface };
-
 /**
  * Execution metrics options
  */

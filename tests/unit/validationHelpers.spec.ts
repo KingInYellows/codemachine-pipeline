@@ -60,6 +60,8 @@ describe('validateOrThrow', () => {
       }),
     );
   });
+
+  it('should throw on null input', () => {
     expect(() => validateOrThrow(TestSchema, null, 'test')).toThrow(ValidationError);
   });
 
@@ -150,15 +152,6 @@ describe('ValidationError', () => {
     expect(json.issues[0]).not.toHaveProperty('received');
   });
 });
-  it('should redact expected/received in JSON serialization', () => {
-    const err = new ValidationError('config', [
-      { path: 'token', message: 'Invalid', code: 'invalid_type', expected: 'string', received: 'secret123' },
-    ]);
-    const json = err.toJSON();
-    expect(json.issues[0]).not.toHaveProperty('expected');
-    expect(json.issues[0]).not.toHaveProperty('received');
-  });
-});
 
 // ============================================================================
 // fromZodError
@@ -210,6 +203,4 @@ describe('fromZodError', () => {
       expect(err.issues[0].path).toBe('root');
     }
   });
-});
-
 });

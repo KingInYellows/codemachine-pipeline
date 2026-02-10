@@ -21,7 +21,7 @@
 
 import type { GitHubAdapter } from '../adapters/github/GitHubAdapter';
 import type { RepoConfig } from '../core/config/RepoConfig';
-import type { LoggerInterface } from '../adapters/http/client';
+import type { LoggerInterface } from '../telemetry/logger';
 
 // Import from companion modules (also re-exported for backward compatibility)
 import {

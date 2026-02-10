@@ -32,7 +32,7 @@ import type {
 import type { BranchProtectionReport } from '../../src/workflows/branchProtectionReporter';
 import type { PRMetadata } from '../../src/cli/pr/shared';
 import type { RepoConfig } from '../../src/core/config/RepoConfig';
-import type { LoggerInterface } from '../../src/adapters/http/client';
+import type { LoggerInterface } from '../../src/telemetry/logger';
 import type { RunManifest } from '../../src/persistence/runDirectoryManager';
 
 type RepoConfigWithDeployment = RepoConfig & {
