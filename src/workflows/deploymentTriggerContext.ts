@@ -79,7 +79,8 @@ export async function loadDeploymentContext(
       error: getErrorMessage(error),
     });
     throw new Error(
-      `Run manifest not found. Ensure the feature run directory exists and is initialized (run directory: ${runDirectory})`
+      `Run manifest not found. Ensure the feature run directory exists and is initialized (run directory: ${runDirectory})`,
+      { cause: error }
     );
   }
 
@@ -96,7 +97,8 @@ export async function loadDeploymentContext(
       error: getErrorMessage(error),
     });
     throw new Error(
-      `PR metadata not found. Ensure PR has been created first (run directory: ${runDirectory})`
+      `PR metadata not found. Ensure PR has been created first (run directory: ${runDirectory})`,
+      { cause: error }
     );
   }
 

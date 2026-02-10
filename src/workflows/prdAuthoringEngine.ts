@@ -200,7 +200,8 @@ async function loadTemplate(customPath?: string): Promise<string> {
     return content;
   } catch (error) {
     throw new Error(
-      `Failed to load PRD template from ${templatePath}: ${error instanceof Error ? error.message : 'Unknown error'}`
+      `Failed to load PRD template from ${templatePath}: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      { cause: error }
     );
   }
 }
@@ -529,7 +530,8 @@ export async function recordPRDApproval(
       metadata = parsedMetadata as PRDMetadata;
     } catch (error) {
       throw new Error(
-        `Failed to load PRD metadata: ${error instanceof Error ? error.message : 'Unknown error'}`
+        `Failed to load PRD metadata: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        { cause: error }
       );
     }
 

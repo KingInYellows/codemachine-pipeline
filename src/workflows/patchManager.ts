@@ -275,7 +275,8 @@ export async function isWorkingTreeClean(workingDir: string): Promise<boolean> {
     return stdout.trim().length === 0;
   } catch (error) {
     throw new Error(
-      `Failed to check git working tree status: ${error instanceof Error ? error.message : 'Unknown error'}`
+      `Failed to check git working tree status: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      { cause: error }
     );
   }
 }
@@ -300,7 +301,8 @@ export async function getCurrentGitRef(workingDir: string): Promise<{ ref: strin
     };
   } catch (error) {
     throw new Error(
-      `Failed to get current git ref: ${error instanceof Error ? error.message : 'Unknown error'}`
+      `Failed to get current git ref: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      { cause: error }
     );
   }
 }
