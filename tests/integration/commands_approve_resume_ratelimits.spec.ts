@@ -243,6 +243,7 @@ describe('Resume Command Integration Tests', () => {
     });
 
     expect(analysis.featureId).toBe(featureId);
+    expect(analysis.canResume).toBe(true);
     expect(analysis.pendingApprovals).toHaveLength(0);
     expect(analysis.queueState.pending).toBe(0);
     expect(analysis.canResume).toBe(true);

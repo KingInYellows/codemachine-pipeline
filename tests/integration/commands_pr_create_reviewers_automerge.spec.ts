@@ -90,13 +90,17 @@ function buildManifest(overrides: Partial<RunManifest> = {}): RunManifest {
     feature_id: TEST_FEATURE_ID,
     title: 'Test Feature',
     source: 'feature/test-branch',
+    repo: {
+      url: 'https://github.com/test-org/test-repo.git',
+      default_branch: 'main',
+    },
     status: 'in_progress',
     execution: {
       current_step: 'code',
-      last_step: 'plan',
-      last_error: null,
+      completed_steps: 5,
     },
     queue: {
+      queue_dir: 'queue',
       pending_count: 0,
       completed_count: 5,
       failed_count: 0,
@@ -105,6 +109,7 @@ function buildManifest(overrides: Partial<RunManifest> = {}): RunManifest {
       pending: [],
       completed: ['prd', 'spec', 'plan', 'code'],
     },
+    artifacts: {},
     telemetry: {
       logs_dir: 'logs',
       metrics_file: 'metrics/prometheus.txt',
@@ -112,6 +117,7 @@ function buildManifest(overrides: Partial<RunManifest> = {}): RunManifest {
     },
     timestamps: {
       created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
       started_at: new Date().toISOString(),
     },
     ...overrides,
@@ -138,6 +144,8 @@ function buildPRMetadata(overrides: Partial<PRMetadata> = {}): PRMetadata {
 
 let testRootDir: string;
 let baseDir: string;
+let savedGithubToken: string | undefined;
+let savedJsonOutput: string | undefined;
 
 async function setupRunDir(
   manifestOverrides: Partial<RunManifest> = {},
@@ -175,15 +183,28 @@ describe('PR Create Command Integration Tests', () => {
   beforeEach(async () => {
     testRootDir = await fs.mkdtemp(path.join(os.tmpdir(), TEST_RUN_DIR_PREFIX));
     baseDir = path.join(testRootDir, 'runs');
+    savedGithubToken = process.env.GITHUB_TOKEN;
+    savedJsonOutput = process.env.JSON_OUTPUT;
     process.env.GITHUB_TOKEN = 'mock-token';
     delete process.env.JSON_OUTPUT;
   });
 
   afterEach(async () => {
-    await fs.rm(testRootDir, { recursive: true, force: true });
-    delete process.env.GITHUB_TOKEN;
-    delete process.env.JSON_OUTPUT;
-    vi.restoreAllMocks();
+    try {
+      await fs.rm(testRootDir, { recursive: true, force: true });
+    } finally {
+      if (savedGithubToken !== undefined) {
+        process.env.GITHUB_TOKEN = savedGithubToken;
+      } else {
+        delete process.env.GITHUB_TOKEN;
+      }
+      if (savedJsonOutput !== undefined) {
+        process.env.JSON_OUTPUT = savedJsonOutput;
+      } else {
+        delete process.env.JSON_OUTPUT;
+      }
+      vi.restoreAllMocks();
+    }
   });
 
   it('should reject when code approval gate is missing', async () => {
@@ -309,15 +330,28 @@ describe('PR Disable-Auto-Merge Command Integration Tests', () => {
   beforeEach(async () => {
     testRootDir = await fs.mkdtemp(path.join(os.tmpdir(), TEST_RUN_DIR_PREFIX));
     baseDir = path.join(testRootDir, 'runs');
+    savedGithubToken = process.env.GITHUB_TOKEN;
+    savedJsonOutput = process.env.JSON_OUTPUT;
     process.env.GITHUB_TOKEN = 'mock-token';
     delete process.env.JSON_OUTPUT;
   });
 
   afterEach(async () => {
-    await fs.rm(testRootDir, { recursive: true, force: true });
-    delete process.env.GITHUB_TOKEN;
-    delete process.env.JSON_OUTPUT;
-    vi.restoreAllMocks();
+    try {
+      await fs.rm(testRootDir, { recursive: true, force: true });
+    } finally {
+      if (savedGithubToken !== undefined) {
+        process.env.GITHUB_TOKEN = savedGithubToken;
+      } else {
+        delete process.env.GITHUB_TOKEN;
+      }
+      if (savedJsonOutput !== undefined) {
+        process.env.JSON_OUTPUT = savedJsonOutput;
+      } else {
+        delete process.env.JSON_OUTPUT;
+      }
+      vi.restoreAllMocks();
+    }
   });
 
   it('should detect when no PR exists', async () => {
@@ -434,15 +468,28 @@ describe('PR Reviewers Command Integration Tests', () => {
   beforeEach(async () => {
     testRootDir = await fs.mkdtemp(path.join(os.tmpdir(), TEST_RUN_DIR_PREFIX));
     baseDir = path.join(testRootDir, 'runs');
+    savedGithubToken = process.env.GITHUB_TOKEN;
+    savedJsonOutput = process.env.JSON_OUTPUT;
     process.env.GITHUB_TOKEN = 'mock-token';
     delete process.env.JSON_OUTPUT;
   });
 
   afterEach(async () => {
-    await fs.rm(testRootDir, { recursive: true, force: true });
-    delete process.env.GITHUB_TOKEN;
-    delete process.env.JSON_OUTPUT;
-    vi.restoreAllMocks();
+    try {
+      await fs.rm(testRootDir, { recursive: true, force: true });
+    } finally {
+      if (savedGithubToken !== undefined) {
+        process.env.GITHUB_TOKEN = savedGithubToken;
+      } else {
+        delete process.env.GITHUB_TOKEN;
+      }
+      if (savedJsonOutput !== undefined) {
+        process.env.JSON_OUTPUT = savedJsonOutput;
+      } else {
+        delete process.env.JSON_OUTPUT;
+      }
+      vi.restoreAllMocks();
+    }
   });
 
   it('should detect when no PR exists for reviewer requests', async () => {
