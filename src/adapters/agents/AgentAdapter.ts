@@ -267,8 +267,7 @@ export type ProviderInvoker = (
  * Session telemetry record for audit trails
  * Schema is used for type inference only; runtime validation is not required for internal telemetry
  */
-// Note: Schema appears unused but is required for type inference via z.infer
-const SessionTelemetrySchema = z
+export const SessionTelemetrySchema = z
   .object({
     sessionId: z.string().min(1),
     taskId: z.string().min(1),

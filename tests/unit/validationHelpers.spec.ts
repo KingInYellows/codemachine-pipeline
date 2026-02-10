@@ -189,8 +189,8 @@ describe('fromZodError', () => {
       expect(nameIssue).toBeDefined();
       expect(nameIssue!.code).toBeDefined();
       // The mapper preserves expected/received when present; only assert when present
-      if ('expected' in nameIssue! && nameIssue!.expected !== undefined) {
-        expect(nameIssue!.expected).toBeDefined();
+      if (nameIssue && 'expected' in nameIssue && nameIssue.expected !== undefined) {
+        expect(nameIssue.expected).toBeDefined();
       }
     }
   });
