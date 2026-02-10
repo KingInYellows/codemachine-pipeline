@@ -83,7 +83,8 @@ function mapZodIssue(issue: ZodIssue): ValidationIssue {
     base.expected = typeof issue.expected === 'string' ? issue.expected : String(issue.expected);
   }
   if ('received' in issue && issue.received !== undefined) {
-    base.received = typeof issue.received === 'string' ? issue.received : String(issue.received);
+    base.received =
+      typeof issue.received === 'string' ? issue.received : JSON.stringify(issue.received);
   }
 
   return base;
