@@ -48,14 +48,14 @@ This project uses [Graphite](https://graphite.dev/) for stacked PRs. See [docs/d
 
 **Key Graphite commands:**
 
-| Command                          | Purpose                           |
-| -------------------------------- | --------------------------------- |
-| `gt create <name> -m "msg"`      | Create a new branch               |
-| `gt submit --no-edit --publish`  | Submit PR through Graphite        |
-| `gt log`                         | View stack status                 |
-| `gt log --stack`                 | View current branch stack         |
-| `gh pr ready <num>`              | Mark a draft PR as ready          |
-| `gh pr view <num>`               | View PR details                   |
+| Command                                 | Purpose                           |
+| --------------------------------------- | --------------------------------- |
+| `gt create <name> -m "msg"`             | Create a new branch               |
+| `gt submit --no-interactive --publish`  | Submit PR through Graphite        |
+| `gt log`                                | View stack status                 |
+| `gt log --stack`                        | View current branch stack         |
+| `gh pr ready <num>`                     | Mark a draft PR as ready          |
+| `gh pr view <num>`                      | View PR details                   |
 
 **Typical flow:**
 
@@ -68,7 +68,7 @@ git add src/widgets/widget.ts tests/unit/widget.spec.ts
 git commit -m "feat: add widget support"
 
 # 3. Submit through Graphite (never push directly to main)
-gt submit --no-edit --publish
+gt submit --no-interactive --publish
 
 # 4. Mark ready for review if created as draft
 gh pr ready $(gh pr list --head $(git branch --show-current) --json number -q '.[0].number')
@@ -187,7 +187,6 @@ npm run clean            # Remove dist/
 - **Formatting:** Prettier. Check with `npm run format:check`, auto-fix with `npm run format`.
 - **Linting:** ESLint 10 with flat config (`eslint.config.cjs`). Check with `npm run lint`, auto-fix with `npm run lint:fix`.
   - `@eslint/js` is a separate devDependency (unbundled from `eslint` in v10).
-  - The `preserve-caught-error` rule requires `{ cause: error }` when re-throwing.
   - The `no-useless-assignment` rule prohibits initializing variables that are immediately overwritten.
 - **Validation:** Runtime schemas use Zod (see ADR-7).
 - **Circular dependency detection:** `npm run deps:check` (madge). CI runs `npm run deps:check:ci` against a baseline.
@@ -226,7 +225,7 @@ Keep the subject line under 72 characters. Use the body for additional context w
 1. Create a Graphite branch (`gt create <name> -m "description"`).
 2. Make your changes, ensuring all tests pass (`npm test`).
 3. Run formatting and lint checks (`npm run format:check && npm run lint`).
-4. Submit via Graphite (`gt submit --no-edit --publish`).
+4. Submit via Graphite (`gt submit --no-interactive --publish`).
 5. Mark as ready for review if created as draft (`gh pr ready <PR-number>`).
 6. CI runs automatically on all PRs: unit + integration tests, security scans, Docker image builds, and code quality checks.
 7. Address review feedback; the PR is merged through Graphite.
