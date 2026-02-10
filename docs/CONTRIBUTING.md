@@ -124,6 +124,7 @@ beforeEach(async () => {
   await fs.mkdir(runsDir, { recursive: true });
 
   // Bootstrap a run directory with queue
+  const featureId = 'test-feature-id';
   runDir = await createRunDirectory(runsDir, featureId, {
     repoUrl: 'https://github.com/test/repo.git',
     defaultBranch: 'main',
@@ -158,7 +159,9 @@ Command tests that invoke the binary directly use `spawnSync` against `bin/run.j
 ```ts
 import { spawnSync } from 'node:child_process';
 
-const CLI_BIN_PATH = path.resolve(__dirname, '../../bin/run.js');
+import { fileURLToPath } from 'node:url';
+
+const CLI_BIN_PATH = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../bin/run.js');
 
 const result = spawnSync('node', [CLI_BIN_PATH, 'status', '--json', '--dir', workspaceDir], {
   encoding: 'utf-8',
