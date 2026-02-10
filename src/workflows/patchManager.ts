@@ -152,7 +152,17 @@ interface SnapshotMetadata {
 // ============================================================================
 
 /**
- * Validate that affected files comply with RepoConfig constraints
+ * Validate that affected files comply with RepoConfig constraints.
+ *
+ * Algorithm: For each file, blocked patterns are checked first (higher priority).
+ * If a file matches any blocked pattern, it is recorded as a violation and no
+ * further checks are performed for that file. Otherwise, the file must match at
+ * least one allowed pattern or it is recorded as a violation.
+ *
+ * @param affectedFiles - List of file paths to validate against the constraints
+ * @param repoConfig - Repository configuration containing allowed/blocked file patterns
+ * @param logger - Logger instance for recording constraint check warnings
+ * @returns An object with `valid` (true if no violations) and a `violations` array
  */
 export function validateFileConstraints(
   affectedFiles: string[],
@@ -211,7 +221,13 @@ export function validateFileConstraints(
 // ============================================================================
 
 /**
- * Extract affected files from a unified diff patch
+ * Extract affected files from a unified diff patch.
+ *
+ * Parses `--- a/...` and `+++ b/...` diff headers to collect unique file paths,
+ * filtering out `/dev/null` entries that appear for newly created or deleted files.
+ *
+ * @param patchContent - Unified diff content to parse
+ * @returns Deduplicated array of file paths affected by the patch
  */
 export function extractAffectedFiles(patchContent: string): string[] {
   const files = new Set<string>();
@@ -265,7 +281,13 @@ function summarizeLineChanges(patchContent: string): { insertions: number; delet
 // ============================================================================
 
 /**
- * Check if the working tree is clean
+ * Check if the git working tree is clean (no uncommitted changes).
+ *
+ * Runs `git status --porcelain` and checks for empty output.
+ *
+ * @param workingDir - Path to the git repository working directory
+ * @returns `true` if the working tree has no uncommitted changes
+ * @throws {Error} If `git status` fails to execute (e.g., not a git repository)
  */
 export async function isWorkingTreeClean(workingDir: string): Promise<boolean> {
   try {
@@ -282,7 +304,11 @@ export async function isWorkingTreeClean(workingDir: string): Promise<boolean> {
 }
 
 /**
- * Get current git HEAD reference and SHA
+ * Get the current git HEAD reference (branch name or detached SHA) and full commit SHA.
+ *
+ * @param workingDir - Path to the git repository working directory
+ * @returns An object with `ref` (symbolic ref or SHA) and `sha` (full commit hash)
+ * @throws {Error} If git commands fail to execute
  */
 export async function getCurrentGitRef(workingDir: string): Promise<{ ref: string; sha: string }> {
   try {
@@ -308,7 +334,21 @@ export async function getCurrentGitRef(workingDir: string): Promise<{ ref: strin
 }
 
 /**
- * Perform dry-run validation of a patch using git apply --check
+ * Perform dry-run validation of a patch before actual application.
+ *
+ * Algorithm (4-step pipeline):
+ * 1. Extract affected files from the patch (or use pre-computed list)
+ * 2. Validate file paths against RepoConfig allowed/blocked constraints
+ * 3. Verify the git working tree is clean
+ * 4. Run `git apply --check` to test whether the patch applies cleanly
+ *
+ * The temporary patch file written to `/tmp` is always cleaned up in a finally block.
+ *
+ * @param patch - The patch to validate
+ * @param workingDir - Git repository working directory
+ * @param repoConfig - Repository configuration for constraint enforcement
+ * @param logger - Logger for recording validation progress and warnings
+ * @returns A {@link DryRunResult} indicating success, errors, affected/blocked files, and violations
  */
 export async function validatePatchDryRun(
   patch: Patch,
@@ -394,7 +434,17 @@ export async function validatePatchDryRun(
 // ============================================================================
 
 /**
- * Create a rollback snapshot before applying a patch
+ * Create a rollback snapshot before applying a patch.
+ *
+ * Captures the current git ref, SHA, and working tree status into a JSON metadata
+ * file stored under the run directory's `artifacts/patches/snapshots/` subdirectory.
+ * This snapshot enables rollback if the patch application fails or causes issues.
+ *
+ * @param config - Patch configuration containing runDir, featureId, taskId, and workingDir
+ * @param patch - The patch about to be applied (used for the snapshot filename)
+ * @param logger - Logger for recording snapshot creation
+ * @returns Absolute path to the created snapshot JSON file
+ * @throws {Error} If git state cannot be captured or the file cannot be written
  */
 export async function createRollbackSnapshot(
   config: PatchConfig,
@@ -441,7 +491,16 @@ export async function createRollbackSnapshot(
 }
 
 /**
- * Generate a diff summary for the applied patch
+ * Generate a JSON diff summary artifact for an applied patch.
+ *
+ * Writes a summary file containing patch metadata, modified files list,
+ * application timestamp, and a SHA-256 hash of the patch content to the
+ * run directory's `artifacts/patches/` subdirectory.
+ *
+ * @param patch - The applied patch (content is hashed for the summary)
+ * @param config - Patch configuration containing runDir, featureId, and taskId
+ * @param modifiedFiles - List of files that were modified by the patch
+ * @returns Absolute path to the generated summary JSON file
  */
 export async function generateDiffSummary(
   patch: Patch,
@@ -475,7 +534,24 @@ export async function generateDiffSummary(
 // ============================================================================
 
 /**
- * Apply a patch to the working directory with safety rails
+ * Apply a patch to the working directory with full safety rails.
+ *
+ * Algorithm (5-step pipeline, steps 2-5 run under a file lock):
+ * 1. Dry-run validation (constraint checks + `git apply --check`)
+ * 2. Create a rollback snapshot of the current git state
+ * 3. Write the patch to a temp file and run `git apply`
+ * 4. Generate a diff summary artifact with line-change statistics
+ * 5. Update the run manifest with patch metadata
+ *
+ * If any step fails, the result includes an error message and a `recoverable`
+ * flag indicating whether manual intervention or simple retry may help.
+ *
+ * @param patch - The patch to apply
+ * @param config - Patch configuration (runDir, workingDir, featureId, taskId, repoConfig)
+ * @param logger - Logger for recording progress, warnings, and errors
+ * @param metrics - Metrics collector for tracking success/failure counters
+ * @param telemetry - Optional execution telemetry for diff stats and patch-applied events
+ * @returns A {@link PatchApplicationResult} with success status, paths, and error details
  */
 export async function applyPatch(
   patch: Patch,
@@ -638,7 +714,19 @@ export async function applyPatch(
 }
 
 /**
- * Apply a patch with automatic conflict detection and state management
+ * Apply a patch with automatic conflict detection and state management.
+ *
+ * Delegates to {@link applyPatch} and, if the result is a recoverable failure,
+ * updates the run manifest to mark the execution as `paused` with a
+ * human-action-required error record. This enables external tooling to detect
+ * tasks that need manual conflict resolution.
+ *
+ * @param patch - The patch to apply
+ * @param config - Patch configuration (runDir, workingDir, featureId, taskId, repoConfig)
+ * @param logger - Logger for recording state management actions
+ * @param metrics - Metrics collector forwarded to the underlying applyPatch call
+ * @param telemetry - Optional execution telemetry forwarded to the underlying applyPatch call
+ * @returns A {@link PatchApplicationResult} with success status, paths, and error details
  */
 export async function applyPatchWithStateManagement(
   patch: Patch,
