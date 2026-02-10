@@ -14,7 +14,8 @@ import {
   type ActionExecutor,
 } from './writeActionQueue';
 import { createGitHubAdapter, type GitHubAdapter } from '../adapters/github/GitHubAdapter';
-import type { LoggerInterface, HttpClient } from '../adapters/http/client';
+import type { HttpClient } from '../adapters/http/client';
+import type { LoggerInterface } from '../telemetry/logger';
 import type { MetricsCollector } from '../telemetry/metrics';
 
 // ============================================================================

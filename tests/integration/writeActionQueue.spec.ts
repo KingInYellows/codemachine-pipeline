@@ -23,7 +23,7 @@ import {
   type WriteActionQueueManifest,
 } from '../../src/workflows/writeActionQueue';
 import { RateLimitLedger, type RateLimitEnvelope } from '../../src/telemetry/rateLimitLedger';
-import type { LoggerInterface } from '../../src/adapters/http/client';
+import type { LoggerInterface } from '../../src/telemetry/logger';
 import type { MetricsCollector } from '../../src/telemetry/metrics';
 import type { LogContext } from '../../src/core/sharedTypes';
 

@@ -13,7 +13,7 @@ import {
   type StructuredLogger,
   LogLevel,
 } from '../../telemetry/logger';
-import type { LoggerInterface } from './httpTypes.js';
+import type { LoggerInterface } from '../../telemetry/logger';
 
 // ============================================================================
 // Sensitive Data Constants

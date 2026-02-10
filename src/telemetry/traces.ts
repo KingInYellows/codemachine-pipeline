@@ -118,8 +118,6 @@ export interface ActiveSpan {
   end(status?: { code: SpanStatusCode; message?: string }): void;
 }
 
-export type { LoggerInterface };
-
 /**
  * Trace manager configuration
  */
