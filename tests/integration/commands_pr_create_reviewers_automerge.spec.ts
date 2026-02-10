@@ -144,8 +144,6 @@ function buildPRMetadata(overrides: Partial<PRMetadata> = {}): PRMetadata {
 
 let testRootDir: string;
 let baseDir: string;
-let savedGithubToken: string | undefined;
-let savedJsonOutput: string | undefined;
 
 async function setupRunDir(
   manifestOverrides: Partial<RunManifest> = {},
@@ -176,10 +174,13 @@ async function setupRunDir(
 }
 
 // =============================================================================
-// pr create command tests
+// PR command tests
 // =============================================================================
 
-describe('PR Create Command Integration Tests', () => {
+describe('PR Commands Integration Tests', () => {
+  let savedGithubToken: string | undefined;
+  let savedJsonOutput: string | undefined;
+
   beforeEach(async () => {
     testRootDir = await fs.mkdtemp(path.join(os.tmpdir(), TEST_RUN_DIR_PREFIX));
     baseDir = path.join(testRootDir, 'runs');
@@ -206,6 +207,12 @@ describe('PR Create Command Integration Tests', () => {
       vi.restoreAllMocks();
     }
   });
+
+// =============================================================================
+// pr create command tests
+// =============================================================================
+
+describe('PR Create Command', () => {
 
   it('should reject when code approval gate is missing', async () => {
     await setupRunDir({
@@ -326,33 +333,7 @@ describe('PR Create Command Integration Tests', () => {
 // pr disable-auto-merge command tests
 // =============================================================================
 
-describe('PR Disable-Auto-Merge Command Integration Tests', () => {
-  beforeEach(async () => {
-    testRootDir = await fs.mkdtemp(path.join(os.tmpdir(), TEST_RUN_DIR_PREFIX));
-    baseDir = path.join(testRootDir, 'runs');
-    savedGithubToken = process.env.GITHUB_TOKEN;
-    savedJsonOutput = process.env.JSON_OUTPUT;
-    process.env.GITHUB_TOKEN = 'mock-token';
-    delete process.env.JSON_OUTPUT;
-  });
-
-  afterEach(async () => {
-    try {
-      await fs.rm(testRootDir, { recursive: true, force: true });
-    } finally {
-      if (savedGithubToken !== undefined) {
-        process.env.GITHUB_TOKEN = savedGithubToken;
-      } else {
-        delete process.env.GITHUB_TOKEN;
-      }
-      if (savedJsonOutput !== undefined) {
-        process.env.JSON_OUTPUT = savedJsonOutput;
-      } else {
-        delete process.env.JSON_OUTPUT;
-      }
-      vi.restoreAllMocks();
-    }
-  });
+describe('PR Disable-Auto-Merge Command', () => {
 
   it('should detect when no PR exists', async () => {
     await setupRunDir();
@@ -464,33 +445,7 @@ describe('PR Disable-Auto-Merge Command Integration Tests', () => {
 // pr reviewers command tests
 // =============================================================================
 
-describe('PR Reviewers Command Integration Tests', () => {
-  beforeEach(async () => {
-    testRootDir = await fs.mkdtemp(path.join(os.tmpdir(), TEST_RUN_DIR_PREFIX));
-    baseDir = path.join(testRootDir, 'runs');
-    savedGithubToken = process.env.GITHUB_TOKEN;
-    savedJsonOutput = process.env.JSON_OUTPUT;
-    process.env.GITHUB_TOKEN = 'mock-token';
-    delete process.env.JSON_OUTPUT;
-  });
-
-  afterEach(async () => {
-    try {
-      await fs.rm(testRootDir, { recursive: true, force: true });
-    } finally {
-      if (savedGithubToken !== undefined) {
-        process.env.GITHUB_TOKEN = savedGithubToken;
-      } else {
-        delete process.env.GITHUB_TOKEN;
-      }
-      if (savedJsonOutput !== undefined) {
-        process.env.JSON_OUTPUT = savedJsonOutput;
-      } else {
-        delete process.env.JSON_OUTPUT;
-      }
-      vi.restoreAllMocks();
-    }
-  });
+describe('PR Reviewers Command', () => {
 
   it('should detect when no PR exists for reviewer requests', async () => {
     await setupRunDir();
@@ -602,3 +557,6 @@ describe('PR Reviewers Command Integration Tests', () => {
     expect(output).toContain('Reviewers: alice, bob');
   });
 });
+
+});
+
