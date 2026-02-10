@@ -65,7 +65,7 @@
     "@typescript-eslint/parser": "^8.54.0",
     "@vitest/ui": "^4.0.18",
     "cross-env": "^10.1.0",
-    "eslint": "^9.39.2",
+    "eslint": "^10.0.0",
     "eslint-config-prettier": "^10.1.8",
     "madge": "^8.0.0",
     "prettier": "^3.8.1",
