@@ -409,6 +409,11 @@ export class CLIExecutionEngine {
   async executeTask(
     task: ExecutionTask
   ): Promise<{ success: boolean; permanentlyFailed: boolean }> {
+    if (!validateTaskId(task.task_id)) {
+      this.logger?.warn('Invalid task ID format, rejecting task', { taskId: task.task_id });
+      return { success: false, permanentlyFailed: true };
+    }
+
     const strategy = this.findStrategy(task);
 
     if (!strategy) {

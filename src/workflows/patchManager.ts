@@ -21,7 +21,7 @@
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 import * as crypto from 'node:crypto';
-import { exec } from 'node:child_process';
+import { exec, execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import picomatch from 'picomatch';
 import { withLock, getSubdirectoryPath, updateManifest } from '../persistence/runDirectoryManager';
@@ -33,6 +33,7 @@ import type { DiffStats } from '../telemetry/executionMetrics';
 import { getErrorMessage } from '../utils/errors.js';
 
 const execAsync = promisify(exec);
+const execFileAsync = promisify(execFile);
 
 type ExecCommandResult = { stdout?: string; stderr?: string } | string;
 
@@ -45,6 +46,24 @@ function normalizeExecResult(result: ExecCommandResult): { stdout: string; stder
     stdout: result?.stdout ?? '',
     stderr: result?.stderr ?? '',
   };
+}
+
+/**
+ * Validate that a patchId contains only safe characters for use in file paths.
+ *
+ * Allows alphanumeric characters, underscores, hyphens, and dots.
+ * Throws an Error if the patchId contains any other characters, preventing
+ * command injection or path traversal via crafted patch identifiers.
+ *
+ * @param patchId - The patch identifier to validate
+ * @throws {Error} If patchId contains characters outside the allowed set
+ */
+function validatePatchId(patchId: string): void {
+  if (!/^[a-zA-Z0-9_.-]+$/.test(patchId)) {
+    throw new Error(
+      `Invalid patchId "${patchId}": must contain only alphanumeric characters, underscores, hyphens, and dots`
+    );
+  }
 }
 
 // ============================================================================
@@ -337,7 +356,7 @@ export async function getCurrentGitRef(workingDir: string): Promise<{ ref: strin
  * Perform dry-run validation of a patch before actual application.
  *
  * Algorithm (4-step pipeline):
- * 1. Extract affected files from the patch (or use pre-computed list)
+ * 1. Extract affected files from the patch content
  * 2. Validate file paths against RepoConfig allowed/blocked constraints
  * 3. Verify the git working tree is clean
  * 4. Run `git apply --check` to test whether the patch applies cleanly
@@ -356,6 +375,8 @@ export async function validatePatchDryRun(
   repoConfig: RepoConfig,
   logger: StructuredLogger
 ): Promise<DryRunResult> {
+  validatePatchId(patch.patchId);
+
   const result: DryRunResult = {
     success: false,
     errors: [],
@@ -365,7 +386,7 @@ export async function validatePatchDryRun(
   };
 
   // Step 1: Extract affected files
-  const affectedFiles = patch.affectedFiles || extractAffectedFiles(patch.content);
+  const affectedFiles = extractAffectedFiles(patch.content);
   result.affectedFiles = affectedFiles;
 
   logger.debug('Extracted affected files from patch', {
@@ -402,7 +423,7 @@ export async function validatePatchDryRun(
   try {
     await fs.writeFile(patchFile, patch.content, 'utf-8');
 
-    await execAsync(`git apply --check "${patchFile}"`, { cwd: workingDir });
+    await execFileAsync('git', ['apply', '--check', patchFile], { cwd: workingDir });
 
     result.success = true;
     logger.info('Dry-run validation succeeded', {
@@ -560,6 +581,8 @@ export async function applyPatch(
   metrics: MetricsCollector,
   telemetry?: ExecutionTelemetry
 ): Promise<PatchApplicationResult> {
+  validatePatchId(patch.patchId);
+
   logger.info('Starting patch application', {
     patchId: patch.patchId,
     featureId: config.featureId,
@@ -616,7 +639,7 @@ export async function applyPatch(
           await fs.writeFile(patchFile, patch.content, 'utf-8');
 
           logger.debug('Applying patch with git apply');
-          await execAsync(`git apply "${patchFile}"`, { cwd: config.workingDir });
+          await execFileAsync('git', ['apply', patchFile], { cwd: config.workingDir });
 
           logger.info('Patch applied successfully', {
             patchId: patch.patchId,
