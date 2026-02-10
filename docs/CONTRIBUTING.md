@@ -156,12 +156,14 @@ Each CLI command (`src/cli/commands/`) should have at least:
 
 Command tests that invoke the binary directly use `spawnSync` against `bin/run.js`:
 
-```ts
+
 import { spawnSync } from 'node:child_process';
 
+import * as path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const CLI_BIN_PATH = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../bin/run.js');
+
 
 const result = spawnSync('node', [CLI_BIN_PATH, 'status', '--json', '--dir', workspaceDir], {
   encoding: 'utf-8',
