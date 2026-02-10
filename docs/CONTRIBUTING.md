@@ -157,7 +157,9 @@ Each CLI command (`src/cli/commands/`) should have at least:
 Command tests that invoke the binary directly use `spawnSync` against `bin/run.js`:
 
 
+```ts
 import { spawnSync } from 'node:child_process';
+
 
 import * as path from 'node:path';
 import { fileURLToPath } from 'node:url';
