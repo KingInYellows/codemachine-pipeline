@@ -108,7 +108,8 @@ export async function loadPRContext(
       error: getErrorMessage(error),
     });
     throw new Error(
-      `Failed to read manifest for feature ${featureId}: ${getErrorMessage(error)}`
+      `Failed to read manifest for feature ${featureId}: ${getErrorMessage(error)}`,
+      { cause: error }
     );
   }
 
@@ -256,7 +257,8 @@ export async function persistPRData(context: PRContext, prMetadata: PRMetadata):
       error: getErrorMessage(error),
     });
     throw new Error(
-      `Failed to persist PR metadata: ${getErrorMessage(error)}`
+      `Failed to persist PR metadata: ${getErrorMessage(error)}`,
+      { cause: error }
     );
   }
 }

@@ -114,9 +114,9 @@ export async function computeFileHash(filePath: string): Promise<string> {
     return hash.digest('hex');
   } catch (error) {
     if (error instanceof Error) {
-      throw new Error(`Failed to compute hash for ${filePath}: ${error.message}`);
+      throw new Error(`Failed to compute hash for ${filePath}: ${error.message}`, { cause: error });
     }
-    throw new Error(`Failed to compute hash for ${filePath}: Unknown error`);
+    throw new Error(`Failed to compute hash for ${filePath}: Unknown error`, { cause: error });
   }
 }
 
@@ -403,9 +403,9 @@ export async function loadHashManifest(manifestPath: string): Promise<HashManife
     return manifest;
   } catch (error) {
     if (error instanceof Error) {
-      throw new Error(`Failed to load hash manifest: ${error.message}`);
+      throw new Error(`Failed to load hash manifest: ${error.message}`, { cause: error });
     }
-    throw new Error('Failed to load hash manifest: Unknown error');
+    throw new Error('Failed to load hash manifest: Unknown error', { cause: error });
   }
 }
 
