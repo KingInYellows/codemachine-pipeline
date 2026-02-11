@@ -4,6 +4,14 @@
   "description": "Autonomous AI-powered feature development pipeline CLI",
   "author": "CodeMachine Team",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/KingInYellows/codemachine-pipeline.git"
+  },
+  "bugs": {
+    "url": "https://github.com/KingInYellows/codemachine-pipeline/issues"
+  },
+  "homepage": "https://github.com/KingInYellows/codemachine-pipeline#readme",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "bin": {
