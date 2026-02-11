@@ -63,6 +63,12 @@ jobs:
       - name: Build project
         run: npm run build
 
+      - name: Validate CLI reference (drift check)
+        run: npm run docs:cli:check
+
+      - name: Validate API reference examples
+        run: node scripts/tooling/validate_api_examples.js --check
+
       - name: Run smoke tests
         run: ./scripts/tooling/smoke_execution.sh
         continue-on-error: true

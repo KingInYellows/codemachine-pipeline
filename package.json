@@ -25,6 +25,8 @@
     "deps:check": "madge --circular --extensions ts src",
     "deps:baseline": "node -e \"require('node:fs').mkdirSync('.deps', { recursive: true })\" && madge --circular --extensions ts src --json > .deps/cycles-baseline.json || true",
     "deps:check:ci": "node scripts/tooling/check_circular_deps.js",
+    "docs:cli": "node scripts/tooling/generate_cli_reference.js",
+    "docs:cli:check": "node scripts/tooling/generate_cli_reference.js --check",
     "security:glob-guard": "node scripts/tooling/check_glob_cli_advisory.js",
     "pretest": "cross-env OCLIF_SKIP_MANIFEST=1 npm run build",
     "test": "npm run test:config && npm run test:http && npm run test:integration && npm run test:commands",
