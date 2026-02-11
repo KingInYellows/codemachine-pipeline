@@ -48,14 +48,14 @@ This project uses [Graphite](https://graphite.dev/) for stacked PRs. See [docs/d
 
 **Key Graphite commands:**
 
-| Command                          | Purpose                           |
-| -------------------------------- | --------------------------------- |
-| `gt create <name> -m "msg"`      | Create a new branch               |
-| `gt submit --no-edit`            | Submit PR through Graphite        |
-| `gt log`                         | View stack status                 |
-| `gt log --stack`                 | View current branch stack         |
-| `gh pr ready <num>`              | Mark a draft PR as ready          |
-| `gh pr view <num>`               | View PR details                   |
+| Command                                 | Purpose                           |
+| --------------------------------------- | --------------------------------- |
+| `gt create <name> -m "msg"`             | Create a new branch               |
+| `gt submit --no-interactive --publish`  | Submit PR through Graphite        |
+| `gt log`                                | View stack status                 |
+| `gt log --stack`                        | View current branch stack         |
+| `gh pr ready <num>`                     | Mark a draft PR as ready          |
+| `gh pr view <num>`                      | View PR details                   |
 
 **Typical flow:**
 
@@ -68,7 +68,7 @@ git add src/widgets/widget.ts tests/unit/widget.spec.ts
 git commit -m "feat: add widget support"
 
 # 3. Submit through Graphite (never push directly to main)
-gt submit --no-edit
+gt submit --no-interactive --publish
 
 # 4. Mark ready for review if created as draft
 gh pr ready $(gh pr list --head $(git branch --show-current) --json number -q '.[0].number')
@@ -101,6 +101,79 @@ npm run smoke:help       # ./bin/run.js --help
 npm run smoke:init       # ./bin/run.js init --help
 ```
 
+### Integration Tests
+
+Integration tests live in `tests/integration/` and exercise CLI commands, workflow orchestration, and adapter interactions against a temporary on-disk workspace. Follow these conventions when adding new integration tests:
+
+**Directory and file setup:**
+
+```ts
+import * as fs from 'node:fs/promises';
+import * as path from 'node:path';
+import * as os from 'node:os';
+import { createRunDirectory } from '../../src/persistence/runDirectoryManager.js';
+import { initializeQueue } from '../../src/workflows/queueStore.js';
+
+let workspaceDir: string;
+let runDir: string;
+
+beforeEach(async () => {
+  // Create an isolated temp directory for each test
+  workspaceDir = await fs.mkdtemp(path.join(os.tmpdir(), 'my-test-'));
+  const runsDir = path.join(workspaceDir, '.codepipe', 'runs');
+  await fs.mkdir(runsDir, { recursive: true });
+
+  // Bootstrap a run directory with queue
+  const featureId = 'test-feature-id';
+  runDir = await createRunDirectory(runsDir, featureId, {
+    repoUrl: 'https://github.com/test/repo.git',
+    defaultBranch: 'main',
+    title: 'Test Feature',
+  });
+  await initializeQueue(runDir, featureId);
+});
+
+afterEach(async () => {
+  await fs.rm(workspaceDir, { recursive: true, force: true });
+});
+```
+
+**Key patterns:**
+
+- **Temp directories** -- always use `fs.mkdtemp()` in `beforeEach` to create an isolated workspace. Never write to the real project tree.
+- **Cleanup** -- always call `fs.rm(dir, { recursive: true, force: true })` in `afterEach`.
+- **Run directories** -- use `createRunDirectory()` from `src/persistence/runDirectoryManager` to scaffold the `.codepipe/runs/<feature>` structure.
+- **Queue initialization** -- call `initializeQueue(runDir, featureId)` to set up the write-action queue.
+- **Import paths** -- use relative imports from `../../src/...` with `.js` extensions (TypeScript ESM resolution).
+- **Cache invalidation** -- when testing queue integrity across multiple scenarios in one test, call `invalidateV2Cache(runDir)` to reset the integrity verification cache.
+
+**Coverage expectations for CLI commands:**
+
+Each CLI command (`src/cli/commands/`) should have at least:
+
+1. One **happy-path** test that exercises normal behavior with valid inputs.
+2. One **invalid-arguments** test that verifies proper error handling (missing required flags, bad values, etc.).
+
+Command tests that invoke the binary directly use `spawnSync` against `bin/run.js`:
+
+
+```ts
+import { spawnSync } from 'node:child_process';
+
+
+import * as path from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+const CLI_BIN_PATH = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../bin/run.js');
+
+
+const result = spawnSync('node', [CLI_BIN_PATH, 'status', '--json', '--dir', workspaceDir], {
+  encoding: 'utf-8',
+  timeout: 15_000,
+});
+expect(result.status).toBe(0);
+```
+
 ### Building
 
 ```bash
@@ -112,8 +185,12 @@ npm run clean            # Remove dist/
 
 - **TypeScript strict mode** is enforced throughout `src/` and `tests/`.
 - **Formatting:** Prettier. Check with `npm run format:check`, auto-fix with `npm run format`.
-- **Linting:** ESLint. Check with `npm run lint`, auto-fix with `npm run lint:fix`.
+- **Linting:** ESLint 10 with flat config (`eslint.config.cjs`). Check with `npm run lint`, auto-fix with `npm run lint:fix`.
+  - `@eslint/js` is a separate devDependency (unbundled from `eslint` in v10).
+  - The `no-useless-assignment` rule prohibits initializing variables that are immediately overwritten.
 - **Validation:** Runtime schemas use Zod (see ADR-7).
+- **Circular dependency detection:** `npm run deps:check` (madge). CI runs `npm run deps:check:ci` against a baseline.
+- **Unused exports:** `npm run exports:check` (ts-unused-exports).
 
 Run both checks before submitting:
 
@@ -148,7 +225,7 @@ Keep the subject line under 72 characters. Use the body for additional context w
 1. Create a Graphite branch (`gt create <name> -m "description"`).
 2. Make your changes, ensuring all tests pass (`npm test`).
 3. Run formatting and lint checks (`npm run format:check && npm run lint`).
-4. Submit via Graphite (`gt submit --no-edit`).
+4. Submit via Graphite (`gt submit --no-interactive --publish`).
 5. Mark as ready for review if created as draft (`gh pr ready <PR-number>`).
 6. CI runs automatically on all PRs: unit + integration tests, security scans, Docker image builds, and code quality checks.
 7. Address review feedback; the PR is merged through Graphite.
@@ -173,6 +250,7 @@ src/
   persistence/         On-disk state and hash manifest
   telemetry/           Logging, metrics, cost tracking, rate-limit ledger
   utils/               Shared utilities (error handling, JSON helpers)
+  validation/          Zod schema validation helpers (validateOrThrow, validateOrResult)
   workflows/           Orchestration logic
                          Context aggregation, PRD authoring, spec composition,
                          task planning, execution engine, deployment triggers,
