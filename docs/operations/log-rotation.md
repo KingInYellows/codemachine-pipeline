@@ -51,7 +51,9 @@ Configure log rotation in `.codepipe/config.json`:
 
 ### Environment Variables
 
-Override config values with environment variables:
+> **Note:** The `CODEPIPE_LOG_ROTATION_*` environment variable overrides are not yet implemented. Use the `execution` section of `.codepipe/config.json` to configure log rotation settings (`log_rotation_mb`, `log_rotation_keep`, `log_rotation_compress`).
+
+The following shows the intended environment variable design for future implementation:
 
 ```bash
 # Set rotation threshold to 50MB
@@ -437,7 +439,9 @@ find . -name "logs-archive-*.tar.gz" -mtime +30 -delete
 
 ### Performance Tuning
 
-**Optimize for different scenarios:**
+**Optimize for different scenarios.**
+
+> **Note:** The `CODEPIPE_LOG_ROTATION_*` env var overrides below are not yet implemented. Set these values in `.codepipe/config.json` under `execution`.
 
 **High-volume logging (>1GB/day):**
 ```bash

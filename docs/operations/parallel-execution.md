@@ -54,17 +54,14 @@ Configure parallel execution in `.codepipe/config.json`:
 Override config values with environment variables:
 
 ```bash
-# Set maximum parallel tasks
-export CODEPIPE_MAX_PARALLEL_TASKS=4
+# Set maximum concurrent tasks
+export CODEPIPE_RUNTIME_MAX_CONCURRENT_TASKS=4
 
 # Set task timeout (5 minutes)
-export CODEPIPE_TASK_TIMEOUT_MS=300000
-
-# Disable parallel execution
-export CODEPIPE_ENABLE_PARALLEL_EXECUTION=false
+export CODEPIPE_EXECUTION_TIMEOUT_MS=300000
 ```
 
-> **Note:** The `CODEPIPE_ENABLE_PARALLEL_EXECUTION` environment variable override is not yet implemented. Use the `execution.max_parallel_tasks` config field instead.
+> **Note:** The `CODEPIPE_MAX_PARALLEL_TASKS`, `CODEPIPE_TASK_TIMEOUT_MS`, and `CODEPIPE_ENABLE_PARALLEL_EXECUTION` names shown in earlier drafts of this guide are not implemented. Use `CODEPIPE_RUNTIME_MAX_CONCURRENT_TASKS` and `CODEPIPE_EXECUTION_TIMEOUT_MS` instead, or set the values in the `execution` section of `.codepipe/config.json`.
 
 ### Runtime Override
 
@@ -72,10 +69,10 @@ Override parallelism at command execution:
 
 ```bash
 # Force sequential execution
-CODEPIPE_MAX_PARALLEL_TASKS=1 codepipe resume
+CODEPIPE_RUNTIME_MAX_CONCURRENT_TASKS=1 codepipe resume
 
 # Enable high parallelism
-CODEPIPE_MAX_PARALLEL_TASKS=8 codepipe resume
+CODEPIPE_RUNTIME_MAX_CONCURRENT_TASKS=8 codepipe resume
 ```
 
 ## How It Works
@@ -294,10 +291,11 @@ grep "task_completed" .codepipe/runs/*/logs/execution.ndjson | \
 **Measure Throughput Improvement:**
 ```bash
 # Sequential baseline
-time CODEPIPE_MAX_PARALLEL_TASKS=1 codepipe resume
+# Note: CODEPIPE_RUNTIME_MAX_CONCURRENT_TASKS is the implemented env var name
+time CODEPIPE_RUNTIME_MAX_CONCURRENT_TASKS=1 codepipe resume
 
 # Parallel execution
-time CODEPIPE_MAX_PARALLEL_TASKS=4 codepipe resume
+time CODEPIPE_RUNTIME_MAX_CONCURRENT_TASKS=4 codepipe resume
 
 # Calculate speedup
 # Speedup = Sequential Time / Parallel Time
@@ -333,7 +331,7 @@ free -m      # Check memory usage
 iostat -x 1  # Check disk I/O
 
 # Step 2: Reduce parallelism
-export CODEPIPE_MAX_PARALLEL_TASKS=2
+export CODEPIPE_RUNTIME_MAX_CONCURRENT_TASKS=2
 codepipe resume
 
 # Step 3: Monitor improvement

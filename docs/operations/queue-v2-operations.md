@@ -92,7 +92,7 @@ const SNAPSHOT_CONFIG = {
 - `CODEPIPE_QUEUE_SNAPSHOT_INTERVAL`: Override snapshot frequency
 - `CODEPIPE_QUEUE_SNAPSHOT_COMPRESS`: Enable gzip compression (true/false)
 
-> **Note:** The `CODEPIPE_QUEUE_SNAPSHOT_INTERVAL` environment variable override is not yet implemented. Queue behavior is controlled through the config file settings.
+> **Note:** The `CODEPIPE_QUEUE_SNAPSHOT_INTERVAL` and `CODEPIPE_QUEUE_SNAPSHOT_COMPRESS` environment variable overrides are not yet implemented. Queue behavior is controlled through the config file settings.
 
 ## Monitoring
 
@@ -206,13 +206,13 @@ codepipe status --verbose
 **Resolution:**
 
 ```bash
-# Step 1: Disable snapshot loading
+# Step 1: Disable snapshot loading (env var not yet implemented — manual workaround)
 export CODEPIPE_QUEUE_USE_SNAPSHOTS=false
 
 # Step 2: Replay from WAL (slower but safe)
 codepipe resume --feature FEATURE-ID --validate-queue
 
-# Step 3: Rebuild snapshot
+# Step 3: Rebuild snapshot (env var not yet implemented — manual workaround)
 export CODEPIPE_QUEUE_REBUILD_SNAPSHOT=true
 codepipe status --feature FEATURE-ID
 
@@ -223,7 +223,7 @@ unset CODEPIPE_QUEUE_USE_SNAPSHOTS
 **Prevention:**
 - Use reliable filesystems (ext4, XFS)
 - Monitor disk space continuously
-- Enable snapshot compression for integrity: `CODEPIPE_QUEUE_SNAPSHOT_COMPRESS=true`
+- No dedicated queue snapshot compression config exists yet; use reliable filesystems and monitor disk space
 
 ### Memory Leaks
 
@@ -243,7 +243,7 @@ ps aux | grep codepipe
 # Step 2: Force cache invalidation
 node -e "require('./src/workflows/queueStore.js').invalidateV2Cache()"
 
-# Step 3: Reduce snapshot retention
+# Step 3: Reduce snapshot retention (env var not yet implemented — manual workaround)
 export CODEPIPE_QUEUE_SNAPSHOT_KEEP=1
 
 # Step 4: Restart with clean state
@@ -262,7 +262,7 @@ codepipe resume --feature FEATURE-ID
 Force compaction without waiting for thresholds:
 
 ```bash
-# Trigger immediate compaction
+# Trigger immediate compaction (env var not yet implemented — manual workaround)
 export CODEPIPE_QUEUE_FORCE_COMPACT=true
 codepipe resume --feature FEATURE-ID
 ```
@@ -315,7 +315,9 @@ codepipe resume --feature FEATURE-ID
 
 ### Performance Tuning
 
-Optimize queue performance for your workload:
+Optimize queue performance for your workload.
+
+> **Note:** The `CODEPIPE_QUEUE_*` environment variable overrides shown below are not yet implemented. These examples illustrate the intended design; currently, queue behavior is controlled through the config file settings.
 
 **High Throughput (1000+ tasks/hour):**
 ```bash

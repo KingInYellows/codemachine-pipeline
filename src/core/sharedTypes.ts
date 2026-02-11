@@ -56,7 +56,20 @@ export function isSerializedError(value: unknown): value is SerializedError {
     return false;
   }
 
-  const candidate = value as Record<string, unknown>;
+  const candidate = value as {
+    name?: unknown;
+    message?: unknown;
+    stack?: unknown;
+    code?: unknown;
+    statusCode?: unknown;
+    requestId?: unknown;
+    type?: unknown;
+    operation?: unknown;
+    cause?: unknown;
+    retryable?: unknown;
+    headers?: unknown;
+    responseBody?: unknown;
+  };
 
   // Required fields
   if (typeof candidate.name !== 'string' || typeof candidate.message !== 'string') {

@@ -26,15 +26,19 @@ This index provides a centralized navigation hub for all documentation in the co
 
 ```
 docs/
+├── adr/              # Architecture Decision Records
 ├── architecture/     # System design and component documentation
-├── requirements/     # Specifications, schemas, and playbooks
-├── ops/              # Operational guides and runbooks
-├── operations/       # Runtime operations (queue, logs, parallel execution)
+├── audit/            # Documentation audit reports
+├── brainstorms/      # Brainstorm documents
 ├── development/      # Developer workflows and guidelines
 ├── diagrams/         # Visual diagrams (Mermaid, PlantUML)
-├── templates/        # Document templates
-├── solutions/        # Known issue resolutions
+├── operations/       # Runtime operations (queue, logs, parallel execution)
+├── ops/              # Operational guides and runbooks
+├── plans/            # Implementation plans
+├── requirements/     # Specifications, schemas, and playbooks
 ├── security/         # Security fix documentation
+├── solutions/        # Known issue resolutions
+├── templates/        # Document templates
 └── ui/               # CLI and user interface patterns
 ```
 
@@ -48,6 +52,17 @@ Core system design documents describing the pipeline's layered architecture, com
 |----------|-------------|
 | [Component Index](architecture/component_index.md) | Centralized navigation hub for all architecture artifacts, diagrams, and ADR references |
 | [Execution Flow](architecture/execution_flow.md) | CLIExecutionEngine architecture, strategy pattern, and CodeMachine integration |
+
+---
+
+## Architecture Decision Records (ADRs)
+
+Documented architectural decisions with context, rationale, and consequences.
+
+| Document | Description |
+|----------|-------------|
+| [ADR-6: Linear Integration](adr/ADR-6-linear-integration.md) | Linear integration strategy and adapter design |
+| [ADR-7: Validation Policy](adr/ADR-7-validation-policy.md) | Zod runtime validation policy and schema validation approach |
 
 ---
 
@@ -110,7 +125,8 @@ Runbooks and operational procedures for pipeline administration and troubleshoot
 |----------|-------------|
 | [Init Playbook](ops/init_playbook.md) | Repository initialization with `codepipe init` command |
 | [Doctor Reference](ops/doctor_reference.md) | Environment diagnostics and prerequisite validation |
-| [CLI Reference](ops/cli-reference.md) | CLI command reference and usage guide |
+| [CLI Reference](ops/cli-reference.md) | CLI command reference and usage guide (auto-generated) |
+| [API Reference](ops/api-reference.md) | Configuration schema, domain models, and validation utilities |
 | [Troubleshooting](ops/troubleshooting.md) | Common issues and troubleshooting procedures |
 | [Smoke Test Guide](ops/smoke_test_guide.md) | Quick validation tests for deployment verification |
 | [Integration Testing](ops/integration_testing.md) | End-to-end integration test procedures |
@@ -235,6 +251,35 @@ Security vulnerability documentation and remediation records.
 | Document | Description |
 |----------|-------------|
 | [CI Stability](ci-stability.md) | CI pipeline stability guidelines and monitoring |
+
+---
+
+## Audit Reports
+
+| Document | Description |
+|----------|-------------|
+| [Documentation Audit Report](audit/AUDIT_REPORT.md) | Comprehensive documentation audit with 6-agent cross-verification |
+
+---
+
+## Plans & Brainstorms
+
+Working documents for feature planning and design exploration.
+
+### Plans
+
+| Document | Description |
+|----------|-------------|
+| [Documentation Tooling Plan](plans/2026-02-10-feat-documentation-tooling-cycle6-plan.md) | Cycle 8 documentation tooling implementation plan |
+| [Post-Release Docs Cleanup](plans/2026-02-11-chore-post-release-docs-cleanup-plan.md) | Post-v1.0.0 documentation cleanup plan |
+| [v1 Release Ceremony](plans/2026-02-10-chore-v1-release-ceremony-plan.md) | v1.0.0 release ceremony plan |
+
+### Brainstorms
+
+| Document | Description |
+|----------|-------------|
+| [Documentation Tooling Decisions](brainstorms/2026-02-10-documentation-tooling-decisions-brainstorm.md) | Brainstorm on documentation tooling choices for Cycle 8 |
+| [v1 Release Readiness](brainstorms/2026-02-10-v1-release-readiness-brainstorm.md) | v1.0.0 release readiness assessment |
 
 ---
 
