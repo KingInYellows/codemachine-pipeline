@@ -218,7 +218,8 @@ export class RedactionEngine {
     }
 
     if (obj && typeof obj === 'object') {
-      const redacted: { [key: string]: unknown } = {};
+      // eslint-disable-next-line @typescript-eslint/no-restricted-types -- intentional: redaction output preserves arbitrary input keys
+      const redacted: Record<string, unknown> = {};
 
       for (const [key, value] of Object.entries(obj)) {
         // Redact common secret field names

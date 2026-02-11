@@ -50,7 +50,7 @@ module.exports = [
           types: {
             'Record<string, unknown>': {
               message:
-                'Prefer a specific interface. If intentional (metadata, logging), add JSDoc: /** Intentional: [reason] */',
+                'Prefer a specific interface. If intentional (metadata, logging), add // eslint-disable-next-line with reason.',
             },
           },
         },

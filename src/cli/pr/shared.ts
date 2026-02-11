@@ -359,8 +359,10 @@ function sortKeys(obj: unknown): unknown {
     return obj.map(sortKeys);
   }
 
-  const record = obj as { [key: string]: unknown };
-  const sorted: { [key: string]: unknown } = {};
+  // eslint-disable-next-line @typescript-eslint/no-restricted-types -- intentional: sortKeys processes arbitrary object shapes
+  const record = obj as Record<string, unknown>;
+  // eslint-disable-next-line @typescript-eslint/no-restricted-types -- intentional: accumulates sorted keys from arbitrary input
+  const sorted: Record<string, unknown> = {};
   const keys = Object.keys(record).sort();
 
   for (const key of keys) {

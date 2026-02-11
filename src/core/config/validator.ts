@@ -397,7 +397,8 @@ export function checkSchemaCompatibility(
 
   // Check safety.* fields only if we have raw config to detect explicit settings
   if (raw?.safety && typeof raw.safety === 'object') {
-    const rawSafety = raw.safety as { [key: string]: unknown };
+    // eslint-disable-next-line @typescript-eslint/no-restricted-types -- intentional: deprecated safety fields are open-ended
+    const rawSafety = raw.safety as Record<string, unknown>;
 
     // Deprecated: safety.require_approval_for_prd → governance.approval_workflow
     if ('require_approval_for_prd' in rawSafety) {
