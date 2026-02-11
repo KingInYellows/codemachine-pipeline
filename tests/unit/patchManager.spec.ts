@@ -61,6 +61,17 @@ vi.mock('node:child_process', () => ({
       return childProcessStub;
     }
   ),
+  execFile: vi.fn((...args: unknown[]) => {
+    const callback = args.find((a) => typeof a === 'function') as ExecCallback | undefined;
+    if (!callback) {
+      throw new Error('execFile callback missing');
+    }
+    const file = args[0] as string;
+    const fileArgs = Array.isArray(args[1]) ? (args[1] as string[]) : [];
+    const commandText = [file, ...fileArgs].join(' ');
+    currentExecHandler(commandText, callback);
+    return childProcessStub;
+  }),
 }));
 vi.mock('../../src/persistence/runDirectoryManager', () => ({
   withLock: vi.fn(async (_runDir: string, fn: () => Promise<unknown>) => await fn()),

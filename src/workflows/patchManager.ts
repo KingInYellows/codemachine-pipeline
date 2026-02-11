@@ -356,7 +356,7 @@ export async function getCurrentGitRef(workingDir: string): Promise<{ ref: strin
  * Perform dry-run validation of a patch before actual application.
  *
  * Algorithm (4-step pipeline):
- * 1. Extract affected files from the patch content
+ * 1. Extract affected files from the patch content (merged with caller-provided list)
  * 2. Validate file paths against RepoConfig allowed/blocked constraints
  * 3. Verify the git working tree is clean
  * 4. Run `git apply --check` to test whether the patch applies cleanly
@@ -385,8 +385,10 @@ export async function validatePatchDryRun(
     violations: [],
   };
 
-  // Step 1: Extract affected files
-  const affectedFiles = extractAffectedFiles(patch.content);
+  // Step 1: Extract affected files from content, merging caller-provided list for defense-in-depth
+  const contentFiles = extractAffectedFiles(patch.content);
+  const callerFiles = patch.affectedFiles || [];
+  const affectedFiles = [...new Set([...contentFiles, ...callerFiles])];
   result.affectedFiles = affectedFiles;
 
   logger.debug('Extracted affected files from patch', {
@@ -472,6 +474,7 @@ export async function createRollbackSnapshot(
   patch: Patch,
   logger: StructuredLogger
 ): Promise<string> {
+  validatePatchId(patch.patchId);
   const snapshotId = `snapshot-${config.taskId || 'unknown'}-${patch.patchId}-${Date.now()}`;
   const artifactsDir = getSubdirectoryPath(config.runDir, 'artifacts');
   const snapshotDir = path.join(artifactsDir, 'patches', 'snapshots');
@@ -528,6 +531,7 @@ export async function generateDiffSummary(
   config: PatchConfig,
   modifiedFiles: string[]
 ): Promise<string> {
+  validatePatchId(patch.patchId);
   const artifactsDir = getSubdirectoryPath(config.runDir, 'artifacts');
   const patchesDir = path.join(artifactsDir, 'patches');
   await fs.mkdir(patchesDir, { recursive: true });
