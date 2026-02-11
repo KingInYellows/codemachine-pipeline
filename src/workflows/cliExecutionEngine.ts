@@ -123,6 +123,9 @@ async function captureArtifacts(
   return artifacts;
 }
 
+/**
+ * Configuration options for constructing a {@link CLIExecutionEngine}.
+ */
 export interface ExecutionEngineOptions {
   runDir: string;
   config: RepoConfig;
@@ -133,6 +136,9 @@ export interface ExecutionEngineOptions {
   telemetry?: ExecutionTelemetry;
 }
 
+/**
+ * Summary of an execution run, reporting task outcome counts.
+ */
 export interface ExecutionResult {
   totalTasks: number;
   completedTasks: number;
@@ -141,6 +147,9 @@ export interface ExecutionResult {
   skippedTasks: number;
 }
 
+/**
+ * Result of a prerequisite validation check before execution can proceed.
+ */
 export interface PrerequisiteResult {
   valid: boolean;
   errors: string[];
@@ -160,6 +169,23 @@ const DEFAULT_EXECUTION_CONFIG = {
   log_rotation_compress: false,
 };
 
+/**
+ * CLI Execution Engine
+ *
+ * Orchestrates the execution of queued tasks by matching each task to a
+ * registered {@link ExecutionStrategy}, executing with bounded parallelism,
+ * and handling retries with exponential backoff.
+ *
+ * Algorithm (execute loop):
+ * 1. Load the task queue from the run directory
+ * 2. While capacity is available, select ready tasks (running > pending > retryable)
+ * 3. Dispatch tasks up to `max_parallel_tasks` concurrently
+ * 4. On completion, update counters and queue depth metrics
+ * 5. On failure, apply exponential backoff and re-enqueue if retries remain
+ *
+ * Supports dry-run mode, graceful stop, artifact capture with path-traversal
+ * protection, and telemetry/metrics integration.
+ */
 export class CLIExecutionEngine {
   private readonly runDir: string;
   private readonly config: RepoConfig;
@@ -170,6 +196,11 @@ export class CLIExecutionEngine {
   private readonly telemetry: ExecutionTelemetry | undefined;
   private stopped = false;
 
+  /**
+   * Create a new CLIExecutionEngine.
+   *
+   * @param options - Engine configuration including runDir, RepoConfig, strategies, and optional logger/telemetry
+   */
   constructor(options: ExecutionEngineOptions) {
     this.runDir = options.runDir;
     this.config = options.config;
@@ -180,6 +211,15 @@ export class CLIExecutionEngine {
     this.logWriter = options.logWriter ?? options.telemetry?.logs;
   }
 
+  /**
+   * Validate that all prerequisites for execution are met.
+   *
+   * Checks CLI availability, workspace directory existence, strategy
+   * registration, and queue loadability. Errors are fatal blockers;
+   * warnings are informational (e.g., empty queue or no strategies).
+   *
+   * @returns A {@link PrerequisiteResult} with `valid`, `errors`, and `warnings`
+   */
   async validatePrerequisites(): Promise<PrerequisiteResult> {
     const errors: string[] = [];
     const warnings: string[] = [];
@@ -223,6 +263,16 @@ export class CLIExecutionEngine {
     };
   }
 
+  /**
+   * Execute all pending tasks in the queue with bounded parallelism.
+   *
+   * Tasks are selected in priority order: running (resumed) > pending > retryable.
+   * Up to `max_parallel_tasks` run concurrently via `Promise.race`. Each completed
+   * task updates the result counters and queue depth metrics. The loop exits when
+   * no tasks remain or {@link stop} has been called and in-flight tasks drain.
+   *
+   * @returns An {@link ExecutionResult} summarizing task outcomes
+   */
   async execute(): Promise<ExecutionResult> {
     const result: ExecutionResult = {
       totalTasks: 0,
@@ -342,9 +392,28 @@ export class CLIExecutionEngine {
     return result;
   }
 
+  /**
+   * Execute a single task using the first matching strategy.
+   *
+   * Algorithm:
+   * 1. Find a strategy that can handle the task type
+   * 2. If no strategy matches, mark the task as skipped (permanently failed)
+   * 3. In dry-run mode, mark the task as completed without actual execution
+   * 4. Otherwise, delegate to the strategy and process the result
+   * 5. On failure, apply retry backoff and re-enqueue if retries remain
+   * 6. Capture artifacts (success or failure) with path-traversal protection
+   *
+   * @param task - The execution task to run
+   * @returns An object with `success` and `permanentlyFailed` flags
+   */
   async executeTask(
     task: ExecutionTask
   ): Promise<{ success: boolean; permanentlyFailed: boolean }> {
+    if (!validateTaskId(task.task_id)) {
+      this.logger?.warn('Invalid task ID format, rejecting task', { taskId: task.task_id });
+      return { success: false, permanentlyFailed: true };
+    }
+
     const strategy = this.findStrategy(task);
 
     if (!strategy) {
@@ -540,6 +609,13 @@ export class CLIExecutionEngine {
     return { success: false, permanentlyFailed: true };
   }
 
+  /**
+   * Request a graceful stop of the execution loop.
+   *
+   * In-flight tasks will be allowed to complete, but no new tasks will be
+   * dispatched. The {@link execute} method will return once all in-flight
+   * tasks have finished.
+   */
   stop(): void {
     this.stopped = true;
     this.logger?.info('Execution stop requested');
