@@ -63,6 +63,11 @@ jobs:
       - name: Build project
         run: npm run build
 
+      - name: Generate oclif manifest for docs check
+        run: node scripts/tooling/oclif_manifest.js
+        env:
+          OCLIF_SKIP_MANIFEST: ''
+
       - name: Validate CLI reference (drift check)
         run: npm run docs:cli:check
 
