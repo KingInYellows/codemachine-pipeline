@@ -152,7 +152,7 @@ export function isResearchSource(value: unknown): value is ResearchSource {
   if (!value || typeof value !== 'object') {
     return false;
   }
-  const candidate = value as Record<string, unknown>;
+  const candidate = value as { type?: unknown; identifier?: unknown };
   return typeof candidate.type === 'string' && typeof candidate.identifier === 'string';
 }
 
@@ -291,7 +291,13 @@ export function extractUnknownsFromMetadata(
     }
 
     if (entry && typeof entry === 'object') {
-      const candidate = entry as Record<string, unknown>;
+      const candidate = entry as {
+        objective?: unknown;
+        objectives?: unknown;
+        label?: unknown;
+        title?: unknown;
+        sources?: unknown;
+      };
       const objective = typeof candidate.objective === 'string' ? candidate.objective : undefined;
       const objectives = Array.isArray(candidate.objectives)
         ? candidate.objectives.filter((item): item is string => typeof item === 'string')
@@ -459,7 +465,15 @@ export function extractUnknownsFromText(
     }
     dedupe.add(dedupeKey);
 
-    const detectionMetadata: Record<string, unknown> = {
+    const detectionMetadata: {
+      origin: UnknownOriginType;
+      reason: string;
+      snippet: string;
+      source: string;
+      pattern: string;
+      line: number;
+      file_path?: string;
+    } = {
       origin: origin.type,
       reason: pattern.reason,
       snippet,

@@ -359,11 +359,12 @@ function sortKeys(obj: unknown): unknown {
     return obj.map(sortKeys);
   }
 
-  const sorted: Record<string, unknown> = {};
-  const keys = Object.keys(obj as Record<string, unknown>).sort();
+  const record = obj as { [key: string]: unknown };
+  const sorted: { [key: string]: unknown } = {};
+  const keys = Object.keys(record).sort();
 
   for (const key of keys) {
-    sorted[key] = sortKeys((obj as Record<string, unknown>)[key]);
+    sorted[key] = sortKeys(record[key]);
   }
 
   return sorted;

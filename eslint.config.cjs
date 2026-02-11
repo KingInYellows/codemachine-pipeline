@@ -44,6 +44,17 @@ module.exports = [
       '@typescript-eslint/explicit-function-return-type': 'off',
       '@typescript-eslint/no-explicit-any': 'warn',
       '@typescript-eslint/no-floating-promises': 'error',
+      '@typescript-eslint/no-restricted-types': [
+        'warn',
+        {
+          types: {
+            'Record<string, unknown>': {
+              message:
+                'Prefer a specific interface. If intentional (metadata, logging), add JSDoc: /** Intentional: [reason] */',
+            },
+          },
+        },
+      ],
     },
   },
   {
