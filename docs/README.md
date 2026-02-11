@@ -4,6 +4,10 @@
 
 This index provides a centralized navigation hub for all documentation in the codemachine-pipeline project. Use this guide to quickly locate architecture references, operational playbooks, requirements specifications, and development guides.
 
+
+> **Note:** Pre-v1.0.0 historical documentation (certification comments, phase plans, issue tracking,
+> release audits) has been archived on the [`archive/pre-v1.0.0-docs`](https://github.com/KingInYellows/codemachine-pipeline/tree/archive/pre-v1.0.0-docs) branch.
+
 ---
 
 ## Quick Links
@@ -30,7 +34,7 @@ docs/
 ├── diagrams/         # Visual diagrams (Mermaid, PlantUML)
 ├── templates/        # Document templates
 ├── solutions/        # Known issue resolutions
-├── plans/            # Release and implementation plans
+├── security/         # Security fix documentation
 └── ui/               # CLI and user interface patterns
 ```
 
@@ -215,51 +219,22 @@ User interface design patterns and CLI output format specifications.
 
 ---
 
-## Plans & Reports
+## Security
 
-Release planning, implementation tracking, and verification reports.
-
-### Release Plans
+Security vulnerability documentation and remediation records.
 
 | Document | Description |
 |----------|-------------|
-| [Alpha Release Readiness](plans/2025-12-31-alpha-release-readiness.md) | Alpha release milestone tracking and readiness criteria |
-| [Stable Release Audit](stable-release-audit.md) | Stable release audit checklist and results |
-| [Stable Release Definition](stable-release-definition.md) | Stable release criteria and definition of done |
-| [Stable Release Roadmap](stable-release-roadmap.md) | Roadmap and timeline for stable release milestones |
+| [Security Fix CVE-HIGH-1](security/SECURITY-FIX-CVE-HIGH-1.md) | High-severity CVE remediation documentation |
+| [Security Fix Summary](security/SECURITY-FIX-SUMMARY.md) | Security vulnerability fix summary report |
+
+---
+
+## CI & Operations
+
+| Document | Description |
+|----------|-------------|
 | [CI Stability](ci-stability.md) | CI pipeline stability guidelines and monitoring |
-
-### Implementation Reports
-
-| Document | Description |
-|----------|-------------|
-| [Issue Resolution Plan](ISSUE_RESOLUTION_PLAN.md) | Systematic issue triage and resolution tracking |
-| [Issue Closures](ISSUE_CLOSURES.md) | Completed issue closure records |
-| [GitHub Issue Closures](GITHUB_ISSUE_CLOSURES.md) | GitHub-specific issue closure documentation |
-| [Implementation Summary](IMPLEMENTATION_SUMMARY.md) | High-level implementation progress summary |
-| [Orchestration Final Summary](ORCHESTRATION_FINAL_SUMMARY.md) | Orchestration layer implementation completion report |
-
-### Phase Plans
-
-| Document | Description |
-|----------|-------------|
-| [Phase 1 Verification Report](PHASE1_VERIFICATION_REPORT.md) | Phase 1 completion verification and acceptance criteria |
-| [Phase 2 Implementation Plan](PHASE2_IMPLEMENTATION_PLAN.md) | Phase 2 feature scope and implementation schedule |
-| [Phase 3 Implementation Plan](PHASE3_IMPLEMENTATION_PLAN.md) | Phase 3 feature scope and implementation schedule |
-
-### PR Reviews
-
-| Document | Description |
-|----------|-------------|
-| [PR Review Plan](PR_REVIEW_PLAN.md) | Pull request review process and checklist |
-| [Certification Comments](CERTIFICATION_COMMENT_149.md) | PR #149 certification review notes |
-
-### Security
-
-| Document | Description |
-|----------|-------------|
-| [Security Fix CVE-HIGH-1](SECURITY-FIX-CVE-HIGH-1.md) | High-severity CVE remediation documentation |
-| [Security Fix Summary](SECURITY-FIX-SUMMARY.md) | Security vulnerability fix summary report |
 
 ---
 

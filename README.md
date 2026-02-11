@@ -15,7 +15,7 @@ Autonomous AI-powered feature development pipeline CLI
 - **Deterministic Builds**: Node v24 LTS, containerized execution
 - **CodeMachine CLI Adapter**: External execution engine integration with retry logic and artifact capture
 
-## New Features (v3.0)
+## Features
 
 ### Queue V2 Optimization
 - **O(1) task operations** (previously O(n²)) with WAL-based persistence
@@ -878,8 +878,7 @@ Contributions are welcome! Please open an issue or submit a pull request.
 
 For issues and questions:
 
-<!-- TODO: verify this URL — clone URL on line 70 uses KingInYellows/codemachine-pipeline -->
-- GitHub Issues: https://github.com/codemachine/codemachine-pipeline/issues
+- GitHub Issues: https://github.com/KingInYellows/codemachine-pipeline/issues
 - Documentation: See `specification.md` for detailed requirements
 
 ---
