@@ -223,7 +223,7 @@ unset CODEPIPE_QUEUE_USE_SNAPSHOTS
 **Prevention:**
 - Use reliable filesystems (ext4, XFS)
 - Monitor disk space continuously
-- Enable snapshot compression for integrity via config: `execution.log_rotation_compress: true`
+- No dedicated queue snapshot compression config exists yet; use reliable filesystems and monitor disk space
 
 ### Memory Leaks
 

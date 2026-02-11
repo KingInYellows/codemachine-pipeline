@@ -73,7 +73,7 @@ This guide provides solutions for common issues encountered when operating the A
    ```
 
 **Prevention:**
-- Enable periodic snapshots via config: `execution.snapshot_interval: 100`
+- Periodic snapshots are taken automatically by the queue engine (no user config required yet)
 - Monitor disk space before long runs
 - Never manually edit queue files
 

@@ -291,10 +291,11 @@ grep "task_completed" .codepipe/runs/*/logs/execution.ndjson | \
 **Measure Throughput Improvement:**
 ```bash
 # Sequential baseline
-time CODEPIPE_MAX_PARALLEL_TASKS=1 codepipe resume
+# Note: CODEPIPE_RUNTIME_MAX_CONCURRENT_TASKS is the implemented env var name
+time CODEPIPE_RUNTIME_MAX_CONCURRENT_TASKS=1 codepipe resume
 
 # Parallel execution
-time CODEPIPE_MAX_PARALLEL_TASKS=4 codepipe resume
+time CODEPIPE_RUNTIME_MAX_CONCURRENT_TASKS=4 codepipe resume
 
 # Calculate speedup
 # Speedup = Sequential Time / Parallel Time

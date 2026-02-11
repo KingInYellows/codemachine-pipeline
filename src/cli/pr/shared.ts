@@ -412,12 +412,12 @@ export async function hasValidationsPassed(runDir: string): Promise<boolean> {
  * @returns true if branch exists
  */
 export async function isBranchLocal(branchName: string): Promise<boolean> {
-  const { exec } = await import('node:child_process');
+  const { execFile } = await import('node:child_process');
   const { promisify } = await import('node:util');
-  const execAsync = promisify(exec);
+  const execFileAsync = promisify(execFile);
 
   try {
-    await execAsync(`git rev-parse --verify ${branchName}`, { cwd: process.cwd() });
+    await execFileAsync('git', ['rev-parse', '--verify', branchName], { cwd: process.cwd() });
     return true;
   } catch {
     return false;
