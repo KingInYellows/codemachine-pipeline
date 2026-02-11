@@ -52,6 +52,8 @@ oclif.manifest.json
 # CodeMachine Pipeline runtime
 .codepipe/runs/
 .codepipe/logs/
+.codepipe/metrics/
+.codepipe/telemetry/
 ISSUE_RESOLUTION_PLAN.md
 
 # Claude Code / Claude Flow - config (committed)
