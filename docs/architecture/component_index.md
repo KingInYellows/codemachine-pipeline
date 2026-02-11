@@ -2,7 +2,7 @@
 
 **Version:** 1.0.0
 **Status:** Active
-**Last Updated:** 2025-12-15
+**Last Updated:** 2026-02-11
 
 ## Overview
 
@@ -367,17 +367,17 @@ erDiagram
 
 ---
 
-#### 2.2 RepoConfig Schema (Planned)
+#### 2.2 RepoConfig Schema
 
-**Status:** 🚧 Planned
+**Status:** ✅ Active
 
-**File:** `docs/requirements/repo_config_schema.md` (to be created)
+**File:** [`docs/requirements/RepoConfig_schema.md`](../requirements/RepoConfig_schema.md)
 
-**Description:** Specification for `.codepipe/config.json` schema, including integration settings (GitHub, Linear, agents), validation policies, and governance metadata.
+**API Reference:** [`docs/ops/api-reference.md`](../ops/api-reference.md)
 
-**Iteration:** I1 (pending creation)
+**Description:** Specification for `.codepipe/config.json` schema, including integration settings (GitHub, Linear, agents), validation policies, and governance metadata. Full field-level documentation with types, defaults, and environment variable overrides.
 
-**ADR References:** ADR-2 (State Persistence), ADR-3 (Adapter Boundary)
+**ADR References:** ADR-2 (State Persistence), ADR-3 (Adapter Boundary), ADR-7 (Validation Policy)
 
 ---
 
@@ -409,7 +409,9 @@ erDiagram
 
 ### 3. Architectural Decision Records (ADRs)
 
-**Status:** 🚧 ADRs referenced but not yet uploaded to repository
+**Existing ADR Files:**
+- [`docs/adr/ADR-6-linear-integration.md`](../adr/ADR-6-linear-integration.md) - Linear integration strategy and adapter design
+- [`docs/adr/ADR-7-validation-policy.md`](../adr/ADR-7-validation-policy.md) - Zod runtime validation policy
 
 **Planned ADR Files:**
 - `docs/adr/ADR-1-agent-execution.md` - Agent execution patterns and task delegation
@@ -418,7 +420,7 @@ erDiagram
 - `docs/adr/ADR-4-context-gathering.md` - Context aggregation strategies
 - `docs/adr/ADR-5-approval-workflows.md` - Human approval gates and validation policies
 
-**Note:** ADR references in diagrams and documentation are accurate but point to files that will be created in future iterations. Current implementation aligns with blueprint sections that define these decisions.
+**Note:** ADR-1 through ADR-5 are referenced in diagrams and documentation but not yet created as standalone files. ADR-6 and ADR-7 are active and accepted.
 
 ---
 
@@ -713,9 +715,12 @@ All architecture artifacts must meet these standards:
 |---------|--------|---------|-----------|--------------|
 | Component Overview | ✅ Active | 1.0.0 | I1 | 2025-12-15 |
 | Run Directory Schema | ✅ Active | 1.0.0 | I1 | 2025-12-15 |
+| Context & Research Sequence | ✅ Active | 1.0.0 | I1 | 2025-12-15 |
+| PR Automation Sequence | ✅ Active | 1.0.0 | I1 | 2025-12-15 |
+| Spec Flow | ✅ Active | 1.0.0 | I1 | 2025-12-15 |
+| Data Model ERD | ✅ Active | 1.0.0 | I1 | 2025-12-15 |
 | Start Command Sequence | 🚧 Planned | - | I2+ | - |
 | Resume Command Sequence | 🚧 Planned | - | I2+ | - |
-| PR Creation Sequence | 🚧 Planned | - | I2+ | - |
 | Deployment Sequence | 🚧 Planned | - | I2+ | - |
 | Rate Limit Handling Sequence | 🚧 Planned | - | I2+ | - |
 
@@ -725,11 +730,11 @@ All architecture artifacts must meet these standards:
 
 | Schema | Status | Version | Last Updated | Implementation Status |
 |--------|--------|---------|--------------|----------------------|
-| Run Directory Schema | ✅ Active | 1.0.0 | 2025-12-15 | ✅ Implemented (I1.T3) |
-| Rate Limit Ledger Schema | ✅ Active | 1.0.0 | 2025-12-15 | ✅ Implemented (I1.T4) |
-| RepoConfig Schema | 🚧 Planned | - | - | 🚧 In Progress (I1.T1) |
-| Plan.json Schema | 🚧 Planned | - | - | 🚧 Future (I2+) |
-| Telemetry Schemas | 🚧 Planned | - | - | 🚧 Future (I2+) |
+| Run Directory Schema | ✅ Active | 1.0.0 | 2025-12-15 | ✅ Implemented |
+| Rate Limit Ledger Schema | ✅ Active | 1.0.0 | 2025-12-15 | ✅ Implemented |
+| RepoConfig Schema | ✅ Active | 1.0.0 | 2026-02-10 | ✅ Implemented (Zod + JSON Schema) |
+| Plan.json Schema | 🚧 Planned | - | - | 🚧 Future |
+| Telemetry Schemas | 🚧 Planned | - | - | 🚧 Future |
 
 ---
 
@@ -737,13 +742,15 @@ All architecture artifacts must meet these standards:
 
 | ADR | Title | Status | Referenced By |
 |-----|-------|--------|---------------|
-| ADR-1 | Agent Execution | 🚧 Pending Upload | Component Overview, Execution Engine, Agent Adapter |
-| ADR-2 | State Persistence | 🚧 Pending Upload | Run Directory Schema, Component Overview, all persistence |
-| ADR-3 | Adapter Boundary | 🚧 Pending Upload | Component Overview, all adapters, HTTP Client |
-| ADR-4 | Context Gathering | 🚧 Pending Upload | Component Overview, Context Aggregator |
-| ADR-5 | Approval Workflows | 🚧 Pending Upload | Component Overview, Resume Coordinator, Deployment Adapter |
+| ADR-1 | Agent Execution | 🚧 Pending | Component Overview, Execution Engine, Agent Adapter |
+| ADR-2 | State Persistence | 🚧 Pending | Run Directory Schema, Component Overview, all persistence |
+| ADR-3 | Adapter Boundary | 🚧 Pending | Component Overview, all adapters, HTTP Client |
+| ADR-4 | Context Gathering | 🚧 Pending | Component Overview, Context Aggregator |
+| ADR-5 | Approval Workflows | 🚧 Pending | Component Overview, Resume Coordinator, Deployment Adapter |
+| ADR-6 | Linear Integration | ✅ Accepted | Linear Adapter, Integration Tests |
+| ADR-7 | Validation Policy | ✅ Accepted | Zod schemas, `src/validation/`, config loading |
 
-**Note:** ADRs are referenced throughout documentation but files are not yet uploaded to repository. Current implementation aligns with blueprint sections that define these architectural decisions.
+**Note:** ADR-1 through ADR-5 are referenced throughout documentation but not yet created as standalone files. ADR-6 and ADR-7 are active.
 
 ---
 
@@ -777,6 +784,7 @@ To update architecture documentation:
 | Version | Date       | Changes                                                       |
 |---------|------------|---------------------------------------------------------------|
 | 1.0.0   | 2025-12-15 | Initial component index for I1 with diagram and schema catalog |
+| 1.0.1   | 2026-02-11 | Add ADR-6/7, update schema/diagram dashboards, fix stale statuses |
 
 ---
 

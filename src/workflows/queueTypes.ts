@@ -205,7 +205,13 @@ export function isQueueOperation(value: unknown): value is QueueOperation {
     return false;
   }
 
-  const obj = value as Record<string, unknown>;
+  const obj = value as {
+    op?: unknown;
+    seq?: unknown;
+    ts?: unknown;
+    taskId?: unknown;
+    checksum?: unknown;
+  };
 
   return (
     typeof obj.op === 'string' &&
@@ -228,7 +234,16 @@ export function isQueueSnapshotV2(value: unknown): value is QueueSnapshotV2 {
     return false;
   }
 
-  const obj = value as Record<string, unknown>;
+  const obj = value as {
+    schemaVersion?: unknown;
+    featureId?: unknown;
+    snapshotSeq?: unknown;
+    tasks?: unknown;
+    counts?: unknown;
+    dependencyGraph?: unknown;
+    timestamp?: unknown;
+    checksum?: unknown;
+  };
 
   return (
     obj.schemaVersion === '2.0.0' &&

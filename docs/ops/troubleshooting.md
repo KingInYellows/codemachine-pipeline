@@ -66,12 +66,14 @@ This guide provides solutions for common issues encountered when operating the A
 
 4. **Force Compaction to Clean WAL**
    ```bash
+   # Note: CODEPIPE_QUEUE_* env var overrides are not yet implemented.
+   # Compaction is triggered automatically by the queue engine.
    export CODEPIPE_QUEUE_FORCE_COMPACT=true
    codepipe resume <feature_id>
    ```
 
 **Prevention:**
-- Enable periodic snapshots: `CODEPIPE_QUEUE_SNAPSHOT_INTERVAL=100`
+- Periodic snapshots are taken automatically by the queue engine (no user config required yet)
 - Monitor disk space before long runs
 - Never manually edit queue files
 
@@ -702,6 +704,7 @@ grep '"level":"error"' .codepipe/runs/<feature_id>/logs/execution.ndjson | \
 
 5. **Force Compaction**
    ```bash
+   # Note: CODEPIPE_QUEUE_* env var overrides are not yet implemented.
    export CODEPIPE_QUEUE_FORCE_COMPACT=true
    codepipe resume <feature_id>
    ```

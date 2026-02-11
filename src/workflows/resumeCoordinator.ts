@@ -747,7 +747,7 @@ export async function validateQueueSnapshot(
     const rawSnapshot = JSON.parse(content) as {
       schemaVersion?: string;
       schema_version?: string;
-      tasks: Record<string, unknown>;
+      tasks: { [taskId: string]: unknown };
       counts?: unknown;
       dependencyGraph?: Record<string, string[]>;
       dependency_graph?: Record<string, string[]>;

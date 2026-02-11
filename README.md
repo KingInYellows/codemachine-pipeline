@@ -15,8 +15,6 @@ Autonomous AI-powered feature development pipeline CLI
 - **Deterministic Builds**: Node v24 LTS, containerized execution
 - **CodeMachine CLI Adapter**: External execution engine integration with retry logic and artifact capture
 
-## Features
-
 ### Queue V2 Optimization
 - **O(1) task operations** (previously O(n²)) with WAL-based persistence
 - **150x-12,500x faster search** via HNSW indexing for large queues
@@ -184,6 +182,9 @@ Initialize the pipeline in the current git repository with schema-validated conf
 
 - `-f, --force`: Force re-initialization even if config already exists
 - `--validate-only`: Validate existing config without creating new files
+- `--dry-run`: Compute config and validation without creating files
+- `-y, --yes`: Skip interactive confirmations
+- `--json`: Output results in JSON format
 
 **Examples:**
 
@@ -196,6 +197,9 @@ codepipe init --force
 
 # Validate existing configuration
 codepipe init --validate-only
+
+# Dry-run with JSON output
+codepipe init --dry-run --json
 ```
 
 **Exit Codes:**
@@ -215,6 +219,8 @@ Start a new feature development pipeline from a prompt, Linear issue, or specifi
 - `-s, --spec <path>`: Path to existing specification file
 - `--json`: Output results in JSON format
 - `--dry-run`: Simulate execution without making changes
+- `--max-parallel <n>`: Maximum parallel tasks during execution (1-10, default: 1)
+- `--skip-execution`: Stop after PRD generation (skip task execution phase)
 
 **Examples:**
 
@@ -392,6 +398,7 @@ Resume a failed or paused feature pipeline execution with safety checks.
 - `--force`: Override blockers (use with caution)
 - `--skip-hash-verification`: Skip artifact integrity checks (dangerous)
 - `--validate-queue`: Validate queue files before resuming (default: true)
+- `--max-parallel <n>`: Maximum parallel tasks during execution (1-10, default: 1)
 - `--json`: Output results in JSON format
 - `-v, --verbose`: Show detailed diagnostics
 
@@ -490,6 +497,25 @@ codepipe rate-limits --json
 
 ---
 
+### `codepipe health`
+
+Quick runtime health check (config, disk, writable run dir).
+
+**Options:**
+
+- `--json`: Output results in JSON format
+
+---
+
+### Context Commands
+
+- `codepipe context summarize`: Generate or refresh cached context summaries
+
+### Research Commands
+
+- `codepipe research create`: Create a ResearchTask manually
+- `codepipe research list`: List ResearchTasks for a feature run
+
 ### PR Commands
 
 Manage pull requests for completed features:
@@ -498,6 +524,8 @@ Manage pull requests for completed features:
 - `codepipe pr status`: Show PR status and check results
 - `codepipe pr reviewers`: Manage PR reviewer assignments
 - `codepipe pr disable-auto-merge`: Disable auto-merge on a pull request
+
+For full command details, flags, and examples, see the [CLI Reference](docs/ops/cli-reference.md).
 
 ### Planned Commands
 
@@ -583,7 +611,7 @@ npx husky init
 echo "npm run lint" > .husky/pre-commit
 
 # Add pre-push hook for tests
-echo "npm run test -- --runInBand" > .husky/pre-push
+echo "npm test" > .husky/pre-push
 ```
 
 **Manual Git Hook Setup:**
@@ -599,7 +627,7 @@ Create `.git/hooks/pre-push` with:
 
 ```bash
 #!/bin/sh
-npm run test -- --runInBand
+npm test
 ```
 
 Make them executable:
@@ -634,13 +662,17 @@ codemachine-pipeline/
 │   │   ├── commands/      # oclif command implementations
 │   │   │   ├── init.ts       # Repository initialization
 │   │   │   ├── start.ts      # Start feature pipeline
-│   │   │   ├── status.ts     # Show pipeline status
+│   │   │   ├── status/       # Show pipeline status
 │   │   │   ├── doctor.ts     # Environment diagnostics
+│   │   │   ├── health.ts     # Quick runtime health check
 │   │   │   ├── approve.ts    # Approval gate management
 │   │   │   ├── plan.ts       # Execution plan display
 │   │   │   ├── resume.ts     # Pipeline resumption
 │   │   │   ├── validate.ts   # Validation commands
-│   │   │   └── rate-limits.ts # Rate limit monitoring
+│   │   │   ├── rate-limits.ts # Rate limit monitoring
+│   │   │   ├── context/      # Context summarization commands
+│   │   │   ├── research/     # Research task commands
+│   │   │   └── pr/           # Pull request commands
 │   │   ├── utils/         # CLI utilities
 │   │   └── index.ts       # CLI bootstrap + version banner
 │   ├── core/
@@ -872,15 +904,15 @@ MIT
 
 ## Contributing
 
-Contributions are welcome! Please open an issue or submit a pull request.
+Contributions are welcome! See [CONTRIBUTING.md](CONTRIBUTING.md) for prerequisites, workflow, and coding guidelines.
 
 ## Support
 
 For issues and questions:
 
 - GitHub Issues: https://github.com/KingInYellows/codemachine-pipeline/issues
-- Documentation: See `specification.md` for detailed requirements
+- Documentation: [docs/README.md](docs/README.md)
 
 ---
 
-**Note**: This project implements the core pipeline commands (`init`, `start`, `status`, `doctor`, `approve`, `plan`, `resume`, `validate`, `rate-limits`, `pr create`, `pr status`, `pr reviewers`, `pr disable-auto-merge`). The `deploy` and `export` commands are planned for future releases. See `specification.md` for the complete roadmap and [docs/README.md](docs/README.md) for detailed documentation.
+**Note**: This project implements the core pipeline commands (`init`, `start`, `status`, `doctor`, `health`, `approve`, `plan`, `resume`, `validate`, `rate-limits`, `context summarize`, `research create`, `research list`, `pr create`, `pr status`, `pr reviewers`, `pr disable-auto-merge`). The `deploy` and `export` commands are planned for future releases. See [docs/README.md](docs/README.md) for detailed documentation.

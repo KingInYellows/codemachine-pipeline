@@ -359,11 +359,14 @@ function sortKeys(obj: unknown): unknown {
     return obj.map(sortKeys);
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-restricted-types -- intentional: sortKeys processes arbitrary object shapes
+  const record = obj as Record<string, unknown>;
+  // eslint-disable-next-line @typescript-eslint/no-restricted-types -- intentional: accumulates sorted keys from arbitrary input
   const sorted: Record<string, unknown> = {};
-  const keys = Object.keys(obj as Record<string, unknown>).sort();
+  const keys = Object.keys(record).sort();
 
   for (const key of keys) {
-    sorted[key] = sortKeys((obj as Record<string, unknown>)[key]);
+    sorted[key] = sortKeys(record[key]);
   }
 
   return sorted;
@@ -409,12 +412,12 @@ export async function hasValidationsPassed(runDir: string): Promise<boolean> {
  * @returns true if branch exists
  */
 export async function isBranchLocal(branchName: string): Promise<boolean> {
-  const { exec } = await import('node:child_process');
+  const { execFile } = await import('node:child_process');
   const { promisify } = await import('node:util');
-  const execAsync = promisify(exec);
+  const execFileAsync = promisify(execFile);
 
   try {
-    await execAsync(`git rev-parse --verify ${branchName}`, { cwd: process.cwd() });
+    await execFileAsync('git', ['rev-parse', '--verify', branchName], { cwd: process.cwd() });
     return true;
   } catch {
     return false;

@@ -169,7 +169,7 @@ export async function executeManualMerge(
       base_sha: pr.base_sha,
       merge_sha: result.sha,
       blockers: [],
-      github_response: result as unknown as Record<string, unknown>,
+      github_response: { ...result },
       metadata: buildMetadata(context, readiness),
     };
   } catch (error) {

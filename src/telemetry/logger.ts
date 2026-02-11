@@ -218,6 +218,7 @@ export class RedactionEngine {
     }
 
     if (obj && typeof obj === 'object') {
+      // eslint-disable-next-line @typescript-eslint/no-restricted-types -- intentional: redaction output preserves arbitrary input keys
       const redacted: Record<string, unknown> = {};
 
       for (const [key, value] of Object.entries(obj)) {
