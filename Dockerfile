@@ -11,6 +11,7 @@ COPY package*.json ./
 
 # Copy source code BEFORE installing (to avoid prepare script running without source)
 COPY tsconfig.json ./
+COPY .npmrc ./
 COPY src ./src
 COPY scripts ./scripts
 
@@ -26,6 +27,7 @@ WORKDIR /app
 
 # Copy package files
 COPY package*.json ./
+COPY .npmrc ./
 
 # Install production dependencies only (skip prepare script)
 RUN npm ci --omit=dev --ignore-scripts
@@ -53,4 +55,4 @@ CMD ["--help"]
 LABEL maintainer="CodeMachine Team"
 LABEL description="Autonomous AI-powered feature development pipeline CLI"
 LABEL version="1.0.0"
-LABEL org.opencontainers.image.source="https://github.com/codemachine/codemachine-pipeline"
+LABEL org.opencontainers.image.source="https://github.com/KingInYellows/codemachine-pipeline"
