@@ -65,17 +65,6 @@ function groupCommands(cmds) {
 // 3. Markdown rendering helpers
 // ---------------------------------------------------------------------------
 
-/** Resolve oclif example template syntax to readable form. */
-function resolveExample(example) {
-  return example
-    .replace(/<%= config\.bin %>/g, BIN_NAME)
-    .replace(/<%= command\.id %>/g, (_, offset, str) => {
-      // command.id is resolved per-command, but we don't have context here.
-      // The caller passes the command id.
-      return '__CMD_ID__';
-    });
-}
-
 function resolveExampleForCommand(example, cmd) {
   const displayId = cmd.id.replace(/:/g, ' ');
   return example
@@ -131,7 +120,7 @@ function renderCommandSection(cmd) {
   const displayId = cmd.id.replace(/:/g, ' ');
   const lines = [];
 
-  lines.push(`### ${BIN_NAME} ${displayId}`);
+  lines.push(`#### ${BIN_NAME} ${displayId}`);
   lines.push('');
 
   // Description
@@ -147,7 +136,7 @@ function renderCommandSection(cmd) {
   const argNames = Object.values(cmd.args || {})
     .map((a) => (a.required ? a.name.toUpperCase() : `[${a.name.toUpperCase()}]`))
     .join(' ');
-  lines.push('#### Synopsis');
+  lines.push('##### Synopsis');
   lines.push('');
   lines.push('```bash');
   lines.push(`${BIN_NAME} ${displayId}${argNames ? ' ' + argNames : ''} [FLAGS]`);
@@ -156,7 +145,7 @@ function renderCommandSection(cmd) {
 
   // Arguments
   if (cmd.args && Object.keys(cmd.args).length > 0) {
-    lines.push('#### Arguments');
+    lines.push('##### Arguments');
     lines.push('');
     lines.push(renderArgsTable(cmd.args));
     lines.push('');
@@ -164,7 +153,7 @@ function renderCommandSection(cmd) {
 
   // Flags
   if (cmd.flags && Object.keys(cmd.flags).length > 0) {
-    lines.push('#### Options');
+    lines.push('##### Options');
     lines.push('');
     lines.push(renderFlagsTable(cmd.flags));
     lines.push('');
@@ -172,7 +161,7 @@ function renderCommandSection(cmd) {
 
   // Examples
   if (cmd.examples && cmd.examples.length > 0) {
-    lines.push('#### Examples');
+    lines.push('##### Examples');
     lines.push('');
     lines.push('```bash');
     for (const ex of cmd.examples) {
@@ -244,10 +233,8 @@ function generateDocument() {
   for (const [topic, cmds] of groups) {
     const label = topicLabels[topic] || `${topic.charAt(0).toUpperCase() + topic.slice(1)} Commands`;
 
-    if (topic !== '_top') {
-      lines.push(`## ${label}`);
-      lines.push('');
-    }
+    lines.push(`### ${label}`);
+    lines.push('');
 
     for (const cmd of cmds) {
       lines.push(renderCommandSection(cmd));

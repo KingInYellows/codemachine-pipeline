@@ -42,23 +42,25 @@ The `codepipe` CLI is the primary interface for managing feature development pip
 
 ## Commands
 
-### codepipe approve
+### Core Commands
+
+#### codepipe approve
 
 Approve or deny a feature pipeline gate
 
-#### Synopsis
+##### Synopsis
 
 ```bash
 codepipe approve GATE [FLAGS]
 ```
 
-#### Arguments
+##### Arguments
 
 | Argument | Description | Required | Options |
 |----------|-------------|----------|---------|
 | `gate` | Approval gate type (prd, spec, plan, code, pr, deploy) | Yes | `prd`, `spec`, `plan`, `code`, `pr`, `deploy` |
 
-#### Options
+##### Options
 
 | Option | Short | Type | Description | Default |
 |--------|-------|------|-------------|---------|
@@ -71,7 +73,7 @@ codepipe approve GATE [FLAGS]
 | `--signer-name` |  | string | Signer display name |  |
 | `--skip-hash-check` |  | boolean | Skip artifact hash validation (use with caution) |  |
 
-#### Examples
+##### Examples
 
 ```bash
 codepipe approve prd --approve --signer "user@example.com"
@@ -82,24 +84,24 @@ codepipe approve prd --approve --signer "user@example.com" --json
 
 ---
 
-### codepipe doctor
+#### codepipe doctor
 
 Run environment diagnostics and readiness checks
 
-#### Synopsis
+##### Synopsis
 
 ```bash
 codepipe doctor [FLAGS]
 ```
 
-#### Options
+##### Options
 
 | Option | Short | Type | Description | Default |
 |--------|-------|------|-------------|---------|
 | `--json` |  | boolean | Output results in JSON format |  |
 | `--verbose` | `-v` | boolean | Show detailed diagnostic information |  |
 
-#### Examples
+##### Examples
 
 ```bash
 codepipe doctor
@@ -109,23 +111,23 @@ codepipe doctor --verbose
 
 ---
 
-### codepipe health
+#### codepipe health
 
 Quick runtime health check (config, disk, writable run dir)
 
-#### Synopsis
+##### Synopsis
 
 ```bash
 codepipe health [FLAGS]
 ```
 
-#### Options
+##### Options
 
 | Option | Short | Type | Description | Default |
 |--------|-------|------|-------------|---------|
 | `--json` |  | boolean | Output results in JSON format |  |
 
-#### Examples
+##### Examples
 
 ```bash
 codepipe health
@@ -134,17 +136,17 @@ codepipe health --json
 
 ---
 
-### codepipe init
+#### codepipe init
 
 Initialize codemachine-pipeline with schema-validated configuration
 
-#### Synopsis
+##### Synopsis
 
 ```bash
 codepipe init [FLAGS]
 ```
 
-#### Options
+##### Options
 
 | Option | Short | Type | Description | Default |
 |--------|-------|------|-------------|---------|
@@ -154,7 +156,7 @@ codepipe init [FLAGS]
 | `--validate-only` |  | boolean | Only validate existing config without creating new files |  |
 | `--yes` | `-y` | boolean | Skip interactive confirmations (assume yes) |  |
 
-#### Examples
+##### Examples
 
 ```bash
 codepipe init
@@ -166,17 +168,17 @@ codepipe init --yes
 
 ---
 
-### codepipe plan
+#### codepipe plan
 
 Display the execution plan DAG, task summaries, and dependency graph
 
-#### Synopsis
+##### Synopsis
 
 ```bash
 codepipe plan [FLAGS]
 ```
 
-#### Options
+##### Options
 
 | Option | Short | Type | Description | Default |
 |--------|-------|------|-------------|---------|
@@ -185,7 +187,7 @@ codepipe plan [FLAGS]
 | `--show-diff` |  | boolean | Compare plan against spec hash to detect changes |  |
 | `--verbose` | `-v` | boolean | Show detailed task breakdown and dependency chains |  |
 
-#### Examples
+##### Examples
 
 ```bash
 codepipe plan
@@ -197,17 +199,17 @@ codepipe plan --verbose
 
 ---
 
-### codepipe rate-limits
+#### codepipe rate-limits
 
 Display rate limit status and telemetry for API providers
 
-#### Synopsis
+##### Synopsis
 
 ```bash
 codepipe rate-limits [FLAGS]
 ```
 
-#### Options
+##### Options
 
 | Option | Short | Type | Description | Default |
 |--------|-------|------|-------------|---------|
@@ -217,7 +219,7 @@ codepipe rate-limits [FLAGS]
 | `--provider` | `-p` | string | Filter output to specific provider (github, linear, etc.) |  |
 | `--verbose` | `-v` | boolean | Show detailed rate limit history and diagnostics |  |
 
-#### Examples
+##### Examples
 
 ```bash
 codepipe rate-limits
@@ -229,17 +231,17 @@ codepipe rate-limits --clear github --feature feature-auth-123
 
 ---
 
-### codepipe resume
+#### codepipe resume
 
 Resume a failed or paused feature pipeline execution with safety checks
 
-#### Synopsis
+##### Synopsis
 
 ```bash
 codepipe resume [FLAGS]
 ```
 
-#### Options
+##### Options
 
 | Option | Short | Type | Description | Default |
 |--------|-------|------|-------------|---------|
@@ -252,7 +254,7 @@ codepipe resume [FLAGS]
 | `--validate-queue` |  | boolean | Validate queue files before resuming |  |
 | `--verbose` | `-v` | boolean | Show detailed diagnostics |  |
 
-#### Examples
+##### Examples
 
 ```bash
 codepipe resume
@@ -264,17 +266,17 @@ codepipe resume --validate-queue
 
 ---
 
-### codepipe start
+#### codepipe start
 
 Start a new feature development pipeline
 
-#### Synopsis
+##### Synopsis
 
 ```bash
 codepipe start [FLAGS]
 ```
 
-#### Options
+##### Options
 
 | Option | Short | Type | Description | Default |
 |--------|-------|------|-------------|---------|
@@ -286,7 +288,7 @@ codepipe start [FLAGS]
 | `--skip-execution` |  | boolean | Skip task execution phase (stop after PRD) |  |
 | `--spec` | `-s` | string | Path to existing specification file |  |
 
-#### Examples
+##### Examples
 
 ```bash
 codepipe start --prompt "Add user authentication"
@@ -297,17 +299,17 @@ codepipe start --prompt "OAuth integration" --json
 
 ---
 
-### codepipe status
+#### codepipe status
 
 Show the current state of a feature development pipeline
 
-#### Synopsis
+##### Synopsis
 
 ```bash
 codepipe status [FLAGS]
 ```
 
-#### Options
+##### Options
 
 | Option | Short | Type | Description | Default |
 |--------|-------|------|-------------|---------|
@@ -316,7 +318,7 @@ codepipe status [FLAGS]
 | `--show-costs` |  | boolean | Include token usage and cost estimates |  |
 | `--verbose` | `-v` | boolean | Show detailed execution logs and task breakdown |  |
 
-#### Examples
+##### Examples
 
 ```bash
 codepipe status
@@ -327,17 +329,17 @@ codepipe status --verbose
 
 ---
 
-### codepipe validate
+#### codepipe validate
 
 Execute validation commands (lint, test, typecheck, build) with auto-fix retry loops
 
-#### Synopsis
+##### Synopsis
 
 ```bash
 codepipe validate [FLAGS]
 ```
 
-#### Options
+##### Options
 
 | Option | Short | Type | Description | Default |
 |--------|-------|------|-------------|---------|
@@ -350,7 +352,7 @@ codepipe validate [FLAGS]
 | `--timeout` |  | string | Override command timeout in seconds |  |
 | `--verbose` | `-v` | boolean | Show detailed execution logs |  |
 
-#### Examples
+##### Examples
 
 ```bash
 codepipe validate
@@ -363,19 +365,19 @@ codepipe validate --max-retries 5
 
 ---
 
-## Context Commands
+### Context Commands
 
-### codepipe context summarize
+#### codepipe context summarize
 
 Generate or refresh cached context summaries
 
-#### Synopsis
+##### Synopsis
 
 ```bash
 codepipe context summarize [FLAGS]
 ```
 
-#### Options
+##### Options
 
 | Option | Short | Type | Description | Default |
 |--------|-------|------|-------------|---------|
@@ -386,7 +388,7 @@ codepipe context summarize [FLAGS]
 | `--max-chunk-tokens` |  | string | Override maximum tokens per chunk (default 4000) |  |
 | `--path` | `-p` | string | Glob pattern of files to re-summarize (repeatable) |  |
 
-#### Examples
+##### Examples
 
 ```bash
 codepipe context summarize
@@ -397,19 +399,19 @@ codepipe context summarize --force --max-chunk-tokens 2000
 
 ---
 
-## Pull Request Commands
+### Pull Request Commands
 
-### codepipe pr create
+#### codepipe pr create
 
 Create a pull request on GitHub for the feature branch
 
-#### Synopsis
+##### Synopsis
 
 ```bash
 codepipe pr create [FLAGS]
 ```
 
-#### Options
+##### Options
 
 | Option | Short | Type | Description | Default |
 |--------|-------|------|-------------|---------|
@@ -421,7 +423,7 @@ codepipe pr create [FLAGS]
 | `--reviewers` | `-r` | string | Comma-separated list of reviewer usernames |  |
 | `--title` | `-t` | string | PR title (defaults to feature title) |  |
 
-#### Examples
+##### Examples
 
 ```bash
 codepipe pr create
@@ -433,17 +435,17 @@ codepipe pr create --json
 
 ---
 
-### codepipe pr disable-auto-merge
+#### codepipe pr disable-auto-merge
 
 Disable auto-merge for a pull request
 
-#### Synopsis
+##### Synopsis
 
 ```bash
 codepipe pr disable-auto-merge [FLAGS]
 ```
 
-#### Options
+##### Options
 
 | Option | Short | Type | Description | Default |
 |--------|-------|------|-------------|---------|
@@ -451,7 +453,7 @@ codepipe pr disable-auto-merge [FLAGS]
 | `--json` |  | boolean | Output results in JSON format |  |
 | `--reason` | `-r` | string | Reason for disabling auto-merge (logged to deployment.json) |  |
 
-#### Examples
+##### Examples
 
 ```bash
 codepipe pr disable-auto-merge
@@ -462,17 +464,17 @@ codepipe pr disable-auto-merge --json
 
 ---
 
-### codepipe pr reviewers
+#### codepipe pr reviewers
 
 Request reviewers for a pull request
 
-#### Synopsis
+##### Synopsis
 
 ```bash
 codepipe pr reviewers [FLAGS]
 ```
 
-#### Options
+##### Options
 
 | Option | Short | Type | Description | Default |
 |--------|-------|------|-------------|---------|
@@ -480,7 +482,7 @@ codepipe pr reviewers [FLAGS]
 | `--feature` | `-f` | string | Feature ID (defaults to current/latest) |  |
 | `--json` |  | boolean | Output results in JSON format |  |
 
-#### Examples
+##### Examples
 
 ```bash
 codepipe pr reviewers --add user1,user2
@@ -490,17 +492,17 @@ codepipe pr reviewers --json
 
 ---
 
-### codepipe pr status
+#### codepipe pr status
 
 Show pull request status and merge readiness
 
-#### Synopsis
+##### Synopsis
 
 ```bash
 codepipe pr status [FLAGS]
 ```
 
-#### Options
+##### Options
 
 | Option | Short | Type | Description | Default |
 |--------|-------|------|-------------|---------|
@@ -508,7 +510,7 @@ codepipe pr status [FLAGS]
 | `--feature` | `-f` | string | Feature ID (defaults to current/latest) |  |
 | `--json` |  | boolean | Output results in JSON format |  |
 
-#### Examples
+##### Examples
 
 ```bash
 codepipe pr status
@@ -519,19 +521,19 @@ codepipe pr status --json
 
 ---
 
-## Research Commands
+### Research Commands
 
-### codepipe research create
+#### codepipe research create
 
 Create a ResearchTask manually via the CLI
 
-#### Synopsis
+##### Synopsis
 
 ```bash
 codepipe research create [FLAGS]
 ```
 
-#### Options
+##### Options
 
 | Option | Short | Type | Description | Default |
 |--------|-------|------|-------------|---------|
@@ -543,7 +545,7 @@ codepipe research create [FLAGS]
 | `--source` | `-s` | string | Source to consult formatted as type:identifier or type:identifier|description |  |
 | `--title` | `-t` | string | Research task title **(required)** |  |
 
-#### Examples
+##### Examples
 
 ```bash
 codepipe research create --title "Clarify rate limits" --objective "What are the GitHub API quotas?"
@@ -552,17 +554,17 @@ codepipe research create -f feat-123 --title "Investigate auth flow" --objective
 
 ---
 
-### codepipe research list
+#### codepipe research list
 
 List ResearchTasks for the selected feature run directory
 
-#### Synopsis
+##### Synopsis
 
 ```bash
 codepipe research list [FLAGS]
 ```
 
-#### Options
+##### Options
 
 | Option | Short | Type | Description | Default |
 |--------|-------|------|-------------|---------|
@@ -572,7 +574,7 @@ codepipe research list [FLAGS]
 | `--stale` |  | boolean | Show only tasks whose cached results are stale |  |
 | `--status` | `-s` | string | Filter by task status (repeatable) |  |
 
-#### Examples
+##### Examples
 
 ```bash
 codepipe research list
