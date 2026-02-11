@@ -148,10 +148,7 @@ export async function loadDeploymentContext(
   const deployApprovalGranted =
     !deployApprovalRequired || manifest.approvals.completed.includes('deploy');
 
-  logger.debug(
-    'Deployment configuration loaded',
-    deploymentConfig as unknown as Record<string, unknown>
-  );
+  logger.debug('Deployment configuration loaded', { ...deploymentConfig });
 
   const approvalsState: ApprovalState = {
     pending: manifest.approvals.pending,

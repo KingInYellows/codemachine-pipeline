@@ -144,7 +144,7 @@ function isLockFilePayload(value: unknown): value is LockFile {
     return false;
   }
 
-  const candidate = value as Record<string, unknown>;
+  const candidate = value as { pid?: unknown; hostname?: unknown; acquired_at?: unknown };
   return (
     typeof candidate.pid === 'number' &&
     typeof candidate.hostname === 'string' &&

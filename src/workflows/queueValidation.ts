@@ -83,11 +83,11 @@ export async function validateQueue(runDir: string): Promise<QueueValidationResu
         const parseResult = parseExecutionTask(parsed);
         const parsedRecord =
           typeof parsed === 'object' && parsed !== null
-            ? (parsed as Record<string, unknown>)
+            ? (parsed as { task_id?: unknown })
             : null;
         const parsedTaskId =
-          parsedRecord && typeof parsedRecord['task_id'] === 'string'
-            ? parsedRecord['task_id']
+          parsedRecord && typeof parsedRecord.task_id === 'string'
+            ? parsedRecord.task_id
             : `line_${lineNumber}`;
 
         if (!parseResult.success) {

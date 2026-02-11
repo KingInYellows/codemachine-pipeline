@@ -218,7 +218,7 @@ export class RedactionEngine {
     }
 
     if (obj && typeof obj === 'object') {
-      const redacted: Record<string, unknown> = {};
+      const redacted: { [key: string]: unknown } = {};
 
       for (const [key, value] of Object.entries(obj)) {
         // Redact common secret field names

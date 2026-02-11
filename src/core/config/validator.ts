@@ -388,7 +388,7 @@ export function checkSchemaCompatibility(
 
   // Check for deprecated fields and provide specific migration paths
   // Use rawConfig if provided to detect explicitly set fields (avoids false positives from defaults)
-  const raw = rawConfig as Record<string, unknown> | undefined;
+  const raw = rawConfig as { safety?: unknown; governance_notes?: unknown } | undefined;
 
   // Deprecated: governance_notes at root level
   if (config.governance_notes && !config.governance?.governance_notes) {
@@ -397,7 +397,7 @@ export function checkSchemaCompatibility(
 
   // Check safety.* fields only if we have raw config to detect explicit settings
   if (raw?.safety && typeof raw.safety === 'object') {
-    const rawSafety = raw.safety as Record<string, unknown>;
+    const rawSafety = raw.safety as { [key: string]: unknown };
 
     // Deprecated: safety.require_approval_for_prd → governance.approval_workflow
     if ('require_approval_for_prd' in rawSafety) {
