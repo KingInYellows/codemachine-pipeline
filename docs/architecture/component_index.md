@@ -61,37 +61,277 @@ The Component Index serves as:
 
 **Description:** Mermaid diagram visualizing the `.codepipe/runs/<feature_id>/` directory structure, including manifest files, artifacts, queue, logs, telemetry, approvals, SQLite indexes, and context caches.
 
-**Format:** Mermaid (`.mmd`)
+**Format:** Mermaid (`.mmd`) | **Status:** ✅ Active (v1.0.0) | **ADR:** ADR-2
 
-**Status:** ✅ Active (v1.0.0)
+<details>
+<summary>Run Directory Schema (click to expand)</summary>
 
-**Last Updated:** 2025-12-15
+```mermaid
+graph TB
+    subgraph RunDirectory[".codepipe/runs/feature_id/"]
+        direction TB
+        Manifest["manifest.json"]
+        HashManifest["hash_manifest.json"]
+        Lock["run.lock"]
 
-**Iteration:** I1 (Iteration 1 - Foundation)
+        subgraph Artifacts["artifacts/"]
+            PRD["prd.md"]
+            Spec["spec.md"]
+            Plan["plan.json"]
+        end
 
-**Covers:**
-- Core files (manifest.json, hash_manifest.json, run.lock)
-- Subdirectories (artifacts/, queue/, logs/, telemetry/, approvals/, sqlite/, context/)
-- State machine transitions (pending → in_progress → completed/paused/failed)
+        subgraph Queue["queue/"]
+            QP["pending/*.json"]
+            QR["running/*.json"]
+            QC["completed/*.json"]
+            QF["failed/*.json"]
+        end
 
-**ADR References:** ADR-2 (State Persistence)
+        subgraph Logs["logs/"]
+            StdOut["stdout.log"]
+            StdErr["stderr.log"]
+            Events["events.ndjson"]
+        end
 
-**Rendering Instructions:** See [How to Render Diagrams](#how-to-render-diagrams) below.
+        subgraph Telemetry["telemetry/"]
+            Metrics["metrics.json"]
+            Traces["traces.json"]
+            Costs["costs.json"]
+            RateLimits["rate_limits.json"]
+        end
+
+        subgraph ApprovalsDir["approvals/"]
+            ApprovalsFile["approvals.json"]
+            Signatures["signatures/*.json"]
+        end
+    end
+
+    Manifest -->|references| Artifacts
+    Manifest -->|references| Queue
+    Manifest -->|references| Telemetry
+    Lock -.->|guards| Manifest
+
+    subgraph StateMachine["State Transitions"]
+        direction LR
+        Pending[pending] -->|start| InProgress[in_progress]
+        InProgress -->|pause| Paused[paused]
+        InProgress -->|complete| Completed[completed]
+        InProgress -->|error| Failed[failed]
+        Paused -->|resume| InProgress
+        Failed -->|retry| InProgress
+    end
+```
+
+</details>
 
 ---
 
-#### 1.3 Sequence Diagrams (Planned - I2+)
+#### 1.3 Sequence Diagrams
 
-**Status:** 🚧 Planned
+**Status:** ✅ Active
 
-**Planned Diagrams:**
-- `cli_start_sequence.puml` - Start command flow (init → context → PRD → spec → plan → execute)
-- `cli_resume_sequence.puml` - Resume command flow (load state → validate → resume execution)
-- `pr_creation_sequence.puml` - PR automation flow (validation → branch → PR → reviewers → auto-merge)
-- `deployment_sequence.puml` - Deployment trigger flow (status checks → merge → workflow dispatch)
-- `rate_limit_handling_sequence.puml` - Rate limit detection and cooldown workflow
+##### Context & Research Sequence
 
-**Iteration:** I2+ (Future iterations)
+> From [`docs/diagrams/context_research_sequence.mmd`](../diagrams/context_research_sequence.mmd).
+
+<details>
+<summary>Context & Research Sequence (click to expand)</summary>
+
+```mermaid
+sequenceDiagram
+    participant CLI as CLI Command
+    participant Orch as Orchestration Core
+    participant CtxAgg as Context Aggregator
+    participant ResCo as Research Coordinator
+    participant PRDEng as PRD Engine
+    participant SpecComp as Specification Composer
+    participant RunStore as Run Storage
+    participant Agent as Agent Adapter
+
+    Note over CLI,Agent: Phase 1: Context Gathering
+
+    CLI->>Orch: start feature
+    activate Orch
+    Orch->>CtxAgg: aggregateContext(featureId, config)
+    activate CtxAgg
+    CtxAgg->>RunStore: Store file_hashes.json
+    CtxAgg->>RunStore: Store context/summary.json
+    CtxAgg-->>Orch: ContextDocument
+    deactivate CtxAgg
+
+    Note over CLI,Agent: Phase 2: Research Detection
+
+    Orch->>ResCo: detectUnknownsFromContext(contextDoc)
+    activate ResCo
+    loop For each unknown
+        alt Cached and fresh
+            ResCo->>RunStore: Load cached task
+        else New task
+            ResCo->>RunStore: Save research/tasks/{taskId}.json
+        end
+    end
+    ResCo-->>Orch: ResearchTask[]
+    deactivate ResCo
+
+    Note over CLI,Agent: Phase 3: Research Execution
+
+    opt Execute research tasks
+        loop For each pending task
+            Orch->>Agent: Query sources
+            Agent-->>Orch: Research findings
+            Orch->>ResCo: completeTask(taskId, results)
+        end
+    end
+
+    Note over CLI,Agent: Phase 4: PRD/Spec Authoring
+
+    Orch->>PRDEng: generatePRD(contextDoc, researchTasks)
+    PRDEng->>Agent: Generate PRD draft
+    Agent-->>PRDEng: PRD content
+    PRDEng->>RunStore: Save artifacts/prd.md
+    Orch->>SpecComp: generateSpec(prd, contextDoc)
+    SpecComp->>Agent: Generate specification
+    Agent-->>SpecComp: Spec content
+    SpecComp->>RunStore: Save artifacts/spec.md
+    Orch-->>CLI: Feature initialized
+    deactivate Orch
+```
+
+</details>
+
+##### PR Automation Sequence
+
+> From [`docs/diagrams/pr_automation_sequence.mmd`](../diagrams/pr_automation_sequence.mmd).
+
+<details>
+<summary>PR Automation Sequence (click to expand)</summary>
+
+```mermaid
+sequenceDiagram
+    participant CLI as CLI Orchestrator
+    participant PRCtx as PR Context
+    participant GH as GitHub Adapter
+    participant WQ as Write Action Queue
+    participant API as GitHub API
+    participant Man as Manifest
+
+    Note over CLI,Man: PR Creation Flow
+
+    CLI->>PRCtx: Load PR context
+    PRCtx->>Man: Read manifest.json + check approvals
+    PRCtx->>CLI: Context loaded
+
+    CLI->>GH: createPullRequest(params)
+    GH->>API: POST /repos/{owner}/{repo}/pulls
+    API-->>GH: PR created
+    GH-->>CLI: PR metadata
+
+    alt Reviewers requested
+        CLI->>WQ: Queue reviewer request
+        WQ->>GH: requestReviewers(params)
+        GH->>API: POST /pulls/{number}/requested_reviewers
+        API-->>GH: Reviewers requested
+    end
+
+    CLI->>Man: Persist pr.json
+    CLI-->>CLI: Output PR URL
+
+    Note over CLI,Man: PR Status Check Flow
+
+    CLI->>GH: getPullRequest(pr_number)
+    GH->>API: GET /pulls/{number}
+    API-->>GH: PR details
+    CLI->>GH: getStatusChecks(head_sha)
+    GH->>API: GET /commits/{sha}/check-suites
+    API-->>GH: Status checks
+    CLI->>GH: isPullRequestReadyToMerge(pr_number)
+    GH-->>CLI: {ready, reasons[]}
+```
+
+</details>
+
+##### Data Model ERD
+
+> From [`docs/diagrams/data_model.mmd`](../diagrams/data_model.mmd).
+
+<details>
+<summary>Data Model ERD (click to expand)</summary>
+
+```mermaid
+erDiagram
+    RepoConfig ||--o{ Feature : "configures"
+    Feature ||--|| RunArtifact : "produces"
+    Feature ||--|| PlanArtifact : "executes"
+    Feature ||--o{ ResearchTask : "spawns"
+    Feature ||--o{ Specification : "defines"
+    Feature ||--o{ ExecutionTask : "contains"
+    Feature ||--o{ ApprovalRecord : "requires"
+    Feature ||--o{ DeploymentRecord : "deploys"
+    Feature ||--|| ContextDocument : "uses"
+
+    PlanArtifact ||--o{ ExecutionTask : "schedules"
+    ExecutionTask }o--o{ ExecutionTask : "depends_on"
+    Specification ||--o{ TestPlanItem : "includes"
+
+    Feature ||--o{ RateLimitEnvelope : "tracks_limits"
+    RepoConfig ||--o{ IntegrationCredential : "authenticates"
+    RepoConfig ||--o{ AgentProviderCapability : "provisions"
+
+    RepoConfig {
+        string schema_version
+        string project_id
+        object github
+        object linear
+        object runtime
+        object safety
+        object feature_flags
+        object governance
+    }
+
+    Feature {
+        string feature_id PK
+        string title
+        enum status
+        object execution
+        object approvals
+        object telemetry
+    }
+
+    ExecutionTask {
+        string task_id PK
+        string feature_id FK
+        enum task_type
+        enum status
+        string assigned_agent
+        array dependency_ids
+    }
+
+    ResearchTask {
+        string task_id PK
+        string feature_id FK
+        array objectives
+        enum status
+        object results
+    }
+
+    ApprovalRecord {
+        string approval_id PK
+        enum gate_type
+        enum verdict
+        string signer
+        string artifact_hash
+    }
+```
+
+</details>
+
+#### 1.4 Component Overview (PlantUML)
+
+**File:** [`docs/diagrams/component_overview.puml`](../diagrams/component_overview.puml)
+
+**Render online:** [PlantUML Server](http://www.plantuml.com/plantuml/uml/) (paste file contents)
+
+**Note:** This diagram uses PlantUML's layered package syntax which cannot be represented in Mermaid. View the source file or render online.
 
 ---
 

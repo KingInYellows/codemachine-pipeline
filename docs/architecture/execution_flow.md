@@ -188,9 +188,140 @@ All log output passes through ResultNormalizer which redacts:
 
 ## Diagrams
 
-### Execution Flow Sequence
+### Execution Engine State Machine
 
-**File:** `docs/diagrams/execution_flow.puml`
+> Converted from [`docs/diagrams/execution_flow.puml`](../diagrams/execution_flow.puml).
+
+```mermaid
+stateDiagram-v2
+    [*] --> Approved : PRD & Spec approval recorded
+
+    state "Task Planner" as planner {
+        LoadSpec --> GenNodes : Extract test_plan
+        GenNodes --> BuildDAG : Create ExecutionTasks
+        BuildDAG --> ValidateDAG : Link dependencies
+        ValidateDAG --> TopoSort : No cycles
+        TopoSort --> PersistPlan : Deterministic ordering
+    }
+
+    state "Queue Coordinator" as queue {
+        LoadPlan --> EnqueueEntry : Read entry tasks
+        EnqueueEntry --> MonitorDeps : Queue JSONL writes
+        MonitorDeps --> UpdateQueue : Dependency resolution
+        UpdateQueue --> MonitorDeps : Task status change
+    }
+
+    state "Execution Engine" as execution {
+        Dequeue --> ApplyPatch : Pop from queue
+        ApplyPatch --> RunValidation : Git operations
+        RunValidation --> CommitBranch : Lint/test/build
+        RunValidation --> ApplyPatch : Auto-fix retry
+        CommitBranch --> MarkComplete : Git commit
+        MarkComplete --> Dequeue : Update queue
+    }
+
+    state "Resume Coordinator" as resume {
+        LoadState --> ReadQueue : feature.json last_step
+        ReadQueue --> FindRestart : Queue entries
+        FindRestart --> SkipCompleted : Find last success
+    }
+
+    Approved --> planner : CLI codepipe plan
+    planner --> PlanReady : plan.json with checksum
+    PlanReady --> queue : CLI codepipe start
+    queue --> execution : Entry tasks queued
+    execution --> Gates : Validation required
+    Gates --> execution : Approval granted
+    Gates --> [*] : Approval denied
+    execution --> ExecComplete : All tasks done
+    ExecComplete --> [*] : Success
+    execution --> ResumePoint : Failure detected
+    ResumePoint --> resume : CLI codepipe resume
+    resume --> queue : Restart from last success
+```
+
+### Deployment & Resume State Machine
+
+> Converted from [`docs/diagrams/deployment_resume_state.puml`](../diagrams/deployment_resume_state.puml).
+
+```mermaid
+stateDiagram-v2
+    [*] --> IDLE
+
+    IDLE --> LOADING_CONTEXT : triggerDeployment()
+    LOADING_CONTEXT --> ASSESSING_READINESS : context loaded
+    LOADING_CONTEXT --> FAILED : missing pr.json
+
+    ASSESSING_READINESS --> READY : eligible, no blockers
+    ASSESSING_READINESS --> BLOCKED : blockers found
+    ASSESSING_READINESS --> FAILED : GitHub API error
+
+    READY --> SELECTING_STRATEGY : proceed
+    BLOCKED --> PERSISTING : record blockers
+    BLOCKED --> IDLE : resume after operator resolves blockers
+
+    SELECTING_STRATEGY --> AUTO_MERGING : auto-merge enabled
+    SELECTING_STRATEGY --> MANUAL_MERGING : auto-merge disabled
+    SELECTING_STRATEGY --> DISPATCHING_WORKFLOW : workflow configured
+
+    AUTO_MERGING --> MERGED : GitHub merges PR
+    AUTO_MERGING --> FAILED : enableAutoMerge() error
+
+    MANUAL_MERGING --> MERGED : mergePullRequest() success
+    MANUAL_MERGING --> FAILED : merge conflict / API error
+
+    DISPATCHING_WORKFLOW --> WORKFLOW_TRIGGERED : dispatch accepted
+    DISPATCHING_WORKFLOW --> FAILED : workflow not found
+
+    MERGED --> PERSISTING : record merge SHA
+    WORKFLOW_TRIGGERED --> PERSISTING : record workflow URL
+    FAILED --> PERSISTING : record error
+
+    PERSISTING --> [*] : deployment.json updated
+
+    note right of ASSESSING_READINESS
+        Checks: PR open, not draft,
+        no conflicts, status checks pass,
+        reviews sufficient, branch current
+    end note
+
+    note right of BLOCKED
+        Blocker types: status_checks,
+        reviews, branch_stale, conflicts,
+        draft, closed, protection
+    end note
+```
+
+### Specification Composer Flow
+
+> From [`docs/diagrams/spec_flow.mmd`](../diagrams/spec_flow.mmd).
+
+```mermaid
+flowchart TD
+    Start([CLI: codepipe start --spec]) --> CheckPRD{PRD Approved?}
+    CheckPRD -->|No| ErrorPRD[Error: Exit 30]
+    CheckPRD -->|Yes| LoadPRD[Load PRD Content]
+    LoadPRD --> ExtractSections[Extract PRD Sections]
+    ExtractSections --> GenConstraints[Generate Technical Constraints]
+    GenConstraints --> GenRisks[Generate Risk Assessments]
+    GenRisks --> GenTests[Generate Test Plan]
+    GenTests --> GenRollout[Generate Rollout Plan]
+    GenRollout --> BuildContent[Build Spec Content]
+    BuildContent --> DetectUnknowns{Detect Unknowns?}
+    DetectUnknowns -->|Yes| FlagUnknowns[Flag Unknowns]
+    DetectUnknowns -->|No| PersistSpec
+    FlagUnknowns --> NeedResearch{Need Research?}
+    NeedResearch -->|Yes| TriggerResearch[Queue Research Tasks]
+    NeedResearch -->|No| PersistSpec
+    TriggerResearch --> WaitResearch[Wait for Research]
+    WaitResearch --> GenRisks
+    PersistSpec[Persist spec.md + spec.json] --> ComputeHash[Compute SHA-256]
+    ComputeHash --> ReviewGate{User Reviews spec.md}
+    ReviewGate -->|Request Changes| EditSpec[Edit & Recompute Hash]
+    EditSpec --> ReviewGate
+    ReviewGate -->|Approve| CreateApproval[Create Approval Record]
+    CreateApproval --> EnablePlanner([Spec Ready for Planning])
+```
 
 ### Data Flow
 
