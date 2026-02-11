@@ -1,5 +1,5 @@
-<!-- AUTO-GENERATED from source code Zod schemas and TypeScript declarations. -->
-<!-- Manual edits will be preserved between regenerations. -->
+<!-- Hand-written API reference. Safe to edit directly. -->
+<!-- Config example validated by: node scripts/tooling/validate_api_examples.js -->
 
 # API Reference
 
@@ -465,23 +465,23 @@ Quick summary of available commands:
 
 | Command | Description |
 |---------|-------------|
-| `codepipe init` | Initialize a new codepipe project |
-| `codepipe start` | Start feature execution pipeline |
-| `codepipe resume` | Resume a paused or failed feature run |
-| `codepipe status` | Display feature run status |
-| `codepipe approve` | Record a gate approval for a pipeline stage |
-| `codepipe plan` | Generate an execution plan from specification |
-| `codepipe validate` | Run validation checks against a feature run |
-| `codepipe doctor` | Run system health diagnostics |
-| `codepipe context summarize` | Summarize gathered context documents |
-| `codepipe pr create` | Create a pull request for a feature branch |
-| `codepipe pr automerge` | Enable auto-merge on a pull request |
-| `codepipe pr reviewers` | Assign reviewers to a pull request |
-| `codepipe pr status` | Check pull request status and merge readiness |
-| `codepipe research start` | Start a research task for context gathering |
-| `codepipe research status` | Check research task status |
-| `codepipe rate-limits` | Display current rate limit status |
-| `codepipe deploy` | Trigger deployment workflow |
+| `codepipe approve` | Approve or deny a feature pipeline gate |
+| `codepipe context summarize` | Generate or refresh cached context summaries |
+| `codepipe doctor` | Run environment diagnostics and readiness checks |
+| `codepipe health` | Quick runtime health check (config, disk, writable run dir) |
+| `codepipe init` | Initialize codemachine-pipeline with schema-validated configuration |
+| `codepipe plan` | Display the execution plan DAG, task summaries, and dependency graph |
+| `codepipe pr create` | Create a pull request on GitHub for the feature branch |
+| `codepipe pr disable-auto-merge` | Disable auto-merge for a pull request |
+| `codepipe pr reviewers` | Request reviewers for a pull request |
+| `codepipe pr status` | Show pull request status and merge readiness |
+| `codepipe rate-limits` | Display rate limit status and telemetry for API providers |
+| `codepipe research create` | Create a ResearchTask manually via the CLI |
+| `codepipe research list` | List ResearchTasks for the selected feature run directory |
+| `codepipe resume` | Resume a failed or paused feature pipeline execution with safety checks |
+| `codepipe start` | Start a new feature development pipeline |
+| `codepipe status` | Show the current state of a feature development pipeline |
+| `codepipe validate` | Execute validation commands (lint, test, typecheck, build) with auto-fix retry loops |
 
 ---
 

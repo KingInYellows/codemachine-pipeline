@@ -18,7 +18,7 @@ This plan also resolves GitHub #424 ("Plan documentation tooling decisions") sin
 
 ## Problem Statement / Motivation
 
-The project has 22 CLI commands, rich Zod-validated config schemas, and 8 architecture diagrams, but:
+The project has 17 CLI commands, rich Zod-validated config schemas, and 8 architecture diagrams, but:
 - The existing `docs/ops/cli-reference.md` (1187 lines) is **hand-written and drifts** from source
 - Architecture diagrams in `docs/diagrams/` are **not embedded** in any documentation
 - There is **no API reference** for configuration schema or key types
@@ -109,7 +109,7 @@ Config examples in **JSON format** (matches `.codepipe/config.json` usage patter
 - All 3 Linear Cycle 6 issues (`CDMCH-58`, `CDMCH-59`, `CDMCH-62`) moved to Done
 - GitHub issues `#211`, `#212`, `#215`, `#424` closed
 - CI passes with new drift checks enabled
-- Generated CLI reference covers all 22 commands
+- Generated CLI reference covers all 17 commands
 - Zero broken cross-references between documentation files
 
 ## Dependencies & Risks
