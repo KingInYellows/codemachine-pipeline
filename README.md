@@ -21,7 +21,7 @@ Autonomous AI-powered feature development pipeline CLI
 - **Automatic V1→V2 migration** with integrity validation and rollback support
 - **Benchmark validation**: 0.43ms for 500 tasks, <100ms for 1000 tasks
 - **8-layer architecture**: WAL, in-memory index, snapshots, compaction, migration, unified API, types, performance monitoring
-- See [Queue V2 Operations Guide](docs/operations/queue-v2-operations.md) for details
+- See [Queue V2 Operations Guide](docs/ops/queue-v2-operations.md) for details
 
 ### Parallel Execution
 - **Configurable concurrency** (1-10 tasks) via `execution.max_parallel_tasks`
@@ -29,7 +29,7 @@ Autonomous AI-powered feature development pipeline CLI
 - **2-4x throughput improvement** for independent tasks (validated in benchmarks)
 - **Safety guarantees**: Failed prerequisites halt dependent tasks, ACID queue updates
 - **Worker pool management**: In-flight task tracking with capacity enforcement
-- See [Parallel Execution Guide](docs/operations/parallel-execution.md) for details
+- See [Parallel Execution Guide](docs/ops/parallel-execution.md) for details
 
 ### Enhanced Telemetry
 - **Execution metrics tracking**: Task lifecycle, validation results, diff statistics
@@ -45,7 +45,7 @@ Autonomous AI-powered feature development pipeline CLI
 - **Secure CLI execution**: Command injection vulnerabilities eliminated via parameterized execution
 - **Comprehensive test coverage**: >90% for critical modules (queue, execution engine, validation)
 - **Security improvements**: Path traversal prevention, input validation, safe artifact capture
-- See [Log Rotation Guide](docs/operations/log-rotation.md) for details
+- See [Log Rotation Guide](docs/ops/log-rotation.md) for details
 
 ### Developer Experience
 - **Comprehensive test suite** with 100% pass rate across all modules
@@ -77,8 +77,8 @@ npm link
 Build and run the CLI in a containerized environment for reproducible execution:
 
 ```bash
-# Build the Docker image (from project root)
-docker build -f docker/Dockerfile -t codemachine-pipeline .
+# Build the Docker image
+docker build -t codemachine-pipeline .
 
 # Run with help
 docker run --rm codemachine-pipeline --help
@@ -705,7 +705,6 @@ codemachine-pipeline/
 │   ├── integration/       # Integration tests
 │   └── fixtures/          # Test fixtures
 ├── scripts/               # Build and utility scripts
-├── docker/                # Docker configuration
 ├── .github/
 │   └── workflows/
 │       └── ci.yml         # CI/CD pipeline
