@@ -1,7 +1,7 @@
 import { Command, Flags } from '@oclif/core';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
-import { execSync } from 'node:child_process';
+import { execFileSync } from 'node:child_process';
 import { createInterface } from 'node:readline/promises';
 import { stdin as input, stdout as output } from 'node:process';
 import {
@@ -501,7 +501,7 @@ export default class Init extends Command {
    */
   private findGitRoot(): string {
     try {
-      const gitRoot = execSync('git rev-parse --show-toplevel', {
+      const gitRoot = execFileSync('git', ['rev-parse', '--show-toplevel'], {
         encoding: 'utf-8',
         stdio: ['pipe', 'pipe', 'pipe'],
       }).trim();
@@ -525,7 +525,7 @@ export default class Init extends Command {
    */
   private getRepositoryUrl(gitRoot: string): string {
     try {
-      const remoteUrl = execSync('git config --get remote.origin.url', {
+      const remoteUrl = execFileSync('git', ['config', '--get', 'remote.origin.url'], {
         cwd: gitRoot,
         encoding: 'utf-8',
         stdio: ['pipe', 'pipe', 'pipe'],

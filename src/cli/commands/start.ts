@@ -1,7 +1,7 @@
 import { Command, Flags } from '@oclif/core';
 import * as path from 'node:path';
 import * as fs from 'node:fs/promises';
-import { execSync } from 'node:child_process';
+import { execFileSync } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
 import type { StructuredLogger } from '../../telemetry/logger';
 import { createCliLogger, LogLevel } from '../../telemetry/logger';
@@ -786,7 +786,7 @@ export default class Start extends Command {
 
   private findGitRoot(): string {
     try {
-      return execSync('git rev-parse --show-toplevel', {
+      return execFileSync('git', ['rev-parse', '--show-toplevel'], {
         encoding: 'utf-8',
         stdio: ['pipe', 'pipe', 'pipe'],
       }).trim();

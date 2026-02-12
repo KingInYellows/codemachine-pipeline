@@ -39,29 +39,10 @@ import { updateManifest } from '../../src/persistence/runDirectoryManager';
 // ============================================================================
 
 vi.mock('node:fs/promises');
-vi.mock('node:child_process', () => ({
-  exec: vi.fn(
-    (
-      command: string | Buffer,
-      optionsOrCallback?: ExecOptionsArg,
-      callbackMaybe?: ExecCallbackArg
-    ) => {
-      const callback = isExecCallback(optionsOrCallback)
-        ? optionsOrCallback
-        : isExecCallback(callbackMaybe)
-          ? callbackMaybe
-          : undefined;
+vi.mock('node:child_process', () => {
+  const kCustomPromisify = Symbol.for('nodejs.util.promisify.custom');
 
-      if (!callback) {
-        throw new Error('exec callback missing');
-      }
-
-      const commandText = typeof command === 'string' ? command : command.toString('utf-8');
-      currentExecHandler(commandText, callback);
-      return childProcessStub;
-    }
-  ),
-  execFile: vi.fn((...args: unknown[]) => {
+  const execFileMock = vi.fn((...args: unknown[]) => {
     const callback = args.find((a) => typeof a === 'function') as ExecCallback | undefined;
     if (!callback) {
       throw new Error('execFile callback missing');
@@ -71,8 +52,52 @@ vi.mock('node:child_process', () => ({
     const commandText = [file, ...fileArgs].join(' ');
     currentExecHandler(commandText, callback);
     return childProcessStub;
-  }),
-}));
+  });
+
+  // Support promisify(execFile) returning { stdout, stderr } like the real implementation
+  (execFileMock as unknown as Record<symbol, unknown>)[kCustomPromisify] = (
+    file: string,
+    fileArgs?: string[],
+    _options?: unknown
+  ) => {
+    return new Promise<{ stdout: string; stderr: string }>((resolve, reject) => {
+      const args = Array.isArray(fileArgs) ? fileArgs : [];
+      const commandText = [file, ...args].join(' ');
+      currentExecHandler(commandText, (error, stdout, stderr) => {
+        if (error) {
+          reject(Object.assign(error, { stdout: stdout || '', stderr: stderr || '' }));
+        } else {
+          resolve({ stdout: stdout || '', stderr: stderr || '' });
+        }
+      });
+    });
+  };
+
+  return {
+    exec: vi.fn(
+      (
+        command: string | Buffer,
+        optionsOrCallback?: ExecOptionsArg,
+        callbackMaybe?: ExecCallbackArg
+      ) => {
+        const callback = isExecCallback(optionsOrCallback)
+          ? optionsOrCallback
+          : isExecCallback(callbackMaybe)
+            ? callbackMaybe
+            : undefined;
+
+        if (!callback) {
+          throw new Error('exec callback missing');
+        }
+
+        const commandText = typeof command === 'string' ? command : command.toString('utf-8');
+        currentExecHandler(commandText, callback);
+        return childProcessStub;
+      }
+    ),
+    execFile: execFileMock,
+  };
+});
 vi.mock('../../src/persistence/runDirectoryManager', () => ({
   withLock: vi.fn(async (_runDir: string, fn: () => Promise<unknown>) => await fn()),
   getSubdirectoryPath: vi.fn((runDir: string, subdir: string) => `${runDir}/${subdir}`),

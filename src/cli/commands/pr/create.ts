@@ -400,12 +400,12 @@ export default class PRCreate extends Command {
   }
 
   private async getCurrentBranch(): Promise<string | null> {
-    const { exec } = await import('node:child_process');
+    const { execFile } = await import('node:child_process');
     const { promisify } = await import('node:util');
-    const execAsync = promisify(exec);
+    const execFileAsync = promisify(execFile);
 
     try {
-      const { stdout } = await execAsync('git rev-parse --abbrev-ref HEAD', {
+      const { stdout } = await execFileAsync('git', ['rev-parse', '--abbrev-ref', 'HEAD'], {
         cwd: process.cwd(),
       });
       return stdout.trim();

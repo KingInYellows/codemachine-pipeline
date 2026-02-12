@@ -1,6 +1,6 @@
 import { Args, Command, Flags } from '@oclif/core';
 import * as path from 'node:path';
-import { execSync } from 'node:child_process';
+import { execFileSync } from 'node:child_process';
 import * as os from 'node:os';
 import { createCliLogger, LogLevel, type StructuredLogger } from '../../telemetry/logger';
 import {
@@ -444,7 +444,7 @@ export default class Approve extends Command {
 
   private getGitUser(): string {
     try {
-      const email = execSync('git config user.email', {
+      const email = execFileSync('git', ['config', 'user.email'], {
         encoding: 'utf-8',
         stdio: ['pipe', 'pipe', 'pipe'],
       }).trim();

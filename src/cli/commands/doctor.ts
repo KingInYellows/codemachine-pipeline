@@ -1,7 +1,7 @@
 import { Command, Flags } from '@oclif/core';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
-import { execSync, spawnSync } from 'node:child_process';
+import { execFileSync, spawnSync } from 'node:child_process';
 import { loadRepoConfig } from '../../core/config/repo_config';
 import { createCliLogger, LogLevel } from '../../telemetry/logger';
 import { createRunMetricsCollector, StandardMetrics } from '../../telemetry/metrics';
@@ -451,7 +451,7 @@ export default class Doctor extends Command {
    */
   private checkGitRepository(): DiagnosticCheck {
     try {
-      const gitRoot = execSync('git rev-parse --show-toplevel', {
+      const gitRoot = execFileSync('git', ['rev-parse', '--show-toplevel'], {
         encoding: 'utf-8',
         stdio: ['pipe', 'pipe', 'pipe'],
       }).trim();

@@ -21,7 +21,7 @@
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 import * as crypto from 'node:crypto';
-import { exec, execFile } from 'node:child_process';
+import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import picomatch from 'picomatch';
 import { withLock, getSubdirectoryPath, updateManifest } from '../persistence/runDirectoryManager';
@@ -32,21 +32,7 @@ import type { ExecutionTelemetry } from '../telemetry/executionTelemetry';
 import type { DiffStats } from '../telemetry/executionMetrics';
 import { getErrorMessage } from '../utils/errors.js';
 
-const execAsync = promisify(exec);
 const execFileAsync = promisify(execFile);
-
-type ExecCommandResult = { stdout?: string; stderr?: string } | string;
-
-function normalizeExecResult(result: ExecCommandResult): { stdout: string; stderr: string } {
-  if (typeof result === 'string') {
-    return { stdout: result, stderr: '' };
-  }
-
-  return {
-    stdout: result?.stdout ?? '',
-    stderr: result?.stderr ?? '',
-  };
-}
 
 /**
  * Validate that a patchId contains only safe characters for use in file paths.
@@ -310,9 +296,7 @@ function summarizeLineChanges(patchContent: string): { insertions: number; delet
  */
 export async function isWorkingTreeClean(workingDir: string): Promise<boolean> {
   try {
-    const { stdout } = normalizeExecResult(
-      await execAsync('git status --porcelain', { cwd: workingDir })
-    );
+    const { stdout } = await execFileAsync('git', ['status', '--porcelain'], { cwd: workingDir });
     return stdout.trim().length === 0;
   } catch (error) {
     throw new Error(
@@ -331,14 +315,15 @@ export async function isWorkingTreeClean(workingDir: string): Promise<boolean> {
  */
 export async function getCurrentGitRef(workingDir: string): Promise<{ ref: string; sha: string }> {
   try {
-    const { stdout: ref } = normalizeExecResult(
-      await execAsync('git symbolic-ref -q HEAD || git rev-parse HEAD', {
-        cwd: workingDir,
-      })
-    );
-    const { stdout: sha } = normalizeExecResult(
-      await execAsync('git rev-parse HEAD', { cwd: workingDir })
-    );
+    let ref: string;
+    try {
+      const result = await execFileAsync('git', ['symbolic-ref', '-q', 'HEAD'], { cwd: workingDir });
+      ref = result.stdout;
+    } catch {
+      const result = await execFileAsync('git', ['rev-parse', 'HEAD'], { cwd: workingDir });
+      ref = result.stdout;
+    }
+    const { stdout: sha } = await execFileAsync('git', ['rev-parse', 'HEAD'], { cwd: workingDir });
 
     return {
       ref: ref.trim(),
@@ -484,11 +469,9 @@ export async function createRollbackSnapshot(
 
   // Capture current git state
   const gitRef = await getCurrentGitRef(config.workingDir);
-  const { stdout: workingTreeStatus } = normalizeExecResult(
-    await execAsync('git status --porcelain', {
-      cwd: config.workingDir,
-    })
-  );
+  const { stdout: workingTreeStatus } = await execFileAsync('git', ['status', '--porcelain'], {
+    cwd: config.workingDir,
+  });
 
   const metadata: SnapshotMetadata = {
     schema_version: '1.0.0',
