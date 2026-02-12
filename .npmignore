@@ -1,17 +1,38 @@
 # Source files (only dist/ should be published)
 src/
-test/
+tests/
 *.test.ts
+*.spec.ts
 
 # Configuration files
 tsconfig.json
-jest.config.js
-.eslintrc.json
+tsconfig.eslint.json
+eslint.config.cjs
+vitest.config.ts
 .prettierrc.json
+.npmrc
 
-# Development files
+# Development tooling
+.codemachine/
+.serena/
+.claude/
+.mcp.json
+claude-flow.config.json
+.deps/
+CLAUDE.md
+tools/
+scripts/
+
+# Documentation (keep README.md, LICENSE, CHANGELOG.md)
+docs/
+specification.md
+CONTRIBUTING.md
+
+# Testing
 .test-temp/
 coverage/
+
+# IDE
 .vscode/
 .idea/
 
@@ -21,10 +42,6 @@ coverage/
 # Docker
 Dockerfile
 .dockerignore
-
-# Documentation (keep README.md)
-specification.md
-codemachine-plan.md
 
 # Git
 .git/
@@ -41,6 +58,3 @@ logs/
 # OS
 .DS_Store
 Thumbs.db
-
-# CodeMachine
-.codemachine/

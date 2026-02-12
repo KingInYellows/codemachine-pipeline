@@ -30,9 +30,9 @@ describe('README.md documentation links', () => {
     'docs/ops/execution_telemetry.md',
     'docs/ops/codemachine_adapter_guide.md',
     'docs/README.md',
-    'docs/operations/queue-v2-operations.md',
-    'docs/operations/parallel-execution.md',
-    'docs/operations/log-rotation.md',
+    'docs/ops/queue-v2-operations.md',
+    'docs/ops/parallel-execution.md',
+    'docs/ops/log-rotation.md',
   ];
 
   it.each(criticalFiles)('critical file %s should exist', (href) => {
