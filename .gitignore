@@ -1,8 +1,9 @@
-.codemachine/logs
-.codemachine/memory
-.codemachine/prompts
-.codemachine/agents
-.codemachine/template.json
+# Development artifacts (AI tooling, IDE plugins)
+.codemachine/
+.serena/
+.mcp.json
+claude-flow.config.json
+.deps/
 
 # Dependencies
 node_modules/
@@ -56,11 +57,8 @@ oclif.manifest.json
 .codepipe/telemetry/
 ISSUE_RESOLUTION_PLAN.md
 
-# Claude Code / Claude Flow - config (committed)
-# .mcp.json, .npmrc, claude-flow.config.json — tracked
-# .claude/settings.json — tracked (hooks, statusline, permissions)
-.claude/*
-!.claude/settings.json
+# Claude Code / Claude Flow
+.claude/
 
 # Claude Flow - runtime state (ignored)
 .claude-flow/
