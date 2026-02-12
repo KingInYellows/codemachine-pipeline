@@ -28,13 +28,12 @@ This index provides a centralized navigation hub for all documentation in the co
 docs/
 ├── adr/              # Architecture Decision Records
 ├── architecture/     # System design and component documentation
+├── archive/          # Historical documents (plans, brainstorms, specs)
 ├── audit/            # Documentation audit reports
-├── brainstorms/      # Brainstorm documents
 ├── development/      # Developer workflows and guidelines
 ├── diagrams/         # Visual diagrams (Mermaid, PlantUML)
-├── operations/       # Runtime operations (queue, logs, parallel execution)
 ├── ops/              # Operational guides and runbooks
-├── plans/            # Implementation plans
+├── plans/            # Active implementation plans
 ├── requirements/     # Specifications, schemas, and playbooks
 ├── security/         # Security fix documentation
 ├── solutions/        # Known issue resolutions
@@ -163,9 +162,9 @@ Guides for managing runtime components including queues, logging, and parallel e
 
 | Document | Description |
 |----------|-------------|
-| [Queue V2 Operations](operations/queue-v2-operations.md) | Queue V2 architecture (WAL, HNSW indexing), monitoring, and maintenance |
-| [Log Rotation](operations/log-rotation.md) | Log management, rotation policies, and retention |
-| [Parallel Execution](operations/parallel-execution.md) | Concurrent task execution and resource management |
+| [Queue V2 Operations](ops/queue-v2-operations.md) | Queue V2 architecture (WAL, HNSW indexing), monitoring, and maintenance |
+| [Log Rotation](ops/log-rotation.md) | Log management, rotation policies, and retention |
+| [Parallel Execution](ops/parallel-execution.md) | Concurrent task execution and resource management |
 
 ---
 
@@ -262,24 +261,15 @@ Security vulnerability documentation and remediation records.
 
 ---
 
-## Plans & Brainstorms
+## Plans
 
-Working documents for feature planning and design exploration.
-
-### Plans
+Active implementation plans.
 
 | Document | Description |
 |----------|-------------|
-| [Documentation Tooling Plan](plans/2026-02-10-feat-documentation-tooling-cycle6-plan.md) | Cycle 8 documentation tooling implementation plan |
-| [Post-Release Docs Cleanup](plans/2026-02-11-chore-post-release-docs-cleanup-plan.md) | Post-v1.0.0 documentation cleanup plan |
-| [v1 Release Ceremony](plans/2026-02-10-chore-v1-release-ceremony-plan.md) | v1.0.0 release ceremony plan |
+| [Release Branch Readiness](plans/2026-02-12-chore-release-branch-readiness-execution-plan.md) | v1.0.0 release branch readiness execution plan |
 
-### Brainstorms
-
-| Document | Description |
-|----------|-------------|
-| [Documentation Tooling Decisions](brainstorms/2026-02-10-documentation-tooling-decisions-brainstorm.md) | Brainstorm on documentation tooling choices for Cycle 8 |
-| [v1 Release Readiness](brainstorms/2026-02-10-v1-release-readiness-brainstorm.md) | v1.0.0 release readiness assessment |
+Historical plans and brainstorms are archived in [`archive/`](archive/).
 
 ---
 
