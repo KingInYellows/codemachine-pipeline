@@ -59,6 +59,7 @@ ISSUE_RESOLUTION_PLAN.md
 
 # Claude Code / Claude Flow
 .claude/
+CLAUDE.md
 
 # Claude Flow - runtime state (ignored)
 .claude-flow/
