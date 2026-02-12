@@ -4,9 +4,10 @@
 
 This index provides a centralized navigation hub for all documentation in the codemachine-pipeline project. Use this guide to quickly locate architecture references, operational playbooks, requirements specifications, and development guides.
 
-
-> **Note:** Pre-v1.0.0 historical documentation (certification comments, phase plans, issue tracking,
-> release audits) has been archived on the [`archive/pre-v1.0.0-docs`](https://github.com/KingInYellows/codemachine-pipeline/tree/archive/pre-v1.0.0-docs) branch.
+> **Archive branches:** Pre-v1.0.0 historical documentation (certification comments, phase plans, issue tracking,
+> release audits) is on [`archive/pre-v1.0.0-docs`](https://github.com/KingInYellows/codemachine-pipeline/tree/archive/pre-v1.0.0-docs).
+> Post-v1.0.0 stale docs (completed plans, audit reports, security fix records, aspirational playbooks)
+> are on [`archive/post-v1.0.0-stale`](https://github.com/KingInYellows/codemachine-pipeline/tree/archive/post-v1.0.0-stale).
 
 ---
 
@@ -14,11 +15,13 @@ This index provides a centralized navigation hub for all documentation in the co
 
 | Task | Document |
 |------|----------|
-| **Getting Started** | [Init Playbook](ops/init_playbook.md) |
+| **Getting Started** | [Quickstart](quickstart.md) / [Init Playbook](ops/init_playbook.md) |
+| **CLI Reference** | [CLI Reference](ops/cli-reference.md) |
 | **Configuration** | [RepoConfig Schema](requirements/RepoConfig_schema.md) |
-| **Troubleshooting** | [Doctor Reference](ops/doctor_reference.md) |
-| **CLI Usage** | [CLI Patterns](ui/cli_patterns.md) |
+| **Troubleshooting** | [Doctor Reference](ops/doctor_reference.md) / [Troubleshooting](ops/troubleshooting.md) |
+| **CLI Patterns** | [CLI Patterns](ui/cli_patterns.md) |
 | **System Status** | [CLI Surface Requirements](requirements/cli_surface.md) |
+| **API Reference** | [API Reference](ops/api-reference.md) |
 
 ---
 
@@ -28,14 +31,11 @@ This index provides a centralized navigation hub for all documentation in the co
 docs/
 ├── adr/              # Architecture Decision Records
 ├── architecture/     # System design and component documentation
-├── archive/          # Historical documents (plans, brainstorms, specs)
-├── audit/            # Documentation audit reports
 ├── development/      # Developer workflows and guidelines
 ├── diagrams/         # Visual diagrams (Mermaid, PlantUML)
 ├── ops/              # Operational guides and runbooks
 ├── plans/            # Active implementation plans
 ├── requirements/     # Specifications, schemas, and playbooks
-├── security/         # Security fix documentation
 ├── solutions/        # Known issue resolutions
 ├── templates/        # Document templates
 └── ui/               # CLI and user interface patterns
@@ -109,7 +109,6 @@ Detailed specifications for features, data models, adapters, and validation poli
 | [Validation Playbook](requirements/validation_playbook.md) | Queue integrity and plan consistency validation |
 | [Write Action Playbook](requirements/write_action_playbook.md) | File write operations and artifact persistence |
 | [Traceability Playbook](requirements/traceability_playbook.md) | Audit trail and provenance tracking |
-| [Deployment Playbook](requirements/deployment_playbook.md) | Deployment procedures and environment management |
 | [Rate Limit Dashboard](requirements/rate_limit_dashboard.md) | API rate limiting monitoring and budget management |
 
 ---
@@ -124,7 +123,7 @@ Runbooks and operational procedures for pipeline administration and troubleshoot
 |----------|-------------|
 | [Init Playbook](ops/init_playbook.md) | Repository initialization with `codepipe init` command |
 | [Doctor Reference](ops/doctor_reference.md) | Environment diagnostics and prerequisite validation |
-| [CLI Reference](ops/cli-reference.md) | CLI command reference and usage guide (auto-generated) |
+| [CLI Reference](ops/cli-reference.md) | CLI command reference and usage guide |
 | [API Reference](ops/api-reference.md) | Configuration schema, domain models, and validation utilities |
 | [Troubleshooting](ops/troubleshooting.md) | Common issues and troubleshooting procedures |
 | [Smoke Test Guide](ops/smoke_test_guide.md) | Quick validation tests for deployment verification |
@@ -177,6 +176,7 @@ Contributor guidelines, workflows, and development best practices.
 | [Testing Practices](development/testing.md) | Test framework (Vitest), patterns, mocking, CI integration |
 | [Submission Workflow](development/submission-workflow.md) | PR submission workflow using Graphite (`gt`) commands |
 | [NPM Warnings](development/npm-warnings.md) | Common npm warning resolutions and package management |
+| [Release Branch Strategy](development/release-branch-strategy.md) | Release branch workflow and versioning approach |
 
 ---
 
@@ -222,6 +222,12 @@ Known issues and their resolutions organized by category.
 |----------|-------------|
 | [Graphite Restack Conflicts](solutions/integration-issues/graphite-restack-conflicts-after-main-advanced.md) | Resolving merge conflicts when main advances during PR lifecycle |
 
+### Linting
+
+| Document | Description |
+|----------|-------------|
+| [ESLint Index Signature Evasion](solutions/linting/eslint-no-restricted-types-index-signature-evasion.md) | Workaround for `no-restricted-types` rule with index signatures |
+
 ---
 
 ## UI & CLI Patterns
@@ -234,30 +240,11 @@ User interface design patterns and CLI output format specifications.
 
 ---
 
-## Security
-
-Security vulnerability documentation and remediation records.
-
-| Document | Description |
-|----------|-------------|
-| [Security Fix CVE-HIGH-1](security/SECURITY-FIX-CVE-HIGH-1.md) | High-severity CVE remediation documentation |
-| [Security Fix Summary](security/SECURITY-FIX-SUMMARY.md) | Security vulnerability fix summary report |
-
----
-
 ## CI & Operations
 
 | Document | Description |
 |----------|-------------|
 | [CI Stability](ci-stability.md) | CI pipeline stability guidelines and monitoring |
-
----
-
-## Audit Reports
-
-| Document | Description |
-|----------|-------------|
-| [Documentation Audit Report](audit/AUDIT_REPORT.md) | Comprehensive documentation audit with 6-agent cross-verification |
 
 ---
 
@@ -267,9 +254,7 @@ Active implementation plans.
 
 | Document | Description |
 |----------|-------------|
-| [Release Branch Readiness](plans/2026-02-12-chore-release-branch-readiness-execution-plan.md) | v1.0.0 release branch readiness execution plan |
-
-Historical plans and brainstorms are archived in [`archive/`](archive/).
+| [Documentation Cleanup](plans/2026-02-12-chore-documentation-cleanup-plan.md) | Clean and organize documentation |
 
 ---
 
