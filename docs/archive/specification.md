@@ -1,3 +1,5 @@
+> **Note:** This is the original product specification from initial development. It is preserved for historical reference.
+
 # AI-Driven Feature Development Workflow Specification
 
 [[ TEMPLATE META ]] Name: Project Specification Schema
