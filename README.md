@@ -29,11 +29,6 @@ Full documentation is in [`docs/README.md`](docs/README.md).
 | Getting Started | [Init Playbook](docs/ops/init_playbook.md) |
 | CLI Reference | [CLI Reference](docs/ops/cli-reference.md) |
 | Troubleshooting | [Doctor Reference](docs/ops/doctor_reference.md) |
-| Configuration | [RepoConfig Schema](docs/requirements/RepoConfig_schema.md) |
-| Queue V2 Operations | [Queue V2 Guide](docs/ops/queue-v2-operations.md) |
-| Parallel Execution | [Parallel Execution Guide](docs/ops/parallel-execution.md) |
-| Telemetry | [Execution Telemetry](docs/ops/execution_telemetry.md) |
-| Log Rotation | [Log Rotation Guide](docs/ops/log-rotation.md) |
 
 ## Installation
 
@@ -120,7 +115,7 @@ codepipe start --spec ./specs/new-feature.md
 | `codepipe status` | Show pipeline state for a feature |
 | `codepipe doctor` | Run environment diagnostics and readiness checks |
 | `codepipe health` | Quick runtime health check |
-| `codepipe approve <gate>` | Approve or deny pipeline gates (prd, spec, plan, code, pr) |
+| `codepipe approve <gate>` | Approve or deny pipeline gates (prd, spec, plan, code, pr, deploy) |
 | `codepipe plan` | Display execution plan DAG and dependency graph |
 | `codepipe resume` | Resume a failed or paused pipeline execution |
 | `codepipe validate` | Run validation commands (lint, test, typecheck, build) |
@@ -134,8 +129,6 @@ codepipe start --spec ./specs/new-feature.md
 | `codepipe pr disable-auto-merge` | Disable auto-merge on a pull request |
 
 All commands support `--json` for machine-readable output. For full options and examples, see the [CLI Reference](docs/ops/cli-reference.md).
-
-**Planned:** `codepipe deploy`, `codepipe export` (future releases).
 
 ## Development
 
@@ -192,6 +185,7 @@ codemachine-pipeline/
 │   ├── workflows/         # Business logic workflows
 │   ├── persistence/       # Run directory and state management
 │   ├── telemetry/         # Logging, metrics, and tracing
+│   ├── utils/             # Shared utilities (errors, safe JSON parsing)
 │   └── validation/        # Zod schema validation helpers
 ├── config/schemas/        # JSON Schema definitions
 ├── docs/                  # Full documentation (see docs/README.md)
@@ -222,14 +216,11 @@ See [Execution Flow](docs/architecture/execution_flow.md) for details.
 
 The pipeline supports multiple AI execution engines via the CodeMachine CLI adapter.
 
-| Engine     | Description                |
-| ---------- | -------------------------- |
-| `claude`   | Anthropic Claude (default) |
-| `codex`    | OpenAI Codex               |
-| `opencode` | OpenCode CLI               |
-| `cursor`   | Cursor IDE                 |
-| `auggie`   | Auggie AI                  |
-| `ccr`      | Claude Code Runner         |
+| Engine | Description |
+|--------|-------------|
+| `claude` | Anthropic Claude (default) |
+| `codex` | OpenAI Codex |
+| `openai` | OpenAI |
 
 For configuration and setup, see [CodeMachine Adapter Guide](docs/ops/codemachine_adapter_guide.md).
 
@@ -245,7 +236,7 @@ export LINEAR_API_KEY=lin_api_xxxxx
 export AGENT_ENDPOINT=https://agent.example.com/v1
 ```
 
-Full schema: `config/schemas/repo_config.schema.json` | Sample: `examples/sample_repo_config/` | Details: [RepoConfig Schema](docs/requirements/RepoConfig_schema.md)
+See [RepoConfig Schema](docs/requirements/RepoConfig_schema.md) for details. Full schema: `config/schemas/repo_config.schema.json`. Sample: `examples/sample_repo_config/`.
 
 ## License
 

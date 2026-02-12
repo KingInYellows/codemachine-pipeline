@@ -29,6 +29,8 @@ This index provides a centralized navigation hub for all documentation in the co
 
 ```
 docs/
+├── quickstart.md     # Getting started guide
+├── ci-stability.md   # CI pipeline stability guidelines
 ├── adr/              # Architecture Decision Records
 ├── architecture/     # System design and component documentation
 ├── development/      # Developer workflows and guidelines
