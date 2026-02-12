@@ -39,6 +39,11 @@ try {
 let baselineCycles = [];
 if (existsSync(BASELINE_PATH)) {
   baselineCycles = JSON.parse(readFileSync(BASELINE_PATH, 'utf-8'));
+} else {
+  console.log('⚠ No baseline file found at .deps/cycles-baseline.json');
+  console.log('  Run `npm run deps:baseline` to create one.');
+  console.log(`  Current cycles: ${currentCycles.length}`);
+  process.exit(0);
 }
 
 const currentCount = currentCycles.length;
