@@ -15,6 +15,7 @@ import {
 import type { ExecutionTelemetry } from '../telemetry/executionTelemetry.js';
 import { getErrorMessage } from '../utils/errors.js';
 import { CODEMACHINE_STRATEGY_NAMES } from './codemachineTypes.js';
+import { DEFAULT_EXECUTION_CONFIG } from '../core/config/RepoConfig.js';
 
 type TaskTypeString = ExecutionTask['task_type'];
 
@@ -156,19 +157,6 @@ export interface PrerequisiteResult {
   errors: string[];
   warnings: string[];
 }
-
-const DEFAULT_EXECUTION_CONFIG = {
-  task_timeout_ms: 1800000,
-  max_parallel_tasks: 1,
-  max_retries: 3,
-  retry_backoff_ms: 5000,
-  codemachine_cli_path: 'codemachine',
-  default_engine: 'claude' as const,
-  workspace_dir: undefined,
-  log_rotation_mb: 100,
-  log_rotation_keep: 3,
-  log_rotation_compress: false,
-};
 
 /**
  * CLI Execution Engine

@@ -24,14 +24,14 @@ The pipeline needed a clean integration that would:
 
 ## Decision
 
-Introduce a new adapter bridge layer under `src/adapters/codemachine/` that encapsulates all CodeMachine-CLI interaction, registered as a new `ExecutionStrategy` named `codemachine-cli` (distinct from the existing `codemachine` strategy).
+Introduce a new adapter bridge layer under `src/adapters/codemachine/` that encapsulates all CodeMachine-CLI interaction, implemented as a new `ExecutionStrategy` named `codemachine-cli` (distinct from the existing `codemachine` strategy). Registration in CLI commands is deferred to a future cycle.
 
 ### Binary resolution
 
 `binaryResolver.ts` implements a three-tier fallback chain:
 
 1. **Environment variable** (`CODEMACHINE_BIN_PATH`): validated against an allowlist regex, checked for executability.
-2. **npm optionalDependency**: resolves the platform-specific binary from `node_modules/.bin/codemachine` or the platform package directly (e.g., `codemachine-linux-x64/bin/codemachine`).
+2. **npm optionalDependency**: resolves the platform-specific package via `require.resolve()` (e.g., `codemachine-linux-x64/package.json`), then locates the binary in the package root (e.g., `codemachine-linux-x64/codemachine`).
 3. **PATH search**: scans `process.env.PATH` directories for an executable `codemachine` binary.
 
 Results are cached in-process with `clearBinaryCache()` available for testing.
@@ -47,7 +47,7 @@ Results are cached in-process with `clearBinaryCache()` available for testing.
 
 ### Strategy registration
 
-`CodeMachineCLIStrategy` implements `ExecutionStrategy` with `name = 'codemachine-cli'`. It calls `checkAvailability()` at registration time and caches the result. It is registered before the existing `codemachine` strategy so it takes priority when the binary is available (first-match-wins).
+`CodeMachineCLIStrategy` implements `ExecutionStrategy` with `name = 'codemachine-cli'`. It calls `checkAvailability()` at construction time and caches the result. The strategy is defined but not yet registered in CLI commands (`start.ts`, `resume.ts`) — both still use the existing `createCodeMachineStrategy()`. When wired in (a future cycle), it should be registered before the existing `codemachine` strategy so it takes priority when the binary is available (first-match-wins).
 
 The telemetry name-check in `cliExecutionEngine.ts` was updated from a string comparison to a `Set` (`CODEMACHINE_STRATEGY_NAMES`) that includes both `codemachine` and `codemachine-cli`.
 
@@ -91,7 +91,7 @@ Three fields were added to `ExecutionConfigSchema`:
 
 **Negative:**
 
-- **New dependency.** `codemachine@^0.8.0` is added as a direct dependency along with `semver` for version comparison. The codemachine package adds platform-specific optionalDependencies that increase install size.
+- **New dependency.** `codemachine@^0.8.0` is added as an optional dependency (along with `semver` for version comparison). The codemachine package itself declares platform-specific optionalDependencies that install per-platform native binaries, increasing install size when present.
 - **Two strategies.** During the migration period, both `codemachine` and `codemachine-cli` strategies exist. The old strategy should be deprecated and removed in a future cycle once the new adapter is proven stable.
 
 ## References

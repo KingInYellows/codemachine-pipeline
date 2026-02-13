@@ -64,11 +64,13 @@
   "dependencies": {
     "@oclif/core": "^4.0.30",
     "@oclif/plugin-help": "^6.2.37",
-    "codemachine": "^0.8.0",
     "picomatch": "^4.0.3",
     "semver": "^7.7.4",
     "undici": "^7.21.0",
     "zod": "^4.3.6"
+  },
+  "optionalDependencies": {
+    "codemachine": "^0.8.0"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

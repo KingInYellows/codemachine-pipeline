@@ -1,13 +1,11 @@
 import { spawn } from 'node:child_process';
-import * as fs from 'node:fs/promises';
-import * as path from 'node:path';
-import * as os from 'node:os';
 import * as semver from 'semver';
 import { resolveBinary, type BinaryResolutionResult } from './binaryResolver.js';
 import type { CodeMachineExecutionResult } from '../../workflows/codemachineTypes.js';
 import type { ExecutionConfig } from '../../core/config/RepoConfig.js';
 import type { StructuredLogger } from '../../telemetry/logger.js';
 import { getErrorMessage } from '../../utils/errors.js';
+import { filterEnvironment as filterEnv } from '../../utils/envFilter.js';
 
 export interface CodeMachineCLIAdapterOptions {
   config: ExecutionConfig;
@@ -29,7 +27,6 @@ export interface AvailabilityResult {
  * - Binary resolution (delegates to binaryResolver)
  * - Availability + version checking
  * - Spawning with shell:false, timeout, output capture
- * - PID tracking for crash recovery
  * - Credential delegation via stdin
  */
 export class CodeMachineCLIAdapter {
@@ -147,6 +144,11 @@ export class CodeMachineCLIAdapter {
     }
 
     const binaryPath = resolution.binaryPath;
+    const maxBuffer = this.config.max_log_buffer_size && this.config.max_log_buffer_size > 0
+      ? this.config.max_log_buffer_size
+      : 10 * 1024 * 1024; // 10 MB default
+    let totalBufferSize = 0;
+    let bufferLimitReached = false;
 
     this.logger?.info('Starting CodeMachine-CLI execution', {
       binary: binaryPath,
@@ -187,19 +189,25 @@ export class CodeMachineCLIAdapter {
 
       const pid = child.pid;
 
-      // Write PID file for crash recovery
-      if (options.runDir && pid) {
-        void this.writePidFile(options.runDir, pid);
-      }
-
       // Pipe credentials via stdin if provided
       if (options.credentials && Object.keys(options.credentials).length > 0) {
         try {
           child.stdin.write(JSON.stringify(options.credentials) + '\n');
         } catch (error) {
-          this.logger?.warn('Failed to write credentials to stdin', {
+          this.logger?.warn('Failed to write credentials to stdin, killing process', {
+            taskId: options.taskId,
             error: getErrorMessage(error),
           });
+          child.kill('SIGTERM');
+          resolve({
+            exitCode: 1,
+            stdout: '',
+            stderr: `Failed to deliver credentials: ${getErrorMessage(error)}`,
+            durationMs: Date.now() - startTime,
+            timedOut: false,
+            killed: false,
+          });
+          return;
         }
       }
       child.stdin.end();
@@ -217,21 +225,38 @@ export class CodeMachineCLIAdapter {
       }, options.timeoutMs);
 
       child.stdout?.on('data', (chunk: Buffer) => {
-        stdoutChunks.push(chunk);
+        if (!bufferLimitReached) {
+          totalBufferSize += chunk.length;
+          if (totalBufferSize > maxBuffer) {
+            bufferLimitReached = true;
+            this.logger?.warn('Large output detected, truncating in-memory buffer', {
+              taskId: options.taskId,
+              bufferSize: totalBufferSize,
+            });
+          } else {
+            stdoutChunks.push(chunk);
+          }
+        }
       });
 
       child.stderr?.on('data', (chunk: Buffer) => {
-        stderrChunks.push(chunk);
+        if (!bufferLimitReached) {
+          totalBufferSize += chunk.length;
+          if (totalBufferSize > maxBuffer) {
+            bufferLimitReached = true;
+            this.logger?.warn('Large output detected, truncating in-memory buffer', {
+              taskId: options.taskId,
+              bufferSize: totalBufferSize,
+            });
+          } else {
+            stderrChunks.push(chunk);
+          }
+        }
       });
 
       child.on('close', (code) => {
         clearTimeout(timeoutHandle);
         const durationMs = Date.now() - startTime;
-
-        // Clean up PID file
-        if (options.runDir) {
-          void this.removePidFile(options.runDir);
-        }
 
         this.logger?.info('CodeMachine-CLI execution completed', {
           exitCode: code,
@@ -254,14 +279,10 @@ export class CodeMachineCLIAdapter {
       child.on('error', (error) => {
         clearTimeout(timeoutHandle);
 
-        if (options.runDir) {
-          void this.removePidFile(options.runDir);
-        }
-
         resolve({
           exitCode: 1,
           stdout: Buffer.concat(stdoutChunks).toString('utf-8'),
-          stderr: `Execution error: ${error.message}`,
+          stderr: `Execution error: ${getErrorMessage(error)}`,
           durationMs: Date.now() - startTime,
           timedOut: false,
           killed: false,
@@ -269,47 +290,6 @@ export class CodeMachineCLIAdapter {
         });
       });
     });
-  }
-
-  /**
-   * Check if a previously-spawned process is still running via PID file.
-   */
-  async checkLiveness(runDir: string): Promise<{ alive: boolean; pid?: number }> {
-    try {
-      const pidPath = path.join(runDir, 'codemachine.pid');
-      const content = await fs.readFile(pidPath, 'utf-8');
-      const data = JSON.parse(content) as { pid: number; startedAt: string };
-      const pid = data.pid;
-
-      try {
-        process.kill(pid, 0); // signal 0 = liveness check only
-        return { alive: true, pid };
-      } catch {
-        return { alive: false, pid };
-      }
-    } catch {
-      return { alive: false };
-    }
-  }
-
-  private async writePidFile(runDir: string, pid: number): Promise<void> {
-    try {
-      const pidPath = path.join(runDir, 'codemachine.pid');
-      const tmpPath = pidPath + `.${pid}.tmp`;
-      const data = JSON.stringify({ pid, startedAt: new Date().toISOString() });
-      await fs.writeFile(tmpPath, data, { mode: 0o600 });
-      await fs.rename(tmpPath, pidPath); // atomic
-    } catch (error) {
-      this.logger?.warn('Failed to write PID file', { error: getErrorMessage(error) });
-    }
-  }
-
-  private async removePidFile(runDir: string): Promise<void> {
-    try {
-      await fs.rm(path.join(runDir, 'codemachine.pid'), { force: true });
-    } catch {
-      // Ignore cleanup errors
-    }
   }
 
   private async runCommand(
@@ -339,33 +319,17 @@ export class CodeMachineCLIAdapter {
       });
 
       child.on('error', (error) => {
-        resolve({ exitCode: 1, stdout, stderr: error.message });
+        resolve({ exitCode: 1, stdout, stderr: getErrorMessage(error) });
       });
     });
   }
 
   private filterEnvironment(): Record<string, string> {
-    const filtered: Record<string, string> = {};
-    const allowed = new Set([
-      'PATH', 'HOME', 'USER', 'SHELL', 'TERM', 'LANG', 'LC_ALL',
-      'NODE_ENV', 'LOG_LEVEL',
-      // Note: DEBUG intentionally excluded — can cause verbose output that leaks internal state
-      ...(this.config.env_allowlist ?? []),
-    ]);
-
-    for (const key of allowed) {
-      const value = process.env[key];
-      if (value !== undefined) {
-        filtered[key] = value;
-      }
-    }
-
-    // Add TMPDIR for consistent temp file behavior
-    const tmpDir = os.tmpdir();
-    if (tmpDir) {
-      filtered.TMPDIR = tmpDir;
-    }
-
-    return filtered;
+    // Note: DEBUG intentionally excluded (unlike codeMachineRunner) — prevents internal state leaks
+    return filterEnv({
+      additional: this.config.env_allowlist ?? [],
+      includeDebug: false,
+      includeTmpdir: true,
+    });
   }
 }

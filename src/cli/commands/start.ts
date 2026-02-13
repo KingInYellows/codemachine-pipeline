@@ -36,6 +36,7 @@ import { loadQueue } from '../../workflows/queueStore';
 import { createCodeMachineStrategy } from '../../workflows/codeMachineStrategy';
 import { CliError, CliErrorCode, formatErrorMessage, formatErrorJson } from '../utils/cliErrors';
 import { getErrorMessage } from '../../utils/errors.js';
+import { DEFAULT_EXECUTION_CONFIG } from '../../core/config/RepoConfig.js';
 
 const EXECUTION_STEPS = {
   Context: 'context_aggregation',
@@ -580,22 +581,7 @@ export default class Start extends Command {
     }
 
     // Create execution config with max parallel override
-    const executionConfig = repoConfig.execution ?? {
-      task_timeout_ms: 1800000,
-      max_parallel_tasks: maxParallel,
-      max_retries: 3,
-      retry_backoff_ms: 5000,
-      codemachine_cli_path: 'codemachine',
-      default_engine: 'claude' as const,
-      workspace_dir: undefined,
-      max_log_buffer_size: 10 * 1024 * 1024,
-      env_allowlist: [],
-      spec_path: '',
-      log_rotation_mb: 100,
-      log_rotation_keep: 3,
-      log_rotation_compress: false,
-      env_credential_keys: [],
-    };
+    const executionConfig = repoConfig.execution ?? DEFAULT_EXECUTION_CONFIG;
 
     // Override max_parallel_tasks if specified
     const mergedConfig: RepoConfig = {

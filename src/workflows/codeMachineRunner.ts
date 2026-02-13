@@ -6,6 +6,7 @@ import * as zlib from 'node:zlib';
 import type { ExecutionConfig, ExecutionEngineType } from '../core/config/RepoConfig.js';
 import type { StructuredLogger } from '../telemetry/logger.js';
 import { getErrorMessage } from '../utils/errors.js';
+import { filterEnvironment as filterEnv } from '../utils/envFilter.js';
 
 export const EXIT_CODES = {
   SUCCESS: 0,
@@ -198,31 +199,7 @@ export async function validateCliAvailability(
 }
 
 function filterEnvironment(allowlist: string[]): Record<string, string> {
-  const filtered: Record<string, string> = {};
-
-  const alwaysAllowed = [
-    'PATH',
-    'HOME',
-    'USER',
-    'SHELL',
-    'TERM',
-    'LANG',
-    'LC_ALL',
-    'NODE_ENV',
-    'DEBUG',
-    'LOG_LEVEL',
-  ];
-
-  const allowlistSet = new Set([...alwaysAllowed, ...allowlist]);
-
-  for (const key of allowlistSet) {
-    const value = process.env[key];
-    if (value !== undefined) {
-      filtered[key] = value;
-    }
-  }
-
-  return filtered;
+  return filterEnv({ additional: allowlist, includeDebug: true });
 }
 
 function buildArgs(options: RunnerOptions, engine: ExecutionEngineType): string[] {

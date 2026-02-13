@@ -41,7 +41,9 @@ export async function resolveBinary(): Promise<BinaryResolutionResult> {
   }
 
   const result = await resolveBinaryUncached();
-  cachedResult = result;
+  if (result.resolved) {
+    cachedResult = result;
+  }
   return result;
 }
 

@@ -7,6 +7,7 @@ import type {
 } from './executionStrategy.js';
 import { CodeMachineCLIAdapter, type AvailabilityResult } from '../adapters/codemachine/index.js';
 import type { StructuredLogger } from '../telemetry/logger.js';
+import { CodeMachineEngineTypeSchema } from './codemachineTypes.js';
 
 export interface CodeMachineCLIStrategyOptions {
   config: ExecutionConfig;
@@ -16,9 +17,11 @@ export interface CodeMachineCLIStrategyOptions {
 /**
  * Execution strategy that delegates to CodeMachine-CLI via the adapter bridge.
  *
- * Registered as 'codemachine-cli' (distinct from the old 'codemachine' strategy).
- * Should be registered BEFORE the old strategy so it takes priority when the
- * binary is available — first match wins in canHandle() iteration.
+ * Named 'codemachine-cli' (distinct from the old 'codemachine' strategy).
+ * Not yet registered in CLI commands (start/resume) — registration is deferred
+ * to a future cycle once the adapter is proven stable. When wired in, it should
+ * be registered BEFORE the old strategy so it takes priority when the binary is
+ * available (first-match-wins in canHandle() iteration).
  */
 export class CodeMachineCLIStrategy implements ExecutionStrategy {
   readonly name = 'codemachine-cli';
@@ -73,10 +76,23 @@ export class CodeMachineCLIStrategy implements ExecutionStrategy {
       taskType: task.task_type,
     });
 
-    // Build coordination syntax: "claude '<prompt>'"
+    // Validate engine is supported by CodeMachine-CLI
     const engine = this.config.default_engine;
+    const engineCheck = CodeMachineEngineTypeSchema.safeParse(engine);
+    if (!engineCheck.success) {
+      return {
+        success: false,
+        status: 'failed',
+        summary: `Engine '${engine}' is not supported by CodeMachine-CLI`,
+        errorMessage: `Unsupported engine: '${engine}'. Supported: ${CodeMachineEngineTypeSchema.options.join(', ')}`,
+        recoverable: false,
+        durationMs: 0,
+        artifacts: [],
+      };
+    }
+
     const prompt = (task.config?.prompt as string | undefined) ?? task.title;
-    const args = ['run', `${engine} '${prompt.replace(/'/g, "'\\''")}'`];
+    const args = ['run', engine, prompt];
 
     // Build credentials from configured keys
     const credentials: Record<string, string> = {};

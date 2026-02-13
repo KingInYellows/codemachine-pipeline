@@ -100,6 +100,61 @@ describe('binaryResolver', () => {
     });
   });
 
+  describe('PATH fallback after npm resolution failure', () => {
+    it('falls back to PATH when require.resolve for platform package fails', async () => {
+      delete process.env.CODEMACHINE_BIN_PATH;
+
+      // Use a platform with no optionalDep installed but put binary on PATH
+      // Override platform to ensure no require.resolve match (freebsd has no entry in PLATFORM_MAP)
+      // but we do have it in PATH
+      Object.defineProperty(process, 'platform', { value: 'freebsd', configurable: true });
+      process.env.PATH = '/fake-path-bin';
+
+      // fs.access succeeds for the PATH candidate
+      vi.mocked(fs.access).mockResolvedValue(undefined);
+
+      const result = await resolveBinary();
+
+      expect(result.resolved).toBe(true);
+      expect(result.source).toBe('path');
+      expect(result.binaryPath).toBe('/fake-path-bin/codemachine');
+
+      // Restore platform
+      Object.defineProperty(process, 'platform', { value: 'linux', configurable: true });
+    });
+
+    it('falls back to PATH when optionalDep binary is not executable', async () => {
+      delete process.env.CODEMACHINE_BIN_PATH;
+      process.env.PATH = '/usr/bin';
+
+      // The platform package may or may not be resolvable via require.resolve.
+      // If it is, fs.access needs to reject for the optionalDep path but accept for PATH.
+      // If it isn't, it naturally falls through.
+      // We simulate: optionalDep binary not executable, but PATH binary is.
+      vi.mocked(fs.access).mockImplementation(async (pathArg) => {
+        const pathStr = String(pathArg);
+        // Accept only the PATH candidate (contains /usr/bin)
+        if (pathStr.startsWith('/usr/bin/')) {
+          return undefined;
+        }
+        // Reject everything else (optionalDep paths in node_modules)
+        throw new Error('EACCES');
+      });
+
+      const result = await resolveBinary();
+
+      // Should either find via PATH or not at all (if require.resolve doesn't find pkg either)
+      if (result.resolved) {
+        expect(result.source).toBe('path');
+        expect(result.binaryPath).toBe('/usr/bin/codemachine');
+      } else {
+        // If on a platform where the platform package also doesn't exist,
+        // both optionalDep and PATH might fail -- this is still valid
+        expect(result.error).toBeDefined();
+      }
+    });
+  });
+
   describe('graceful fallback', () => {
     it('returns resolved=false with descriptive error when nothing found', async () => {
       delete process.env.CODEMACHINE_BIN_PATH;

@@ -112,7 +112,6 @@ export {
   type CodeMachineCLIAdapterOptions,
   type AvailabilityResult,
   type BinaryResolutionResult,
-  type CoordinationSyntax,
   type CodeMachineExecutionResult,
   type CodeMachineEngineType,
 } from './codemachine/index.js';

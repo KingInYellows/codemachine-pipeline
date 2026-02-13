@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { EventEmitter } from 'node:events';
 import { PassThrough } from 'node:stream';
 import type { ChildProcess } from 'node:child_process';
@@ -15,21 +15,8 @@ vi.mock('../../src/adapters/codemachine/binaryResolver.js', () => ({
   clearBinaryCache: vi.fn(),
 }));
 
-// Mock fs/promises for PID file operations
-vi.mock('node:fs/promises', async (importOriginal) => {
-  const original = await importOriginal<typeof import('node:fs/promises')>();
-  return {
-    ...original,
-    writeFile: vi.fn().mockResolvedValue(undefined),
-    rename: vi.fn().mockResolvedValue(undefined),
-    rm: vi.fn().mockResolvedValue(undefined),
-    readFile: vi.fn().mockResolvedValue('{"pid": 12345, "startedAt": "2026-01-01T00:00:00Z"}'),
-  };
-});
-
 const { spawn } = await import('node:child_process');
 const { resolveBinary } = await import('../../src/adapters/codemachine/binaryResolver.js');
-const { readFile } = await import('node:fs/promises');
 
 import { CodeMachineCLIAdapter } from '../../src/adapters/codemachine/CodeMachineCLIAdapter.js';
 
@@ -230,19 +217,370 @@ describe('CodeMachineCLIAdapter', () => {
     });
   });
 
-  describe('checkLiveness', () => {
-    it('returns alive=true when process is running', async () => {
-      vi.mocked(readFile).mockResolvedValue('{"pid": 12345, "startedAt": "2026-01-01T00:00:00Z"}');
-      const originalKill = process.kill;
-      process.kill = vi.fn() as unknown as typeof process.kill;
+  describe('child process error event', () => {
+    it('returns error result when child emits an error event (e.g. ENOENT)', async () => {
+      const mockStdin = new PassThrough();
+      const mockStdout = new PassThrough();
+      const mockStderr = new PassThrough();
+      const emitter = new EventEmitter();
+      const child = Object.assign(emitter, {
+        stdin: mockStdin,
+        stdout: mockStdout,
+        stderr: mockStderr,
+        pid: 12345,
+        killed: false,
+        kill: vi.fn(),
+        ref: vi.fn(),
+        unref: vi.fn(),
+        connected: true,
+        exitCode: null,
+        signalCode: null,
+        spawnargs: [],
+        spawnfile: '',
+        disconnect: vi.fn(),
+        send: vi.fn(),
+        stdio: [mockStdin, mockStdout, mockStderr, null, null] as const,
+        [Symbol.dispose]: vi.fn(),
+      }) as unknown as ChildProcess;
+
+      vi.mocked(spawn).mockReturnValueOnce(child);
 
       const adapter = new CodeMachineCLIAdapter({ config: makeConfig() });
-      const result = await adapter.checkLiveness('/run-dir');
+      const resultPromise = adapter.execute(['run', "claude 'task'"], {
+        workspaceDir: '/workspace',
+        timeoutMs: 30000,
+      });
 
-      expect(result.alive).toBe(true);
-      expect(result.pid).toBe(12345);
+      // Emit error on next tick (simulates ENOENT when binary not found at spawn time)
+      process.nextTick(() => {
+        const err = new Error('spawn codemachine ENOENT') as NodeJS.ErrnoException;
+        err.code = 'ENOENT';
+        emitter.emit('error', err);
+      });
 
-      process.kill = originalKill;
+      const result = await resultPromise;
+
+      expect(result.exitCode).toBe(1);
+      expect(result.stderr).toContain('Execution error');
+      expect(result.stderr).toContain('ENOENT');
+      expect(result.timedOut).toBe(false);
+      expect(result.killed).toBe(false);
     });
   });
+
+  describe('timeout SIGTERM -> SIGKILL escalation', () => {
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
+    it('sends SIGTERM on timeout, then SIGKILL after grace period', async () => {
+      vi.useFakeTimers();
+
+      const mockStdin = new PassThrough();
+      const mockStdout = new PassThrough();
+      const mockStderr = new PassThrough();
+      const emitter = new EventEmitter();
+
+      const killFn = vi.fn();
+
+      const child = Object.assign(emitter, {
+        stdin: mockStdin,
+        stdout: mockStdout,
+        stderr: mockStderr,
+        pid: 12345,
+        killed: false,
+        kill: killFn,
+        ref: vi.fn(),
+        unref: vi.fn(),
+        connected: true,
+        exitCode: null,
+        signalCode: null,
+        spawnargs: [],
+        spawnfile: '',
+        disconnect: vi.fn(),
+        send: vi.fn(),
+        stdio: [mockStdin, mockStdout, mockStderr, null, null] as const,
+        [Symbol.dispose]: vi.fn(),
+      }) as unknown as ChildProcess;
+
+      vi.mocked(spawn).mockReturnValueOnce(child);
+
+      const adapter = new CodeMachineCLIAdapter({ config: makeConfig() });
+      const resultPromise = adapter.execute(['run', "claude 'long task'"], {
+        workspaceDir: '/workspace',
+        timeoutMs: 1000,
+      });
+
+      // Advance past the timeout
+      await vi.advanceTimersByTimeAsync(1000);
+
+      // SIGTERM should have been sent
+      expect(killFn).toHaveBeenCalledWith('SIGTERM');
+      expect(killFn).not.toHaveBeenCalledWith('SIGKILL');
+
+      // Advance past the 5s grace period -- child.killed is still false
+      await vi.advanceTimersByTimeAsync(5000);
+
+      // SIGKILL should now have been sent (child.killed was false)
+      expect(killFn).toHaveBeenCalledWith('SIGKILL');
+
+      // Now close the process so the promise resolves
+      mockStdout.push(null);
+      mockStderr.push(null);
+      emitter.emit('close', null, 'SIGKILL');
+
+      const result = await resultPromise;
+
+      expect(result.timedOut).toBe(true);
+      expect(result.killed).toBe(true);
+      expect(result.exitCode).toBe(124);
+    });
+
+    it('skips SIGKILL if process already marked as killed after SIGTERM', async () => {
+      vi.useFakeTimers();
+
+      const mockStdin = new PassThrough();
+      const mockStdout = new PassThrough();
+      const mockStderr = new PassThrough();
+      const emitter = new EventEmitter();
+
+      const killFn = vi.fn((signal?: string) => {
+        // Simulate Node.js behavior: after kill(), child.killed becomes true
+        if (signal === 'SIGTERM') {
+          (child as Record<string, unknown>).killed = true;
+        }
+      });
+
+      const child = Object.assign(emitter, {
+        stdin: mockStdin,
+        stdout: mockStdout,
+        stderr: mockStderr,
+        pid: 12345,
+        killed: false,
+        kill: killFn,
+        ref: vi.fn(),
+        unref: vi.fn(),
+        connected: true,
+        exitCode: null,
+        signalCode: null,
+        spawnargs: [],
+        spawnfile: '',
+        disconnect: vi.fn(),
+        send: vi.fn(),
+        stdio: [mockStdin, mockStdout, mockStderr, null, null] as const,
+        [Symbol.dispose]: vi.fn(),
+      }) as unknown as ChildProcess;
+
+      vi.mocked(spawn).mockReturnValueOnce(child);
+
+      const adapter = new CodeMachineCLIAdapter({ config: makeConfig() });
+      const resultPromise = adapter.execute(['run', "claude 'task'"], {
+        workspaceDir: '/workspace',
+        timeoutMs: 1000,
+      });
+
+      // Advance past the timeout -- SIGTERM fires, child.killed becomes true
+      await vi.advanceTimersByTimeAsync(1000);
+      expect(killFn).toHaveBeenCalledWith('SIGTERM');
+
+      // Advance past grace period -- SIGKILL should NOT fire because child.killed is true
+      await vi.advanceTimersByTimeAsync(5000);
+      expect(killFn).not.toHaveBeenCalledWith('SIGKILL');
+
+      // Process exits after SIGTERM
+      mockStdout.push(null);
+      mockStderr.push(null);
+      emitter.emit('close', 143, 'SIGTERM');
+
+      const result = await resultPromise;
+
+      expect(result.timedOut).toBe(true);
+      expect(result.killed).toBe(false); // killed flag is only set by the SIGKILL code path
+    });
+  });
+
+  describe('credential stdin write', () => {
+    it('writes credentials to stdin when provided', async () => {
+      const mockStdin = new PassThrough();
+      const mockStdout = new PassThrough();
+      const mockStderr = new PassThrough();
+      const emitter = new EventEmitter();
+
+      const writtenData: string[] = [];
+      const originalWrite = mockStdin.write.bind(mockStdin);
+      mockStdin.write = vi.fn((...args: Parameters<typeof mockStdin.write>) => {
+        const chunk = args[0];
+        if (typeof chunk === 'string') {
+          writtenData.push(chunk);
+        }
+        return originalWrite(...args);
+      }) as typeof mockStdin.write;
+
+      const child = Object.assign(emitter, {
+        stdin: mockStdin,
+        stdout: mockStdout,
+        stderr: mockStderr,
+        pid: 12345,
+        killed: false,
+        kill: vi.fn(),
+        ref: vi.fn(),
+        unref: vi.fn(),
+        connected: true,
+        exitCode: null,
+        signalCode: null,
+        spawnargs: [],
+        spawnfile: '',
+        disconnect: vi.fn(),
+        send: vi.fn(),
+        stdio: [mockStdin, mockStdout, mockStderr, null, null] as const,
+        [Symbol.dispose]: vi.fn(),
+      }) as unknown as ChildProcess;
+
+      vi.mocked(spawn).mockReturnValueOnce(child);
+
+      const adapter = new CodeMachineCLIAdapter({ config: makeConfig() });
+      const resultPromise = adapter.execute(['run', "claude 'task'"], {
+        workspaceDir: '/workspace',
+        timeoutMs: 30000,
+        credentials: { ANTHROPIC_API_KEY: 'sk-ant-test', GITHUB_TOKEN: 'ghp_test123' },
+      });
+
+      // Let execution proceed and close the process
+      process.nextTick(() => {
+        mockStdout.push(Buffer.from('ok\n'));
+        mockStdout.push(null);
+        mockStderr.push(null);
+        emitter.emit('close', 0, null);
+      });
+
+      const result = await resultPromise;
+
+      expect(result.exitCode).toBe(0);
+      // Verify credentials were written as JSON to stdin
+      expect(writtenData.length).toBeGreaterThanOrEqual(1);
+      const jsonWritten = writtenData.join('');
+      expect(jsonWritten).toContain('ANTHROPIC_API_KEY');
+      expect(jsonWritten).toContain('sk-ant-test');
+      expect(jsonWritten).toContain('GITHUB_TOKEN');
+      expect(jsonWritten).toContain('ghp_test123');
+    });
+
+    it('kills process and returns error when stdin.write throws', async () => {
+      const mockStdin = new PassThrough();
+      const mockStdout = new PassThrough();
+      const mockStderr = new PassThrough();
+      const emitter = new EventEmitter();
+
+      // Make stdin.write throw
+      mockStdin.write = vi.fn(() => {
+        throw new Error('write EPIPE');
+      }) as typeof mockStdin.write;
+
+      const killFn = vi.fn();
+      const child = Object.assign(emitter, {
+        stdin: mockStdin,
+        stdout: mockStdout,
+        stderr: mockStderr,
+        pid: 12345,
+        killed: false,
+        kill: killFn,
+        ref: vi.fn(),
+        unref: vi.fn(),
+        connected: true,
+        exitCode: null,
+        signalCode: null,
+        spawnargs: [],
+        spawnfile: '',
+        disconnect: vi.fn(),
+        send: vi.fn(),
+        stdio: [mockStdin, mockStdout, mockStderr, null, null] as const,
+        [Symbol.dispose]: vi.fn(),
+      }) as unknown as ChildProcess;
+
+      vi.mocked(spawn).mockReturnValueOnce(child);
+
+      const adapter = new CodeMachineCLIAdapter({ config: makeConfig() });
+      const result = await adapter.execute(['run', "claude 'task'"], {
+        workspaceDir: '/workspace',
+        timeoutMs: 30000,
+        credentials: { ANTHROPIC_API_KEY: 'sk-ant-test' },
+      });
+
+      expect(result.exitCode).toBe(1);
+      expect(result.stderr).toContain('Failed to deliver credentials');
+      expect(result.stderr).toContain('EPIPE');
+      expect(killFn).toHaveBeenCalledWith('SIGTERM');
+    });
+
+    it('does not write to stdin when credentials object is empty', async () => {
+      const mockStdin = new PassThrough();
+      const mockStdout = new PassThrough();
+      const mockStderr = new PassThrough();
+      const emitter = new EventEmitter();
+
+      const writeSpy = vi.spyOn(mockStdin, 'write');
+
+      const child = Object.assign(emitter, {
+        stdin: mockStdin,
+        stdout: mockStdout,
+        stderr: mockStderr,
+        pid: 12345,
+        killed: false,
+        kill: vi.fn(),
+        ref: vi.fn(),
+        unref: vi.fn(),
+        connected: true,
+        exitCode: null,
+        signalCode: null,
+        spawnargs: [],
+        spawnfile: '',
+        disconnect: vi.fn(),
+        send: vi.fn(),
+        stdio: [mockStdin, mockStdout, mockStderr, null, null] as const,
+        [Symbol.dispose]: vi.fn(),
+      }) as unknown as ChildProcess;
+
+      vi.mocked(spawn).mockReturnValueOnce(child);
+
+      const adapter = new CodeMachineCLIAdapter({ config: makeConfig() });
+      const resultPromise = adapter.execute(['run', "claude 'task'"], {
+        workspaceDir: '/workspace',
+        timeoutMs: 30000,
+        credentials: {},
+      });
+
+      process.nextTick(() => {
+        mockStdout.push(null);
+        mockStderr.push(null);
+        emitter.emit('close', 0, null);
+      });
+
+      const result = await resultPromise;
+
+      expect(result.exitCode).toBe(0);
+      // stdin.write should NOT have been called (empty credentials)
+      expect(writeSpy).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('spawn failure (synchronous throw)', () => {
+    it('returns error result when spawn itself throws', async () => {
+      vi.mocked(spawn).mockImplementationOnce(() => {
+        throw new Error('spawn ENOMEM');
+      });
+
+      const adapter = new CodeMachineCLIAdapter({ config: makeConfig() });
+      const result = await adapter.execute(['run', "claude 'task'"], {
+        workspaceDir: '/workspace',
+        timeoutMs: 30000,
+      });
+
+      expect(result.exitCode).toBe(1);
+      expect(result.stderr).toContain('Failed to spawn');
+      expect(result.stderr).toContain('ENOMEM');
+      expect(result.timedOut).toBe(false);
+      expect(result.killed).toBe(false);
+    });
+  });
+
 });

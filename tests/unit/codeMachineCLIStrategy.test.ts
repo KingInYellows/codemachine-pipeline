@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import type { ExecutionConfig } from '../../src/core/config/RepoConfig.js';
 import type { ExecutionTask } from '../../src/core/models/ExecutionTask.js';
 import type { ExecutionContext } from '../../src/workflows/executionStrategy.js';
@@ -178,7 +178,114 @@ describe('CodeMachineCLIStrategy', () => {
 
       const callArgs = vi.mocked(CodeMachineCLIAdapter.prototype.execute).mock.calls[0];
       const commandArgs = callArgs[0];
-      expect(commandArgs[1]).toContain('Custom prompt from config');
+      expect(commandArgs[2]).toContain('Custom prompt from config');
+    });
+  });
+
+  describe('env_credential_keys gathering', () => {
+    const originalEnv = { ...process.env };
+
+    afterEach(() => {
+      process.env = originalEnv;
+    });
+
+    it('gathers specified env vars and passes them as credentials', async () => {
+      process.env.ANTHROPIC_API_KEY = 'sk-ant-test-key';
+      process.env.GITHUB_TOKEN = 'ghp_test_token';
+
+      vi.mocked(CodeMachineCLIAdapter.prototype.execute).mockResolvedValue({
+        exitCode: 0,
+        stdout: 'done',
+        stderr: '',
+        durationMs: 100,
+        timedOut: false,
+        killed: false,
+      });
+
+      const config = makeConfig({
+        env_credential_keys: ['ANTHROPIC_API_KEY', 'GITHUB_TOKEN'],
+      });
+      const strategy = new CodeMachineCLIStrategy({ config });
+      await strategy.execute(makeTask(), makeContext());
+
+      const callArgs = vi.mocked(CodeMachineCLIAdapter.prototype.execute).mock.calls[0];
+      const executeOptions = callArgs[1];
+      expect(executeOptions.credentials).toEqual({
+        ANTHROPIC_API_KEY: 'sk-ant-test-key',
+        GITHUB_TOKEN: 'ghp_test_token',
+      });
+    });
+
+    it('skips env vars that are not set in the environment', async () => {
+      process.env.ANTHROPIC_API_KEY = 'sk-ant-test-key';
+      delete process.env.MISSING_KEY;
+
+      vi.mocked(CodeMachineCLIAdapter.prototype.execute).mockResolvedValue({
+        exitCode: 0,
+        stdout: 'done',
+        stderr: '',
+        durationMs: 100,
+        timedOut: false,
+        killed: false,
+      });
+
+      const config = makeConfig({
+        env_credential_keys: ['ANTHROPIC_API_KEY', 'MISSING_KEY'],
+      });
+      const strategy = new CodeMachineCLIStrategy({ config });
+      await strategy.execute(makeTask(), makeContext());
+
+      const callArgs = vi.mocked(CodeMachineCLIAdapter.prototype.execute).mock.calls[0];
+      const executeOptions = callArgs[1];
+      // Only the set key should be present
+      expect(executeOptions.credentials).toEqual({
+        ANTHROPIC_API_KEY: 'sk-ant-test-key',
+      });
+    });
+
+    it('does not pass credentials when env_credential_keys is empty', async () => {
+      vi.mocked(CodeMachineCLIAdapter.prototype.execute).mockResolvedValue({
+        exitCode: 0,
+        stdout: 'done',
+        stderr: '',
+        durationMs: 100,
+        timedOut: false,
+        killed: false,
+      });
+
+      const config = makeConfig({ env_credential_keys: [] });
+      const strategy = new CodeMachineCLIStrategy({ config });
+      await strategy.execute(makeTask(), makeContext());
+
+      const callArgs = vi.mocked(CodeMachineCLIAdapter.prototype.execute).mock.calls[0];
+      const executeOptions = callArgs[1];
+      // No credentials property should be set when none are gathered
+      expect(executeOptions.credentials).toBeUndefined();
+    });
+
+    it('does not pass credentials when all keys are unset in env', async () => {
+      delete process.env.NONEXISTENT_KEY_1;
+      delete process.env.NONEXISTENT_KEY_2;
+
+      vi.mocked(CodeMachineCLIAdapter.prototype.execute).mockResolvedValue({
+        exitCode: 0,
+        stdout: 'done',
+        stderr: '',
+        durationMs: 100,
+        timedOut: false,
+        killed: false,
+      });
+
+      const config = makeConfig({
+        env_credential_keys: ['NONEXISTENT_KEY_1', 'NONEXISTENT_KEY_2'],
+      });
+      const strategy = new CodeMachineCLIStrategy({ config });
+      await strategy.execute(makeTask(), makeContext());
+
+      const callArgs = vi.mocked(CodeMachineCLIAdapter.prototype.execute).mock.calls[0];
+      const executeOptions = callArgs[1];
+      // Empty credentials object means credentials should not be set
+      expect(executeOptions.credentials).toBeUndefined();
     });
   });
 });

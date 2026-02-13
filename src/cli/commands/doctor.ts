@@ -2,15 +2,14 @@ import { Command, Flags } from '@oclif/core';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { execSync, spawnSync } from 'node:child_process';
-import * as semver from 'semver';
 import { loadRepoConfig } from '../../core/config/repo_config';
 import { createCliLogger, LogLevel } from '../../telemetry/logger';
 import { createRunMetricsCollector, StandardMetrics } from '../../telemetry/metrics';
 import { createRunTraceManager, SpanStatusCode } from '../../telemetry/traces';
-import { resolveBinary } from '../../adapters/codemachine/binaryResolver';
 import type { StructuredLogger } from '../../telemetry/logger';
 import type { MetricsCollector } from '../../telemetry/metrics';
 import type { TraceManager, ActiveSpan } from '../../telemetry/traces';
+import { checkCodeMachineCli } from '../diagnostics';
 
 const CONFIG_RELATIVE_PATH = path.join('.codepipe', 'config.json');
 
@@ -132,10 +131,21 @@ export default class Doctor extends Command {
       checks.push(this.checkFilesystemPermissions());
       checks.push(this.checkOutboundConnectivity());
 
+      // Pre-load config once for checks that need it
+      const configPath = path.resolve(process.cwd(), CONFIG_RELATIVE_PATH);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Config used for minimal property extraction only
+      let loadedConfig: any;
+      if (fs.existsSync(configPath)) {
+        const configResult = await loadRepoConfig(configPath);
+        if (configResult.success && configResult.config) {
+          loadedConfig = configResult.config;
+        }
+      }
+
       // Async checks
       checks.push(await this.checkRepoConfig());
-      checks.push(await this.checkCodeMachineCli());
-      checks.push(...(await this.checkEnvironmentVariables()));
+      checks.push(await this.checkCodeMachineCli(loadedConfig));
+      checks.push(...this.checkEnvironmentVariables(loadedConfig));
 
       // Compute summary
       const summary = {
@@ -615,127 +625,31 @@ export default class Doctor extends Command {
     };
   }
 
-  private async checkCodeMachineCli(): Promise<DiagnosticCheck> {
-    const configPath = path.resolve(process.cwd(), CONFIG_RELATIVE_PATH);
-
-    // Load minimum version from config if available
-    let minVersion: string | undefined;
-    if (fs.existsSync(configPath)) {
-      const configResult = await loadRepoConfig(configPath);
-      if (configResult.success && configResult.config?.execution?.codemachine_cli_version) {
-        minVersion = configResult.config.execution.codemachine_cli_version;
-      }
-    }
-
-    // Use binary resolver for consistent resolution
-    const resolution = await resolveBinary();
-
-    if (!resolution.resolved || !resolution.binaryPath) {
-      return {
-        name: 'CodeMachine CLI (Execution)',
-        status: 'warn',
-        message: 'CodeMachine CLI not found',
-        remediation:
-          'Install codemachine: npm install codemachine@^0.8.0 (optional for execution engine)',
-        details: { error: resolution.error },
-      };
-    }
-
-    // Get version from binary
-    try {
-      const result = spawnSync(resolution.binaryPath, ['--version'], {
-        encoding: 'utf-8',
-        timeout: 5000,
-      });
-
-      if (result.status !== 0) {
-        return {
-          name: 'CodeMachine CLI (Execution)',
-          status: 'warn',
-          message: `CodeMachine CLI found but --version failed`,
-          remediation: 'Check the binary at: ' + resolution.binaryPath,
-          details: { cli_path: resolution.binaryPath, source: resolution.source },
-        };
-      }
-
-      const versionRaw = result.stdout.trim().split('\n')[0]?.trim() ?? '';
-      const version = semver.clean(versionRaw) ?? versionRaw;
-
-      // Check minimum version if configured
-      if (minVersion && version) {
-        const parsed = semver.valid(version);
-        if (parsed && !semver.satisfies(parsed, `>=${minVersion}`)) {
-          return {
-            name: 'CodeMachine CLI (Execution)',
-            status: 'warn',
-            message: `CodeMachine CLI v${version} below minimum v${minVersion}`,
-            remediation: `Upgrade: npm install codemachine@^${minVersion}`,
-            details: { version, min_version: minVersion, cli_path: resolution.binaryPath, source: resolution.source },
-          };
-        }
-
-        // Warn on 0.x minor version mismatch (breaking per SemVer spec)
-        if (parsed && semver.major(parsed) === 0 && minVersion) {
-          const minParsed = semver.valid(semver.coerce(minVersion));
-          if (minParsed && semver.minor(parsed) !== semver.minor(minParsed)) {
-            return {
-              name: 'CodeMachine CLI (Execution)',
-              status: 'warn',
-              message: `CodeMachine CLI v${version} — minor version differs from expected v${minVersion} (0.x minor = breaking)`,
-              details: { version, min_version: minVersion, cli_path: resolution.binaryPath, source: resolution.source },
-            };
-          }
-        }
-      }
-
-      return {
-        name: 'CodeMachine CLI (Execution)',
-        status: 'pass',
-        message: `CodeMachine CLI v${version} (${resolution.source})`,
-        details: { version, cli_path: resolution.binaryPath, source: resolution.source },
-      };
-    } catch {
-      return {
-        name: 'CodeMachine CLI (Execution)',
-        status: 'warn',
-        message: 'CodeMachine CLI found but version check failed',
-        remediation: 'Check the binary at: ' + resolution.binaryPath,
-        details: { cli_path: resolution.binaryPath, source: resolution.source },
-      };
-    }
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Config used for minimal property extraction only
+  private async checkCodeMachineCli(config?: any): Promise<DiagnosticCheck> {
+    return checkCodeMachineCli(config);
   }
 
-  private async checkEnvironmentVariables(): Promise<DiagnosticCheck[]> {
-    const configPath = path.resolve(process.cwd(), CONFIG_RELATIVE_PATH);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Config used for minimal property extraction only
+  private checkEnvironmentVariables(config?: any): DiagnosticCheck[] {
     const checks: DiagnosticCheck[] = [];
 
-    // Try to load config to determine which env vars are needed
-    if (!fs.existsSync(configPath)) {
+    // Check if config was provided and is valid
+    if (!config) {
       checks.push({
         name: 'Environment Variables',
         status: 'warn',
-        message: 'Cannot check environment variables (config not found)',
+        message: 'Cannot check environment variables (config not found or invalid)',
         remediation: 'Run "codepipe init" first',
       });
       return checks;
     }
 
-    const result = await loadRepoConfig(configPath);
-    if (!result.success || !result.config) {
-      checks.push({
-        name: 'Environment Variables',
-        status: 'warn',
-        message: 'Cannot check environment variables (config invalid)',
-        remediation: 'Fix configuration first',
-      });
-      return checks;
-    }
-
-    const config = result.config;
-
     // Check GitHub token
-    if (config.github.enabled) {
-      const tokenVar = config.github.token_env_var;
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access -- Config type not fully specified for this usage
+    if (config.github?.enabled && config.github.token_env_var) {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access -- Config type not fully specified for this usage
+      const tokenVar = config.github.token_env_var as string;
       const token = process.env[tokenVar];
 
       if (token) {
@@ -746,18 +660,22 @@ export default class Doctor extends Command {
           details: { length: token.length },
         });
       } else {
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access -- Config type not fully specified for this usage
+        const requiredScopes = (config.github.required_scopes ?? []) as string[];
         checks.push({
           name: `${tokenVar} (GitHub)`,
           status: 'fail',
           message: 'Token not set',
-          remediation: `Set ${tokenVar} with scopes: ${config.github.required_scopes.join(', ')}`,
+          remediation: `Set ${tokenVar} with scopes: ${requiredScopes.join(', ')}`,
         });
       }
     }
 
     // Check Linear API key
-    if (config.linear.enabled) {
-      const keyVar = config.linear.api_key_env_var;
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access -- Config type not fully specified for this usage
+    if (config.linear?.enabled && config.linear.api_key_env_var) {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access -- Config type not fully specified for this usage
+      const keyVar = config.linear.api_key_env_var as string;
       const key = process.env[keyVar];
 
       if (key) {
@@ -778,22 +696,28 @@ export default class Doctor extends Command {
     }
 
     // Check agent endpoint
-    const agentEndpoint =
-      config.runtime.agent_endpoint || process.env[config.runtime.agent_endpoint_env_var];
-    if (!agentEndpoint) {
-      checks.push({
-        name: `${config.runtime.agent_endpoint_env_var} (Agent)`,
-        status: 'warn',
-        message: 'Agent endpoint not configured',
-        remediation: `Set ${config.runtime.agent_endpoint_env_var} or add runtime.agent_endpoint to config`,
-      });
-    } else {
-      checks.push({
-        name: `Agent Endpoint`,
-        status: 'pass',
-        message: `Configured: ${agentEndpoint}`,
-        details: { endpoint: agentEndpoint },
-      });
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access -- Config type not fully specified for this usage
+    if (config.runtime?.agent_endpoint_env_var) {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access -- Config type not fully specified for this usage
+      const agentEndpoint =
+        (config.runtime.agent_endpoint as string | undefined) ?? process.env[config.runtime.agent_endpoint_env_var as string];
+      if (!agentEndpoint) {
+        checks.push({
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access -- Config type not fully specified for this usage
+          name: `${config.runtime.agent_endpoint_env_var as string} (Agent)`,
+          status: 'warn',
+          message: 'Agent endpoint not configured',
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access -- Config type not fully specified for this usage
+          remediation: `Set ${config.runtime.agent_endpoint_env_var as string} or add runtime.agent_endpoint to config`,
+        });
+      } else {
+        checks.push({
+          name: `Agent Endpoint`,
+          status: 'pass',
+          message: `Configured: ${agentEndpoint}`,
+          details: { endpoint: agentEndpoint },
+        });
+      }
     }
 
     return checks;

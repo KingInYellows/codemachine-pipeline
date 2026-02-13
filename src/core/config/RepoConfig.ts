@@ -765,3 +765,22 @@ export function addConfigHistoryEntry(
     ],
   };
 }
+
+/**
+ * Default execution configuration values.
+ * Used as fallback when repo config does not specify execution settings.
+ */
+export const DEFAULT_EXECUTION_CONFIG: ExecutionConfig = {
+  task_timeout_ms: 1800000,
+  max_parallel_tasks: 1,
+  max_retries: 3,
+  retry_backoff_ms: 5000,
+  codemachine_cli_path: 'codemachine',
+  default_engine: 'claude',
+  max_log_buffer_size: 10 * 1024 * 1024,
+  env_allowlist: [],
+  log_rotation_mb: 100,
+  log_rotation_keep: 3,
+  log_rotation_compress: false,
+  env_credential_keys: [],
+};
