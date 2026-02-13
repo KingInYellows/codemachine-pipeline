@@ -9,7 +9,6 @@ This document defines requirements for responding to security advisories that af
 **Related Documents:**
 - [Branch Protection Playbook](branch_protection_playbook.md)
 - [Validation Playbook](validation_playbook.md)
-- [Deployment Playbook](deployment_playbook.md)
 
 ---
 
