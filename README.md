@@ -14,11 +14,7 @@ Autonomous AI-powered feature development pipeline CLI
 - **Integration Ready**: Supports GitHub and Linear integrations
 - **Deterministic Builds**: Node v24 LTS, containerized execution
 - **CodeMachine CLI Adapter**: External execution engine integration with retry logic and artifact capture
-- **Queue V2 Optimization**: O(1) task operations with WAL-based persistence and HNSW indexing
-- **Parallel Execution**: Configurable concurrency (1-10 tasks) with dependency-aware scheduling
-- **Enhanced Telemetry**: Execution metrics, queue monitoring, structured NDJSON logging
-- **Log Rotation**: Automatic rotation with configurable retention and gzip compression
-- **Security Hardened**: Command injection prevention, path traversal protection, input validation
+- **Production-Ready Runtime**: O(1) queue operations, parallel execution, telemetry, log rotation, and security hardening
 
 ## Documentation
 
@@ -121,12 +117,8 @@ codepipe start --spec ./specs/new-feature.md
 | `codepipe validate` | Run validation commands (lint, test, typecheck, build) |
 | `codepipe rate-limits` | Display API rate limit status and telemetry |
 | `codepipe context summarize` | Generate or refresh context summaries |
-| `codepipe research create` | Create a research task |
-| `codepipe research list` | List research tasks for a feature |
-| `codepipe pr create` | Create a pull request for a completed feature |
-| `codepipe pr status` | Show PR status and check results |
-| `codepipe pr reviewers` | Manage PR reviewer assignments |
-| `codepipe pr disable-auto-merge` | Disable auto-merge on a pull request |
+| `codepipe research <sub>` | Research task management (create, list) |
+| `codepipe pr <sub>` | PR management (create, status, reviewers, disable-auto-merge) |
 
 All commands support `--json` for machine-readable output. For full options and examples, see the [CLI Reference](docs/ops/cli-reference.md).
 
@@ -143,8 +135,6 @@ npm run build
 
 ```bash
 npm test
-npm run test:config:watch    # Config-scoped test watcher
-npm run test:config:coverage  # Config-scoped coverage report
 ```
 
 ### Linting & Formatting
