@@ -69,7 +69,7 @@ export async function checkCodeMachineCli(config?: any): Promise<DiagnosticCheck
     }
 
     const versionRaw = result.stdout.trim().split('\n')[0]?.trim() ?? '';
-    const version = semver.clean(versionRaw) ?? versionRaw;
+    const version = semver.coerce(versionRaw)?.version ?? versionRaw;
 
     // Check minimum version if configured
     if (minVersion && version) {

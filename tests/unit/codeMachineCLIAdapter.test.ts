@@ -336,7 +336,7 @@ describe('CodeMachineCLIAdapter', () => {
       expect(result.exitCode).toBe(124);
     });
 
-    it('skips SIGKILL if process already marked as killed after SIGTERM', async () => {
+    it('skips SIGKILL if process exits within grace period after SIGTERM', async () => {
       vi.useFakeTimers();
 
       const mockStdin = new PassThrough();
@@ -344,12 +344,7 @@ describe('CodeMachineCLIAdapter', () => {
       const mockStderr = new PassThrough();
       const emitter = new EventEmitter();
 
-      const killFn = vi.fn((signal?: string) => {
-        // Simulate Node.js behavior: after kill(), child.killed becomes true
-        if (signal === 'SIGTERM') {
-          (child as Record<string, unknown>).killed = true;
-        }
-      });
+      const killFn = vi.fn();
 
       const child = Object.assign(emitter, {
         stdin: mockStdin,
@@ -379,18 +374,18 @@ describe('CodeMachineCLIAdapter', () => {
         timeoutMs: 1000,
       });
 
-      // Advance past the timeout -- SIGTERM fires, child.killed becomes true
+      // Advance past the timeout -- SIGTERM fires
       await vi.advanceTimersByTimeAsync(1000);
       expect(killFn).toHaveBeenCalledWith('SIGTERM');
 
-      // Advance past grace period -- SIGKILL should NOT fire because child.killed is true
-      await vi.advanceTimersByTimeAsync(5000);
-      expect(killFn).not.toHaveBeenCalledWith('SIGKILL');
-
-      // Process exits after SIGTERM
+      // Process exits within grace period (before SIGKILL would fire)
       mockStdout.push(null);
       mockStderr.push(null);
       emitter.emit('close', 143, 'SIGTERM');
+
+      // Advance past grace period -- SIGKILL should NOT fire because process already exited
+      await vi.advanceTimersByTimeAsync(5000);
+      expect(killFn).not.toHaveBeenCalledWith('SIGKILL');
 
       const result = await resultPromise;
 

@@ -551,9 +551,17 @@ export function applyEnvironmentOverrides(config: RepoConfig): RepoConfig {
   const codemachineCliPath = process.env.CODEPIPE_EXECUTION_CLI_PATH;
   if (codemachineCliPath && overridden.execution) {
     // SECURITY: validate env override path before applying (prevents injection via env var)
-    const SAFE_CLI_PATH = /^[a-zA-Z0-9_\-./]+$/;
-    if (SAFE_CLI_PATH.test(codemachineCliPath)) {
+    const SAFE_CLI_PATH = /^[a-zA-Z0-9_\-./:\\]+$/;
+    if (
+      codemachineCliPath.length > 0 &&
+      codemachineCliPath.trim() === codemachineCliPath &&
+      SAFE_CLI_PATH.test(codemachineCliPath) &&
+      !codemachineCliPath.split(/[\\/]/).includes('..')
+    ) {
       overridden.execution = { ...overridden.execution, codemachine_cli_path: codemachineCliPath };
+    } else {
+      // eslint-disable-next-line no-console -- Warning for misconfigured env var
+      console.warn(`[codemachine] CODEPIPE_EXECUTION_CLI_PATH rejected: path failed security validation`);
     }
   }
 

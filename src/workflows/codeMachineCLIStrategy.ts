@@ -18,10 +18,9 @@ export interface CodeMachineCLIStrategyOptions {
  * Execution strategy that delegates to CodeMachine-CLI via the adapter bridge.
  *
  * Named 'codemachine-cli' (distinct from the old 'codemachine' strategy).
- * Not yet registered in CLI commands (start/resume) — registration is deferred
- * to a future cycle once the adapter is proven stable. When wired in, it should
- * be registered BEFORE the old strategy so it takes priority when the binary is
- * available (first-match-wins in canHandle() iteration).
+ * Registered BEFORE the old strategy in start/resume commands so it takes
+ * priority when the binary is available (first-match-wins in canHandle() iteration).
+ * Call checkAvailability() at registration time to flip the isAvailable flag.
  */
 export class CodeMachineCLIStrategy implements ExecutionStrategy {
   readonly name = 'codemachine-cli';

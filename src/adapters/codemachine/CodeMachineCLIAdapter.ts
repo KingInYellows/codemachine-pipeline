@@ -67,7 +67,7 @@ export class CodeMachineCLIAdapter {
     // Check minimum version if configured
     const minVersion = this.config.codemachine_cli_version;
     if (minVersion && version) {
-      const cleaned = semver.clean(version);
+      const cleaned = semver.coerce(version)?.version ?? null;
       if (cleaned && !semver.satisfies(cleaned, `>=${minVersion}`)) {
         return {
           available: false,
@@ -153,7 +153,7 @@ export class CodeMachineCLIAdapter {
     this.logger?.info('Starting CodeMachine-CLI execution', {
       binary: binaryPath,
       source: resolution.source,
-      args: args.slice(0, 3), // Log first few args only
+      argCount: args.length,
       workspaceDir: options.workspaceDir,
       timeoutMs: options.timeoutMs,
     });
@@ -166,6 +166,7 @@ export class CodeMachineCLIAdapter {
       const stderrChunks: Buffer[] = [];
       let timedOut = false;
       let killed = false;
+      let hasExited = false;
 
       let child;
       try {
@@ -217,7 +218,7 @@ export class CodeMachineCLIAdapter {
         timedOut = true;
         child.kill('SIGTERM');
         setTimeout(() => {
-          if (!child.killed) {
+          if (!hasExited) {
             killed = true;
             child.kill('SIGKILL');
           }
@@ -255,6 +256,7 @@ export class CodeMachineCLIAdapter {
       });
 
       child.on('close', (code) => {
+        hasExited = true;
         clearTimeout(timeoutHandle);
         const durationMs = Date.now() - startTime;
 

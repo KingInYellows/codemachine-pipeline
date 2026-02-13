@@ -88,7 +88,8 @@ async function resolveBinaryUncached(): Promise<BinaryResolutionResult> {
   }
 
   // 3. Check global PATH
-  const globalPath = await findInPath('codemachine');
+  const globalBinaryName = process.platform === 'win32' ? 'codemachine.exe' : 'codemachine';
+  const globalPath = await findInPath(globalBinaryName);
   if (globalPath) {
     return { resolved: true, binaryPath: globalPath, source: 'path' };
   }

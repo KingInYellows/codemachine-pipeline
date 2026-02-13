@@ -34,6 +34,7 @@ import { createLinearAdapter, type IssueSnapshot } from '../../adapters/linear/L
 import { CLIExecutionEngine } from '../../workflows/cliExecutionEngine';
 import { loadQueue } from '../../workflows/queueStore';
 import { createCodeMachineStrategy } from '../../workflows/codeMachineStrategy';
+import { createCodeMachineCLIStrategy } from '../../workflows/codeMachineCLIStrategy';
 import { CliError, CliErrorCode, formatErrorMessage, formatErrorJson } from '../utils/cliErrors';
 import { getErrorMessage } from '../../utils/errors.js';
 import { DEFAULT_EXECUTION_CONFIG } from '../../core/config/RepoConfig.js';
@@ -592,8 +593,14 @@ export default class Start extends Command {
       },
     };
 
-    // Create strategy
-    const strategy = createCodeMachineStrategy({
+    // Create strategies — CLI strategy takes priority when binary is available
+    const cliStrategy = createCodeMachineCLIStrategy({
+      config: mergedConfig.execution!,
+      logger,
+    });
+    await cliStrategy.checkAvailability();
+
+    const legacyStrategy = createCodeMachineStrategy({
       config: mergedConfig.execution!,
       logger,
     });
@@ -602,7 +609,7 @@ export default class Start extends Command {
     const executionEngine = new CLIExecutionEngine({
       runDir,
       config: mergedConfig,
-      strategies: [strategy],
+      strategies: [cliStrategy, legacyStrategy],
       dryRun: false,
       logger,
       telemetry,

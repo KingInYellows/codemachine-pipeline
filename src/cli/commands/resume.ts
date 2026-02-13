@@ -10,6 +10,7 @@ import { getRunDirectoryPath } from '../../persistence/runDirectoryManager';
 import type { QueueValidationResult } from '../../workflows/queueStore';
 import { CLIExecutionEngine } from '../../workflows/cliExecutionEngine';
 import { createCodeMachineStrategy } from '../../workflows/codeMachineStrategy';
+import { createCodeMachineCLIStrategy } from '../../workflows/codeMachineCLIStrategy';
 import { loadRepoConfig, type RepoConfig, DEFAULT_EXECUTION_CONFIG } from '../../core/config/RepoConfig';
 import { createCliLogger, LogLevel } from '../../telemetry/logger';
 import { createRunMetricsCollector, StandardMetrics } from '../../telemetry/metrics';
@@ -330,7 +331,14 @@ export default class Resume extends Command {
         },
       };
 
-      const strategy = createCodeMachineStrategy({
+      // Create strategies — CLI strategy takes priority when binary is available
+      const cliStrategy = createCodeMachineCLIStrategy({
+        config: mergedConfig.execution!,
+        logger,
+      });
+      await cliStrategy.checkAvailability();
+
+      const legacyStrategy = createCodeMachineStrategy({
         config: mergedConfig.execution!,
         logger,
       });
@@ -338,7 +346,7 @@ export default class Resume extends Command {
       const executionEngine = new CLIExecutionEngine({
         runDir: runDirPath,
         config: mergedConfig,
-        strategies: [strategy],
+        strategies: [cliStrategy, legacyStrategy],
         dryRun: false,
         logger,
         telemetry: executionTelemetry,

@@ -110,7 +110,7 @@ async function rotateLogFiles(
  * Uses an allowlist regex instead of a blocklist to prevent bypass
  * via `$()`, backticks, or Unicode homoglyphs.
  */
-const SAFE_CLI_PATH_PATTERN = /^[a-zA-Z0-9_\-./]+$/;
+const SAFE_CLI_PATH_PATTERN = /^[a-zA-Z0-9_\-./:\\]+$/;
 
 export function validateCliPath(cliPath: string): { valid: boolean; error?: string } {
   if (cliPath.length === 0) {
@@ -129,8 +129,8 @@ export function validateCliPath(cliPath: string): { valid: boolean; error?: stri
     }
     return { valid: false, error: 'CLI path contains invalid characters' };
   }
-  if (cliPath.includes('..')) {
-    return { valid: false, error: 'CLI path contains path traversal (..)' };
+  if (cliPath.split(/[\\/]/).includes('..')) {
+    return { valid: false, error: 'CLI path contains path traversal segments (..)' };
   }
   return { valid: true };
 }
