@@ -594,6 +594,7 @@ export default class Start extends Command {
       log_rotation_mb: 100,
       log_rotation_keep: 3,
       log_rotation_compress: false,
+      env_credential_keys: [],
     };
 
     // Override max_parallel_tasks if specified

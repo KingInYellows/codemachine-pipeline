@@ -14,6 +14,7 @@ import {
 } from '../telemetry/executionMetrics.js';
 import type { ExecutionTelemetry } from '../telemetry/executionTelemetry.js';
 import { getErrorMessage } from '../utils/errors.js';
+import { CODEMACHINE_STRATEGY_NAMES } from './codemachineTypes.js';
 
 type TaskTypeString = ExecutionTask['task_type'];
 
@@ -492,7 +493,7 @@ export class CLIExecutionEngine {
         strategyResult.artifacts,
         this.logger
       );
-      if (strategy.name === 'codemachine') {
+      if (CODEMACHINE_STRATEGY_NAMES.has(strategy.name)) {
         const engine = executionConfig.default_engine;
         this.telemetry?.metrics?.recordCodeMachineExecution(engine, 'success', durationMs);
       }
@@ -528,7 +529,7 @@ export class CLIExecutionEngine {
     const canRetryTask = canRetry(updatedTask);
     const status: CodeMachineExecutionStatus =
       strategyResult.status === 'timeout' ? 'timeout' : 'failure';
-    if (strategy.name === 'codemachine') {
+    if (CODEMACHINE_STRATEGY_NAMES.has(strategy.name)) {
       const engine = executionConfig.default_engine;
       this.telemetry?.metrics?.recordCodeMachineExecution(engine, status, durationMs);
       if (canRetryTask) {

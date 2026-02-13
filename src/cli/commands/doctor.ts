@@ -2,10 +2,12 @@ import { Command, Flags } from '@oclif/core';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { execSync, spawnSync } from 'node:child_process';
+import * as semver from 'semver';
 import { loadRepoConfig } from '../../core/config/repo_config';
 import { createCliLogger, LogLevel } from '../../telemetry/logger';
 import { createRunMetricsCollector, StandardMetrics } from '../../telemetry/metrics';
 import { createRunTraceManager, SpanStatusCode } from '../../telemetry/traces';
+import { resolveBinary } from '../../adapters/codemachine/binaryResolver';
 import type { StructuredLogger } from '../../telemetry/logger';
 import type { MetricsCollector } from '../../telemetry/metrics';
 import type { TraceManager, ActiveSpan } from '../../telemetry/traces';
@@ -615,47 +617,90 @@ export default class Doctor extends Command {
 
   private async checkCodeMachineCli(): Promise<DiagnosticCheck> {
     const configPath = path.resolve(process.cwd(), CONFIG_RELATIVE_PATH);
-    let cliPath = 'codemachine-cli';
 
+    // Load minimum version from config if available
+    let minVersion: string | undefined;
     if (fs.existsSync(configPath)) {
-      const result = await loadRepoConfig(configPath);
-      if (result.success && result.config?.execution?.codemachine_cli_path) {
-        cliPath = result.config.execution.codemachine_cli_path;
+      const configResult = await loadRepoConfig(configPath);
+      if (configResult.success && configResult.config?.execution?.codemachine_cli_version) {
+        minVersion = configResult.config.execution.codemachine_cli_version;
       }
     }
 
-    try {
-      const result = spawnSync(cliPath, ['--version'], {
-        encoding: 'utf-8',
-        timeout: 5000,
-      });
+    // Use binary resolver for consistent resolution
+    const resolution = await resolveBinary();
 
-      if (result.status === 0) {
-        const version = result.stdout.trim();
-        return {
-          name: 'CodeMachine CLI (Execution)',
-          status: 'pass',
-          message: `${cliPath} ${version}`,
-          details: { version, cli_path: cliPath },
-        };
-      }
-
-      return {
-        name: 'CodeMachine CLI (Execution)',
-        status: 'warn',
-        message: `${cliPath} command failed`,
-        remediation:
-          'Install codemachine-cli: npm install -g codemachine-cli (optional for execution engine)',
-        details: { cli_path: cliPath },
-      };
-    } catch {
+    if (!resolution.resolved || !resolution.binaryPath) {
       return {
         name: 'CodeMachine CLI (Execution)',
         status: 'warn',
         message: 'CodeMachine CLI not found',
         remediation:
-          'Install codemachine-cli: npm install -g codemachine-cli (optional for execution engine)',
-        details: { cli_path: cliPath },
+          'Install codemachine: npm install codemachine@^0.8.0 (optional for execution engine)',
+        details: { error: resolution.error },
+      };
+    }
+
+    // Get version from binary
+    try {
+      const result = spawnSync(resolution.binaryPath, ['--version'], {
+        encoding: 'utf-8',
+        timeout: 5000,
+      });
+
+      if (result.status !== 0) {
+        return {
+          name: 'CodeMachine CLI (Execution)',
+          status: 'warn',
+          message: `CodeMachine CLI found but --version failed`,
+          remediation: 'Check the binary at: ' + resolution.binaryPath,
+          details: { cli_path: resolution.binaryPath, source: resolution.source },
+        };
+      }
+
+      const versionRaw = result.stdout.trim().split('\n')[0]?.trim() ?? '';
+      const version = semver.clean(versionRaw) ?? versionRaw;
+
+      // Check minimum version if configured
+      if (minVersion && version) {
+        const parsed = semver.valid(version);
+        if (parsed && !semver.satisfies(parsed, `>=${minVersion}`)) {
+          return {
+            name: 'CodeMachine CLI (Execution)',
+            status: 'warn',
+            message: `CodeMachine CLI v${version} below minimum v${minVersion}`,
+            remediation: `Upgrade: npm install codemachine@^${minVersion}`,
+            details: { version, min_version: minVersion, cli_path: resolution.binaryPath, source: resolution.source },
+          };
+        }
+
+        // Warn on 0.x minor version mismatch (breaking per SemVer spec)
+        if (parsed && semver.major(parsed) === 0 && minVersion) {
+          const minParsed = semver.valid(semver.coerce(minVersion));
+          if (minParsed && semver.minor(parsed) !== semver.minor(minParsed)) {
+            return {
+              name: 'CodeMachine CLI (Execution)',
+              status: 'warn',
+              message: `CodeMachine CLI v${version} — minor version differs from expected v${minVersion} (0.x minor = breaking)`,
+              details: { version, min_version: minVersion, cli_path: resolution.binaryPath, source: resolution.source },
+            };
+          }
+        }
+      }
+
+      return {
+        name: 'CodeMachine CLI (Execution)',
+        status: 'pass',
+        message: `CodeMachine CLI v${version} (${resolution.source})`,
+        details: { version, cli_path: resolution.binaryPath, source: resolution.source },
+      };
+    } catch {
+      return {
+        name: 'CodeMachine CLI (Execution)',
+        status: 'warn',
+        message: 'CodeMachine CLI found but version check failed',
+        remediation: 'Check the binary at: ' + resolution.binaryPath,
+        details: { cli_path: resolution.binaryPath, source: resolution.source },
       };
     }
   }

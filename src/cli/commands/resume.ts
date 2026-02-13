@@ -334,6 +334,7 @@ export default class Resume extends Command {
         log_rotation_mb: 100,
         log_rotation_keep: 3,
         log_rotation_compress: false,
+        env_credential_keys: [],
       };
 
       const mergedConfig: RepoConfig = {

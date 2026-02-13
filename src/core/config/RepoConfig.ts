@@ -255,6 +255,9 @@ const ExecutionConfigSchema = z.object({
   log_rotation_mb: z.number().int().min(1).max(10240).default(100),
   log_rotation_keep: z.number().int().min(1).max(20).default(3),
   log_rotation_compress: z.boolean().default(false),
+  codemachine_cli_version: z.string().optional().describe('Minimum required CodeMachine-CLI version (semver)'),
+  codemachine_workflow_dir: z.string().optional().describe('Path to workflow template overrides directory'),
+  env_credential_keys: z.array(z.string()).default([]).describe('Env var names to pipe to CodeMachine-CLI via stdin'),
 });
 
 export type ExecutionConfig = z.infer<typeof ExecutionConfigSchema>;
@@ -547,7 +550,11 @@ export function applyEnvironmentOverrides(config: RepoConfig): RepoConfig {
 
   const codemachineCliPath = process.env.CODEPIPE_EXECUTION_CLI_PATH;
   if (codemachineCliPath && overridden.execution) {
-    overridden.execution = { ...overridden.execution, codemachine_cli_path: codemachineCliPath };
+    // SECURITY: validate env override path before applying (prevents injection via env var)
+    const SAFE_CLI_PATH = /^[a-zA-Z0-9_\-./]+$/;
+    if (SAFE_CLI_PATH.test(codemachineCliPath)) {
+      overridden.execution = { ...overridden.execution, codemachine_cli_path: codemachineCliPath };
+    }
   }
 
   const defaultEngine = process.env.CODEPIPE_EXECUTION_DEFAULT_ENGINE;
@@ -669,6 +676,7 @@ export function createDefaultConfig(
       log_rotation_mb: 100,
       log_rotation_keep: 3,
       log_rotation_compress: false,
+      env_credential_keys: [],
     },
     config_history: [
       {
