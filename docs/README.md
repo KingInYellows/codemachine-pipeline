@@ -125,7 +125,7 @@ Runbooks and operational procedures for pipeline administration and troubleshoot
 |----------|-------------|
 | [Init Playbook](ops/init_playbook.md) | Repository initialization with `codepipe init` command |
 | [Doctor Reference](ops/doctor_reference.md) | Environment diagnostics and prerequisite validation |
-| [CLI Reference](ops/cli-reference.md) | CLI command reference and usage guide |
+| [CLI Reference](ops/cli-reference.md) | CLI command reference and usage guide (auto-generated) |
 | [API Reference](ops/api-reference.md) | Configuration schema, domain models, and validation utilities |
 | [Troubleshooting](ops/troubleshooting.md) | Common issues and troubleshooting procedures |
 | [Smoke Test Guide](ops/smoke_test_guide.md) | Quick validation tests for deployment verification |
