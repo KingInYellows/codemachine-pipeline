@@ -224,6 +224,12 @@ Known issues and their resolutions organized by category.
 |----------|-------------|
 | [Graphite Restack Conflicts](solutions/integration-issues/graphite-restack-conflicts-after-main-advanced.md) | Resolving merge conflicts when main advances during PR lifecycle |
 
+### Code Review
+
+| Document | Description |
+|----------|-------------|
+| [Reviewing Documentation PRs](solutions/code-review/reviewing-documentation-prs.md) | Agent selection, factual accuracy verification, and archive strategy for docs PRs |
+
 ### Linting
 
 | Document | Description |
