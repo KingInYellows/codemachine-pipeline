@@ -1,5 +1,5 @@
 ---
-status: ready
+status: complete
 priority: p3
 issue_id: "015"
 tags: [code-review, dead-code, simplicity, pr-466]
