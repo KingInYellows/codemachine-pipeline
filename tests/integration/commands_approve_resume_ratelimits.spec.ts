@@ -28,10 +28,7 @@ import {
   computeContentHash,
   computeArtifactHash,
 } from '../../src/workflows/approvalRegistry.js';
-import {
-  analyzeResumeState,
-  formatResumeAnalysis,
-} from '../../src/workflows/resumeCoordinator.js';
+import { analyzeResumeState, formatResumeAnalysis } from '../../src/workflows/resumeCoordinator.js';
 import {
   generateRateLimitReport,
   formatRateLimitCLIOutput,
@@ -61,11 +58,7 @@ describe('Approve Command Integration Tests', () => {
 
     const artifactsDir = path.join(runDir, 'artifacts');
     await fs.mkdir(artifactsDir, { recursive: true });
-    await fs.writeFile(
-      path.join(artifactsDir, 'prd.md'),
-      '# Test PRD\n\nTest content.',
-      'utf-8'
-    );
+    await fs.writeFile(path.join(artifactsDir, 'prd.md'), '# Test PRD\n\nTest content.', 'utf-8');
   });
 
   afterEach(async () => {
@@ -128,9 +121,7 @@ describe('Approve Command Integration Tests', () => {
 
     // Simulates the command's "already approved" check
     const history = await getApprovalHistory(runDir);
-    const alreadyApproved = history.some(
-      (a) => a.gate_type === 'spec' && a.verdict === 'approved'
-    );
+    const alreadyApproved = history.some((a) => a.gate_type === 'spec' && a.verdict === 'approved');
     expect(alreadyApproved).toBe(false);
   });
 
@@ -151,9 +142,7 @@ describe('Approve Command Integration Tests', () => {
 
     // History shows it was approved
     const history = await getApprovalHistory(runDir);
-    const alreadyApproved = history.some(
-      (a) => a.gate_type === 'prd' && a.verdict === 'approved'
-    );
+    const alreadyApproved = history.some((a) => a.gate_type === 'prd' && a.verdict === 'approved');
     expect(alreadyApproved).toBe(true);
   });
 
@@ -181,9 +170,7 @@ describe('Approve Command Integration Tests', () => {
 
     // Modify artifact, compute new hash
     await fs.writeFile(prdPath, originalContent + '\n## Added section', 'utf-8');
-    const modifiedHash = computeContentHash(
-      await fs.readFile(prdPath, 'utf-8')
-    );
+    const modifiedHash = computeContentHash(await fs.readFile(prdPath, 'utf-8'));
     expect(modifiedHash).not.toBe(originalHash);
 
     // Attempt grant with modified hash → should throw

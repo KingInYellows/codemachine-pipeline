@@ -98,7 +98,7 @@ export class CodeMachineCLIAdapter {
       runDir?: string;
       taskId?: string;
       credentials?: Record<string, string>;
-    },
+    }
   ): Promise<CodeMachineExecutionResult> {
     if (this.executing) {
       return {
@@ -127,7 +127,7 @@ export class CodeMachineCLIAdapter {
       runDir?: string;
       taskId?: string;
       credentials?: Record<string, string>;
-    },
+    }
   ): Promise<CodeMachineExecutionResult> {
     const startTime = Date.now();
 
@@ -144,9 +144,10 @@ export class CodeMachineCLIAdapter {
     }
 
     const binaryPath = resolution.binaryPath;
-    const maxBuffer = this.config.max_log_buffer_size && this.config.max_log_buffer_size > 0
-      ? this.config.max_log_buffer_size
-      : 10 * 1024 * 1024; // 10 MB default
+    const maxBuffer =
+      this.config.max_log_buffer_size && this.config.max_log_buffer_size > 0
+        ? this.config.max_log_buffer_size
+        : 10 * 1024 * 1024; // 10 MB default
     let totalBufferSize = 0;
     let bufferLimitReached = false;
 
@@ -297,7 +298,7 @@ export class CodeMachineCLIAdapter {
   private async runCommand(
     binaryPath: string,
     args: string[],
-    opts: { timeoutMs: number },
+    opts: { timeoutMs: number }
   ): Promise<{ exitCode: number; stdout: string; stderr: string }> {
     return new Promise((resolve) => {
       const child = spawn(binaryPath, args, {

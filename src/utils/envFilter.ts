@@ -4,8 +4,15 @@ import * as os from 'node:os';
  * Base set of environment variables always passed to child processes.
  */
 const BASE_ENV_ALLOWLIST = [
-  'PATH', 'HOME', 'USER', 'SHELL', 'TERM', 'LANG', 'LC_ALL',
-  'NODE_ENV', 'LOG_LEVEL',
+  'PATH',
+  'HOME',
+  'USER',
+  'SHELL',
+  'TERM',
+  'LANG',
+  'LC_ALL',
+  'NODE_ENV',
+  'LOG_LEVEL',
 ] as const;
 
 /**
@@ -15,16 +22,15 @@ const BASE_ENV_ALLOWLIST = [
  * @param options.includeDebug - Include DEBUG env var (default: false)
  * @param options.includeTmpdir - Include TMPDIR from os.tmpdir() (default: false)
  */
-export function filterEnvironment(options: {
-  additional?: string[];
-  includeDebug?: boolean;
-  includeTmpdir?: boolean;
-} = {}): Record<string, string> {
+export function filterEnvironment(
+  options: {
+    additional?: string[];
+    includeDebug?: boolean;
+    includeTmpdir?: boolean;
+  } = {}
+): Record<string, string> {
   const filtered: Record<string, string> = {};
-  const keys = new Set<string>([
-    ...BASE_ENV_ALLOWLIST,
-    ...(options.additional ?? []),
-  ]);
+  const keys = new Set<string>([...BASE_ENV_ALLOWLIST, ...(options.additional ?? [])]);
 
   if (options.includeDebug) {
     keys.add('DEBUG');

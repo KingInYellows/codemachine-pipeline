@@ -32,9 +32,7 @@ export class ValidationError extends Error {
   readonly boundary: string;
 
   constructor(boundary: string, issues: ValidationIssue[]) {
-    const summary = issues.length === 1
-      ? issues[0].message
-      : `${issues.length} validation errors`;
+    const summary = issues.length === 1 ? issues[0].message : `${issues.length} validation errors`;
     super(`[${boundary}] ${summary}`);
     this.name = 'ValidationError';
     this.boundary = boundary;
@@ -44,9 +42,7 @@ export class ValidationError extends Error {
 
   /** Format issues for CLI output. */
   formatForCLI(): string {
-    return this.issues
-      .map((i) => `  - ${i.path ? `${i.path}: ` : ''}${i.message}`)
-      .join('\n');
+    return this.issues.map((i) => `  - ${i.path ? `${i.path}: ` : ''}${i.message}`).join('\n');
   }
 
   /** Serialize for logging/telemetry. */
@@ -89,4 +85,3 @@ function mapZodIssue(issue: ZodIssue): ValidationIssue {
 
   return base;
 }
-

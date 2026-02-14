@@ -64,10 +64,7 @@ import {
 export { assessMergeReadiness } from './deploymentTriggerExecution';
 
 // Import context loading and persistence from companion module
-import {
-  loadDeploymentContext,
-  persistDeploymentOutcome,
-} from './deploymentTriggerContext.js';
+import { loadDeploymentContext, persistDeploymentOutcome } from './deploymentTriggerContext.js';
 import { getErrorMessage } from '../utils/errors.js';
 
 // Re-export context API for backward compatibility

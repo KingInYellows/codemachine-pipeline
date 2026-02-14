@@ -8,11 +8,7 @@ export {
   type AvailabilityResult,
 } from './CodeMachineCLIAdapter.js';
 
-export {
-  resolveBinary,
-  clearBinaryCache,
-  type BinaryResolutionResult,
-} from './binaryResolver.js';
+export { resolveBinary, clearBinaryCache, type BinaryResolutionResult } from './binaryResolver.js';
 
 // Re-export workflow-layer types for adapter consumers
 export {

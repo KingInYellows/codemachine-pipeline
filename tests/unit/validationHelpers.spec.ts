@@ -22,9 +22,11 @@ const TestSchema = z.object({
   name: z.string().min(1),
   count: z.number().int().positive(),
   tags: z.array(z.string()).optional(),
-  nested: z.object({
-    enabled: z.boolean(),
-  }).optional(),
+  nested: z
+    .object({
+      enabled: z.boolean(),
+    })
+    .optional(),
 });
 
 type TestType = z.infer<typeof TestSchema>;
@@ -57,7 +59,7 @@ describe('validateOrThrow', () => {
       expect.objectContaining({
         name: 'ValidationError',
         boundary: 'webhook',
-      }),
+      })
     );
   });
 
@@ -145,7 +147,13 @@ describe('ValidationError', () => {
 
   it('should redact expected/received in JSON serialization', () => {
     const err = new ValidationError('config', [
-      { path: 'token', message: 'Invalid', code: 'invalid_type', expected: 'string', received: 'secret123' },
+      {
+        path: 'token',
+        message: 'Invalid',
+        code: 'invalid_type',
+        expected: 'string',
+        received: 'secret123',
+      },
     ]);
     const json = err.toJSON();
     expect(json.issues[0]).not.toHaveProperty('expected');

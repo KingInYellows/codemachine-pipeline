@@ -212,7 +212,7 @@ describe('CodeMachineCLIAdapter', () => {
       expect(spawn).toHaveBeenCalledWith(
         '/usr/local/bin/codemachine',
         ['run', "claude 'task'"],
-        expect.objectContaining({ shell: false }),
+        expect.objectContaining({ shell: false })
       );
     });
   });
@@ -577,5 +577,4 @@ describe('CodeMachineCLIAdapter', () => {
       expect(result.killed).toBe(false);
     });
   });
-
 });

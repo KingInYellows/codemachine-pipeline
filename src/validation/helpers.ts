@@ -43,11 +43,7 @@ export type ValidationResult<T> = ValidationSuccess<T> | ValidationFailure;
  * @returns Typed, validated data
  * @throws ValidationError with structured issues
  */
-export function validateOrThrow<T>(
-  schema: ZodSchema<T>,
-  input: unknown,
-  boundary: string,
-): T {
+export function validateOrThrow<T>(schema: ZodSchema<T>, input: unknown, boundary: string): T {
   const result = schema.safeParse(input);
   if (result.success) {
     return result.data;
@@ -69,7 +65,7 @@ export function validateOrThrow<T>(
 export function validateOrResult<T>(
   schema: ZodSchema<T>,
   input: unknown,
-  boundary: string,
+  boundary: string
 ): ValidationResult<T> {
   const result = schema.safeParse(input);
   if (result.success) {

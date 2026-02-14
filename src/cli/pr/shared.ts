@@ -107,10 +107,9 @@ export async function loadPRContext(
     logger.error('Failed to read manifest', {
       error: getErrorMessage(error),
     });
-    throw new Error(
-      `Failed to read manifest for feature ${featureId}: ${getErrorMessage(error)}`,
-      { cause: error }
-    );
+    throw new Error(`Failed to read manifest for feature ${featureId}: ${getErrorMessage(error)}`, {
+      cause: error,
+    });
   }
 
   // Validate GitHub integration is enabled
@@ -256,10 +255,7 @@ export async function persistPRData(context: PRContext, prMetadata: PRMetadata):
     logger.error('Failed to persist PR metadata', {
       error: getErrorMessage(error),
     });
-    throw new Error(
-      `Failed to persist PR metadata: ${getErrorMessage(error)}`,
-      { cause: error }
-    );
+    throw new Error(`Failed to persist PR metadata: ${getErrorMessage(error)}`, { cause: error });
   }
 }
 

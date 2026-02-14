@@ -24,10 +24,7 @@ import { z } from 'zod';
  * cursor, mistral, auggie, ccr) that were never referenced or
  * supported — removed in Todo 015.
  */
-export const CodeMachineEngineTypeSchema = z.enum([
-  'claude',
-  'codex',
-]);
+export const CodeMachineEngineTypeSchema = z.enum(['claude', 'codex']);
 
 export type CodeMachineEngineType = z.infer<typeof CodeMachineEngineTypeSchema>;
 

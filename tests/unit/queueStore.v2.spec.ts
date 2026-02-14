@@ -89,7 +89,6 @@ describe('queueStore V2 Integration', () => {
       const tasksAgain = await loadQueue(runDir);
       expect(tasksAgain.size).toBe(1);
     });
-
   });
 
   // ==========================================================================

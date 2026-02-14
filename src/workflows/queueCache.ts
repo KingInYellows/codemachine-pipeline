@@ -85,18 +85,30 @@ async function detectLegacyV1Queue(queueDir: string): Promise<void> {
     // Check if V1 files exist
     const [v1QueueExists, v1UpdatesExists, v2OperationsExists, v2SnapshotExists] =
       await Promise.all([
-        fs.access(v1QueueFile).then(() => true, () => false),
-        fs.access(v1UpdatesFile).then(() => true, () => false),
-        fs.access(v2OperationsLog).then(() => true, () => false),
-        fs.access(v2Snapshot).then(() => true, () => false),
+        fs.access(v1QueueFile).then(
+          () => true,
+          () => false
+        ),
+        fs.access(v1UpdatesFile).then(
+          () => true,
+          () => false
+        ),
+        fs.access(v2OperationsLog).then(
+          () => true,
+          () => false
+        ),
+        fs.access(v2Snapshot).then(
+          () => true,
+          () => false
+        ),
       ]);
 
     // If V1 files exist but no V2 files, throw error
     if ((v1QueueExists || v1UpdatesExists) && !v2OperationsExists && !v2SnapshotExists) {
       throw new Error(
         `Legacy V1 queue format detected in ${queueDir}. V1 queues are no longer supported. ` +
-        `Please migrate your queue to V2 format or recreate the run. ` +
-        `V1 files found: ${v1QueueExists ? 'queue.jsonl ' : ''}${v1UpdatesExists ? 'queue_updates.jsonl' : ''}`
+          `Please migrate your queue to V2 format or recreate the run. ` +
+          `V1 files found: ${v1QueueExists ? 'queue.jsonl ' : ''}${v1UpdatesExists ? 'queue_updates.jsonl' : ''}`
       );
     }
   } catch (error) {

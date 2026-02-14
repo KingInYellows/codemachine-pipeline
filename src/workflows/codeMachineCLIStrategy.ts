@@ -150,7 +150,7 @@ export class CodeMachineCLIStrategy implements ExecutionStrategy {
 }
 
 export function createCodeMachineCLIStrategy(
-  options: CodeMachineCLIStrategyOptions,
+  options: CodeMachineCLIStrategyOptions
 ): CodeMachineCLIStrategy {
   return new CodeMachineCLIStrategy(options);
 }

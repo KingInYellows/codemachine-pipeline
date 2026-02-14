@@ -10,7 +10,5 @@ README.md
 .ai-feature-pipeline
 test
 *.test.ts
-jest.config.js
-.eslintrc.json
 .prettierrc.json
 .test-temp

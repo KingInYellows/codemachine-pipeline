@@ -11,7 +11,11 @@ import type { QueueValidationResult } from '../../workflows/queueStore';
 import { CLIExecutionEngine } from '../../workflows/cliExecutionEngine';
 import { createCodeMachineStrategy } from '../../workflows/codeMachineStrategy';
 import { createCodeMachineCLIStrategy } from '../../workflows/codeMachineCLIStrategy';
-import { loadRepoConfig, type RepoConfig, DEFAULT_EXECUTION_CONFIG } from '../../core/config/RepoConfig';
+import {
+  loadRepoConfig,
+  type RepoConfig,
+  DEFAULT_EXECUTION_CONFIG,
+} from '../../core/config/RepoConfig';
 import { createCliLogger, LogLevel } from '../../telemetry/logger';
 import { createRunMetricsCollector, StandardMetrics } from '../../telemetry/metrics';
 import { createRunTraceManager, SpanStatusCode } from '../../telemetry/traces';
