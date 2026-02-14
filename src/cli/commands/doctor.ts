@@ -9,6 +9,7 @@ import { createRunTraceManager, SpanStatusCode } from '../../telemetry/traces';
 import type { StructuredLogger } from '../../telemetry/logger';
 import type { MetricsCollector } from '../../telemetry/metrics';
 import type { TraceManager, ActiveSpan } from '../../telemetry/traces';
+import { checkCodeMachineCli } from '../diagnostics';
 
 const CONFIG_RELATIVE_PATH = path.join('.codepipe', 'config.json');
 
@@ -130,10 +131,21 @@ export default class Doctor extends Command {
       checks.push(this.checkFilesystemPermissions());
       checks.push(this.checkOutboundConnectivity());
 
+      // Pre-load config once for checks that need it
+      const configPath = path.resolve(process.cwd(), CONFIG_RELATIVE_PATH);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Config used for minimal property extraction only
+      let loadedConfig: any;
+      if (fs.existsSync(configPath)) {
+        const configResult = await loadRepoConfig(configPath);
+        if (configResult.success && configResult.config) {
+          loadedConfig = configResult.config;
+        }
+      }
+
       // Async checks
       checks.push(await this.checkRepoConfig());
-      checks.push(await this.checkCodeMachineCli());
-      checks.push(...(await this.checkEnvironmentVariables()));
+      checks.push(await this.checkCodeMachineCli(loadedConfig));
+      checks.push(...this.checkEnvironmentVariables(loadedConfig));
 
       // Compute summary
       const summary = {
@@ -613,84 +625,31 @@ export default class Doctor extends Command {
     };
   }
 
-  private async checkCodeMachineCli(): Promise<DiagnosticCheck> {
-    const configPath = path.resolve(process.cwd(), CONFIG_RELATIVE_PATH);
-    let cliPath = 'codemachine-cli';
-
-    if (fs.existsSync(configPath)) {
-      const result = await loadRepoConfig(configPath);
-      if (result.success && result.config?.execution?.codemachine_cli_path) {
-        cliPath = result.config.execution.codemachine_cli_path;
-      }
-    }
-
-    try {
-      const result = spawnSync(cliPath, ['--version'], {
-        encoding: 'utf-8',
-        timeout: 5000,
-      });
-
-      if (result.status === 0) {
-        const version = result.stdout.trim();
-        return {
-          name: 'CodeMachine CLI (Execution)',
-          status: 'pass',
-          message: `${cliPath} ${version}`,
-          details: { version, cli_path: cliPath },
-        };
-      }
-
-      return {
-        name: 'CodeMachine CLI (Execution)',
-        status: 'warn',
-        message: `${cliPath} command failed`,
-        remediation:
-          'Install codemachine-cli: npm install -g codemachine-cli (optional for execution engine)',
-        details: { cli_path: cliPath },
-      };
-    } catch {
-      return {
-        name: 'CodeMachine CLI (Execution)',
-        status: 'warn',
-        message: 'CodeMachine CLI not found',
-        remediation:
-          'Install codemachine-cli: npm install -g codemachine-cli (optional for execution engine)',
-        details: { cli_path: cliPath },
-      };
-    }
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Config used for minimal property extraction only
+  private async checkCodeMachineCli(config?: any): Promise<DiagnosticCheck> {
+    return checkCodeMachineCli(config);
   }
 
-  private async checkEnvironmentVariables(): Promise<DiagnosticCheck[]> {
-    const configPath = path.resolve(process.cwd(), CONFIG_RELATIVE_PATH);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Config used for minimal property extraction only
+  private checkEnvironmentVariables(config?: any): DiagnosticCheck[] {
     const checks: DiagnosticCheck[] = [];
 
-    // Try to load config to determine which env vars are needed
-    if (!fs.existsSync(configPath)) {
+    // Check if config was provided and is valid
+    if (!config) {
       checks.push({
         name: 'Environment Variables',
         status: 'warn',
-        message: 'Cannot check environment variables (config not found)',
+        message: 'Cannot check environment variables (config not found or invalid)',
         remediation: 'Run "codepipe init" first',
       });
       return checks;
     }
 
-    const result = await loadRepoConfig(configPath);
-    if (!result.success || !result.config) {
-      checks.push({
-        name: 'Environment Variables',
-        status: 'warn',
-        message: 'Cannot check environment variables (config invalid)',
-        remediation: 'Fix configuration first',
-      });
-      return checks;
-    }
-
-    const config = result.config;
-
     // Check GitHub token
-    if (config.github.enabled) {
-      const tokenVar = config.github.token_env_var;
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access -- Config type not fully specified for this usage
+    if (config.github?.enabled && config.github.token_env_var) {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access -- Config type not fully specified for this usage
+      const tokenVar = config.github.token_env_var as string;
       const token = process.env[tokenVar];
 
       if (token) {
@@ -701,18 +660,22 @@ export default class Doctor extends Command {
           details: { length: token.length },
         });
       } else {
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access -- Config type not fully specified for this usage
+        const requiredScopes = (config.github.required_scopes ?? []) as string[];
         checks.push({
           name: `${tokenVar} (GitHub)`,
           status: 'fail',
           message: 'Token not set',
-          remediation: `Set ${tokenVar} with scopes: ${config.github.required_scopes.join(', ')}`,
+          remediation: `Set ${tokenVar} with scopes: ${requiredScopes.join(', ')}`,
         });
       }
     }
 
     // Check Linear API key
-    if (config.linear.enabled) {
-      const keyVar = config.linear.api_key_env_var;
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access -- Config type not fully specified for this usage
+    if (config.linear?.enabled && config.linear.api_key_env_var) {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access -- Config type not fully specified for this usage
+      const keyVar = config.linear.api_key_env_var as string;
       const key = process.env[keyVar];
 
       if (key) {
@@ -733,22 +696,28 @@ export default class Doctor extends Command {
     }
 
     // Check agent endpoint
-    const agentEndpoint =
-      config.runtime.agent_endpoint || process.env[config.runtime.agent_endpoint_env_var];
-    if (!agentEndpoint) {
-      checks.push({
-        name: `${config.runtime.agent_endpoint_env_var} (Agent)`,
-        status: 'warn',
-        message: 'Agent endpoint not configured',
-        remediation: `Set ${config.runtime.agent_endpoint_env_var} or add runtime.agent_endpoint to config`,
-      });
-    } else {
-      checks.push({
-        name: `Agent Endpoint`,
-        status: 'pass',
-        message: `Configured: ${agentEndpoint}`,
-        details: { endpoint: agentEndpoint },
-      });
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access -- Config type not fully specified for this usage
+    if (config.runtime?.agent_endpoint_env_var) {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access -- Config type not fully specified for this usage
+      const agentEndpoint =
+        (config.runtime.agent_endpoint as string | undefined) ?? process.env[config.runtime.agent_endpoint_env_var as string];
+      if (!agentEndpoint) {
+        checks.push({
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access -- Config type not fully specified for this usage
+          name: `${config.runtime.agent_endpoint_env_var as string} (Agent)`,
+          status: 'warn',
+          message: 'Agent endpoint not configured',
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access -- Config type not fully specified for this usage
+          remediation: `Set ${config.runtime.agent_endpoint_env_var as string} or add runtime.agent_endpoint to config`,
+        });
+      } else {
+        checks.push({
+          name: `Agent Endpoint`,
+          status: 'pass',
+          message: `Configured: ${agentEndpoint}`,
+          details: { endpoint: agentEndpoint },
+        });
+      }
     }
 
     return checks;

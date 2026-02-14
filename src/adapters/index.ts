@@ -103,5 +103,18 @@ export {
   type HttpResponse,
 } from './http/client.js';
 
+// CodeMachine-CLI exports
+export {
+  CodeMachineCLIAdapter,
+  resolveBinary,
+  clearBinaryCache,
+  CODEMACHINE_STRATEGY_NAMES,
+  type CodeMachineCLIAdapterOptions,
+  type AvailabilityResult,
+  type BinaryResolutionResult,
+  type CodeMachineExecutionResult,
+  type CodeMachineEngineType,
+} from './codemachine/index.js';
+
 // Telemetry exports (legacy / for backward compatibility)
 export { type LoggerInterface } from '../telemetry/logger.js';

@@ -14,6 +14,8 @@ import {
 } from '../telemetry/executionMetrics.js';
 import type { ExecutionTelemetry } from '../telemetry/executionTelemetry.js';
 import { getErrorMessage } from '../utils/errors.js';
+import { CODEMACHINE_STRATEGY_NAMES } from './codemachineTypes.js';
+import { DEFAULT_EXECUTION_CONFIG } from '../core/config/RepoConfig.js';
 
 type TaskTypeString = ExecutionTask['task_type'];
 
@@ -156,19 +158,6 @@ export interface PrerequisiteResult {
   warnings: string[];
 }
 
-const DEFAULT_EXECUTION_CONFIG = {
-  task_timeout_ms: 1800000,
-  max_parallel_tasks: 1,
-  max_retries: 3,
-  retry_backoff_ms: 5000,
-  codemachine_cli_path: 'codemachine',
-  default_engine: 'claude' as const,
-  workspace_dir: undefined,
-  log_rotation_mb: 100,
-  log_rotation_keep: 3,
-  log_rotation_compress: false,
-};
-
 /**
  * CLI Execution Engine
  *
@@ -228,9 +217,20 @@ export class CLIExecutionEngine {
     const cliPath = executionConfig.codemachine_cli_path;
     const cliCheck = await validateCliAvailability(cliPath);
     if (!cliCheck.available) {
-      errors.push(
-        `CodeMachine CLI not available at '${cliPath}': ${cliCheck.error ?? 'unknown error'}`
+      // When the codemachine-cli strategy resolved a binary via binaryResolver
+      // (e.g. optionalDep), the legacy CLI path is not required for execution.
+      const cliStrategyAvailable = this.strategies.some(
+        (s) => s.name === 'codemachine-cli' && s.canHandle({ task_type: 'code_generation' } as ExecutionTask)
       );
+      if (cliStrategyAvailable) {
+        warnings.push(
+          `Legacy CLI not found at '${cliPath}'; using codemachine-cli strategy`
+        );
+      } else {
+        errors.push(
+          `CodeMachine CLI not available at '${cliPath}': ${cliCheck.error ?? 'unknown error'}`
+        );
+      }
     }
 
     const workspaceDir = executionConfig.workspace_dir || this.runDir;
@@ -492,7 +492,7 @@ export class CLIExecutionEngine {
         strategyResult.artifacts,
         this.logger
       );
-      if (strategy.name === 'codemachine') {
+      if (CODEMACHINE_STRATEGY_NAMES.has(strategy.name)) {
         const engine = executionConfig.default_engine;
         this.telemetry?.metrics?.recordCodeMachineExecution(engine, 'success', durationMs);
       }
@@ -528,7 +528,7 @@ export class CLIExecutionEngine {
     const canRetryTask = canRetry(updatedTask);
     const status: CodeMachineExecutionStatus =
       strategyResult.status === 'timeout' ? 'timeout' : 'failure';
-    if (strategy.name === 'codemachine') {
+    if (CODEMACHINE_STRATEGY_NAMES.has(strategy.name)) {
       const engine = executionConfig.default_engine;
       this.telemetry?.metrics?.recordCodeMachineExecution(engine, status, durationMs);
       if (canRetryTask) {

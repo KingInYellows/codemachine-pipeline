@@ -10,7 +10,8 @@ import { getRunDirectoryPath } from '../../persistence/runDirectoryManager';
 import type { QueueValidationResult } from '../../workflows/queueStore';
 import { CLIExecutionEngine } from '../../workflows/cliExecutionEngine';
 import { createCodeMachineStrategy } from '../../workflows/codeMachineStrategy';
-import { loadRepoConfig, type RepoConfig } from '../../core/config/RepoConfig';
+import { createCodeMachineCLIStrategy } from '../../workflows/codeMachineCLIStrategy';
+import { loadRepoConfig, type RepoConfig, DEFAULT_EXECUTION_CONFIG } from '../../core/config/RepoConfig';
 import { createCliLogger, LogLevel } from '../../telemetry/logger';
 import { createRunMetricsCollector, StandardMetrics } from '../../telemetry/metrics';
 import { createRunTraceManager, SpanStatusCode } from '../../telemetry/traces';
@@ -320,21 +321,7 @@ export default class Resume extends Command {
       // Execute tasks via CLIExecutionEngine
       logger.info('Starting task execution via CLIExecutionEngine', { feature_id: featureId });
 
-      const executionConfig = repoConfig.execution ?? {
-        task_timeout_ms: 1800000,
-        max_parallel_tasks: typedFlags['max-parallel'] ?? 1,
-        max_retries: 3,
-        retry_backoff_ms: 5000,
-        codemachine_cli_path: 'codemachine',
-        default_engine: 'claude' as const,
-        workspace_dir: undefined,
-        max_log_buffer_size: 10 * 1024 * 1024,
-        env_allowlist: [],
-        spec_path: '',
-        log_rotation_mb: 100,
-        log_rotation_keep: 3,
-        log_rotation_compress: false,
-      };
+      const executionConfig = repoConfig.execution ?? DEFAULT_EXECUTION_CONFIG;
 
       const mergedConfig: RepoConfig = {
         ...repoConfig,
@@ -344,7 +331,14 @@ export default class Resume extends Command {
         },
       };
 
-      const strategy = createCodeMachineStrategy({
+      // Create strategies — CLI strategy takes priority when binary is available
+      const cliStrategy = createCodeMachineCLIStrategy({
+        config: mergedConfig.execution!,
+        logger,
+      });
+      await cliStrategy.checkAvailability();
+
+      const legacyStrategy = createCodeMachineStrategy({
         config: mergedConfig.execution!,
         logger,
       });
@@ -352,7 +346,7 @@ export default class Resume extends Command {
       const executionEngine = new CLIExecutionEngine({
         runDir: runDirPath,
         config: mergedConfig,
-        strategies: [strategy],
+        strategies: [cliStrategy, legacyStrategy],
         dryRun: false,
         logger,
         telemetry: executionTelemetry,
