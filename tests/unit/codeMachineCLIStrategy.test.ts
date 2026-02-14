@@ -11,6 +11,13 @@ vi.mock('../../src/adapters/codemachine/CodeMachineCLIAdapter.js', () => {
   return { CodeMachineCLIAdapter: MockAdapter };
 });
 
+// Mock taskMapper so canHandle filters on task type
+vi.mock('../../src/workflows/taskMapper.js', () => ({
+  shouldUseNativeEngine: vi.fn((taskType: string) => {
+    return taskType === 'testing' || taskType === 'deployment';
+  }),
+}));
+
 import { CodeMachineCLIStrategy } from '../../src/workflows/codeMachineCLIStrategy.js';
 import { CodeMachineCLIAdapter } from '../../src/adapters/codemachine/CodeMachineCLIAdapter.js';
 
@@ -101,6 +108,38 @@ describe('CodeMachineCLIStrategy', () => {
 
       expect(strategy.canHandle(makeTask())).toBe(false);
     });
+
+    it('returns false for native-engine task types even when available', async () => {
+      vi.mocked(CodeMachineCLIAdapter.prototype.validateAvailability).mockResolvedValue({
+        available: true,
+        version: '0.8.0',
+        binaryPath: '/usr/local/bin/codemachine',
+        source: 'optionalDep',
+      });
+
+      const strategy = new CodeMachineCLIStrategy({ config: makeConfig() });
+      await strategy.checkAvailability();
+
+      // 'testing' and 'deployment' use native engines per taskMapper.ts
+      expect(strategy.canHandle(makeTask({ task_type: 'testing' }))).toBe(false);
+      expect(strategy.canHandle(makeTask({ task_type: 'deployment' }))).toBe(false);
+    });
+
+    it('returns true for non-native task types when available', async () => {
+      vi.mocked(CodeMachineCLIAdapter.prototype.validateAvailability).mockResolvedValue({
+        available: true,
+        version: '0.8.0',
+        binaryPath: '/usr/local/bin/codemachine',
+        source: 'optionalDep',
+      });
+
+      const strategy = new CodeMachineCLIStrategy({ config: makeConfig() });
+      await strategy.checkAvailability();
+
+      expect(strategy.canHandle(makeTask({ task_type: 'code_generation' }))).toBe(true);
+      expect(strategy.canHandle(makeTask({ task_type: 'pr_creation' }))).toBe(true);
+      expect(strategy.canHandle(makeTask({ task_type: 'review' }))).toBe(true);
+    });
   });
 
   describe('execute', () => {
@@ -157,6 +196,16 @@ describe('CodeMachineCLIStrategy', () => {
       expect(result.success).toBe(false);
       expect(result.status).toBe('timeout');
       expect(result.recoverable).toBe(true);
+    });
+
+    it('rejects openai engine as unsupported by CodeMachine-CLI', async () => {
+      const config = makeConfig({ default_engine: 'openai' as any });
+      const strategy = new CodeMachineCLIStrategy({ config });
+      const result = await strategy.execute(makeTask(), makeContext());
+
+      expect(result.success).toBe(false);
+      expect(result.errorMessage).toContain('openai');
+      expect(result.errorMessage).toContain('Unsupported engine');
     });
 
     it('uses task prompt from config when available', async () => {

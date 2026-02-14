@@ -8,6 +8,7 @@ import type {
 import { CodeMachineCLIAdapter, type AvailabilityResult } from '../adapters/codemachine/index.js';
 import type { StructuredLogger } from '../telemetry/logger.js';
 import { CodeMachineEngineTypeSchema } from './codemachineTypes.js';
+import { shouldUseNativeEngine } from './taskMapper.js';
 
 export interface CodeMachineCLIStrategyOptions {
   config: ExecutionConfig;
@@ -39,10 +40,11 @@ export class CodeMachineCLIStrategy implements ExecutionStrategy {
     });
   }
 
-  canHandle(_task: ExecutionTask): boolean {
-    // Availability is checked at registration time via checkAvailability().
-    // If not yet checked, conservatively return false.
-    return this.isAvailable;
+  canHandle(task: ExecutionTask): boolean {
+    // Must be available AND the task type must not require native engine handling.
+    // This mirrors the old CodeMachineStrategy filter so that task types like
+    // 'testing' and 'deployment' (which use native engines) are not intercepted.
+    return this.isAvailable && !shouldUseNativeEngine(task.task_type);
   }
 
   /**

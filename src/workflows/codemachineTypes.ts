@@ -16,15 +16,17 @@ import { z } from 'zod';
 /**
  * Engine types supported by CodeMachine-CLI.
  *
- * Only the three engines that are actually wired up as execution
- * engines in the pipeline are included.  The original schema listed
- * five additional engines (opencode, cursor, mistral, auggie, ccr)
- * that were never referenced or supported — removed in Todo 015.
+ * Only the engines that the CodeMachine-CLI binary actually supports
+ * are included here.  Note: `openai` is a valid pipeline engine
+ * (see `ExecutionEngineType` in RepoConfig.ts) but is NOT supported
+ * by the CodeMachine-CLI binary, so it is excluded from this schema.
+ * The original schema also listed five additional engines (opencode,
+ * cursor, mistral, auggie, ccr) that were never referenced or
+ * supported — removed in Todo 015.
  */
 export const CodeMachineEngineTypeSchema = z.enum([
   'claude',
   'codex',
-  'openai',
 ]);
 
 export type CodeMachineEngineType = z.infer<typeof CodeMachineEngineTypeSchema>;
