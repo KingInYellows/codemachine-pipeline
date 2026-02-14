@@ -7,29 +7,75 @@ on:
     branches: [main, master]
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
   optimize_ci:
-    runs-on: self-hosted
+    runs-on: [self-hosted, linux]
+    timeout-minutes: 5
+    env:
+      GRAPHITE_TOKEN: ${{ secrets.GRAPHITE_TOKEN }}
     outputs:
-      skip: ${{ steps.check_skip.outputs.skip || 'false' }}
+      skip: ${{ steps.check_skip.outputs.skip || steps.default_skip.outputs.skip || 'false' }}
     steps:
+      - name: Default skip flag
+        id: default_skip
+        run: echo "skip=false" >> "$GITHUB_OUTPUT"
+
       - name: Optimize CI
         id: check_skip
+        if: github.event_name == 'pull_request' && env.GRAPHITE_TOKEN != ''
         # Pinned to v0.0.9 (9bc969adfd43bb790da3b64b543c78c75cef9689) for traceability.
         continue-on-error: true
         uses: withgraphite/graphite-ci-action@v0.0.9
         with:
-          graphite_token: ${{ secrets.GRAPHITE_TOKEN }}
+          graphite_token: ${{ env.GRAPHITE_TOKEN }}
+
+  workflow_lint:
+    name: Workflow Lint
+    needs: optimize_ci
+    if: needs.optimize_ci.outputs.skip == 'false'
+    runs-on: [self-hosted, linux]
+    timeout-minutes: 10
+    continue-on-error: true
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.2.2
+        with:
+          clean: true
+
+      - name: Install actionlint
+        env:
+          ACTIONLINT_VERSION: '1.7.7'
+        run: |
+          set -euo pipefail
+          os="$(uname -s | tr '[:upper:]' '[:lower:]')"
+          arch="$(uname -m)"
+          case "$arch" in
+            x86_64|amd64) arch=amd64 ;;
+            aarch64|arm64) arch=arm64 ;;
+            *) echo "Unsupported architecture: $arch" >&2; exit 1 ;;
+          esac
+          archive="actionlint_${ACTIONLINT_VERSION}_${os}_${arch}.tar.gz"
+          url="https://github.com/rhysd/actionlint/releases/download/v${ACTIONLINT_VERSION}/${archive}"
+          curl -fsSL "$url" -o actionlint.tar.gz
+          tar -xzf actionlint.tar.gz actionlint
+          chmod +x actionlint
+
+      - name: Lint GitHub workflows
+        run: ./actionlint -color
 
   test:
     name: Test and Lint
     needs: optimize_ci
     if: needs.optimize_ci.outputs.skip == 'false'
-    runs-on: self-hosted
+    runs-on: [self-hosted, linux]
+    timeout-minutes: 45
     env:
       OCLIF_SKIP_MANIFEST: '1'
       TZ: UTC
@@ -39,14 +85,27 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.2.2
+        with:
+          clean: true
 
       - name: Setup Node.js
         uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.1.0
         with:
           node-version: '24'
+          cache: npm
+
+      - name: Runner preflight checks
+        run: |
+          set -euo pipefail
+          node -v
+          npm -v
+          node -e "const major=Number(process.versions.node.split('.')[0]); if (major < 24) { console.error('Node 24+ is required for CI'); process.exit(1) }"
 
       - name: Install dependencies
-        run: npm ci
+        run: npm ci --no-audit --no-fund
+
+      - name: Run security advisory guard
+        run: npm run security:glob-guard
 
       - name: Check formatting
         run: npm run format:check
@@ -64,7 +123,7 @@ jobs:
         run: npm run build
 
       - name: Generate oclif manifest for drift check
-        run: OCLIF_SKIP_MANIFEST= node scripts/tooling/oclif_manifest.js
+        run: OCLIF_SKIP_MANIFEST='' node scripts/tooling/oclif_manifest.js
 
       - name: Validate CLI reference (drift check)
         run: npm run docs:cli:check
@@ -88,34 +147,42 @@ jobs:
     name: Docker Build
     needs: optimize_ci
     if: needs.optimize_ci.outputs.skip == 'false'
-    runs-on: self-hosted
+    runs-on: [self-hosted, linux]
+    timeout-minutes: 30
     env:
       OCLIF_SKIP_MANIFEST: '1'
       TZ: UTC
       LANG: C.UTF-8
       LC_ALL: C.UTF-8
+      DOCKER_IMAGE: 'codemachine-pipeline:test-${{ github.run_id }}-${{ github.run_attempt }}'
 
     steps:
       - name: Checkout code
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.1.0
         with:
           node-version: '24'
 
+      - name: Runner preflight checks
+        run: |
+          set -euo pipefail
+          docker version
+          node -v
+
       - name: Build Docker image
         run: |
-          docker build -t codemachine-pipeline:test .
+          docker build -t "$DOCKER_IMAGE" .
 
       - name: Test Docker image
         run: |
           set -o pipefail
-          docker run --rm codemachine-pipeline:test --version || true
-          docker run --rm codemachine-pipeline:test --help
-          docker run --rm codemachine-pipeline:test doctor --json | node -e "const fs=require('fs');JSON.parse(fs.readFileSync(0,'utf8'))" > /dev/null && echo 'doctor --json: valid JSON'
+          docker run --rm "$DOCKER_IMAGE" --version || true
+          docker run --rm "$DOCKER_IMAGE" --help
+          docker run --rm "$DOCKER_IMAGE" doctor --json | node -e "const fs=require('fs');JSON.parse(fs.readFileSync(0,'utf8'))" > /dev/null && echo 'doctor --json: valid JSON'
 
       - name: Cleanup
         if: always()
         run: |
-          docker rmi codemachine-pipeline:test || true
+          docker rmi "$DOCKER_IMAGE" || true

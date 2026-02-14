@@ -5,24 +5,45 @@ on:
     - cron: '0 3 * * 1'
   workflow_dispatch:
 
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   security_scan:
     name: security/scan
-    runs-on: self-hosted
+    runs-on: [self-hosted, linux]
+    timeout-minutes: 20
     env:
       OCLIF_SKIP_MANIFEST: '1'
+      TZ: UTC
+      LANG: C.UTF-8
+      LC_ALL: C.UTF-8
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.2.2
+        with:
+          clean: true
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.1.0
         with:
           node-version: '24'
+          cache: npm
+
+      - name: Runner preflight checks
+        run: |
+          set -euo pipefail
+          node -v
+          npm -v
+          node -e "const major=Number(process.versions.node.split('.')[0]); if (major < 24) { console.error('Node 24+ is required for CI'); process.exit(1) }"
 
       - name: Install dependencies
-        run: npm ci
+        run: npm ci --no-fund
 
       - name: Run npm audit (high+)
         run: npm audit --audit-level=high

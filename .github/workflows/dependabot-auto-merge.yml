@@ -11,7 +11,8 @@ permissions:
 jobs:
   dependabot_automerge:
     if: github.actor == 'dependabot[bot]'
-    runs-on: self-hosted
+    runs-on: [self-hosted, linux]
+    timeout-minutes: 10
     steps:
       - name: Fetch Dependabot metadata
         id: metadata
