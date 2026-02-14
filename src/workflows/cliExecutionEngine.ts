@@ -217,9 +217,20 @@ export class CLIExecutionEngine {
     const cliPath = executionConfig.codemachine_cli_path;
     const cliCheck = await validateCliAvailability(cliPath);
     if (!cliCheck.available) {
-      errors.push(
-        `CodeMachine CLI not available at '${cliPath}': ${cliCheck.error ?? 'unknown error'}`
+      // When the codemachine-cli strategy resolved a binary via binaryResolver
+      // (e.g. optionalDep), the legacy CLI path is not required for execution.
+      const cliStrategyAvailable = this.strategies.some(
+        (s) => s.name === 'codemachine-cli' && s.canHandle({} as ExecutionTask)
       );
+      if (cliStrategyAvailable) {
+        warnings.push(
+          `Legacy CLI not found at '${cliPath}'; using codemachine-cli strategy`
+        );
+      } else {
+        errors.push(
+          `CodeMachine CLI not available at '${cliPath}': ${cliCheck.error ?? 'unknown error'}`
+        );
+      }
     }
 
     const workspaceDir = executionConfig.workspace_dir || this.runDir;
