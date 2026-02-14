@@ -8,18 +8,23 @@ trustworthy signal on PRs and a green `main`.
 CI workflow: `.github/workflows/ci.yml`
 
 Required (merge gate):
+
 - `Test and Lint`
+  - runner preflight check (Node 24+)
   - `npm run security:glob-guard`
   - `npm run lint`
   - `npm run format:check`
   - `npm test`
   - `npm run build`
 - `Docker Build`
-  - `docker build -t codemachine-pipeline:test .`
-  - `docker run --rm codemachine-pipeline:test --help`
-  - `docker run --rm codemachine-pipeline:test doctor --json | node -e "JSON.parse(require('fs').readFileSync(0,'utf8'))"`
+  - runner preflight check (`docker version`)
+  - `docker build -t "$IMAGE_TAG" .`
+  - `docker run --rm "$IMAGE_TAG" --help`
+  - `docker run --rm "$IMAGE_TAG" doctor --json | node -e "JSON.parse(require('fs').readFileSync(0,'utf8'))"`
 
 Optional (non-blocking signal):
+
+- workflow lint (pinned `actionlint` against `.github/workflows/*.yml`)
 - smoke tests (run with `./scripts/tooling/smoke_execution.sh`)
 - Codecov upload (`fail_ci_if_error: false`)
 
@@ -54,9 +59,11 @@ Smoke tests (non-blocking in CI):
 Docker checks:
 
 ```bash
-docker build -t codemachine-pipeline:test .
-docker run --rm codemachine-pipeline:test --help
-docker run --rm codemachine-pipeline:test doctor --json | node -e "JSON.parse(require('fs').readFileSync(0,'utf8'))"
+IMAGE_TAG="codemachine-pipeline:test-local-$(date +%s)"
+docker build -t "$IMAGE_TAG" .
+docker run --rm "$IMAGE_TAG" --help
+docker run --rm "$IMAGE_TAG" doctor --json | node -e "JSON.parse(require('fs').readFileSync(0,'utf8'))"
+docker rmi "$IMAGE_TAG"
 ```
 
 If you need to reproduce CI determinism locally, use UTC:
@@ -90,6 +97,7 @@ TZ=UTC LANG=C.UTF-8 LC_ALL=C.UTF-8 npm test
 - Node.js 24+ and npm available.
 - Docker available and usable without elevated privileges.
 - Node.js used for JSON validation in docker smoke test (no Python dependency).
+- Runner must advertise `self-hosted` and `linux` labels.
 
 If any of the above are missing, CI should fail fast with a clear error.
 
@@ -101,9 +109,15 @@ If any of the above are missing, CI should fail fast with a clear error.
 - **Graphite `optimize_ci` job**: The `optimize_ci` job uses the Graphite CI action
   (`withgraphite/graphite-ci-action`) to skip redundant CI runs on stacked PRs. Downstream
   jobs check `needs.optimize_ci.outputs.skip` and only run when the value is `'false'`.
+- **Workflow linting**: CI installs a pinned `actionlint` version and validates all GitHub
+  workflow files as a non-blocking advisory signal.
 - **Codecov upload step**: After tests pass, coverage data (`./coverage/lcov.info`) is
   uploaded to Codecov via `codecov/codecov-action@v4`. The upload is non-blocking
   (`fail_ci_if_error: false`) and only runs on success.
+- **Timeout guardrails**: CI jobs use explicit timeout limits to avoid hung jobs consuming
+  self-hosted runner capacity.
+- **Collision-safe Docker tags**: Docker test images are tagged per workflow run to avoid
+  image-name collisions on shared self-hosted Docker daemons.
 
 ## Escalation
 
