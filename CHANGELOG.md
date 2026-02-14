@@ -7,13 +7,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Known Deviations
+(Empty - all changes included in v1.0.0)
 
-- Phase 2.3 (start command wiring) deferred until plan generation is implemented
-
-## [1.0.0] - 2026-02-05
+## [1.0.0] - 2026-02-14
 
 ### Added
+
+#### Cycle 9: CodeMachine-CLI Two-Way Integration
+- `CLIExecutionEngine` with queue-based task execution (#466)
+- `CodeMachineRunner` with argument injection prevention (separate argv elements)
+- `CodeMachineCLIStrategy` with 3-tier binary resolution (env var → optionalDep → PATH)
+- `BinaryResolver` for platform-specific binary detection
+- `ResultNormalizer` with 18 sensitive data redaction patterns
+- Doctor command enhancement for CodeMachine binary availability
+- Integration tests for strategy prerequisite validation
+- Support for both legacy and CLI-based CodeMachine execution
+
+#### Cycle 7: Testing & Documentation
+- 45 CLI integration tests across 8 commands (init, start, resume, approve, etc.) (#421)
+- CONTRIBUTING.md update with Graphite workflow and testing instructions (#422)
+- JSDoc documentation for complex modules (#423)
+- Integration test patterns for oclif commands
+
+#### Cycle 6: Code Quality & Foundations
+- LoggerInterface unification across adapters and workflows (CDMCH-93, #397)
+- getErrorMessage consolidation into utils/errors.ts (CDMCH-94, #398)
+- Record<string, unknown> audit with eslint-disable patterns (CDMCH-95, #399)
+- Madge circular dependency guardrail with baseline (CDMCH-66, #400)
+- V1 queue removal - V2 migration complete (CDMCH-63, #401, #402)
+- ts-unused-exports pruning phase 1 (CDMCH-64, #403)
+- Zod schema validation foundation (CDMCH-56, #404)
+
 
 #### Queue Integrity Verification (CDMCH-69)
 - Fail-fast/warn-only integrity modes via `QUEUE_INTEGRITY_MODE` env var
@@ -28,8 +52,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Enriched JSON error output with `how_to_fix`, `common_fixes`, `docs_url`
 - Wrapped all error paths in `start.ts` and `status.ts` with actionable `CliError`
 
+### Changed
+
+#### Housekeeping & CI Improvements
+- ESLint 10 compatibility (`preserve-caught-error`, `no-useless-assignment` rules) (#419)
+- Package name: `codemachine-pipeline` → `@kinginyellows/codemachine-pipeline` (GitHub Packages scoping)
+- Node.js requirement: v22+ → v24+ (LTS alignment)
+- Documentation cleanup and organization (#464)
+- Dockerfile consolidation (#461)
+- Release branch strategy documentation (CDMCH-116, #463)
+
 ### Fixed
 
+- Prettier formatting violations (26 files)
+- Docker CI `doctor --json` exit code handling (added fallback for exit 20)
+- Stale .dockerignore references (jest.config.js, .eslintrc.json)
+- Flaky parallel execution test in CI (skipped pending investigation)
 - Orphaned code fragment in `start.ts` causing build failures
 - `exactOptionalPropertyTypes` issues in error constructors
 

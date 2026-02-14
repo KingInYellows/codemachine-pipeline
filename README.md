@@ -28,11 +28,21 @@ Full documentation is in [`docs/README.md`](docs/README.md).
 
 ## Installation
 
-### From npm (when published)
+### From GitHub Packages
 
 ```bash
-npm install -g codemachine-pipeline
+# Configure npm for GitHub Packages
+echo "@kinginyellows:registry=https://npm.pkg.github.com" >> ~/.npmrc
+echo "//npm.pkg.github.com/:_authToken=YOUR_GITHUB_PAT" >> ~/.npmrc
+
+# Install globally
+npm install -g @kinginyellows/codemachine-pipeline
+
+# Verify
+codepipe --version
 ```
+
+**Security Note:** Create a GitHub Personal Access Token with `read:packages` scope at https://github.com/settings/tokens. Store your PAT securely. Do NOT commit `.npmrc` files containing tokens.
 
 ### From source
 
