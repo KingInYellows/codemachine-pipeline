@@ -140,6 +140,54 @@ describe('CLIExecutionEngine Integration', () => {
       expect(result.warnings).toContain('No execution strategies registered');
     });
 
+    it('should downgrade CLI error to warning when codemachine-cli strategy is available', async () => {
+      const tasks = [createExecutionTask('T1', featureId, 'Test Task', 'code_generation')];
+      await appendToQueue(runDir, tasks);
+
+      // Simulate the codemachine-cli strategy being registered and available
+      const cliStrategy: ExecutionStrategy = {
+        name: 'codemachine-cli',
+        canHandle: () => true, // isAvailable = true
+        execute: async () => createSuccessResult(),
+      };
+
+      const engine = new CLIExecutionEngine({
+        runDir,
+        config: baseConfig,
+        strategies: [cliStrategy],
+      });
+
+      const result = await engine.validatePrerequisites();
+
+      // Should pass (not a hard error) since codemachine-cli strategy is available
+      expect(result.valid).toBe(true);
+      expect(result.warnings.some((w) => w.includes('using codemachine-cli strategy'))).toBe(true);
+      expect(result.errors).toHaveLength(0);
+    });
+
+    it('should still error when codemachine-cli strategy is registered but not available', async () => {
+      const tasks = [createExecutionTask('T1', featureId, 'Test Task', 'code_generation')];
+      await appendToQueue(runDir, tasks);
+
+      // Simulate the codemachine-cli strategy being registered but NOT available
+      const cliStrategy: ExecutionStrategy = {
+        name: 'codemachine-cli',
+        canHandle: () => false, // isAvailable = false (binary not resolved)
+        execute: async () => createSuccessResult(),
+      };
+
+      const engine = new CLIExecutionEngine({
+        runDir,
+        config: baseConfig,
+        strategies: [cliStrategy],
+      });
+
+      const result = await engine.validatePrerequisites();
+
+      expect(result.valid).toBe(false);
+      expect(result.errors.some((e) => e.includes('CLI not available'))).toBe(true);
+    });
+
     it('should validate workspace directory exists', async () => {
       const configWithBadWorkspace: RepoConfig = {
         ...baseConfig,
@@ -1649,11 +1697,17 @@ describe('CLI Command Integration with CLIExecutionEngine', () => {
 
   describe('validation and error handling', () => {
     it('should validate prerequisites before execution', async () => {
-      const strategy = createMockStrategy('prereq-check', true);
+      // Use a codemachine-cli strategy that reports as available, matching
+      // the real integration flow where binaryResolver finds the binary.
+      const cliStrategy: ExecutionStrategy = {
+        name: 'codemachine-cli',
+        canHandle: () => true,
+        execute: async () => createSuccessResult(),
+      };
       const engine = new CLIExecutionEngine({
         runDir,
         config: baseConfig,
-        strategies: [strategy],
+        strategies: [cliStrategy],
       });
 
       const prereqResult = await engine.validatePrerequisites();

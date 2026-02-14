@@ -6,6 +6,7 @@ import * as zlib from 'node:zlib';
 import type { ExecutionConfig, ExecutionEngineType } from '../core/config/RepoConfig.js';
 import type { StructuredLogger } from '../telemetry/logger.js';
 import { getErrorMessage } from '../utils/errors.js';
+import { filterEnvironment as filterEnv } from '../utils/envFilter.js';
 
 export const EXIT_CODES = {
   SUCCESS: 0,
@@ -105,25 +106,31 @@ async function rotateLogFiles(
 }
 
 /**
- * Validate CLI path for security issues
- * Prevents shell injection via path traversal or command chaining
+ * Validate CLI path for security issues.
+ * Uses an allowlist regex instead of a blocklist to prevent bypass
+ * via `$()`, backticks, or Unicode homoglyphs.
  */
+const SAFE_CLI_PATH_PATTERN = /^[a-zA-Z0-9_\-./:\\]+$/;
+
 export function validateCliPath(cliPath: string): { valid: boolean; error?: string } {
-  // SECURITY: Check for path traversal and command injection characters
-  if (cliPath.includes('..')) {
-    return { valid: false, error: 'CLI path contains path traversal characters (..)' };
-  }
-  if (cliPath.includes(';') || cliPath.includes('|') || cliPath.includes('&')) {
-    return { valid: false, error: 'CLI path contains shell metacharacters' };
-  }
-  if (cliPath.includes('\n') || cliPath.includes('\r')) {
-    return { valid: false, error: 'CLI path contains newline characters' };
+  if (cliPath.length === 0) {
+    return { valid: false, error: 'CLI path is empty' };
   }
   if (cliPath.trim() !== cliPath) {
     return { valid: false, error: 'CLI path contains leading or trailing whitespace' };
   }
-  if (cliPath.length === 0) {
-    return { valid: false, error: 'CLI path is empty' };
+  if (!SAFE_CLI_PATH_PATTERN.test(cliPath)) {
+    // Provide specific error messages for common attack vectors
+    if (/[\n\r]/.test(cliPath)) {
+      return { valid: false, error: 'CLI path contains newline characters' };
+    }
+    if (/[;|&`$(){}]/.test(cliPath)) {
+      return { valid: false, error: 'CLI path contains shell metacharacters' };
+    }
+    return { valid: false, error: 'CLI path contains invalid characters' };
+  }
+  if (cliPath.split(/[\\/]/).includes('..')) {
+    return { valid: false, error: 'CLI path contains path traversal segments (..)' };
   }
   return { valid: true };
 }
@@ -192,31 +199,7 @@ export async function validateCliAvailability(
 }
 
 function filterEnvironment(allowlist: string[]): Record<string, string> {
-  const filtered: Record<string, string> = {};
-
-  const alwaysAllowed = [
-    'PATH',
-    'HOME',
-    'USER',
-    'SHELL',
-    'TERM',
-    'LANG',
-    'LC_ALL',
-    'NODE_ENV',
-    'DEBUG',
-    'LOG_LEVEL',
-  ];
-
-  const allowlistSet = new Set([...alwaysAllowed, ...allowlist]);
-
-  for (const key of allowlistSet) {
-    const value = process.env[key];
-    if (value !== undefined) {
-      filtered[key] = value;
-    }
-  }
-
-  return filtered;
+  return filterEnv({ additional: allowlist, includeDebug: true });
 }
 
 function buildArgs(options: RunnerOptions, engine: ExecutionEngineType): string[] {
