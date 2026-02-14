@@ -11,11 +11,7 @@ import {
   ACCEPT_HEADER,
   GITHUB_API_VERSION,
 } from './httpTypes.js';
-import type {
-  HttpClientConfig,
-  HttpRequestOptions,
-  HttpResponse,
-} from './httpTypes.js';
+import type { HttpClientConfig, HttpRequestOptions, HttpResponse } from './httpTypes.js';
 import type { LoggerInterface } from '../../telemetry/logger';
 import {
   generateRequestId,

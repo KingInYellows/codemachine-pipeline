@@ -80,7 +80,12 @@ export async function checkCodeMachineCli(config?: any): Promise<DiagnosticCheck
           status: 'warn',
           message: `CodeMachine CLI v${version} below minimum v${minVersion}`,
           remediation: `Upgrade: npm install codemachine@^${minVersion}`,
-          details: { version, min_version: minVersion, cli_path: resolution.binaryPath, source: resolution.source },
+          details: {
+            version,
+            min_version: minVersion,
+            cli_path: resolution.binaryPath,
+            source: resolution.source,
+          },
         };
       }
     }

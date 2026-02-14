@@ -700,7 +700,10 @@ export default class Doctor extends Command {
     if (config.runtime?.agent_endpoint_env_var) {
       // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access -- Config type not fully specified for this usage
       const agentEndpoint =
-        (config.runtime.agent_endpoint as string | undefined) ?? process.env[config.runtime.agent_endpoint_env_var as string];
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access -- Config type not fully specified for this usage
+        (config.runtime.agent_endpoint as string | undefined) ??
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access -- Config type not fully specified for this usage
+        process.env[config.runtime.agent_endpoint_env_var as string];
       if (!agentEndpoint) {
         checks.push({
           // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access -- Config type not fully specified for this usage

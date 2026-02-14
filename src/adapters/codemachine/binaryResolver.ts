@@ -97,7 +97,8 @@ async function resolveBinaryUncached(): Promise<BinaryResolutionResult> {
   // 4. Not found
   return {
     resolved: false,
-    error: `CodeMachine-CLI binary not found. Platform: ${platformKey}. ` +
+    error:
+      `CodeMachine-CLI binary not found. Platform: ${platformKey}. ` +
       'Install via npm (codemachine@^0.8.0) or set CODEMACHINE_BIN_PATH.',
   };
 }

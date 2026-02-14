@@ -21,6 +21,8 @@ module.exports = [
       'test/**',
       'vitest.config.ts',
       '.codemachine/**',
+      'docs/research/**',
+      'docs/brainstorms/**',
     ],
   },
   js.configs.recommended,

@@ -119,9 +119,7 @@ export async function loadSnapshot(queueDir: string): Promise<QueueSnapshotV2 | 
     }
 
     // Log other errors but don't throw - caller can fall back to WAL replay
-    console.warn(
-      `Failed to load queue snapshot: ${getErrorMessage(error)}`
-    );
+    console.warn(`Failed to load queue snapshot: ${getErrorMessage(error)}`);
     return null;
   }
 }

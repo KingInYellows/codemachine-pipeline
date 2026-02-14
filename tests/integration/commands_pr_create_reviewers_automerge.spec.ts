@@ -45,7 +45,9 @@ function buildRepoConfig(overrides: Partial<RepoConfig> = {}): RepoConfig {
       enabled: true,
       token_env_var: 'GITHUB_TOKEN',
       api_base_url: 'https://api.github.com',
-      required_scopes: ['repo', 'workflow'] as Array<'repo' | 'workflow' | 'read:org' | 'write:org'>,
+      required_scopes: ['repo', 'workflow'] as Array<
+        'repo' | 'workflow' | 'read:org' | 'write:org'
+      >,
       default_reviewers: [],
     },
     linear: {
@@ -164,10 +166,7 @@ async function setupRunDir(
   );
 
   if (prMeta) {
-    await fs.writeFile(
-      path.join(runDir, 'pr.json'),
-      JSON.stringify(prMeta, null, 2)
-    );
+    await fs.writeFile(path.join(runDir, 'pr.json'), JSON.stringify(prMeta, null, 2));
   }
 
   return runDir;
@@ -208,355 +207,305 @@ describe('PR Commands Integration Tests', () => {
     }
   });
 
-// =============================================================================
-// pr create command tests
-// =============================================================================
+  // =============================================================================
+  // pr create command tests
+  // =============================================================================
 
-describe('PR Create Command', () => {
+  describe('PR Create Command', () => {
+    it('should reject when code approval gate is missing', async () => {
+      await setupRunDir({
+        approvals: { pending: ['code'], completed: ['prd', 'spec', 'plan'] },
+      });
 
-  it('should reject when code approval gate is missing', async () => {
-    await setupRunDir({
-      approvals: { pending: ['code'], completed: ['prd', 'spec', 'plan'] },
+      const context = await loadPRContext(baseDir, TEST_FEATURE_ID, buildRepoConfig(), false);
+
+      expect(isCodeApproved(context.manifest)).toBe(false);
     });
 
-    const context = await loadPRContext(
-      baseDir,
-      TEST_FEATURE_ID,
-      buildRepoConfig(),
-      false
-    );
+    it('should reject when validations have not passed', async () => {
+      const runDir = await setupRunDir();
 
-    expect(isCodeApproved(context.manifest)).toBe(false);
-  });
+      // Overwrite validation.json with failure
+      await fs.writeFile(
+        path.join(runDir, 'validation.json'),
+        JSON.stringify({ success: false }, null, 2)
+      );
 
-  it('should reject when validations have not passed', async () => {
-    const runDir = await setupRunDir();
-
-    // Overwrite validation.json with failure
-    await fs.writeFile(
-      path.join(runDir, 'validation.json'),
-      JSON.stringify({ success: false }, null, 2)
-    );
-
-    const passed = await hasValidationsPassed(runDir);
-    expect(passed).toBe(false);
-  });
-
-  it('should reject when validation.json is missing', async () => {
-    const runDir = await setupRunDir();
-    await fs.rm(path.join(runDir, 'validation.json'));
-
-    const passed = await hasValidationsPassed(runDir);
-    expect(passed).toBe(false);
-  });
-
-  it('should detect existing PR and block creation', async () => {
-    const existingPR = buildPRMetadata({ pr_number: 99 });
-    await setupRunDir({}, existingPR);
-
-    const context = await loadPRContext(
-      baseDir,
-      TEST_FEATURE_ID,
-      buildRepoConfig(),
-      false
-    );
-
-    expect(context.prMetadata).toBeDefined();
-    expect(context.prMetadata?.pr_number).toBe(99);
-  });
-
-  it('should pass preflight when all gates are clear', async () => {
-    await setupRunDir();
-
-    const config = buildRepoConfig();
-    const context = await loadPRContext(baseDir, TEST_FEATURE_ID, config, false);
-
-    expect(isCodeApproved(context.manifest)).toBe(true);
-
-    const runDir = path.join(baseDir, TEST_FEATURE_ID);
-    const validationsPassed = await hasValidationsPassed(runDir);
-    expect(validationsPassed).toBe(true);
-
-    expect(context.prMetadata).toBeUndefined();
-  });
-
-  it('should persist PR metadata after creation', async () => {
-    await setupRunDir();
-
-    const config = buildRepoConfig();
-    const context = await loadPRContext(baseDir, TEST_FEATURE_ID, config, false);
-
-    const prMeta = buildPRMetadata({
-      pr_number: 101,
-      reviewers_requested: ['alice'],
-    });
-    await persistPRData(context, prMeta);
-
-    const runDir = path.join(baseDir, TEST_FEATURE_ID);
-    const saved = JSON.parse(
-      await fs.readFile(path.join(runDir, 'pr.json'), 'utf-8')
-    ) as PRMetadata;
-
-    expect(saved.pr_number).toBe(101);
-    expect(saved.reviewers_requested).toEqual(['alice']);
-  });
-
-  it('should parse --reviewers flag as comma-separated list', () => {
-    const raw = ' alice , bob , charlie ';
-    const parsed = raw
-      .split(',')
-      .map((r) => r.trim())
-      .filter((r) => r.length > 0);
-
-    expect(parsed).toEqual(['alice', 'bob', 'charlie']);
-  });
-
-  it('should throw when GitHub integration is disabled', async () => {
-    await setupRunDir();
-    const config = buildRepoConfig({
-      github: {
-        enabled: false,
-        token_env_var: 'GITHUB_TOKEN',
-        api_base_url: 'https://api.github.com',
-        required_scopes: ['repo'] as Array<'repo' | 'workflow' | 'read:org' | 'write:org'>,
-        default_reviewers: [],
-      },
+      const passed = await hasValidationsPassed(runDir);
+      expect(passed).toBe(false);
     });
 
-    await expect(
-      loadPRContext(baseDir, TEST_FEATURE_ID, config, false)
-    ).rejects.toThrow('GitHub integration is disabled');
-  });
-});
+    it('should reject when validation.json is missing', async () => {
+      const runDir = await setupRunDir();
+      await fs.rm(path.join(runDir, 'validation.json'));
 
-// =============================================================================
-// pr disable-auto-merge command tests
-// =============================================================================
-
-describe('PR Disable-Auto-Merge Command', () => {
-
-  it('should detect when no PR exists', async () => {
-    await setupRunDir();
-
-    const context = await loadPRContext(
-      baseDir,
-      TEST_FEATURE_ID,
-      buildRepoConfig(),
-      false
-    );
-
-    // Command checks prMetadata is undefined → error
-    expect(context.prMetadata).toBeUndefined();
-  });
-
-  it('should detect auto-merge already disabled', async () => {
-    const prMeta = buildPRMetadata({ auto_merge_enabled: false });
-    await setupRunDir({}, prMeta);
-
-    const context = await loadPRContext(
-      baseDir,
-      TEST_FEATURE_ID,
-      buildRepoConfig(),
-      false
-    );
-
-    expect(context.prMetadata?.auto_merge_enabled).toBe(false);
-  });
-
-  it('should update metadata when disabling auto-merge', async () => {
-    const prMeta = buildPRMetadata({ auto_merge_enabled: true });
-    await setupRunDir({}, prMeta);
-
-    const context = await loadPRContext(
-      baseDir,
-      TEST_FEATURE_ID,
-      buildRepoConfig(),
-      false
-    );
-
-    expect(context.prMetadata?.auto_merge_enabled).toBe(true);
-
-    // Simulate what the command does after the API call:
-    const updatedMeta: PRMetadata = {
-      ...context.prMetadata!,
-      auto_merge_enabled: false,
-      last_updated: new Date().toISOString(),
-    };
-
-    await persistPRData(context, updatedMeta);
-
-    const runDir = path.join(baseDir, TEST_FEATURE_ID);
-    const saved = JSON.parse(
-      await fs.readFile(path.join(runDir, 'pr.json'), 'utf-8')
-    ) as PRMetadata;
-
-    expect(saved.auto_merge_enabled).toBe(false);
-  });
-
-  it('should log reason to deployment.json', async () => {
-    const prMeta = buildPRMetadata({ auto_merge_enabled: true });
-    await setupRunDir({}, prMeta);
-
-    const context = await loadPRContext(
-      baseDir,
-      TEST_FEATURE_ID,
-      buildRepoConfig(),
-      false
-    );
-
-    await logDeploymentAction(context, 'auto_merge_disabled', {
-      pr_number: 42,
-      reason: 'Manual merge required for compliance',
-      disabled_at: new Date().toISOString(),
+      const passed = await hasValidationsPassed(runDir);
+      expect(passed).toBe(false);
     });
 
-    const runDir = path.join(baseDir, TEST_FEATURE_ID);
-    const deployment = JSON.parse(
-      await fs.readFile(path.join(runDir, 'deployment.json'), 'utf-8')
-    ) as { actions: Array<{ action: string; metadata: Record<string, unknown> }> };
+    it('should detect existing PR and block creation', async () => {
+      const existingPR = buildPRMetadata({ pr_number: 99 });
+      await setupRunDir({}, existingPR);
 
-    expect(deployment.actions.length).toBe(1);
-    expect(deployment.actions[0].action).toBe('auto_merge_disabled');
-    expect(deployment.actions[0].metadata.reason).toBe('Manual merge required for compliance');
+      const context = await loadPRContext(baseDir, TEST_FEATURE_ID, buildRepoConfig(), false);
+
+      expect(context.prMetadata).toBeDefined();
+      expect(context.prMetadata?.pr_number).toBe(99);
+    });
+
+    it('should pass preflight when all gates are clear', async () => {
+      await setupRunDir();
+
+      const config = buildRepoConfig();
+      const context = await loadPRContext(baseDir, TEST_FEATURE_ID, config, false);
+
+      expect(isCodeApproved(context.manifest)).toBe(true);
+
+      const runDir = path.join(baseDir, TEST_FEATURE_ID);
+      const validationsPassed = await hasValidationsPassed(runDir);
+      expect(validationsPassed).toBe(true);
+
+      expect(context.prMetadata).toBeUndefined();
+    });
+
+    it('should persist PR metadata after creation', async () => {
+      await setupRunDir();
+
+      const config = buildRepoConfig();
+      const context = await loadPRContext(baseDir, TEST_FEATURE_ID, config, false);
+
+      const prMeta = buildPRMetadata({
+        pr_number: 101,
+        reviewers_requested: ['alice'],
+      });
+      await persistPRData(context, prMeta);
+
+      const runDir = path.join(baseDir, TEST_FEATURE_ID);
+      const saved = JSON.parse(
+        await fs.readFile(path.join(runDir, 'pr.json'), 'utf-8')
+      ) as PRMetadata;
+
+      expect(saved.pr_number).toBe(101);
+      expect(saved.reviewers_requested).toEqual(['alice']);
+    });
+
+    it('should parse --reviewers flag as comma-separated list', () => {
+      const raw = ' alice , bob , charlie ';
+      const parsed = raw
+        .split(',')
+        .map((r) => r.trim())
+        .filter((r) => r.length > 0);
+
+      expect(parsed).toEqual(['alice', 'bob', 'charlie']);
+    });
+
+    it('should throw when GitHub integration is disabled', async () => {
+      await setupRunDir();
+      const config = buildRepoConfig({
+        github: {
+          enabled: false,
+          token_env_var: 'GITHUB_TOKEN',
+          api_base_url: 'https://api.github.com',
+          required_scopes: ['repo'] as Array<'repo' | 'workflow' | 'read:org' | 'write:org'>,
+          default_reviewers: [],
+        },
+      });
+
+      await expect(loadPRContext(baseDir, TEST_FEATURE_ID, config, false)).rejects.toThrow(
+        'GitHub integration is disabled'
+      );
+    });
   });
 
-  it('should render disable-auto-merge JSON output with sorted keys', () => {
-    const output = renderPROutput(
-      {
-        success: true,
-        pr_number: 42,
-        url: 'https://github.com/test-org/test-repo/pull/42',
+  // =============================================================================
+  // pr disable-auto-merge command tests
+  // =============================================================================
+
+  describe('PR Disable-Auto-Merge Command', () => {
+    it('should detect when no PR exists', async () => {
+      await setupRunDir();
+
+      const context = await loadPRContext(baseDir, TEST_FEATURE_ID, buildRepoConfig(), false);
+
+      // Command checks prMetadata is undefined → error
+      expect(context.prMetadata).toBeUndefined();
+    });
+
+    it('should detect auto-merge already disabled', async () => {
+      const prMeta = buildPRMetadata({ auto_merge_enabled: false });
+      await setupRunDir({}, prMeta);
+
+      const context = await loadPRContext(baseDir, TEST_FEATURE_ID, buildRepoConfig(), false);
+
+      expect(context.prMetadata?.auto_merge_enabled).toBe(false);
+    });
+
+    it('should update metadata when disabling auto-merge', async () => {
+      const prMeta = buildPRMetadata({ auto_merge_enabled: true });
+      await setupRunDir({}, prMeta);
+
+      const context = await loadPRContext(baseDir, TEST_FEATURE_ID, buildRepoConfig(), false);
+
+      expect(context.prMetadata?.auto_merge_enabled).toBe(true);
+
+      // Simulate what the command does after the API call:
+      const updatedMeta: PRMetadata = {
+        ...context.prMetadata!,
         auto_merge_enabled: false,
-        reason: 'Compliance requirement',
-        message: 'Auto-merge disabled successfully',
-      },
-      true
-    );
+        last_updated: new Date().toISOString(),
+      };
 
-    const parsed = JSON.parse(output) as Record<string, unknown>;
-    const keys = Object.keys(parsed);
-    const sorted = [...keys].sort();
-    expect(keys).toEqual(sorted);
-    expect(parsed.auto_merge_enabled).toBe(false);
-  });
-});
+      await persistPRData(context, updatedMeta);
 
-// =============================================================================
-// pr reviewers command tests
-// =============================================================================
+      const runDir = path.join(baseDir, TEST_FEATURE_ID);
+      const saved = JSON.parse(
+        await fs.readFile(path.join(runDir, 'pr.json'), 'utf-8')
+      ) as PRMetadata;
 
-describe('PR Reviewers Command', () => {
-
-  it('should detect when no PR exists for reviewer requests', async () => {
-    await setupRunDir();
-
-    const context = await loadPRContext(
-      baseDir,
-      TEST_FEATURE_ID,
-      buildRepoConfig(),
-      false
-    );
-
-    expect(context.prMetadata).toBeUndefined();
-  });
-
-  it('should parse --add flag and deduplicate with existing reviewers', async () => {
-    const prMeta = buildPRMetadata({
-      reviewers_requested: ['alice', 'bob'],
+      expect(saved.auto_merge_enabled).toBe(false);
     });
-    await setupRunDir({}, prMeta);
 
-    const context = await loadPRContext(
-      baseDir,
-      TEST_FEATURE_ID,
-      buildRepoConfig(),
-      false
-    );
+    it('should log reason to deployment.json', async () => {
+      const prMeta = buildPRMetadata({ auto_merge_enabled: true });
+      await setupRunDir({}, prMeta);
 
-    // Simulate command's reviewer parsing and dedup
-    const addFlag = 'bob, charlie, dave';
-    const reviewersToAdd = addFlag
-      .split(',')
-      .map((r) => r.trim())
-      .filter((r) => r.length > 0);
+      const context = await loadPRContext(baseDir, TEST_FEATURE_ID, buildRepoConfig(), false);
 
-    const allReviewers = Array.from(
-      new Set([...context.prMetadata!.reviewers_requested, ...reviewersToAdd])
-    );
+      await logDeploymentAction(context, 'auto_merge_disabled', {
+        pr_number: 42,
+        reason: 'Manual merge required for compliance',
+        disabled_at: new Date().toISOString(),
+      });
 
-    expect(allReviewers).toEqual(['alice', 'bob', 'charlie', 'dave']);
-  });
+      const runDir = path.join(baseDir, TEST_FEATURE_ID);
+      const deployment = JSON.parse(
+        await fs.readFile(path.join(runDir, 'deployment.json'), 'utf-8')
+      ) as { actions: Array<{ action: string; metadata: Record<string, unknown> }> };
 
-  it('should update PR metadata with merged reviewer list', async () => {
-    const prMeta = buildPRMetadata({
-      reviewers_requested: ['alice'],
+      expect(deployment.actions.length).toBe(1);
+      expect(deployment.actions[0].action).toBe('auto_merge_disabled');
+      expect(deployment.actions[0].metadata.reason).toBe('Manual merge required for compliance');
     });
-    await setupRunDir({}, prMeta);
 
-    const context = await loadPRContext(
-      baseDir,
-      TEST_FEATURE_ID,
-      buildRepoConfig(),
-      false
-    );
+    it('should render disable-auto-merge JSON output with sorted keys', () => {
+      const output = renderPROutput(
+        {
+          success: true,
+          pr_number: 42,
+          url: 'https://github.com/test-org/test-repo/pull/42',
+          auto_merge_enabled: false,
+          reason: 'Compliance requirement',
+          message: 'Auto-merge disabled successfully',
+        },
+        true
+      );
 
-    const reviewersToAdd = ['bob', 'charlie'];
-    const allReviewers = Array.from(
-      new Set([...context.prMetadata!.reviewers_requested, ...reviewersToAdd])
-    );
-
-    const updatedMeta: PRMetadata = {
-      ...context.prMetadata!,
-      reviewers_requested: allReviewers,
-      last_updated: new Date().toISOString(),
-    };
-
-    await persistPRData(context, updatedMeta);
-
-    const runDir = path.join(baseDir, TEST_FEATURE_ID);
-    const saved = JSON.parse(
-      await fs.readFile(path.join(runDir, 'pr.json'), 'utf-8')
-    ) as PRMetadata;
-
-    expect(saved.reviewers_requested).toEqual(['alice', 'bob', 'charlie']);
+      const parsed = JSON.parse(output) as Record<string, unknown>;
+      const keys = Object.keys(parsed);
+      const sorted = [...keys].sort();
+      expect(keys).toEqual(sorted);
+      expect(parsed.auto_merge_enabled).toBe(false);
+    });
   });
 
-  it('should render reviewers in JSON output', () => {
-    const output = renderPROutput(
-      {
-        success: true,
-        pr_number: 42,
-        url: 'https://github.com/test-org/test-repo/pull/42',
-        reviewers_requested: ['alice', 'bob', 'charlie'],
-        reviewers_added: ['bob', 'charlie'],
-        message: 'Reviewers requested: bob, charlie',
-      },
-      true
-    );
+  // =============================================================================
+  // pr reviewers command tests
+  // =============================================================================
 
-    const parsed = JSON.parse(output) as {
-      reviewers_requested: string[];
-      reviewers_added: string[];
-    };
+  describe('PR Reviewers Command', () => {
+    it('should detect when no PR exists for reviewer requests', async () => {
+      await setupRunDir();
 
-    expect(parsed.reviewers_requested).toEqual(['alice', 'bob', 'charlie']);
-    expect(parsed.reviewers_added).toEqual(['bob', 'charlie']);
-  });
+      const context = await loadPRContext(baseDir, TEST_FEATURE_ID, buildRepoConfig(), false);
 
-  it('should render reviewers in human-readable output', () => {
-    const output = renderPROutput(
-      {
-        pr_number: 42,
-        url: 'https://github.com/test-org/test-repo/pull/42',
+      expect(context.prMetadata).toBeUndefined();
+    });
+
+    it('should parse --add flag and deduplicate with existing reviewers', async () => {
+      const prMeta = buildPRMetadata({
         reviewers_requested: ['alice', 'bob'],
-      },
-      false
-    );
+      });
+      await setupRunDir({}, prMeta);
 
-    expect(output).toContain('PR #42');
-    expect(output).toContain('Reviewers: alice, bob');
+      const context = await loadPRContext(baseDir, TEST_FEATURE_ID, buildRepoConfig(), false);
+
+      // Simulate command's reviewer parsing and dedup
+      const addFlag = 'bob, charlie, dave';
+      const reviewersToAdd = addFlag
+        .split(',')
+        .map((r) => r.trim())
+        .filter((r) => r.length > 0);
+
+      const allReviewers = Array.from(
+        new Set([...context.prMetadata!.reviewers_requested, ...reviewersToAdd])
+      );
+
+      expect(allReviewers).toEqual(['alice', 'bob', 'charlie', 'dave']);
+    });
+
+    it('should update PR metadata with merged reviewer list', async () => {
+      const prMeta = buildPRMetadata({
+        reviewers_requested: ['alice'],
+      });
+      await setupRunDir({}, prMeta);
+
+      const context = await loadPRContext(baseDir, TEST_FEATURE_ID, buildRepoConfig(), false);
+
+      const reviewersToAdd = ['bob', 'charlie'];
+      const allReviewers = Array.from(
+        new Set([...context.prMetadata!.reviewers_requested, ...reviewersToAdd])
+      );
+
+      const updatedMeta: PRMetadata = {
+        ...context.prMetadata!,
+        reviewers_requested: allReviewers,
+        last_updated: new Date().toISOString(),
+      };
+
+      await persistPRData(context, updatedMeta);
+
+      const runDir = path.join(baseDir, TEST_FEATURE_ID);
+      const saved = JSON.parse(
+        await fs.readFile(path.join(runDir, 'pr.json'), 'utf-8')
+      ) as PRMetadata;
+
+      expect(saved.reviewers_requested).toEqual(['alice', 'bob', 'charlie']);
+    });
+
+    it('should render reviewers in JSON output', () => {
+      const output = renderPROutput(
+        {
+          success: true,
+          pr_number: 42,
+          url: 'https://github.com/test-org/test-repo/pull/42',
+          reviewers_requested: ['alice', 'bob', 'charlie'],
+          reviewers_added: ['bob', 'charlie'],
+          message: 'Reviewers requested: bob, charlie',
+        },
+        true
+      );
+
+      const parsed = JSON.parse(output) as {
+        reviewers_requested: string[];
+        reviewers_added: string[];
+      };
+
+      expect(parsed.reviewers_requested).toEqual(['alice', 'bob', 'charlie']);
+      expect(parsed.reviewers_added).toEqual(['bob', 'charlie']);
+    });
+
+    it('should render reviewers in human-readable output', () => {
+      const output = renderPROutput(
+        {
+          pr_number: 42,
+          url: 'https://github.com/test-org/test-repo/pull/42',
+          reviewers_requested: ['alice', 'bob'],
+        },
+        false
+      );
+
+      expect(output).toContain('PR #42');
+      expect(output).toContain('Reviewers: alice, bob');
+    });
   });
 });
-
-});
-

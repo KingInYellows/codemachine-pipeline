@@ -8,11 +8,7 @@
 import type { Headers } from 'undici-types';
 import type { LogContext } from '../../core/sharedTypes';
 import * as crypto from 'node:crypto';
-import {
-  createLogger,
-  type StructuredLogger,
-  LogLevel,
-} from '../../telemetry/logger';
+import { createLogger, type StructuredLogger, LogLevel } from '../../telemetry/logger';
 import type { LoggerInterface } from '../../telemetry/logger';
 
 // ============================================================================

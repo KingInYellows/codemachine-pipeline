@@ -82,9 +82,7 @@ export async function validateQueue(runDir: string): Promise<QueueValidationResu
         const parsed: unknown = JSON.parse(line);
         const parseResult = parseExecutionTask(parsed);
         const parsedRecord =
-          typeof parsed === 'object' && parsed !== null
-            ? (parsed as { task_id?: unknown })
-            : null;
+          typeof parsed === 'object' && parsed !== null ? (parsed as { task_id?: unknown }) : null;
         const parsedTaskId =
           parsedRecord && typeof parsedRecord.task_id === 'string'
             ? parsedRecord.task_id

@@ -103,7 +103,13 @@ describe('Research Create Command Integration Tests', () => {
   it('should parse source flag value correctly', () => {
     // Inline re-implementation of the command's parseSourceFlag logic
     const validTypes: ReadonlyArray<ResearchSource['type']> = [
-      'codebase', 'web', 'documentation', 'api', 'linear', 'github', 'other',
+      'codebase',
+      'web',
+      'documentation',
+      'api',
+      'linear',
+      'github',
+      'other',
     ];
 
     function parseSourceFlag(value: string): ResearchSource | null {
@@ -285,11 +291,7 @@ describe('Context Summarize Command Integration Tests', () => {
   it('should fail when context summary contains invalid JSON', async () => {
     const contextDir = path.join(runDir, 'context');
     await fs.mkdir(contextDir, { recursive: true });
-    await fs.writeFile(
-      path.join(contextDir, 'summary.json'),
-      'not valid json {{{',
-      'utf-8'
-    );
+    await fs.writeFile(path.join(contextDir, 'summary.json'), 'not valid json {{{', 'utf-8');
 
     const raw = await fs.readFile(path.join(contextDir, 'summary.json'), 'utf-8');
     const parsed = safeJsonParse<unknown>(raw);

@@ -220,12 +220,12 @@ export class CLIExecutionEngine {
       // When the codemachine-cli strategy resolved a binary via binaryResolver
       // (e.g. optionalDep), the legacy CLI path is not required for execution.
       const cliStrategyAvailable = this.strategies.some(
-        (s) => s.name === 'codemachine-cli' && s.canHandle({ task_type: 'code_generation' } as ExecutionTask)
+        (s) =>
+          s.name === 'codemachine-cli' &&
+          s.canHandle({ task_type: 'code_generation' } as ExecutionTask)
       );
       if (cliStrategyAvailable) {
-        warnings.push(
-          `Legacy CLI not found at '${cliPath}'; using codemachine-cli strategy`
-        );
+        warnings.push(`Legacy CLI not found at '${cliPath}'; using codemachine-cli strategy`);
       } else {
         errors.push(
           `CodeMachine CLI not available at '${cliPath}': ${cliCheck.error ?? 'unknown error'}`
