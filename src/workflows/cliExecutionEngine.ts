@@ -220,7 +220,7 @@ export class CLIExecutionEngine {
       // When the codemachine-cli strategy resolved a binary via binaryResolver
       // (e.g. optionalDep), the legacy CLI path is not required for execution.
       const cliStrategyAvailable = this.strategies.some(
-        (s) => s.name === 'codemachine-cli' && s.canHandle({} as ExecutionTask)
+        (s) => s.name === 'codemachine-cli' && s.canHandle({ task_type: 'code_generation' } as ExecutionTask)
       );
       if (cliStrategyAvailable) {
         warnings.push(
