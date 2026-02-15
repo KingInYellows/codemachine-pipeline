@@ -43,7 +43,7 @@ This ADR documents critical architectural decisions discovered during documentat
 **Sources**:
 
 - `src/cli/utils/runDirectory.ts:11` - CONFIG_RELATIVE_PATH constant
-- `src/cli/commands/init.ts:350-365` - Git root resolution
+- `src/cli/commands/init.ts:498-513` - Git root resolution
 - `src/core/config/RepoConfig.ts:356-365` - Error handling
 
 **Documentation Impact**: Must clarify that config MUST be in git root, not any parent directory
@@ -81,7 +81,7 @@ This ADR documents critical architectural decisions discovered during documentat
 
 ### Q4: Approval Workflow Mechanics
 
-**Answer**: Six-gate system with SHA-256 hash validation and two-file state model
+**Answer**: Seven-gate system with SHA-256 hash validation and two-file state model
 
 **Available Gates**:
 
@@ -91,6 +91,7 @@ This ADR documents critical architectural decisions discovered during documentat
 - `code` - Code Implementation
 - `pr` - Pull Request
 - `deploy` - Deployment
+- `other` - Custom/extensibility gate
 
 **Workflow Progression**:
 
@@ -126,8 +127,8 @@ This ADR documents critical architectural decisions discovered during documentat
 **Sources**:
 
 - `src/cli/commands/approve.ts` - Complete approval logic
-- `src/workflows/approvalTypes.ts` - Data structures
-- `src/persistence/approvalStorage.ts` - State persistence
+- `src/core/models/ApprovalRecord.ts` - Data structures and gate definitions
+- `src/workflows/approvalRegistry.ts` - State persistence and audit trail
 
 **Documentation Impact**: Must explain hash validation, audit trail, and resume blocking
 
@@ -256,16 +257,20 @@ This ADR documents critical architectural decisions discovered during documentat
 
 ### Q8: Can .codepipe/ Be Committed to Git?
 
-**Answer**: **NO** - `.codepipe/` is gitignored by default
+**Answer**: **Partially** - Only specific subdirectories are gitignored by default
 
-**Gitignored Patterns**:
+**Gitignored Patterns** (only 4 subdirectories):
 
 - `.codepipe/runs/` - Execution state (ephemeral)
 - `.codepipe/logs/` - Log files (large, transient)
 - `.codepipe/metrics/` - Metrics data (transient)
 - `.codepipe/telemetry/` - Telemetry data (transient)
 
-**Exception**: `.codepipe/config.json` CAN be committed (but shouldn't if it contains secrets)
+**NOT Gitignored**:
+
+- `.codepipe/` directory itself (can be committed)
+- `.codepipe/config.json` (CAN be committed for team collaboration, but shouldn't if it contains secrets)
+- Any other files/folders in `.codepipe/` (not in the 4 subdirs above)
 
 **Team Collaboration Strategy**:
 
@@ -276,7 +281,7 @@ This ADR documents critical architectural decisions discovered during documentat
 
 **Sources**:
 
-- `.gitignore:15-18` - .codepipe/ patterns
+- `.gitignore:47-50` - .codepipe/ patterns
 
 **Documentation Impact**: Must document team collaboration workflow, secret sharing strategy
 
@@ -394,7 +399,7 @@ Result:
 **Sources**:
 
 - `src/core/config/RepoConfig.ts:527-536` - Override logic
-- `src/cli/utils/shared.ts:168` - GitHub token loading
+- `src/cli/pr/shared.ts:168` - GitHub token loading
 - `src/cli/commands/start.ts:819` - Linear key loading
 
 **Documentation Impact**: Must explain indirection pattern clearly with diagrams
@@ -618,16 +623,6 @@ codepipe doctor
 - `src/adapters/codemachine/binaryResolver.ts` - Platform-specific binary selection
 
 **Documentation Impact**: Installation guide must include platform-specific instructions
-
----
-
-## Additional Answers (Quick Lookups)
-
-### Q8: .codepipe/ Committable to Git?
-
-**Answer**: NO - gitignored by default
-
-See full answer in Q8 section above.
 
 ---
 
