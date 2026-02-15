@@ -8,10 +8,10 @@ This document defines the command-line interface requirements for AI Feature Pip
 **Last Updated:** 2025-12-17
 **Related Documents:**
 
-- [CLI Patterns](../../archive/ui/cli_patterns.md)
-- [GitHub Adapter Requirements](../config/github_adapter.md)
-- [Linear Adapter Requirements](../config/linear_adapter.md)
-- [Resume Playbook](../../playbooks/resume_playbook.md)
+- [CLI Patterns](../ui/cli_patterns.md)
+- [GitHub Adapter Requirements](github_adapter.md)
+- [Linear Adapter Requirements](linear_adapter.md)
+- [Resume Playbook](resume_playbook.md)
 
 ---
 
@@ -426,10 +426,10 @@ fi
 
 ## Reference Links
 
-- **[CLI Patterns](../../archive/ui/cli_patterns.md)** - Full JSON schemas and examples
-- **[GitHub Adapter](../config/github_adapter.md)** - GitHub API headers, rate limits, versioning
-- **[Linear Adapter](../config/linear_adapter.md)** - Linear API rate limits, developer-preview caveats
-- **[Resume Playbook](../../playbooks/resume_playbook.md)** - Crash recovery, checkpoint restoration
+- **[CLI Patterns](../ui/cli_patterns.md)** - Full JSON schemas and examples
+- **[GitHub Adapter](github_adapter.md)** - GitHub API headers, rate limits, versioning
+- **[Linear Adapter](linear_adapter.md)** - Linear API rate limits, developer-preview caveats
+- **[Resume Playbook](resume_playbook.md)** - Crash recovery, checkpoint restoration
 
 ---
 

@@ -58,7 +58,7 @@ The Component Index serves as:
 
 **File:** [`docs/diagrams/run_directory_schema.mmd`](../diagrams/run_directory_schema.mmd)
 
-**Documentation:** [`docs/reference/run_directory_schema.md`](../run_directory_schema.md)
+**Documentation:** [`docs/requirements/run_directory_schema.md`](../requirements/run_directory_schema.md)
 
 **Description:** Mermaid diagram visualizing the `.codepipe/runs/<feature_id>/` directory structure, including manifest files, artifacts, queue, logs, telemetry, approvals, SQLite indexes, and context caches.
 
@@ -340,7 +340,7 @@ erDiagram
 
 #### 2.1 Run Directory Schema
 
-**File:** [`docs/reference/run_directory_schema.md`](../run_directory_schema.md)
+**File:** [`docs/requirements/run_directory_schema.md`](../requirements/run_directory_schema.md)
 
 **Diagram:** [`docs/diagrams/run_directory_schema.mmd`](../diagrams/run_directory_schema.mmd)
 
@@ -373,9 +373,9 @@ erDiagram
 
 **Status:** ✅ Active
 
-**File:** [`docs/reference/config/RepoConfig_schema.md`](../config/RepoConfig_schema.md)
+**File:** [`docs/requirements/RepoConfig_schema.md`](../requirements/RepoConfig_schema.md)
 
-**API Reference:** [`docs/reference/api/api-reference.md`](../api/api-reference.md)
+**API Reference:** [`docs/ops/api-reference.md`](../ops/api-reference.md)
 
 **Description:** Specification for `.codepipe/config.json` schema, including integration settings (GitHub, Linear, agents), validation policies, and governance metadata. Full field-level documentation with types, defaults, and environment variable overrides.
 
@@ -385,7 +385,7 @@ erDiagram
 
 #### 2.3 Rate Limit Ledger Schema
 
-**File:** [`docs/reference/cli/rate_limit_reference.md`](../cli/rate_limit_reference.md)
+**File:** [`docs/ops/rate_limit_reference.md`](../ops/rate_limit_reference.md)
 
 **Description:** Operational reference for rate limit handling, ledger schema (`rate_limits.json`), retry logic, cooldown states, and operator troubleshooting guidance.
 
@@ -433,7 +433,7 @@ erDiagram
 
 #### 4.1 Blueprint Foundation
 
-**Generated Artifact (not committed):** `.codemachine/artifacts/architecture/01_Blueprint_Foundation.md`
+**File:** `.codemachine/artifacts/architecture/01_Blueprint_Foundation.md`
 
 **Anchor:** `4-0-the-blueprint`
 
@@ -446,13 +446,13 @@ erDiagram
 - Key Components/Services catalog (20+ components)
 - Component responsibilities and boundaries
 
-**Status:** ✅ Active (generated during runs; not committed to this repo)
+**Status:** ✅ Active (authoritative source)
 
 ---
 
 #### 4.2 System Structure and Data
 
-**Generated Artifact (not committed):** `.codemachine/artifacts/architecture/02_System_Structure_and_Data.md`
+**File:** `.codemachine/artifacts/architecture/02_System_Structure_and_Data.md`
 
 **Anchors:** `3-1-architectural-style`, `3-2-technology-stack-summary`
 
@@ -463,7 +463,7 @@ erDiagram
 - Architectural style (Modular Layered Orchestrator with Pluggable Adapters)
 - Technology stack per layer (CLI, Orchestration, HTTP, Adapters, Persistence, Observability, Validation, Containerization, Distribution)
 
-**Status:** ✅ Active (generated during runs; not committed to this repo)
+**Status:** ✅ Active (authoritative source)
 
 ---
 
@@ -471,7 +471,7 @@ erDiagram
 
 #### 5.1 Rate Limit Reference
 
-**File:** [`docs/reference/cli/rate_limit_reference.md`](../cli/rate_limit_reference.md)
+**File:** [`docs/ops/rate_limit_reference.md`](../ops/rate_limit_reference.md)
 
 **Description:** Operational guide for rate limit monitoring, troubleshooting, and manual intervention.
 
@@ -618,7 +618,7 @@ When modifying system architecture, use this checklist:
 #### Adding New Diagrams
 
 - [ ] Create diagram file in `docs/diagrams/`
-- [ ] Create companion documentation in `docs/diagrams/` or `docs/reference/`
+- [ ] Create companion documentation in `docs/diagrams/` or `docs/requirements/`
 - [ ] Add entry to this index (Section 1 or 2)
 - [ ] Include rendering instructions
 - [ ] Reference related ADRs
@@ -677,26 +677,26 @@ All architecture artifacts must meet these standards:
 **Architects / Technical Leads:**
 
 - [Component Overview Diagram](../diagrams/component_overview.puml) - System architecture
-- Blueprint Foundation (generated: `.codemachine/artifacts/architecture/01_Blueprint_Foundation.md`) - Core principles
+- [Blueprint Foundation](.codemachine/artifacts/architecture/01_Blueprint_Foundation.md) - Core principles
 - ADRs (pending upload) - Architectural decisions
 
 **Backend Developers:**
 
 - [Component Overview Diagram](../diagrams/component_overview.puml) - Module boundaries
-- [Run Directory Schema](../run_directory_schema.md) - Persistence layer
-- [Rate Limit Reference](../cli/rate_limit_reference.md) - HTTP layer
+- [Run Directory Schema](../requirements/run_directory_schema.md) - Persistence layer
+- [Rate Limit Reference](../ops/rate_limit_reference.md) - HTTP layer
 
 **DevOps / SREs:**
 
-- [Rate Limit Reference](../cli/rate_limit_reference.md) - Operational troubleshooting
-- [Run Directory Schema](../run_directory_schema.md) - State persistence
+- [Rate Limit Reference](../ops/rate_limit_reference.md) - Operational troubleshooting
+- [Run Directory Schema](../requirements/run_directory_schema.md) - State persistence
 - Cleanup policies (future) - Retention management
 
 **New Team Members:**
 
 1. Start with [Component Overview Documentation](../diagrams/component_overview.md)
-2. Review Blueprint Foundation (generated: `.codemachine/artifacts/architecture/01_Blueprint_Foundation.md`)
-3. Explore [Run Directory Schema](../run_directory_schema.md)
+2. Review [Blueprint Foundation](.codemachine/artifacts/architecture/01_Blueprint_Foundation.md)
+3. Explore [Run Directory Schema](../requirements/run_directory_schema.md)
 4. Read ADRs (pending upload) for decision context
 
 ---
@@ -706,30 +706,30 @@ All architecture artifacts must meet these standards:
 **CLI Presentation:**
 
 - [Component Overview Diagram](../diagrams/component_overview.puml) (CLI Section)
-- Blueprint Foundation (generated: `.codemachine/artifacts/architecture/01_Blueprint_Foundation.md`) (CLI Orchestrator, RepoConfig Manager)
+- [Blueprint Foundation](.codemachine/artifacts/architecture/01_Blueprint_Foundation.md) (CLI Orchestrator, RepoConfig Manager)
 
 **Orchestration Core:**
 
 - [Component Overview Diagram](../diagrams/component_overview.puml) (Orchestration Section)
-- Blueprint Foundation (generated: `.codemachine/artifacts/architecture/01_Blueprint_Foundation.md`) (Context, Research, PRD, Spec, Task Planning, Execution, Resume, Validation)
+- [Blueprint Foundation](.codemachine/artifacts/architecture/01_Blueprint_Foundation.md) (Context, Research, PRD, Spec, Task Planning, Execution, Resume, Validation)
 
 **Adapter Boundary:**
 
 - [Component Overview Diagram](../diagrams/component_overview.puml) (Adapter Section)
-- [Rate Limit Reference](../cli/rate_limit_reference.md) (HTTP Client)
-- Blueprint Foundation (generated: `.codemachine/artifacts/architecture/01_Blueprint_Foundation.md`) (GitHub, Linear, Agent, Git, Deployment, Notification adapters)
+- [Rate Limit Reference](../ops/rate_limit_reference.md) (HTTP Client)
+- [Blueprint Foundation](.codemachine/artifacts/architecture/01_Blueprint_Foundation.md) (GitHub, Linear, Agent, Git, Deployment, Notification adapters)
 
 **Persistence:**
 
-- [Run Directory Schema](../run_directory_schema.md)
+- [Run Directory Schema](../requirements/run_directory_schema.md)
 - [Run Directory Diagram](../diagrams/run_directory_schema.mmd)
-- Blueprint Foundation (generated: `.codemachine/artifacts/architecture/01_Blueprint_Foundation.md`) (Run Directory Manager, Artifact Bundle)
+- [Blueprint Foundation](.codemachine/artifacts/architecture/01_Blueprint_Foundation.md) (Run Directory Manager, Artifact Bundle)
 
 **Observability:**
 
-- [Rate Limit Reference](../cli/rate_limit_reference.md) (Telemetry Writers)
-- [Run Directory Schema](../run_directory_schema.md) (Telemetry subdirectory)
-- Blueprint Foundation (generated: `.codemachine/artifacts/architecture/01_Blueprint_Foundation.md`) (Observability Hub, Security Vault)
+- [Rate Limit Reference](../ops/rate_limit_reference.md) (Telemetry Writers)
+- [Run Directory Schema](../requirements/run_directory_schema.md) (Telemetry subdirectory)
+- [Blueprint Foundation](.codemachine/artifacts/architecture/01_Blueprint_Foundation.md) (Observability Hub, Security Vault)
 
 ---
 
@@ -842,13 +842,13 @@ To update architecture documentation:
 
 ### Schemas
 
-- `docs/reference/run_directory_schema.md` - Run directory specification
-- `docs/reference/cli/rate_limit_reference.md` - Rate limit ledger operational guide
+- `docs/requirements/run_directory_schema.md` - Run directory specification
+- `docs/ops/rate_limit_reference.md` - Rate limit ledger operational guide
 
 ### Blueprint
 
-- (Generated) `.codemachine/artifacts/architecture/01_Blueprint_Foundation.md` - Blueprint foundation
-- (Generated) `.codemachine/artifacts/architecture/02_System_Structure_and_Data.md` - System structure
+- `.codemachine/artifacts/architecture/01_Blueprint_Foundation.md` - Blueprint foundation
+- `.codemachine/artifacts/architecture/02_System_Structure_and_Data.md` - System structure
 
 ### ADRs (Planned)
 
@@ -860,4 +860,4 @@ To update architecture documentation:
 
 ### This File
 
-- `docs/reference/architecture/component_index.md` - Architecture component index (you are here)
+- `docs/architecture/component_index.md` - Architecture component index (you are here)
