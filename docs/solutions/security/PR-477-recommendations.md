@@ -11,12 +11,14 @@
 ### Action 1: Fix Anthropic Key Regex Length
 
 **Current Code** (VULNERABLE):
+
 ```bash
 # Line 25 in scripts/security-scan-docs.sh
 grep -rE "sk-ant-[A-Za-z0-9_-]{48,}" docs/ README.md
 ```
 
 **Fixed Code:**
+
 ```bash
 # Match exactly 48 characters post-prefix
 grep -rE "sk-ant-[A-Za-z0-9_-]{48}" docs/ README.md
@@ -25,6 +27,7 @@ grep -rE "sk-ant-[A-Za-z0-9_-]{48}" docs/ README.md
 **Why:** Current pattern with `{48,}` requires 48 or MORE characters. Real keys are exactly 48 characters and will NOT be caught.
 
 **Testing:**
+
 ```bash
 # Create test file
 REAL_KEY="sk-ant-$(python3 -c 'import random,string; print("".join(random.choices(string.ascii_letters + string.digits, k=48)))')"
@@ -47,12 +50,14 @@ echo "Status: $?" # Should be 0 (found) - CORRECT
 ### Action 2: Fix OpenAI Key Regex Bounds
 
 **Current Code** (VULNERABLE):
+
 ```bash
 # Line 34 in scripts/security-scan-docs.sh
 grep -rE "sk-[A-Za-z0-9]{32,}" docs/ README.md
 ```
 
 **Fixed Code:**
+
 ```bash
 # Bound the pattern to actual OpenAI key length (32-48 chars)
 grep -rE "sk-[A-Za-z0-9]{32,48}\b" docs/ README.md | \
@@ -60,11 +65,13 @@ grep -rE "sk-[A-Za-z0-9]{32,48}\b" docs/ README.md | \
 ```
 
 **Why:** Current pattern `{32,}` matches unlimited characters, causing:
+
 1. Excessive false positives (strings like `sk-development-build-xyz` match)
 2. Alert fatigue that leads to disabled checks
 3. Potential ReDoS (Regular Expression Denial of Service) on large files
 
 **Testing:**
+
 ```bash
 # Test unbounded pattern (current - VULNERABLE)
 echo "sk-development-build-string-with-tons-of-chars" | grep -E "sk-[A-Za-z0-9]{32,}"
@@ -88,13 +95,22 @@ echo "$REAL_OPENAI" | grep -E "sk-[A-Za-z0-9]{32,48}\b"
 ### Action 3: Fix GitHub Workflow Failure Enforcement
 
 **Current Code** (VULNERABLE):
+
 ```yaml
 # Lines 182-193 in .github/workflows/docs-validation.yml
 summary:
   name: Documentation Quality Summary
   runs-on: ubuntu-latest
-  needs: [link-check, command-validation, factual-accuracy, security-scan, code-examples, structure-validation]
-  if: always()  # VULNERABLE: Runs even if security-scan fails
+  needs:
+    [
+      link-check,
+      command-validation,
+      factual-accuracy,
+      security-scan,
+      code-examples,
+      structure-validation,
+    ]
+  if: always() # VULNERABLE: Runs even if security-scan fails
   steps:
     - name: Summary
       run: |
@@ -105,12 +121,21 @@ summary:
 ```
 
 **Fixed Code:**
+
 ```yaml
 summary:
   name: Documentation Quality Summary
   runs-on: ubuntu-latest
-  needs: [link-check, command-validation, factual-accuracy, security-scan, code-examples, structure-validation]
-  if: failure()  # Only run if upstream jobs failed
+  needs:
+    [
+      link-check,
+      command-validation,
+      factual-accuracy,
+      security-scan,
+      code-examples,
+      structure-validation,
+    ]
+  if: failure() # Only run if upstream jobs failed
   steps:
     - name: Report Validation Failures
       run: |
@@ -130,6 +155,7 @@ summary:
 **Why:** Current code with `if: always()` runs summary regardless of failures, making the security gate bypassable. PR can be merged with failing security checks.
 
 **How to Verify Fix Works:**
+
 1. Commit a real API key to test branch
 2. Create PR
 3. Verify security-scan job fails
@@ -144,6 +170,7 @@ summary:
 ### Action 4: Add Bash Strict Mode
 
 **Current Code** (UNSAFE):
+
 ```bash
 #!/bin/bash
 set -e
@@ -153,6 +180,7 @@ echo ""
 ```
 
 **Fixed Code:**
+
 ```bash
 #!/bin/bash
 set -euo pipefail  # Exit on error, undefined variables, pipe failures
@@ -163,11 +191,13 @@ echo ""
 ```
 
 **Why:** Current script with only `set -e` can silently fail in several ways:
+
 - Unset variables are ignored
 - Pipe failures are silently ignored
 - Script can report success despite failures
 
 **Testing:**
+
 ```bash
 # Demonstrate the vulnerability
 bash -c 'set -e; [ $UNDEFINED_VAR -eq 0 ] && echo "matched"; echo "script continued"'
@@ -190,6 +220,7 @@ bash -c 'set -eu; [ $UNDEFINED_VAR -eq 0 ] && echo "matched"; echo "script conti
 **Current:** Only detects classic tokens (`ghp_*`)
 
 **Add to security-scan-docs.sh:**
+
 ```bash
 # Check for real GitHub tokens (all types)
 echo "Checking for real GitHub tokens..."
@@ -214,6 +245,7 @@ fi
 **Current:** Only detects Access Key IDs (`AKIA*`)
 
 **Add to security-scan-docs.sh:**
+
 ```bash
 # Check for AWS credentials (all types)
 echo "Checking for AWS credentials..."
@@ -236,6 +268,7 @@ fi
 ### Action 7: Document Credential Format Sources
 
 **Create** `docs/security/credential-patterns.md`:
+
 ```markdown
 # Credential Detection Patterns
 
@@ -243,23 +276,23 @@ This document tracks the source of each credential pattern used in our security 
 
 ## GitHub Tokens
 
-| Type | Format | Length | Reference | Status |
-|------|--------|--------|-----------|--------|
-| Classic PAT | ghp_* | 40 chars | [GitHub Docs] | Covered |
-| Fine-grained | github_pat_* | 50+ chars | [GitHub Docs] | Covered |
-| OAuth | ghu_* | 36+ chars | [GitHub Docs] | Covered |
+| Type         | Format        | Length    | Reference     | Status  |
+| ------------ | ------------- | --------- | ------------- | ------- |
+| Classic PAT  | ghp\_\*       | 40 chars  | [GitHub Docs] | Covered |
+| Fine-grained | github*pat*\* | 50+ chars | [GitHub Docs] | Covered |
+| OAuth        | ghu\_\*       | 36+ chars | [GitHub Docs] | Covered |
 
 ## Anthropic API Keys
 
-| Type | Format | Length | Reference | Status |
-|------|--------|--------|-----------|--------|
-| Production | sk-ant-* | 48 chars | [Anthropic Docs] | Covered |
+| Type       | Format    | Length   | Reference        | Status  |
+| ---------- | --------- | -------- | ---------------- | ------- |
+| Production | sk-ant-\* | 48 chars | [Anthropic Docs] | Covered |
 
 ## Linear API Keys
 
-| Type | Format | Length | Reference | Status |
-|------|--------|--------|-----------|--------|
-| API Key | lin_api_* | 40 chars | [Linear Docs] | Covered |
+| Type    | Format     | Length   | Reference     | Status  |
+| ------- | ---------- | -------- | ------------- | ------- |
+| API Key | lin*api*\* | 40 chars | [Linear Docs] | Covered |
 
 **Note:** Linear format verified against official documentation on [DATE].
 
@@ -280,6 +313,7 @@ This document tracks the source of each credential pattern used in our security 
 ### Action 8: Create Comprehensive Test Suite
 
 **Create** `tests/security-scan.test.sh`:
+
 ```bash
 #!/bin/bash
 # Test suite for security scanning
@@ -343,6 +377,7 @@ test_github_fine_grained
 ### Action 9: Expand Credential Type Coverage
 
 Add detection for:
+
 - Google API keys (`AIza*`)
 - Slack tokens (`xoxb-*`, `xoxp-*`)
 - JWT tokens (common patterns)
@@ -375,6 +410,7 @@ Replace regex scanning with battle-tested tool:
 ```
 
 **Benefits:**
+
 - ML-based entropy detection
 - No false positives
 - Detects unknown credential formats
@@ -454,12 +490,12 @@ If issues arise:
 
 ## TIMELINE
 
-| Phase | Duration | Tasks |
-|-------|----------|-------|
-| Immediate | 10 min | Actions 1-4 |
-| Short-term | 1 week | Actions 5-7 |
-| Medium-term | 1 month | Actions 8-9 |
-| Optional | Ongoing | Enhancements |
+| Phase       | Duration | Tasks        |
+| ----------- | -------- | ------------ |
+| Immediate   | 10 min   | Actions 1-4  |
+| Short-term  | 1 week   | Actions 5-7  |
+| Medium-term | 1 month  | Actions 8-9  |
+| Optional    | Ongoing  | Enhancements |
 
 **Total Effort to Production-Ready:** ~3-4 hours
 
@@ -486,4 +522,3 @@ The security scanning pipeline has critical gaps but is fixable with the recomme
 4. **Nice to have:** Enhancements
 
 Do not merge without addressing Critical issues.
-

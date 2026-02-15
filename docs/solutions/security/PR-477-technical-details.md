@@ -9,6 +9,7 @@
 ## ISSUE #1: Anthropic Key Regex Quantifier Error (CRITICAL)
 
 ### Current Implementation
+
 ```bash
 echo "Checking for real Anthropic API keys..."
 if grep -rE "sk-ant-[A-Za-z0-9_-]{48,}" docs/ README.md 2>/dev/null | \
@@ -25,11 +26,13 @@ fi
 **The Bug:** Quantifier `{48,}` means "48 or more characters"
 
 **Why This Is Wrong:**
+
 - Anthropic API keys have exactly 48 alphanumeric characters after prefix
 - The regex REQUIRES at least 48 chars, meaning exactly 48 char keys PASS validation
 - It only catches keys with 49+ characters (which are invalid)
 
 **Real-World Impact:**
+
 ```
 Real Anthropic key:
 sk-ant-[48 alphanumeric chars exactly]
@@ -61,11 +64,14 @@ fi
 **Expected Output:** NOT DETECTED (the vulnerability)
 
 ### Root Cause
+
 The developer likely confused:
+
 - `{48,}` - "48 or more" (what's in code)
 - `{48}` - "exactly 48" (what's needed)
 
 ### Correct Fix
+
 ```bash
 # Option 1: Exactly 48 characters (most precise)
 grep -rE "sk-ant-[A-Za-z0-9_-]{48}" docs/ README.md
@@ -75,6 +81,7 @@ grep -rE "sk-ant-[A-Za-z0-9_-]{48,52}" docs/ README.md
 ```
 
 ### Test Cases
+
 ```bash
 # Should MATCH (real key format)
 echo "sk-ant-abcdefghijklmnopqrstuvwxyz0123456789ABCDEFGH" | grep -E "sk-ant-[A-Za-z0-9_-]{48}"
@@ -91,6 +98,7 @@ echo "sk-ant-abcdefghijklmnopqrstuvwxyz0123456789ABCDEFGHextra" | grep -E "sk-an
 ## ISSUE #2: OpenAI Key Regex Unbounded and ReDoS Risk (CRITICAL)
 
 ### Current Implementation
+
 ```bash
 echo "Checking for real OpenAI API keys..."
 if grep -rE "sk-[A-Za-z0-9]{32,}" docs/ README.md 2>/dev/null | \
@@ -112,6 +120,7 @@ fi
 **What this matches:** Anything with sk- followed by 32+ alphanumerics
 
 **False Positive Examples:**
+
 ```
 sk-development-build-environment-production-database-123456789 (matches!)
 sk-uuid-550e8400-e29b-41d4-a716-446655440000-value-here (matches!)
@@ -130,7 +139,7 @@ The pattern `[A-Za-z0-9]{32,}` on a large input can cause catastrophic backtrack
 ```javascript
 // Example where regex engine thrashes
 const pattern = /sk-[A-Za-z0-9]{32,}/;
-const largeString = "sk-" + "a".repeat(10000);
+const largeString = 'sk-' + 'a'.repeat(10000);
 // Regex engine tries all possible endpoints for {32,}
 // Exponential time complexity on large strings
 ```
@@ -155,6 +164,7 @@ time grep -rE "sk-[A-Za-z0-9]{32,}" large_documentation_file.md
 ```
 
 ### Root Cause
+
 - Developer didn't specify upper bound for key length
 - Didn't test with realistic documentation
 - No performance testing for ReDoS
@@ -194,11 +204,20 @@ echo "sk-$(python3 -c 'import random,string; print("".join(random.choices(string
 ## ISSUE #3: Workflow Enforcement Disabled (CRITICAL)
 
 ### Current Implementation
+
 ```yaml
 summary:
   name: Documentation Quality Summary
   runs-on: ubuntu-latest
-  needs: [link-check, command-validation, factual-accuracy, security-scan, code-examples, structure-validation]
+  needs:
+    [
+      link-check,
+      command-validation,
+      factual-accuracy,
+      security-scan,
+      code-examples,
+      structure-validation,
+    ]
   if: always()
   steps:
     - name: Summary
@@ -257,9 +276,9 @@ security-scan:
 
 summary:
   needs: [security-scan]
-  if: always()  # Still runs even though security-scan failed
+  if: always() # Still runs even though security-scan failed
   steps:
-    - run: echo "Done"  # Exits with 0 (success)
+    - run: echo "Done" # Exits with 0 (success)
   # Entire workflow shows as PASSED/FAILED based on summary (which succeeds)
 
 # Result: PR can be merged even with failing security checks
@@ -291,8 +310,16 @@ summary:
 summary:
   name: Documentation Quality Summary
   runs-on: ubuntu-latest
-  needs: [link-check, command-validation, factual-accuracy, security-scan, code-examples, structure-validation]
-  if: failure()  # Only run if ANY upstream job failed
+  needs:
+    [
+      link-check,
+      command-validation,
+      factual-accuracy,
+      security-scan,
+      code-examples,
+      structure-validation,
+    ]
+  if: failure() # Only run if ANY upstream job failed
   steps:
     - name: Report Failures
       run: |
@@ -342,6 +369,7 @@ EOF
 ## ISSUE #4: Missing Bash Strict Mode (HIGH)
 
 ### Current Implementation
+
 ```bash
 #!/bin/bash
 set -e
@@ -354,6 +382,7 @@ errors=0
 ### Missing Safety Guards
 
 **Set -e alone is insufficient because:**
+
 1. Undefined variables don't cause exit
 2. Pipe failures are silently ignored
 3. Command substitution failures aren't caught
@@ -421,6 +450,7 @@ bash -c 'set -eo pipefail; grep x /dev/null | grep y; echo success' # No success
 ## ISSUE #5: Unvalidated Linear API Key Format (HIGH)
 
 ### Current Implementation
+
 ```bash
 echo "Checking for real Linear API keys..."
 if grep -rE "lin_api_[A-Za-z0-9]{40}" docs/ README.md 2>/dev/null | \
@@ -437,6 +467,7 @@ fi
 **The Issue:** No verification that this format is correct
 
 **Why This Matters:**
+
 - If actual Linear keys are 32 chars, this catches nothing
 - If they're 50 chars, this still catches nothing
 - Silent false negatives
@@ -480,6 +511,7 @@ echo "lin_api_4f6e8e9c1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d" | \
 ## ISSUE #6: False Positive in Email Detection (MEDIUM)
 
 ### Current Implementation
+
 ```bash
 echo "Checking for email addresses..."
 if grep -rE "[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}" docs/ README.md 2>/dev/null | \
@@ -495,6 +527,7 @@ fi
 **The Bug:** Substring-based grep exclusion is fragile
 
 **Why It Fails:**
+
 ```
 Exclusion regex: "noreply@anthropic.com\|example.com\|EXAMPLE\|placeholder"
 
@@ -506,6 +539,7 @@ Files with:
 ```
 
 **Examples of False Positives:**
+
 ```
 documentation says: "For questions contact docs-team@company.com"
 Pattern matches, exclusion fails → False positive
@@ -539,6 +573,7 @@ grep -rE "[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}" docs/ README.md | \
 ## ISSUE #7: Incomplete GitHub Token Patterns (MEDIUM)
 
 ### Current Implementation
+
 ```bash
 echo "Checking for real GitHub tokens (ghp_*)..."
 if grep -rE "ghp_[A-Za-z0-9]{36}" docs/ README.md ...
@@ -550,12 +585,12 @@ if grep -rE "ghp_[A-Za-z0-9]{36}" docs/ README.md ...
 
 1. **Classic Personal Access Token (PAT)**
    - Format: `ghp_[A-Za-z0-9]{36}`
-   - Length: ghp_ + 36 chars = 40 chars total
+   - Length: ghp\_ + 36 chars = 40 chars total
    - Status: ✓ Covered
 
 2. **Fine-Grained Personal Access Token** (NEW - not covered)
    - Format: `github_pat_[base64url string]`
-   - Length: github_pat_ + ~50-100 chars
+   - Length: github*pat* + ~50-100 chars
    - Status: ✗ NOT COVERED
 
 3. **OAuth Token** (not covered)
@@ -596,6 +631,7 @@ fi
 ## ISSUE #8: Incomplete AWS Credential Coverage (MEDIUM)
 
 ### Current Implementation
+
 ```bash
 echo "Checking for AWS credentials..."
 if grep -rE "AKIA[0-9A-Z]{16}" docs/ README.md ...
@@ -646,6 +682,7 @@ AQoDYXdzEJr../Z2IZ2DISDJFIAJ3/aQm+Ewzz8CqLj...
 ## ISSUE #9: JavaScript Dependency Not Validated (HIGH)
 
 ### Current Implementation
+
 ```javascript
 import { glob } from 'glob';
 import fs from 'fs';
@@ -690,17 +727,17 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 ## Summary Table
 
-| Issue | Type | Bypass | Detection |
-|-------|------|--------|-----------|
-| Anthropic regex | Quantifier | Real keys pass | Cryptic |
-| OpenAI regex | Unbounded | False positives | ReDoS risk |
-| Workflow gate | Architecture | Completely | Silent |
-| Bash strict | Error handling | Silent failures | Subtle |
-| Linear format | Unknown | Unknown gap | Possible |
-| GitHub tokens | Incomplete | Modern tokens | Silent |
-| AWS credentials | Incomplete | Secret keys | Silent |
-| Email false FP | False positive | Alert fatigue | Excessive |
-| IP ranges | Incomplete | IPv6 + private | Silent |
+| Issue           | Type           | Bypass          | Detection  |
+| --------------- | -------------- | --------------- | ---------- |
+| Anthropic regex | Quantifier     | Real keys pass  | Cryptic    |
+| OpenAI regex    | Unbounded      | False positives | ReDoS risk |
+| Workflow gate   | Architecture   | Completely      | Silent     |
+| Bash strict     | Error handling | Silent failures | Subtle     |
+| Linear format   | Unknown        | Unknown gap     | Possible   |
+| GitHub tokens   | Incomplete     | Modern tokens   | Silent     |
+| AWS credentials | Incomplete     | Secret keys     | Silent     |
+| Email false FP  | False positive | Alert fatigue   | Excessive  |
+| IP ranges       | Incomplete     | IPv6 + private  | Silent     |
 
 ---
 
@@ -729,4 +766,3 @@ test_workflow_failure_blocks_merge() {
 
 # ... more comprehensive tests
 ```
-
