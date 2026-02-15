@@ -220,7 +220,7 @@ Create a multi-format documentation suite with clear organization, progressive d
    - [ ] Verify all file paths and line numbers are accurate
 
 2. **Restructure docs/ Directory** (Architecture Review Recommendation)
-   - [ ] Consolidate from 16 → 7 top-level directories:
+   - [x] Consolidate from 16 → 7 top-level directories:
      ```
      docs/
      ├── guide/           # Consolidates getting-started + user-guide (Tier 1: Learn)
@@ -231,8 +231,8 @@ Create a multi-format documentation suite with clear organization, progressive d
      ├── diagrams/        # Keep existing (Visual assets)
      └── templates/       # Keep existing (Document templates)
      ```
-   - [ ] Create migration map: existing files → new structure
-   - [ ] Archive transient docs (brainstorms, plans, research) to `docs/archive/`
+   - [x] Create migration map: existing files → new structure
+   - [x] Archive transient docs (announcements, development, ui) to `docs/archive/`
 
 3. **Establish Link Validation CI**
    - [ ] Create `.github/workflows/docs-validation.yml`
