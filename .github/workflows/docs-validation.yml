@@ -143,7 +143,7 @@ jobs:
           CD
           EOF
 
-          mdspell -r -n -a --en-us 'docs/**/*.md' 'README.md' || true
+          mdspell -r -n -a --en-us 'docs/**/*.md' 'README.md'
 
   structure-validation:
     name: Structure & Formatting
@@ -182,7 +182,7 @@ jobs:
   summary:
     name: Documentation Quality Summary
     runs-on: ubuntu-latest
-    needs: [link-check, command-validation, factual-accuracy, security-scan, code-examples, structure-validation]
+    needs: [link-check, command-validation, factual-accuracy, security-scan, code-examples, spell-check, structure-validation]
     if: failure()
     steps:
       - name: Summary

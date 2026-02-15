@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+/* eslint-disable no-console -- CLI script, not browser code */
 /**
  * Test code examples in documentation
  *
@@ -29,7 +30,7 @@ let totalBlocks = 0;
 let errors = 0;
 const unsafePatterns = [
   { pattern: /rm\s+-rf\s+\//, message: 'Dangerous rm -rf on root' },
-  { pattern: /:\(\)\{\s*:\|\:&\s*\};:/, message: 'Fork bomb detected' },
+  { pattern: /:\(\)\{\s*:\|:&\s*\};:/, message: 'Fork bomb detected' },
   { pattern: /chmod\s+777/, message: 'Insecure permissions (chmod 777)' },
   { pattern: /curl.*\|\s*bash/, message: 'Pipe to bash (security risk)' },
   { pattern: /eval\s+\$\(/, message: 'Eval with command substitution' },
@@ -83,7 +84,7 @@ for (const file of markdownFiles) {
         JSON.parse(code);
       } catch (e) {
         console.error(`❌ ${relativePath}:`);
-        console.error(`   Invalid JSON syntax`);
+        console.error('   Invalid JSON syntax');
         console.error(`   Error: ${e.message}`);
         errors++;
       }
@@ -93,7 +94,7 @@ for (const file of markdownFiles) {
 
 // Summary
 console.log('');
-console.log(`📊 Summary:`);
+console.log('📊 Summary:');
 console.log(`   ${totalBlocks} code blocks checked`);
 console.log(`   ${markdownFiles.length} files scanned`);
 

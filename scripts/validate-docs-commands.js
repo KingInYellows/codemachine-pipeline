@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+/* eslint-disable no-console -- CLI script */
 /**
  * Validate that CLI command documentation matches oclif.manifest.json
  *
@@ -48,7 +49,7 @@ for (const cmd of actualCommands) {
 }
 
 // Check for phantom commands (documented but don't exist)
-const docCommandPattern = /codepipe\s+([a-z-]+)/gi;
+const docCommandPattern = /codepipe\s+([a-z]+(?:\s[a-z-]+)*)/gi;
 const matches = cliRefContent.matchAll(docCommandPattern);
 const documentedCommands = new Set();
 
