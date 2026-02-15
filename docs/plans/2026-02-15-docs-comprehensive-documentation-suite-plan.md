@@ -54,18 +54,21 @@ milestone: Cycle 8
 ### New Considerations Discovered
 
 **Critical (Must Address):**
+
 - Team collaboration requires locking documentation (queue file access patterns)
 - Enterprise config inheritance mechanism undefined (blocks org-wide rollout)
 - Queue corruption recovery lacks clear procedures (data loss risk)
 - AI API key cost protection is security-critical (leaked keys = $1000s in charges)
 
 **Important (Significant UX Impact):**
+
 - Migration guide needed for pre-v1.0 → v1.0+ upgrades
 - Platform-specific quirks (Windows paths, macOS filesystem) require dedicated section
 - Performance tuning for large repositories (>10GB) needs documentation
 - Advanced error recovery scenarios (stale locks, deadlocks) not covered
 
 **Time Impact:** +3.5 days (was 11.5 days, now **15 days / 3 weeks**) due to:
+
 - Phase 0: Architecture restructuring (+2 days)
 - Security enhancements (+1 day)
 - Additional gap documentation (+0.5 days)
@@ -79,6 +82,7 @@ Create a complete, self-service documentation suite covering installation, setup
 ## Problem Statement
 
 **Current State:**
+
 - Documentation exists but is fragmented across README.md, docs/, and CLI help
 - Recent v1.0.0 release (2026-02-11) included Cycle 9 CodeMachine-CLI integration, but docs haven't been fully audited
 - No consolidated installation guide covering all resolution paths (env vars, optionalDeps, PATH)
@@ -87,6 +91,7 @@ Create a complete, self-service documentation suite covering installation, setup
 - Troubleshooting section is minimal
 
 **Pain Points:**
+
 - New users don't know which installation method to use
 - Configuration errors are cryptic due to Zod validation without friendly explanations
 - CodeMachine CLI resolution has 3 paths but priority order isn't documented
@@ -97,11 +102,13 @@ Create a complete, self-service documentation suite covering installation, setup
 **SpecFlow Analysis Identified 34 Original Gaps + 31 Additional Gaps = 65 Total:**
 
 **Original Gaps:**
+
 - **Critical (6)**: Node version requirement, config file discovery, CodeMachine CLI resolution priority, approval mechanics, required vs optional config fields, LINEAR_API_KEY requirement
 - **Important (7)**: Execution engine comparison, error recovery, concurrent execution, credential precedence, debug logging, command output format, platform support
 - **Nice-to-have (7)**: Monorepo support, offline installation, proxy config, workflow cancellation, queue recovery, GitHub rate limits, doc versioning
 
 **Additional Gaps Discovered During Deepening:**
+
 - **Critical (15)**: Team collaboration locking, enterprise config inheritance, queue corruption recovery, disaster recovery procedures, AI API key cost protection, binary integrity verification, secret rotation, multi-user approval delegation, queue backup/restore, stale lock recovery, secret management integration, migration pre-v1.0 → v1.0+, cross-repo dependencies, compliance auditing, pipeline handoff scenarios
 - **Important (11)**: Performance tuning (large repos), platform-specific quirks, advanced error recovery, in-place upgrades, downgrade procedures, concurrent pipeline execution, network bandwidth optimization, partial PR conflicts, permission management, API quota sharing, version compatibility
 - **Nice-to-have (5)**: Internationalization, accessibility (a11y), circular dependency deadlock detection, keyboard-only navigation, Braille display support
@@ -152,6 +159,7 @@ Create a multi-format documentation suite with clear organization, progressive d
    - Badge matrix (CI status, version, license)
 
 2. **docs/ Directory Structure** (Organized by Topic)
+
    ```
    docs/
    ├── getting-started/
@@ -204,6 +212,7 @@ Create a multi-format documentation suite with clear organization, progressive d
 ### Phase 0: Architecture Foundation & Critical Corrections (2 days) **NEW**
 
 **Tasks:**
+
 1. **Correct Factual Errors in Plan**
    - [x] Replace all `CODEMACHINE_CLI_PATH` with `CODEMACHINE_BIN_PATH`
    - [x] Remove `CODEMACHINE_LOG_LEVEL` or replace with actual debug method
@@ -231,6 +240,7 @@ Create a multi-format documentation suite with clear organization, progressive d
    - [ ] Add factual accuracy checks (engine lists, command counts)
 
 **Deliverable:**
+
 - Restructured docs/ directory
 - Migration map documenting all file moves
 - CI validation workflow
@@ -242,41 +252,44 @@ Create a multi-format documentation suite with clear organization, progressive d
 
 **Original Critical Questions:**
 
-| # | Question | Current Assumption | Validation Method | Answer Found |
-|---|----------|-------------------|-------------------|--------------|
-| 1 | Node.js version requirement? | >=24.0.0 | Check `package.json` engines field | ✅ Verified: >=24.0.0 |
-| 2 | Config file discovery algorithm? | Git root only | Read `src/core/config/RepoConfig.ts` loader logic | ❓ MUST VERIFY |
-| 3 | CodeMachine CLI resolution priority? | env var → optionalDeps → PATH | Read `src/adapters/codemachine/binaryResolver.ts` | ✅ Verified (corrected) |
-| 4 | Approval workflow mechanics? | GitHub PR approval | Read `src/cli/commands/approve.ts` implementation | ❓ MUST VERIFY |
-| 5 | Required vs optional config fields? | Reverse-engineer from Zod | Extract from `src/core/config/RepoConfig.ts` Zod schema | ❓ MUST VERIFY |
-| 6 | LINEAR_API_KEY required or optional? | Optional | Read config validation logic | ✅ Optional (warning if Linear enabled) |
+| #   | Question                             | Current Assumption            | Validation Method                                       | Answer Found                            |
+| --- | ------------------------------------ | ----------------------------- | ------------------------------------------------------- | --------------------------------------- |
+| 1   | Node.js version requirement?         | >=24.0.0                      | Check `package.json` engines field                      | ✅ Verified: >=24.0.0                   |
+| 2   | Config file discovery algorithm?     | Git root only                 | Read `src/core/config/RepoConfig.ts` loader logic       | ❓ MUST VERIFY                          |
+| 3   | CodeMachine CLI resolution priority? | env var → optionalDeps → PATH | Read `src/adapters/codemachine/binaryResolver.ts`       | ✅ Verified (corrected)                 |
+| 4   | Approval workflow mechanics?         | GitHub PR approval            | Read `src/cli/commands/approve.ts` implementation       | ❓ MUST VERIFY                          |
+| 5   | Required vs optional config fields?  | Reverse-engineer from Zod     | Extract from `src/core/config/RepoConfig.ts` Zod schema | ❓ MUST VERIFY                          |
+| 6   | LINEAR_API_KEY required or optional? | Optional                      | Read config validation logic                            | ✅ Optional (warning if Linear enabled) |
 
 **NEW Critical Questions from Gap Analysis:**
 
-| # | Question | Why Critical | Validation Method |
-|---|----------|--------------|-------------------|
-| 7 | Multi-user queue locking mechanism? | Team collaboration - prevents queue corruption | Read queue file access patterns |
-| 8 | Can `.codepipe/` be committed to git for team collaboration? | Determines team workflow guidance | Check .gitignore defaults |
-| 9 | Queue backup/restore mechanism? | Disaster recovery requirement | Check for backup commands |
-| 10 | Credential precedence: env vars vs config.json? | Security - users must know which wins | Read credential loading order |
-| 11 | Debug logging enablement method? | Troubleshooting - essential for bug reports | Find actual debug flag/env var |
-| 12 | AI API keys: which env vars control them? | Cost protection - leaked keys = $1000s | Read execution engine credential handling |
-| 13 | Migration path from pre-v1.0? | Upgrade guidance - users stuck without it | Check for migration scripts or guides |
-| 14 | Concurrent pipeline execution support? | Prevents data corruption | Read locking implementation |
-| 15 | Platform support matrix? | Installation instructions vary | Check package.json platforms |
+| #   | Question                                                     | Why Critical                                   | Validation Method                         |
+| --- | ------------------------------------------------------------ | ---------------------------------------------- | ----------------------------------------- |
+| 7   | Multi-user queue locking mechanism?                          | Team collaboration - prevents queue corruption | Read queue file access patterns           |
+| 8   | Can `.codepipe/` be committed to git for team collaboration? | Determines team workflow guidance              | Check .gitignore defaults                 |
+| 9   | Queue backup/restore mechanism?                              | Disaster recovery requirement                  | Check for backup commands                 |
+| 10  | Credential precedence: env vars vs config.json?              | Security - users must know which wins          | Read credential loading order             |
+| 11  | Debug logging enablement method?                             | Troubleshooting - essential for bug reports    | Find actual debug flag/env var            |
+| 12  | AI API keys: which env vars control them?                    | Cost protection - leaked keys = $1000s         | Read execution engine credential handling |
+| 13  | Migration path from pre-v1.0?                                | Upgrade guidance - users stuck without it      | Check for migration scripts or guides     |
+| 14  | Concurrent pipeline execution support?                       | Prevents data corruption                       | Read locking implementation               |
+| 15  | Platform support matrix?                                     | Installation instructions vary                 | Check package.json platforms              |
 
 **Additional Important Questions:**
+
 - Execution engine feature comparison (capabilities, cost, speed) - **Mark as speculative or source externally**
 - Error recovery mechanism (can `resume` handle mid-execution failures?)
 - Command output format (`--json` support?) - **Verify per-command**
 
 **Deliverable:**
+
 - `docs/adr/adr-009-documentation-architecture.md` - Answers to all critical questions
 - Decision log in planning document
 
 ### Phase 2: Content Audit & Structure (1 day)
 
 **Tasks:**
+
 1. **Audit existing documentation**
    - [ ] Read current README.md (note sections to preserve, rewrite, deprecate)
    - [ ] Inventory docs/ directory (75+ files - categorize by status)
@@ -301,6 +314,7 @@ Create a multi-format documentation suite with clear organization, progressive d
    - [ ] Progressive disclosure hierarchy (quick start → guide → reference)
 
 **Deliverable:**
+
 - `docs/plans/content-audit-findings.md` - Audit results with recommendations
 - `mkdocs.yml` - Initial site structure
 - Archive branch: `archive/post-v1.0.0-stale` (if needed)
@@ -310,6 +324,7 @@ Create a multi-format documentation suite with clear organization, progressive d
 #### 3.1 Getting Started Documentation (1 day)
 
 **Files:**
+
 - `docs/getting-started/prerequisites.md`
 - `docs/getting-started/installation.md`
 - `docs/getting-started/quick-start.md`
@@ -317,6 +332,7 @@ Create a multi-format documentation suite with clear organization, progressive d
 **Content Requirements:**
 
 **prerequisites.md**
+
 - [ ] Node.js version requirement (>=24.0.0 from MEMORY.md)
 - [ ] Required tools (git, npm, GitHub account)
 - [ ] Optional tools (Linear account for issue tracking)
@@ -325,6 +341,7 @@ Create a multi-format documentation suite with clear organization, progressive d
 - [ ] Network requirements (firewall/proxy configuration if needed)
 
 **installation.md**
+
 - [ ] Installation method comparison table (global vs local vs npx)
 - [ ] Recommended installation path (npm install -g for most users)
 - [ ] Platform-specific instructions:
@@ -336,6 +353,7 @@ Create a multi-format documentation suite with clear organization, progressive d
 - [ ] Offline/air-gapped installation (if supported, else document "not supported")
 
 **quick-start.md**
+
 - [ ] Target: 5 minutes to first successful workflow
 - [ ] Assumes installation already complete
 - [ ] Step-by-step walkthrough:
@@ -354,6 +372,7 @@ Create a multi-format documentation suite with clear organization, progressive d
 #### 3.2 Configuration Documentation (1.5 days)
 
 **Files:**
+
 - `docs/configuration/overview.md`
 - `docs/configuration/environment-variables.md`
 - `docs/configuration/config-file.md`
@@ -363,6 +382,7 @@ Create a multi-format documentation suite with clear organization, progressive d
 **Content Requirements:**
 
 **overview.md**
+
 - [ ] Configuration file discovery algorithm (current dir → git root → home?)
 - [ ] Precedence order (env vars > config.json > defaults)
 - [ ] Minimal configuration example
@@ -370,35 +390,36 @@ Create a multi-format documentation suite with clear organization, progressive d
 - [ ] How to validate config (`codepipe validate config` if exists)
 
 **environment-variables.md**
+
 - [ ] Complete environment variable reference table (CORRECTED):
 
 **User-Facing Environment Variables:**
 
-| Variable | Required? | Default | Description | Example |
-|----------|-----------|---------|-------------|---------|
-| `GITHUB_TOKEN` | Yes | - | GitHub Personal Access Token | `ghp_EXAMPLE_DO_NOT_USE_1234567890abcdef` |
-| `LINEAR_API_KEY` | No* | - | Linear API key for issue tracking | `lin_api_EXAMPLE_PLACEHOLDER_abc123xyz` |
-| `ANTHROPIC_API_KEY` | No** | - | Anthropic Claude API key | `sk-ant-EXAMPLE_PLACEHOLDER_123456` |
-| `OPENAI_API_KEY` | No** | - | OpenAI API key (GPT-4, Codex) | `sk-EXAMPLE_DO_NOT_USE_abcdef123456` |
-| `CODEMACHINE_BIN_PATH` | No | - | Override CodeMachine CLI binary path (3-path resolution Priority 1) | `/usr/local/bin/codemachine` |
+| Variable               | Required? | Default | Description                                                         | Example                                   |
+| ---------------------- | --------- | ------- | ------------------------------------------------------------------- | ----------------------------------------- |
+| `GITHUB_TOKEN`         | Yes       | -       | GitHub Personal Access Token                                        | `ghp_EXAMPLE_DO_NOT_USE_1234567890abcdef` |
+| `LINEAR_API_KEY`       | No\*      | -       | Linear API key for issue tracking                                   | `lin_api_EXAMPLE_PLACEHOLDER_abc123xyz`   |
+| `ANTHROPIC_API_KEY`    | No\*\*    | -       | Anthropic Claude API key                                            | `sk-ant-EXAMPLE_PLACEHOLDER_123456`       |
+| `OPENAI_API_KEY`       | No\*\*    | -       | OpenAI API key (GPT-4, Codex)                                       | `sk-EXAMPLE_DO_NOT_USE_abcdef123456`      |
+| `CODEMACHINE_BIN_PATH` | No        | -       | Override CodeMachine CLI binary path (3-path resolution Priority 1) | `/usr/local/bin/codemachine`              |
 
-*Required only if Linear integration enabled (`config.linear.enabled = true`)
-**Required for respective execution engine (claude requires ANTHROPIC_API_KEY, openai/codex require OPENAI_API_KEY)
+\*Required only if Linear integration enabled (`config.linear.enabled = true`)
+\*\*Required for respective execution engine (claude requires ANTHROPIC_API_KEY, openai/codex require OPENAI_API_KEY)
 
 **⚠️ SECURITY NOTE**: All examples above use placeholder tokens with `EXAMPLE`, `PLACEHOLDER`, or `DO_NOT_USE` markers. **NEVER use real API keys in documentation.**
 
 **Advanced: `CODEPIPE_*` Override Environment Variables:**
 
-| Variable | Default | Description | When to Use |
-|----------|---------|-------------|-------------|
-| `CODEPIPE_GITHUB_TOKEN` | - | Override GitHub token from config | CI/CD with secret injection |
-| `CODEPIPE_LINEAR_API_KEY` | - | Override Linear API key | Multi-environment deployments |
-| `CODEPIPE_RUNTIME_AGENT_ENDPOINT` | (Anthropic default) | Override AI agent endpoint | Self-hosted models, proxy |
-| `CODEPIPE_RUNTIME_MAX_CONCURRENT_TASKS` | 3 | Max parallel task execution | Resource-constrained environments |
-| `CODEPIPE_RUNTIME_TIMEOUT_MINUTES` | 30 | Global execution timeout | Cost control, CI time limits |
-| `CODEPIPE_EXECUTION_CLI_PATH` | `codemachine` | Legacy CLI path override | Backward compatibility |
-| `CODEPIPE_EXECUTION_DEFAULT_ENGINE` | `claude` | Override execution engine | Switch engines without editing config |
-| `CODEPIPE_EXECUTION_TIMEOUT_MS` | 300000 | Per-task timeout | Fine-grained timeout control |
+| Variable                                | Default             | Description                       | When to Use                           |
+| --------------------------------------- | ------------------- | --------------------------------- | ------------------------------------- |
+| `CODEPIPE_GITHUB_TOKEN`                 | -                   | Override GitHub token from config | CI/CD with secret injection           |
+| `CODEPIPE_LINEAR_API_KEY`               | -                   | Override Linear API key           | Multi-environment deployments         |
+| `CODEPIPE_RUNTIME_AGENT_ENDPOINT`       | (Anthropic default) | Override AI agent endpoint        | Self-hosted models, proxy             |
+| `CODEPIPE_RUNTIME_MAX_CONCURRENT_TASKS` | 3                   | Max parallel task execution       | Resource-constrained environments     |
+| `CODEPIPE_RUNTIME_TIMEOUT_MINUTES`      | 30                  | Global execution timeout          | Cost control, CI time limits          |
+| `CODEPIPE_EXECUTION_CLI_PATH`           | `codemachine`       | Legacy CLI path override          | Backward compatibility                |
+| `CODEPIPE_EXECUTION_DEFAULT_ENGINE`     | `claude`            | Override execution engine         | Switch engines without editing config |
+| `CODEPIPE_EXECUTION_TIMEOUT_MS`         | 300000              | Per-task timeout                  | Fine-grained timeout control          |
 
 **Source**: `src/core/config/RepoConfig.ts:509-596`
 
@@ -436,27 +457,28 @@ Create a multi-format documentation suite with clear organization, progressive d
 - [ ] Platform-specific env var setting (Windows vs macOS/Linux)
 
 **config-file.md**
+
 - [ ] `.codepipe/config.json` structure documentation
 - [ ] Required vs optional fields (extracted from Zod schema)
 - [ ] Field-by-field reference with examples (using correct nested structure):
   ```json
   {
     "execution": {
-      "default_engine": "claude"        // Required: claude | codex | openai
+      "default_engine": "claude" // Required: claude | codex | openai
     },
     "github": {
-      "org": "my-org",                  // Required: GitHub organization or username
-      "repository": "my-repo"           // Required: Repository name
+      "org": "my-org", // Required: GitHub organization or username
+      "repository": "my-repo" // Required: Repository name
     },
     "linear": {
-      "team": "ENG",                    // Optional: Linear team key (if using Linear)
-      "enabled": true                   // Optional: Enable Linear integration
+      "team": "ENG", // Optional: Linear team key (if using Linear)
+      "enabled": true // Optional: Enable Linear integration
     },
     "research": {
-      "enabled": true                   // Optional: Enable research phase (default: true)
+      "enabled": true // Optional: Enable research phase (default: true)
     },
     "approval": {
-      "gates": ["prd", "spec"]          // Optional: Approval gates (default: all)
+      "gates": ["prd", "spec"] // Optional: Approval gates (default: all)
     }
   }
   ```
@@ -469,6 +491,7 @@ Create a multi-format documentation suite with clear organization, progressive d
 - [ ] Schema reference (link to auto-generated schema docs)
 
 **codemachine-cli.md**
+
 - [ ] CodeMachine CLI integration overview
 - [ ] Binary resolution algorithm (3 paths with priority):
   1. `CODEMACHINE_BIN_PATH` environment variable (allowlist-validated)
@@ -483,17 +506,18 @@ Create a multi-format documentation suite with clear organization, progressive d
 - [ ] Version compatibility matrix (codemachine-pipeline version → CodeMachine CLI version)
 
 **execution-engines.md**
+
 - [ ] Execution engine comparison table:
 
-| Feature | claude | codex | openai |
-|---------|--------|-------|--------|
-| **Provider** | Anthropic | OpenAI | OpenAI |
-| **Model** | Claude 3 Opus | Codex | GPT-4 |
-| **Cost (1M tokens)** | ~$15 | ~$0.002 | ~$30 |
-| **Speed** | Medium | Fast | Medium |
-| **Code Quality** | Excellent | Good | Excellent |
-| **Context Window** | 200K | 8K | 128K |
-| **Best For** | Complex refactoring, architecture | Quick fixes, autocomplete | General-purpose coding |
+| Feature              | claude                            | codex                     | openai                 |
+| -------------------- | --------------------------------- | ------------------------- | ---------------------- |
+| **Provider**         | Anthropic                         | OpenAI                    | OpenAI                 |
+| **Model**            | Claude 3 Opus                     | Codex                     | GPT-4                  |
+| **Cost (1M tokens)** | ~$15                              | ~$0.002                   | ~$30                   |
+| **Speed**            | Medium                            | Fast                      | Medium                 |
+| **Code Quality**     | Excellent                         | Good                      | Excellent              |
+| **Context Window**   | 200K                              | 8K                        | 128K                   |
+| **Best For**         | Complex refactoring, architecture | Quick fixes, autocomplete | General-purpose coding |
 
 - [ ] How to switch engines (edit config.json, restart pipeline)
 - [ ] API key requirements per engine
@@ -503,6 +527,7 @@ Create a multi-format documentation suite with clear organization, progressive d
 #### 3.3 User Guide Documentation (1.5 days)
 
 **Files:**
+
 - `docs/user-guide/workflows.md`
 - `docs/user-guide/commands/init.md`
 - `docs/user-guide/commands/start.md`
@@ -518,6 +543,7 @@ Create a multi-format documentation suite with clear organization, progressive d
 **Content Requirements:**
 
 **workflows.md**
+
 - [ ] Core pipeline workflow walkthrough (end-to-end):
   1. **Initialize**: `codepipe init` (creates .codepipe/, config.json)
   2. **Start**: `codepipe start --prompt "..."` (generates PRD, runs research)
@@ -533,6 +559,7 @@ Create a multi-format documentation suite with clear organization, progressive d
 - [ ] Real-world example with actual command output and screenshots
 
 **Per-command documentation** (template for all 17 commands):
+
 - [ ] Command purpose and when to use it
 - [ ] Syntax: `codepipe <command> [flags]`
 - [ ] Flags/options reference table
@@ -542,7 +569,8 @@ Create a multi-format documentation suite with clear organization, progressive d
 - [ ] Related commands (e.g., `init` links to `doctor`)
 
 **Example structure for `commands/start.md`:**
-```markdown
+
+````markdown
 # codepipe start
 
 Start a new feature pipeline by providing a feature description prompt.
@@ -552,28 +580,32 @@ Start a new feature pipeline by providing a feature description prompt.
 ```bash
 codepipe start --prompt "<feature description>" [options]
 ```
+````
 
 ## Options
 
-| Flag | Alias | Required? | Description | Default |
-|------|-------|-----------|-------------|---------|
-| `--prompt` | `-p` | Yes | Feature description prompt | - |
-| `--no-research` | - | No | Skip research phase | false |
-| `--json` | - | No | Output in JSON format | false |
+| Flag            | Alias | Required? | Description                | Default |
+| --------------- | ----- | --------- | -------------------------- | ------- |
+| `--prompt`      | `-p`  | Yes       | Feature description prompt | -       |
+| `--no-research` | -     | No        | Skip research phase        | false   |
+| `--json`        | -     | No        | Output in JSON format      | false   |
 
 ## Examples
 
 ### Basic feature request
+
 ```bash
 codepipe start --prompt "Add user authentication with OAuth"
 ```
 
 ### Skip research phase (faster but less context)
+
 ```bash
 codepipe start --prompt "Fix typo in README" --no-research
 ```
 
 ### JSON output for CI/CD
+
 ```bash
 codepipe start --prompt "Update dependencies" --json
 ```
@@ -588,10 +620,12 @@ codepipe start --prompt "Update dependencies" --json
 ## Troubleshooting
 
 **Error: "Invalid prompt: too short"**
+
 - Prompts must be at least 10 characters
 - Provide more detail about the desired feature
 
 **Error: "GITHUB_TOKEN not found"**
+
 - Set GITHUB_TOKEN environment variable
 - See [Configuration](/configuration/environment-variables.md)
 
@@ -599,7 +633,8 @@ codepipe start --prompt "Update dependencies" --json
 
 - [`codepipe approve`](/user-guide/commands/approve.md) - Approve generated artifacts
 - [`codepipe resume`](/user-guide/commands/resume.md) - Resume after errors
-```
+
+````
 
 **advanced-usage.md**
 - [ ] CI/CD integration examples (GitHub Actions, GitLab CI)
@@ -651,7 +686,8 @@ codepipe start --prompt "Update dependencies" --json
   # TODO: Verify actual debug logging mechanism
   # Potential options: --verbose flag, DEBUG env var, or config setting
   codepipe start --prompt "..." --verbose
-  ```
+````
+
 - [ ] Log file locations (`.codepipe/logs/`)
 - [ ] What to include in bug reports (version, config, logs)
 - [ ] Verbose mode (`--verbose` flag if exists)
@@ -663,6 +699,7 @@ codepipe start --prompt "Update dependencies" --json
   ```
 
 **faq.md**
+
 - [ ] Frequently asked questions with answers:
   - Q: Which execution engine should I choose?
   - Q: How much does it cost to run a pipeline?
@@ -678,6 +715,7 @@ codepipe start --prompt "Update dependencies" --json
 #### 3.5 Architecture & Concepts Documentation (1 day)
 
 **Files:**
+
 - `docs/architecture/overview.md`
 - `docs/architecture/concepts.md`
 - `docs/architecture/components.md`
@@ -686,12 +724,14 @@ codepipe start --prompt "Update dependencies" --json
 **Content Requirements:**
 
 **overview.md**
+
 - [ ] High-level architecture diagram (components and interactions)
 - [ ] System design philosophy
 - [ ] Technology stack (Node.js, TypeScript, oclif, Zod)
 - [ ] External dependencies (GitHub, Linear, CodeMachine CLI, AI APIs)
 
 **concepts.md**
+
 - [ ] Glossary of key terms:
   - **Pipeline**: End-to-end workflow from prompt to PR
   - **Queue**: Persistent task queue in `.codepipe/queue/`
@@ -705,6 +745,7 @@ codepipe start --prompt "Update dependencies" --json
   - **Spec**: Technical specification document
 
 **components.md**
+
 - [ ] Component interaction diagram
 - [ ] Core components:
   - CLI Commands (`src/cli/commands/`)
@@ -717,6 +758,7 @@ codepipe start --prompt "Update dependencies" --json
 - [ ] Adapter architecture (ADR-8: CodeMachine CLI integration)
 
 **data-flow.md**
+
 - [ ] Pipeline execution flow diagram:
   ```
   Initialize → Specify → Plan → Implement → Review → Deploy
@@ -733,6 +775,7 @@ codepipe start --prompt "Update dependencies" --json
 ### Phase 4: Auto-Generated Documentation (1 day)
 
 **Tasks:**
+
 1. **CLI Reference Auto-Generation**
    - [ ] Verify `npm run docs:cli` command works
    - [ ] Update script to include examples from command implementations
@@ -753,6 +796,7 @@ codepipe start --prompt "Update dependencies" --json
    - [ ] Version compatibility notes
 
 **Deliverable:**
+
 - `docs/reference/cli-reference.md` (auto-generated)
 - `docs/reference/schema-reference.md` (auto-generated if applicable)
 - `docs/reference/api-reference.md` (if applicable)
@@ -760,13 +804,15 @@ codepipe start --prompt "Update dependencies" --json
 ### Phase 5: MkDocs Material Setup (1 day)
 
 **Tasks:**
+
 1. **Install and Configure MkDocs** (Enhanced Configuration from Research)
    - [ ] Add to Python requirements: `mkdocs-material`, `mkdocstrings`, `mkdocs-git-revision-date-localized-plugin`, `mkdocs-minify-plugin`, `mkdocs-redirects`, `mike`
    - [ ] Create production-ready `mkdocs.yml` configuration:
+
      ```yaml
      # Site information
      site_name: Codemachine Pipeline
-     site_url: https://kinginyellow.github.io/codemachine-pipeline/  # REQUIRED for plugins
+     site_url: https://kinginyellow.github.io/codemachine-pipeline/ # REQUIRED for plugins
      site_description: AI-powered code pipeline automation for GitHub repositories
      site_author: Kinginyellow
      repo_name: kinginyellow/codemachine-pipeline
@@ -778,7 +824,7 @@ codepipe start --prompt "Update dependencies" --json
        name: material
        palette:
          # Light mode
-         - media: "(prefers-color-scheme: light)"
+         - media: '(prefers-color-scheme: light)'
            scheme: default
            primary: indigo
            accent: deep purple
@@ -786,7 +832,7 @@ codepipe start --prompt "Update dependencies" --json
              icon: material/brightness-7
              name: Switch to dark mode
          # Dark mode
-         - media: "(prefers-color-scheme: dark)"
+         - media: '(prefers-color-scheme: dark)'
            scheme: slate
            primary: indigo
            accent: deep purple
@@ -800,27 +846,27 @@ codepipe start --prompt "Update dependencies" --json
 
        # Navigation Features (Best Practices for Developer Docs)
        features:
-         - navigation.instant          # SPA-like navigation (fast page loads)
+         - navigation.instant # SPA-like navigation (fast page loads)
          - navigation.instant.progress # Loading progress bar
-         - navigation.tracking         # Update URL on scroll
-         - navigation.tabs             # Top-level sections as tabs
-         - navigation.tabs.sticky      # Tabs stay visible when scrolling
-         - navigation.sections         # Group sections in sidebar
-         - navigation.expand           # Expand all by default
-         - navigation.path             # Breadcrumb navigation
-         - navigation.indexes          # Section index pages
-         - navigation.top              # Back to top button
-         - navigation.footer           # Prev/next links
-         - search.suggest              # Search suggestions
-         - search.highlight            # Highlight search terms
-         - search.share                # Deep-link search results
-         - toc.follow                  # TOC follows scroll
-         - toc.integrate               # Integrate TOC into sidebar
-         - content.code.copy           # Copy button for code blocks
-         - content.code.select         # Double-click to select
-         - content.code.annotate       # Code annotations
-         - content.tabs.link           # Link content tabs across pages
-         - content.tooltips            # Glossary tooltips
+         - navigation.tracking # Update URL on scroll
+         - navigation.tabs # Top-level sections as tabs
+         - navigation.tabs.sticky # Tabs stay visible when scrolling
+         - navigation.sections # Group sections in sidebar
+         - navigation.expand # Expand all by default
+         - navigation.path # Breadcrumb navigation
+         - navigation.indexes # Section index pages
+         - navigation.top # Back to top button
+         - navigation.footer # Prev/next links
+         - search.suggest # Search suggestions
+         - search.highlight # Highlight search terms
+         - search.share # Deep-link search results
+         - toc.follow # TOC follows scroll
+         - toc.integrate # Integrate TOC into sidebar
+         - content.code.copy # Copy button for code blocks
+         - content.code.select # Double-click to select
+         - content.code.annotate # Code annotations
+         - content.tabs.link # Link content tabs across pages
+         - content.tooltips # Glossary tooltips
 
        icon:
          repo: fontawesome/brands/github
@@ -854,17 +900,17 @@ codepipe start --prompt "Update dependencies" --json
              'ops/cli-reference.md': 'reference/cli/README.md'
              'ops/troubleshooting.md': 'troubleshooting/common-errors.md'
 
-       - meta  # Per-directory metadata
+       - meta # Per-directory metadata
 
      # Markdown Extensions (Full Developer Toolkit)
      markdown_extensions:
-       - abbr                # Abbreviations with tooltips
-       - admonition          # Callouts/alerts
-       - attr_list           # HTML/CSS attributes
-       - def_list            # Definition lists
-       - footnotes           # Footnote syntax
-       - md_in_html          # Markdown inside HTML
-       - tables              # Table support
+       - abbr # Abbreviations with tooltips
+       - admonition # Callouts/alerts
+       - attr_list # HTML/CSS attributes
+       - def_list # Definition lists
+       - footnotes # Footnote syntax
+       - md_in_html # Markdown inside HTML
+       - tables # Table support
        - toc:
            permalink: true
            toc_depth: 3
@@ -872,11 +918,11 @@ codepipe start --prompt "Update dependencies" --json
        # PyMdown Extensions
        - pymdownx.betterem:
            smart_enable: all
-       - pymdownx.caret      # Superscript
-       - pymdownx.mark       # Highlighting
-       - pymdownx.tilde      # Subscript
-       - pymdownx.critic     # Track changes
-       - pymdownx.details    # Collapsible sections
+       - pymdownx.caret # Superscript
+       - pymdownx.mark # Highlighting
+       - pymdownx.tilde # Subscript
+       - pymdownx.critic # Track changes
+       - pymdownx.details # Collapsible sections
        - pymdownx.emoji:
            emoji_index: !!python/name:material.extensions.emoji.twemoji
            emoji_generator: !!python/name:material.extensions.emoji.to_svg
@@ -885,7 +931,7 @@ codepipe start --prompt "Update dependencies" --json
            line_spans: __span
            pygments_lang_class: true
        - pymdownx.inlinehilite
-       - pymdownx.keys       # Keyboard key styling
+       - pymdownx.keys # Keyboard key styling
        - pymdownx.magiclink:
            repo_url_shorthand: true
            user: kinginyellow
@@ -1000,6 +1046,7 @@ codepipe start --prompt "Update dependencies" --json
 3. **GitHub Pages Deployment**
    - [ ] Configure GitHub Pages in repo settings
    - [ ] Create `.github/workflows/docs.yml` for auto-deployment:
+
      ```yaml
      name: Deploy Documentation
 
@@ -1021,10 +1068,12 @@ codepipe start --prompt "Update dependencies" --json
            - run: pip install mkdocs-material
            - run: mkdocs gh-deploy --force
      ```
+
    - [ ] Test deployment to `gh-pages` branch
    - [ ] Verify site is live at `https://kinginyellow.github.io/codemachine-pipeline/`
 
 **Deliverable:**
+
 - `mkdocs.yml` - Site configuration
 - `.github/workflows/docs.yml` - Auto-deployment workflow
 - Live documentation site
@@ -1032,6 +1081,7 @@ codepipe start --prompt "Update dependencies" --json
 ### Phase 6: README.md Consolidation (0.5 days)
 
 **Tasks:**
+
 1. **Streamline README.md**
    - [ ] Keep: Project overview, value proposition, badges
    - [ ] Keep: Quick start (5-minute version)
@@ -1054,6 +1104,7 @@ codepipe start --prompt "Update dependencies" --json
    - [ ] README serves as entry point, not comprehensive guide
 
 **Example README Structure:**
+
 ```markdown
 # Codemachine Pipeline
 
@@ -1094,6 +1145,7 @@ MIT
 ### Phase 7: Validation & Testing (1 day)
 
 **Tasks:**
+
 1. **Internal Review**
    - [ ] Walk through entire documentation as new user
    - [ ] Follow quick start guide from scratch
@@ -1117,13 +1169,13 @@ MIT
 
    **Agent Team Composition (Optimized for Docs PRs - Saves ~40% execution time):**
 
-   | Agent | Priority | Focus Area | Key Findings |
-   |-------|----------|------------|--------------|
-   | `pr-review-toolkit:comment-analyzer` | P1 (Critical) | Cross-reference claims against source code | Catches factual errors, phantom features, broken links |
-   | `compound-engineering:review:code-simplicity-reviewer` | P2 (Important) | Identify redundancy, YAGNI, bloat | Drives content reduction, eliminates duplication |
-   | `compound-engineering:review:pattern-recognition-specialist` | P3 (Important) | Check formatting consistency | Catches style drift, table formatting issues |
-   | `compound-engineering:review:architecture-strategist` | P3 (Important) | Validate overall doc structure | Confirms hierarchy is sound, progressive disclosure works |
-   | `compound-engineering:review:security-sentinel` | P2 (Important) | Audit for information disclosure | Verifies no secrets, real tokens, or PII leaked |
+   | Agent                                                        | Priority       | Focus Area                                 | Key Findings                                              |
+   | ------------------------------------------------------------ | -------------- | ------------------------------------------ | --------------------------------------------------------- |
+   | `pr-review-toolkit:comment-analyzer`                         | P1 (Critical)  | Cross-reference claims against source code | Catches factual errors, phantom features, broken links    |
+   | `compound-engineering:review:code-simplicity-reviewer`       | P2 (Important) | Identify redundancy, YAGNI, bloat          | Drives content reduction, eliminates duplication          |
+   | `compound-engineering:review:pattern-recognition-specialist` | P3 (Important) | Check formatting consistency               | Catches style drift, table formatting issues              |
+   | `compound-engineering:review:architecture-strategist`        | P3 (Important) | Validate overall doc structure             | Confirms hierarchy is sound, progressive disclosure works |
+   | `compound-engineering:review:security-sentinel`              | P2 (Important) | Audit for information disclosure           | Verifies no secrets, real tokens, or PII leaked           |
 
    **⚠️ SKIP these agents for docs-only PRs** (saves ~40% time with zero findings):
    - Rails reviewers (dhh, kieran-rails), data integrity guardian, performance oracle
@@ -1203,6 +1255,7 @@ MIT
      ```
 
    **CI Integration (`.github/workflows/docs-quality.yml`):**
+
    ```yaml
    name: Documentation Quality Gates
    on:
@@ -1239,6 +1292,7 @@ MIT
    ```
 
 **Deliverable:**
+
 - Validation report with findings
 - Updated documentation based on feedback
 - Clean PR ready for merge
@@ -1334,12 +1388,14 @@ MIT
 ## Success Metrics
 
 **Qualitative:**
+
 - New users can complete first workflow in <15 minutes
 - Support questions decrease by 50%+ after documentation launch
 - No confusion about which installation method to use
 - Configuration errors are self-service (users fix without asking)
 
 **Quantitative:**
+
 - 100% of commands have documentation with examples
 - 100% of configuration fields documented
 - 20+ common errors in troubleshooting catalog
@@ -1348,6 +1404,7 @@ MIT
 - <5 minute documentation site load time
 
 **User Feedback:**
+
 - "I didn't need to ask any questions during setup"
 - "Error messages now link to solutions in docs"
 - "Configuration validation errors are clear and actionable"
@@ -1355,18 +1412,21 @@ MIT
 ## Dependencies & Prerequisites
 
 **Before Starting:**
+
 - [ ] Complete Phase 1 (answer all 6 critical questions)
 - [ ] Package.json `engines` field specifies Node version
 - [ ] oclif.manifest.json exists and is up-to-date
 - [ ] CLI commands have accurate descriptions and examples
 
 **External Dependencies:**
+
 - MkDocs Material (Python package)
 - GitHub Pages (deployment target)
 - markdown-link-check (validation)
 - mdspell (validation)
 
 **Internal Dependencies:**
+
 - Existing documentation in docs/ (audit source)
 - CONTRIBUTING.md (reference for doc contribution process)
 - ADRs (reference for architectural decisions)
@@ -1377,6 +1437,7 @@ MIT
 ### High Risk
 
 **Risk: Critical questions remain unanswered**
+
 - **Impact**: Documentation contains incorrect information, user confusion
 - **Probability**: Medium (some answers may require code archaeology)
 - **Mitigation**:
@@ -1386,6 +1447,7 @@ MIT
   - Mark uncertain areas with "TODO: Verify" during draft
 
 **Risk: Documentation drift (gets out of sync with code)**
+
 - **Impact**: Users follow outdated instructions, errors increase
 - **Probability**: High (natural drift over time)
 - **Mitigation**:
@@ -1397,6 +1459,7 @@ MIT
 ### Medium Risk
 
 **Risk: Scope creep (documentation project expands endlessly)**
+
 - **Impact**: Never ships, indefinite timeline
 - **Probability**: Medium (easy to keep adding "just one more thing")
 - **Mitigation**:
@@ -1406,6 +1469,7 @@ MIT
   - Time-box each phase
 
 **Risk: User testing reveals major gaps**
+
 - **Impact**: Must redo substantial sections, timeline slips
 - **Probability**: Low (SpecFlow analysis identified 34 gaps upfront)
 - **Mitigation**:
@@ -1417,6 +1481,7 @@ MIT
 ### Low Risk
 
 **Risk: MkDocs Material theme updates break site**
+
 - **Impact**: Site doesn't render correctly after dependency update
 - **Probability**: Low (stable theme, semantic versioning)
 - **Mitigation**:
@@ -1425,6 +1490,7 @@ MIT
   - Monitor GitHub releases for breaking changes
 
 **Risk: Auto-generated docs script breaks**
+
 - **Impact**: CI fails, can't regenerate CLI reference
 - **Probability**: Low (stable oclif manifest format)
 - **Mitigation**:
@@ -1435,6 +1501,7 @@ MIT
 ## Resource Requirements
 
 **Time Estimate (1 person, full-time) - REVISED:**
+
 - Phase 0: Architecture foundation & corrections (2 days) **NEW**
 - Phase 1: Critical questions & requirements (2 days)
 - Phase 2: Content audit & structure (1.5 days) - includes drift prevention setup
@@ -1452,6 +1519,7 @@ MIT
 - **Total: ~16.5 days (~3.5 weeks)**
 
 **Comparison to Original Estimate:**
+
 - Original: 11.5 days (2.5 weeks)
 - Enhanced: 16.5 days (3.5 weeks)
 - **Increase: +5 days** due to:
@@ -1461,6 +1529,7 @@ MIT
   - Automation scripts (+0.5 days)
 
 **Skills Required:**
+
 - Technical writing (clear, concise, user-focused)
 - Code reading (TypeScript, Node.js, oclif)
 - Markdown proficiency
@@ -1469,6 +1538,7 @@ MIT
 - User empathy (anticipating confusion points)
 
 **Tools Needed:**
+
 - Text editor (VS Code recommended)
 - MkDocs Material (Python package)
 - markdown-link-check, mdspell (validation)
@@ -1478,6 +1548,7 @@ MIT
 ## Future Considerations
 
 **Post-Launch Enhancements:**
+
 - [ ] Video tutorials for visual learners
 - [ ] Interactive playground (try commands in browser)
 - [ ] Multi-version documentation (v1.0, v1.1, v2.0)
@@ -1486,12 +1557,14 @@ MIT
 - [ ] Community contributions guide (how to improve docs)
 
 **Extensibility:**
+
 - [ ] Plugin documentation framework (if plugins are added)
 - [ ] Third-party integration guides (other CI systems, issue trackers)
 - [ ] Performance tuning guide (optimize pipeline execution)
 - [ ] Security hardening guide (production deployment best practices)
 
 **Analytics & Feedback:**
+
 - [ ] Add "Was this helpful?" buttons to each page
 - [ ] Google Analytics integration (track most-visited pages)
 - [ ] Feedback form for documentation improvement requests
@@ -1500,17 +1573,20 @@ MIT
 ## Documentation Plan
 
 **Maintenance Strategy:**
+
 - **Weekly**: Monitor GitHub issues for documentation-related questions
 - **Monthly**: Review analytics to identify high-traffic pages needing improvement
 - **Quarterly**: Full documentation audit (links, accuracy, completeness)
 - **Per-Release**: Update documentation for breaking changes, new features
 
 **Ownership:**
+
 - **Primary Maintainer**: [Assign owner]
 - **Reviewers**: Use 5-agent specialized review team for PRs
 - **Contributors**: Community PRs welcome (see CONTRIBUTING.md)
 
 **Review Process:**
+
 1. Documentation PR created
 2. Automated checks run (link checker, spell checker, CI)
 3. 5-agent specialized review (comment-analyzer, code-simplicity-reviewer, etc.)
@@ -1522,42 +1598,50 @@ MIT
 ### Internal References
 
 **Configuration & Validation:**
+
 - `src/core/config/RepoConfig.ts:1-100` - Zod schema definitions
 - `src/validation/` - Validation helpers (validateOrThrow, validateOrResult)
 - `config/schemas/repo_config.schema.json` - JSON Schema
 
 **CLI Commands:**
+
 - `src/cli/commands/` - All 17 command implementations
 - `oclif.manifest.json` - Auto-generated command manifest
 - Auto-generation: `npm run docs:cli` → `docs/ops/cli-reference.md`
 
 **CodeMachine Integration:**
+
 - `src/adapters/codemachine/binaryResolver.ts` - 3-path resolution algorithm
 - `src/adapters/codemachine/CodeMachineCLIAdapter.ts` - Adapter implementation
 - `docs/adr/adr-008-codemachine-cli-integration.md` - ADR-8
 
 **Workflows:**
+
 - `src/workflows/` - 48 workflow files
 - `docs/architecture/execution_flow.md` - Pipeline phases
 - `src/persistence/runDirectoryManager.ts` - Run directory structure
 
 **Documentation Patterns:**
+
 - `docs/solutions/code-review/reviewing-documentation-prs.md` - 5-agent review pattern
 - `docs/solutions/integration-issues/codemachine-cli-strategy-prerequisite-validation.md` - CLI resolution documentation requirements
 
 ### External References
 
 **Framework Documentation:**
+
 - [oclif Documentation](https://oclif.io/) - CLI framework
 - [Zod Documentation](https://zod.dev/) - Schema validation
 - [MkDocs Material](https://squidfunk.github.io/mkdocs-material/) - Documentation theme
 
 **Best Practices:**
+
 - [Write the Docs](https://www.writethedocs.org/) - Documentation community
 - [Google Developer Documentation Style Guide](https://developers.google.com/style)
 - [Microsoft Writing Style Guide](https://learn.microsoft.com/en-us/style-guide/welcome/)
 
 **Tools:**
+
 - [markdown-link-check](https://github.com/tcort/markdown-link-check) - Link validation
 - [markdownlint](https://github.com/DavidAnson/markdownlint) - Markdown linting
 - [Mike](https://github.com/jimporter/mike) - MkDocs versioning (future)
@@ -1565,6 +1649,7 @@ MIT
 ### Related Work
 
 **Previous Documentation Work:**
+
 - PR #464 - README streamlining (917 → 244 lines)
 - Issue #211 - CLI reference auto-generation (Cycle 8 deferred)
 - Issue #212 - Architecture diagram integration (Cycle 8 deferred)
@@ -1572,9 +1657,11 @@ MIT
 - Issue #424 - Documentation tooling decisions (Cycle 8 prerequisite)
 
 **Brainstorm Context:**
+
 - `docs/brainstorms/2026-02-14-v1-release-readiness-brainstorm.md` - Step 4: Documentation Audit
 
 **Milestone:**
+
 - Cycle 8: Documentation Tooling & Type Safety
 
 ---
@@ -1582,8 +1669,10 @@ MIT
 ## Implementation Checklist
 
 ### Pre-Implementation (Phase 0)
+
 - [ ] Create feature branch: `gt create -m "docs: comprehensive documentation suite"`
 - [ ] Set up development environment:
+
   ```bash
   # Python environment for MkDocs
   python -m venv venv
@@ -1594,10 +1683,12 @@ MIT
   # Node.js tooling
   npm install --save-dev markdown-link-check markdownlint-cli
   ```
+
 - [ ] Review this plan with stakeholders
 - [ ] Get approval to proceed
 
 ### Phase 0: Architecture Foundation (2 days)
+
 - [ ] Correct all factual errors identified in Critical Corrections section
 - [ ] Restructure docs/ directory: 16 → 7 top-level directories
 - [ ] Create file migration map (existing → new locations)
@@ -1606,12 +1697,14 @@ MIT
 - [ ] Create validation scripts (validate-docs-commands.js, test-docs-examples.js)
 
 ### Phase 1: Critical Questions (2 days)
+
 - [ ] Answer all 6 critical questions (Node version, config discovery, etc.)
 - [ ] Document decisions in ADR-009
 - [ ] Validate assumptions via code reading
 - [ ] Create decision log
 
 ### Phase 2: Content Audit (1 day)
+
 - [ ] Audit README.md
 - [ ] Inventory docs/ directory (75+ files)
 - [ ] Identify content to preserve, archive, rewrite
@@ -1619,6 +1712,7 @@ MIT
 - [ ] Draft mkdocs.yml structure
 
 ### Phase 3: Content Creation (5 days)
+
 - [ ] 3.1: Getting Started (1 day)
 - [ ] 3.2: Configuration (1.5 days)
 - [ ] 3.3: User Guide (1.5 days)
@@ -1626,28 +1720,33 @@ MIT
 - [ ] 3.5: Architecture & Concepts (1 day)
 
 ### Phase 4: Auto-Generated Docs (1 day)
+
 - [ ] Verify CLI reference auto-generation
 - [ ] Create schema reference generation script (if needed)
 - [ ] Generate API reference (if applicable)
 
 ### Phase 5: MkDocs Setup (1 day)
+
 - [ ] Install and configure MkDocs Material
 - [ ] Create mkdocs.yml
 - [ ] Test local build
 - [ ] Set up GitHub Pages deployment
 
 ### Phase 6: README Consolidation (0.5 days)
+
 - [ ] Streamline README.md
 - [ ] Update badges
 - [ ] Validate cross-references
 
 ### Phase 7: Validation (1 day)
+
 - [ ] Internal review and testing
 - [ ] Automated validation (links, spelling, syntax)
 - [ ] User testing (optional but recommended)
 - [ ] 5-agent PR review
 
 ### Post-Implementation
+
 - [ ] Submit PR: `gt submit --no-interactive --publish`
 - [ ] Address review feedback
 - [ ] Merge to main
@@ -1664,18 +1763,21 @@ MIT
 ### From Learnings (docs/solutions/)
 
 **1. Reviewing Documentation PRs (5-Agent Pattern)**
+
 - Use specialized 5-agent team for docs PRs, not full 8-12 agent suite
 - comment-analyzer is MOST VALUABLE - catches factual drift (e.g., phantom engines)
 - Prevention checklist prevents shipping incorrect documentation
 - Example: PR #464 would have shipped 3 non-existent engines without targeted review
 
 **2. CodeMachine CLI Resolution Strategy**
+
 - Binary resolution has 3 paths with strict priority: `CODEMACHINE_BIN_PATH` → optionalDeps → PATH
 - Security validation prevents command injection (allowlist-based path validation)
 - Strategy-aware prerequisite validation (warning vs error based on available strategies)
 - Environment-specific deployment scenarios require different resolution paths
 
 **3. Wave-Based Parallel Execution**
+
 - Phase 3 (Content Creation) subsections can be parallelized in waves
 - Dependencies: Phase 3.1 → Phase 3.2 (config docs need prerequisites reference)
 - Opportunity: 3.3 (User Guide), 3.4 (Troubleshooting), 3.5 (Architecture) can run in parallel (saves 2 days)
@@ -1683,6 +1785,7 @@ MIT
 ### From Best Practices Research
 
 **4. MkDocs Material Production Configuration**
+
 - **Essential plugins**: git-revision-date-localized, minify, redirects, meta, mike (versioning)
 - **Performance targets**: Lighthouse 95+, FCP <1.5s, TTI <3s, search <100ms
 - **Accessibility**: WCAG 2.1 AA compliance built-in, some AAA gaps remain
@@ -1690,6 +1793,7 @@ MIT
 - **SEO**: Requires `site_url` for many plugins, meta plugin for per-page optimization
 
 **5. oclif CLI Documentation Standards**
+
 - **Auto-generation**: `oclif readme` injects docs into README via HTML comment markers
 - **Examples format**: Support both simple strings and objects with descriptions
 - **Template variables**: Always use `<%= config.bin %>` and `<%= command.id %>`
@@ -1697,6 +1801,7 @@ MIT
 - **Best practice**: Lead with examples (users scan for these first)
 
 **6. Technical Writing for Developer Tools**
+
 - **Voice**: Active voice, second person, action-oriented ("Run", "Create", "Verify")
 - **Avoid**: "simply", "just", "easily" (patronizing), "kill" (use "stop", "terminate")
 - **Progressive disclosure**: Quick start (<5 min) → Guide (5-15 min) → Reference (on-demand)
@@ -1707,6 +1812,7 @@ MIT
 ### From Review Agents
 
 **7. Factual Accuracy Corrections** (comment-analyzer)
+
 - **CRITICAL**: `CODEMACHINE_CLI_PATH` does not exist → use `CODEMACHINE_BIN_PATH`
 - **CRITICAL**: `CODEMACHINE_LOG_LEVEL` does not exist → remove or find actual debug method
 - Missing `CODEPIPE_*` family of override environment variables (9 variables)
@@ -1714,6 +1820,7 @@ MIT
 - Execution engine comparison table has aspirational data without source
 
 **8. Simplification Opportunities** (code-simplicity-reviewer)
+
 - **Over-engineering**: MkDocs + GitHub Pages can be deferred to v1.1 (GitHub markdown sufficient for MVP)
 - **Premature optimization**: Auto-generation scripts can be deferred (hand-write first, automate if maintenance burden grows)
 - **Scope creep**: Architecture docs are developer-focused, not user-focused (defer to "Developer Guide")
@@ -1721,12 +1828,14 @@ MIT
 - **Recommendation**: Simplify to 6-day MVP (was 11.5 days) by deferring MkDocs, auto-generation, architecture docs
 
 **9. Pattern Consistency** (pattern-recognition-specialist)
+
 - 95% consistency overall
 - Minor variations in task list formatting (numbered sections vs. checkboxes)
 - Table dash lengths vary (cosmetic, semantically identical)
 - **Recommendation**: Add style guide section to establish conventions
 
 **10. Information Architecture** (architecture-strategist)
+
 - **Directory consolidation**: Reduce from 16 → 7 top-level directories (guide, reference, playbooks, adr, solutions, diagrams, templates)
 - **Progressive disclosure**: Establish clear path: README → Guide → Reference → Playbooks
 - **DRY violations**: Configuration docs in 3 places, CLI commands in 2 places, troubleshooting in 3 places
@@ -1734,11 +1843,13 @@ MIT
 - **Recommendation**: Single source of truth + cross-references
 
 **11. Security Gaps** (security-sentinel)
+
 - **7 critical gaps**: Real token examples, insufficient credential security, missing security troubleshooting, no AI API key cost protection, no binary integrity verification, insecure CI/CD examples, no SECURITY.md
 - **Required additions**: Comprehensive credential security section, emergency response procedures, AI API cost protection, SECURITY.md with responsible disclosure policy
 - **Estimated effort**: +1.5 days for security enhancements
 
 **12. Additional User Flows** (spec-flow-analyzer - second pass)
+
 - **31 NEW flows identified**: Team collaboration (multi-user locking), enterprise deployment (org-wide config), disaster recovery (queue corruption, system crashes), migration paths (pre-v1.0 → v1.0+), performance tuning (large repos), i18n, a11y, advanced error recovery
 - **39 NEW questions**: Concurrent execution, approval delegation, config inheritance, queue backups, credential rotation, platform quirks, compliance auditing
 - **Impact**: +1.5 days for additional documentation files
