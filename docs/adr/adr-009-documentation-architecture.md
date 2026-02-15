@@ -572,6 +572,7 @@ codepipe doctor
 - `docs/reference/config/config_migrations.md` - Config migration guide (queue format NOT covered)
 
 **Documentation Impact**:
+
 - Must clearly warn users: "V1 queues are UNSUPPORTED and will cause errors"
 - Must document: "Upgrading with active V1 queues will result in data loss"
 - Must provide: Step-by-step recovery instructions for users with V1 queues
