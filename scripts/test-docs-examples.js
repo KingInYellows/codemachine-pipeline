@@ -45,7 +45,7 @@ const placeholderPatterns = [/EXAMPLE/i, /PLACEHOLDER/i, /DO_NOT_USE/i];
 
 // Helper function to check if a code block contains placeholder markers
 function hasPlaceholderMarker(code) {
-  return placeholderPatterns.some(pattern => pattern.test(code));
+  return placeholderPatterns.some((pattern) => pattern.test(code));
 }
 
 for (const file of markdownFiles) {
