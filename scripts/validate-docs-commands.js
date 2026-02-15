@@ -54,7 +54,8 @@ const documentedCommands = new Set();
 
 for (const match of matches) {
   const cmd = match[1];
-  if (!cmd.startsWith('-')) { // Skip flags
+  if (!cmd.startsWith('-')) {
+    // Skip flags
     documentedCommands.add(cmd);
   }
 }
