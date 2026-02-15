@@ -7,12 +7,14 @@ When submitting completed work, **ALWAYS** use Graphite (`gt`) commands instead 
 ## Proper Workflow
 
 ### 1. Start New Work
+
 ```bash
 # Create a new Graphite branch from main
 gt create <branch-name> --message "Brief description"
 ```
 
 ### 2. Make Changes
+
 ```bash
 # Make your code changes
 # Stage files
@@ -27,6 +29,7 @@ Co-Authored-By: Claude Sonnet 4.5 (1M context) <noreply@anthropic.com>"
 ```
 
 ### 3. Submit to Graphite
+
 ```bash
 # Push and create PR through Graphite
 gt submit --no-edit
@@ -39,6 +42,7 @@ gh pr edit <PR-number> --body "Detailed description"
 ```
 
 ### 4. View Stack Status
+
 ```bash
 # View your current stack
 gt log
@@ -50,6 +54,7 @@ gt log --stack
 ## ❌ What NOT to Do
 
 **NEVER push directly to main:**
+
 ```bash
 # ❌ DON'T DO THIS
 git checkout main
@@ -57,6 +62,7 @@ git push origin main
 ```
 
 **NEVER create PRs without Graphite:**
+
 ```bash
 # ❌ DON'T DO THIS
 gh pr create --title "..." --body "..."
@@ -101,18 +107,19 @@ gt submit --no-edit
 
 ## Key Commands Reference
 
-| Command | Purpose |
-|---------|---------|
-| `gt create <name> -m "msg"` | Create new branch |
-| `gt submit --no-edit` | Submit PR to Graphite |
-| `gt log` | View stack status |
-| `gt log --stack` | View current branch stack |
-| `gh pr ready <num>` | Mark draft PR as ready |
-| `gh pr view <num>` | View PR details |
+| Command                     | Purpose                   |
+| --------------------------- | ------------------------- |
+| `gt create <name> -m "msg"` | Create new branch         |
+| `gt submit --no-edit`       | Submit PR to Graphite     |
+| `gt log`                    | View stack status         |
+| `gt log --stack`            | View current branch stack |
+| `gh pr ready <num>`         | Mark draft PR as ready    |
+| `gh pr view <num>`          | View PR details           |
 
 ## Integration with CI/CD
 
 All PRs submitted through Graphite will automatically:
+
 - ✅ Run CI tests (unit + integration)
 - ✅ Run security scans
 - ✅ Build Docker images

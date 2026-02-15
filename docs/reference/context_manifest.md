@@ -198,10 +198,10 @@ Context aggregation is configured via `RepoConfig` (`.codemachine.yml`) and CLI 
 ```yaml
 project:
   context_paths:
-    - "src/"
-    - "docs/"
-    - "README.md"
-    - "package.json"
+    - 'src/'
+    - 'docs/'
+    - 'README.md'
+    - 'package.json'
 
 runtime:
   context_token_budget: 32000
@@ -216,14 +216,16 @@ constraints:
 Array of glob patterns defining which files to include in context.
 
 **Supported patterns:**
+
 - `**/*.ts` - All TypeScript files recursively
 - `src/` - All files in `src/` directory
 - `README.md` - Specific file
 - `docs/**/*.md` - All Markdown files in `docs/`
 
 **Default patterns:**
+
 ```typescript
-['src/', 'docs/', 'README.md']
+['src/', 'docs/', 'README.md'];
 ```
 
 #### runtime.context_token_budget
@@ -258,12 +260,12 @@ When no `context_paths` are specified, the aggregator includes:
 
 ```typescript
 [
-  'src/',           // Source code
-  'docs/',          // Documentation
-  'README.md',      // Main README
-  'package.json',   // Dependencies
-  'tsconfig.json',  // TypeScript config
-]
+  'src/', // Source code
+  'docs/', // Documentation
+  'README.md', // Main README
+  'package.json', // Dependencies
+  'tsconfig.json', // TypeScript config
+];
 ```
 
 ### Always Excluded
@@ -272,17 +274,17 @@ The following patterns are excluded automatically:
 
 ```typescript
 [
-  '**/node_modules/**',     // Dependencies
-  '**/.git/**',             // Git metadata
-  '**/dist/**',             // Build output
-  '**/build/**',            // Build artifacts
-  '**/.next/**',            // Next.js cache
-  '**/coverage/**',         // Test coverage
-  '**/*.log',               // Log files
-  '**/.DS_Store',           // macOS metadata
-  '**/package-lock.json',   // Lock files
-  '**/yarn.lock',           // Lock files
-]
+  '**/node_modules/**', // Dependencies
+  '**/.git/**', // Git metadata
+  '**/dist/**', // Build output
+  '**/build/**', // Build artifacts
+  '**/.next/**', // Next.js cache
+  '**/coverage/**', // Test coverage
+  '**/*.log', // Log files
+  '**/.DS_Store', // macOS metadata
+  '**/package-lock.json', // Lock files
+  '**/yarn.lock', // Lock files
+];
 ```
 
 ---
@@ -321,12 +323,14 @@ composite_score =
 ### Budget Application
 
 Files are selected in order of composite score until:
+
 1. Token budget is exhausted, OR
 2. `max_context_files` limit is reached
 
 **Example:**
 
 With `context_token_budget: 10000` and 20 discovered files totaling 30,000 tokens:
+
 - Files are sorted by score (descending)
 - Top-ranked files are included until 10,000 tokens reached
 - Remaining files are excluded but tracked in diagnostics
@@ -385,7 +389,7 @@ These patterns are **added** to default exclusions.
 # .codemachine.yml
 project:
   context_paths:
-    - "src/"
+    - 'src/'
 ```
 
 ```bash
@@ -393,6 +397,7 @@ codepipe start --include "experimental/" --exclude "src/legacy/"
 ```
 
 **Effective patterns:**
+
 - Include: `src/`, `experimental/`
 - Exclude: Default exclusions + `src/legacy/`
 
@@ -412,6 +417,7 @@ The aggregator supports incremental updates to avoid re-scanning unchanged files
 ### Freshness Validation
 
 Context is considered **stale** if:
+
 - `file_hashes.json` is missing
 - Repository files have changed since last aggregation
 - Configuration (`context_paths`, `token_budget`) has changed
@@ -419,6 +425,7 @@ Context is considered **stale** if:
 ### Resume Behavior
 
 When a run is resumed:
+
 1. Load `file_hashes.json` from run directory.
 2. Compare hashes to current repository state.
 3. Re-aggregate only if changes detected.
@@ -521,6 +528,7 @@ The manifest schema is versioned (`schema_version: "1.0.0"`) to support future e
 ### Migration Strategy
 
 When the schema version changes:
+
 1. Old manifests remain valid (backward compatibility).
 2. New runs generate updated manifests with new `schema_version`.
 3. Validators emit warnings for outdated manifests.
@@ -546,6 +554,7 @@ When the schema version changes:
 **Problem:** `diagnostics.discovered = 0`
 
 **Solutions:**
+
 1. Check `context_paths` patterns in `.codemachine.yml`.
 2. Verify files exist in repository.
 3. Ensure patterns are not overly restrictive.
@@ -556,6 +565,7 @@ When the schema version changes:
 **Problem:** `ranking.excluded.length > 0`
 
 **Solutions:**
+
 1. Increase `context_token_budget` in configuration.
 2. Narrow `context_paths` to essential files.
 3. Add exclusions for low-priority files (tests, build artifacts).
@@ -566,6 +576,7 @@ When the schema version changes:
 **Problem:** Context not updating after file changes
 
 **Solutions:**
+
 1. Delete `file_hashes.json` to force full re-scan.
 2. Check if files are excluded by patterns.
 3. Verify git metadata is accessible (for recency scoring).
@@ -575,6 +586,7 @@ When the schema version changes:
 **Problem:** Slow context gathering
 
 **Solutions:**
+
 1. Reduce `max_context_files` limit.
 2. Exclude large directories (e.g., `vendor/`, `third_party/`).
 3. Use more specific glob patterns instead of `**/*`.
@@ -585,8 +597,8 @@ When the schema version changes:
 
 ### Path Depth Scoring
 
-| Depth | Example Path               | Score |
-|-------|---------------------------|-------|
+| Depth | Example Path              | Score |
+| ----- | ------------------------- | ----- |
 | 0     | `README.md`               | 1.0   |
 | 1     | `src/index.ts`            | 0.8   |
 | 2     | `src/utils/helper.ts`     | 0.6   |
@@ -595,24 +607,24 @@ When the schema version changes:
 
 ### File Type Scoring
 
-| Type                  | Score | Example                    |
-|-----------------------|-------|----------------------------|
-| README                | 1.0   | `README.md`, `readme.txt`  |
-| Documentation         | 0.8   | `docs/guide.md`            |
-| Source Code           | 0.6   | `src/index.ts`             |
-| Configuration         | 0.5   | `package.json`             |
-| Tests                 | 0.4   | `tests/index.spec.ts`      |
-| Build Artifacts       | 0.2   | `dist/bundle.js`           |
+| Type            | Score | Example                   |
+| --------------- | ----- | ------------------------- |
+| README          | 1.0   | `README.md`, `readme.txt` |
+| Documentation   | 0.8   | `docs/guide.md`           |
+| Source Code     | 0.6   | `src/index.ts`            |
+| Configuration   | 0.5   | `package.json`            |
+| Tests           | 0.4   | `tests/index.spec.ts`     |
+| Build Artifacts | 0.2   | `dist/bundle.js`          |
 
 ### File Size Scoring
 
-| Size Range   | Score | Notes                    |
-|--------------|-------|--------------------------|
-| 0 bytes      | 0.0   | Empty files excluded     |
-| < 1 KB       | 0.5   | Penalized (too small)    |
-| 1 KB - 100 KB| 1.0   | Optimal range            |
-| 100 KB - 1 MB| 0.5   | Penalized (large)        |
-| > 1 MB       | 0.0   | Excluded (too large)     |
+| Size Range    | Score | Notes                 |
+| ------------- | ----- | --------------------- |
+| 0 bytes       | 0.0   | Empty files excluded  |
+| < 1 KB        | 0.5   | Penalized (too small) |
+| 1 KB - 100 KB | 1.0   | Optimal range         |
+| 100 KB - 1 MB | 0.5   | Penalized (large)     |
+| > 1 MB        | 0.0   | Excluded (too large)  |
 
 ---
 

@@ -65,6 +65,7 @@ When migrating, add an entry to the `config_history` array:
 ```
 
 **Example:**
+
 ```json
 {
   "timestamp": "2025-12-15T14:30:00.000Z",
@@ -100,6 +101,7 @@ When migrating, add an entry to the `config_history` array:
 #### Migration Steps
 
 1. **Add governance section (optional but recommended):**
+
    ```json
    "governance": {
      "approval_workflow": {
@@ -128,6 +130,7 @@ When migrating, add an entry to the `config_history` array:
    ```
 
 2. **Add config_history section:**
+
    ```json
    "config_history": [
      {
@@ -146,6 +149,7 @@ When migrating, add an entry to the `config_history` array:
    - Keep root field for backward compatibility (will show deprecation warning)
 
 4. **Update schema_version:**
+
    ```json
    "schema_version": "1.0.0"
    ```
@@ -159,7 +163,7 @@ When migrating, add an entry to the `config_history` array:
 **Status:** Not yet released
 **Planned Changes:** TBD
 
-*This section will be populated when version 2.0.0 is released.*
+_This section will be populated when version 2.0.0 is released._
 
 ---
 
@@ -168,10 +172,12 @@ When migrating, add an entry to the `config_history` array:
 ### Issue: Validation fails after migration
 
 **Symptoms:**
+
 - `codepipe init --validate-only` reports errors
 - Required fields missing
 
 **Resolution:**
+
 1. Check error message for specific missing field
 2. Consult `docs/requirements/RepoConfig_schema.md` for field requirements
 3. Add missing fields with appropriate defaults
@@ -180,10 +186,12 @@ When migrating, add an entry to the `config_history` array:
 ### Issue: Environment variables no longer recognized
 
 **Symptoms:**
+
 - Warnings about missing credentials
 - Integration features not working
 
 **Resolution:**
+
 1. Verify environment variables are still set: `env | grep AI_FEATURE`
 2. Check if variable names changed in migration
 3. Update environment variable names if needed
@@ -192,10 +200,12 @@ When migrating, add an entry to the `config_history` array:
 ### Issue: JSON syntax errors after manual edit
 
 **Symptoms:**
+
 - `Invalid JSON` error
 - Config file won't load
 
 **Resolution:**
+
 1. Use `jq` to find syntax error: `jq . .codepipe/config.json`
 2. Common issues: missing commas, trailing commas, unquoted strings
 3. Use JSON linter or editor with JSON validation
@@ -204,10 +214,12 @@ When migrating, add an entry to the `config_history` array:
 ### Issue: Deprecated field warnings
 
 **Symptoms:**
+
 - Validation passes but shows deprecation warnings
 - Features work but warnings persist
 
 **Resolution:**
+
 1. Review warnings for specific deprecated fields
 2. Migrate to new field locations per migration guide
 3. Keep old fields temporarily for backward compatibility
@@ -288,12 +300,12 @@ echo "✓ Backup created: $BACKUP_PATH"
 ## Schema Version Compatibility Matrix
 
 | CLI Version | Supported Schema Versions | Recommended Schema |
-|-------------|--------------------------|-------------------|
-| 0.1.x | 1.0.0 | 1.0.0 |
-| 0.2.x | 1.0.0, 1.1.0 | 1.1.0 |
-| 1.0.x | 1.0.0, 1.1.0, 2.0.0 | 2.0.0 |
+| ----------- | ------------------------- | ------------------ |
+| 0.1.x       | 1.0.0                     | 1.0.0              |
+| 0.2.x       | 1.0.0, 1.1.0              | 1.1.0              |
+| 1.0.x       | 1.0.0, 1.1.0, 2.0.0       | 2.0.0              |
 
-*Note: Always use the latest CLI version for best compatibility.*
+_Note: Always use the latest CLI version for best compatibility._
 
 ---
 
@@ -306,6 +318,7 @@ If you encounter issues during migration:
    - `.codepipe/templates/config.example.json` - Example config
 
 2. **Validation command:**
+
    ```bash
    codepipe init --validate-only
    ```
@@ -323,6 +336,6 @@ If you encounter issues during migration:
 
 ## Changelog
 
-| Date | Version | Author | Description |
-|------|---------|--------|-------------|
-| 2025-12-15 | 1.0.0 | CodeMachine Team | Initial migration checklist for schema 1.0.0 |
+| Date       | Version | Author           | Description                                  |
+| ---------- | ------- | ---------------- | -------------------------------------------- |
+| 2025-12-15 | 1.0.0   | CodeMachine Team | Initial migration checklist for schema 1.0.0 |

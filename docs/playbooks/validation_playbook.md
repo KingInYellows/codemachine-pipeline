@@ -100,12 +100,12 @@ The Validation Command Registry provides a deterministic, auditable framework fo
 
 The system supports four validation command types:
 
-| Command Type | Purpose | Default Command | Supports Auto-Fix | Typical Timeout |
-|--------------|---------|-----------------|-------------------|-----------------|
-| `lint` | Code quality checks (ESLint) | `npm run lint` | ✓ (via `lint:fix`) | 60s |
-| `typecheck` | TypeScript type checking | `npm run typecheck` | ✗ | 120s |
-| `test` | Automated test suite | `npm run test` | ✗ | 180s |
-| `build` | Production build verification | `npm run build` | ✗ | 120s |
+| Command Type | Purpose                       | Default Command     | Supports Auto-Fix  | Typical Timeout |
+| ------------ | ----------------------------- | ------------------- | ------------------ | --------------- |
+| `lint`       | Code quality checks (ESLint)  | `npm run lint`      | ✓ (via `lint:fix`) | 60s             |
+| `typecheck`  | TypeScript type checking      | `npm run typecheck` | ✗                  | 120s            |
+| `test`       | Automated test suite          | `npm run test`      | ✗                  | 180s            |
+| `build`      | Production build verification | `npm run build`     | ✗                  | 120s            |
 
 ### Command Configuration Schema
 
@@ -411,11 +411,11 @@ Commands can reference environment variables:
 
 Commands support lightweight templating via `{{token}}` placeholders. The auto-fix engine provides the following built-in tokens:
 
-| Token | Value |
-|-------|-------|
-| `{{feature_id}}` | Current feature ID (run directory name) |
-| `{{run_dir}}` | Absolute path to the feature run directory |
-| `{{repo_root}}` | Absolute path to the git repository root |
+| Token             | Value                                            |
+| ----------------- | ------------------------------------------------ |
+| `{{feature_id}}`  | Current feature ID (run directory name)          |
+| `{{run_dir}}`     | Absolute path to the feature run directory       |
+| `{{repo_root}}`   | Absolute path to the git repository root         |
 | `{{command_cwd}}` | Fully resolved working directory for the command |
 
 Define additional tokens in `validation.template_context` or per-command `template_context`. These custom values merge with the built-ins before rendering, enabling commands such as:
@@ -517,12 +517,12 @@ Validation data is stored in the feature run directory:
 
 The `codepipe validate` command uses the following exit codes:
 
-| Exit Code | Meaning | Automation Action |
-|-----------|---------|-------------------|
-| **0** | All validations passed | ✓ Proceed with pipeline (e.g., create PR) |
-| **1** | General error (config/setup) | ✗ Fix configuration, then retry |
-| **10** | Validation failed (recoverable) | ⚠ Review errors, fix code, then retry |
-| **11** | Retry limit exceeded | ⚠ Manual intervention required; review logs and fix root cause |
+| Exit Code | Meaning                         | Automation Action                                              |
+| --------- | ------------------------------- | -------------------------------------------------------------- |
+| **0**     | All validations passed          | ✓ Proceed with pipeline (e.g., create PR)                      |
+| **1**     | General error (config/setup)    | ✗ Fix configuration, then retry                                |
+| **10**    | Validation failed (recoverable) | ⚠ Review errors, fix code, then retry                          |
+| **11**    | Retry limit exceeded            | ⚠ Manual intervention required; review logs and fix root cause |
 
 ### Usage in CI/CD
 
@@ -616,6 +616,7 @@ cat .codepipe/runs/<feature-id>/validation/ledger.json | jq '.attempts'
 **Cause:** Registry hasn't been initialized for this feature.
 
 **Solution:**
+
 ```bash
 codepipe validate --init
 ```
@@ -627,6 +628,7 @@ codepipe validate --init
 **Cause:** Command has failed more than `max_retries + 1` times.
 
 **Solution:**
+
 1. Review error summary in CLI output
 2. Inspect stderr: `cat .codepipe/runs/<feature-id>/validation/outputs/<command>_*.stderr.txt`
 3. Fix underlying code issue
@@ -642,6 +644,7 @@ codepipe validate --init
 **Cause:** Command execution exceeded configured timeout.
 
 **Solution:**
+
 1. Check if timeout is too short for your environment
 2. Override timeout:
    ```bash
@@ -656,6 +659,7 @@ codepipe validate --init
 **Cause:** Either command doesn't support auto-fix or `--no-auto-fix` flag is set.
 
 **Solution:**
+
 1. Verify command configuration has `supports_auto_fix: true`
 2. Ensure `auto_fix_command` is specified
 3. Don't use `--no-auto-fix` flag
@@ -668,6 +672,7 @@ codepipe validate --init
 **Cause:** Environment differences (dependencies, Node version, etc.)
 
 **Solution:**
+
 1. Ensure CI uses same Node version (`engines` in `package.json`)
 2. Verify dependencies are locked (`package-lock.json` committed)
 3. Check for environment-specific config (`.env` files)

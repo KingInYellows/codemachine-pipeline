@@ -3,6 +3,7 @@
 ## Overview
 
 The `codepipe init` command initializes the codemachine-pipeline in a repository by:
+
 - Detecting the git repository root
 - Creating the `.codepipe/` directory structure
 - Generating a schema-validated `config.json` with defaults
@@ -35,13 +36,13 @@ codepipe init [FLAGS]
 
 ### Flags
 
-| Flag | Short | Description | Default |
-|------|-------|-------------|---------|
-| `--force` | `-f` | Force re-initialization even if config exists | `false` |
-| `--validate-only` | | Only validate existing config without creating files | `false` |
-| `--dry-run` | | Compute config and validation without writing files | `false` |
-| `--json` | | Output results in JSON format | `false` |
-| `--yes` | `-y` | Skip interactive confirmations (assume yes) | `false` |
+| Flag              | Short | Description                                          | Default |
+| ----------------- | ----- | ---------------------------------------------------- | ------- |
+| `--force`         | `-f`  | Force re-initialization even if config exists        | `false` |
+| `--validate-only` |       | Only validate existing config without creating files | `false` |
+| `--dry-run`       |       | Compute config and validation without writing files  | `false` |
+| `--json`          |       | Output results in JSON format                        | `false` |
+| `--yes`           | `-y`  | Skip interactive confirmations (assume yes)          | `false` |
 
 ---
 
@@ -56,6 +57,7 @@ codepipe init
 ```
 
 **Output:**
+
 ```
 ✓ Git repository detected at: /path/to/repo
 ✓ Created directory: .codepipe
@@ -98,6 +100,7 @@ codepipe init --dry-run --json
 ```
 
 **JSON Output:**
+
 ```json
 {
   "status": "dry_run_success",
@@ -148,6 +151,7 @@ codepipe init --validate-only
 ```
 
 **Output (Success):**
+
 ```
 Validating existing configuration...
 ✓ Configuration is valid
@@ -163,6 +167,7 @@ Configuration Summary:
 ```
 
 **Output (Failure):**
+
 ```
 Validating existing configuration...
 
@@ -184,16 +189,17 @@ For detailed schema documentation, see:
 
 The `init` command uses standardized exit codes for automation and CI integration:
 
-| Exit Code | Meaning | Description | Remediation |
-|-----------|---------|-------------|-------------|
-| `0` | Success | Initialization completed successfully | None |
-| `10` | Validation Error | Config schema validation failed or missing required fields | Review error messages; check schema documentation |
-| `20` | Environment Issue | Missing tools, version mismatches, or filesystem permission errors | Install required tools; check permissions; run `codepipe doctor` |
-| `30` | Credential Issue | Missing tokens or invalid API credentials | Set required environment variables (GITHUB_TOKEN, LINEAR_API_KEY, etc.) |
+| Exit Code | Meaning           | Description                                                        | Remediation                                                             |
+| --------- | ----------------- | ------------------------------------------------------------------ | ----------------------------------------------------------------------- |
+| `0`       | Success           | Initialization completed successfully                              | None                                                                    |
+| `10`      | Validation Error  | Config schema validation failed or missing required fields         | Review error messages; check schema documentation                       |
+| `20`      | Environment Issue | Missing tools, version mismatches, or filesystem permission errors | Install required tools; check permissions; run `codepipe doctor`        |
+| `30`      | Credential Issue  | Missing tokens or invalid API credentials                          | Set required environment variables (GITHUB_TOKEN, LINEAR_API_KEY, etc.) |
 
 ### Exit Code Examples
 
 **Validation Error (10):**
+
 ```bash
 codepipe init --validate-only
 # Exit code: 10
@@ -201,6 +207,7 @@ codepipe init --validate-only
 ```
 
 **Environment Issue (20):**
+
 ```bash
 cd /read-only-filesystem && codepipe init
 # Exit code: 20
@@ -208,6 +215,7 @@ cd /read-only-filesystem && codepipe init
 ```
 
 **Credential Issue (30):**
+
 ```bash
 # Currently, init only warns about missing credentials (exit 0)
 # Exit code 30 reserved for future strict credential validation
@@ -275,11 +283,13 @@ The `init` command includes multiple safety mechanisms:
 ### Error: "Not a git repository"
 
 **Symptom:**
+
 ```
 Initialization failed: Not a git repository. Please run this command from within a git repository.
 ```
 
 **Remediation:**
+
 ```bash
 # Option 1: Initialize git
 git init
@@ -295,6 +305,7 @@ cd /path/to/your/repo
 ### Error: "Configuration file already exists"
 
 **Symptom:**
+
 ```
 ⚠ Configuration already exists at: .codepipe/config.json
 ⚠ Use --force to re-initialize or --validate-only to check configuration
@@ -303,6 +314,7 @@ cd /path/to/your/repo
 ```
 
 **Remediation:**
+
 ```bash
 # Validate existing config
 codepipe init --validate-only
@@ -321,11 +333,13 @@ vim .codepipe/config.json
 ### Error: "Permission denied"
 
 **Symptom:**
+
 ```
 Initialization failed: EACCES: permission denied, mkdir '.codepipe'
 ```
 
 **Remediation:**
+
 ```bash
 # Check directory permissions
 ls -la
@@ -344,11 +358,13 @@ sudo codepipe init  # Not recommended
 ### Warning: "GITHUB_TOKEN not set"
 
 **Symptom:**
+
 ```
 ⚠ GitHub integration enabled but GITHUB_TOKEN not set. Set GITHUB_TOKEN with scopes: repo, workflow
 ```
 
 **Remediation:**
+
 ```bash
 # Set GitHub token
 export GITHUB_TOKEN=ghp_your_token_here
@@ -366,11 +382,13 @@ codepipe init --validate-only
 After running `codepipe init`, follow these steps:
 
 1. **Verify Environment**
+
    ```bash
    codepipe doctor
    ```
 
 2. **Set Credentials**
+
    ```bash
    export GITHUB_TOKEN=ghp_your_token_here
    export LINEAR_API_KEY=lin_api_your_key_here
@@ -378,11 +396,13 @@ After running `codepipe init`, follow these steps:
    ```
 
 3. **Validate Configuration**
+
    ```bash
    codepipe init --validate-only
    ```
 
 4. **Review Config**
+
    ```bash
    cat .codepipe/config.json
    ```
@@ -502,6 +522,7 @@ The `init` command records telemetry to `.codepipe/logs/`:
 - **Traces**: OpenTelemetry format in `telemetry/traces.json`
 
 Telemetry includes:
+
 - Command invocation timestamp
 - Flags used (`--dry-run`, `--json`, `--force`, etc.)
 - Exit code
@@ -515,6 +536,6 @@ All telemetry respects the `safety.redact_secrets: true` setting to prevent cred
 
 ## Version History
 
-| Version | Date | Changes |
-|---------|------|---------|
-| 1.0.0 | 2025-01-XX | Initial playbook for I1.T8 (init command with --dry-run, --json, --yes flags) |
+| Version | Date       | Changes                                                                       |
+| ------- | ---------- | ----------------------------------------------------------------------------- |
+| 1.0.0   | 2025-01-XX | Initial playbook for I1.T8 (init command with --dry-run, --json, --yes flags) |

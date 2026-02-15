@@ -18,13 +18,13 @@ node_version: v24.12.0
 
 ## Test Results Summary
 
-| Category | Tests | Passed | Failed | Notes |
-|----------|-------|--------|--------|-------|
-| **Core Pipeline Flow** | 8 | 8 | 0 | All commands functional |
-| **JSON Output Mode** | 3 | 3 | 0 | Valid JSON, parseable |
-| **Error Paths** | 3 | 3 | 0 | Clear errors with remediation |
-| **Optional Dependencies** | 1 | 1 | 0 | CodeMachine CLI detected |
-| **TOTAL** | 15 | 15 | 0 | **100% PASS RATE** |
+| Category                  | Tests | Passed | Failed | Notes                         |
+| ------------------------- | ----- | ------ | ------ | ----------------------------- |
+| **Core Pipeline Flow**    | 8     | 8      | 0      | All commands functional       |
+| **JSON Output Mode**      | 3     | 3      | 0      | Valid JSON, parseable         |
+| **Error Paths**           | 3     | 3      | 0      | Clear errors with remediation |
+| **Optional Dependencies** | 1     | 1      | 0      | CodeMachine CLI detected      |
+| **TOTAL**                 | 15    | 15     | 0      | **100% PASS RATE**            |
 
 ---
 
@@ -37,6 +37,7 @@ node_version: v24.12.0
 **Expected:** Creates `.codepipe/` scaffolding, exits 0
 
 **Result:** ✅ PASS
+
 - Created `.codepipe/` directory
 - Generated `config.json` (4.6KB)
 - Created subdirectories: artifacts/, logs/, metrics/, runs/, telemetry/
@@ -52,6 +53,7 @@ node_version: v24.12.0
 **Expected:** Reports environment health, exits 0
 
 **Result:** ✅ PASS
+
 - Total checks: 10
 - Passed: 8
 - Warnings: 2 (RepoConfig validation, AGENT_ENDPOINT not configured)
@@ -60,6 +62,7 @@ node_version: v24.12.0
 - Duration: 434ms
 
 **Warnings (acceptable):**
+
 - `⚠ RepoConfig: Configuration valid with 1 warning(s)`
 - `⚠ AGENT_ENDPOINT (Agent): Agent endpoint not configured`
 
@@ -72,6 +75,7 @@ node_version: v24.12.0
 **Expected:** Quick health check, exits 0
 
 **Result:** ✅ PASS
+
 - Config: valid ✓
 - Run directory: writable ✓
 - Disk space: 80362MB free ✓
@@ -87,6 +91,7 @@ node_version: v24.12.0
 **Expected:** Creates run dir, generates PRD, exits 0
 
 **Result:** ✅ PASS
+
 - Feature ID: FEAT-1f40a2a6
 - Status: awaiting_prd_approval
 - Run directory: `/tmp/codepipe-e2e-test/.codepipe/runs/FEAT-1f40a2a6`
@@ -103,6 +108,7 @@ node_version: v24.12.0
 **Expected:** Shows current pipeline state
 
 **Result:** ✅ PASS
+
 - Feature: FEAT-1f40a2a6
 - Title: Add authentication endpoint
 - Source: prompt
@@ -121,6 +127,7 @@ node_version: v24.12.0
 **Expected:** Advances gate, exits 0
 
 **Result:** ✅ PASS
+
 - Feature: FEAT-1f40a2a6
 - Signer: e2e-test@example.com
 - Artifact: artifacts/prd.md
@@ -129,6 +136,7 @@ node_version: v24.12.0
 - Exit code: 0
 
 **Next steps shown:**
+
 - PRD approved. Continue to specification authoring
 - Or resume the pipeline
 
@@ -141,6 +149,7 @@ node_version: v24.12.0
 **Expected:** Shows resume analysis
 
 **Result:** ✅ PASS
+
 - Feature: FEAT-1f40a2a6
 - Status: paused (can be resumed)
 - Last completed step: prd_authoring
@@ -157,6 +166,7 @@ node_version: v24.12.0
 **Expected:** Shows execution DAG
 
 **Result:** ✅ PASS
+
 - Feature: FEAT-1f40a2a6
 - Plan file: /tmp/codepipe-e2e-test/.codepipe/runs/FEAT-1f40a2a6/plan.json
 - Plan exists: No (expected - spec not approved yet)
@@ -172,6 +182,7 @@ node_version: v24.12.0
 **Command:** `codepipe status --json`
 
 **Result:** ✅ PASS
+
 - Valid JSON output: yes
 - Feature count: 0 (after cleanup)
 - Schema: `{feature_count, first_feature}`
@@ -184,6 +195,7 @@ node_version: v24.12.0
 **Command:** `codepipe doctor --json`
 
 **Result:** ✅ PASS
+
 - Valid JSON output: yes
 - Schema: `{exit_code, summary: {total, passed, warnings, failed}, checks: [...]}`
 - Exit code in JSON: 0
@@ -197,6 +209,7 @@ node_version: v24.12.0
 **Command:** `codepipe start --prompt "test" --dry-run --json`
 
 **Result:** ✅ PASS
+
 - Valid JSON output: yes
 - Schema: `{status, message, planned_steps[], input: {...}}`
 - Status: "dry_run"
@@ -212,6 +225,7 @@ node_version: v24.12.0
 **Command:** `codepipe start --prompt "test"` (in directory without `.codepipe/`)
 
 **Result:** ✅ PASS (clear error with remediation)
+
 - Error type: CLIError
 - Message: "Config file not found: /tmp/no-init-test-e2e/.codepipe/config.json"
 - Exit code: 10 (validation error)
@@ -224,6 +238,7 @@ node_version: v24.12.0
 **Command:** `codepipe approve prd --feature "INVALID-ID"`
 
 **Result:** ✅ PASS (validation error)
+
 - Error type: FailedFlagValidationError
 - Message: "Missing required flag signer"
 - Reason: Test command didn't provide --signer flag
@@ -238,6 +253,7 @@ node_version: v24.12.0
 **Command:** `codepipe resume` (after clearing runs)
 
 **Result:** ✅ PASS (auto-detection works)
+
 - Auto-detected feature: FEAT-1f40a2a6
 - Showed resume analysis
 - No error (feature was still present in directory)
@@ -253,6 +269,7 @@ node_version: v24.12.0
 **Command:** `codepipe doctor --json | jq '.checks[] | select(.name | contains("CodeMachine"))'`
 
 **Result:** ✅ PASS
+
 - Check name: "CodeMachine CLI (Execution)"
 - Status: "pass"
 - Version: null (binary detected, version not captured)
@@ -269,11 +286,13 @@ node_version: v24.12.0
 **Status:** DEFERRED - Requires complex setup (SIGINT simulation, queue corruption)
 
 **Rationale:**
+
 - Crash recovery is already tested in `tests/integration/crashRecovery.e2e.spec.ts` (integration test suite)
 - Test covers: interrupted start, corrupted queue, resume behavior
 - Redundant to re-test in manual E2E
 
 **Reference:** Existing integration test validates:
+
 - WAL (Write-Ahead Log) queue persistence
 - Resume from interrupted state
 - Queue integrity verification
@@ -286,6 +305,7 @@ node_version: v24.12.0
 ### ✅ No Bugs Found
 
 All tested commands functioned correctly:
+
 - No runtime errors
 - No incorrect output
 - No unexpected behavior
@@ -295,6 +315,7 @@ All tested commands functioned correctly:
 ### JSON Output Schema Validation
 
 All `--json` outputs are:
+
 - Valid JSON (parseable)
 - Consistent schema structure
 - Include expected fields
@@ -303,6 +324,7 @@ All `--json` outputs are:
 ### Error Message Quality
 
 All error paths produce:
+
 - Clear error messages
 - Actionable remediation guidance
 - Appropriate exit codes (0=success, 1=error, 10=validation, 30=human-required)
@@ -311,16 +333,16 @@ All error paths produce:
 
 ## Environment Prerequisites Documented
 
-| Prerequisite | Required | Detected | Status |
-|--------------|----------|----------|--------|
-| Node.js v24+ | Yes | v24.12.0 | ✅ PASS |
-| Git | Yes | v2.43.0 | ✅ PASS |
-| npm | Yes | v11.6.2 | ✅ PASS |
-| Docker | No (optional) | Installed | ✅ PASS |
-| CodeMachine CLI | No (optional) | Installed | ✅ PASS |
-| GITHUB_TOKEN | No (integration) | Not set | ⚠️ WARN |
-| LINEAR_API_KEY | No (integration) | Not set | ⚠️ WARN |
-| AGENT_ENDPOINT | No (optional) | Not set | ⚠️ WARN |
+| Prerequisite    | Required         | Detected  | Status  |
+| --------------- | ---------------- | --------- | ------- |
+| Node.js v24+    | Yes              | v24.12.0  | ✅ PASS |
+| Git             | Yes              | v2.43.0   | ✅ PASS |
+| npm             | Yes              | v11.6.2   | ✅ PASS |
+| Docker          | No (optional)    | Installed | ✅ PASS |
+| CodeMachine CLI | No (optional)    | Installed | ✅ PASS |
+| GITHUB_TOKEN    | No (integration) | Not set   | ⚠️ WARN |
+| LINEAR_API_KEY  | No (integration) | Not set   | ⚠️ WARN |
+| AGENT_ENDPOINT  | No (optional)    | Not set   | ⚠️ WARN |
 
 ---
 
@@ -330,6 +352,7 @@ All error paths produce:
 **Integration Test Suite:** 264 tests (100% pass, 1 skipped)
 
 **Coverage:**
+
 - E2E validates user-facing workflows (init → start → approve → resume)
 - Integration tests validate internal logic (queue operations, adapters, validation)
 - Combined: comprehensive validation of v1.0.0 functionality

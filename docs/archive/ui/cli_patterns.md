@@ -7,6 +7,7 @@ This document describes the CLI command surface, output formats, JSON schemas, a
 **Version:** 1.0.0
 **Last Updated:** 2025-12-17
 **Related Documents:**
+
 - [Execution Flow](../requirements/execution_flow.md)
 - [Approval Playbook](../ops/approval_playbook.md)
 - [Resume Playbook](../requirements/resume_playbook.md)
@@ -23,6 +24,7 @@ The CLI provides four primary commands for pipeline observability and control:
 4. **`codepipe validate`** - Validate queue integrity and plan consistency
 
 All commands support:
+
 - **JSON mode** (`--json`) for automation and scripting
 - **Verbose mode** (`-v`) for detailed diagnostics
 - **Deterministic output** with stable field ordering for CI/CD integration
@@ -44,12 +46,12 @@ codepipe status [--feature <id>] [--json] [--verbose] [--show-costs]
 
 ### Flags
 
-| Flag | Type | Description |
-|------|------|-------------|
-| `--feature` / `-f` | string | Feature ID to query (defaults to current/latest) |
-| `--json` | boolean | Output results in JSON format |
-| `--verbose` / `-v` | boolean | Show detailed execution logs and task breakdown |
-| `--show-costs` | boolean | Include token usage and cost estimates |
+| Flag               | Type    | Description                                      |
+| ------------------ | ------- | ------------------------------------------------ |
+| `--feature` / `-f` | string  | Feature ID to query (defaults to current/latest) |
+| `--json`           | boolean | Output results in JSON format                    |
+| `--verbose` / `-v` | boolean | Show detailed execution logs and task breakdown  |
+| `--show-costs`     | boolean | Include token usage and cost estimates           |
 
 ### JSON Output Schema
 
@@ -183,13 +185,16 @@ interface StatusPayload {
     };
   };
   rate_limits?: {
-    providers: Record<string, {
-      remaining: number;
-      reset_at: string;
-      in_cooldown: boolean;
-      manual_ack_required: boolean;
-      recent_hit_count: number;
-    }>;
+    providers: Record<
+      string,
+      {
+        remaining: number;
+        reset_at: string;
+        in_cooldown: boolean;
+        manual_ack_required: boolean;
+        recent_hit_count: number;
+      }
+    >;
     summary: {
       any_in_cooldown: boolean;
       any_requires_ack: boolean;
@@ -258,12 +263,12 @@ codepipe plan [--feature <id>] [--json] [--verbose] [--show-diff]
 
 ### Flags
 
-| Flag | Type | Description |
-|------|------|-------------|
-| `--feature` / `-f` | string | Feature ID to query (defaults to current/latest) |
-| `--json` | boolean | Output results in JSON format |
+| Flag               | Type    | Description                                        |
+| ------------------ | ------- | -------------------------------------------------- |
+| `--feature` / `-f` | string  | Feature ID to query (defaults to current/latest)   |
+| `--json`           | boolean | Output results in JSON format                      |
 | `--verbose` / `-v` | boolean | Show detailed task breakdown and dependency chains |
-| `--show-diff` | boolean | Compare plan against spec hash to detect changes |
+| `--show-diff`      | boolean | Compare plan against spec hash to detect changes   |
 
 ### JSON Output Schema
 
@@ -366,15 +371,15 @@ codepipe resume [--feature <id>] [--dry-run] [--force] [--skip-hash-verification
 
 ### Flags
 
-| Flag | Type | Description |
-|------|------|-------------|
-| `--feature` / `-f` | string | Feature ID to resume (defaults to current/latest) |
-| `--dry-run` / `-d` | boolean | Analyze resume eligibility without executing |
-| `--force` | boolean | Override blockers (integrity warnings) - use with caution |
+| Flag                       | Type    | Description                                                    |
+| -------------------------- | ------- | -------------------------------------------------------------- |
+| `--feature` / `-f`         | string  | Feature ID to resume (defaults to current/latest)              |
+| `--dry-run` / `-d`         | boolean | Analyze resume eligibility without executing                   |
+| `--force`                  | boolean | Override blockers (integrity warnings) - use with caution      |
 | `--skip-hash-verification` | boolean | Skip artifact integrity checks (dangerous, for debugging only) |
-| `--validate-queue` | boolean | Validate queue files before resuming (default: true) |
-| `--json` | boolean | Output results in JSON format |
-| `--verbose` / `-v` | boolean | Show detailed diagnostics |
+| `--validate-queue`         | boolean | Validate queue files before resuming (default: true)           |
+| `--json`                   | boolean | Output results in JSON format                                  |
+| `--verbose` / `-v`         | boolean | Show detailed diagnostics                                      |
 
 ### JSON Output Schema
 
@@ -514,16 +519,17 @@ codepipe validate [--feature <id>] [--json] [--verbose]
 
 The CLI uses consistent ANSI color codes for terminal output:
 
-| Token Type | Color Code | Usage |
-|------------|------------|-------|
-| Success | `\x1b[32m` (Green) | Checkmarks (✓), success messages |
-| Warning | `\x1b[33m` (Yellow) | Warnings (⚠), pending states |
-| Error | `\x1b[31m` (Red) | Errors (✗), failures |
-| Info | `\x1b[36m` (Cyan) | Informational messages (ℹ️) |
-| Emphasis | `\x1b[1m` (Bold) | Headers, important fields |
-| Reset | `\x1b[0m` | Reset to default |
+| Token Type | Color Code          | Usage                            |
+| ---------- | ------------------- | -------------------------------- |
+| Success    | `\x1b[32m` (Green)  | Checkmarks (✓), success messages |
+| Warning    | `\x1b[33m` (Yellow) | Warnings (⚠), pending states     |
+| Error      | `\x1b[31m` (Red)    | Errors (✗), failures             |
+| Info       | `\x1b[36m` (Cyan)   | Informational messages (ℹ️)      |
+| Emphasis   | `\x1b[1m` (Bold)    | Headers, important fields        |
+| Reset      | `\x1b[0m`           | Reset to default                 |
 
 ANSI codes are automatically disabled when:
+
 - `--json` flag is set
 - Output is redirected (not a TTY)
 - `NO_COLOR` environment variable is set
@@ -545,13 +551,13 @@ When `--json` is specified:
 
 ### Exit Codes
 
-| Code | Meaning | Commands |
-|------|---------|----------|
-| 0 | Success | All |
-| 1 | General error | All |
-| 10 | Validation error (feature not found, resume blocked) | `status`, `resume` |
-| 20 | Integrity check failed (without --force) | `resume` |
-| 30 | Queue validation failed | `resume` |
+| Code | Meaning                                              | Commands           |
+| ---- | ---------------------------------------------------- | ------------------ |
+| 0    | Success                                              | All                |
+| 1    | General error                                        | All                |
+| 10   | Validation error (feature not found, resume blocked) | `status`, `resume` |
+| 20   | Integrity check failed (without --force)             | `resume`           |
+| 30   | Queue validation failed                              | `resume`           |
 
 ---
 

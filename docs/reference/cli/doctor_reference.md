@@ -22,10 +22,10 @@ codepipe doctor [FLAGS]
 
 ### Flags
 
-| Flag | Short | Description | Default |
-|------|-------|-------------|---------|
-| `--json` | | Output results in JSON format | `false` |
-| `--verbose` | `-v` | Show detailed diagnostic information | `false` |
+| Flag        | Short | Description                          | Default |
+| ----------- | ----- | ------------------------------------ | ------- |
+| `--json`    |       | Output results in JSON format        | `false` |
+| `--verbose` | `-v`  | Show detailed diagnostic information | `false` |
 
 ---
 
@@ -40,6 +40,7 @@ codepipe doctor
 ```
 
 **Sample Output:**
+
 ```
 Environment Diagnostics Report
 ======================================================================
@@ -92,6 +93,7 @@ codepipe doctor --json
 ```
 
 **JSON Output:**
+
 ```json
 {
   "status": "critical_failures",
@@ -133,6 +135,7 @@ codepipe doctor --verbose
 ```
 
 Verbose mode includes:
+
 - Detailed version information
 - File paths and URLs
 - Environment variable values (redacted)
@@ -148,13 +151,16 @@ Verbose mode includes:
 **Check:** Validates Node.js version against project requirements.
 
 **Pass Criteria:**
+
 - Node.js v24.x (LTS) or higher
 
 **Fail Criteria:**
+
 - Node.js < v24.0.0
 - Node.js not installed
 
 **Remediation:**
+
 ```bash
 # Install Node.js v24 LTS
 # macOS (homebrew)
@@ -181,14 +187,17 @@ node --version
 **Check:** Verifies git command-line tool is installed and accessible.
 
 **Pass Criteria:**
+
 - `git --version` returns successfully
 - Any modern git version accepted
 
 **Fail Criteria:**
+
 - `git` command not found
 - `git --version` returns non-zero exit code
 
 **Remediation:**
+
 ```bash
 # macOS
 brew install git
@@ -212,12 +221,15 @@ git --version
 **Check:** Validates npm package manager is installed.
 
 **Pass Criteria:**
+
 - `npm --version` returns successfully
 
 **Fail Criteria:**
+
 - `npm` command not found
 
 **Remediation:**
+
 ```bash
 # npm is bundled with Node.js
 # Reinstall Node.js if npm is missing
@@ -238,12 +250,15 @@ npm --version
 **Check:** Checks if Docker is installed and accessible.
 
 **Pass Criteria:**
+
 - `docker --version` returns successfully
 
 **Warn Criteria:**
+
 - `docker` command not found (optional dependency)
 
 **Remediation:**
+
 ```bash
 # macOS
 brew install --cask docker
@@ -268,14 +283,17 @@ docker --version
 **Check:** Verifies current directory is within a git repository.
 
 **Pass Criteria:**
+
 - `git rev-parse --show-toplevel` returns successfully
 - Valid git repository root detected
 
 **Fail Criteria:**
+
 - Not in a git repository
 - `.git` directory not found
 
 **Remediation:**
+
 ```bash
 # Initialize new repository
 git init
@@ -297,16 +315,19 @@ git status
 **Check:** Tests write permissions in `.codepipe/` directory.
 
 **Pass Criteria:**
+
 - Can create test directory
 - Can write test file
 - Can delete test artifacts
 
 **Fail Criteria:**
+
 - Permission denied errors (EACCES)
 - Read-only filesystem
 - Disk full
 
 **Remediation:**
+
 ```bash
 # Check current permissions
 ls -la .codepipe/
@@ -332,15 +353,18 @@ ls -la | grep codemachine-pipeline
 **Test Endpoint:** `https://api.github.com`
 
 **Pass Criteria:**
+
 - `curl -Is https://api.github.com` succeeds, OR
 - `wget --spider https://api.github.com` succeeds
 
 **Warn Criteria:**
+
 - curl/wget not installed (cannot verify)
 - Connection timeout
 - Network unreachable
 
 **Remediation:**
+
 ```bash
 # Test connectivity manually
 curl -I https://api.github.com
@@ -366,20 +390,24 @@ nslookup api.github.com
 **Check:** Validates `.codepipe/config.json` against schema.
 
 **Pass Criteria:**
+
 - Config file exists
 - Schema validation passes
 - No validation errors
 
 **Warn Criteria:**
+
 - Config exists with warnings (missing optional fields)
 - Config not found (not yet initialized)
 
 **Fail Criteria:**
+
 - Config exists but has schema errors
 - Invalid JSON syntax
 - Required fields missing
 
 **Remediation:**
+
 ```bash
 # If config not found
 codepipe init
@@ -406,13 +434,16 @@ codepipe init --validate-only
 **Check:** Verifies GitHub Personal Access Token is set when GitHub integration is enabled.
 
 **Pass Criteria:**
+
 - `config.github.enabled === false`, OR
 - `config.github.enabled === true` AND `GITHUB_TOKEN` env var is set
 
 **Fail Criteria:**
+
 - `config.github.enabled === true` AND `GITHUB_TOKEN` not set
 
 **Remediation:**
+
 ```bash
 # Create GitHub Personal Access Token
 # 1. Go to https://github.com/settings/tokens
@@ -432,6 +463,7 @@ codepipe doctor
 ```
 
 **Required Scopes:**
+
 - `repo` - Full control of private repositories
 - `workflow` - Update GitHub Action workflows
 
@@ -444,13 +476,16 @@ codepipe doctor
 **Check:** Verifies Linear API key is set when Linear integration is enabled.
 
 **Pass Criteria:**
+
 - `config.linear.enabled === false`, OR
 - `config.linear.enabled === true` AND `LINEAR_API_KEY` env var is set
 
 **Fail Criteria:**
+
 - `config.linear.enabled === true` AND `LINEAR_API_KEY` not set
 
 **Remediation:**
+
 ```bash
 # Create Linear API Key
 # 1. Go to https://linear.app/settings/api
@@ -477,13 +512,16 @@ codepipe doctor
 **Check:** Verifies agent service endpoint is configured.
 
 **Pass Criteria:**
+
 - `config.runtime.agent_endpoint` is set, OR
 - `AGENT_ENDPOINT` env var is set
 
 **Warn Criteria:**
+
 - Neither `runtime.agent_endpoint` nor `AGENT_ENDPOINT` is set
 
 **Remediation:**
+
 ```bash
 # Option 1: Set via environment variable
 export AGENT_ENDPOINT=https://agent.example.com
@@ -502,14 +540,15 @@ codepipe doctor
 
 ## Exit Codes
 
-| Exit Code | Meaning | Typical Causes | Remediation |
-|-----------|---------|----------------|-------------|
-| `0` | All Checks Passed | All diagnostics passed (warnings allowed) | None - system ready |
-| `10` | Validation Error | RepoConfig has schema errors or invalid JSON | Run `codepipe init --validate-only` for details; fix config.json |
-| `20` | Environment Issue | Missing Node.js, git, npm; filesystem permissions; git repo not found | Install required tools; check permissions; run from git repo |
-| `30` | Credential Issue | Missing GITHUB_TOKEN, LINEAR_API_KEY, or other required credentials | Set required environment variables; verify scopes |
+| Exit Code | Meaning           | Typical Causes                                                        | Remediation                                                      |
+| --------- | ----------------- | --------------------------------------------------------------------- | ---------------------------------------------------------------- |
+| `0`       | All Checks Passed | All diagnostics passed (warnings allowed)                             | None - system ready                                              |
+| `10`      | Validation Error  | RepoConfig has schema errors or invalid JSON                          | Run `codepipe init --validate-only` for details; fix config.json |
+| `20`      | Environment Issue | Missing Node.js, git, npm; filesystem permissions; git repo not found | Install required tools; check permissions; run from git repo     |
+| `30`      | Credential Issue  | Missing GITHUB_TOKEN, LINEAR_API_KEY, or other required credentials   | Set required environment variables; verify scopes                |
 
 **Exit Code Priority:** When multiple failure types exist, the highest-priority exit code is returned:
+
 1. Credential issues (30) take precedence
 2. Environment issues (20) are next
 3. Validation errors (10) are lowest priority
@@ -521,11 +560,13 @@ codepipe doctor
 ### Scenario 1: Fresh Install (No Configuration)
 
 **Command:**
+
 ```bash
 codepipe doctor
 ```
 
 **Output:**
+
 ```
 ⚠ RepoConfig: Configuration file not found
   → Run "codepipe init" to create configuration
@@ -534,6 +575,7 @@ codepipe doctor
 **Exit Code:** 0 (warning only)
 
 **Resolution:**
+
 ```bash
 codepipe init
 codepipe doctor
@@ -544,11 +586,13 @@ codepipe doctor
 ### Scenario 2: Missing Credentials
 
 **Command:**
+
 ```bash
 codepipe doctor
 ```
 
 **Output:**
+
 ```
 ❌ GITHUB_TOKEN (GitHub): Token not set
   → Set GITHUB_TOKEN with scopes: repo, workflow
@@ -559,6 +603,7 @@ codepipe doctor
 **Exit Code:** 30
 
 **Resolution:**
+
 ```bash
 export GITHUB_TOKEN=ghp_your_token
 export LINEAR_API_KEY=lin_api_your_key
@@ -570,11 +615,13 @@ codepipe doctor
 ### Scenario 3: Outdated Node.js
 
 **Command:**
+
 ```bash
 codepipe doctor
 ```
 
 **Output:**
+
 ```
 ❌ Node.js Version: Node.js v18.12.0 is below minimum required version
   → Install Node.js v24 LTS or higher from https://nodejs.org/
@@ -583,6 +630,7 @@ codepipe doctor
 **Exit Code:** 20
 
 **Resolution:**
+
 ```bash
 nvm install 24
 nvm use 24
@@ -594,11 +642,13 @@ codepipe doctor
 ### Scenario 4: Not in Git Repository
 
 **Command:**
+
 ```bash
 cd /tmp && codepipe doctor
 ```
 
 **Output:**
+
 ```
 ❌ Git Repository: Not in a git repository
   → Run "git init" or navigate to a git repository
@@ -607,6 +657,7 @@ cd /tmp && codepipe doctor
 **Exit Code:** 20
 
 **Resolution:**
+
 ```bash
 cd /path/to/your/repo
 codepipe doctor
@@ -717,6 +768,7 @@ The `doctor` command records telemetry to `.codepipe/logs/`:
 - **Traces**: OpenTelemetry format in `telemetry/traces.json`
 
 Telemetry includes:
+
 - Command invocation timestamp
 - Individual check results (pass/warn/fail)
 - Exit code
@@ -738,6 +790,6 @@ All telemetry respects `safety.redact_secrets: true` to prevent credential leaka
 
 ## Version History
 
-| Version | Date | Changes |
-|---------|------|---------|
-| 1.0.0 | 2025-01-XX | Initial doctor reference for I1.T8 (environment diagnostics with exit codes 0/10/20/30) |
+| Version | Date       | Changes                                                                                 |
+| ------- | ---------- | --------------------------------------------------------------------------------------- |
+| 1.0.0   | 2025-01-XX | Initial doctor reference for I1.T8 (environment diagnostics with exit codes 0/10/20/30) |

@@ -27,6 +27,7 @@ The smoke test suite validates the complete AI feature pipeline execution workfl
 ### Purpose
 
 Smoke tests serve as:
+
 - **Regression Prevention**: Catch breaking changes before they reach production
 - **Integration Validation**: Verify all components work together correctly
 - **Reproducibility Verification**: Confirm deterministic execution across environments
@@ -35,6 +36,7 @@ Smoke tests serve as:
 ### Scope
 
 The smoke test suite covers:
+
 1. **Context → PRD → Spec → Plan → Patch → Validation Flow**: Complete happy path execution
 2. **Resume Workflows**: Crash recovery, approval gates, queue restoration
 3. **Validation Execution**: Command registry, auto-fix loops, retry logic
@@ -101,6 +103,7 @@ npm run test:smoke
 ```
 
 This command:
+
 - Runs the vitest smoke test suite
 - Generates test reports
 - Outputs results to console
@@ -187,6 +190,7 @@ npx vitest watch tests/integration/smoke_execution.spec.ts
 ### Scenario 1: Complete Happy Path Execution
 
 **What it tests:**
+
 - Full workflow from context gathering through validation
 - Artifact creation and persistence
 - Queue management and task progression
@@ -194,12 +198,14 @@ npx vitest watch tests/integration/smoke_execution.spec.ts
 - Run directory structure
 
 **Key assertions:**
+
 - All artifacts created with correct content
 - Queue state transitions correctly
 - Hash manifest includes all tracked files
 - Next task selection respects dependencies
 
 **Files verified:**
+
 - `artifacts/context.json`
 - `artifacts/prd.md`
 - `artifacts/spec.md`
@@ -211,18 +217,21 @@ npx vitest watch tests/integration/smoke_execution.spec.ts
 ### Scenario 2: Resume After Crash
 
 **What it tests:**
+
 - Crash detection and recovery
 - Queue restoration from disk
 - Resume state analysis
 - Approval gate integration
 
 **Key assertions:**
+
 - Resume coordinator identifies crash correctly
 - Queue state matches pre-crash state
 - Next task determined correctly
 - Approval requirements block resume appropriately
 
 **Failure modes tested:**
+
 - Unexpected interruption (status: in_progress)
 - Pending approvals (status: paused)
 - Recoverable errors
@@ -230,18 +239,21 @@ npx vitest watch tests/integration/smoke_execution.spec.ts
 ### Scenario 3: Validation Command Execution
 
 **What it tests:**
+
 - Validation registry loading
 - Command execution
 - Result recording
 - Ledger persistence
 
 **Key assertions:**
+
 - Commands execute with correct configuration
 - Exit codes captured accurately
 - Stdout/stderr saved to outputs directory
 - Ledger summary matches individual attempts
 
 **Commands validated:**
+
 - `lint` with auto-fix support
 - `test` without auto-fix
 - Custom validation commands
@@ -249,16 +261,19 @@ npx vitest watch tests/integration/smoke_execution.spec.ts
 ### Scenario 4: Patch Application with Git Safety
 
 **What it tests:**
+
 - Patch format validation
 - Metadata tracking
 - File modification recording
 
 **Key assertions:**
+
 - Patch contains valid diff format
 - Metadata includes all required fields
 - Files modified list is accurate
 
 **Safety rails verified:**
+
 - Patch format validation
 - File allowlist enforcement (conceptual)
 - Metadata completeness
@@ -266,16 +281,19 @@ npx vitest watch tests/integration/smoke_execution.spec.ts
 ### Scenario 5: Export Bundle with Diff Summaries
 
 **What it tests:**
+
 - Export bundle creation
 - Artifact collection
 - Diff summary generation
 
 **Key assertions:**
+
 - Bundle includes all artifacts
 - Diff summary contains file lists
 - Export format matches schema
 
 **Artifacts included:**
+
 - Context, PRD, Spec, Plan
 - Patches and metadata
 - Validation results
@@ -284,17 +302,20 @@ npx vitest watch tests/integration/smoke_execution.spec.ts
 ### Scenario 6: Run Directory Recovery
 
 **What it tests:**
+
 - Recovery readiness verification
 - Required artifact presence
 - State consistency
 
 **Key assertions:**
+
 - Manifest exists and is valid
 - Queue directory exists
 - Hash manifest present
 - Artifacts directory populated
 
 **Recovery criteria:**
+
 - All critical files present
 - Manifests not corrupted
 - Queue structure valid
@@ -306,6 +327,7 @@ npx vitest watch tests/integration/smoke_execution.spec.ts
 ### Success Indicators
 
 **All tests passing:**
+
 ```
 ✓ tests/integration/smoke_execution.spec.ts (8)
 Test Files  1 passed (1)
@@ -313,12 +335,14 @@ Tests  8 passed (8)
 ```
 
 **What this means:**
+
 - All execution paths work correctly
 - State persistence is reliable
 - Resume capabilities function
 - Validation framework operational
 
 **Next steps:**
+
 - Proceed with feature development
 - Merge PR if in CI pipeline
 - No action required
@@ -326,6 +350,7 @@ Tests  8 passed (8)
 ### Failure Indicators
 
 **Test failures:**
+
 ```
 ✗ tests/integration/smoke_execution.spec.ts (8)
   ✗ Scenario: Complete Happy Path Execution
@@ -334,6 +359,7 @@ Tests  8 passed (8)
 ```
 
 **What to check:**
+
 1. **Error message**: Read the assertion failure details
 2. **Stack trace**: Identify which operation failed
 3. **Test output**: Review logs for context
@@ -341,23 +367,23 @@ Tests  8 passed (8)
 
 **Common failure causes:**
 
-| Error Pattern | Likely Cause | Remediation |
-|---------------|--------------|-------------|
-| "File not found: artifacts/..." | Artifact creation failed | Check file creation logic in test helpers |
-| "Queue validation failed" | Queue corruption | Verify queue append/update operations |
-| "Hash mismatch" | Artifact modified after hashing | Check hash generation timing |
-| "Cannot resume: pending approvals" | Approval not cleared | Verify approval completion logic |
-| "Command execution failed" | Validation command error | Check command configuration |
+| Error Pattern                      | Likely Cause                    | Remediation                               |
+| ---------------------------------- | ------------------------------- | ----------------------------------------- |
+| "File not found: artifacts/..."    | Artifact creation failed        | Check file creation logic in test helpers |
+| "Queue validation failed"          | Queue corruption                | Verify queue append/update operations     |
+| "Hash mismatch"                    | Artifact modified after hashing | Check hash generation timing              |
+| "Cannot resume: pending approvals" | Approval not cleared            | Verify approval completion logic          |
+| "Command execution failed"         | Validation command error        | Check command configuration               |
 
 ### Exit Codes
 
 The smoke test suite uses standard test runner exit codes:
 
-| Exit Code | Meaning | Action |
-|-----------|---------|--------|
-| 0 | All tests passed | ✓ Proceed |
-| 1 | One or more tests failed | ✗ Fix failures, re-run |
-| 2 | Configuration/setup error | ✗ Check environment |
+| Exit Code | Meaning                   | Action                 |
+| --------- | ------------------------- | ---------------------- |
+| 0         | All tests passed          | ✓ Proceed              |
+| 1         | One or more tests failed  | ✗ Fix failures, re-run |
+| 2         | Configuration/setup error | ✗ Check environment    |
 
 ### Detailed Logs
 
@@ -375,6 +401,7 @@ npm run test:smoke -- --reporter=verbose > smoke-test.log 2>&1
 ```
 
 **Log locations:**
+
 - **npm script**: Console output only
 - **Shell script**: `.smoke-test-output/run_*/test_output.log`
 
@@ -387,6 +414,7 @@ npm run test:smoke -- --reporter=verbose > smoke-test.log 2>&1
 **Cause:** Dependencies not installed or build artifacts missing
 
 **Solution:**
+
 ```bash
 # Reinstall dependencies
 rm -rf node_modules package-lock.json
@@ -407,6 +435,7 @@ npm run test:smoke
 **Cause:** Test fixtures missing or corrupted
 
 **Solution:**
+
 ```bash
 # Verify fixture exists
 ls -la tests/fixtures/sample_repo/
@@ -425,6 +454,7 @@ git checkout tests/fixtures/sample_repo/
 **Cause:** Long-running operations or resource constraints
 
 **Solution:**
+
 ```bash
 # Increase vitest timeout
 npx vitest run tests/integration/smoke_execution.spec.ts --testTimeout=60000
@@ -442,6 +472,7 @@ htop  # or top
 **Cause:** Execute permission not set
 
 **Solution:**
+
 ```bash
 chmod +x scripts/tooling/smoke_execution.sh
 ./scripts/tooling/smoke_execution.sh
@@ -454,6 +485,7 @@ chmod +x scripts/tooling/smoke_execution.sh
 **Cause:** Race conditions or non-deterministic behavior
 
 **Solution:**
+
 ```bash
 # Run tests multiple times to identify flakiness
 for i in {1..5}; do
@@ -471,6 +503,7 @@ done
 **Cause:** TypeScript compilation errors
 
 **Solution:**
+
 ```bash
 # Run TypeScript compiler directly
 npm run build
@@ -626,11 +659,13 @@ git log --all --grep="smoke test" --oneline
 ```
 
 **Performance targets:**
+
 - Total suite: < 5 seconds
 - Individual scenario: < 1 second
 - Setup/teardown: < 500ms
 
 If tests slow down significantly, investigate:
+
 - Excessive file I/O
 - Synchronous operations
 - Large artifact generation

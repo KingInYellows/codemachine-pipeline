@@ -12,6 +12,7 @@ This document defines the observability surfaces for rate limit telemetry, inclu
 ## Purpose
 
 Rate limit dashboards enable operators to:
+
 - **Monitor Budget Consumption**: Track remaining requests and reset times per provider
 - **Detect Cooldown States**: Identify providers in cooldown before workflows fail
 - **Surface Manual Interventions**: Alert when repeated secondary limits require operator action
@@ -35,13 +36,13 @@ codepipe rate-limits --clear <provider> --feature <feature-id>
 
 #### Flags
 
-| Flag | Alias | Description | Default |
-|------|-------|-------------|---------|
-| `--feature <id>` | `-f` | Feature ID to query (defaults to current/latest) | Latest run |
-| `--json` | - | Output results in JSON format | `false` |
-| `--verbose` | `-v` | Show detailed rate limit history and diagnostics | `false` |
-| `--provider <name>` | `-p` | Filter output to specific provider (github, linear, etc.) | All providers |
-| `--clear <provider>` | - | Clear cooldown for specified provider (requires confirmation) | - |
+| Flag                 | Alias | Description                                                   | Default       |
+| -------------------- | ----- | ------------------------------------------------------------- | ------------- |
+| `--feature <id>`     | `-f`  | Feature ID to query (defaults to current/latest)              | Latest run    |
+| `--json`             | -     | Output results in JSON format                                 | `false`       |
+| `--verbose`          | `-v`  | Show detailed rate limit history and diagnostics              | `false`       |
+| `--provider <name>`  | `-p`  | Filter output to specific provider (github, linear, etc.)     | All providers |
+| `--clear <provider>` | -     | Clear cooldown for specified provider (requires confirmation) | -             |
 
 #### Exit Codes
 
@@ -52,21 +53,25 @@ codepipe rate-limits --clear <provider> --feature <feature-id>
 #### Examples
 
 **Display all providers:**
+
 ```bash
 codepipe rate-limits
 ```
 
 **Display specific provider:**
+
 ```bash
 codepipe rate-limits --provider github
 ```
 
 **JSON output for automation:**
+
 ```bash
 codepipe rate-limits --json
 ```
 
 **Clear cooldown for GitHub:**
+
 ```bash
 codepipe rate-limits --clear github --feature feature-auth-123
 ```
@@ -154,27 +159,28 @@ All metrics use the namespace prefix `codemachine_pipeline_`.
 
 ### Core Rate Limit Metrics
 
-| Metric Name | Type | Description | Labels | Example Query |
-|-------------|------|-------------|--------|---------------|
-| `rate_limit_remaining` | Gauge | Requests remaining before rate limit | `provider` | `codemachine_pipeline_rate_limit_remaining{provider="github"}` |
-| `rate_limit_reset_timestamp` | Gauge | Unix timestamp when rate limit resets | `provider` | `codemachine_pipeline_rate_limit_reset_timestamp{provider="github"}` |
-| `rate_limit_cooldown_active` | Gauge | Whether provider is in cooldown (1=active, 0=inactive) | `provider` | `codemachine_pipeline_rate_limit_cooldown_active{provider="linear"}` |
-| `rate_limit_recent_hits` | Gauge | Number of recent rate limit hits (429 responses) | `provider` | `codemachine_pipeline_rate_limit_recent_hits{provider="linear"}` |
+| Metric Name                      | Type  | Description                                                             | Labels     | Example Query                                                            |
+| -------------------------------- | ----- | ----------------------------------------------------------------------- | ---------- | ------------------------------------------------------------------------ |
+| `rate_limit_remaining`           | Gauge | Requests remaining before rate limit                                    | `provider` | `codemachine_pipeline_rate_limit_remaining{provider="github"}`           |
+| `rate_limit_reset_timestamp`     | Gauge | Unix timestamp when rate limit resets                                   | `provider` | `codemachine_pipeline_rate_limit_reset_timestamp{provider="github"}`     |
+| `rate_limit_cooldown_active`     | Gauge | Whether provider is in cooldown (1=active, 0=inactive)                  | `provider` | `codemachine_pipeline_rate_limit_cooldown_active{provider="linear"}`     |
+| `rate_limit_recent_hits`         | Gauge | Number of recent rate limit hits (429 responses)                        | `provider` | `codemachine_pipeline_rate_limit_recent_hits{provider="linear"}`         |
 | `rate_limit_manual_ack_required` | Gauge | Whether manual acknowledgement is required (1=required, 0=not required) | `provider` | `codemachine_pipeline_rate_limit_manual_ack_required{provider="linear"}` |
 
 ### Supporting Metrics
 
 These metrics are emitted by the HTTP client and complement rate limit reporting:
 
-| Metric Name | Type | Description | Labels |
-|-------------|------|-------------|--------|
-| `rate_limit_hits_total` | Counter | Total rate limit hits (429 responses) | `provider`, `endpoint` |
-| `http_requests_total` | Counter | Total HTTP requests | `provider`, `endpoint`, `status` |
-| `http_retry_count` | Counter | HTTP retry attempts | `provider`, `endpoint`, `attempt` |
+| Metric Name             | Type    | Description                           | Labels                            |
+| ----------------------- | ------- | ------------------------------------- | --------------------------------- |
+| `rate_limit_hits_total` | Counter | Total rate limit hits (429 responses) | `provider`, `endpoint`            |
+| `http_requests_total`   | Counter | Total HTTP requests                   | `provider`, `endpoint`, `status`  |
+| `http_retry_count`      | Counter | HTTP retry attempts                   | `provider`, `endpoint`, `attempt` |
 
 ### Metric Collection
 
 Metrics are collected via the `RateLimitReporter.exportMetrics()` method, typically invoked by:
+
 1. **CLI commands** (`codepipe rate-limits`, `codepipe status`)
 2. **Workflow orchestrator** (periodic snapshots during execution)
 3. **Cron jobs** (`codepipe observe` for multi-run aggregation)
@@ -197,17 +203,20 @@ await metrics.flush(); // Writes to metrics/prometheus.txt
 ### Panel: Rate Limit Budget Overview
 
 **Query:**
+
 ```promql
 codemachine_pipeline_rate_limit_remaining
 ```
 
 **Visualization:** Gauge
 **Thresholds:**
+
 - Green: `> 100`
 - Yellow: `10-100`
 - Red: `< 10`
 
 **Panel Options:**
+
 - Unit: `short`
 - Min: `0`
 - Max: `5000` (GitHub) / `1500` (Linear)
@@ -215,6 +224,7 @@ codemachine_pipeline_rate_limit_remaining
 ### Panel: Time Until Reset
 
 **Query:**
+
 ```promql
 codemachine_pipeline_rate_limit_reset_timestamp - time()
 ```
@@ -223,28 +233,33 @@ codemachine_pipeline_rate_limit_reset_timestamp - time()
 **Unit:** `s` (seconds)
 
 **Panel Options:**
+
 - Display: Time remaining until reset
 - Decimals: `0`
 
 ### Panel: Cooldown Status
 
 **Query:**
+
 ```promql
 codemachine_pipeline_rate_limit_cooldown_active
 ```
 
 **Visualization:** Stat
 **Thresholds:**
+
 - Green: `0` (inactive)
 - Red: `1` (active)
 
 **Value Mappings:**
+
 - `0` → `Inactive`
 - `1` → `Active`
 
 ### Panel: Rate Limit Hits Over Time
 
 **Query:**
+
 ```promql
 rate(codemachine_pipeline_rate_limit_hits_total[5m])
 ```
@@ -253,17 +268,20 @@ rate(codemachine_pipeline_rate_limit_hits_total[5m])
 **Unit:** `ops` (operations per second)
 
 **Panel Options:**
+
 - Legend: `{{provider}} - {{endpoint}}`
 - Stack: `false`
 
 ### Dashboard JSON Template
 
 A complete Grafana dashboard JSON template is available at:
+
 ```
 .codepipe/templates/grafana/rate_limits_dashboard.json
 ```
 
 **Import Instructions:**
+
 1. Navigate to Grafana → Dashboards → Import
 2. Upload `rate_limits_dashboard.json`
 3. Select Prometheus data source
@@ -280,6 +298,7 @@ A complete Grafana dashboard JSON template is available at:
 **Symptom:** `codepipe rate-limits` shows `⚠ Cooldown: Active` for a provider.
 
 **Diagnosis:**
+
 1. Check remaining requests and reset time:
    ```bash
    codepipe rate-limits --provider <name>
@@ -297,6 +316,7 @@ A complete Grafana dashboard JSON template is available at:
    ```
 
 **Resolution:**
+
 - **Option A (Wait):** Wait until reset time, then resume operations
 - **Option B (Clear):** Clear cooldown manually if reset has occurred:
   ```bash
@@ -309,6 +329,7 @@ A complete Grafana dashboard JSON template is available at:
   ```
 
 **Prevention:**
+
 - Set `rate_limit.cooldown_threshold` in RepoConfig to enter cooldown earlier
 - Implement request batching for high-volume operations
 - Use GitHub Apps instead of PATs for higher rate limits
@@ -318,6 +339,7 @@ A complete Grafana dashboard JSON template is available at:
 **Symptom:** `codepipe rate-limits` shows `⚠ Manual Acknowledgement Required` with 3+ consecutive hits.
 
 **Diagnosis:**
+
 1. Review error details:
    ```bash
    codepipe rate-limits --provider <name> --verbose
@@ -333,6 +355,7 @@ A complete Grafana dashboard JSON template is available at:
    ```
 
 **Resolution:**
+
 1. **Wait for full reset:** GitHub secondary limits may require waiting beyond the primary reset window.
 2. **Review strategy:** Identify code paths causing repeated requests (e.g., polling loops, pagination bugs).
 3. **Clear cooldown:** After confirming strategy fix:
@@ -345,6 +368,7 @@ A complete Grafana dashboard JSON template is available at:
    ```
 
 **Prevention:**
+
 - Implement exponential backoff with jitter (already handled by HttpClient)
 - Add caching for idempotent GET requests
 - Use GraphQL batching for GitHub queries
@@ -355,6 +379,7 @@ A complete Grafana dashboard JSON template is available at:
 **Symptom:** Prometheus metrics show no data for `rate_limit_remaining`.
 
 **Diagnosis:**
+
 1. Verify metrics file exists:
    ```bash
    ls -la .codepipe/runs/<feature-id>/metrics/prometheus.txt
@@ -369,6 +394,7 @@ A complete Grafana dashboard JSON template is available at:
    ```
 
 **Resolution:**
+
 1. **Run CLI command to refresh metrics:**
    ```bash
    codepipe rate-limits --feature <feature-id> --json > /dev/null
@@ -383,6 +409,7 @@ A complete Grafana dashboard JSON template is available at:
    ```
 
 **Prevention:**
+
 - Ensure `codepipe status` or `codepipe rate-limits` is run periodically
 - Configure cron job to refresh metrics every 5 minutes:
   ```bash
@@ -396,6 +423,7 @@ A complete Grafana dashboard JSON template is available at:
 ### Prometheus Alert: Low Rate Limit Budget
 
 **Rule:**
+
 ```yaml
 groups:
   - name: rate_limits
@@ -407,8 +435,8 @@ groups:
         labels:
           severity: warning
         annotations:
-          summary: "Rate limit budget low for {{ $labels.provider }}"
-          description: "Provider {{ $labels.provider }} has {{ $value }} requests remaining"
+          summary: 'Rate limit budget low for {{ $labels.provider }}'
+          description: 'Provider {{ $labels.provider }} has {{ $value }} requests remaining'
 ```
 
 **Action:** Trigger Slack/email notification to throttle workflows or wait for reset.
@@ -416,15 +444,16 @@ groups:
 ### Prometheus Alert: Rate Limit Cooldown Active
 
 **Rule:**
+
 ```yaml
-      - alert: RateLimitCooldown
-        expr: codemachine_pipeline_rate_limit_cooldown_active == 1
-        for: 5m
-        labels:
-          severity: warning
-        annotations:
-          summary: "Rate limit cooldown active for {{ $labels.provider }}"
-          description: "Provider {{ $labels.provider }} is in cooldown. Check rate_limits.json for reset time."
+- alert: RateLimitCooldown
+  expr: codemachine_pipeline_rate_limit_cooldown_active == 1
+  for: 5m
+  labels:
+    severity: warning
+  annotations:
+    summary: 'Rate limit cooldown active for {{ $labels.provider }}'
+    description: 'Provider {{ $labels.provider }} is in cooldown. Check rate_limits.json for reset time.'
 ```
 
 **Action:** Pause non-essential workflows, alert ops team.
@@ -432,15 +461,16 @@ groups:
 ### Prometheus Alert: Manual Acknowledgement Required
 
 **Rule:**
+
 ```yaml
-      - alert: RateLimitManualAck
-        expr: codemachine_pipeline_rate_limit_manual_ack_required == 1
-        for: 10m
-        labels:
-          severity: critical
-        annotations:
-          summary: "Manual acknowledgement required for {{ $labels.provider }}"
-          description: "Provider {{ $labels.provider }} has hit rate limits 3+ times consecutively. Manual intervention needed."
+- alert: RateLimitManualAck
+  expr: codemachine_pipeline_rate_limit_manual_ack_required == 1
+  for: 10m
+  labels:
+    severity: critical
+  annotations:
+    summary: 'Manual acknowledgement required for {{ $labels.provider }}'
+    description: 'Provider {{ $labels.provider }} has hit rate limits 3+ times consecutively. Manual intervention needed.'
 ```
 
 **Action:** Escalate to on-call engineer, review rate limit strategy.
@@ -452,6 +482,7 @@ groups:
 The `codepipe status` command surfaces rate limit highlights alongside other telemetry:
 
 **Example Output:**
+
 ```bash
 $ codepipe status --verbose
 
@@ -468,6 +499,7 @@ Warnings:
 ```
 
 **Implementation Notes:**
+
 - Status command reads `rate_limits.json` via `generateRateLimitReport()`
 - Displays condensed summary in human mode, full details in `--verbose`
 - JSON mode includes `rate_limits` field with structured data
@@ -541,6 +573,6 @@ Warnings:
 
 ## Changelog
 
-| Version | Date | Changes |
-|---------|------|---------|
-| 1.0.0 | 2025-12-17 | Initial dashboard requirements and metric definitions |
+| Version | Date       | Changes                                               |
+| ------- | ---------- | ----------------------------------------------------- |
+| 1.0.0   | 2025-12-17 | Initial dashboard requirements and metric definitions |

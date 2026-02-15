@@ -8,6 +8,7 @@ This document describes how the AI Feature Pipeline handles API rate limits, per
 ## Overview
 
 The HTTP client module implements zero-tolerance rate limit discipline by:
+
 - Extracting rate limit metadata from API response headers
 - Persisting envelopes to `rate_limits.json` in run directories
 - Implementing exponential backoff with jitter for retries
@@ -19,6 +20,7 @@ The HTTP client module implements zero-tolerance rate limit discipline by:
 ### File Location
 
 Each run directory contains a rate limit ledger at:
+
 ```
 .codepipe/runs/<feature_id>/rate_limits.json
 ```
@@ -78,12 +80,14 @@ Each run directory contains a rate limit ledger at:
 ### Field Descriptions
 
 #### Top Level
+
 - `schema_version`: Semantic version for migrations (currently `1.0.0`)
 - `feature_id`: Optional reference to the feature being developed (not automatically populated by the ledger writer yet; orchestration layers may set this when creating manifests)
 - `providers`: Provider-specific rate limit states (keyed by provider name)
 - `metadata`: Ledger creation and update timestamps
 
 #### Provider State
+
 - `provider`: Provider identifier (`github`, `linear`, `graphite`, `codemachine`, `custom`)
 - `state.remaining`: Number of API requests remaining in current window
 - `state.reset`: Unix epoch timestamp when rate limit window resets
@@ -94,6 +98,7 @@ Each run directory contains a rate limit ledger at:
 - `lastUpdated`: ISO 8601 timestamp of last state update
 
 #### Envelope Structure
+
 - `provider`: Provider that returned this envelope
 - `remaining`: Requests remaining from `x-ratelimit-remaining` header
 - `reset`: Reset timestamp from `x-ratelimit-reset` header (unix epoch)
@@ -110,13 +115,14 @@ Each run directory contains a rate limit ledger at:
 
 The HTTP client extracts these headers from GitHub responses:
 
-| Header | Purpose | Example |
-|--------|---------|---------|
-| `x-ratelimit-remaining` | Requests remaining in window | `4999` |
-| `x-ratelimit-reset` | Unix timestamp when limit resets | `1705329600` |
-| `retry-after` | Seconds to wait before retry (on 429) | `60` |
+| Header                  | Purpose                               | Example      |
+| ----------------------- | ------------------------------------- | ------------ |
+| `x-ratelimit-remaining` | Requests remaining in window          | `4999`       |
+| `x-ratelimit-reset`     | Unix timestamp when limit resets      | `1705329600` |
+| `retry-after`           | Seconds to wait before retry (on 429) | `60`         |
 
 **GitHub Rate Limits:**
+
 - **Primary Limit:** 5,000 requests/hour for authenticated users
 - **Secondary Limits:** Per-endpoint abuse detection (variable thresholds)
 - **Reset Window:** Hourly, based on first request in window
@@ -125,13 +131,14 @@ The HTTP client extracts these headers from GitHub responses:
 
 Linear uses different header conventions:
 
-| Header | Purpose | Example |
-|--------|---------|---------|
-| `x-ratelimit-remaining` | Requests remaining | `1450` |
-| `x-ratelimit-reset` | Reset timestamp | `1705329600` |
-| `retry-after` | Retry delay in seconds | `60` |
+| Header                  | Purpose                | Example      |
+| ----------------------- | ---------------------- | ------------ |
+| `x-ratelimit-remaining` | Requests remaining     | `1450`       |
+| `x-ratelimit-reset`     | Reset timestamp        | `1705329600` |
+| `retry-after`           | Retry delay in seconds | `60`         |
 
 **Linear Rate Limits:**
+
 - **Standard Limit:** 1,500 requests/hour
 - **Burst Limit:** 60 requests/minute
 - **Reset Window:** Sliding window
@@ -149,6 +156,7 @@ backoff_ms = min(initial_backoff * 2^attempt, max_backoff) + jitter
 ```
 
 Where:
+
 - `initial_backoff`: Default 1000ms (configurable)
 - `max_backoff`: Default 32000ms (configurable)
 - `jitter`: ±10% random variance to prevent thundering herd
@@ -157,6 +165,7 @@ Where:
 ### Retry-After Override
 
 When a `retry-after` header is present (typically on 429 responses), the client:
+
 1. Ignores exponential backoff calculation
 2. Waits exactly `retry-after` seconds before retrying
 3. Caps retry delay at `max_backoff` to prevent indefinite waits
@@ -164,6 +173,7 @@ When a `retry-after` header is present (typically on 429 responses), the client:
 ### Reset-Time Backoff
 
 If `retry-after` is absent but `x-ratelimit-reset` is present:
+
 1. Calculate wait time: `reset_timestamp - current_time`
 2. Cap at `max_backoff`
 3. Add jitter
@@ -176,6 +186,7 @@ If `retry-after` is absent but `x-ratelimit-reset` is present:
 **Trigger:** `remaining <= 10` requests
 
 **Behavior:**
+
 - Set `state.inCooldown = true`
 - Calculate `cooldownUntil` from reset timestamp
 - Log warning with cooldown end time
@@ -188,6 +199,7 @@ If `retry-after` is absent but `x-ratelimit-reset` is present:
 **Trigger:** HTTP 429 response received
 
 **Behavior:**
+
 - Set `state.inCooldown = true`
 - Record error in `lastError` field
 - Calculate `cooldownUntil` from `retry-after` or `reset` header
@@ -199,6 +211,7 @@ If `retry-after` is absent but `x-ratelimit-reset` is present:
 **Trigger:** 3 consecutive HTTP 429 responses for same provider
 
 **Behavior:**
+
 - Log critical error with escalation guidance
 - Suggest manual cooldown clearing or config review
 - Provide diagnostic commands (see [Operator Actions](#operator-actions))
@@ -256,17 +269,20 @@ All HTTP errors are classified into three types:
 ### Inspecting Rate Limit State
 
 **View current rate limits for a run:**
+
 ```bash
 cat .codepipe/runs/<feature_id>/rate_limits.json | jq '.providers'
 ```
 
 **Check GitHub remaining requests:**
+
 ```bash
 cat .codepipe/runs/<feature_id>/rate_limits.json | \
   jq '.providers.github.state.remaining'
 ```
 
 **Check if in cooldown:**
+
 ```bash
 cat .codepipe/runs/<feature_id>/rate_limits.json | \
   jq '.providers.github.state.inCooldown'
@@ -284,6 +300,7 @@ jq '.providers.github.state.inCooldown = false | del(.providers.github.state.coo
 ```
 
 **Future CLI Command:**
+
 ```bash
 # Not yet implemented
 codepipe rate-limits clear --provider github --run <feature_id>
@@ -292,6 +309,7 @@ codepipe rate-limits clear --provider github --run <feature_id>
 ### Verifying Token Scopes
 
 **GitHub:**
+
 ```bash
 curl -H "Authorization: Bearer $GITHUB_TOKEN" \
   https://api.github.com/rate_limit
@@ -300,6 +318,7 @@ curl -H "Authorization: Bearer $GITHUB_TOKEN" \
 Response shows `resources.core.limit` (should be 5000 for authenticated) and `remaining`.
 
 **Linear:**
+
 ```bash
 curl -H "Authorization: $LINEAR_API_KEY" \
   https://api.linear.app/graphql \
@@ -309,12 +328,14 @@ curl -H "Authorization: $LINEAR_API_KEY" \
 ### Monitoring Rate Limit Consumption
 
 **Track envelope history:**
+
 ```bash
 cat .codepipe/runs/<feature_id>/rate_limits.json | \
   jq '.providers.github.recentEnvelopes[] | {timestamp, remaining, endpoint}'
 ```
 
 **Identify high-consumption endpoints:**
+
 ```bash
 cat .codepipe/runs/<feature_id>/rate_limits.json | \
   jq '.providers.github.recentEnvelopes | group_by(.endpoint) |
@@ -377,16 +398,19 @@ const client = new HttpClient({
 ### Provider-Specific Recommendations
 
 **GitHub:**
+
 - `maxRetries`: 3 (primary limits rarely need more)
 - `initialBackoff`: 1000ms
 - `timeout`: 30000ms (GraphQL queries can be slow)
 
 **Linear:**
+
 - `maxRetries`: 5 (smaller rate limit, more sensitive to bursts)
 - `initialBackoff`: 500ms
 - `timeout`: 15000ms
 
 **Custom/CodeMachine:**
+
 - `maxRetries`: 2
 - `initialBackoff`: 2000ms
 - `timeout`: 60000ms (agent calls can be slow)
@@ -396,11 +420,13 @@ const client = new HttpClient({
 ### Symptom: Repeated 429 errors despite waiting
 
 **Possible Causes:**
+
 1. Secondary abuse detection limits (GitHub)
 2. Incorrect token scopes
 3. Shared token across multiple pipelines
 
 **Resolution:**
+
 ```bash
 # Check token scopes
 curl -I -H "Authorization: Bearer $GITHUB_TOKEN" https://api.github.com/user
@@ -414,10 +440,12 @@ ps aux | grep codepipe
 ### Symptom: Cooldown never clears
 
 **Possible Causes:**
+
 1. Reset timestamp is in the future (timezone issue)
 2. Stale lock on ledger file
 
 **Resolution:**
+
 ```bash
 # Check reset timestamp
 cat .codepipe/runs/<feature_id>/rate_limits.json | \
@@ -430,10 +458,12 @@ cat .codepipe/runs/<feature_id>/rate_limits.json | \
 ### Symptom: Ledger not being written
 
 **Possible Causes:**
+
 1. Run directory not passed to HttpClient constructor
 2. File permission issues
 
 **Resolution:**
+
 ```bash
 # Check run directory exists and is writable
 ls -ld .codepipe/runs/<feature_id>/
@@ -450,20 +480,24 @@ grep "runDir" .codepipe/runs/<feature_id>/logs/*.ndjson
 The HTTP client sanitizes all logs to prevent token leakage:
 
 **Headers:**
+
 - `Authorization`: Redacted as `***REDACTED***`
 - `X-API-Key`: Redacted as `***REDACTED***`
 - `Cookie`: Redacted as `***REDACTED***`
 
 **URLs:**
+
 - Query parameters `token`, `access_token`, `api_key` are removed
 
 **Ledger Storage:**
+
 - Tokens are NEVER stored in `rate_limits.json`
 - Only non-sensitive headers (remaining, reset) are persisted
 
 ### Ledger File Permissions
 
 Recommended permissions:
+
 ```bash
 chmod 600 .codepipe/runs/*/rate_limits.json
 ```
@@ -501,6 +535,6 @@ Prevents other users from reading rate limit state.
 
 ## Changelog
 
-| Version | Date | Changes |
-|---------|------|---------|
-| 1.0.0 | 2024-01-15 | Initial reference documentation |
+| Version | Date       | Changes                         |
+| ------- | ---------- | ------------------------------- |
+| 1.0.0   | 2024-01-15 | Initial reference documentation |

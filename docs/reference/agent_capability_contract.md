@@ -42,6 +42,7 @@ ExecutionTask → AgentAdapter → ManifestLoader → Provider Manifests
 ```
 
 **AgentAdapter**
+
 - Maps execution contexts to capability requirements
 - Selects optimal provider via ManifestLoader
 - Classifies errors using taxonomy (transient/permanent/humanAction)
@@ -49,6 +50,7 @@ ExecutionTask → AgentAdapter → ManifestLoader → Provider Manifests
 - Records session telemetry for auditability
 
 **ManifestLoader**
+
 - Loads and validates provider manifests from `.codepipe/agents/*.json`
 - Caches manifests with SHA-256 hash-based change detection
 - Filters providers by capability requirements
@@ -56,6 +58,7 @@ ExecutionTask → AgentAdapter → ManifestLoader → Provider Manifests
 - Registers cost configs with CostTracker
 
 **Provider Manifests**
+
 - Declarative JSON files describing models, tools, features, costs, rate limits
 - Supports optional `fallbackProvider` for automatic retry
 - Defines error taxonomy rules via `errorTaxonomy` field (optional)
@@ -78,16 +81,16 @@ ExecutionTask → AgentAdapter → ManifestLoader → Provider Manifests
 
 Execution contexts map ExecutionTask types to provider capability requirements. Each context specifies minimum context windows, required features, required tools, and cost budgets.
 
-| Context | Min Context | Required Features | Required Tools | Max Cost (USD/1k tokens) |
-|---------|-------------|-------------------|----------------|--------------------------|
-| `code_generation` | 8,000 | codeGeneration | functionCalling, jsonMode | 0.15 |
-| `code_review` | 16,000 | codeReview | jsonMode | 0.10 |
-| `test_generation` | 8,000 | testGeneration | functionCalling, jsonMode | 0.12 |
-| `refactoring` | 12,000 | codeGeneration | functionCalling | 0.15 |
-| `documentation` | 6,000 | summarization | - | 0.08 |
-| `prd_generation` | 10,000 | prdGeneration | jsonMode | 0.10 |
-| `spec_generation` | 12,000 | specGeneration | jsonMode | 0.12 |
-| `summarization` | 4,000 | summarization | - | 0.05 |
+| Context           | Min Context | Required Features | Required Tools            | Max Cost (USD/1k tokens) |
+| ----------------- | ----------- | ----------------- | ------------------------- | ------------------------ |
+| `code_generation` | 8,000       | codeGeneration    | functionCalling, jsonMode | 0.15                     |
+| `code_review`     | 16,000      | codeReview        | jsonMode                  | 0.10                     |
+| `test_generation` | 8,000       | testGeneration    | functionCalling, jsonMode | 0.12                     |
+| `refactoring`     | 12,000      | codeGeneration    | functionCalling           | 0.15                     |
+| `documentation`   | 6,000       | summarization     | -                         | 0.08                     |
+| `prd_generation`  | 10,000      | prdGeneration     | jsonMode                  | 0.10                     |
+| `spec_generation` | 12,000      | specGeneration    | jsonMode                  | 0.12                     |
+| `summarization`   | 4,000       | summarization     | -                         | 0.05                     |
 
 ### Task Type Mapping
 
@@ -100,9 +103,9 @@ const TASK_TO_CONTEXT: Record<ExecutionTaskType, ExecutionContext> = {
   review: 'code_review',
   refactoring: 'refactoring',
   documentation: 'documentation',
-  pr_creation: 'summarization',  // PR descriptions
-  deployment: 'documentation',    // Deployment docs
-  other: 'summarization',         // Generic fallback
+  pr_creation: 'summarization', // PR descriptions
+  deployment: 'documentation', // Deployment docs
+  other: 'summarization', // Generic fallback
 };
 ```
 
@@ -125,17 +128,18 @@ const TASK_TO_CONTEXT: Record<ExecutionTaskType, ExecutionContext> = {
 
 ```typescript
 interface ProviderRequirements {
-  minContextWindow?: number;           // Minimum context window (tokens)
-  requiredTools?: Partial<Tools>;      // Required tool support flags
+  minContextWindow?: number; // Minimum context window (tokens)
+  requiredTools?: Partial<Tools>; // Required tool support flags
   requiredFeatures?: Partial<Features>; // Required feature support flags
-  maxCostPer1kTokens?: number;         // Maximum acceptable cost
-  minRequestsPerMinute?: number;       // Minimum rate limit capacity
+  maxCostPer1kTokens?: number; // Maximum acceptable cost
+  minRequestsPerMinute?: number; // Minimum rate limit capacity
 }
 ```
 
 ### Manifest Feature Flags
 
 **Tools** (technical capabilities):
+
 - `streaming`: Supports streaming responses
 - `functionCalling`: Supports function/tool calling
 - `vision`: Supports image/vision inputs
@@ -143,6 +147,7 @@ interface ProviderRequirements {
 - `embeddings`: Supports text embedding generation
 
 **Features** (pipeline workflows):
+
 - `prdGeneration`: PRD generation workflow
 - `specGeneration`: Specification generation workflow
 - `codeGeneration`: Code generation workflow
@@ -163,6 +168,7 @@ The adapter classifies all errors into three categories for deterministic failur
 **Definition**: Temporary failures that may succeed on retry with backoff.
 
 **Examples**:
+
 - Rate limit exceeded (HTTP 429)
 - Timeout / deadline exceeded
 - Service unavailable (HTTP 503)
@@ -170,12 +176,14 @@ The adapter classifies all errors into three categories for deterministic failur
 - Temporary service degradation
 
 **Handling**:
+
 - Retry with exponential backoff (respects `retryAfterSeconds` from provider)
 - Attempt fallback provider if configured
 - Respect rate limit headers and manifest `rateLimits`
 - Max retry attempts controlled by manifest `errorTaxonomy.retryPolicy.maxAttempts`
 
 **Error Codes** (provider-defined, examples):
+
 ```
 RATE_LIMIT_EXCEEDED
 TIMEOUT
@@ -190,6 +198,7 @@ CONNECTION_TIMEOUT
 **Definition**: Failures that will not succeed on retry without configuration changes.
 
 **Examples**:
+
 - Invalid API key / authentication failure (HTTP 401, 403)
 - Model not found / unsupported model (HTTP 404)
 - Invalid request format (HTTP 400)
@@ -197,12 +206,14 @@ CONNECTION_TIMEOUT
 - Feature not supported by provider
 
 **Handling**:
+
 - Do NOT retry
 - Mark task as `failed` with `recoverable: false`
 - Log error for operator review
 - Require manual intervention (update credentials, change provider, etc.)
 
 **Error Codes** (provider-defined, examples):
+
 ```
 INVALID_API_KEY
 MODEL_NOT_FOUND
@@ -219,6 +230,7 @@ UNSUPPORTED_FEATURE
 **Definition**: Errors requiring human judgment or input clarification.
 
 **Examples**:
+
 - Ambiguous requirements / unclear prompt
 - Content policy violation
 - Safety filter triggered
@@ -226,12 +238,14 @@ UNSUPPORTED_FEATURE
 - Requires domain expertise
 
 **Handling**:
+
 - Mark task as `failed` with `recoverable: false`
 - Escalate to user via notification adapter
 - Attach clarifying questions or policy guidance
 - Require user response to resume
 
 **Error Codes** (provider-defined, examples):
+
 ```
 POLICY_VIOLATION
 CONTENT_FILTER
@@ -250,15 +264,24 @@ function classifyError(error: Error): AgentErrorCategory {
   const msg = error.message.toLowerCase();
 
   // Transient patterns
-  if (msg.includes('timeout') || msg.includes('rate limit') ||
-      msg.includes('503') || msg.includes('429') ||
-      msg.includes('network') || msg.includes('connection')) {
+  if (
+    msg.includes('timeout') ||
+    msg.includes('rate limit') ||
+    msg.includes('503') ||
+    msg.includes('429') ||
+    msg.includes('network') ||
+    msg.includes('connection')
+  ) {
     return 'transient';
   }
 
   // Human action patterns
-  if (msg.includes('ambiguous') || msg.includes('policy violation') ||
-      msg.includes('clarification') || msg.includes('human review')) {
+  if (
+    msg.includes('ambiguous') ||
+    msg.includes('policy violation') ||
+    msg.includes('clarification') ||
+    msg.includes('human review')
+  ) {
     return 'humanAction';
   }
 
@@ -268,6 +291,7 @@ function classifyError(error: Error): AgentErrorCategory {
 ```
 
 Providers may override classification via manifest `errorTaxonomy` fields:
+
 - `transientErrorCodes`: Array of provider-specific codes for transient errors
 - `permanentErrorCodes`: Array of provider-specific codes for permanent errors
 - `humanActionErrorCodes`: Array of provider-specific codes for human action
@@ -290,6 +314,7 @@ Manifests may specify retry policy for transient errors:
 ```
 
 **Retry Delay Calculation**:
+
 ```
 delay = min(baseDelayMs * (backoffMultiplier ^ attemptNumber), maxDelayMs)
 ```
@@ -328,7 +353,9 @@ Manifests may specify `fallbackProvider` field referencing another provider ID. 
   "version": "1.0.0",
   "fallbackProvider": "anthropic",
   "rateLimits": { "requestsPerMinute": 500 },
-  "costConfig": { /* ... */ },
+  "costConfig": {
+    /* ... */
+  },
   "errorTaxonomy": {
     "transientErrorCodes": ["RATE_LIMIT_EXCEEDED", "TIMEOUT"],
     "retryPolicy": { "maxAttempts": 2 }
@@ -343,12 +370,14 @@ Manifests may specify `fallbackProvider` field referencing another provider ID. 
 ### Cost Attribution
 
 Every agent session records cost by:
+
 - **Provider**: Agent provider ID (e.g., `openai`, `anthropic`)
 - **Model**: Specific model ID (e.g., `gpt-4`, `claude-3-opus`)
 - **Feature**: Feature ID from ExecutionTask
 - **Task**: Task ID from ExecutionTask
 
 Cost calculation:
+
 ```
 costUsd = (inputTokens / 1000) * inputCostPer1kTokens +
           (outputTokens / 1000) * outputCostPer1kTokens
@@ -382,21 +411,21 @@ Every session (success or failure) records:
 
 ```typescript
 interface SessionTelemetry {
-  sessionId: string;              // Unique session ID
-  taskId: string;                 // ExecutionTask ID
-  featureId: string;              // Feature ID
-  context: ExecutionContext;      // Execution context
-  providerId: string;             // Selected provider
-  modelId: string;                // Selected model
-  manifestHash: string;           // SHA-256 hash of manifest
-  promptHash: string;             // SHA-256 hash of prompt (redacted)
-  tokensConsumed: number;         // Total tokens (input + output)
-  costUsd: number;                // Total cost in USD
-  durationMs: number;             // Processing duration
-  usedFallback: boolean;          // Whether fallback was used
-  fallbackAttempts: number;       // Number of fallback attempts
+  sessionId: string; // Unique session ID
+  taskId: string; // ExecutionTask ID
+  featureId: string; // Feature ID
+  context: ExecutionContext; // Execution context
+  providerId: string; // Selected provider
+  modelId: string; // Selected model
+  manifestHash: string; // SHA-256 hash of manifest
+  promptHash: string; // SHA-256 hash of prompt (redacted)
+  tokensConsumed: number; // Total tokens (input + output)
+  costUsd: number; // Total cost in USD
+  durationMs: number; // Processing duration
+  usedFallback: boolean; // Whether fallback was used
+  fallbackAttempts: number; // Number of fallback attempts
   errorCategory?: AgentErrorCategory; // Error category if failed
-  timestamp: string;              // ISO 8601 timestamp
+  timestamp: string; // ISO 8601 timestamp
   metadata?: Record<string, unknown>; // Optional metadata
 }
 ```
@@ -404,6 +433,7 @@ interface SessionTelemetry {
 ### Redacted Prompt Hashing
 
 To honor auditability WITHOUT exposing sensitive repo contents:
+
 - Prompts are hashed with SHA-256
 - Telemetry stores `promptHash` instead of raw prompt
 - Auditors can validate prompt consistency by comparing hashes
@@ -412,6 +442,7 @@ To honor auditability WITHOUT exposing sensitive repo contents:
 ### Telemetry Output
 
 Telemetry records written to:
+
 ```
 <run-directory>/telemetry/agent_sessions.jsonl
 ```
@@ -419,7 +450,22 @@ Telemetry records written to:
 Format: JSONL (one record per line)
 
 ```json
-{"sessionId":"session_1234_abc","taskId":"task-1","featureId":"FEAT-1","context":"code_generation","providerId":"openai","modelId":"gpt-4","manifestHash":"a1b2c3...","promptHash":"d4e5f6...","tokensConsumed":1000,"costUsd":0.09,"durationMs":1500,"usedFallback":false,"fallbackAttempts":0,"timestamp":"2025-12-17T10:00:00Z"}
+{
+  "sessionId": "session_1234_abc",
+  "taskId": "task-1",
+  "featureId": "FEAT-1",
+  "context": "code_generation",
+  "providerId": "openai",
+  "modelId": "gpt-4",
+  "manifestHash": "a1b2c3...",
+  "promptHash": "d4e5f6...",
+  "tokensConsumed": 1000,
+  "costUsd": 0.09,
+  "durationMs": 1500,
+  "usedFallback": false,
+  "fallbackAttempts": 0,
+  "timestamp": "2025-12-17T10:00:00Z"
+}
 ```
 
 ---
@@ -433,6 +479,7 @@ JSON Schema: `docs/requirements/agent_manifest_schema.json`
 ### Required Fields
 
 Per acceptance criteria, manifests MUST include:
+
 - `schema_version`: Semantic version (e.g., `1.0.0`)
 - `providerId`: Unique provider identifier
 - `name`: Human-readable name
@@ -479,11 +526,13 @@ Per acceptance criteria, manifests MUST include:
 ### Creating a New Provider Manifest
 
 1. **Create Manifest File**:
+
    ```bash
    touch .codepipe/agents/my-provider.json
    ```
 
 2. **Define Manifest**:
+
    ```json
    {
      "schema_version": "1.0.0",
@@ -527,12 +576,14 @@ Per acceptance criteria, manifests MUST include:
    ```
 
 3. **Validate Schema**:
+
    ```bash
    npx ajv validate -s docs/requirements/agent_manifest_schema.json \
                      -d .codepipe/agents/my-provider.json
    ```
 
 4. **Test Integration**:
+
    ```typescript
    const loader = createManifestLoader(logger);
    await loader.loadManifest('.codepipe/agents/my-provider.json');
@@ -643,7 +694,12 @@ The following manifest fragments demonstrate how providers describe capabilities
     "transientErrorCodes": ["RATE_LIMIT", "TIMEOUT", "NETWORK_ERROR"],
     "permanentErrorCodes": ["INVALID_API_KEY", "MODEL_NOT_FOUND"],
     "humanActionErrorCodes": ["AMBIGUOUS_INPUT"],
-    "retryPolicy": { "maxAttempts": 2, "baseDelayMs": 1000, "maxDelayMs": 8000, "backoffMultiplier": 2 }
+    "retryPolicy": {
+      "maxAttempts": 2,
+      "baseDelayMs": 1000,
+      "maxDelayMs": 8000,
+      "backoffMultiplier": 2
+    }
   }
 }
 ```
@@ -734,7 +790,12 @@ The following manifest fragments demonstrate how providers describe capabilities
     "transientErrorCodes": ["RATE_LIMIT", "TIMEOUT"],
     "permanentErrorCodes": ["UNSUPPORTED_FRAMEWORK"],
     "humanActionErrorCodes": ["SPEC_MISSING"],
-    "retryPolicy": { "maxAttempts": 3, "baseDelayMs": 500, "maxDelayMs": 4000, "backoffMultiplier": 1.5 }
+    "retryPolicy": {
+      "maxAttempts": 3,
+      "baseDelayMs": 500,
+      "maxDelayMs": 4000,
+      "backoffMultiplier": 1.5
+    }
   }
 }
 ```
@@ -782,7 +843,7 @@ try {
   });
 } catch (error) {
   console.log(error.category); // 'permanent'
-  console.log(error.code);     // 'INVALID_API_KEY'
+  console.log(error.code); // 'INVALID_API_KEY'
   // Operator must fix credentials
 }
 ```
@@ -801,7 +862,7 @@ try {
   });
 } catch (error) {
   console.log(error.category); // 'humanAction'
-  console.log(error.code);     // 'POLICY_VIOLATION'
+  console.log(error.code); // 'POLICY_VIOLATION'
   // Escalate to user for clarification
 }
 ```
@@ -821,9 +882,9 @@ try {
 
 ## Revision History
 
-| Version | Date | Author | Changes |
-|---------|------|--------|---------|
-| 1.0.0 | 2025-12-17 | CodeMachine Pipeline | Initial release |
+| Version | Date       | Author               | Changes         |
+| ------- | ---------- | -------------------- | --------------- |
+| 1.0.0   | 2025-12-17 | CodeMachine Pipeline | Initial release |
 
 ---
 

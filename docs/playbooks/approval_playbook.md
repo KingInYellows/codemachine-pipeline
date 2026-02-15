@@ -5,6 +5,7 @@
 This playbook documents the approval governance workflow for the AI Feature Pipeline. Approvals enforce human-in-the-loop gates at critical transitions (PRD→Spec→Code→PR→Deploy), ensuring that autonomous agents never modify production code without explicit human authorization.
 
 **Implements:**
+
 - ADR-5 (Approval Workflow): Gate enforcement and signature capture
 - Section 4 (Directives): Approval gates and audit trail requirements
 - Blueprint Rulebook: Human-in-the-loop enforcement
@@ -28,14 +29,14 @@ This playbook documents the approval governance workflow for the AI Feature Pipe
 
 The pipeline enforces **five mandatory approval gates** that align with the feature development lifecycle:
 
-| Gate Type | Transition | Artifact | Purpose |
-|-----------|------------|----------|---------|
-| **PRD** | Research → Specification | `artifacts/prd.md` | Validate problem statement, goals, and acceptance criteria before detailed design |
-| **Spec** | PRD → Planning | `artifacts/spec.md` | Approve technical specification, architecture decisions, and implementation approach |
-| **Plan** | Spec → Code | `artifacts/plan.json` | Review execution tasks, dependencies, and resource allocation before code generation |
-| **Code** | Plan → PR | Code diffs, tests | Approve generated code for quality, security, and adherence to spec |
-| **PR** | Code → Deploy | Pull request | Authorize merge to target branch after CI/CD validation |
-| **Deploy** | PR → Production | Deployment manifest | Approve production release and rollout strategy |
+| Gate Type  | Transition               | Artifact              | Purpose                                                                              |
+| ---------- | ------------------------ | --------------------- | ------------------------------------------------------------------------------------ |
+| **PRD**    | Research → Specification | `artifacts/prd.md`    | Validate problem statement, goals, and acceptance criteria before detailed design    |
+| **Spec**   | PRD → Planning           | `artifacts/spec.md`   | Approve technical specification, architecture decisions, and implementation approach |
+| **Plan**   | Spec → Code              | `artifacts/plan.json` | Review execution tasks, dependencies, and resource allocation before code generation |
+| **Code**   | Plan → PR                | Code diffs, tests     | Approve generated code for quality, security, and adherence to spec                  |
+| **PR**     | Code → Deploy            | Pull request          | Authorize merge to target branch after CI/CD validation                              |
+| **Deploy** | PR → Production          | Deployment manifest   | Approve production release and rollout strategy                                      |
 
 ### Default Turnaround Targets
 
@@ -66,6 +67,7 @@ Need edits? Request revisions via: codepipe prd edit --request "<details>"
 ```
 
 **What happens:**
+
 - Pipeline status changes to `paused`
 - Approval gate added to `manifest.json` pending approvals
 - Artifact hash computed and stored in `approvals/approvals.json`
@@ -83,6 +85,7 @@ vim .codepipe/runs/FEAT-abc123/artifacts/prd.md
 ```
 
 **Review checklist:**
+
 - [ ] All required sections completed
 - [ ] Goals are clear and measurable
 - [ ] Acceptance criteria are testable
@@ -98,6 +101,7 @@ codepipe approve prd --signer "user@example.com" --comment "LGTM"
 ```
 
 **Output:**
+
 ```
 ✅ Approval granted for PRD gate
 Feature: FEAT-abc123
@@ -119,6 +123,7 @@ codepipe approve prd --deny --signer "reviewer@example.com" \
 ```
 
 **Output:**
+
 ```
 ❌ Approval denied for PRD gate
 Feature: FEAT-abc123
@@ -270,6 +275,7 @@ For advanced users who need to manually edit approval records (e.g., bulk import
 ⚠ **Use with extreme caution.** Manual edits bypass hash validation and audit controls.
 
 1. **Compute artifact hash:**
+
    ```bash
    sha256sum .codepipe/runs/FEAT-abc123/artifacts/prd.md
    ```
@@ -281,6 +287,7 @@ For advanced users who need to manually edit approval records (e.g., bulk import
    - Update `metadata.updated_at` and `metadata.total_approvals`
 
 3. **Update manifest pending/completed arrays:**
+
    ```bash
    # Edit manifest.json
    vim .codepipe/runs/FEAT-abc123/manifest.json
@@ -356,6 +363,7 @@ The `--signer` flag captures the approver's identity. Best practices:
 - **Avoid generic identities** like "admin" or "bot"
 
 **Retrieve Git user:**
+
 ```bash
 git config user.email
 # Output: user@example.com
@@ -372,6 +380,7 @@ Artifact hashes prevent approval tampering:
 3. **Hash mismatch:** Approval fails with exit code 30
 
 **Example mismatch error:**
+
 ```
 ❌ Artifact modified after approval request:
 Artifact hash mismatch: expected a3f5e8b9... but got c1d2e3f4...
@@ -390,6 +399,7 @@ codepipe approve prd --signer "user@example.com" --skip-hash-check
 ```
 
 **Warning logged to telemetry:**
+
 ```
 WARN: Artifact hash validation skipped for prd gate
 ```
@@ -401,6 +411,7 @@ WARN: Artifact hash validation skipped for prd gate
 ### Error: "No pending approval for gate prd"
 
 **Symptom:**
+
 ```
 No pending approval for gate prd. Current pending approvals: spec
 ```
@@ -408,6 +419,7 @@ No pending approval for gate prd. Current pending approvals: spec
 **Cause:** Approval already completed or not yet requested.
 
 **Resolution:**
+
 ```bash
 # Check approval status
 codepipe status --feature FEAT-abc123
@@ -421,6 +433,7 @@ codepipe resume
 ### Error: "Gate prd has already been approved"
 
 **Symptom:**
+
 ```
 Gate prd has already been approved. No pending approval required.
 ```
@@ -434,6 +447,7 @@ Gate prd has already been approved. No pending approval required.
 ### Error: "Artifact hash mismatch"
 
 **Symptom:**
+
 ```
 Artifact hash mismatch: expected a3f5e8b9... but got c1d2e3f4...
 ```
@@ -441,6 +455,7 @@ Artifact hash mismatch: expected a3f5e8b9... but got c1d2e3f4...
 **Cause:** Artifact modified after approval request.
 
 **Resolution:**
+
 1. Review changes to artifact
 2. If changes are intentional, request new approval:
    ```bash
@@ -454,6 +469,7 @@ Artifact hash mismatch: expected a3f5e8b9... but got c1d2e3f4...
 ### Error: "No artifact found for gate type code"
 
 **Symptom:**
+
 ```
 No artifact found for gate type code. The artifact may not have been created yet.
 ```
@@ -468,12 +484,12 @@ No artifact found for gate type code. The artifact may not have been created yet
 
 The `approve` command uses standardized exit codes:
 
-| Exit Code | Meaning | Description | Remediation |
-|-----------|---------|-------------|-------------|
-| `0` | Success | Approval granted or denied successfully | None |
-| `1` | General Error | Unexpected error during approval | Check logs; contact support if persistent |
-| `10` | Validation Error | Invalid gate type, feature not found, or approval already completed | Review error message; validate inputs |
-| `30` | Human Action Required | Artifact modified after approval request; hash mismatch | Review artifact changes; re-request approval if valid |
+| Exit Code | Meaning               | Description                                                         | Remediation                                           |
+| --------- | --------------------- | ------------------------------------------------------------------- | ----------------------------------------------------- |
+| `0`       | Success               | Approval granted or denied successfully                             | None                                                  |
+| `1`       | General Error         | Unexpected error during approval                                    | Check logs; contact support if persistent             |
+| `10`      | Validation Error      | Invalid gate type, feature not found, or approval already completed | Review error message; validate inputs                 |
+| `30`      | Human Action Required | Artifact modified after approval request; hash mismatch             | Review artifact changes; re-request approval if valid |
 
 ---
 
@@ -488,35 +504,40 @@ The `approve` command uses standardized exit codes:
 
 ## Version History
 
-| Version | Date | Changes |
-|---------|------|---------|
-| 1.0.0 | 2025-01-15 | Initial approval playbook for I2.T6 (approval UX charter) |
+| Version | Date       | Changes                                                   |
+| ------- | ---------- | --------------------------------------------------------- |
+| 1.0.0   | 2025-01-15 | Initial approval playbook for I2.T6 (approval UX charter) |
 
 ---
 
 ## Quick Reference
 
 ### Grant Approval
+
 ```bash
 codepipe approve <gate> --signer "<email>" [--comment "<text>"]
 ```
 
 ### Deny Approval
+
 ```bash
 codepipe approve <gate> --deny --signer "<email>" --comment "<reason>"
 ```
 
 ### Check Status
+
 ```bash
 codepipe status [--feature <id>]
 ```
 
 ### Resume After Approval
+
 ```bash
 codepipe resume [--feature <id>]
 ```
 
 ### JSON Output (Automation)
+
 ```bash
 codepipe approve <gate> --signer "<email>" --json
 ```

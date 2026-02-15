@@ -9,21 +9,25 @@ The parallel execution system enables concurrent task execution with dependency-
 ### Core Components
 
 **1. Worker Pool Manager**
+
 - Tracks in-flight tasks via Map structure
 - Enforces concurrency limits (1-10 tasks)
 - Manages worker capacity and availability
 
 **2. Dependency Graph Analyzer**
+
 - Detects task dependencies from execution plan
 - Ensures prerequisites complete before dependent tasks
 - Prevents circular dependencies
 
 **3. Task Scheduler**
+
 - Selects ready tasks (dependencies met, resources available)
 - Dispatches tasks to available workers
 - Handles task completion and failure
 
 **4. Coordination Layer**
+
 - Synchronizes queue updates across workers
 - Prevents race conditions on shared state
 - Maintains ACID guarantees for task transitions
@@ -45,6 +49,7 @@ Configure parallel execution in `.codepipe/config.json`:
 ```
 
 **Parameters:**
+
 - `max_parallel_tasks`: Maximum concurrent tasks (range: 1-10, default: 1)
 - `task_timeout_ms`: Per-task timeout in milliseconds (default: 300000)
 - `enable_parallel_execution`: Feature flag to enable/disable (default: true)
@@ -83,9 +88,8 @@ CODEPIPE_RUNTIME_MAX_CONCURRENT_TASKS=8 codepipe resume
 // Pseudocode for parallel execution
 while (hasRemainingTasks()) {
   // Get all tasks ready for execution
-  const readyTasks = queue.filter(task =>
-    task.status === 'pending' &&
-    areDependenciesCompleted(task)
+  const readyTasks = queue.filter(
+    (task) => task.status === 'pending' && areDependenciesCompleted(task)
   );
 
   // Calculate available worker capacity
@@ -100,8 +104,8 @@ while (hasRemainingTasks()) {
 
     // Execute asynchronously
     executeTask(task)
-      .then(result => handleCompletion(task, result))
-      .catch(error => handleFailure(task, error))
+      .then((result) => handleCompletion(task, result))
+      .catch((error) => handleFailure(task, error))
       .finally(() => inFlightTasks.delete(task.task_id));
   }
 
@@ -113,6 +117,7 @@ while (hasRemainingTasks()) {
 ### Dependency Resolution
 
 **Dependency Detection:**
+
 ```typescript
 // Task A depends on Task B if:
 // 1. Task A explicitly lists Task B in dependencies array
@@ -131,6 +136,7 @@ function areDependenciesCompleted(task: ExecutionTask): boolean {
 ```
 
 **Dependency Chain Example:**
+
 ```
 Task Graph:
   research-001 (no dependencies)
@@ -149,12 +155,14 @@ Execution with max_parallel_tasks=2:
 ### Worker Pool Management
 
 **Worker Lifecycle:**
+
 1. **Idle**: Worker available, waiting for task assignment
 2. **Running**: Worker executing task, in-flight
 3. **Completing**: Task finished, cleanup in progress
 4. **Failed**: Task failed, retry or move to next task
 
 **Capacity Management:**
+
 ```typescript
 // Track in-flight tasks
 const inFlightTasks = new Map<string, Promise<RunnerResult>>();
@@ -175,15 +183,17 @@ inFlightTasks.set(task.task_id, promise);
 ### Starting Configuration
 
 **Conservative Start:**
+
 ```json
 {
   "execution": {
-    "max_parallel_tasks": 1  // Sequential execution
+    "max_parallel_tasks": 1 // Sequential execution
   }
 }
 ```
 
 **Incremental Scaling:**
+
 1. Start with `max_parallel_tasks=1` (sequential)
 2. Monitor resource usage (CPU, memory, disk I/O)
 3. Increase to 2-3 for moderate parallelism
@@ -193,30 +203,33 @@ inFlightTasks.set(task.task_id, promise);
 ### Task Design for Parallelism
 
 **Independent Tasks (Parallel-Friendly):**
+
 - Documentation generation
 - Linting/formatting (read-only operations)
 - Independent feature implementations
 - Test suite partitions (different test files)
 
 **Dependent Tasks (Sequential Required):**
+
 - Code generation → Testing (tests depend on code)
 - PRD → Spec → Plan (sequential phases)
 - Database migration → Data seeding (order matters)
 - Build → Deploy (deployment depends on build)
 
 **Mixed Workloads:**
+
 ```json
 // Execution plan with parallelism opportunities
 {
   "tasks": [
-    {"id": "research", "dependencies": []},
-    {"id": "spec", "dependencies": ["research"]},
-    {"id": "lint-frontend", "dependencies": []},  // Parallel with research
-    {"id": "lint-backend", "dependencies": []},   // Parallel with research
-    {"id": "code-api", "dependencies": ["spec"]},
-    {"id": "code-ui", "dependencies": ["spec"]},  // Parallel with code-api
-    {"id": "test-api", "dependencies": ["code-api"]},
-    {"id": "test-ui", "dependencies": ["code-ui"]}
+    { "id": "research", "dependencies": [] },
+    { "id": "spec", "dependencies": ["research"] },
+    { "id": "lint-frontend", "dependencies": [] }, // Parallel with research
+    { "id": "lint-backend", "dependencies": [] }, // Parallel with research
+    { "id": "code-api", "dependencies": ["spec"] },
+    { "id": "code-ui", "dependencies": ["spec"] }, // Parallel with code-api
+    { "id": "test-api", "dependencies": ["code-api"] },
+    { "id": "test-ui", "dependencies": ["code-ui"] }
   ]
 }
 ```
@@ -224,6 +237,7 @@ inFlightTasks.set(task.task_id, promise);
 ### Resource Monitoring
 
 **CPU Monitoring:**
+
 ```bash
 # Monitor CPU usage during execution
 top -b -n 1 | grep codepipe
@@ -233,6 +247,7 @@ top -b -n 1 | grep codepipe
 ```
 
 **Memory Monitoring:**
+
 ```bash
 # Monitor memory usage
 ps aux | grep codepipe | awk '{print $6/1024 " MB"}'
@@ -242,6 +257,7 @@ ps aux | grep codepipe | awk '{print $6/1024 " MB"}'
 ```
 
 **Disk I/O Monitoring:**
+
 ```bash
 # Monitor disk I/O during execution
 iostat -x 1
@@ -252,28 +268,30 @@ iostat -x 1
 
 ### Optimal Parallelism Levels
 
-| Scenario | Recommended max_parallel_tasks | Rationale |
-|----------|-------------------------------|-----------|
-| Single-core VM | 1 | No CPU parallelism benefit |
-| 2-core VM | 2 | Matches core count |
-| 4-core VM | 3-4 | Leave headroom for OS |
-| 8-core VM | 4-6 | Diminishing returns beyond 6 |
-| 16+ core server | 8-10 | Hit max limit, I/O bound |
-| I/O-heavy tasks | 4-8 | Parallel I/O benefits |
-| CPU-heavy tasks | 2-4 | Avoid CPU contention |
-| Memory-constrained | 1-2 | Prevent OOM |
+| Scenario           | Recommended max_parallel_tasks | Rationale                    |
+| ------------------ | ------------------------------ | ---------------------------- |
+| Single-core VM     | 1                              | No CPU parallelism benefit   |
+| 2-core VM          | 2                              | Matches core count           |
+| 4-core VM          | 3-4                            | Leave headroom for OS        |
+| 8-core VM          | 4-6                            | Diminishing returns beyond 6 |
+| 16+ core server    | 8-10                           | Hit max limit, I/O bound     |
+| I/O-heavy tasks    | 4-8                            | Parallel I/O benefits        |
+| CPU-heavy tasks    | 2-4                            | Avoid CPU contention         |
+| Memory-constrained | 1-2                            | Prevent OOM                  |
 
 ## Monitoring
 
 ### Execution Metrics
 
 **Key Metrics:**
+
 - **In-flight task count**: Real-time worker utilization
 - **Task completion rate**: Tasks completed per minute
 - **Throughput improvement**: (Parallel time / Sequential time)
 - **Worker idle time**: % time workers waiting for tasks
 
 **Telemetry Commands:**
+
 ```bash
 # View real-time execution status
 codepipe status --verbose
@@ -289,6 +307,7 @@ grep "task_completed" .codepipe/runs/*/logs/execution.ndjson | \
 ### Performance Profiling
 
 **Measure Throughput Improvement:**
+
 ```bash
 # Sequential baseline
 # Note: CODEPIPE_RUNTIME_MAX_CONCURRENT_TASKS is the implemented env var name
@@ -303,6 +322,7 @@ time CODEPIPE_RUNTIME_MAX_CONCURRENT_TASKS=4 codepipe resume
 ```
 
 **Identify Bottlenecks:**
+
 ```bash
 # Find long-running tasks
 jq -s 'sort_by(.duration_ms) | reverse | .[0:5]' \
@@ -319,11 +339,13 @@ codepipe plan --verbose --show-diff
 **Symptom**: Parallel execution slower than sequential
 
 **Common Causes:**
+
 1. CPU over-subscription (too many workers for CPU cores)
 2. Disk I/O bottleneck (workers waiting on filesystem)
 3. Memory pressure (swapping, OOM)
 
 **Resolution:**
+
 ```bash
 # Step 1: Identify resource bottleneck
 top -b -n 1  # Check CPU usage
@@ -339,6 +361,7 @@ codepipe status --verbose --show-costs
 ```
 
 **Prevention:**
+
 - Match `max_parallel_tasks` to CPU cores
 - Use SSD storage for better I/O parallelism
 - Monitor resource usage before scaling
@@ -348,11 +371,13 @@ codepipe status --verbose --show-costs
 **Symptom**: Execution hangs with tasks in pending state
 
 **Common Causes:**
+
 1. Circular dependencies (A depends on B, B depends on A)
 2. Missing dependency completion (prerequisite failed)
 3. Incorrect dependency specification
 
 **Resolution:**
+
 ```bash
 # Step 1: Check dependency graph
 codepipe plan --verbose
@@ -370,6 +395,7 @@ codepipe resume
 ```
 
 **Prevention:**
+
 - Validate dependency graph before execution
 - Use topological sort to detect cycles
 - Test execution plan with `--dry-run`
@@ -379,11 +405,13 @@ codepipe resume
 **Symptom**: Parallel execution not improving throughput
 
 **Common Causes:**
+
 1. Tasks are dependent (sequential chain)
 2. Tasks are too small (overhead dominates)
 3. External API rate limiting
 
 **Resolution:**
+
 ```bash
 # Step 1: Analyze task dependencies
 codepipe plan --verbose --show-diff
@@ -402,6 +430,7 @@ grep "rate_limit" .codepipe/runs/*/logs/execution.ndjson
 ```
 
 **Prevention:**
+
 - Design tasks with parallelism in mind
 - Batch small operations into larger tasks
 - Implement backoff for rate-limited APIs
@@ -413,6 +442,7 @@ grep "rate_limit" .codepipe/runs/*/logs/execution.ndjson
 **Guarantee**: Tasks with dependencies always wait for prerequisites
 
 **Mechanism:**
+
 ```typescript
 // Before scheduling task
 if (!areDependenciesCompleted(task)) {
@@ -425,6 +455,7 @@ updateDependentTasks(task.task_id);
 ```
 
 **Validation:**
+
 ```bash
 # Verify dependency order
 grep "task_completed" .codepipe/runs/*/logs/execution.ndjson | \
@@ -436,19 +467,21 @@ grep "task_completed" .codepipe/runs/*/logs/execution.ndjson | \
 **Guarantee**: Failed prerequisite halts dependent tasks
 
 **Mechanism:**
+
 ```typescript
 // On task failure
 if (task.status === 'failed') {
   // Mark all dependent tasks as blocked
   for (const depId of getDependentTasks(task.task_id)) {
     updateTaskStatus(depId, 'blocked', {
-      reason: `Prerequisite ${task.task_id} failed`
+      reason: `Prerequisite ${task.task_id} failed`,
     });
   }
 }
 ```
 
 **Validation:**
+
 ```bash
 # Check for blocked tasks
 codepipe status --verbose | grep "blocked"
@@ -459,6 +492,7 @@ codepipe status --verbose | grep "blocked"
 **Guarantee**: Never exceed `max_parallel_tasks` in-flight tasks
 
 **Mechanism:**
+
 ```typescript
 // Enforce hard limit
 if (inFlightTasks.size >= maxParallelTasks) {
@@ -468,6 +502,7 @@ if (inFlightTasks.size >= maxParallelTasks) {
 ```
 
 **Validation:**
+
 ```bash
 # Monitor in-flight tasks (should never exceed limit)
 watch -n 1 "codepipe status --json | jq '.in_progress_count'"
@@ -478,11 +513,13 @@ watch -n 1 "codepipe status --json | jq '.in_progress_count'"
 **Guarantee**: Queue state remains consistent across parallel updates
 
 **Mechanism:**
+
 - WAL-based updates (append-only, atomic)
 - Lock-free concurrent reads
 - Synchronous queue persistence
 
 **Validation:**
+
 ```bash
 # Verify queue integrity
 codepipe resume --validate-queue --dry-run
@@ -491,22 +528,26 @@ codepipe resume --validate-queue --dry-run
 ## References
 
 ### Implementation Files
+
 - **Execution Engine**: `src/workflows/cliExecutionEngine.ts:232-391`
 - **Queue Store**: `src/workflows/queueStore.ts`
 - **Execution Strategy**: `src/workflows/executionStrategy.ts`
 - **Task Model**: `src/core/models/ExecutionTask.ts`
 
 ### Test Files
+
 - **Integration Tests**: `tests/integration/cliExecutionEngine.spec.ts:343-446`
 - **Unit Tests**: `tests/unit/executionStrategy.spec.ts`
 - **Queue Tests**: `tests/integration/queueStore.spec.ts`
 
 ### Performance Benchmarks
+
 - **Throughput**: 2-4x improvement for independent tasks
 - **Overhead**: <10ms per task scheduling
 - **Latency**: <100ms task startup time
 
 ### Related Documentation
+
 - [Queue V2 Operations](./queue-v2-operations.md) - Queue performance and management
 - [Execution Telemetry](./execution_telemetry.md) - Metrics and observability
 - [CodeMachine Adapter Guide](./codemachine_adapter_guide.md) - Task execution details

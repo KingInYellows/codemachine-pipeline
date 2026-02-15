@@ -7,6 +7,7 @@ This document defines requirements for responding to security advisories that af
 **Version:** 1.0.0
 **Last Updated:** 2026-01-03
 **Related Documents:**
+
 - [Branch Protection Playbook](branch_protection_playbook.md)
 - [Validation Playbook](validation_playbook.md)
 
@@ -35,11 +36,13 @@ Security advisories affecting build-time or CLI tooling must be detected early a
 ### Guard Script
 
 The guard lives at `scripts/tooling/check_glob_cli_advisory.js` and checks for:
+
 - Direct dependency on @oclif/plugin-plugins in `package.json`.
 - Presence of @oclif/plugin-plugins in `package-lock.json`.
 - Any `glob` package entries in `package-lock.json` that fall into the vulnerable ranges.
 
 **Run locally:**
+
 ```bash
 npm run security:glob-guard
 ```

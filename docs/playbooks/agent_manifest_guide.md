@@ -76,27 +76,32 @@ All manifests MUST include these fields (CLI will reject manifests missing any):
 ### Field Descriptions
 
 #### `schema_version` (required)
+
 - **Type:** String (semver)
 - **Example:** `"1.0.0"`
 - **Description:** Manifest schema version for forward compatibility
 
 #### `providerId` (required)
+
 - **Type:** String (lowercase alphanumeric, hyphens, underscores)
 - **Pattern:** `^[a-z0-9_-]+$`
 - **Example:** `"openai"`, `"anthropic"`, `"local-ollama"`
 - **Description:** Unique identifier for this provider (used in cost tracking and selection)
 
 #### `name` (required)
+
 - **Type:** String
 - **Example:** `"OpenAI GPT-4"`
 - **Description:** Human-readable provider name for CLI display
 
 #### `version` (required)
+
 - **Type:** String (semver)
 - **Example:** `"2.1.3"`
 - **Description:** Provider implementation version (update when capabilities change)
 
 #### `rateLimits` (required)
+
 - **Type:** Object
 - **Description:** Rate limit constraints (**REQUIRED** per acceptance criteria)
 
@@ -107,6 +112,7 @@ All manifests MUST include these fields (CLI will reject manifests missing any):
   - `concurrentRequests` (optional): Maximum concurrent in-flight requests (integer ≥ 1)
 
   **Example:**
+
   ```json
   "rateLimits": {
     "requestsPerMinute": 500,
@@ -117,6 +123,7 @@ All manifests MUST include these fields (CLI will reject manifests missing any):
   ```
 
 #### `costConfig` (required)
+
 - **Type:** Object
 - **Description:** Cost estimation configuration (**REQUIRED** - no silent fallbacks)
 
@@ -132,6 +139,7 @@ All manifests MUST include these fields (CLI will reject manifests missing any):
   - `maxOutputTokens` (optional): Maximum output tokens per request (integer ≥ 1)
 
   **Example:**
+
   ```json
   "costConfig": {
     "currency": "USD",
@@ -150,10 +158,12 @@ All manifests MUST include these fields (CLI will reject manifests missing any):
 ### Optional Fields
 
 #### `description` (optional)
+
 - **Type:** String
 - **Description:** Provider capabilities and use case summary
 
 #### `tools` (optional)
+
 - **Type:** Object
 - **Description:** Tool and feature support flags
 - **Default:** All flags default to `false`
@@ -166,6 +176,7 @@ All manifests MUST include these fields (CLI will reject manifests missing any):
   - `embeddings`: Supports text embedding generation
 
   **Example:**
+
   ```json
   "tools": {
     "streaming": true,
@@ -177,6 +188,7 @@ All manifests MUST include these fields (CLI will reject manifests missing any):
   ```
 
 #### `features` (optional)
+
 - **Type:** Object
 - **Description:** Pipeline-specific capability flags (ADR-1 capability set)
 - **Default:** All flags default to `true`
@@ -190,6 +202,7 @@ All manifests MUST include these fields (CLI will reject manifests missing any):
   - `summarization`: Supports context summarization workflow
 
   **Example:**
+
   ```json
   "features": {
     "prdGeneration": true,
@@ -202,6 +215,7 @@ All manifests MUST include these fields (CLI will reject manifests missing any):
   ```
 
 #### `endpoint` (optional)
+
 - **Type:** Object
 - **Description:** API endpoint configuration for custom providers
 
@@ -211,6 +225,7 @@ All manifests MUST include these fields (CLI will reject manifests missing any):
   - `timeout` (optional): Request timeout in milliseconds (integer ≥ 1000, default: 30000)
 
   **Example:**
+
   ```json
   "endpoint": {
     "baseUrl": "https://api.example.com/v1",
@@ -220,11 +235,13 @@ All manifests MUST include these fields (CLI will reject manifests missing any):
   ```
 
 #### `fallbackProvider` (optional)
+
 - **Type:** String (provider ID pattern)
 - **Description:** Fallback provider ID to use if this provider fails
 - **Example:** `"gpt-3.5-turbo-fallback"`
 
 #### `metadata` (optional)
+
 - **Type:** Object
 - **Description:** Additional provider-specific metadata (arbitrary key-value pairs)
 
@@ -503,6 +520,7 @@ When starting a feature workflow, the pipeline selects the best provider matchin
 3. **Rate limits:** Minimum requests per minute capacity
 
 **Selection algorithm:**
+
 1. Filter manifests matching all requirements
 2. Rank remaining providers by cost (lowest first)
 3. Select cheapest provider meeting criteria
@@ -523,16 +541,19 @@ codemachine start "Feature description" --prefer-provider anthropic
 ### Example Selection Scenarios
 
 **Scenario 1: PRD Generation (Large Context)**
+
 - **Requirements:** `minContextWindow: 100000`, `requiredFeatures: { prdGeneration: true }`
 - **Selected:** Anthropic Claude 3 Sonnet (200K context, $0.018/1K avg cost)
 - **Rejected:** OpenAI GPT-3.5 Turbo (16K context insufficient)
 
 **Scenario 2: Code Review (Low Cost)**
+
 - **Requirements:** `maxCostPer1kTokens: 0.01`, `requiredFeatures: { codeReview: true }`
 - **Selected:** Anthropic Claude 3 Haiku ($0.00175/1K avg cost)
 - **Rejected:** OpenAI GPT-4 Turbo ($0.04/1K exceeds budget)
 
 **Scenario 3: Summarization (High Throughput)**
+
 - **Requirements:** `minRequestsPerMinute: 200`, `requiredFeatures: { summarization: true }`
 - **Selected:** OpenAI GPT-3.5 Turbo (500 req/min capacity)
 - **Rejected:** Anthropic Claude (50 req/min insufficient)
@@ -546,6 +567,7 @@ Manifests integrate seamlessly with the `CostTracker` telemetry system:
 ### Automatic Cost Registration
 
 When manifests load, the system automatically:
+
 1. Registers model pricing with `CostTracker.registerCostConfig()`
 2. Attributes spend to correct provider/model in telemetry
 3. Enforces budget warnings based on declared costs
@@ -598,11 +620,13 @@ The manifest system supports graceful degradation via fallback chains:
 ### 1. Primary Provider Failure
 
 If the selected provider fails (rate limit, API error, timeout):
+
 - **Action:** Check manifest's `fallbackProvider` field
 - **Behavior:** Retry request with fallback provider
 - **Logging:** Record fallback event in telemetry
 
 **Example:**
+
 ```json
 {
   "providerId": "local-ollama",
@@ -615,6 +639,7 @@ If Ollama fails, requests automatically route to OpenAI.
 ### 2. No Manifests Available
 
 If `.codepipe/agents/` is empty or all manifests invalid:
+
 - **Action:** CLI exits with error (fail-fast)
 - **Behavior:** **No silent defaults** (prevents budget surprises)
 - **Message:**
@@ -627,6 +652,7 @@ If `.codepipe/agents/` is empty or all manifests invalid:
 ### 3. Manifest Change During Resume
 
 If manifest hash changes mid-run (detected during `resume`):
+
 - **Action:** Log warning and halt resume
 - **Behavior:** Prevent non-deterministic prompt packaging
 - **Message:**
@@ -640,9 +666,11 @@ If manifest hash changes mid-run (detected during `resume`):
 ### 4. Missing Rate Limit Metadata
 
 If manifest lacks required `rateLimits.requestsPerMinute`:
+
 - **Action:** Reject manifest at load time
 - **Behavior:** CLI fails validation immediately
 - **Message:**
+
   ```
   ERROR: Invalid agent manifest at .codepipe/agents/bad.json:
     - rateLimits.requestsPerMinute: Required
@@ -720,6 +748,7 @@ If manifest lacks required `rateLimits.requestsPerMinute`:
 
 **Cause:** Manifest file changed after workflow started
 **Fix:** Either:
+
 1. Rollback manifest to original version and resume
 2. Accept changes and re-run workflow from scratch
 

@@ -50,12 +50,12 @@ All log entries follow this JSON schema:
 
 ### Log Levels
 
-| Level | Usage | Retention |
-|-------|-------|-----------|
-| `debug` | Detailed diagnostics (disabled by default) | 7 days |
-| `info` | Normal operations, lifecycle events | 30 days |
-| `warn` | Recoverable errors, rate limit warnings | 90 days |
-| `error` | Unrecoverable errors requiring intervention | 1 year |
+| Level   | Usage                                         | Retention |
+| ------- | --------------------------------------------- | --------- |
+| `debug` | Detailed diagnostics (disabled by default)    | 7 days    |
+| `info`  | Normal operations, lifecycle events           | 30 days   |
+| `warn`  | Recoverable errors, rate limit warnings       | 90 days   |
+| `error` | Unrecoverable errors requiring intervention   | 1 year    |
 | `fatal` | Critical failures causing process termination | Permanent |
 
 ### Log Fields
@@ -79,6 +79,7 @@ All log entries follow this JSON schema:
 Logs are written to `<run_dir>/logs/logs.ndjson` in NDJSON (newline-delimited JSON) format.
 
 Example path:
+
 ```
 .codepipe/runs/01JFABCDEFGHIJKLMNOPQRSTUV/logs/logs.ndjson
 ```
@@ -100,17 +101,17 @@ The logger automatically redacts secrets before writing to disk or stderr. Redac
 
 ### Protected Patterns
 
-| Pattern | Example | Replacement |
-|---------|---------|-------------|
-| GitHub Personal Access Token | `ghp_1234567890abcdef` | `[REDACTED_GITHUB_TOKEN]` |
-| GitHub OAuth Token | `gho_1234567890abcdef` | `[REDACTED_GITHUB_TOKEN]` |
-| GitHub App Token | `ghs_1234567890abcdef` | `[REDACTED_GITHUB_APP_TOKEN]` |
-| Linear API Key | `lin_api_abc123...` | `[REDACTED_LINEAR_KEY]` |
-| JWT Bearer Token | `eyJhbGc...` | `[REDACTED_JWT]` |
-| API Key | `api_key=abc123...` | `api_key=[REDACTED_API_KEY]` |
-| Authorization Header | `Authorization: Bearer xyz...` | `Authorization: Bearer [REDACTED_TOKEN]` |
-| AWS Access Key | `AKIAIOSFODNN7EXAMPLE` | `[REDACTED_AWS_KEY]` |
-| Environment Secrets | `GITHUB_TOKEN=xyz...` | `GITHUB_TOKEN=[REDACTED]` |
+| Pattern                      | Example                        | Replacement                              |
+| ---------------------------- | ------------------------------ | ---------------------------------------- |
+| GitHub Personal Access Token | `ghp_1234567890abcdef`         | `[REDACTED_GITHUB_TOKEN]`                |
+| GitHub OAuth Token           | `gho_1234567890abcdef`         | `[REDACTED_GITHUB_TOKEN]`                |
+| GitHub App Token             | `ghs_1234567890abcdef`         | `[REDACTED_GITHUB_APP_TOKEN]`            |
+| Linear API Key               | `lin_api_abc123...`            | `[REDACTED_LINEAR_KEY]`                  |
+| JWT Bearer Token             | `eyJhbGc...`                   | `[REDACTED_JWT]`                         |
+| API Key                      | `api_key=abc123...`            | `api_key=[REDACTED_API_KEY]`             |
+| Authorization Header         | `Authorization: Bearer xyz...` | `Authorization: Bearer [REDACTED_TOKEN]` |
+| AWS Access Key               | `AKIAIOSFODNN7EXAMPLE`         | `[REDACTED_AWS_KEY]`                     |
+| Environment Secrets          | `GITHUB_TOKEN=xyz...`          | `GITHUB_TOKEN=[REDACTED]`                |
 
 ### Sample Redacted Log
 
@@ -166,46 +167,46 @@ Metrics are exported in **Prometheus textfile format** to:
 
 #### Queue Metrics
 
-| Metric | Type | Description | Labels |
-|--------|------|-------------|--------|
-| `codemachine_pipeline_queue_depth` | Gauge | Total queue depth (pending + completed + failed) | `run_id` |
-| `codemachine_pipeline_queue_pending_count` | Gauge | Number of pending tasks | `run_id` |
-| `codemachine_pipeline_queue_completed_count` | Gauge | Number of completed tasks | `run_id` |
-| `codemachine_pipeline_queue_failed_count` | Gauge | Number of failed tasks | `run_id` |
-| `codemachine_pipeline_queue_processing_duration_ms` | Histogram | Task processing time distribution | `run_id`, `task_type` |
+| Metric                                              | Type      | Description                                      | Labels                |
+| --------------------------------------------------- | --------- | ------------------------------------------------ | --------------------- |
+| `codemachine_pipeline_queue_depth`                  | Gauge     | Total queue depth (pending + completed + failed) | `run_id`              |
+| `codemachine_pipeline_queue_pending_count`          | Gauge     | Number of pending tasks                          | `run_id`              |
+| `codemachine_pipeline_queue_completed_count`        | Gauge     | Number of completed tasks                        | `run_id`              |
+| `codemachine_pipeline_queue_failed_count`           | Gauge     | Number of failed tasks                           | `run_id`              |
+| `codemachine_pipeline_queue_processing_duration_ms` | Histogram | Task processing time distribution                | `run_id`, `task_type` |
 
 #### Rate Limit Metrics
 
-| Metric | Type | Description | Labels |
-|--------|------|-------------|--------|
-| `codemachine_pipeline_rate_limit_remaining` | Gauge | Requests remaining before rate limit | `provider` (github, linear) |
-| `codemachine_pipeline_rate_limit_reset_timestamp` | Gauge | Unix timestamp when rate limit resets | `provider` |
-| `codemachine_pipeline_rate_limit_hits_total` | Counter | Total rate limit hits (HTTP 429) | `provider`, `endpoint` |
-| `codemachine_pipeline_rate_limit_cooldown_active` | Gauge | Cooldown state (0=inactive, 1=active) | `provider` |
+| Metric                                            | Type    | Description                           | Labels                      |
+| ------------------------------------------------- | ------- | ------------------------------------- | --------------------------- |
+| `codemachine_pipeline_rate_limit_remaining`       | Gauge   | Requests remaining before rate limit  | `provider` (github, linear) |
+| `codemachine_pipeline_rate_limit_reset_timestamp` | Gauge   | Unix timestamp when rate limit resets | `provider`                  |
+| `codemachine_pipeline_rate_limit_hits_total`      | Counter | Total rate limit hits (HTTP 429)      | `provider`, `endpoint`      |
+| `codemachine_pipeline_rate_limit_cooldown_active` | Gauge   | Cooldown state (0=inactive, 1=active) | `provider`                  |
 
 #### HTTP Metrics
 
-| Metric | Type | Description | Labels |
-|--------|------|-------------|--------|
-| `codemachine_pipeline_http_requests_total` | Counter | Total HTTP requests | `provider`, `endpoint`, `status` |
-| `codemachine_pipeline_http_errors_total` | Counter | Total HTTP errors | `provider`, `endpoint`, `status` |
-| `codemachine_pipeline_http_request_duration_ms` | Histogram | HTTP request latency distribution | `provider`, `endpoint`, `status` |
-| `codemachine_pipeline_http_retry_count` | Counter | HTTP retry attempts | `provider`, `endpoint`, `attempt` |
+| Metric                                          | Type      | Description                       | Labels                            |
+| ----------------------------------------------- | --------- | --------------------------------- | --------------------------------- |
+| `codemachine_pipeline_http_requests_total`      | Counter   | Total HTTP requests               | `provider`, `endpoint`, `status`  |
+| `codemachine_pipeline_http_errors_total`        | Counter   | Total HTTP errors                 | `provider`, `endpoint`, `status`  |
+| `codemachine_pipeline_http_request_duration_ms` | Histogram | HTTP request latency distribution | `provider`, `endpoint`, `status`  |
+| `codemachine_pipeline_http_retry_count`         | Counter   | HTTP retry attempts               | `provider`, `endpoint`, `attempt` |
 
 #### Token Usage Metrics
 
-| Metric | Type | Description | Labels |
-|--------|------|-------------|--------|
-| `codemachine_pipeline_token_usage_prompt` | Counter | Prompt tokens consumed | `run_id`, `model` |
+| Metric                                        | Type    | Description                | Labels            |
+| --------------------------------------------- | ------- | -------------------------- | ----------------- |
+| `codemachine_pipeline_token_usage_prompt`     | Counter | Prompt tokens consumed     | `run_id`, `model` |
 | `codemachine_pipeline_token_usage_completion` | Counter | Completion tokens consumed | `run_id`, `model` |
-| `codemachine_pipeline_token_usage_total` | Counter | Total tokens consumed | `run_id`, `model` |
+| `codemachine_pipeline_token_usage_total`      | Counter | Total tokens consumed      | `run_id`, `model` |
 
 #### CLI Command Metrics
 
-| Metric | Type | Description | Labels |
-|--------|------|-------------|--------|
-| `codemachine_pipeline_command_execution_duration_ms` | Histogram | Command execution time | `command` |
-| `codemachine_pipeline_command_invocations_total` | Counter | Command invocation count | `command`, `exit_code` |
+| Metric                                               | Type      | Description              | Labels                 |
+| ---------------------------------------------------- | --------- | ------------------------ | ---------------------- |
+| `codemachine_pipeline_command_execution_duration_ms` | Histogram | Command execution time   | `command`              |
+| `codemachine_pipeline_command_invocations_total`     | Counter   | Command invocation count | `command`, `exit_code` |
 
 ### Histogram Buckets
 
@@ -276,21 +277,21 @@ Each span record follows this schema:
 
 ### Span Kinds
 
-| Kind | Value | Usage |
-|------|-------|-------|
-| `INTERNAL` | 0 | Internal operations (default) |
-| `SERVER` | 1 | Server-side request handling |
-| `CLIENT` | 2 | Client-side requests (HTTP calls) |
-| `PRODUCER` | 3 | Message queue producers |
-| `CONSUMER` | 4 | Message queue consumers |
+| Kind       | Value | Usage                             |
+| ---------- | ----- | --------------------------------- |
+| `INTERNAL` | 0     | Internal operations (default)     |
+| `SERVER`   | 1     | Server-side request handling      |
+| `CLIENT`   | 2     | Client-side requests (HTTP calls) |
+| `PRODUCER` | 3     | Message queue producers           |
+| `CONSUMER` | 4     | Message queue consumers           |
 
 ### Status Codes
 
-| Code | Name | Description |
-|------|------|-------------|
-| 0 | `UNSET` | Status not explicitly set |
-| 1 | `OK` | Operation succeeded |
-| 2 | `ERROR` | Operation failed |
+| Code | Name    | Description               |
+| ---- | ------- | ------------------------- |
+| 0    | `UNSET` | Status not explicitly set |
+| 1    | `OK`    | Operation succeeded       |
+| 2    | `ERROR` | Operation failed          |
 
 ### Trace Context Propagation
 

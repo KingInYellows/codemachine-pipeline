@@ -11,6 +11,7 @@ The Run Directory Schema defines the deterministic structure of `.codepipe/runs/
 ## Purpose
 
 Each run directory:
+
 - **Preserves execution state** across CLI invocations and system restarts
 - **Enables resumability** by tracking last_step, last_error, and queue snapshots
 - **Enforces concurrent access safety** via file-based locking
@@ -64,6 +65,7 @@ Each run directory:
 **Schema Version:** 1.0.0
 
 **Key Fields:**
+
 - `schema_version` (string): Manifest format version (semver)
 - `feature_id` (string): Unique identifier (ULID/UUIDv7)
 - `title` (string, optional): Human-readable feature description
@@ -104,6 +106,7 @@ Each run directory:
 **Schema Version:** 1.0.0
 
 **Structure:**
+
 ```json
 {
   "schema_version": "1.0.0",
@@ -123,6 +126,7 @@ Each run directory:
 ```
 
 **Use Cases:**
+
 - Verify artifact integrity before resume or export
 - Detect unauthorized modifications
 - Support approval workflows (hash artifacts before approval)
@@ -137,6 +141,7 @@ Each run directory:
 **Lifecycle:** Created during lock acquisition, deleted on release. Automatically cleaned up if stale (> 5 minutes or owning process no longer exists).
 
 **Structure:**
+
 ```json
 {
   "pid": 12345,
@@ -147,12 +152,14 @@ Each run directory:
 ```
 
 **Locking Strategy:**
+
 - Exclusive write locks only (no shared read locks for simplicity)
 - Default timeout: 30 seconds
 - Poll interval: 100ms
 - Stale lock detection based on age and process liveness
 
 **API:**
+
 - `acquireLock(runDir, options)` - Acquire lock with timeout
 - `releaseLock(runDir)` - Release lock
 - `withLock(runDir, fn, options)` - Execute function while holding lock
@@ -174,12 +181,14 @@ Stores generated work products (PRDs, specs, plans, code diffs, test results).
 Task queue organized into state-specific subdirectories.
 
 **Subdirectories:**
+
 - `pending/` - Tasks awaiting execution
 - `running/` - Tasks currently being executed
 - `completed/` - Successfully finished tasks
 - `failed/` - Tasks that failed with error details
 
 **File Format:** Each task is a JSON file named `<task_id>.json` containing:
+
 - `task_id`, `description`, `status`, `created_at`, `updated_at`
 - `inputs`, `outputs`, `error` (for failed tasks)
 - `retry_count`, `max_retries`
@@ -195,6 +204,7 @@ Task queue organized into state-specific subdirectories.
 Command outputs and structured event streams.
 
 **Files:**
+
 - `stdout.log` - Captured standard output
 - `stderr.log` - Captured standard error
 - `events.ndjson` - Structured events (newline-delimited JSON)
@@ -208,6 +218,7 @@ Command outputs and structured event streams.
 Observability data for metrics, traces, costs, and rate limits.
 
 **Files:**
+
 - `metrics.json` - Performance metrics (durations, counts, gauges)
 - `traces.json` - Distributed trace data
 - `costs.json` - Agent API cost estimates and budgets
@@ -222,10 +233,12 @@ Observability data for metrics, traces, costs, and rate limits.
 Approval workflow artifacts per ADR-5.
 
 **Files:**
+
 - `approvals.json` - Approval records with timestamps, signers, artifact hashes
 - `signatures/*.json` - Individual approval artifacts with rationale
 
 **Workflow:**
+
 1. Orchestrator marks approval required in `manifest.json` `approvals.pending`
 2. CLI prompts human operator
 3. Operator approves, writing record to `approvals.json`
@@ -238,6 +251,7 @@ Approval workflow artifacts per ADR-5.
 SQLite queue indexes enable resumable observers (`codepipe observe`, future `cleanup`) to inspect queue health without re-hashing every JSON file.
 
 **Files:**
+
 - `run_queue.db` - Deterministic SQLite database containing queue pointers
 - `run_queue.db-wal` - Write-ahead log enabling concurrent writers and readers
 - `run_queue.db-shm` - Shared memory file used by SQLite for coordination
@@ -253,6 +267,7 @@ SQLite queue indexes enable resumable observers (`codepipe observe`, future `cle
 Repository context cache for agent prompts.
 
 **Files:**
+
 - `summary.json` - Aggregated context (README, docs, history) with token budgets
 - `file_hashes.json` - Snapshot of source file hashes at run start
 
@@ -273,6 +288,7 @@ pending → in_progress → completed
 ```
 
 **State Descriptions:**
+
 - `pending` - Run created but not started
 - `in_progress` - Actively executing steps
 - `paused` - Temporarily halted (approval required, rate limit hit, manual pause)
@@ -303,10 +319,12 @@ Cleanup behavior is defined in `manifest.json` `metadata.cleanup_hook`:
 ```
 
 **Eligibility Checks:**
+
 - `min_age_days` - Minimum age (days since `created_at`)
 - `required_status` - Only cleanup runs in these states
 
 **Actions:**
+
 - `remove_logs` - Delete `logs/` directory
 - `remove_telemetry` - Delete `telemetry/` directory
 - `archive_artifacts` - Move `artifacts/` to archive location (future)
@@ -319,10 +337,12 @@ Cleanup behavior is defined in `manifest.json` `metadata.cleanup_hook`:
 ### Retention Metadata
 
 `manifest.json` `timestamps` provides:
+
 - `created_at` - When run was initialized
 - `completed_at` - When run finished (null if incomplete)
 
 Operators can define policies like:
+
 - Delete runs older than 90 days with `status: completed`
 - Archive runs older than 30 days with `status: failed`
 - Never delete runs with `status: paused` (may be resumed)
@@ -336,10 +356,12 @@ Operators can define policies like:
 **Implementation:** Atomic lock file creation with exclusive write flags.
 
 **Stale Lock Detection:**
+
 - Age-based: Locks older than 5 minutes are stale
 - Process-based: If owning PID no longer exists (Unix only)
 
 **Best Practices:**
+
 - Always use `withLock()` wrapper for manifest updates
 - Keep lock duration minimal
 - Release locks in `finally` blocks
@@ -347,6 +369,7 @@ Operators can define policies like:
 ### Atomic Writes
 
 All critical files use atomic write patterns:
+
 1. Write to temporary file with unique suffix
 2. Call `fsync()` to flush to disk (implicit in Node.js `writeFile`)
 3. Rename temp file to target path (atomic on POSIX systems)
@@ -355,6 +378,7 @@ All critical files use atomic write patterns:
 ### Integrity Verification
 
 Before resuming a run:
+
 1. Load `manifest.json`
 2. Load `hash_manifest.json`
 3. Call `verifyHashManifest()` to check artifacts
@@ -365,6 +389,7 @@ Before resuming a run:
 ### init
 
 Creates base directories:
+
 - `.codepipe/runs/`
 - `.codepipe/logs/`
 - `.codepipe/artifacts/`
@@ -379,11 +404,13 @@ Creates base directories:
 ### status
 
 Read `manifest.json` and display:
+
 - `status`, `last_step`, `current_step`, `last_error`
 - Queue counts (`pending_count`, `completed_count`, `failed_count`)
 - Timestamps and approval status
 
 **Flags:**
+
 - `--json` - Output raw manifest
 - `--feature <id>` - Specific run
 - `--verbose` - Include queue and telemetry details
@@ -411,16 +438,19 @@ Dry-run invocation `bin/run status --json` references this schema and always pri
 **Current Version:** 1.0.0
 
 **Migration Strategy:**
+
 - `manifest.json` includes `schema_version` field
 - Future versions add new fields without breaking old ones (additive changes)
 - Breaking changes require migration scripts stored in `scripts/migrations/`
 - Migration history recorded in `config_history` per RepoConfig pattern
 
 **Forward Compatibility:**
+
 - Older CLI versions ignore unknown fields
 - Newer CLI versions validate against schema version and warn if unsupported
 
 **Backward Compatibility:**
+
 - New fields are optional with sensible defaults
 - CLI commands check schema version before operations
 
@@ -437,6 +467,7 @@ Dry-run invocation `bin/run status --json` references this schema and always pri
 See `src/persistence/runDirectoryManager.ts` for full API documentation.
 
 **Key Functions:**
+
 - `createRunDirectory(baseDir, featureId, options)` - Provision new run
 - `readManifest(runDir)` - Load manifest
 - `updateManifest(runDir, updates)` - Atomic manifest update
@@ -454,9 +485,9 @@ See [run_directory_schema.mmd](../diagrams/run_directory_schema.mmd) for visual 
 
 ## Change Log
 
-| Version | Date       | Changes                                  |
-|---------|------------|------------------------------------------|
-| 1.0.0   | 2025-12-15 | Initial specification for Iteration I1  |
+| Version | Date       | Changes                                |
+| ------- | ---------- | -------------------------------------- |
+| 1.0.0   | 2025-12-15 | Initial specification for Iteration I1 |
 
 ## Future Enhancements
 

@@ -4,12 +4,12 @@ This guide documents testing practices for the codemachine-pipeline project.
 
 ## Overview
 
-| Component | Framework | Location |
-|-----------|-----------|----------|
-| Test Runner | Vitest v4 | `vitest.config.ts` |
-| Unit Tests | Vitest | `tests/unit/` |
-| Integration Tests | Vitest | `tests/integration/` |
-| Coverage | V8 | `coverage/` |
+| Component         | Framework | Location             |
+| ----------------- | --------- | -------------------- |
+| Test Runner       | Vitest v4 | `vitest.config.ts`   |
+| Unit Tests        | Vitest    | `tests/unit/`        |
+| Integration Tests | Vitest    | `tests/integration/` |
+| Coverage          | V8        | `coverage/`          |
 
 ## Test File Conventions
 
@@ -88,6 +88,7 @@ npm run test:config:coverage
 ```
 
 Reports are generated in:
+
 - Text reporter - coverage summary printed to terminal/stdout (no output directory)
 - `coverage/html` - Interactive HTML report
 - `coverage/lcov.info` - LCOV format for CI
@@ -178,7 +179,7 @@ import { invalidateV2Cache } from '../../src/workflows/queueStore.js';
 
 beforeEach(async () => {
   // ... create runDir
-  invalidateV2Cache(runDir);  // Reset integrity cache
+  invalidateV2Cache(runDir); // Reset integrity cache
 });
 ```
 
@@ -222,7 +223,7 @@ vi.mock('node:fs/promises', async () => {
   const actual = await vi.importActual<typeof import('node:fs/promises')>('node:fs/promises');
   return {
     ...actual,
-    open: vi.fn(actual.open),  // Spy on open while keeping other methods
+    open: vi.fn(actual.open), // Spy on open while keeping other methods
   };
 });
 ```
@@ -256,9 +257,13 @@ describe('HttpClient', () => {
         path: '/repos/test/repo',
         method: 'GET',
       })
-      .reply(200, { name: 'repo' }, {
-        headers: { 'content-type': 'application/json' },
-      });
+      .reply(
+        200,
+        { name: 'repo' },
+        {
+          headers: { 'content-type': 'application/json' },
+        }
+      );
 
     const response = await client.get('/repos/test/repo');
     expect(response.data.name).toBe('repo');
@@ -269,36 +274,35 @@ describe('HttpClient', () => {
 ### Capturing Request Details
 
 ```typescript
-pool
-  .intercept({ path: '/test', method: 'POST' })
-  .reply((opts) => {
-    // Capture body
-    const body = JSON.parse(opts.body as string);
+pool.intercept({ path: '/test', method: 'POST' }).reply((opts) => {
+  // Capture body
+  const body = JSON.parse(opts.body as string);
 
-    // Capture headers
-    let headers: Record<string, string>;
-    if (Array.isArray(opts.headers)) {
-      headers = {};
-      for (let i = 0; i < opts.headers.length; i += 2) {
-        const key = opts.headers[i] as string;
-        const value = opts.headers[i + 1] as string;
-        headers[key] = value;
-      }
-    } else {
-      headers = opts.headers as Record<string, string>;
+  // Capture headers
+  let headers: Record<string, string>;
+  if (Array.isArray(opts.headers)) {
+    headers = {};
+    for (let i = 0; i < opts.headers.length; i += 2) {
+      const key = opts.headers[i] as string;
+      const value = opts.headers[i + 1] as string;
+      headers[key] = value;
     }
+  } else {
+    headers = opts.headers as Record<string, string>;
+  }
 
-    return {
-      statusCode: 201,
-      data: { id: 1 },
-      headers: { 'content-type': 'application/json' },
-    };
-  });
+  return {
+    statusCode: 201,
+    data: { id: 1 },
+    headers: { 'content-type': 'application/json' },
+  };
+});
 ```
 
 ## CI Integration
 
 Tests run automatically in GitHub Actions on:
+
 - Push to `main`/`master`
 - Pull requests to `main`/`master`
 
@@ -321,6 +325,7 @@ jobs:
 ```
 
 > Note: In the actual GitHub Actions workflow configuration (for example, `.github/workflows/ci.yml`), all actions are pinned to specific commit SHAs for security and reproducibility. The example above uses major-version tags (`@v4`) for readability only.
+
 ### Coverage Uploads
 
 Coverage reports are uploaded to Codecov on successful test runs:
@@ -336,12 +341,12 @@ Coverage reports are uploaded to Codecov on successful test runs:
 
 ### Common Failures
 
-| Issue | Solution |
-|-------|----------|
+| Issue                  | Solution                                                                |
+| ---------------------- | ----------------------------------------------------------------------- |
 | `ENOENT` on temp files | Ensure `afterEach` cleanup doesn't run before async operations complete |
-| Module not found | Check import path uses `.js` extension |
-| Timeout errors | Increase test timeout: `{ timeout: 30000 }` in test config |
-| Mock not working | Ensure `vi.mock()` is called before imports at module level |
+| Module not found       | Check import path uses `.js` extension                                  |
+| Timeout errors         | Increase test timeout: `{ timeout: 30000 }` in test config              |
+| Mock not working       | Ensure `vi.mock()` is called before imports at module level             |
 
 ### Queue Integrity Test Failures
 
@@ -367,11 +372,11 @@ npx vitest run tests/unit/mytest.spec.ts --reporter=verbose --logHeapUsage
 
 ### Environment Variables
 
-| Variable | Purpose |
-|----------|---------|
+| Variable              | Purpose                                 |
+| --------------------- | --------------------------------------- |
 | `OCLIF_SKIP_MANIFEST` | Skip oclif manifest generation in tests |
-| `TZ=UTC` | Consistent timezone for date tests |
-| `DEBUG` | Enable debug logging |
+| `TZ=UTC`              | Consistent timezone for date tests      |
+| `DEBUG`               | Enable debug logging                    |
 
 ## Configuration Reference
 
@@ -386,12 +391,7 @@ export default defineConfig({
     environment: 'node',
     testTimeout: 30000,
     // Tests are discovered in both src/ (for config tests) and tests/
-    include: [
-      'src/**/*.test.ts',
-      'src/**/*.spec.ts',
-      'tests/**/*.spec.ts',
-      'tests/**/*.test.ts'
-    ],
+    include: ['src/**/*.test.ts', 'src/**/*.spec.ts', 'tests/**/*.spec.ts', 'tests/**/*.test.ts'],
     coverage: {
       provider: 'v8',
       reporter: ['text', 'json', 'html', 'lcov'],
@@ -401,4 +401,3 @@ export default defineConfig({
   },
 });
 ```
-

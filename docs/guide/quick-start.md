@@ -169,15 +169,15 @@ codepipe start --prompt "Your feature description"
 
 ## Common Commands
 
-| Command | Description |
-|---------|-------------|
-| `codepipe init` | Initialize repository configuration |
-| `codepipe start --prompt "..."` | Start a new feature run |
-| `codepipe status` | Show current run status |
-| `codepipe status --json` | Machine-readable status output |
-| `codepipe approve prd --approve --signer "you@example.com"` | Approve the PRD gate (example) |
-| `codepipe resume` | Resume a paused or failed run |
-| `codepipe doctor` | Diagnose environment issues |
+| Command                                                     | Description                         |
+| ----------------------------------------------------------- | ----------------------------------- |
+| `codepipe init`                                             | Initialize repository configuration |
+| `codepipe start --prompt "..."`                             | Start a new feature run             |
+| `codepipe status`                                           | Show current run status             |
+| `codepipe status --json`                                    | Machine-readable status output      |
+| `codepipe approve prd --approve --signer "you@example.com"` | Approve the PRD gate (example)      |
+| `codepipe resume`                                           | Resume a paused or failed run       |
+| `codepipe doctor`                                           | Diagnose environment issues         |
 
 ---
 

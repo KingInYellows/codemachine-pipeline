@@ -19,6 +19,7 @@ The Specification Composer converts an approved Product Requirements Document (P
 #### 1. Specification Composer (`src/workflows/specComposer.ts`)
 
 **Responsibilities:**
+
 - Validate PRD approval status before composition
 - Load PRD metadata and markdown content
 - Extract structured sections (problem, goals, acceptance criteria, risks)
@@ -31,6 +32,7 @@ The Specification Composer converts an approved Product Requirements Document (P
 - Record approvals with hash verification
 
 **Key Functions:**
+
 - `composeSpecification(config, logger, metrics) → SpecComposerResult`
 - `recordSpecApproval(runDir, featureId, options, logger, metrics) → ApprovalRecord`
 - `loadSpecMetadata(runDir) → SpecMetadata | null`
@@ -39,6 +41,7 @@ The Specification Composer converts an approved Product Requirements Document (P
 #### 2. Specification Model (`src/core/models/Specification.ts`)
 
 **Responsibilities:**
+
 - Define zod schema for Specification entities
 - Validate spec JSON structure
 - Provide serialization/deserialization helpers
@@ -46,6 +49,7 @@ The Specification Composer converts an approved Product Requirements Document (P
 - Track reviewer info and approval status
 
 **Key Helpers:**
+
 - `createSpecification(specId, featureId, title, content, options) → Specification`
 - `addChangeLogEntry(spec, author, description, version) → Specification`
 - `isFullyApproved(spec) → boolean`
@@ -199,26 +203,28 @@ The Specification Composer converts an approved Product Requirements Document (P
    - Author, timestamp, description
 
 10. **Traceability**
-   - PRD hash linkage
-   - PRD trace ID
-   - Execution plan reference (post-approval)
+
+- PRD hash linkage
+- PRD trace ID
+- Execution plan reference (post-approval)
 
 ## Integration with ExecutionTask Mapping
 
 After spec approval, the Task Planner (I2.T6) consumes `spec.json` to generate `plan.json`:
 
-| Spec Section          | ExecutionTask Category   | Dependency Logic                          |
-|-----------------------|--------------------------|-------------------------------------------|
-| Technical Constraints | `validation`             | Run before code_generation                |
-| Test Plan (unit)      | `testing`                | Run after code_generation                 |
-| Test Plan (e2e)       | `testing`                | Run after integration tests               |
-| Rollout Plan Phase 1  | `deployment`             | Requires all tests to pass                |
-| Rollout Plan Phase N  | `deployment`             | Sequential, gated by previous phase       |
-| Referenced Files      | `code_generation` inputs | File paths inform agent prompts           |
+| Spec Section          | ExecutionTask Category   | Dependency Logic                    |
+| --------------------- | ------------------------ | ----------------------------------- |
+| Technical Constraints | `validation`             | Run before code_generation          |
+| Test Plan (unit)      | `testing`                | Run after code_generation           |
+| Test Plan (e2e)       | `testing`                | Run after integration tests         |
+| Rollout Plan Phase 1  | `deployment`             | Requires all tests to pass          |
+| Rollout Plan Phase N  | `deployment`             | Sequential, gated by previous phase |
+| Referenced Files      | `code_generation` inputs | File paths inform agent prompts     |
 
 ## CLI Commands
 
 ### Generate Specification
+
 ```bash
 codepipe start --spec
 # OR
@@ -226,38 +232,45 @@ codepipe spec draft
 ```
 
 **Effects:**
+
 - Checks PRD approval (exit code 30 if unapproved)
 - Generates `spec.md`, `spec.json`, `spec_metadata.json`
 - Logs diagnostics (unknowns, warnings)
 
 ### Approve Specification
+
 ```bash
 codepipe approve spec --signer <user> --rationale "Reviewed and approved"
 ```
 
 **Effects:**
+
 - Verifies hash match
 - Creates `APR-<id>.json` approval record
 - Updates `spec_metadata.json` approval status
 - Enables next stage (Task Planner)
 
 ### Edit Specification
+
 ```bash
 codepipe spec edit --section constraints --add "New constraint"
 ```
 
 **Effects:**
+
 - Updates `spec.md` content
 - Adds change log entry
 - Recomputes hash
 - Resets approval status to `pending` (requires re-approval)
 
 ### Status Check
+
 ```bash
 codepipe status --json
 ```
 
 **Output includes:**
+
 - Spec approval status
 - Detected unknowns
 - Change log summary
@@ -265,13 +278,13 @@ codepipe status --json
 
 ## Error Handling
 
-| Error Condition                     | Exit Code | Message                                                |
-|-------------------------------------|-----------|--------------------------------------------------------|
-| PRD not approved                    | 30        | "PRD must be approved before generating specification" |
-| PRD metadata missing                | 20        | "PRD metadata not found. Generate PRD first."          |
-| Spec hash mismatch on approval      | 40        | "Spec content changed. Regenerate or update metadata." |
-| Invalid spec schema                 | 50        | "Specification validation failed: <errors>"            |
-| File I/O errors                     | 60        | "Failed to write spec artifacts: <reason>"             |
+| Error Condition                | Exit Code | Message                                                |
+| ------------------------------ | --------- | ------------------------------------------------------ |
+| PRD not approved               | 30        | "PRD must be approved before generating specification" |
+| PRD metadata missing           | 20        | "PRD metadata not found. Generate PRD first."          |
+| Spec hash mismatch on approval | 40        | "Spec content changed. Regenerate or update metadata." |
+| Invalid spec schema            | 50        | "Specification validation failed: <errors>"            |
+| File I/O errors                | 60        | "Failed to write spec artifacts: <reason>"             |
 
 ## Performance Characteristics
 
@@ -361,6 +374,6 @@ codepipe status --json
 
 ## Revision History
 
-| Version | Date       | Author       | Changes                          |
-|---------|------------|--------------|----------------------------------|
-| 1.0.0   | 2025-01-15 | AI Pipeline  | Initial blueprint specification  |
+| Version | Date       | Author      | Changes                         |
+| ------- | ---------- | ----------- | ------------------------------- |
+| 1.0.0   | 2025-01-15 | AI Pipeline | Initial blueprint specification |

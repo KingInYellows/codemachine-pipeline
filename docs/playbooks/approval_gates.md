@@ -5,6 +5,7 @@
 Approval gates are checkpoints in the AI Feature Pipeline where human review and authorization are required before proceeding to the next phase. Each gate validates that the work product meets quality, security, and business requirements before autonomous agents continue execution.
 
 **Implements:**
+
 - ADR-5 (Approval Workflow): Human-in-the-loop enforcement
 - Blueprint Rulebook: Gate transitions and accountability
 
@@ -19,6 +20,7 @@ Approval gates are checkpoints in the AI Feature Pipeline where human review and
 **Artifact:** `artifacts/prd.md`
 
 **Purpose:** Validate that the product requirements document accurately captures:
+
 - Problem statement and business justification
 - Goals and non-goals
 - Success criteria and acceptance criteria
@@ -26,6 +28,7 @@ Approval gates are checkpoints in the AI Feature Pipeline where human review and
 - Open questions requiring research
 
 **Review Checklist:**
+
 - [ ] Problem statement is clear and addresses a real need
 - [ ] Goals are specific, measurable, and achievable
 - [ ] Acceptance criteria are testable
@@ -34,6 +37,7 @@ Approval gates are checkpoints in the AI Feature Pipeline where human review and
 - [ ] Scope is appropriate for the team's capacity
 
 **Approval Command:**
+
 ```bash
 codepipe approve prd --signer "<your-email>" --comment "LGTM"
 ```
@@ -49,6 +53,7 @@ codepipe approve prd --signer "<your-email>" --comment "LGTM"
 **Artifact:** `artifacts/spec.md`
 
 **Purpose:** Approve the technical specification including:
+
 - System architecture and component design
 - API contracts and data models
 - Technology stack and dependencies
@@ -56,6 +61,7 @@ codepipe approve prd --signer "<your-email>" --comment "LGTM"
 - Testing strategy
 
 **Review Checklist:**
+
 - [ ] Architecture aligns with system constraints
 - [ ] API contracts are well-defined
 - [ ] Security controls are appropriate
@@ -64,6 +70,7 @@ codepipe approve prd --signer "<your-email>" --comment "LGTM"
 - [ ] Dependencies are acceptable
 
 **Approval Command:**
+
 ```bash
 codepipe approve spec --signer "<your-email>" --comment "Architecture approved"
 ```
@@ -79,12 +86,14 @@ codepipe approve spec --signer "<your-email>" --comment "Architecture approved"
 **Artifact:** `artifacts/plan.json`
 
 **Purpose:** Review the execution plan including:
+
 - Task breakdown and dependencies
 - Resource allocation
 - Estimated effort and timeline
 - Risk mitigation steps
 
 **Review Checklist:**
+
 - [ ] Tasks are properly scoped and sequenced
 - [ ] Dependencies are correctly identified
 - [ ] Resource allocation is realistic
@@ -92,6 +101,7 @@ codepipe approve spec --signer "<your-email>" --comment "Architecture approved"
 - [ ] Rollback plan exists
 
 **Approval Command:**
+
 ```bash
 codepipe approve plan --signer "<your-email>"
 ```
@@ -107,12 +117,14 @@ codepipe approve plan --signer "<your-email>"
 **Artifact:** Generated code, tests, documentation
 
 **Purpose:** Validate code quality, security, and spec adherence:
+
 - Code follows project conventions
 - Security best practices applied
 - Tests provide adequate coverage
 - Documentation is complete
 
 **Review Checklist:**
+
 - [ ] Code is readable and maintainable
 - [ ] No security vulnerabilities (SQL injection, XSS, etc.)
 - [ ] Test coverage meets requirements
@@ -121,6 +133,7 @@ codepipe approve plan --signer "<your-email>"
 - [ ] Documentation is accurate
 
 **Approval Command:**
+
 ```bash
 codepipe approve code --signer "<your-email>" --comment "Code review passed"
 ```
@@ -136,12 +149,14 @@ codepipe approve code --signer "<your-email>" --comment "Code review passed"
 **Artifact:** Pull request in GitHub
 
 **Purpose:** Authorize merge to target branch:
+
 - CI/CD checks pass
 - Code review approved
 - Branch protection requirements met
 - Conflicts resolved
 
 **Review Checklist:**
+
 - [ ] All CI/CD checks are green
 - [ ] Code review approved by required reviewers
 - [ ] No merge conflicts
@@ -149,6 +164,7 @@ codepipe approve code --signer "<your-email>" --comment "Code review passed"
 - [ ] Changelog updated (if required)
 
 **Approval Command:**
+
 ```bash
 codepipe approve pr --signer "<your-email>"
 ```
@@ -164,12 +180,14 @@ codepipe approve pr --signer "<your-email>"
 **Artifact:** Deployment manifest, rollout plan
 
 **Purpose:** Authorize production deployment:
+
 - Deployment plan is sound
 - Rollback procedure is documented
 - Monitoring is configured
 - Stakeholders are notified
 
 **Review Checklist:**
+
 - [ ] Deployment plan is safe and tested
 - [ ] Rollback procedure is documented and tested
 - [ ] Monitoring and alerts are configured
@@ -178,6 +196,7 @@ codepipe approve pr --signer "<your-email>"
 - [ ] Deployment window is appropriate
 
 **Approval Command:**
+
 ```bash
 codepipe approve deploy --signer "<your-email>" --comment "Approved for production"
 ```
@@ -264,6 +283,7 @@ For routine approvals, consider automation:
 **Cause:** Approval already completed or not yet requested.
 
 **Resolution:**
+
 ```bash
 codepipe status --feature <feature-id>
 ```
@@ -273,6 +293,7 @@ codepipe status --feature <feature-id>
 **Cause:** Artifact modified after approval request.
 
 **Resolution:**
+
 1. Review changes
 2. Re-request approval if changes are valid
 3. Revert changes if they were accidental

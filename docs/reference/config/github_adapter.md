@@ -18,6 +18,7 @@ The GitHub adapter encapsulates all GitHub API interactions behind a typed inter
 - Auto-merge enablement via GraphQL
 
 **Key Features:**
+
 - Rate-limit aware HTTP calls with automatic retries
 - Required GitHub headers (`Accept`, `X-GitHub-Api-Version`)
 - Error taxonomy (transient, permanent, human action required)
@@ -61,10 +62,12 @@ The adapter supports two authentication methods:
 ### 1. Personal Access Token (PAT)
 
 **Recommended Scopes:**
+
 - `repo` - Full repository access
 - `workflow` - GitHub Actions workflow dispatch
 
 **Configuration:**
+
 ```typescript
 const adapter = new GitHubAdapter({
   owner: 'my-org',
@@ -74,6 +77,7 @@ const adapter = new GitHubAdapter({
 ```
 
 **Environment Variable:**
+
 ```bash
 export GITHUB_TOKEN="ghp_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
 ```
@@ -91,6 +95,7 @@ const adapter = new GitHubAdapter({
 ```
 
 **Required Permissions:**
+
 - Contents: Read and write
 - Pull requests: Read and write
 - Workflows: Read and write
@@ -100,29 +105,32 @@ const adapter = new GitHubAdapter({
 
 All GitHub API calls include the following headers (automatically injected by `HttpClient`):
 
-| Header | Value | Purpose |
-|--------|-------|---------|
-| `Accept` | `application/vnd.github+json` | GitHub API v3 media type |
-| `X-GitHub-Api-Version` | `2022-11-28` | API version pinning for deterministic behavior |
-| `Authorization` | `Bearer <token>` | Authentication token |
-| `X-Request-ID` | `req_<hex>` | Request tracing ID |
-| `Idempotency-Key` | `idem_<hex>` | Idempotency key for POST/PUT/PATCH requests |
+| Header                 | Value                         | Purpose                                        |
+| ---------------------- | ----------------------------- | ---------------------------------------------- |
+| `Accept`               | `application/vnd.github+json` | GitHub API v3 media type                       |
+| `X-GitHub-Api-Version` | `2022-11-28`                  | API version pinning for deterministic behavior |
+| `Authorization`        | `Bearer <token>`              | Authentication token                           |
+| `X-Request-ID`         | `req_<hex>`                   | Request tracing ID                             |
+| `Idempotency-Key`      | `idem_<hex>`                  | Idempotency key for POST/PUT/PATCH requests    |
 
 ## Rate Limiting
 
 The GitHub adapter integrates with the `HttpClient` rate limit tracking:
 
 ### Primary Rate Limit
+
 - **Limit:** 5,000 requests/hour (authenticated users)
 - **Headers:** `x-ratelimit-remaining`, `x-ratelimit-reset`
 - **Cooldown Threshold:** 10 requests remaining
 - **Behavior:** Log warning, continue processing
 
 ### Secondary Abuse Detection
+
 - **Trigger:** 3 consecutive HTTP 429 responses
 - **Behavior:** Log critical error, suggest manual cooldown clearing
 
 ### Retry Logic
+
 - **Transient Errors:** 429, 503, 502, 504, network failures
 - **Max Retries:** 3 (configurable)
 - **Backoff:** Exponential with jitter (1s → 2s → 4s)
@@ -147,6 +155,7 @@ console.log(repoInfo.private); // true
 **Returns:** `RepositoryInfo`
 
 **Errors:**
+
 - `404` - Repository not found (permanent)
 - `401` - Authentication failed (human action required)
 - `403` - Insufficient permissions (human action required)
@@ -168,12 +177,14 @@ console.log(branch.ref); // "refs/heads/feature/new-api"
 ```
 
 **Parameters:**
+
 - `branch` - Branch name (without `refs/heads/` prefix)
 - `sha` - Commit SHA to branch from
 
 **Returns:** `GitReference`
 
 **Errors:**
+
 - `422` - Branch already exists (permanent)
 - `404` - Repository or commit not found (permanent)
 
@@ -208,6 +219,7 @@ console.log(pr.html_url); // "https://github.com/org/repo/pull/42"
 ```
 
 **Parameters:**
+
 - `title` - PR title (required)
 - `body` - PR description (required)
 - `head` - Source branch name (required)
@@ -218,6 +230,7 @@ console.log(pr.html_url); // "https://github.com/org/repo/pull/42"
 **Returns:** `PullRequest`
 
 **Errors:**
+
 - `422` - Validation failed (e.g., head branch doesn't exist, no commits between head and base)
 - `404` - Repository not found
 
@@ -250,6 +263,7 @@ await adapter.requestReviewers({
 ```
 
 **Parameters:**
+
 - `pull_number` - PR number (required)
 - `reviewers` - Array of reviewer usernames (optional)
 - `team_reviewers` - Array of team slugs (optional)
@@ -257,6 +271,7 @@ await adapter.requestReviewers({
 **Returns:** `PullRequest` (updated PR object)
 
 **Errors:**
+
 - `422` - Reviewer not found or cannot be assigned
 - `404` - Pull request not found
 
@@ -293,6 +308,7 @@ if (!ready) {
 ```
 
 **Checks:**
+
 - PR state is `open`
 - PR is not a draft
 - PR is mergeable (no conflicts)
@@ -319,6 +335,7 @@ console.log(result.sha); // Merge commit SHA
 ```
 
 **Parameters:**
+
 - `pull_number` - PR number (required)
 - `merge_method` - Merge strategy: `merge`, `squash`, `rebase` (optional, default: `merge`)
 - `commit_title` - Merge commit title (optional)
@@ -328,6 +345,7 @@ console.log(result.sha); // Merge commit SHA
 **Returns:** `MergeResult`
 
 **Errors:**
+
 - `405` - Pull request not mergeable (merge conflicts, failed checks, blocked)
 - `404` - Pull request not found
 - `409` - SHA mismatch (head changed since check)
@@ -343,6 +361,7 @@ await adapter.enableAutoMerge(42, 'SQUASH');
 ```
 
 **Parameters:**
+
 - `pull_number` - PR number (required)
 - `merge_method` - Merge method: `MERGE`, `SQUASH`, `REBASE` (optional, default: `MERGE`)
 
@@ -368,11 +387,13 @@ await adapter.triggerWorkflow({
 ```
 
 **Parameters:**
+
 - `workflow_id` - Workflow filename or ID (required)
 - `ref` - Branch, tag, or SHA to run workflow on (required)
 - `inputs` - Workflow input parameters (optional)
 
 **Errors:**
+
 - `404` - Workflow not found
 - `422` - Invalid inputs or ref
 
@@ -388,11 +409,13 @@ The adapter classifies errors into three taxonomies:
 **Network Errors:** ECONNRESET, ETIMEDOUT, ECONNREFUSED
 
 **Behavior:**
+
 - Automatically retry with exponential backoff
 - Respect `retry-after` header
 - Log retry attempts with request IDs
 
 **Example:**
+
 ```typescript
 try {
   await adapter.createPullRequest(params);
@@ -410,10 +433,12 @@ try {
 **Examples:** Resource not found, validation failed, branch already exists
 
 **Behavior:**
+
 - Fail fast without retries
 - Provide actionable error messages
 
 **Example:**
+
 ```typescript
 try {
   await adapter.createBranch({ branch: 'main', sha: '...' });
@@ -430,10 +455,12 @@ try {
 **Examples:** Missing token, insufficient scopes, expired credentials
 
 **Behavior:**
+
 - Fail immediately
 - Provide diagnostic guidance
 
 **Example:**
+
 ```typescript
 try {
   await adapter.createPullRequest(params);
@@ -496,6 +523,7 @@ The GitHub adapter integrates with `RepoConfig` for centralized configuration:
 ```
 
 **Loading from Config:**
+
 ```typescript
 import { loadRepoConfig } from './core/config/RepoConfig';
 
@@ -540,6 +568,7 @@ The adapter emits structured logs for all operations:
 ### Sensitive Data Redaction
 
 All logs automatically redact:
+
 - Authorization tokens
 - API keys
 - Query parameters containing `token`, `access_token`, `api_key`
@@ -633,6 +662,7 @@ The adapter operations are documented in OpenAPI 3.1 format at `api/codepipe.yam
 - Supports API documentation tools (Swagger UI, Redoc)
 
 **Viewing the Spec:**
+
 ```bash
 npx @redocly/cli preview-docs api/codepipe.yaml
 ```
@@ -642,17 +672,20 @@ npx @redocly/cli preview-docs api/codepipe.yaml
 ### Token Scopes
 
 Minimum required scopes for PAT:
+
 - `repo` - Repository access (required)
 - `workflow` - Workflow dispatch (optional, required for deployment automation)
 
 ### Secret Management
 
 **Do NOT:**
+
 - Commit tokens to version control
 - Log tokens in plaintext
 - Pass tokens via URL query parameters
 
 **Do:**
+
 - Store tokens in environment variables
 - Use GitHub App installation tokens for organizations
 - Rotate tokens regularly
@@ -661,6 +694,7 @@ Minimum required scopes for PAT:
 ### Rate Limit Abuse
 
 To avoid secondary abuse detection:
+
 - Respect cooldown warnings (`remaining < 10`)
 - Use pagination for large result sets
 - Cache repository metadata
@@ -673,6 +707,7 @@ To avoid secondary abuse detection:
 **Cause:** Missing or invalid `GITHUB_TOKEN`
 
 **Resolution:**
+
 ```bash
 # Verify token is set
 echo $GITHUB_TOKEN
@@ -689,6 +724,7 @@ curl -I -H "Authorization: Bearer $GITHUB_TOKEN" https://api.github.com/user | g
 **Cause:** Too many API requests in short time
 
 **Resolution:**
+
 1. Check rate limit state:
    ```bash
    cat .codepipe/runs/<feature_id>/rate_limits.json | jq '.providers.github'
@@ -708,6 +744,7 @@ curl -I -H "Authorization: Bearer $GITHUB_TOKEN" https://api.github.com/user | g
 **Cause:** Merge conflicts, failed checks, or branch protection
 
 **Resolution:**
+
 ```typescript
 const { ready, reasons } = await adapter.isPullRequestReadyToMerge(42);
 console.log('Merge blocked:', reasons);
@@ -726,6 +763,6 @@ console.log('Merge blocked:', reasons);
 
 ## Changelog
 
-| Version | Date | Changes |
-|---------|------|---------|
-| 1.0.0 | 2025-12-17 | Initial GitHub adapter implementation with full REST API coverage |
+| Version | Date       | Changes                                                           |
+| ------- | ---------- | ----------------------------------------------------------------- |
+| 1.0.0   | 2025-12-17 | Initial GitHub adapter implementation with full REST API coverage |

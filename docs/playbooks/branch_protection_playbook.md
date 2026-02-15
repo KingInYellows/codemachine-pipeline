@@ -86,14 +86,14 @@ The Branch Protection Intelligence module provides comprehensive detection and r
 
 GitHub branch protection supports several rule types:
 
-| Rule Type | Purpose | Impact on Merge |
-|-----------|---------|-----------------|
-| **Required Status Checks** | Mandate CI/CD checks pass | Blocks merge until checks succeed |
-| **Required Reviews** | Require code review approvals | Blocks merge until approvals obtained |
-| **Enforce Admins** | Apply rules to administrators | Prevents admin bypass |
-| **Restrictions** | Limit who can push | Controls contributor access |
-| **Force Push Prevention** | Disable force pushes | Protects history integrity |
-| **Linear History** | Require merge commits or rebase | Enforces commit graph structure |
+| Rule Type                  | Purpose                         | Impact on Merge                       |
+| -------------------------- | ------------------------------- | ------------------------------------- |
+| **Required Status Checks** | Mandate CI/CD checks pass       | Blocks merge until checks succeed     |
+| **Required Reviews**       | Require code review approvals   | Blocks merge until approvals obtained |
+| **Enforce Admins**         | Apply rules to administrators   | Prevents admin bypass                 |
+| **Restrictions**           | Limit who can push              | Controls contributor access           |
+| **Force Push Prevention**  | Disable force pushes            | Protects history integrity            |
+| **Linear History**         | Require merge commits or rebase | Enforces commit graph structure       |
 
 ### Fetching Protection Rules
 
@@ -131,6 +131,7 @@ Every invocation of `codepipe status` refreshes `status/branch_protection.json` 
 ### Unprotected Branches
 
 If a branch is not protected (404 response), the system:
+
 - Reports `protected: false`
 - Sets `compliant: true` by default
 - Allows merge to proceed without checks
@@ -144,27 +145,30 @@ If a branch is not protected (404 response), the system:
 **Required Checks** are defined in branch protection rules (`contexts` array).
 
 **Actual Checks** are fetched from:
+
 1. Commit statuses: `GET /repos/{owner}/{repo}/commits/{sha}/statuses`
 2. Check runs: `GET /repos/{owner}/{repo}/commits/{sha}/check-runs`
 
 ### Check States
 
-| State | Meaning | Blocks Merge? |
-|-------|---------|---------------|
-| `success` | Check passed | No |
-| `pending` | Check in progress | Yes |
-| `failure` | Check failed | Yes |
-| `error` | Check encountered error | Yes |
+| State     | Meaning                 | Blocks Merge? |
+| --------- | ----------------------- | ------------- |
+| `success` | Check passed            | No            |
+| `pending` | Check in progress       | Yes           |
+| `failure` | Check failed            | Yes           |
+| `error`   | Check encountered error | Yes           |
 
 ### Validation Registry Alignment
 
 The system compares GitHub required checks against the validation registry (`validation/commands.json`), which is generated from **ExecutionTask** validation outputs. This ensures the CLI can highlight when pipeline validations fail to cover GitHub-required checks or when unnecessary ExecutionTasks are still configured.
 
 **Mismatch Detection:**
+
 - **Missing in Registry**: GitHub requires checks not defined in validation config
 - **Extra in Registry**: Validation commands defined but not required by GitHub
 
 **Recommendations:**
+
 - Add missing validation commands to align with branch protection
 - Remove unnecessary validations to reduce CI overhead
 
@@ -208,16 +212,17 @@ The system counts **approving reviews** from the most recent review per user:
 
 ### Review States
 
-| State | Counts Toward Approval? |
-|-------|------------------------|
-| `APPROVED` | Yes |
-| `CHANGES_REQUESTED` | No (blocks merge) |
-| `COMMENTED` | No (neutral) |
-| `DISMISSED` | No (invalidated) |
+| State               | Counts Toward Approval? |
+| ------------------- | ----------------------- |
+| `APPROVED`          | Yes                     |
+| `CHANGES_REQUESTED` | No (blocks merge)       |
+| `COMMENTED`         | No (neutral)            |
+| `DISMISSED`         | No (invalidated)        |
 
 ### Stale Review Dismissal
 
 If `dismiss_stale_reviews: true`, new commits invalidate prior reviews. The system:
+
 - Compares review `commit_id` against PR head SHA
 - Marks reviews as stale if commit_id ≠ head SHA
 - Requires fresh approvals after new pushes
@@ -232,28 +237,29 @@ The system evaluates compliance across multiple dimensions:
 
 ```typescript
 interface BranchProtectionCompliance {
-  protected: boolean;           // Branch has protection rules
-  compliant: boolean;            // All requirements satisfied
-  checks_passing: boolean;       // Required checks succeeded
-  reviews_satisfied: boolean;    // Sufficient approvals
-  up_to_date: boolean;           // Branch not behind base
-  stale_commit: boolean;         // Branch needs rebase
-  allows_auto_merge: boolean;    // Safe for auto-merge
-  blockers: string[];            // Reasons for non-compliance
+  protected: boolean; // Branch has protection rules
+  compliant: boolean; // All requirements satisfied
+  checks_passing: boolean; // Required checks succeeded
+  reviews_satisfied: boolean; // Sufficient approvals
+  up_to_date: boolean; // Branch not behind base
+  stale_commit: boolean; // Branch needs rebase
+  allows_auto_merge: boolean; // Safe for auto-merge
+  blockers: string[]; // Reasons for non-compliance
 }
 ```
 
 ### Blocker Examples
 
-| Blocker | Meaning | Resolution |
-|---------|---------|------------|
-| `Required status check missing or failing: ci/build` | Check not run or failed | Fix build errors, rerun CI |
-| `Requires 2 approving review(s), has 1` | Insufficient approvals | Request additional reviews |
-| `Branch is 3 commit(s) behind base - must be up-to-date` | Stale branch | Merge/rebase base branch |
+| Blocker                                                  | Meaning                 | Resolution                 |
+| -------------------------------------------------------- | ----------------------- | -------------------------- |
+| `Required status check missing or failing: ci/build`     | Check not run or failed | Fix build errors, rerun CI |
+| `Requires 2 approving review(s), has 1`                  | Insufficient approvals  | Request additional reviews |
+| `Branch is 3 commit(s) behind base - must be up-to-date` | Stale branch            | Merge/rebase base branch   |
 
 ### Auto-Merge Eligibility
 
 Auto-merge is considered safe when:
+
 - Branch protection is enabled
 - All compliance checks pass
 - Force pushes are disabled (`allow_force_pushes: false`)
@@ -350,6 +356,7 @@ codepipe status --json
 ### `codepipe deploy`
 
 Before deploying (merging), the command:
+
 1. Loads branch protection report from `status/branch_protection.json`
 2. Checks compliance
 3. Blocks deployment if `compliant: false`
@@ -371,12 +378,12 @@ Run 'codepipe status' for detailed information.
 
 The system provides context-aware recommendations:
 
-| Scenario | Recommendation |
-|----------|---------------|
+| Scenario                                 | Recommendation                                                        |
+| ---------------------------------------- | --------------------------------------------------------------------- |
 | All requirements met, auto-merge allowed | "Consider enabling auto-merge for automatic merging when checks pass" |
-| Missing status checks | "Wait for required checks to pass: ci/build, security/scan" |
-| Insufficient reviews | "Request 1 more approving review(s)" |
-| Branch behind base | "Update branch with latest changes from base branch" |
+| Missing status checks                    | "Wait for required checks to pass: ci/build, security/scan"           |
+| Insufficient reviews                     | "Request 1 more approving review(s)"                                  |
+| Branch behind base                       | "Update branch with latest changes from base branch"                  |
 
 ---
 
@@ -387,6 +394,7 @@ The system provides context-aware recommendations:
 **Cause:** Branch is not protected or API permissions insufficient.
 
 **Solution:**
+
 1. Verify branch name is correct
 2. Check GitHub repository settings → Branches → Protection rules
 3. Ensure API token has `repo` scope (read repository metadata)
@@ -398,6 +406,7 @@ The system provides context-aware recommendations:
 **Cause:** Check context name mismatch between CI and branch protection.
 
 **Solution:**
+
 1. Run `codepipe status --json` and inspect `branch_protection.required_checks`
 2. Compare against actual check names in GitHub PR checks tab
 3. Update branch protection rules or CI workflow to align names
@@ -408,8 +417,9 @@ Branch protection expects: `ci/build`
 CI workflow reports: `build`
 
 Update workflow to use matching context:
+
 ```yaml
-name: ci/build  # Must match branch protection rule
+name: ci/build # Must match branch protection rule
 ```
 
 ---
@@ -419,6 +429,7 @@ name: ci/build  # Must match branch protection rule
 **Cause:** Stale reviews dismissed or reviewer left organization.
 
 **Solution:**
+
 1. Check PR timeline for review dismissal events
 2. Verify reviewers still have repository access
 3. Request fresh reviews from active team members
@@ -430,6 +441,7 @@ name: ci/build  # Must match branch protection rule
 **Cause:** SHA comparison detects commits in base not in head.
 
 **Solution:**
+
 1. Ensure rebase completed successfully (no conflicts)
 2. Force push rebased branch if needed: `git push --force-with-lease`
 3. Wait for GitHub to update commit comparison cache (~30 seconds)
@@ -441,6 +453,7 @@ name: ci/build  # Must match branch protection rule
 **Cause:** Force pushes are enabled in branch protection.
 
 **Solution:**
+
 1. Disable "Allow force pushes" in GitHub branch protection settings
 2. Re-fetch branch protection: `codepipe status`
 3. Verify `allows_auto_merge: true` in report
@@ -491,6 +504,7 @@ This prevents merging stale branches that may conflict with recent changes.
 ### 3. Cache Branch Protection Reports
 
 Branch protection rules change infrequently. Cache reports and refresh only when:
+
 - Creating a new PR
 - Deploying
 - Branch protection settings change
@@ -508,6 +522,7 @@ codepipe status --verbose | grep "validation mismatch"
 ```
 
 Address mismatches to avoid:
+
 - Running unnecessary CI checks
 - Missing required validations before merge
 
@@ -516,6 +531,7 @@ Address mismatches to avoid:
 ### 5. Enable Auto-Merge for Clean Workflows
 
 When branch protection is correctly configured:
+
 - Auto-merge eliminates manual merge step
 - Ensures merge happens immediately after checks pass
 - Reduces window for conflicts

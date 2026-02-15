@@ -40,16 +40,19 @@ This document provides technical reference for integrating with GitHub's Branch 
 Fetches protection rules for a specific branch.
 
 **Endpoint:**
+
 ```
 GET /repos/{owner}/{repo}/branches/{branch}/protection
 ```
 
 **Parameters:**
+
 - `owner` (string, required): Repository owner (organization or user)
 - `branch` (string, required): Branch name (e.g., "main", "develop")
 - `repo` (string, required): Repository name
 
 **Required Headers:**
+
 ```
 Accept: application/vnd.github+json
 Authorization: Bearer {token}
@@ -57,17 +60,14 @@ X-GitHub-Api-Version: 2022-11-28
 ```
 
 **Response (200 OK):**
+
 ```json
 {
   "url": "https://api.github.com/repos/owner/repo/branches/main/protection",
   "required_status_checks": {
     "url": "https://api.github.com/repos/owner/repo/branches/main/protection/required_status_checks",
     "strict": true,
-    "contexts": [
-      "ci/build",
-      "test/unit",
-      "security/scan"
-    ],
+    "contexts": ["ci/build", "test/unit", "security/scan"],
     "checks": [
       {
         "context": "ci/build",
@@ -117,6 +117,7 @@ X-GitHub-Api-Version: 2022-11-28
 ```
 
 **Response (404 Not Found):**
+
 ```json
 {
   "message": "Branch not protected",
@@ -125,6 +126,7 @@ X-GitHub-Api-Version: 2022-11-28
 ```
 
 **Interpretation:**
+
 - 200 response → Branch is protected, parse rules
 - 404 response → Branch is not protected, allow unrestricted merge
 
@@ -135,16 +137,19 @@ X-GitHub-Api-Version: 2022-11-28
 Fetches commit statuses (legacy status API) for a specific commit.
 
 **Endpoint:**
+
 ```
 GET /repos/{owner}/{repo}/commits/{ref}/statuses
 ```
 
 **Parameters:**
+
 - `owner` (string, required): Repository owner
 - `repo` (string, required): Repository name
 - `ref` (string, required): Commit SHA or branch name
 
 **Response (200 OK):**
+
 ```json
 [
   {
@@ -169,6 +174,7 @@ GET /repos/{owner}/{repo}/commits/{ref}/statuses
 ```
 
 **Status States:**
+
 - `pending`: Check in progress
 - `success`: Check passed
 - `failure`: Check failed
@@ -181,16 +187,19 @@ GET /repos/{owner}/{repo}/commits/{ref}/statuses
 Fetches check runs (newer checks API) for a specific commit.
 
 **Endpoint:**
+
 ```
 GET /repos/{owner}/{repo}/commits/{ref}/check-runs
 ```
 
 **Parameters:**
+
 - `owner` (string, required): Repository owner
 - `repo` (string, required): Repository name
 - `ref` (string, required): Commit SHA
 
 **Response (200 OK):**
+
 ```json
 {
   "total_count": 2,
@@ -223,11 +232,13 @@ GET /repos/{owner}/{repo}/commits/{ref}/check-runs
 ```
 
 **Check Status:**
+
 - `queued`: Check queued
 - `in_progress`: Check running
 - `completed`: Check finished (see `conclusion`)
 
 **Check Conclusion:**
+
 - `success`: Check passed
 - `failure`: Check failed
 - `neutral`: Check completed without pass/fail
@@ -243,16 +254,19 @@ GET /repos/{owner}/{repo}/commits/{ref}/check-runs
 Fetches all reviews for a pull request.
 
 **Endpoint:**
+
 ```
 GET /repos/{owner}/{repo}/pulls/{pull_number}/reviews
 ```
 
 **Parameters:**
+
 - `owner` (string, required): Repository owner
 - `repo` (string, required): Repository name
 - `pull_number` (integer, required): Pull request number
 
 **Response (200 OK):**
+
 ```json
 [
   {
@@ -286,12 +300,14 @@ GET /repos/{owner}/{repo}/pulls/{pull_number}/reviews
 ```
 
 **Review States:**
+
 - `APPROVED`: Reviewer approved changes
 - `CHANGES_REQUESTED`: Reviewer requested changes
 - `COMMENTED`: Reviewer left comments without approval/rejection
 - `DISMISSED`: Review was dismissed (invalidated)
 
 **Important Notes:**
+
 - Reviews are per-commit (`commit_id` field)
 - If `dismiss_stale_reviews: true`, reviews on old commits are invalid
 - Only count most recent review per reviewer
@@ -303,17 +319,20 @@ GET /repos/{owner}/{repo}/pulls/{pull_number}/reviews
 Compares two commits to determine if head is up-to-date with base.
 
 **Endpoint:**
+
 ```
 GET /repos/{owner}/{repo}/compare/{base}...{head}
 ```
 
 **Parameters:**
+
 - `owner` (string, required): Repository owner
 - `repo` (string, required): Repository name
 - `base` (string, required): Base commit SHA or branch
 - `head` (string, required): Head commit SHA or branch
 
 **Response (200 OK):**
+
 ```json
 {
   "url": "https://api.github.com/repos/owner/repo/compare/main...feature-branch",
@@ -339,12 +358,14 @@ GET /repos/{owner}/{repo}/compare/{base}...{head}
 ```
 
 **Status Values:**
+
 - `ahead`: Head has commits not in base (normal for feature branches)
 - `behind`: Head is missing commits from base (needs rebase)
 - `diverged`: Head and base have diverged (needs merge or rebase)
 - `identical`: Head and base are the same
 
 **Up-to-Date Check:**
+
 - Branch is up-to-date if `behind_by === 0`
 - Branch is stale if `behind_by > 0`
 
@@ -366,6 +387,7 @@ GET /repos/{owner}/{repo}/compare/{base}...{head}
 ```
 
 **Notes:**
+
 - `strict: true` → Branch must be up-to-date before merge (no `behind_by`)
 - `contexts` → Legacy commit statuses
 - `checks` → Modern check runs (GitHub Actions, third-party apps)
@@ -403,6 +425,7 @@ X-GitHub-Api-Version: 2022-11-28
 ```
 
 **Why These Headers Matter:**
+
 - `Accept`: Specifies GitHub API v3 JSON format
 - `Authorization`: Authenticates request (personal access token or app token)
 - `X-GitHub-Api-Version`: Pins API version for stability
@@ -411,12 +434,13 @@ X-GitHub-Api-Version: 2022-11-28
 
 The GitHub token MUST have the following scopes:
 
-| Scope | Required For |
-|-------|-------------|
-| `repo` | Read branch protection, commit statuses, reviews |
-| `read:org` | Access team-based restrictions (optional) |
+| Scope      | Required For                                     |
+| ---------- | ------------------------------------------------ |
+| `repo`     | Read branch protection, commit statuses, reviews |
+| `read:org` | Access team-based restrictions (optional)        |
 
 **Generate Token:**
+
 1. GitHub Settings → Developer Settings → Personal Access Tokens
 2. Select `repo` scope
 3. Copy token and store securely (e.g., environment variable)
@@ -427,11 +451,11 @@ The GitHub token MUST have the following scopes:
 
 ### GitHub Rate Limits
 
-| Endpoint Type | Rate Limit | Reset Interval |
-|---------------|------------|----------------|
-| **Authenticated API** | 5,000 requests/hour | 1 hour |
-| **Search API** | 30 requests/minute | 1 minute |
-| **GraphQL API** | 5,000 points/hour | 1 hour |
+| Endpoint Type         | Rate Limit          | Reset Interval |
+| --------------------- | ------------------- | -------------- |
+| **Authenticated API** | 5,000 requests/hour | 1 hour         |
+| **Search API**        | 30 requests/minute  | 1 minute       |
+| **GraphQL API**       | 5,000 points/hour   | 1 hour         |
 
 ### Rate Limit Headers
 
@@ -448,11 +472,13 @@ X-RateLimit-Resource: core
 ### Rate Limit Handling
 
 The `HttpClient` automatically:
+
 - Records rate limit envelopes to run directory ledgers
 - Implements exponential backoff on 429 responses
 - Retries transient errors (503, network resets)
 
 **Best Practices:**
+
 - Cache branch protection results (TTL: 5 minutes)
 - Batch status check queries when possible
 - Use conditional requests (`If-None-Match` with ETags)
@@ -463,14 +489,14 @@ The `HttpClient` automatically:
 
 ### Error Taxonomy
 
-| HTTP Status | Error Type | Meaning | Retry? |
-|-------------|------------|---------|--------|
-| **404** | `PERMANENT` | Branch not protected or resource not found | No |
-| **401** | `HUMAN_ACTION_REQUIRED` | Invalid or expired token | No (request new token) |
-| **403** | `HUMAN_ACTION_REQUIRED` | Insufficient permissions or rate limited | Check scopes or wait |
-| **429** | `TRANSIENT` | Rate limit exceeded | Yes (with backoff) |
-| **503** | `TRANSIENT` | GitHub service unavailable | Yes (with backoff) |
-| **500/502** | `TRANSIENT` | GitHub server error | Yes (with backoff) |
+| HTTP Status | Error Type              | Meaning                                    | Retry?                 |
+| ----------- | ----------------------- | ------------------------------------------ | ---------------------- |
+| **404**     | `PERMANENT`             | Branch not protected or resource not found | No                     |
+| **401**     | `HUMAN_ACTION_REQUIRED` | Invalid or expired token                   | No (request new token) |
+| **403**     | `HUMAN_ACTION_REQUIRED` | Insufficient permissions or rate limited   | Check scopes or wait   |
+| **429**     | `TRANSIENT`             | Rate limit exceeded                        | Yes (with backoff)     |
+| **503**     | `TRANSIENT`             | GitHub service unavailable                 | Yes (with backoff)     |
+| **500/502** | `TRANSIENT`             | GitHub server error                        | Yes (with backoff)     |
 
 ### Error Response Format
 
@@ -539,14 +565,10 @@ if (protection?.required_status_checks) {
   const actualStatuses = await adapter.getCommitStatuses('abc123');
 
   const passingContexts = new Set(
-    actualStatuses
-      .filter(s => s.state === 'success')
-      .map(s => s.context)
+    actualStatuses.filter((s) => s.state === 'success').map((s) => s.context)
   );
 
-  const missingChecks = requiredContexts.filter(
-    ctx => !passingContexts.has(ctx)
-  );
+  const missingChecks = requiredContexts.filter((ctx) => !passingContexts.has(ctx));
 
   if (missingChecks.length > 0) {
     console.error('Missing checks:', missingChecks);
@@ -570,9 +592,9 @@ for (const review of reviews) {
   }
 }
 
-const approvedCount = Array.from(latestReviews.values())
-  .filter(r => r.state === 'APPROVED')
-  .length;
+const approvedCount = Array.from(latestReviews.values()).filter(
+  (r) => r.state === 'APPROVED'
+).length;
 
 console.log('Approved reviews:', approvedCount);
 ```
@@ -584,6 +606,7 @@ console.log('Approved reviews:', approvedCount);
 ### Pattern 1: Periodic Protection Refresh
 
 Refresh branch protection report on:
+
 - PR creation
 - Pre-deployment checks
 - Manual `codepipe status` invocation
@@ -665,7 +688,7 @@ const mismatch = await detectValidationMismatch(runDir, report.required_checks);
 
 if (mismatch.missing_in_registry.length > 0) {
   console.warn('Missing validation commands:');
-  mismatch.recommendations.forEach(rec => console.warn(`  - ${rec}`));
+  mismatch.recommendations.forEach((rec) => console.warn(`  - ${rec}`));
 }
 ```
 

@@ -40,6 +40,7 @@ The Component Index serves as:
 **Iteration:** I1 (Iteration 1 - Foundation)
 
 **Covers:**
+
 - CLI Presentation Layer (oclif commands)
 - Orchestration Core (Context, Research, PRD, Spec, Task Planning, Execution, Resume, Validation)
 - Adapter Boundary Layer (GitHub, Linear, Agent, Git, Deployment, Notification, HTTP Client)
@@ -352,6 +353,7 @@ erDiagram
 **Last Updated:** 2025-12-15
 
 **Covers:**
+
 - Directory structure and file organization
 - manifest.json schema (status, execution, approvals, queue, telemetry)
 - hash_manifest.json schema (integrity tracking)
@@ -394,6 +396,7 @@ erDiagram
 **Last Updated:** 2025-12-15
 
 **Covers:**
+
 - Rate limit ledger schema (providers, envelopes, state, cooldown)
 - Rate limit header extraction (GitHub, Linear, custom)
 - Retry logic and exponential backoff
@@ -410,10 +413,12 @@ erDiagram
 ### 3. Architectural Decision Records (ADRs)
 
 **Existing ADR Files:**
+
 - [`docs/adr/ADR-6-linear-integration.md`](../adr/ADR-6-linear-integration.md) - Linear integration strategy and adapter design
 - [`docs/adr/ADR-7-validation-policy.md`](../adr/ADR-7-validation-policy.md) - Zod runtime validation policy
 
 **Planned ADR Files:**
+
 - `docs/adr/ADR-1-agent-execution.md` - Agent execution patterns and task delegation
 - `docs/adr/ADR-2-state-persistence.md` - Run directory structure and resumability
 - `docs/adr/ADR-3-adapter-boundary.md` - Adapter interfaces and provider abstraction
@@ -435,6 +440,7 @@ erDiagram
 **Description:** Foundational architecture document defining core principles, system overview, pipeline stages, and key components/services.
 
 **Covers:**
+
 - System overview and pipeline stages
 - Core architectural principle (Separation of Concerns)
 - Key Components/Services catalog (20+ components)
@@ -453,6 +459,7 @@ erDiagram
 **Description:** Architectural style definition and comprehensive technology stack summary.
 
 **Covers:**
+
 - Architectural style (Modular Layered Orchestrator with Pluggable Adapters)
 - Technology stack per layer (CLI, Orchestration, HTTP, Adapters, Persistence, Observability, Validation, Containerization, Distribution)
 
@@ -483,6 +490,7 @@ erDiagram
 ### PlantUML Diagrams (.puml)
 
 **Prerequisites:**
+
 - Java Runtime Environment (JRE) 8+
 - PlantUML JAR or CLI
 
@@ -499,11 +507,13 @@ plantuml docs/diagrams/component_overview.puml
 ```
 
 **VSCode Extension:**
+
 1. Install "PlantUML" extension by jebbs
 2. Open `.puml` file
 3. Press `Alt+D` (Windows/Linux) or `Option+D` (Mac)
 
 **Online Rendering:**
+
 1. Visit [PlantUML Online Editor](http://www.plantuml.com/plantuml/uml/)
 2. Paste `.puml` contents
 3. View rendered diagram
@@ -513,15 +523,18 @@ plantuml docs/diagrams/component_overview.puml
 ### Mermaid Diagrams (.mmd)
 
 **GitHub Native Rendering:**
+
 - GitHub automatically renders `.mmd` files when viewed in browser
 - Click on `run_directory_schema.mmd` in GitHub web interface
 
 **VSCode Extension:**
+
 1. Install "Markdown Preview Mermaid Support" extension
 2. Open markdown file referencing mermaid diagram
 3. Preview markdown to see rendered diagram
 
 **Mermaid Live Editor:**
+
 1. Visit [Mermaid Live Editor](https://mermaid.live/)
 2. Paste `.mmd` contents
 3. View and export diagram
@@ -537,12 +550,14 @@ npm run diagrams
 ```
 
 **Behavior:**
+
 - Scans `docs/diagrams/*.puml` and `docs/diagrams/*.mmd`
 - Renders to PNG/SVG in `docs/diagrams/exports/`
 - Validates PlantUML/Mermaid syntax
 - Fails CI if syntax errors detected
 
 **GitHub Actions Workflow (Future):**
+
 - Triggers on push to `main` or PR to `main`
 - Renders all diagrams
 - Commits exports to `docs/diagrams/exports/`
@@ -660,21 +675,25 @@ All architecture artifacts must meet these standards:
 ### By Role
 
 **Architects / Technical Leads:**
+
 - [Component Overview Diagram](../diagrams/component_overview.puml) - System architecture
 - [Blueprint Foundation](.codemachine/artifacts/architecture/01_Blueprint_Foundation.md) - Core principles
 - ADRs (pending upload) - Architectural decisions
 
 **Backend Developers:**
+
 - [Component Overview Diagram](../diagrams/component_overview.puml) - Module boundaries
 - [Run Directory Schema](../requirements/run_directory_schema.md) - Persistence layer
 - [Rate Limit Reference](../ops/rate_limit_reference.md) - HTTP layer
 
 **DevOps / SREs:**
+
 - [Rate Limit Reference](../ops/rate_limit_reference.md) - Operational troubleshooting
 - [Run Directory Schema](../requirements/run_directory_schema.md) - State persistence
 - Cleanup policies (future) - Retention management
 
 **New Team Members:**
+
 1. Start with [Component Overview Documentation](../diagrams/component_overview.md)
 2. Review [Blueprint Foundation](.codemachine/artifacts/architecture/01_Blueprint_Foundation.md)
 3. Explore [Run Directory Schema](../requirements/run_directory_schema.md)
@@ -685,24 +704,29 @@ All architecture artifacts must meet these standards:
 ### By Layer
 
 **CLI Presentation:**
+
 - [Component Overview Diagram](../diagrams/component_overview.puml) (CLI Section)
 - [Blueprint Foundation](.codemachine/artifacts/architecture/01_Blueprint_Foundation.md) (CLI Orchestrator, RepoConfig Manager)
 
 **Orchestration Core:**
+
 - [Component Overview Diagram](../diagrams/component_overview.puml) (Orchestration Section)
 - [Blueprint Foundation](.codemachine/artifacts/architecture/01_Blueprint_Foundation.md) (Context, Research, PRD, Spec, Task Planning, Execution, Resume, Validation)
 
 **Adapter Boundary:**
+
 - [Component Overview Diagram](../diagrams/component_overview.puml) (Adapter Section)
 - [Rate Limit Reference](../ops/rate_limit_reference.md) (HTTP Client)
 - [Blueprint Foundation](.codemachine/artifacts/architecture/01_Blueprint_Foundation.md) (GitHub, Linear, Agent, Git, Deployment, Notification adapters)
 
 **Persistence:**
+
 - [Run Directory Schema](../requirements/run_directory_schema.md)
 - [Run Directory Diagram](../diagrams/run_directory_schema.mmd)
 - [Blueprint Foundation](.codemachine/artifacts/architecture/01_Blueprint_Foundation.md) (Run Directory Manager, Artifact Bundle)
 
 **Observability:**
+
 - [Rate Limit Reference](../ops/rate_limit_reference.md) (Telemetry Writers)
 - [Run Directory Schema](../requirements/run_directory_schema.md) (Telemetry subdirectory)
 - [Blueprint Foundation](.codemachine/artifacts/architecture/01_Blueprint_Foundation.md) (Observability Hub, Security Vault)
@@ -711,44 +735,44 @@ All architecture artifacts must meet these standards:
 
 ## Diagram Status Dashboard
 
-| Diagram | Status | Version | Iteration | Last Updated |
-|---------|--------|---------|-----------|--------------|
-| Component Overview | ✅ Active | 1.0.0 | I1 | 2025-12-15 |
-| Run Directory Schema | ✅ Active | 1.0.0 | I1 | 2025-12-15 |
-| Context & Research Sequence | ✅ Active | 1.0.0 | I1 | 2025-12-15 |
-| PR Automation Sequence | ✅ Active | 1.0.0 | I1 | 2025-12-15 |
-| Spec Flow | ✅ Active | 1.0.0 | I1 | 2025-12-15 |
-| Data Model ERD | ✅ Active | 1.0.0 | I1 | 2025-12-15 |
-| Start Command Sequence | 🚧 Planned | - | I2+ | - |
-| Resume Command Sequence | 🚧 Planned | - | I2+ | - |
-| Deployment Sequence | 🚧 Planned | - | I2+ | - |
-| Rate Limit Handling Sequence | 🚧 Planned | - | I2+ | - |
+| Diagram                      | Status     | Version | Iteration | Last Updated |
+| ---------------------------- | ---------- | ------- | --------- | ------------ |
+| Component Overview           | ✅ Active  | 1.0.0   | I1        | 2025-12-15   |
+| Run Directory Schema         | ✅ Active  | 1.0.0   | I1        | 2025-12-15   |
+| Context & Research Sequence  | ✅ Active  | 1.0.0   | I1        | 2025-12-15   |
+| PR Automation Sequence       | ✅ Active  | 1.0.0   | I1        | 2025-12-15   |
+| Spec Flow                    | ✅ Active  | 1.0.0   | I1        | 2025-12-15   |
+| Data Model ERD               | ✅ Active  | 1.0.0   | I1        | 2025-12-15   |
+| Start Command Sequence       | 🚧 Planned | -       | I2+       | -            |
+| Resume Command Sequence      | 🚧 Planned | -       | I2+       | -            |
+| Deployment Sequence          | 🚧 Planned | -       | I2+       | -            |
+| Rate Limit Handling Sequence | 🚧 Planned | -       | I2+       | -            |
 
 ---
 
 ## Schema Status Dashboard
 
-| Schema | Status | Version | Last Updated | Implementation Status |
-|--------|--------|---------|--------------|----------------------|
-| Run Directory Schema | ✅ Active | 1.0.0 | 2025-12-15 | ✅ Implemented |
-| Rate Limit Ledger Schema | ✅ Active | 1.0.0 | 2025-12-15 | ✅ Implemented |
-| RepoConfig Schema | ✅ Active | 1.0.0 | 2026-02-10 | ✅ Implemented (Zod + JSON Schema) |
-| Plan.json Schema | 🚧 Planned | - | - | 🚧 Future |
-| Telemetry Schemas | 🚧 Planned | - | - | 🚧 Future |
+| Schema                   | Status     | Version | Last Updated | Implementation Status              |
+| ------------------------ | ---------- | ------- | ------------ | ---------------------------------- |
+| Run Directory Schema     | ✅ Active  | 1.0.0   | 2025-12-15   | ✅ Implemented                     |
+| Rate Limit Ledger Schema | ✅ Active  | 1.0.0   | 2025-12-15   | ✅ Implemented                     |
+| RepoConfig Schema        | ✅ Active  | 1.0.0   | 2026-02-10   | ✅ Implemented (Zod + JSON Schema) |
+| Plan.json Schema         | 🚧 Planned | -       | -            | 🚧 Future                          |
+| Telemetry Schemas        | 🚧 Planned | -       | -            | 🚧 Future                          |
 
 ---
 
 ## ADR Status Dashboard
 
-| ADR | Title | Status | Referenced By |
-|-----|-------|--------|---------------|
-| ADR-1 | Agent Execution | 🚧 Pending | Component Overview, Execution Engine, Agent Adapter |
-| ADR-2 | State Persistence | 🚧 Pending | Run Directory Schema, Component Overview, all persistence |
-| ADR-3 | Adapter Boundary | 🚧 Pending | Component Overview, all adapters, HTTP Client |
-| ADR-4 | Context Gathering | 🚧 Pending | Component Overview, Context Aggregator |
-| ADR-5 | Approval Workflows | 🚧 Pending | Component Overview, Resume Coordinator, Deployment Adapter |
-| ADR-6 | Linear Integration | ✅ Accepted | Linear Adapter, Integration Tests |
-| ADR-7 | Validation Policy | ✅ Accepted | Zod schemas, `src/validation/`, config loading |
+| ADR   | Title              | Status      | Referenced By                                              |
+| ----- | ------------------ | ----------- | ---------------------------------------------------------- |
+| ADR-1 | Agent Execution    | 🚧 Pending  | Component Overview, Execution Engine, Agent Adapter        |
+| ADR-2 | State Persistence  | 🚧 Pending  | Run Directory Schema, Component Overview, all persistence  |
+| ADR-3 | Adapter Boundary   | 🚧 Pending  | Component Overview, all adapters, HTTP Client              |
+| ADR-4 | Context Gathering  | 🚧 Pending  | Component Overview, Context Aggregator                     |
+| ADR-5 | Approval Workflows | 🚧 Pending  | Component Overview, Resume Coordinator, Deployment Adapter |
+| ADR-6 | Linear Integration | ✅ Accepted | Linear Adapter, Integration Tests                          |
+| ADR-7 | Validation Policy  | ✅ Accepted | Zod schemas, `src/validation/`, config loading             |
 
 **Note:** ADR-1 through ADR-5 are referenced throughout documentation but not yet created as standalone files. ADR-6 and ADR-7 are active.
 
@@ -781,9 +805,9 @@ To update architecture documentation:
 
 ## Change Log
 
-| Version | Date       | Changes                                                       |
-|---------|------------|---------------------------------------------------------------|
-| 1.0.0   | 2025-12-15 | Initial component index for I1 with diagram and schema catalog |
+| Version | Date       | Changes                                                           |
+| ------- | ---------- | ----------------------------------------------------------------- |
+| 1.0.0   | 2025-12-15 | Initial component index for I1 with diagram and schema catalog    |
 | 1.0.1   | 2026-02-11 | Add ADR-6/7, update schema/diagram dashboards, fix stale statuses |
 
 ---

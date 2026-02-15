@@ -181,7 +181,7 @@ See [Data Model Dictionary](./data_model_dictionary.md#tracelink) for complete f
 
 **Relationship Type:** `validates`
 
-*Deferred to execution phase.* When tasks complete, the execution engine will append links from task IDs to Git commit SHAs or patch file hashes.
+_Deferred to execution phase._ When tasks complete, the execution engine will append links from task IDs to Git commit SHAs or patch file hashes.
 
 ---
 
@@ -212,7 +212,11 @@ import { generateTraceMap, updateTraceMapOnSpecChange } from '../workflows/trace
 await generateTraceMap({ runDir: '/path/to/run', featureId: 'feat-abc123' }, logger, metrics);
 
 // Force refresh when artifacts changed outside the approval command
-await updateTraceMapOnSpecChange({ runDir: '/path/to/run', featureId: 'feat-abc123' }, logger, metrics);
+await updateTraceMapOnSpecChange(
+  { runDir: '/path/to/run', featureId: 'feat-abc123' },
+  logger,
+  metrics
+);
 ```
 
 #### 2. Extraction
@@ -403,13 +407,7 @@ const traceInfo = featureId
   ? await this.loadTraceabilityStatus(settings.baseDir, featureId)
   : undefined;
 
-const payload = this.buildStatusPayload(
-  featureId,
-  settings,
-  manifestInfo,
-  contextInfo,
-  traceInfo
-);
+const payload = this.buildStatusPayload(featureId, settings, manifestInfo, contextInfo, traceInfo);
 
 if (traceSummary) {
   return {
@@ -542,10 +540,10 @@ if (traceSummary) {
 
 ## Version History
 
-| Version | Date       | Author        | Changes                                      |
-|---------|------------|---------------|----------------------------------------------|
-| 1.0.1   | 2024-05-27 | CodeMachine   | Automated Spec approval trigger + CLI updates|
-| 1.0.0   | 2025-12-17 | CodeMachine   | Initial traceability playbook release        |
+| Version | Date       | Author      | Changes                                       |
+| ------- | ---------- | ----------- | --------------------------------------------- |
+| 1.0.1   | 2024-05-27 | CodeMachine | Automated Spec approval trigger + CLI updates |
+| 1.0.0   | 2025-12-17 | CodeMachine | Initial traceability playbook release         |
 
 ---
 

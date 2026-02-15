@@ -49,16 +49,18 @@ All metrics follow the namespace prefix `codemachine_pipeline_`.
 
 ### Task Lifecycle Metrics
 
-| Metric Name | Type | Description | Labels | Retention |
-|-------------|------|-------------|--------|-----------|
-| `execution_tasks_total` | Counter | Total execution tasks by status and type | `run_id`, `component`, `task_id`, `task_type`, `status` | 90 days |
-| `execution_task_duration_ms` | Histogram | Execution task duration distribution | `run_id`, `component`, `task_type` | 90 days |
+| Metric Name                  | Type      | Description                              | Labels                                                  | Retention |
+| ---------------------------- | --------- | ---------------------------------------- | ------------------------------------------------------- | --------- |
+| `execution_tasks_total`      | Counter   | Total execution tasks by status and type | `run_id`, `component`, `task_id`, `task_type`, `status` | 90 days   |
+| `execution_task_duration_ms` | Histogram | Execution task duration distribution     | `run_id`, `component`, `task_type`                      | 90 days   |
 
 **Label Values:**
+
 - `task_type`: `code_generation`, `validation`, `patch_application`, `git_operation`, `custom`
 - `status`: `started`, `completed`, `failed`, `skipped`
 
 **Example Prometheus Query:**
+
 ```promql
 # Task success rate by type
 sum by (task_type) (
@@ -70,18 +72,20 @@ sum by (task_type) (
 
 ### Validation Metrics
 
-| Metric Name | Type | Description | Labels | Retention |
-|-------------|------|-------------|--------|-----------|
-| `validation_duration_seconds` | Histogram | Validation duration distribution | `run_id`, `component`, `passed` | 90 days |
-| `validation_runs_total` | Counter | Total validation runs by result | `run_id`, `component`, `passed` | 90 days |
-| `validation_errors_total` | Counter | Total validation errors by type | `run_id`, `component`, `error_type` | 90 days |
+| Metric Name                   | Type      | Description                      | Labels                              | Retention |
+| ----------------------------- | --------- | -------------------------------- | ----------------------------------- | --------- |
+| `validation_duration_seconds` | Histogram | Validation duration distribution | `run_id`, `component`, `passed`     | 90 days   |
+| `validation_runs_total`       | Counter   | Total validation runs by result  | `run_id`, `component`, `passed`     | 90 days   |
+| `validation_errors_total`     | Counter   | Total validation errors by type  | `run_id`, `component`, `error_type` | 90 days   |
 
 **Histogram Buckets (seconds):**
+
 ```
 0.1, 0.5, 1, 2.5, 5, 10, 30, 60, 120
 ```
 
 **Example Prometheus Query:**
+
 ```promql
 # P95 validation duration
 histogram_quantile(0.95,
@@ -93,20 +97,23 @@ histogram_quantile(0.95,
 
 ### Diff Statistics Metrics
 
-| Metric Name | Type | Description | Labels | Retention |
-|-------------|------|-------------|--------|-----------|
-| `diff_files_changed` | Histogram | Number of files changed in diff | `run_id`, `component`, `patch_id` | 90 days |
-| `diff_lines_total` | Histogram | Lines added/removed in diff | `run_id`, `component`, `patch_id`, `operation` | 90 days |
-| `diff_operations_total` | Counter | Total diff generation operations | `run_id`, `component`, `patch_id` | 90 days |
+| Metric Name             | Type      | Description                      | Labels                                         | Retention |
+| ----------------------- | --------- | -------------------------------- | ---------------------------------------------- | --------- |
+| `diff_files_changed`    | Histogram | Number of files changed in diff  | `run_id`, `component`, `patch_id`              | 90 days   |
+| `diff_lines_total`      | Histogram | Lines added/removed in diff      | `run_id`, `component`, `patch_id`, `operation` | 90 days   |
+| `diff_operations_total` | Counter   | Total diff generation operations | `run_id`, `component`, `patch_id`              | 90 days   |
 
 **Label Values:**
+
 - `operation`: `insertion`, `deletion`
 
 **Histogram Buckets:**
+
 - Files Changed: `1, 2, 5, 10, 20, 50, 100, 200, 500`
 - Line Counts: `10, 50, 100, 250, 500, 1000, 2500, 5000, 10000`
 
 **Example Prometheus Query:**
+
 ```promql
 # Average files changed per diff
 sum(rate(codemachine_pipeline_diff_files_changed_sum[5m])) /
@@ -115,16 +122,17 @@ sum(rate(codemachine_pipeline_diff_files_changed_count[5m]))
 
 ### Queue Depth Metrics
 
-| Metric Name | Type | Description | Labels | Retention |
-|-------------|------|-------------|--------|-----------|
-| `execution_queue_depth` | Gauge | Total execution queue depth | `run_id`, `component` | 30 days |
-| `execution_queue_pending` | Gauge | Number of pending execution tasks | `run_id`, `component` | 30 days |
-| `execution_queue_completed` | Gauge | Number of completed execution tasks | `run_id`, `component` | 30 days |
-| `execution_queue_failed` | Gauge | Number of failed execution tasks | `run_id`, `component` | 30 days |
+| Metric Name                 | Type  | Description                         | Labels                | Retention |
+| --------------------------- | ----- | ----------------------------------- | --------------------- | --------- |
+| `execution_queue_depth`     | Gauge | Total execution queue depth         | `run_id`, `component` | 30 days   |
+| `execution_queue_pending`   | Gauge | Number of pending execution tasks   | `run_id`, `component` | 30 days   |
+| `execution_queue_completed` | Gauge | Number of completed execution tasks | `run_id`, `component` | 30 days   |
+| `execution_queue_failed`    | Gauge | Number of failed execution tasks    | `run_id`, `component` | 30 days   |
 
 **Note:** Queue depth gauges are updated as snapshots (not incremented/decremented).
 
 **Example Prometheus Query:**
+
 ```promql
 # Queue completion rate
 rate(codemachine_pipeline_execution_queue_completed[5m])
@@ -132,18 +140,20 @@ rate(codemachine_pipeline_execution_queue_completed[5m])
 
 ### Agent Cost Metrics
 
-| Metric Name | Type | Description | Labels | Retention |
-|-------------|------|-------------|--------|-----------|
-| `agent_cost_tokens_total` | Counter | Agent token usage (prompt and completion) | `run_id`, `component`, `model`, `type` | 1 year |
-| `agent_cost_usd_total` | Gauge | Total agent cost in USD | `run_id`, `component` | 1 year |
+| Metric Name               | Type    | Description                               | Labels                                 | Retention |
+| ------------------------- | ------- | ----------------------------------------- | -------------------------------------- | --------- |
+| `agent_cost_tokens_total` | Counter | Agent token usage (prompt and completion) | `run_id`, `component`, `model`, `type` | 1 year    |
+| `agent_cost_usd_total`    | Gauge   | Total agent cost in USD                   | `run_id`, `component`                  | 1 year    |
 
 **Label Values:**
+
 - `type`: `prompt`, `completion`
 - `model`: `gpt-4`, `gpt-3.5-turbo`, `claude-3-opus`, `claude-3-sonnet`, `claude-3-haiku`, etc.
 
 **Integration Note:** Prefer using `CostTracker.recordUsage()` for comprehensive cost tracking. Execution metrics provide aggregated counters for quick dashboard queries.
 
 **Example Prometheus Query:**
+
 ```promql
 # Cost per task (approximate)
 codemachine_pipeline_agent_cost_usd_total /
@@ -169,22 +179,22 @@ All execution logs include:
 
 ### Execution Context Fields
 
-| Field Name | Type | Description | Required |
-|------------|------|-------------|----------|
-| `task_id` | string | Execution task identifier | Yes |
-| `execution_task_type` | string | Task type (see Task Types below) | Yes |
-| `duration_ms` | number | Task duration in milliseconds | Conditional |
-| `patch_id` | string | Patch identifier for correlation | Conditional |
-| `diff_stats` | object | Diff statistics (see below) | Conditional |
-| `validation_duration_ms` | number | Validation duration | Conditional |
-| `passed` | boolean | Validation result | Conditional |
-| `error_count` | number | Number of validation errors | Conditional |
-| `error_types` | string[] | Error type identifiers | Conditional |
-| `git_operation` | string | Git operation type | Conditional |
-| `agent_type` | string | Agent type identifier | Conditional |
-| `model` | string | Model identifier | Conditional |
-| `prompt_tokens` | number | Prompt tokens consumed | Conditional |
-| `completion_tokens` | number | Completion tokens consumed | Conditional |
+| Field Name               | Type     | Description                      | Required    |
+| ------------------------ | -------- | -------------------------------- | ----------- |
+| `task_id`                | string   | Execution task identifier        | Yes         |
+| `execution_task_type`    | string   | Task type (see Task Types below) | Yes         |
+| `duration_ms`            | number   | Task duration in milliseconds    | Conditional |
+| `patch_id`               | string   | Patch identifier for correlation | Conditional |
+| `diff_stats`             | object   | Diff statistics (see below)      | Conditional |
+| `validation_duration_ms` | number   | Validation duration              | Conditional |
+| `passed`                 | boolean  | Validation result                | Conditional |
+| `error_count`            | number   | Number of validation errors      | Conditional |
+| `error_types`            | string[] | Error type identifiers           | Conditional |
+| `git_operation`          | string   | Git operation type               | Conditional |
+| `agent_type`             | string   | Agent type identifier            | Conditional |
+| `model`                  | string   | Model identifier                 | Conditional |
+| `prompt_tokens`          | number   | Prompt tokens consumed           | Conditional |
+| `completion_tokens`      | number   | Completion tokens consumed       | Conditional |
 
 ### Task Types
 
@@ -353,14 +363,23 @@ import { ExecutionTaskType, ExecutionTaskStatus } from './telemetry/executionMet
 // Task started
 const startTime = Date.now();
 executionLogs.taskStarted('I3.T6', ExecutionTaskType.CODE_GENERATION);
-executionMetrics.recordTaskLifecycle('I3.T6', ExecutionTaskType.CODE_GENERATION, ExecutionTaskStatus.STARTED);
+executionMetrics.recordTaskLifecycle(
+  'I3.T6',
+  ExecutionTaskType.CODE_GENERATION,
+  ExecutionTaskStatus.STARTED
+);
 
 // ... execute task ...
 
 // Task completed
 const durationMs = Date.now() - startTime;
 executionLogs.taskCompleted('I3.T6', ExecutionTaskType.CODE_GENERATION, durationMs);
-executionMetrics.recordTaskLifecycle('I3.T6', ExecutionTaskType.CODE_GENERATION, ExecutionTaskStatus.COMPLETED, durationMs);
+executionMetrics.recordTaskLifecycle(
+  'I3.T6',
+  ExecutionTaskType.CODE_GENERATION,
+  ExecutionTaskStatus.COMPLETED,
+  durationMs
+);
 ```
 
 ### Recording Validation Runs
@@ -443,6 +462,7 @@ Metrics retention is controlled via `RepoConfig`:
 ```
 
 Default retention policies:
+
 - Task lifecycle metrics: 90 days
 - Validation metrics: 90 days
 - Diff statistics: 90 days
@@ -534,12 +554,14 @@ delta(codemachine_pipeline_agent_cost_usd_total[1h])
 **Symptom:** Execution metrics absent from `prometheus.txt`
 
 **Diagnostics:**
+
 1. Verify `executionMetrics.flush()` called before process exit
 2. Check metrics collector initialized with valid run directory
 3. Inspect stderr for metric recording errors
 4. Verify task lifecycle methods invoked (check logs for task events)
 
 **Fix:**
+
 ```typescript
 // Ensure flush in finally block
 try {
@@ -554,11 +576,13 @@ try {
 **Symptom:** Logs reference `task_id` but metrics missing for same task
 
 **Diagnostics:**
+
 1. Verify `run_id` label matches across logs and metrics
 2. Check task_id sanitization (labels must be valid Prometheus format)
 3. Inspect metric cardinality (too many unique task_ids may cause truncation)
 
 **Fix:**
+
 ```typescript
 // Sanitize task_id for metric labels
 const sanitizedTaskId = taskId.replace(/[^a-zA-Z0-9_]/g, '_');
@@ -570,11 +594,13 @@ executionMetrics.recordTaskLifecycle(sanitizedTaskId, ...);
 **Symptom:** Validation duration metrics show unexpectedly high P99 values
 
 **Diagnostics:**
+
 1. Query logs for `validation_duration_ms` outliers
 2. Filter by `error_types` to identify problematic validators
 3. Check for timeouts or retries in validation code
 
 **Example Query:**
+
 ```logql
 {component="execution"} | json | execution_task_type="validation" | validation_duration_ms > 30000
 ```
@@ -584,11 +610,13 @@ executionMetrics.recordTaskLifecycle(sanitizedTaskId, ...);
 **Symptom:** `costWarning` logs absent despite high token usage
 
 **Diagnostics:**
+
 1. Verify `CostTracker` initialized with budget configuration
 2. Check `warningThreshold` set correctly (default: 80%)
 3. Ensure `CostTracker.recordUsage()` called for all agent invocations
 
 **Fix:**
+
 ```typescript
 const costTracker = createCostTracker(featureId, runDir, logger, metrics, {
   maxCostUsd: 10.0,
@@ -609,6 +637,7 @@ codepipe status --json
 ```
 
 **Output:**
+
 ```json
 {
   "feature_id": "01JFABCDEFGHIJKLMNOPQRSTUV",
@@ -636,6 +665,7 @@ codepipe export --run-id 01JFABCDEFGHIJKLMNOPQRSTUV --output export.tar.gz
 ```
 
 Includes:
+
 - `logs/logs.ndjson` (with execution events)
 - `metrics/prometheus.txt` (with execution metrics)
 - `telemetry/traces.json` (with execution spans)
@@ -676,7 +706,11 @@ export enum ExecutionTaskType {
 }
 
 // Use in task lifecycle recording
-executionMetrics.recordTaskLifecycle('I3.T99', ExecutionTaskType.CUSTOM_ANALYSIS, ExecutionTaskStatus.COMPLETED);
+executionMetrics.recordTaskLifecycle(
+  'I3.T99',
+  ExecutionTaskType.CUSTOM_ANALYSIS,
+  ExecutionTaskStatus.COMPLETED
+);
 ```
 
 ---

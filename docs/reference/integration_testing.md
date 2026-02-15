@@ -106,6 +106,7 @@ Each fixture is a JSON file with the following structure:
 ```
 
 **Required Fields:**
+
 - `status` (number): HTTP status code
 - `headers` (object): Response headers (must include rate-limit headers for GitHub)
 - `data` (object): Response body (API payload or error message)
@@ -127,6 +128,7 @@ When adapter behavior changes or new endpoints are added, update fixtures using 
 ```
 
 **What the script does:**
+
 1. Validates fixture JSON structure
 2. Computes SHA256 hashes for each fixture
 3. Updates `manifest.json` with new hashes and timestamps
@@ -197,25 +199,25 @@ npm run test tests/integration/github_linear_regression.spec.ts
 
 ### GitHub Adapter Coverage
 
-| Scenario | Fixture | Test Coverage | Rate Limit Behavior |
-|----------|---------|---------------|---------------------|
-| Success - Repository fetch | `success_repository.json` | ✅ Covered | Tracks remaining quota |
-| Success - PR creation | `success_pull_request.json` | ✅ Covered | Tracks remaining quota |
-| Success - Branch protection | `success_branch_protection.json` | ✅ Covered | N/A |
-| Primary rate limit (429) | `ratelimit_429_primary.json` | ✅ Covered | Exponential backoff with `retry-after` |
-| Secondary rate limit (403) | `error_403_secondary.json` | ✅ Covered | Human action required |
-| Missing OAuth scopes (403) | `error_missing_scopes.json` | ✅ Covered | Human action required |
+| Scenario                    | Fixture                          | Test Coverage | Rate Limit Behavior                    |
+| --------------------------- | -------------------------------- | ------------- | -------------------------------------- |
+| Success - Repository fetch  | `success_repository.json`        | ✅ Covered    | Tracks remaining quota                 |
+| Success - PR creation       | `success_pull_request.json`      | ✅ Covered    | Tracks remaining quota                 |
+| Success - Branch protection | `success_branch_protection.json` | ✅ Covered    | N/A                                    |
+| Primary rate limit (429)    | `ratelimit_429_primary.json`     | ✅ Covered    | Exponential backoff with `retry-after` |
+| Secondary rate limit (403)  | `error_403_secondary.json`       | ✅ Covered    | Human action required                  |
+| Missing OAuth scopes (403)  | `error_missing_scopes.json`      | ✅ Covered    | Human action required                  |
 
 ### Linear Adapter Coverage
 
-| Scenario | Fixture | Test Coverage | Rate Limit Behavior |
-|----------|---------|---------------|---------------------|
-| Success - Issue fetch | `success_issue.json` | ✅ Covered | Sliding window tracking |
-| Success - Comments fetch | `success_comments.json` | ✅ Covered | Sliding window tracking |
-| Success - Issue update (preview) | `success_update_issue.json` | ✅ Covered | Requires preview flag |
-| Primary rate limit (429) | `ratelimit_429_primary.json` | ✅ Covered | 1-hour cooldown |
-| Invalid API key (403) | `error_403_invalid_token.json` | ✅ Covered | Human action required |
-| Missing scopes (403) | `error_missing_scopes.json` | ✅ Covered | Human action required |
+| Scenario                         | Fixture                        | Test Coverage | Rate Limit Behavior     |
+| -------------------------------- | ------------------------------ | ------------- | ----------------------- |
+| Success - Issue fetch            | `success_issue.json`           | ✅ Covered    | Sliding window tracking |
+| Success - Comments fetch         | `success_comments.json`        | ✅ Covered    | Sliding window tracking |
+| Success - Issue update (preview) | `success_update_issue.json`    | ✅ Covered    | Requires preview flag   |
+| Primary rate limit (429)         | `ratelimit_429_primary.json`   | ✅ Covered    | 1-hour cooldown         |
+| Invalid API key (403)            | `error_403_invalid_token.json` | ✅ Covered    | Human action required   |
+| Missing scopes (403)             | `error_missing_scopes.json`    | ✅ Covered    | Human action required   |
 
 ### Outstanding Gaps
 
@@ -274,6 +276,7 @@ If a fixture fails validation:
 ```
 
 Check for:
+
 - Missing required fields (`status`, `headers`, `data`)
 - Invalid JSON syntax
 - Incorrect hash in manifest
@@ -358,9 +361,9 @@ Update `manifest.json` with clear scenario descriptions:
 Ensure every error fixture validates the correct `ErrorType`:
 
 ```typescript
-expect(httpError.type).toBe(ErrorType.TRANSIENT);       // For 429, 503
+expect(httpError.type).toBe(ErrorType.TRANSIENT); // For 429, 503
 expect(httpError.type).toBe(ErrorType.HUMAN_ACTION_REQUIRED); // For 401, 403
-expect(httpError.type).toBe(ErrorType.PERMANENT);       // For 422, 404
+expect(httpError.type).toBe(ErrorType.PERMANENT); // For 422, 404
 ```
 
 ### 4. Avoid Brittle Assertions
@@ -377,6 +380,7 @@ expect(result).toMatchObject({
 ### 5. Keep Tests Isolated
 
 Each test should:
+
 - Create its own adapter instance
 - Use fresh mock clients
 - Clean up temp directories in `afterEach`
@@ -394,11 +398,13 @@ The regression suite runs automatically in CI via:
 ```
 
 **Requirements:**
+
 - Node.js v24 (LTS)
 - `npm install` completed
 - Fixtures directory present
 
 **Artifacts:**
+
 - Test results saved to `test-results/`
 - Coverage reports in `coverage/`
 

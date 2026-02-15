@@ -154,15 +154,11 @@ if (!dryRunResult.success) {
 Patches can only modify files matching patterns in `repoConfig.safety.allowed_file_patterns`.
 
 **Default patterns:**
+
 ```json
 {
   "safety": {
-    "allowed_file_patterns": [
-      "**/*.ts",
-      "**/*.js",
-      "**/*.md",
-      "**/*.json"
-    ]
+    "allowed_file_patterns": ["**/*.ts", "**/*.js", "**/*.md", "**/*.json"]
   }
 }
 ```
@@ -172,15 +168,11 @@ Patches can only modify files matching patterns in `repoConfig.safety.allowed_fi
 Patches **cannot** modify files matching patterns in `repoConfig.safety.blocked_file_patterns`.
 
 **Default patterns:**
+
 ```json
 {
   "safety": {
-    "blocked_file_patterns": [
-      ".env",
-      "**/*.key",
-      "**/*.pem",
-      "**/credentials.*"
-    ]
+    "blocked_file_patterns": [".env", "**/*.key", "**/*.pem", "**/credentials.*"]
   }
 }
 ```
@@ -206,11 +198,7 @@ Edit `.codepipe/config.json`:
 ```json
 {
   "safety": {
-    "allowed_file_patterns": [
-      "src/**/*.ts",
-      "tests/**/*.spec.ts",
-      "docs/**/*.md"
-    ],
+    "allowed_file_patterns": ["src/**/*.ts", "tests/**/*.spec.ts", "docs/**/*.md"],
     "blocked_file_patterns": [
       ".env*",
       "**/*.key",
@@ -230,7 +218,11 @@ Edit `.codepipe/config.json`:
 ### Create Feature Branch
 
 ```typescript
-import { createBranch, type BranchConfig, type CreateBranchOptions } from './workflows/branchManager';
+import {
+  createBranch,
+  type BranchConfig,
+  type CreateBranchOptions,
+} from './workflows/branchManager';
 
 const config: BranchConfig = {
   runDir: '.codepipe/runs/feat-abc123',
@@ -289,12 +281,12 @@ console.log(`Status: ${syncStatus.status}`);
 
 ### Branch Naming Conventions
 
-| Prefix | Use Case | Example |
-|--------|----------|---------|
-| `feature/` | New features | `feature/user-authentication` |
-| `bugfix/` | Bug fixes | `bugfix/login-error` |
-| `hotfix/` | Production hotfixes | `hotfix/security-patch` |
-| `experiment/` | Experimental work | `experiment/new-ui-design` |
+| Prefix        | Use Case            | Example                       |
+| ------------- | ------------------- | ----------------------------- |
+| `feature/`    | New features        | `feature/user-authentication` |
+| `bugfix/`     | Bug fixes           | `bugfix/login-error`          |
+| `hotfix/`     | Production hotfixes | `hotfix/security-patch`       |
+| `experiment/` | Experimental work   | `experiment/new-ui-design`    |
 
 ---
 
@@ -329,12 +321,14 @@ The Patch Manager automatically detects conflicts and marks tasks as `human-acti
 ### Resolution Steps
 
 1. **Inspect the conflict**
+
    ```bash
    cd /path/to/repo
    git status
    ```
 
 2. **Review the patch**
+
    ```bash
    cat .codepipe/runs/feat-abc123/artifacts/patches/I3.T2-001.diff
    ```
@@ -387,6 +381,7 @@ Rollback snapshots are created before each patch application:
 ```
 
 **Snapshot metadata:**
+
 ```json
 {
   "schema_version": "1.0.0",
@@ -492,11 +487,13 @@ mv .codepipe/runs/feat-abc123/queue/running/I3.T2.json \
 #### 1. Working Tree Not Clean
 
 **Error:**
+
 ```
 Working tree is not clean. Commit or stash changes before applying patches.
 ```
 
 **Solution:**
+
 ```bash
 git status
 git add .
@@ -508,11 +505,13 @@ git stash
 #### 2. Constraint Violation
 
 **Error:**
+
 ```
 File matches blocked pattern "**/*.env" from RepoConfig.safety.blocked_file_patterns
 ```
 
 **Solution:**
+
 - Remove sensitive files from the patch
 - Update `.codepipe/config.json` to adjust patterns
 - Move sensitive configuration to environment variables
@@ -520,11 +519,13 @@ File matches blocked pattern "**/*.env" from RepoConfig.safety.blocked_file_patt
 #### 3. Patch Conflicts
 
 **Error:**
+
 ```
 git apply failed: error: patch failed: src/index.ts:42
 ```
 
 **Solution:**
+
 - See [Conflict Handling](#conflict-handling) section
 - Manually apply patch with `git apply --reject`
 - Resolve conflicts and resume workflow
@@ -532,11 +533,13 @@ git apply failed: error: patch failed: src/index.ts:42
 #### 4. Branch Already Exists
 
 **Error:**
+
 ```
 Branch "feature/add-user-auth" already exists
 ```
 
 **Solution:**
+
 ```bash
 # Delete local branch
 git branch -d feature/add-user-auth
@@ -551,11 +554,13 @@ git push origin --delete feature/add-user-auth
 #### 5. Protected Branch Commit
 
 **Error:**
+
 ```
 Cannot commit directly to protected branch: main
 ```
 
 **Solution:**
+
 - Create a feature branch first
 - Never commit directly to `main`, `master`, or `develop`
 - Use the Branch Manager to create a proper feature branch

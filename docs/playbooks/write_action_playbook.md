@@ -69,10 +69,10 @@ const queue = createWriteActionQueue({
   provider: 'github',
   logger: yourLogger,
   metrics: yourMetricsCollector,
-  maxRetries: 3,              // Default: 3 attempts per action
-  concurrencyLimit: 2,        // Default: 2 actions in flight (conservative)
-  backoffBaseMs: 2000,        // Default: 2 seconds initial backoff
-  backoffMaxMs: 60000,        // Default: 60 seconds max backoff
+  maxRetries: 3, // Default: 3 attempts per action
+  concurrencyLimit: 2, // Default: 2 actions in flight (conservative)
+  backoffBaseMs: 2000, // Default: 2 seconds initial backoff
+  backoffMaxMs: 60000, // Default: 60 seconds max backoff
 });
 
 await queue.initialize();
@@ -83,11 +83,13 @@ await queue.initialize();
 The `concurrencyLimit` parameter controls how many write actions can execute simultaneously. Lower values reduce the risk of triggering secondary limits but increase queue processing time.
 
 **Recommended values:**
+
 - **Conservative (default):** `concurrencyLimit: 2` - Safest for avoiding abuse detection
 - **Moderate:** `concurrencyLimit: 3-5` - Acceptable if your account has high reputation
 - **Aggressive:** `concurrencyLimit: 10+` - Only for GitHub Apps with dedicated rate limit pools
 
 **Environment variable override:**
+
 ```bash
 export CODEPIPE_WRITE_CONCURRENCY=2
 ```
@@ -98,38 +100,23 @@ export CODEPIPE_WRITE_CONCURRENCY=2
 
 ```typescript
 // Enqueue a PR comment
-await queue.enqueue(
-  WriteActionType.PR_COMMENT,
-  'owner',
-  'repo',
-  {
-    target_number: 42,
-    comment_body: 'Deployment successful!',
-  }
-);
+await queue.enqueue(WriteActionType.PR_COMMENT, 'owner', 'repo', {
+  target_number: 42,
+  comment_body: 'Deployment successful!',
+});
 
 // Enqueue a review request
-await queue.enqueue(
-  WriteActionType.PR_REVIEW_REQUEST,
-  'owner',
-  'repo',
-  {
-    target_number: 42,
-    reviewers: ['alice', 'bob'],
-    team_reviewers: ['engineering'],
-  }
-);
+await queue.enqueue(WriteActionType.PR_REVIEW_REQUEST, 'owner', 'repo', {
+  target_number: 42,
+  reviewers: ['alice', 'bob'],
+  team_reviewers: ['engineering'],
+});
 
 // Enqueue label additions
-await queue.enqueue(
-  WriteActionType.PR_LABEL,
-  'owner',
-  'repo',
-  {
-    target_number: 42,
-    labels: ['ready-for-review', 'backend'],
-  }
-);
+await queue.enqueue(WriteActionType.PR_LABEL, 'owner', 'repo', {
+  target_number: 42,
+  labels: ['ready-for-review', 'backend'],
+});
 ```
 
 ### Draining the Queue
@@ -150,10 +137,7 @@ const executor = async (action: WriteAction) => {
   switch (action.action_type) {
     case WriteActionType.PR_COMMENT:
       // Use GitHub's REST API or adapter method
-      await adapter.createComment(
-        action.payload.target_number!,
-        action.payload.comment_body!
-      );
+      await adapter.createComment(action.payload.target_number!, action.payload.comment_body!);
       break;
 
     case WriteActionType.PR_REVIEW_REQUEST:
@@ -165,10 +149,7 @@ const executor = async (action: WriteAction) => {
       break;
 
     case WriteActionType.PR_LABEL:
-      await adapter.addLabels(
-        action.payload.target_number!,
-        action.payload.labels!
-      );
+      await adapter.addLabels(action.payload.target_number!, action.payload.labels!);
       break;
 
     // ... handle other action types
@@ -228,6 +209,7 @@ codepipe rate-limits --json
 ```
 
 This surfaces:
+
 - Remaining request budget per provider
 - Cooldown status and expiry time
 - Recent 429 hit count
@@ -244,6 +226,7 @@ codepipe rate-limits clear github
 ```
 
 **Warning:** Only clear cooldowns after:
+
 1. Confirming the secondary limit cause (burst writes, large payloads, etc.)
 2. Adjusting concurrency or timing parameters
 3. Ensuring sufficient time has passed (check `retry-after` headers)
@@ -251,6 +234,7 @@ codepipe rate-limits clear github
 ## Idempotency & Deduplication
 
 Each action is assigned an idempotency key computed from:
+
 - Action type
 - Repository owner and name
 - Payload content
@@ -289,6 +273,7 @@ Failed actions are retried with exponential backoff:
 4. **Terminal failure:** After exhausting retries, action status becomes `FAILED`
 
 The queue does **not** retry actions automatically after failure. Operators must:
+
 - Clear the failed action from the queue
 - Re-enqueue if necessary (with adjusted parameters or after resolving the root cause)
 
@@ -298,14 +283,14 @@ The queue does **not** retry actions automatically after failure. Operators must
 
 The queue emits the following Prometheus metrics:
 
-| Metric | Type | Labels | Description |
-|--------|------|--------|-------------|
-| `write_action_queue_enqueued` | counter | `provider`, `action_type` | Actions added to queue |
-| `write_action_queue_deduped` | counter | `provider`, `action_type` | Actions skipped via idempotency |
-| `write_action_queue_completed` | counter | `provider`, `action_type` | Actions completed successfully |
-| `write_action_queue_retried` | counter | `provider`, `action_type` | Actions retried after failure |
-| `write_action_queue_failed` | counter | `provider`, `action_type` | Actions failed after max retries |
-| `write_action_queue_depth` | gauge | `provider`, `status` | Current queue depth by status |
+| Metric                         | Type    | Labels                    | Description                      |
+| ------------------------------ | ------- | ------------------------- | -------------------------------- |
+| `write_action_queue_enqueued`  | counter | `provider`, `action_type` | Actions added to queue           |
+| `write_action_queue_deduped`   | counter | `provider`, `action_type` | Actions skipped via idempotency  |
+| `write_action_queue_completed` | counter | `provider`, `action_type` | Actions completed successfully   |
+| `write_action_queue_retried`   | counter | `provider`, `action_type` | Actions retried after failure    |
+| `write_action_queue_failed`    | counter | `provider`, `action_type` | Actions failed after max retries |
+| `write_action_queue_depth`     | gauge   | `provider`, `status`      | Current queue depth by status    |
 
 ### Logs
 
@@ -362,15 +347,18 @@ When `codepipe resume` runs, it should:
 ### Queue Not Draining
 
 **Symptoms:**
+
 - `pending_count` remains high
 - No actions executing despite calling `drain()`
 
 **Diagnosis:**
+
 1. Check rate limit ledger: `codepipe rate-limits`
 2. Look for cooldown warnings in logs
 3. Verify `concurrencyLimit` isn't exceeded by `in_progress_count`
 
 **Resolution:**
+
 - If in cooldown, wait for `cooldownUntil` timestamp or clear manually
 - If manual ack required, review cause and clear with `codepipe rate-limits clear github`
 - Increase `concurrencyLimit` if backlog is growing and no rate limits are active
@@ -378,29 +366,35 @@ When `codepipe resume` runs, it should:
 ### Duplicate Actions
 
 **Symptoms:**
+
 - GitHub receives the same comment/label multiple times
 
 **Diagnosis:**
+
 1. Check if idempotency keys are being generated correctly
 2. Verify executor function isn't being called multiple times per action
 3. Review queue file for duplicate `action_id` entries
 
 **Resolution:**
+
 - Ensure payload hashing is deterministic (no timestamps or random data)
 - Fix executor to be truly idempotent (check if comment already exists before posting)
 
 ### Failed Actions Accumulating
 
 **Symptoms:**
+
 - `failed_count` grows over time
 - Same action IDs retry and fail repeatedly
 
 **Diagnosis:**
+
 1. Check `last_error` field in queue.jsonl
 2. Review GitHub API error responses (4xx vs 5xx)
 3. Validate token permissions and repository access
 
 **Resolution:**
+
 - For permanent errors (403, 404), remove actions manually or adjust payloads
 - For transient errors (503), increase backoff times or retry limits
 - For auth errors (401), rotate token or update permissions
@@ -410,6 +404,7 @@ When `codepipe resume` runs, it should:
 ### 1. Use Conservative Concurrency
 
 Start with `concurrencyLimit: 2` and monitor metrics. Only increase if you observe:
+
 - No 429 responses in rate limit ledger
 - Backlog is growing faster than drain rate
 - Account has high reputation (old, verified, many repos)
@@ -437,12 +432,14 @@ await queue.enqueue(WriteActionType.PR_LABEL, owner, repo, {
 ### 3. Monitor Queue Depth
 
 Set up alerts when `write_action_queue_depth{status="pending"}` exceeds thresholds:
+
 - **Warning:** `> 50` (investigate drain performance)
 - **Critical:** `> 200` (may indicate rate limit issues or executor failures)
 
 ### 4. Respect cooldown Signals
 
 Do **not** bypass cooldown checks. The ledger's cooldown logic protects your account from suspension. If you're hitting secondary limits frequently:
+
 - Reduce write operation volume
 - Spread operations over longer time windows
 - Use GitHub webhooks instead of polling + commenting
@@ -461,17 +458,19 @@ This playbook assumes you've reviewed:
 - **Section 4:** Rate-limit playbook and ledger management (see `docs/ops/rate_limit_reference.md`)
 
 For additional context on rate limit ledger structure and cooldown thresholds, consult:
+
 - `docs/ops/rate_limit_reference.md`: Ledger schema, inspection commands, manual intervention steps
 
 ## Version History
 
-| Version | Date | Changes |
-|---------|------|---------|
-| 1.0.0 | 2024-01-XX | Initial release with IR-6/IR-7 support |
+| Version | Date       | Changes                                |
+| ------- | ---------- | -------------------------------------- |
+| 1.0.0   | 2024-01-XX | Initial release with IR-6/IR-7 support |
 
 ## Support
 
 For questions or issues:
+
 1. Check queue status: `codepipe status --json`
 2. Review rate limits: `codepipe rate-limits`
 3. Inspect logs: `tail -f <runDir>/logs.ndjson`

@@ -5,6 +5,7 @@
 This playbook documents the pull request automation workflow for the AI Feature Pipeline. PR automation ensures safe, auditable, and governed creation and management of pull requests, enforcing human-in-the-loop gates and respecting branch protection rules.
 
 **Implements:**
+
 - FR-15: PR automation
 - Section 2: Communication Patterns (PR orchestration)
 - Section 3.10.4: `codepipe pr` command flows
@@ -309,13 +310,13 @@ Auto-merge is a **conditional automation** feature:
 
 ### Decision Matrix
 
-| Scenario | Gates Required | Auto-Merge Allowed |
-|----------|---------------|-------------------|
-| Development environment | Code only | Yes (if configured) |
-| Staging environment | Code + PR | Yes (if branch protection allows) |
-| Production environment | Code + PR + Deploy | No (manual merge enforced) |
-| High-risk changes | All gates | No (manual review required) |
-| Low-risk changes | Code + PR | Yes (if validations pass) |
+| Scenario                | Gates Required     | Auto-Merge Allowed                |
+| ----------------------- | ------------------ | --------------------------------- |
+| Development environment | Code only          | Yes (if configured)               |
+| Staging environment     | Code + PR          | Yes (if branch protection allows) |
+| Production environment  | Code + PR + Deploy | No (manual merge enforced)        |
+| High-risk changes       | All gates          | No (manual review required)       |
+| Low-risk changes        | Code + PR          | Yes (if validations pass)         |
 
 ### Example: Production Deployment
 
@@ -341,6 +342,7 @@ For a production deployment with strict governance:
 ```
 
 **Workflow**:
+
 1. Code generated → **Pause** for Code approval
 2. `codepipe approve code --signer user@example.com`
 3. PR created → CI/CD runs
@@ -438,6 +440,7 @@ Currently, PR commands call GitHub adapter directly. Future work will:
 **Cause**: Code approval gate not completed
 
 **Resolution**:
+
 ```bash
 # Review generated code
 cat .codepipe/runs/<feature-id>/code/**/*.ts
@@ -458,6 +461,7 @@ codepipe pr create
 **Cause**: `validation.json` indicates failures
 
 **Resolution**:
+
 ```bash
 # Run validations
 codepipe validate
@@ -481,6 +485,7 @@ codepipe pr create
 **Cause**: `pr.json` doesn't exist (PR not created yet)
 
 **Resolution**:
+
 ```bash
 # Create PR first
 codepipe pr create
@@ -498,6 +503,7 @@ codepipe pr status
 **Cause**: `pr.json` already exists with PR number
 
 **Resolution**:
+
 - PR already created, no action needed
 - View PR: `codepipe pr status`
 - If you need to recreate PR, delete `pr.json` and close/delete PR on GitHub first (manual operation)
@@ -518,12 +524,12 @@ codepipe pr status
 
 All PR commands use standardized exit codes:
 
-| Exit Code | Meaning | Description | Remediation |
-|-----------|---------|-------------|-------------|
-| `0` | Success | Command completed successfully | None |
-| `1` | General Error | Unexpected error during execution | Check logs; contact support if persistent |
-| `10` | Validation Error | Invalid inputs, feature not found, or PR state invalid | Review error message; validate inputs |
-| `30` | Human Action Required | Approvals missing, validations failed, or blockers present | Complete required approvals or fix blockers |
+| Exit Code | Meaning               | Description                                                | Remediation                                 |
+| --------- | --------------------- | ---------------------------------------------------------- | ------------------------------------------- |
+| `0`       | Success               | Command completed successfully                             | None                                        |
+| `1`       | General Error         | Unexpected error during execution                          | Check logs; contact support if persistent   |
+| `10`      | Validation Error      | Invalid inputs, feature not found, or PR state invalid     | Review error message; validate inputs       |
+| `30`      | Human Action Required | Approvals missing, validations failed, or blockers present | Complete required approvals or fix blockers |
 
 **Special Case**: `codepipe pr status --fail-on-blockers` exits with code `1` if blockers are present (instead of `0`).
 
@@ -541,26 +547,31 @@ All PR commands use standardized exit codes:
 ## Quick Reference
 
 ### Create PR
+
 ```bash
 codepipe pr create [--reviewers user1,user2] [--draft]
 ```
 
 ### Check Status
+
 ```bash
 codepipe pr status [--fail-on-blockers]
 ```
 
 ### Request Reviewers
+
 ```bash
 codepipe pr reviewers --add user1,user2
 ```
 
 ### Disable Auto-Merge
+
 ```bash
 codepipe pr disable-auto-merge [--reason "<text>"]
 ```
 
 ### JSON Output (All Commands)
+
 ```bash
 codepipe pr <command> --json
 ```

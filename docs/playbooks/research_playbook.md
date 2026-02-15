@@ -11,6 +11,7 @@
 The **Research Coordinator** is a core workflow component that identifies unknowns from user prompts, PRD/spec requirements, and repository context, then queues structured ResearchTasks to fill knowledge gaps before planning and execution.
 
 This playbook describes:
+
 - How to use CLI commands to manage research tasks
 - Caching and freshness policies for deterministic results
 - Fallback flows when external services (Linear, GitHub) are offline
@@ -24,21 +25,21 @@ This playbook describes:
 
 A **ResearchTask** represents a single investigation unit with:
 
-| Field | Description |
-|-------|-------------|
-| `task_id` | Unique identifier (e.g., `RT-1702345678-abc123`) |
-| `feature_id` | Parent feature identifier |
-| `title` | Human-readable task title |
-| `objectives` | Array of questions or goals to answer |
-| `sources` | Array of sources to consult (codebase, web, API, documentation) |
-| `cache_key` | SHA-256 hash of objectives + sources for result reuse |
-| `freshness_requirements` | Policy defining when cached results expire |
-| `status` | Current state: `pending`, `in_progress`, `completed`, `failed`, `cached` |
-| `results` | Research findings (summary, details, confidence score, sources consulted) |
-| `created_at` | ISO 8601 timestamp of task creation |
-| `updated_at` | ISO 8601 timestamp of last update |
-| `started_at` | ISO 8601 timestamp when task began execution |
-| `completed_at` | ISO 8601 timestamp when task finished |
+| Field                    | Description                                                               |
+| ------------------------ | ------------------------------------------------------------------------- |
+| `task_id`                | Unique identifier (e.g., `RT-1702345678-abc123`)                          |
+| `feature_id`             | Parent feature identifier                                                 |
+| `title`                  | Human-readable task title                                                 |
+| `objectives`             | Array of questions or goals to answer                                     |
+| `sources`                | Array of sources to consult (codebase, web, API, documentation)           |
+| `cache_key`              | SHA-256 hash of objectives + sources for result reuse                     |
+| `freshness_requirements` | Policy defining when cached results expire                                |
+| `status`                 | Current state: `pending`, `in_progress`, `completed`, `failed`, `cached`  |
+| `results`                | Research findings (summary, details, confidence score, sources consulted) |
+| `created_at`             | ISO 8601 timestamp of task creation                                       |
+| `updated_at`             | ISO 8601 timestamp of last update                                         |
+| `started_at`             | ISO 8601 timestamp when task began execution                              |
+| `completed_at`           | ISO 8601 timestamp when task finished                                     |
 
 ### 2.2 Caching Strategy
 
@@ -54,15 +55,15 @@ If a cached task exists and is fresh, its results are reused immediately without
 
 Each source specifies where to consult for information:
 
-| Type | Identifier Example | Description |
-|------|-------------------|-------------|
-| `codebase` | `src/api/endpoints.ts` | File paths or patterns within the repository |
-| `web` | `https://docs.example.com/api` | External documentation or API references |
-| `documentation` | `README.md`, `docs/architecture.md` | Markdown or text documentation |
-| `api` | `https://api.linear.app/graphql` | REST or GraphQL API endpoints |
-| `linear` | `issue:PROJ-123` | Linear issue or project reference |
-| `github` | `repo:owner/name/issues/456` | GitHub issue or PR reference |
-| `other` | Custom identifier | Extensible for future integrations |
+| Type            | Identifier Example                  | Description                                  |
+| --------------- | ----------------------------------- | -------------------------------------------- |
+| `codebase`      | `src/api/endpoints.ts`              | File paths or patterns within the repository |
+| `web`           | `https://docs.example.com/api`      | External documentation or API references     |
+| `documentation` | `README.md`, `docs/architecture.md` | Markdown or text documentation               |
+| `api`           | `https://api.linear.app/graphql`    | REST or GraphQL API endpoints                |
+| `linear`        | `issue:PROJ-123`                    | Linear issue or project reference            |
+| `github`        | `repo:owner/name/issues/456`        | GitHub issue or PR reference                 |
+| `other`         | Custom identifier                   | Extensible for future integrations           |
 
 ---
 
@@ -71,17 +72,20 @@ Each source specifies where to consult for information:
 ### 3.1 List Research Tasks
 
 **Command:**
+
 ```bash
 codepipe research list [options]
 ```
 
 **Options:**
+
 - `--status <status>`: Filter by status (`pending`, `in_progress`, `completed`, `failed`, `cached`)
 - `--stale`: Show only tasks with stale cached results
 - `--limit <n>`: Limit output to n tasks
 - `--json`: Output as JSON for programmatic consumption
 
 **Example:**
+
 ```bash
 # List all pending tasks
 codepipe research list --status pending
@@ -94,6 +98,7 @@ codepipe research list --json
 ```
 
 **Output (Human-Readable):**
+
 ```
 Research Tasks for Feature: feat-abc123
 
@@ -113,6 +118,7 @@ Total: 3 tasks (2 pending, 1 completed)
 ```
 
 **Output (JSON):**
+
 ```json
 {
   "feature_id": "feat-abc123",
@@ -122,7 +128,7 @@ Total: 3 tasks (2 pending, 1 completed)
       "title": "Clarify authentication flow requirements",
       "status": "pending",
       "objectives": ["What OAuth scopes are required?", "..."],
-      "sources": [{"type": "documentation", "identifier": "docs/auth.md"}],
+      "sources": [{ "type": "documentation", "identifier": "docs/auth.md" }],
       "cache_key": "a1b2c3d4...",
       "created_at": "2025-12-15T10:30:00Z",
       "updated_at": "2025-12-15T10:30:00Z"
@@ -140,19 +146,23 @@ Total: 3 tasks (2 pending, 1 completed)
 ### 3.2 Show Task Details
 
 **Command:**
+
 ```bash
 codepipe research show <task-id> [options]
 ```
 
 **Options:**
+
 - `--json`: Output as JSON
 
 **Example:**
+
 ```bash
 codepipe research show RT-123456-xyz
 ```
 
 **Output:**
+
 ```
 Research Task: RT-123456-xyz
 Title: Verify database schema constraints
@@ -183,11 +193,13 @@ Freshness: max_age_hours=24, force_fresh=false
 ### 3.3 Create Research Task (Manual)
 
 **Command:**
+
 ```bash
 codepipe research create [options]
 ```
 
 **Options:**
+
 - `--title <title>`: Task title (required)
 - `--objective <objective>`: Research objective (repeatable)
 - `--source <type:identifier>`: Source to consult (repeatable)
@@ -198,6 +210,7 @@ Sources accept `type:identifier` or `type:identifier|description`. Allowed sourc
 `codebase`, `web`, `documentation`, `api`, `linear`, `github`, `other`.
 
 **Example:**
+
 ```bash
 codepipe research create \
   --title "Clarify rate limit policies" \
@@ -209,6 +222,7 @@ codepipe research create \
 ```
 
 **Output:**
+
 ```
 Created research task: RT-123456-ghi
   Status: pending
@@ -222,11 +236,13 @@ Use 'codepipe research show RT-123456-ghi' to view details.
 Research tasks are typically executed automatically during the `start` workflow, but can be triggered manually:
 
 **Command:**
+
 ```bash
 codepipe research execute [options]
 ```
 
 **Options:**
+
 - `--task-id <id>`: Execute specific task
 - `--all-pending`: Execute all pending tasks
 - `--parallel <n>`: Number of parallel workers (default: 1)
@@ -327,6 +343,7 @@ When a rate limit is hit (GitHub, Linear, etc.), the coordinator:
    CLI displays warning: `"Research task deferred due to GitHub rate limit. Will retry at 15:30 UTC."`
 
 **Example Diagnostic:**
+
 ```json
 {
   "task_id": "RT-123456-def",
@@ -359,6 +376,7 @@ When an external service is unreachable:
    User can manually provide answers via CLI or approve PRD/spec without research completion.
 
 **Example CLI Output:**
+
 ```
 ⚠ WARNING: 1 research task could not be completed due to service outage.
 
@@ -373,12 +391,12 @@ You can:
 
 ### 5.3 Mitigation Summary
 
-| Scenario | Mitigation | Impact |
-|----------|-----------|--------|
-| GitHub rate limit | Queue for retry after `reset_at` | Deferred research, non-blocking |
-| Linear offline | Fallback to cached/local context | Reduced research quality, continues |
-| Network timeout | Log error, mark task pending | Manual retry required |
-| Invalid credentials | Block execution, user warning | User must fix credentials |
+| Scenario            | Mitigation                       | Impact                              |
+| ------------------- | -------------------------------- | ----------------------------------- |
+| GitHub rate limit   | Queue for retry after `reset_at` | Deferred research, non-blocking     |
+| Linear offline      | Fallback to cached/local context | Reduced research quality, continues |
+| Network timeout     | Log error, mark task pending     | Manual retry required               |
+| Invalid credentials | Block execution, user warning    | User must fix credentials           |
 
 ---
 
@@ -472,12 +490,12 @@ Each task is stored as a standalone JSON file conforming to the `ResearchTaskSch
 
 The coordinator exports the following metrics to `metrics/prometheus.txt`:
 
-| Metric | Type | Labels | Description |
-|--------|------|--------|-------------|
-| `research_tasks_created_total` | Counter | `feature_id` | Total research tasks created |
-| `research_tasks_cached_total` | Counter | `feature_id` | Total tasks reused from cache |
+| Metric                           | Type    | Labels       | Description                        |
+| -------------------------------- | ------- | ------------ | ---------------------------------- |
+| `research_tasks_created_total`   | Counter | `feature_id` | Total research tasks created       |
+| `research_tasks_cached_total`    | Counter | `feature_id` | Total tasks reused from cache      |
 | `research_tasks_completed_total` | Counter | `feature_id` | Total tasks completed successfully |
-| `research_tasks_failed_total` | Counter | `feature_id` | Total tasks failed |
+| `research_tasks_failed_total`    | Counter | `feature_id` | Total tasks failed                 |
 
 ### 7.2 Structured Logs
 
@@ -504,11 +522,13 @@ All coordinator operations emit structured logs to `logs/logs.ndjson`:
 ### 8.1 Writing Effective Objectives
 
 **Good:**
+
 - "What OAuth scopes are required for GitHub API access?"
 - "Are there foreign key constraints on the users table?"
 - "What is the recommended deployment strategy for this service?"
 
 **Bad:**
+
 - "Check the docs" (too vague)
 - "Everything about authentication" (too broad)
 - "Look at the code" (no clear goal)
@@ -522,13 +542,13 @@ All coordinator operations emit structured logs to `logs/logs.ndjson`:
 
 ### 8.3 Cache Freshness Tuning
 
-| Use Case | Recommended `max_age_hours` |
-|----------|----------------------------|
-| Static architecture docs | 168 (7 days) |
-| API schemas (rarely change) | 72 (3 days) |
-| Issue status (frequently updated) | 6 (6 hours) |
-| Real-time metrics | 1 (1 hour) |
-| Force fresh for critical decisions | 0 + `force_fresh=true` |
+| Use Case                           | Recommended `max_age_hours` |
+| ---------------------------------- | --------------------------- |
+| Static architecture docs           | 168 (7 days)                |
+| API schemas (rarely change)        | 72 (3 days)                 |
+| Issue status (frequently updated)  | 6 (6 hours)                 |
+| Real-time metrics                  | 1 (1 hour)                  |
+| Force fresh for critical decisions | 0 + `force_fresh=true`      |
 
 ---
 
@@ -539,11 +559,13 @@ All coordinator operations emit structured logs to `logs/logs.ndjson`:
 **Symptom:** Task remains pending for extended period.
 
 **Causes:**
+
 - Rate limit not yet reset
 - External service offline
 - Missing required credentials
 
 **Resolution:**
+
 1. Check `codepipe research show <task-id>` for metadata
 2. Verify credentials: `codepipe config validate`
 3. Retry manually: `codepipe research execute --task-id <task-id>`
@@ -553,11 +575,13 @@ All coordinator operations emit structured logs to `logs/logs.ndjson`:
 **Symptom:** New task created despite identical objectives/sources.
 
 **Causes:**
+
 - Source identifiers differ (e.g., absolute vs. relative paths)
 - Objectives have whitespace/formatting differences
 - `force_fresh=true` set in freshness requirements
 
 **Resolution:**
+
 1. Normalize source identifiers before task creation
 2. Trim and deduplicate objectives
 3. Check freshness policy in task metadata
@@ -567,11 +591,13 @@ All coordinator operations emit structured logs to `logs/logs.ndjson`:
 **Symptom:** Research results have `confidence_score < 0.5`.
 
 **Causes:**
+
 - Ambiguous objectives
 - Insufficient sources
 - Conflicting information across sources
 
 **Resolution:**
+
 1. Refine objectives to be more specific
 2. Add authoritative sources
 3. Manually review results and adjust confidence if needed

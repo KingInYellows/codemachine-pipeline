@@ -20,34 +20,34 @@ main (default)              release
 
 ## Included on `release`
 
-| Category | Files |
-|----------|-------|
-| Source code | `src/`, `bin/` |
-| Build config | `package.json`, `tsconfig.json` |
-| Build output | `dist/` (generated) |
-| CLI manifest | `oclif.manifest.json` (generated) |
+| Category      | Files                                                     |
+| ------------- | --------------------------------------------------------- |
+| Source code   | `src/`, `bin/`                                            |
+| Build config  | `package.json`, `tsconfig.json`                           |
+| Build output  | `dist/` (generated)                                       |
+| CLI manifest  | `oclif.manifest.json` (generated)                         |
 | Documentation | `README.md`, `LICENSE`, `CONTRIBUTING.md`, `CHANGELOG.md` |
-| Docker | `Dockerfile`, `.dockerignore` |
-| CI | `.github/` |
-| Config | `.npmrc`, `.npmignore`, `.gitignore` |
-| Tests | `tests/`, `vitest.config.ts` |
-| Docs | `docs/` |
-| Scripts | `scripts/` |
-| Examples | `examples/` |
+| Docker        | `Dockerfile`, `.dockerignore`                             |
+| CI            | `.github/`                                                |
+| Config        | `.npmrc`, `.npmignore`, `.gitignore`                      |
+| Tests         | `tests/`, `vitest.config.ts`                              |
+| Docs          | `docs/`                                                   |
+| Scripts       | `scripts/`                                                |
+| Examples      | `examples/`                                               |
 
 ## Excluded from `release`
 
-| Category | Files | Reason |
-|----------|-------|--------|
-| AI tooling | `CLAUDE.md` | Claude Code configuration |
-| AI artifacts | `.codemachine/` | Development planning artifacts |
-| IDE plugin | `.serena/` | Serena IDE cache |
-| Claude config | `.claude/` | Claude Code settings |
-| MCP config | `.mcp.json` | MCP server config |
-| Claude Flow | `claude-flow.config.json` | Claude Flow config |
-| Dep baseline | `.deps/` | Circular dependency baseline |
-| Legacy tools | `tools/` | Superseded by scripts/tooling/ |
-| Original spec | `specification.md` | Archived to docs/archive/ |
+| Category      | Files                     | Reason                         |
+| ------------- | ------------------------- | ------------------------------ |
+| AI tooling    | `CLAUDE.md`               | Claude Code configuration      |
+| AI artifacts  | `.codemachine/`           | Development planning artifacts |
+| IDE plugin    | `.serena/`                | Serena IDE cache               |
+| Claude config | `.claude/`                | Claude Code settings           |
+| MCP config    | `.mcp.json`               | MCP server config              |
+| Claude Flow   | `claude-flow.config.json` | Claude Flow config             |
+| Dep baseline  | `.deps/`                  | Circular dependency baseline   |
+| Legacy tools  | `tools/`                  | Superseded by scripts/tooling/ |
+| Original spec | `specification.md`        | Archived to docs/archive/      |
 
 ## Creating the Release Branch
 

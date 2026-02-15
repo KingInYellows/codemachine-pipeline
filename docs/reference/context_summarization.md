@@ -57,6 +57,7 @@ CLI Status Output (shows summaries, warnings)
 Files are chunked when their estimated token count exceeds the configured `maxTokensPerChunk` (default: 4000 tokens).
 
 Token estimation uses a simple heuristic:
+
 ```
 estimatedTokens = fileSize (bytes) / 4
 ```
@@ -87,11 +88,13 @@ For a 20,000-token file with `maxTokensPerChunk=4000` and `chunkOverlapPercent=1
 ### Cache Keys
 
 Summaries are cached using a composite key:
+
 ```
 chunkId = SHA256(filePath + fileSHA + chunkIndex).substring(0, 16)
 ```
 
 This ensures:
+
 - Same file content → same cache hit
 - Different versions → cache miss (re-summarize)
 - Per-chunk granularity → partial reuse when file changes
@@ -99,6 +102,7 @@ This ensures:
 ### Cache Location
 
 Chunk metadata files are stored at:
+
 ```
 .codepipe/<feature_id>/context/docs/<chunkId>.json
 ```
@@ -127,6 +131,7 @@ Chunk metadata files are stored at:
 ### Cache Invalidation
 
 Caches are invalidated when:
+
 1. **File SHA changes** (file content modified)
 2. **--force flag** (manual re-summarization)
 3. **TTL expires** (future enhancement: configurable TTL)
@@ -155,6 +160,7 @@ When redaction occurs, the engine sets `redactionFlags` in the chunk metadata:
 ```
 
 These flags are:
+
 - Stored in chunk metadata
 - Logged to telemetry
 - Included in audit trails
@@ -164,6 +170,7 @@ These flags are:
 ### Token Recording
 
 Every summarization operation records:
+
 - **Prompt tokens**: Tokens sent to provider
 - **Completion tokens**: Tokens received from provider
 - **Total tokens**: Sum of prompt + completion
@@ -172,15 +179,16 @@ Every summarization operation records:
 
 Cost is calculated using provider-specific rates:
 
-| Provider | Model | Input (per 1K) | Output (per 1K) |
-|----------|-------|----------------|-----------------|
-| OpenAI | GPT-4 | $0.03 | $0.06 |
-| OpenAI | GPT-3.5 Turbo | $0.0015 | $0.002 |
-| Anthropic | Claude 3 Opus | $0.015 | $0.075 |
-| Anthropic | Claude 3 Sonnet | $0.003 | $0.015 |
-| Anthropic | Claude 3 Haiku | $0.00025 | $0.00125 |
+| Provider  | Model           | Input (per 1K) | Output (per 1K) |
+| --------- | --------------- | -------------- | --------------- |
+| OpenAI    | GPT-4           | $0.03          | $0.06           |
+| OpenAI    | GPT-3.5 Turbo   | $0.0015        | $0.002          |
+| Anthropic | Claude 3 Opus   | $0.015         | $0.075          |
+| Anthropic | Claude 3 Sonnet | $0.003         | $0.015          |
+| Anthropic | Claude 3 Haiku  | $0.00025       | $0.00125        |
 
 **Example:**
+
 ```
 Prompt tokens: 3500
 Completion tokens: 150
@@ -197,11 +205,12 @@ Budgets are configured in `RepoConfig`:
 
 ```yaml
 runtime:
-  context_token_budget: 100000  # Total tokens
-  context_cost_budget_usd: 5.0  # Total USD
+  context_token_budget: 100000 # Total tokens
+  context_cost_budget_usd: 5.0 # Total USD
 ```
 
 When budgets are exceeded:
+
 1. **Warning threshold** (default: 80%): Logs warning, continues
 2. **Hard limit** (100%): Logs error, adds to `warnings` array
 
@@ -210,6 +219,7 @@ When budgets are exceeded:
 Cost data is persisted to:
 
 **costs.json** (snapshot):
+
 ```json
 {
   "schema_version": "1.0.0",
@@ -243,12 +253,14 @@ Cost data is persisted to:
 ```
 
 **costs.ndjson** (log):
+
 ```json
 {"feature_id":"01JFABCD...","provider":"anthropic","operation":"summarize","prompt_tokens":3500,"completion_tokens":150,"cost_usd":0.01275,"timestamp":"2025-12-15T10:30:45.123Z","model":"claude-3-sonnet"}
 {"feature_id":"01JFABCD...","provider":"anthropic","operation":"summarize","prompt_tokens":4200,"completion_tokens":180,"cost_usd":0.0153,"timestamp":"2025-12-15T10:31:12.456Z","model":"claude-3-sonnet"}
 ```
 
 **context/summarization.json** (latest run metadata):
+
 ```json
 {
   "feature_id": "01JFABCD...",
@@ -297,9 +309,7 @@ The `status --json` command includes summarization metadata:
       },
       "cost_usd": 0.05025
     },
-    "budget_warnings": [
-      "Token budget warning: 13350 / 100000 (13.4%)"
-    ],
+    "budget_warnings": ["Token budget warning: 13350 / 100000 (13.4%)"],
     "warnings": []
   }
 }
@@ -323,6 +333,7 @@ codepipe context summarize --path "README.md" --force
 Without `--path`, the command refreshes the entire context manifest, reusing cached summaries unless `--force` is specified.
 
 **Behavior:**
+
 - Matches files using glob patterns
 - Clears cached summaries for matched files
 - Generates fresh summaries
@@ -406,9 +417,9 @@ constraints:
 
   # Paths excluded from summarization
   must_not_touch_paths:
-    - "secrets/**"
-    - ".env*"
-    - "**/*.key"
+    - 'secrets/**'
+    - '.env*'
+    - '**/*.key'
 ```
 
 ### Summarizer Config
@@ -417,9 +428,9 @@ Passed to `summarizeDocument()`:
 
 ```typescript
 const config: SummarizerConfig = {
-  repoRoot: "/path/to/repo",
-  runDir: ".codepipe/runs/01JFABCD...",
-  featureId: "01JFABCD...",
+  repoRoot: '/path/to/repo',
+  runDir: '.codepipe/runs/01JFABCD...',
+  featureId: '01JFABCD...',
   maxTokensPerChunk: 4000,
   chunkOverlapPercent: 10,
   tokenBudget: 100000,
@@ -433,6 +444,7 @@ const config: SummarizerConfig = {
 ### Provider Failures
 
 When a provider API call fails:
+
 1. **Transient errors** (429, 503): Retry with exponential backoff
 2. **Permanent errors** (401, 403): Log error, skip file
 3. **Timeout errors**: Log error, skip chunk
@@ -442,15 +454,16 @@ Errors are logged to `warnings` array in result:
 ```typescript
 {
   warnings: [
-    "Failed to summarize src/large-file.ts chunk 2: API timeout",
-    "Failed to read file src/missing.ts: ENOENT"
-  ]
+    'Failed to summarize src/large-file.ts chunk 2: API timeout',
+    'Failed to read file src/missing.ts: ENOENT',
+  ];
 }
 ```
 
 ### Budget Exceeded
 
 When budgets are exceeded:
+
 1. **Warning threshold** (80%): Continue, add to warnings
 2. **Hard limit** (100%): Stop summarization, return partial results
 
@@ -459,6 +472,7 @@ When budgets are exceeded:
 ### Caching Impact
 
 For a typical feature run:
+
 - **First run** (cold cache): Summarize all files, ~30s for 50 files
 - **Second run** (warm cache): Reuse cached summaries, ~2s
 - **Incremental run** (3 files changed): Re-summarize 3 files, ~5s
@@ -466,6 +480,7 @@ For a typical feature run:
 ### Token Savings
 
 Example repository:
+
 - **Total files**: 50
 - **Total tokens** (raw): 250,000
 - **Chunks generated**: 80
@@ -514,6 +529,7 @@ See `tests/unit/contextSummarizer.spec.ts`:
 ### Summaries Not Generated
 
 **Check:**
+
 1. `feature_flags.enable_context_summarization` is `true`
 2. Provider credentials configured
 3. Files not excluded by `must_not_touch_paths`
@@ -522,6 +538,7 @@ See `tests/unit/contextSummarizer.spec.ts`:
 ### Cache Not Working
 
 **Check:**
+
 1. `context/docs/` directory exists
 2. File SHAs match cached metadata
 3. `--force` flag not set
@@ -530,6 +547,7 @@ See `tests/unit/contextSummarizer.spec.ts`:
 ### Budget Warnings
 
 **Actions:**
+
 1. Review `telemetry/costs.json` for breakdown
 2. Increase `context_cost_budget_usd` if appropriate
 3. Reduce `max_context_files` to limit scope
@@ -538,6 +556,7 @@ See `tests/unit/contextSummarizer.spec.ts`:
 ### High Costs
 
 **Optimize:**
+
 1. Use Haiku instead of Opus for summaries
 2. Increase `maxTokensPerChunk` to reduce chunk count
 3. Cache more aggressively (higher TTL)
@@ -559,13 +578,14 @@ Allow users to configure summary style:
 
 ```yaml
 summarization:
-  prompt_template: "Summarize the following code, focusing on architecture and key functions."
+  prompt_template: 'Summarize the following code, focusing on architecture and key functions.'
   max_summary_tokens: 200
 ```
 
 ### Multi-level Summaries
 
 Generate hierarchical summaries:
+
 1. **Chunk-level**: Detailed per-chunk summaries
 2. **File-level**: Aggregate chunk summaries
 3. **Module-level**: Aggregate file summaries

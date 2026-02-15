@@ -77,6 +77,7 @@ The adapter uses the shared `HttpClient` with `Provider.LINEAR`, which automatic
 ### Cache Location
 
 Snapshots are stored in the run directory:
+
 ```
 .codepipe/runs/<feature-id>/inputs/linear_issue_<sanitized-id>.json
 ```
@@ -177,8 +178,8 @@ Mutating operations (updates, comment posting) are gated behind `enablePreviewFe
 ```typescript
 const adapter = createLinearAdapter({
   apiKey: process.env.LINEAR_API_KEY!,
-  enablePreviewFeatures: true,  // Opt-in required
-  runDir: '.codepipe/runs/FEAT-123'
+  enablePreviewFeatures: true, // Opt-in required
+  runDir: '.codepipe/runs/FEAT-123',
 });
 ```
 
@@ -212,12 +213,33 @@ query GetIssue($issueId: String!) {
     identifier
     title
     description
-    state { id name type }
+    state {
+      id
+      name
+      type
+    }
     priority
-    labels { nodes { id name color } }
-    assignee { id name email }
-    team { id name key }
-    project { id name }
+    labels {
+      nodes {
+        id
+        name
+        color
+      }
+    }
+    assignee {
+      id
+      name
+      email
+    }
+    team {
+      id
+      name
+      key
+    }
+    project {
+      id
+      name
+    }
     createdAt
     updatedAt
     url
@@ -234,7 +256,11 @@ query GetComments($issueId: String!) {
       nodes {
         id
         body
-        user { id name email }
+        user {
+          id
+          name
+          email
+        }
         createdAt
         updatedAt
       }
@@ -267,7 +293,9 @@ mutation UpdateIssue(
 mutation PostComment($issueId: String!, $body: String!) {
   commentCreate(input: { issueId: $issueId, body: $body }) {
     success
-    comment { id }
+    comment {
+      id
+    }
   }
 }
 ```
@@ -311,6 +339,7 @@ codepipe start --linear ENG-123
 ```
 
 **Behavior**:
+
 1. Resolve Linear issue ID to identifier
 2. Fetch issue snapshot via `LinearAdapter.fetchIssueSnapshot()`
 3. Save snapshot to `inputs/linear_issue_ENG-123.json`
@@ -334,13 +363,11 @@ LINEAR_ENABLE_PREVIEW=true  # Enable mutating operations
 
 ```typescript
 // .codepipe/config.yml
-integrations:
-  linear:
-    enabled: true
-    api_key_env: LINEAR_API_KEY
-    organization: acme-corp
-    preview_features: false
-    cache_ttl: 3600
+integrations: linear: enabled: true;
+api_key_env: LINEAR_API_KEY;
+organization: acme - corp;
+preview_features: false;
+cache_ttl: 3600;
 ```
 
 ## Testing Strategy
@@ -391,8 +418,8 @@ const MOCK_LINEAR_ISSUE: LinearIssue = {
 
 const MOCK_GRAPHQL_RESPONSE = {
   data: {
-    issue: MOCK_LINEAR_ISSUE
-  }
+    issue: MOCK_LINEAR_ISSUE,
+  },
 };
 ```
 
@@ -435,6 +462,7 @@ Target: >80% for typical development workflows
 ### Rate Limit Headroom
 
 With 1,500 req/hour limit:
+
 - Typical feature run: 2-4 requests (issue + comments)
 - Aggressive refresh: ~15 requests (edits, retries)
 - **Headroom**: >100 features per hour

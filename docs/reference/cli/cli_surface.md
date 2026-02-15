@@ -7,6 +7,7 @@ This document defines the command-line interface requirements for AI Feature Pip
 **Version:** 1.0.0
 **Last Updated:** 2025-12-17
 **Related Documents:**
+
 - [CLI Patterns](../ui/cli_patterns.md)
 - [GitHub Adapter Requirements](github_adapter.md)
 - [Linear Adapter Requirements](linear_adapter.md)
@@ -32,6 +33,7 @@ The CLI surface provides deterministic, automation-friendly outputs for observin
 ### Purpose
 
 Display comprehensive pipeline state including:
+
 - Manifest metadata (feature ID, title, source, status)
 - Queue, approvals, and execution progress
 - Context summaries and traceability links
@@ -47,11 +49,13 @@ Display comprehensive pipeline state including:
 
 **Enabled:** Flag indicating GitHub adapter is active
 **Rate Limit:**
+
 - `remaining`: Requests remaining in current window (integer)
 - `reset_at`: ISO 8601 timestamp when rate limit resets (string)
 - `in_cooldown`: Boolean indicating cooldown state (boolean)
 
 **PR Status:**
+
 - `number`: Pull request number (integer)
 - `state`: PR state (e.g., `open`, `closed`, `merged`) (string)
 - `mergeable`: Whether PR can be merged (`true`, `false`, `null` for unknown) (boolean | null)
@@ -60,6 +64,7 @@ Display comprehensive pipeline state including:
 **Warnings:** Array of human-readable warnings (string[])
 
 **Example JSON:**
+
 ```json
 {
   "integrations": {
@@ -86,11 +91,13 @@ Display comprehensive pipeline state including:
 
 **Enabled:** Flag indicating Linear adapter is active
 **Rate Limit:**
+
 - `remaining`: Requests remaining in 1-hour window (integer, max 1500)
 - `reset_at`: ISO 8601 timestamp when rate limit resets (string)
 - `in_cooldown`: Boolean indicating cooldown state (boolean)
 
 **Issue Status:**
+
 - `identifier`: Linear issue identifier (e.g., `ENG-123`) (string)
 - `state`: Issue state (e.g., `tracked`, `in_progress`, `done`) (string)
 - `url`: Linear issue URL (string)
@@ -98,6 +105,7 @@ Display comprehensive pipeline state including:
 **Warnings:** Array of human-readable warnings (string[])
 
 **Example JSON:**
+
 ```json
 {
   "integrations": {
@@ -124,6 +132,7 @@ Display comprehensive pipeline state including:
 Per-provider rate-limit state read from `rate_limits.json` artifact.
 
 **Providers:** Map of provider names to rate-limit data
+
 - `remaining`: Requests remaining (integer)
 - `reset_at`: ISO 8601 reset timestamp (string)
 - `in_cooldown`: Cooldown active (boolean)
@@ -131,6 +140,7 @@ Per-provider rate-limit state read from `rate_limits.json` artifact.
 - `recent_hit_count`: Number of recent 429 responses (integer)
 
 **Summary:**
+
 - `any_in_cooldown`: Whether any provider is in cooldown (boolean)
 - `any_requires_ack`: Whether any provider requires manual acknowledgement (boolean)
 - `providers_in_cooldown`: Count of providers in cooldown (integer)
@@ -138,6 +148,7 @@ Per-provider rate-limit state read from `rate_limits.json` artifact.
 **Warnings:** Array of provider-specific warnings (string[])
 
 **Example JSON:**
+
 ```json
 {
   "rate_limits": {
@@ -172,6 +183,7 @@ Per-provider rate-limit state read from `rate_limits.json` artifact.
 Diagnostics from ResearchCoordinator summarizing task state.
 
 **Fields:**
+
 - `total_tasks`: Total research tasks queued (integer)
 - `pending_tasks`: Tasks awaiting execution (integer)
 - `in_progress_tasks`: Tasks currently executing (integer)
@@ -184,6 +196,7 @@ Diagnostics from ResearchCoordinator summarizing task state.
 - `warnings`: Array of warnings/errors (string[])
 
 **Example JSON:**
+
 ```json
 {
   "research": {
@@ -204,6 +217,7 @@ Diagnostics from ResearchCoordinator summarizing task state.
 ### Human-Readable Output
 
 **Rate Limits (API Ledger Block):**
+
 ```
 ────────────────────────────────────────────────────────────
 API Ledger (Rate Limits)
@@ -223,6 +237,7 @@ linear:
 ```
 
 **Integration Status:**
+
 ```
 Integration Status:
   GitHub:
@@ -238,6 +253,7 @@ Integration Status:
 ```
 
 **Research Tasks:**
+
 ```
 Research Tasks:
   Total: 12
@@ -261,12 +277,14 @@ Resume failed or paused execution with safety checks, surfacing integration bloc
 Array of providers with active cooldowns or manual acknowledgement requirements.
 
 **Fields (per warning):**
+
 - `provider`: Provider name (e.g., `github`, `linear`) (string)
 - `in_cooldown`: Whether provider is in cooldown (boolean)
 - `manual_ack_required`: Whether manual acknowledgement is required (boolean)
 - `reset_at`: ISO 8601 reset timestamp (string)
 
 **Example JSON:**
+
 ```json
 {
   "rate_limit_warnings": [
@@ -285,10 +303,12 @@ Array of providers with active cooldowns or manual acknowledgement requirements.
 Per-integration warnings that may block resumption.
 
 **Fields:**
+
 - `github`: Array of GitHub-specific blockers (string[])
 - `linear`: Array of Linear-specific blockers (string[])
 
 **Example JSON:**
+
 ```json
 {
   "integration_blockers": {
@@ -306,9 +326,11 @@ Per-integration warnings that may block resumption.
 Surface blockers reported in `branch_protection.json` so operators see reviewer and status-check requirements before resuming.
 
 **Fields:**
+
 - `branch_protection_blockers`: Array describing each blocker (string[])
 
 **Example JSON:**
+
 ```json
 {
   "branch_protection_blockers": [
@@ -321,6 +343,7 @@ Surface blockers reported in `branch_protection.json` so operators see reviewer 
 ### Human-Readable Output
 
 **Rate Limit Warnings:**
+
 ```
 Rate Limit Warnings:
   github:
@@ -330,6 +353,7 @@ Rate Limit Warnings:
 ```
 
 **Integration Blockers:**
+
 ```
 Integration Blockers:
   GitHub:
@@ -360,6 +384,7 @@ Integration Blockers:
 ### CI/CD Usage Examples
 
 **Check GitHub rate limit before triggering workflow:**
+
 ```bash
 STATUS=$(codepipe status --feature "$FEATURE_ID" --json)
 GITHUB_REMAINING=$(echo "$STATUS" | jq -r '.integrations.github.rate_limit.remaining // 5000')
@@ -371,6 +396,7 @@ fi
 ```
 
 **Verify resume eligibility with rate-limit checks:**
+
 ```bash
 RESUME=$(codepipe resume --feature "$FEATURE_ID" --dry-run --json)
 CAN_RESUME=$(echo "$RESUME" | jq -r '.can_resume')
@@ -383,6 +409,7 @@ fi
 ```
 
 **Parse research task warnings:**
+
 ```bash
 STATUS=$(codepipe status --feature "$FEATURE_ID" --json)
 RESEARCH_WARNINGS=$(echo "$STATUS" | jq -r '.research.warnings | length')

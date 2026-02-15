@@ -129,6 +129,7 @@ cat /var/log/codepipe-baseline.txt
 ```
 
 **Target Performance (from E2E testing):**
+
 - `doctor`: < 3 seconds
 - `health`: < 1 second
 - `init`: < 5 seconds
@@ -139,14 +140,14 @@ cat /var/log/codepipe-baseline.txt
 
 Configure alerts for these conditions:
 
-| Condition | Severity | Action |
-|-----------|----------|--------|
-| doctor exits non-zero | **CRITICAL** | Immediate investigation |
-| doctor has failed checks (exit 0 with failures) | **HIGH** | Review within 4 hours |
-| Version changes unexpectedly | **MEDIUM** | Verify no unauthorized updates |
-| Disk space > 90% | **MEDIUM** | Clean up old runs |
-| .codepipe/ > 1GB | **LOW** | Archive old feature runs |
-| Pipeline stuck > 24 hours | **MEDIUM** | Check for hanging processes |
+| Condition                                       | Severity     | Action                         |
+| ----------------------------------------------- | ------------ | ------------------------------ |
+| doctor exits non-zero                           | **CRITICAL** | Immediate investigation        |
+| doctor has failed checks (exit 0 with failures) | **HIGH**     | Review within 4 hours          |
+| Version changes unexpectedly                    | **MEDIUM**   | Verify no unauthorized updates |
+| Disk space > 90%                                | **MEDIUM**   | Clean up old runs              |
+| .codepipe/ > 1GB                                | **LOW**      | Archive old feature runs       |
+| Pipeline stuck > 24 hours                       | **MEDIUM**   | Check for hanging processes    |
 
 ---
 
@@ -198,6 +199,7 @@ echo "Run 'codepipe doctor' for detailed diagnostics"
 ```
 
 Make executable:
+
 ```bash
 chmod +x /usr/local/bin/codepipe-status-dashboard.sh
 ```
@@ -208,11 +210,11 @@ chmod +x /usr/local/bin/codepipe-status-dashboard.sh
 
 ### Log Locations
 
-| Log Type | Location | Rotation |
-|----------|----------|----------|
-| **Pipeline Logs** | `.codepipe/logs/codepipe.log` | 100MB, gzip |
-| **Health Checks** | `/var/log/codepipe-health.log` | Manual (or logrotate) |
-| **Feature Runs** | `.codepipe/runs/<feature-id>/execution.log` | Per-feature |
+| Log Type          | Location                                    | Rotation              |
+| ----------------- | ------------------------------------------- | --------------------- |
+| **Pipeline Logs** | `.codepipe/logs/codepipe.log`               | 100MB, gzip           |
+| **Health Checks** | `/var/log/codepipe-health.log`              | Manual (or logrotate) |
+| **Feature Runs**  | `.codepipe/runs/<feature-id>/execution.log` | Per-feature           |
 
 ### Monitor for Errors
 
@@ -341,6 +343,7 @@ codepipe_doctor_failed_checks{version="1.0.0"} $(codepipe doctor --json | jq '.s
 ### Grafana Dashboard (Future)
 
 Metrics to track:
+
 - Health check success rate (%)
 - Doctor check pass/fail counts
 - Pipeline completion rate (%)
@@ -353,6 +356,7 @@ Metrics to track:
 ## Post-v1.0.0 Monitoring Checklist
 
 **First Week:**
+
 - [ ] Health checks running on schedule (verify cron)
 - [ ] Baseline metrics captured
 - [ ] No critical errors in logs
@@ -360,6 +364,7 @@ Metrics to track:
 - [ ] Version remains 1.0.0
 
 **First Month:**
+
 - [ ] Review health check logs for patterns
 - [ ] Adjust cleanup schedule if needed
 - [ ] Validate rotation working correctly
@@ -367,6 +372,7 @@ Metrics to track:
 - [ ] Update baseline if usage patterns change
 
 **Ongoing:**
+
 - [ ] Monthly log review
 - [ ] Quarterly disk cleanup
 - [ ] Annual baseline refresh
@@ -376,6 +382,7 @@ Metrics to track:
 ## Support
 
 For monitoring-related issues:
+
 - Check `codepipe doctor --verbose` for diagnostic details
 - Review `.codepipe/logs/codepipe.log` for error patterns
 - Consult `docs/ops/doctor_reference.md` for check interpretations

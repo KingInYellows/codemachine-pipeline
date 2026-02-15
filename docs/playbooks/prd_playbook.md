@@ -54,14 +54,18 @@ When you run `codepipe start`, the system automatically:
 
 ```typescript
 // Invoked by CLI during `codepipe start`
-const result = await draftPRD({
-  repoRoot: '/path/to/repo',
-  runDir: '.codepipe/FEAT-12345',
-  feature: featureMetadata,
-  contextDocument: contextDoc,
-  researchTasks: completedTasks,
-  repoConfig: config,
-}, logger, metrics);
+const result = await draftPRD(
+  {
+    repoRoot: '/path/to/repo',
+    runDir: '.codepipe/FEAT-12345',
+    feature: featureMetadata,
+    contextDocument: contextDoc,
+    researchTasks: completedTasks,
+    repoConfig: config,
+  },
+  logger,
+  metrics
+);
 ```
 
 **Output Artifacts:**
@@ -76,14 +80,14 @@ When the CLI detects that PRD approval is required (per RepoConfig governance), 
 
 The PRD template includes the following sections (all required):
 
-| Section | Purpose | Example Content |
-|---------|---------|-----------------|
-| **Problem Statement** | Describes the problem being solved | "Users cannot export analytics data..." |
-| **Goals** | Primary objectives (SMART format) | "Enable CSV export with <2s latency" |
-| **Non-Goals** | Explicit scope boundaries | "Real-time streaming export (deferred)" |
-| **Acceptance Criteria** | Measurable success criteria | "95% of exports complete within 2s" |
+| Section                 | Purpose                                   | Example Content                                               |
+| ----------------------- | ----------------------------------------- | ------------------------------------------------------------- |
+| **Problem Statement**   | Describes the problem being solved        | "Users cannot export analytics data..."                       |
+| **Goals**               | Primary objectives (SMART format)         | "Enable CSV export with <2s latency"                          |
+| **Non-Goals**           | Explicit scope boundaries                 | "Real-time streaming export (deferred)"                       |
+| **Acceptance Criteria** | Measurable success criteria               | "95% of exports complete within 2s"                           |
 | **Risks & Mitigations** | Potential risks and mitigation strategies | "Risk: Large exports timeout. Mitigation: Chunked processing" |
-| **Open Questions** | Unresolved questions requiring research | "Which CSV encoding should we use?" |
+| **Open Questions**      | Unresolved questions requiring research   | "Which CSV encoding should we use?"                           |
 
 ### Context and Research Citations
 
@@ -102,6 +106,7 @@ The PRD automatically includes:
 After PRD generation, reviewers should:
 
 1. **Locate the PRD:**
+
    ```bash
    cd .codepipe/<feature_id>/docs
    cat prd.md
@@ -119,9 +124,11 @@ After PRD generation, reviewers should:
    - Ensure no pending research blockers
 
 4. **Review Metadata:**
+
    ```bash
    cat prd_metadata.json
    ```
+
    - Verify `prdHash` matches the current file
    - Check `approvalStatus` is `pending`
 
@@ -242,11 +249,13 @@ codepipe approve prd \
 ### Revision Loop
 
 1. **Operator edits PRD:**
+
    ```bash
    vim .codepipe/<feature_id>/artifacts/prd.md
    ```
 
 2. **Update metadata hash:**
+
    ```bash
    # Compute new hash
    NEW_HASH=$(sha256sum .codepipe/<feature_id>/artifacts/prd.md | awk '{print $1}')
@@ -344,6 +353,7 @@ cat .codepipe/<feature_id>/artifacts/prd_metadata.json | jq '.prdHash'
 **Solution:**
 
 1. Regenerate metadata:
+
    ```bash
    # (Automated tooling planned - manual for now)
    NEW_HASH=$(sha256sum .codepipe/<feature_id>/artifacts/prd.md | awk '{print $1}')
@@ -362,6 +372,7 @@ cat .codepipe/<feature_id>/artifacts/prd_metadata.json | jq '.prdHash'
 **Solution:**
 
 1. Check research task status:
+
    ```bash
    codepipe research list --feature <feature_id>
    ```
@@ -389,22 +400,22 @@ cat .codepipe/<feature_id>/artifacts/prd_metadata.json | jq '.prdHash'
 
 ### CLI Commands
 
-| Command | Description |
-|---------|-------------|
-| `codepipe start` | Generates PRD as part of feature initialization |
-| `codepipe status --feature <id>` | Shows PRD approval status |
-| `codepipe approve prd --feature <id>` | Records PRD approval |
-| `codepipe prd regenerate --feature <id>` | Regenerates PRD (future) |
+| Command                                  | Description                                     |
+| ---------------------------------------- | ----------------------------------------------- |
+| `codepipe start`                         | Generates PRD as part of feature initialization |
+| `codepipe status --feature <id>`         | Shows PRD approval status                       |
+| `codepipe approve prd --feature <id>`    | Records PRD approval                            |
+| `codepipe prd regenerate --feature <id>` | Regenerates PRD (future)                        |
 
 ### Files and Artifacts
 
-| Path | Purpose |
-|------|---------|
-| `docs/templates/prd_template.md` | PRD markdown template |
-| `artifacts/prd.md` | Generated PRD for a feature |
-| `artifacts/prd_metadata.json` | PRD metadata (hash, approvals, trace ID) |
-| `approvals/<approval_id>.json` | Individual approval records |
-| `approvals.json` | Aggregated approval index |
+| Path                             | Purpose                                  |
+| -------------------------------- | ---------------------------------------- |
+| `docs/templates/prd_template.md` | PRD markdown template                    |
+| `artifacts/prd.md`               | Generated PRD for a feature              |
+| `artifacts/prd_metadata.json`    | PRD metadata (hash, approvals, trace ID) |
+| `approvals/<approval_id>.json`   | Individual approval records              |
+| `approvals.json`                 | Aggregated approval index                |
 
 ### Related Documentation
 
@@ -415,9 +426,9 @@ cat .codepipe/<feature_id>/artifacts/prd_metadata.json | jq '.prdHash'
 
 ### Version History
 
-| Version | Date | Changes |
-|---------|------|---------|
-| 1.0.0 | 2024-01-15 | Initial playbook for Iteration I2 |
+| Version | Date       | Changes                           |
+| ------- | ---------- | --------------------------------- |
+| 1.0.0   | 2024-01-15 | Initial playbook for Iteration I2 |
 
 ---
 

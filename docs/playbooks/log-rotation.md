@@ -9,21 +9,25 @@ Automatic log rotation prevents disk space exhaustion during long-running featur
 ### Components
 
 **1. Size Monitor**
+
 - Tracks log file size during execution
 - Triggers rotation when threshold exceeded
 - Implements zero-copy size checking
 
 **2. Rotation Engine**
+
 - Renames current log with numbered suffix
 - Manages retention (keeps N rotated files)
 - Deletes oldest files when limit exceeded
 
 **3. Compression Layer**
+
 - Optional gzip compression for rotated logs
 - Async compression (non-blocking)
 - Error handling with graceful degradation
 
 **4. Structured Logging**
+
 - Emits rotation events to NDJSON logs
 - Includes metadata (timestamp, file size, compression status)
 - Enables audit trail for log management
@@ -45,6 +49,7 @@ Configure log rotation in `.codepipe/config.json`:
 ```
 
 **Parameters:**
+
 - `log_rotation_mb`: Rotation threshold in megabytes (range: 1-10240 MB, default: 100)
 - `log_rotation_keep`: Number of rotated files to retain (range: 1-20, default: 3)
 - `log_rotation_compress`: Enable gzip compression (default: false)
@@ -81,6 +86,7 @@ const DEFAULT_LOG_ROTATION_COMPRESS = false;
 ### Rotation Trigger
 
 **When rotation occurs:**
+
 1. Log file size checked after each task execution
 2. Rotation triggered when size exceeds `log_rotation_mb * 1024 * 1024` bytes
 3. Current log renamed to `<log>.1`, existing files bumped up
@@ -88,6 +94,7 @@ const DEFAULT_LOG_ROTATION_COMPRESS = false;
 5. Oldest file (`.N`) deleted if count exceeds `log_rotation_keep`
 
 **Rotation Algorithm:**
+
 ```typescript
 // Pseudocode
 async function rotateLogFiles(logPath, keep, compress) {
@@ -144,6 +151,7 @@ After fourth rotation:
 ```
 
 **With compression enabled:**
+
 ```
 After rotation with compression:
   execution.log (empty)
@@ -155,6 +163,7 @@ After rotation with compression:
 ### Structured Logging
 
 **Rotation events logged to NDJSON:**
+
 ```json
 {
   "level": "warn",
@@ -167,6 +176,7 @@ After rotation with compression:
 ```
 
 **Compression events:**
+
 ```json
 {
   "level": "info",
@@ -184,6 +194,7 @@ After rotation with compression:
 ### Disk Usage Tracking
 
 **Monitor log directory size:**
+
 ```bash
 # Current log size
 ls -lh .codepipe/runs/*/logs/execution.log
@@ -196,10 +207,12 @@ ls -1 .codepipe/runs/*/logs/execution.log.* | wc -l
 ```
 
 **Expected disk usage:**
+
 - Without compression: `log_rotation_mb * (log_rotation_keep + 1)` MB
 - With compression: `log_rotation_mb * (log_rotation_keep + 1) / 10` MB (typical 10:1 ratio)
 
 **Example:**
+
 ```bash
 # Config: log_rotation_mb=100, log_rotation_keep=3, compress=false
 # Max disk usage: 100MB * (3 + 1) = 400MB
@@ -211,6 +224,7 @@ ls -1 .codepipe/runs/*/logs/execution.log.* | wc -l
 ### Rotation Events
 
 **Query rotation history:**
+
 ```bash
 # Count rotations
 grep "Log rotation occurred" \
@@ -230,6 +244,7 @@ grep "compression" \
 ### Compression Ratio
 
 **Measure compression effectiveness:**
+
 ```bash
 # Compare original vs compressed sizes
 for file in .codepipe/runs/*/logs/execution.log.*.gz; do
@@ -240,6 +255,7 @@ done
 ```
 
 **Typical compression ratios:**
+
 - NDJSON logs: 8-12x compression
 - Plain text logs: 10-15x compression
 - Binary logs: 2-5x compression
@@ -251,11 +267,13 @@ done
 **Symptom**: Logs grow unbounded, rotation not occurring
 
 **Common Causes:**
+
 1. File permissions (cannot rename/delete files)
 2. Disk full (cannot create new files)
 3. Rotation threshold too high
 
 **Resolution:**
+
 ```bash
 # Step 1: Check file permissions
 ls -la .codepipe/runs/*/logs/
@@ -277,6 +295,7 @@ grep "Log rotation" \
 ```
 
 **Prevention:**
+
 - Set appropriate file permissions (600 for logs)
 - Monitor disk space with alerts (<20% free)
 - Use reasonable rotation thresholds (50-200MB)
@@ -286,11 +305,13 @@ grep "Log rotation" \
 **Symptom**: Disk space exhausted despite rotation
 
 **Common Causes:**
+
 1. `log_rotation_keep` too high (retaining too many files)
 2. Compression disabled (large uncompressed logs)
 3. Multiple concurrent features
 
 **Resolution:**
+
 ```bash
 # Step 1: Identify large log directories
 du -sh .codepipe/runs/*/logs/ | sort -h
@@ -309,6 +330,7 @@ rm -rf .codepipe/runs/FEATURE-*
 ```
 
 **Prevention:**
+
 - Enable compression for long-running features
 - Set `log_rotation_keep=1-3` for disk-constrained environments
 - Regularly archive completed features
@@ -318,11 +340,13 @@ rm -rf .codepipe/runs/FEATURE-*
 **Symptom**: Compression failures logged, uncompressed files retained
 
 **Common Causes:**
+
 1. gzip not installed
 2. File system errors
 3. Insufficient disk space during compression
 
 **Resolution:**
+
 ```bash
 # Step 1: Check gzip availability
 which gzip
@@ -347,6 +371,7 @@ grep "compression failed" \
 ```
 
 **Prevention:**
+
 - Verify gzip installation in `codepipe doctor`
 - Monitor disk space before enabling compression
 - Test compression on smaller files first
@@ -356,11 +381,13 @@ grep "compression failed" \
 **Symptom**: Rotation fails with permission errors
 
 **Common Causes:**
+
 1. Logs owned by different user
 2. Directory permissions too restrictive
 3. SELinux/AppArmor policies
 
 **Resolution:**
+
 ```bash
 # Step 1: Check ownership
 ls -la .codepipe/runs/*/logs/
@@ -380,6 +407,7 @@ CODEPIPE_LOG_ROTATION_MB=1 codepipe resume
 ```
 
 **Prevention:**
+
 - Run pipeline as consistent user (avoid sudo)
 - Set umask 077 for private log files
 - Document permission requirements
@@ -389,6 +417,7 @@ CODEPIPE_LOG_ROTATION_MB=1 codepipe resume
 ### Manual Rotation
 
 **Force rotation for testing:**
+
 ```bash
 # Set low threshold to trigger rotation
 CODEPIPE_LOG_ROTATION_MB=1 codepipe resume
@@ -400,6 +429,7 @@ ls -lh .codepipe/runs/*/logs/execution.log.*
 ### Archive Old Logs
 
 **Compress and archive logs for long-term storage:**
+
 ```bash
 # Archive all rotated logs
 tar -czf logs-archive-$(date +%Y%m%d).tar.gz \
@@ -415,11 +445,13 @@ tar -tzf logs-archive-*.tar.gz | head
 ### Cleanup Strategy
 
 **Recommended cleanup schedule:**
+
 - **Daily**: Remove logs from completed features (>24h old)
 - **Weekly**: Compress and archive rotated logs (>7d old)
 - **Monthly**: Delete compressed archives (>30d old)
 
 **Automated cleanup script:**
+
 ```bash
 #!/bin/bash
 # cleanup-logs.sh
@@ -444,6 +476,7 @@ find . -name "logs-archive-*.tar.gz" -mtime +30 -delete
 > **Note:** The `CODEPIPE_LOG_ROTATION_*` env var overrides below are not yet implemented. Set these values in `.codepipe/config.json` under `execution`.
 
 **High-volume logging (>1GB/day):**
+
 ```bash
 export CODEPIPE_LOG_ROTATION_MB=50
 export CODEPIPE_LOG_ROTATION_KEEP=2
@@ -451,6 +484,7 @@ export CODEPIPE_LOG_ROTATION_COMPRESS=true
 ```
 
 **Long-running features (>7 days):**
+
 ```bash
 export CODEPIPE_LOG_ROTATION_MB=200
 export CODEPIPE_LOG_ROTATION_KEEP=5
@@ -458,6 +492,7 @@ export CODEPIPE_LOG_ROTATION_COMPRESS=true
 ```
 
 **Disk-constrained environments (<10GB available):**
+
 ```bash
 export CODEPIPE_LOG_ROTATION_MB=25
 export CODEPIPE_LOG_ROTATION_KEEP=1
@@ -467,19 +502,23 @@ export CODEPIPE_LOG_ROTATION_COMPRESS=true
 ## References
 
 ### Implementation Files
+
 - **Log Rotation**: `src/workflows/codeMachineRunner.ts:44-388`
 - **Structured Logging**: `src/telemetry/logger.ts`
 - **Log Writers**: `src/telemetry/logWriters.ts`
 
 ### Test Files
+
 - **Unit Tests**: `tests/unit/codeMachineRunner.runner.spec.ts:1164-1225`
 - **Integration Tests**: `tests/integration/codeMachineRunner.spec.ts`
 
 ### Configuration Schema
+
 - **RepoConfig Schema**: `config/schemas/repo_config.schema.json`
 - **Execution Config**: Section `execution` in repo config
 
 ### Related Documentation
+
 - [Execution Telemetry](./execution_telemetry.md) - Logging and metrics
 - [Doctor Reference](./doctor_reference.md) - Environment validation
 - [Observability Baseline](./observability_baseline.md) - Monitoring best practices
