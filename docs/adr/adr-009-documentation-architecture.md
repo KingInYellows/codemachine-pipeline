@@ -495,7 +495,7 @@ jq '.component=="http:github"' logs.ndjson
 
 ### Q13: Migration Path from Pre-v1.0 to v1.0+
 
-**Answer**: Automatic queue migration, manual config migration required
+**Answer**: V1 queues are unsupported and will cause errors; manual config migration required; no automatic data migration
 
 **Breaking Changes**:
 
@@ -507,10 +507,15 @@ jq '.component=="http:github"' logs.ndjson
    - v1.0.0+: `@kinginyellows/codemachine-pipeline`
    - Install: `npm install -g @kinginyellows/codemachine-pipeline`
 
-3. **Queue Format** (V1 → V2)
+3. **Queue Format** (V1 → V2) - NO AUTOMATIC MIGRATION
    - V1: JSONL files (`queue.jsonl`, `queue_updates.jsonl`)
    - V2: WAL + snapshot (`queue_operations.log`, `queue_snapshot.json`)
-   - **Migration**: AUTOMATIC - System detects V1, shows error, requires restart to create V2 queue
+   - **Migration Behavior**: ERROR + RESTART REQUIRED
+     - System detects V1 queue format and throws error: `Legacy V1 queue format detected...`
+     - V1 queues are NOT automatically migrated to V2
+     - Old queue state is LOST (not preserved)
+     - User must start a new run to create fresh V2 queue
+     - See `src/workflows/queueCache.ts:detectLegacyV1Queue()` for detection logic
 
 4. **Configuration Schema**
    - New `governance` object (optional but recommended)
@@ -541,20 +546,36 @@ codepipe init --validate-only
 codepipe doctor
 ```
 
-**No Automated Migration Script**:
+**Important Notes**:
 
-- Intentional design decision
-- Config is governance-critical
-- Requires manual review for compliance
+- **V1 Queue Data Loss**: Upgrading with V1 queues will result in loss of queue state (no automatic migration)
+- **No Backward Compatibility**: V1 queue format cannot be used with v1.0.0+
+- **Config Migration Only**: Config migration has some automation via deprecation warnings, but V1 queues require manual restart
+- **No Automated Migration Script**: Intentional design decision - config is governance-critical and requires manual review
+
+**What Happens When User Upgrades with V1 Queue**:
+
+1. User upgrades to v1.0.0+
+2. User runs any queue operation (e.g., `codepipe resume <feature_id>`)
+3. System calls `getV2IndexCache()` which calls `detectLegacyV1Queue()`
+4. Error is thrown: `Legacy V1 queue format detected in {queueDir}. V1 queues are no longer supported. Please migrate your queue to V2 format or recreate the run.`
+5. User's queue state is NOT migrated
+6. User must start a new run with `codepipe start` to create fresh V2 queue
+7. Old queue data from V1 is lost
 
 **Sources**:
 
+- `src/workflows/queueCache.ts:56-121` - `detectLegacyV1Queue()` function (lines 78-121 show error throwing logic)
+- `src/workflows/queueCache.ts:44` - `getV2IndexCache()` calls detection (line 57)
 - `CHANGELOG.md:12-88` - Breaking changes documentation
 - `docs/archive/announcements/v1.0.0-release.md:126-132` - Release announcement
-- `docs/reference/config/config_migrations.md` - Detailed migration guide
-- `src/workflows/queueCache.ts` - Queue migration detection
+- `docs/reference/config/config_migrations.md` - Config migration guide (queue format NOT covered)
 
-**Documentation Impact**: Must create migration guide for pre-v1.0 users
+**Documentation Impact**:
+- Must clearly warn users: "V1 queues are UNSUPPORTED and will cause errors"
+- Must document: "Upgrading with active V1 queues will result in data loss"
+- Must provide: Step-by-step recovery instructions for users with V1 queues
+- Must clarify: This is a breaking change, not a migration path
 
 ---
 
