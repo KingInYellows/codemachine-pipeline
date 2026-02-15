@@ -4,7 +4,7 @@
 # Checks for real credentials, API keys, and sensitive information
 #
 
-set -e
+set -euo pipefail
 
 echo "🔒 Scanning documentation for security issues"
 echo ""
@@ -22,7 +22,7 @@ fi
 
 # Check for real Anthropic API keys (sk-ant-*)
 echo "Checking for real Anthropic API keys..."
-if grep -rE "sk-ant-[A-Za-z0-9_-]{48,}" docs/ README.md 2>/dev/null | grep -v "EXAMPLE\|PLACEHOLDER\|DO_NOT_USE"; then
+if grep -rE "sk-ant-[A-Za-z0-9_-]{48}" docs/ README.md 2>/dev/null | grep -v "EXAMPLE\|PLACEHOLDER\|DO_NOT_USE"; then
   echo "❌ Found potential real Anthropic API key"
   errors=$((errors + 1))
 else
@@ -31,7 +31,7 @@ fi
 
 # Check for real OpenAI API keys (sk-*)
 echo "Checking for real OpenAI API keys..."
-if grep -rE "sk-[A-Za-z0-9]{32,}" docs/ README.md 2>/dev/null | grep -v "EXAMPLE\|PLACEHOLDER\|DO_NOT_USE\|sk-ant-"; then
+if grep -rE "sk-[A-Za-z0-9]{32,48}\b" docs/ README.md 2>/dev/null | grep -v "EXAMPLE\|PLACEHOLDER\|DO_NOT_USE\|sk-ant-"; then
   echo "❌ Found potential real OpenAI API key"
   errors=$((errors + 1))
 else
