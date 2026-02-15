@@ -235,9 +235,11 @@ Create a multi-format documentation suite with clear organization, progressive d
    - [x] Archive transient docs (announcements, development, ui) to `docs/archive/`
 
 3. **Establish Link Validation CI**
-   - [ ] Create `.github/workflows/docs-validation.yml`
-   - [ ] Configure markdown-link-check with `.github/markdown-link-check.json`
-   - [ ] Add factual accuracy checks (engine lists, command counts)
+   - [x] Create `.github/workflows/docs-validation.yml`
+   - [x] Configure markdown-link-check with `.github/markdown-link-check.json`
+   - [x] Add factual accuracy checks (engine lists, command counts)
+   - [x] Create validation scripts (validate-docs-commands.js, test-docs-examples.js, security-scan-docs.sh)
+   - [x] Add npm scripts: docs:validate, docs:links:check, docs:commands:check, docs:examples:check, docs:security:check
 
 **Deliverable:**
 
