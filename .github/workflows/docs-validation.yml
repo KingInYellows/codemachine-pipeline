@@ -183,11 +183,12 @@ jobs:
     name: Documentation Quality Summary
     runs-on: ubuntu-latest
     needs: [link-check, command-validation, factual-accuracy, security-scan, code-examples, structure-validation]
-    if: always()
+    if: failure()
     steps:
       - name: Summary
         run: |
           echo "## Documentation Quality Gates Summary"
           echo ""
-          echo "All validation checks completed."
-          echo "Review results above for any failures."
+          echo "❌ One or more validation checks failed."
+          echo "Review results above and fix issues before merging."
+          exit 1
