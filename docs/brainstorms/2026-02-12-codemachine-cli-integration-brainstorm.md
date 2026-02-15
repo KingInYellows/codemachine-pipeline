@@ -14,11 +14,11 @@ A two-way integration between `codemachine-pipeline` (this project) and [CodeMac
 
 ### Input Modes (all three supported)
 
-| Mode                  | Trigger                                     | What happens                                                                   |
-| --------------------- | ------------------------------------------- | ------------------------------------------------------------------------------ |
-| Issue-driven          | `codepipe start --linear ISSUE-123`         | Linear/GitHub issue content becomes the prompt/spec for a CodeMachine workflow |
-| Pipeline-stage driven | Pipeline reaches "implement" phase          | Task DAG items are dispatched to CodeMachine-CLI one at a time                 |
-| Template-mapped       | PRD/spec output matches a workflow template | Different issue types trigger different CodeMachine workflow templates         |
+| Mode | Trigger | What happens |
+|------|---------|--------------|
+| Issue-driven | `codepipe start --linear ISSUE-123` | Linear/GitHub issue content becomes the prompt/spec for a CodeMachine workflow |
+| Pipeline-stage driven | Pipeline reaches "implement" phase | Task DAG items are dispatched to CodeMachine-CLI one at a time |
+| Template-mapped | PRD/spec output matches a workflow template | Different issue types trigger different CodeMachine workflow templates |
 
 ### Output Flow (full state sync)
 
@@ -107,7 +107,6 @@ Build a translation layer that converts our pipeline's outputs into CodeMachine-
 ## Scope Boundaries (Cycle 9)
 
 ### In scope
-
 - Replace `CodeMachineRunner` with proper adapter
 - Add CodeMachine-CLI as npm dependency
 - Implement workflow template mapping for at least 2 templates (code generation, testing)
@@ -116,7 +115,6 @@ Build a translation layer that converts our pipeline's outputs into CodeMachine-
 - Tests for the adapter layer
 
 ### Out of scope (future cycles)
-
 - Custom workflow builder UI
 - Template marketplace
 - Multi-engine routing optimization
@@ -126,7 +124,6 @@ Build a translation layer that converts our pipeline's outputs into CodeMachine-
 ## Technical Notes
 
 ### Files to modify
-
 - `src/workflows/codeMachineRunner.ts` — Major rewrite (adapter bridge)
 - `src/workflows/cliExecutionEngine.ts` — Minor changes (passthrough engine config)
 - `src/core/config/RepoConfig.ts` — Extend config for workflow templates
@@ -134,7 +131,6 @@ Build a translation layer that converts our pipeline's outputs into CodeMachine-
 - New: `src/adapters/codemachine/` — Adapter module with template mapping
 
 ### Integration points
-
 - `ExecutionStrategy` interface — new `CodeMachineStrategy` implementation
 - `StructuredLogger` — event streaming sink
 - `ExecutionTelemetry` — metrics for CodeMachine workflow executions

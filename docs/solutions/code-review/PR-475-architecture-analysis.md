@@ -5,7 +5,6 @@ date: 2026-02-15
 ---
 
 # PR #475 Architectural Analysis
-
 ## Comprehensive Documentation Suite Plan (7 Directories, 8 Phases)
 
 ---
@@ -15,7 +14,6 @@ date: 2026-02-15
 **Overall Assessment**: ✅ **SOUND ARCHITECTURE** with minor refinements needed
 
 The proposed documentation structure is architecturally sound and demonstrates:
-
 - **Solid progressive disclosure hierarchy** (Guide → Reference → Playbooks)
 - **Well-thought-out directory consolidation** (16 → 7 top-level)
 - **Logical phase sequencing** with proper dependencies
@@ -66,7 +64,6 @@ The hierarchy follows information architecture best practices:
    - **Assessment**: Appropriate complexity level
 
 **Verification**: This 3-tier model aligns with:
-
 - Google Developer Documentation Style Guide (progressive disclosure)
 - Write the Docs community standards
 - Material Design documentation practices
@@ -110,7 +107,6 @@ The hierarchy follows information architecture best practices:
 #### Archive Strategy
 
 ✅ **Appropriate**: Moving `brainstorms/`, `plans/`, `research/` to `docs/archive/` prevents:
-
 - Cognitive overload (users don't see 75+ files, only ~40)
 - Outdated information accidentally referenced
 - Maintenance burden for aspirational docs
@@ -119,15 +115,15 @@ The hierarchy follows information architecture best practices:
 
 ### 1.4 Information Architecture Scoring
 
-| Criterion                  | Score | Notes                                                                         |
-| -------------------------- | ----- | ----------------------------------------------------------------------------- |
-| **Progressive Disclosure** | 9/10  | Clear 3-tier hierarchy; could add visual "you are here" more explicitly       |
-| **Consistency**            | 9/10  | File naming, URL structure, nav ordering all consistent                       |
-| **Discoverability**        | 8/10  | Good top-level categories; command docs might be hard to find (3 levels deep) |
-| **Maintainability**        | 8/10  | Single source of truth maintained; some cross-doc references needed           |
-| **Scalability**            | 8/10  | Can accommodate new commands, guides, playbooks without restructure           |
-| **URL Stability**          | 9/10  | Top-level directory structure unlikely to change                              |
-| **Mobile Friendly**        | 8/10  | MkDocs Material is responsive; command reference might need tabs              |
+| Criterion | Score | Notes |
+|-----------|-------|-------|
+| **Progressive Disclosure** | 9/10 | Clear 3-tier hierarchy; could add visual "you are here" more explicitly |
+| **Consistency** | 9/10 | File naming, URL structure, nav ordering all consistent |
+| **Discoverability** | 8/10 | Good top-level categories; command docs might be hard to find (3 levels deep) |
+| **Maintainability** | 8/10 | Single source of truth maintained; some cross-doc references needed |
+| **Scalability** | 8/10 | Can accommodate new commands, guides, playbooks without restructure |
+| **URL Stability** | 9/10 | Top-level directory structure unlikely to change |
+| **Mobile Friendly** | 8/10 | MkDocs Material is responsive; command reference might need tabs |
 
 **Overall Information Architecture Score: 8.4/10** ✅ Sound
 
@@ -254,7 +250,6 @@ Phase 2.5 (NEW - 0.5 days): CI Setup
 ```
 
 **Impact on Timeline**:
-
 - Original: Phase 0 (2 days) + Phase 1 (2 days) = 4 days
 - Corrected: Phase 0 (0.5 days) + Phase 1 (2 days) + Phase 2 (1.5 days) = 4 days
 - **Net impact**: -1 day (restructure now integrated into Phase 2)
@@ -266,7 +261,6 @@ Phase 2.5 (NEW - 0.5 days): CI Setup
 **Location**: Lines 308-591 (Phase 3 subsections)
 
 **Current Sequencing** (Serial):
-
 ```
 3.1: Getting Started (1 day)
   ↓
@@ -283,13 +277,13 @@ Total: 6.5 days (serial)
 
 **Dependency Analysis**:
 
-| Section              | Depends On                     | Can Parallel?            |
-| -------------------- | ------------------------------ | ------------------------ |
-| 3.1: Getting Started | Nothing                        | ✅ Independent           |
-| 3.2: Configuration   | 3.1 (references prerequisites) | ✅ Partial - after 3.1.1 |
-| 3.3: User Guide      | 3.1, 3.2 (basics)              | ✅ After 3.1-3.2 started |
-| 3.4: Troubleshooting | 3.2 (config errors)            | ✅ Parallel with 3.3     |
-| 3.5: Architecture    | 3.1-3.4 (overviews)            | ✅ Parallel with 3.3-3.4 |
+| Section | Depends On | Can Parallel? |
+|---------|------------|---------------|
+| 3.1: Getting Started | Nothing | ✅ Independent |
+| 3.2: Configuration | 3.1 (references prerequisites) | ✅ Partial - after 3.1.1 |
+| 3.3: User Guide | 3.1, 3.2 (basics) | ✅ After 3.1-3.2 started |
+| 3.4: Troubleshooting | 3.2 (config errors) | ✅ Parallel with 3.3 |
+| 3.5: Architecture | 3.1-3.4 (overviews) | ✅ Parallel with 3.3-3.4 |
 
 **Optimized Parallelization** (Wave-Based):
 
@@ -312,14 +306,12 @@ Savings: 2.5 days (38% reduction)
 **Implementation Note**: Requires coordination between writers (not feasible solo), but essential for team-based execution.
 
 **Recommended Text Change** (Line 308):
-
 ```markdown
 ### Phase 3: Content Creation (4 days - wave-based parallelization)
 
 3.1 and 3.2 must complete sequentially (3.1 → 3.2).
 3.2 can overlap with 3.1 development.
 Once 3.2 prerequisites section is complete, 3.3-3.5 can proceed in parallel:
-
 - 3.2 Configuration (complete)
 - 3.3 User Guide (parallel)
 - 3.4 Troubleshooting (parallel)
@@ -333,12 +325,10 @@ Once 3.2 prerequisites section is complete, 3.3-3.5 can proceed in parallel:
 **Location**: Lines 721-747 (Phase 4)
 
 **Problem**: Phase 4 (Auto-Generated Docs) depends on Phase 3 completion, but specifically:
-
 - CLI reference auto-generation requires oclif.manifest.json (existing, no Phase 3 dependency)
 - Schema reference generation requires Phase 3.2 completion (config schema examples needed as reference)
 
 **Current Text** (Line 721):
-
 ```markdown
 ### Phase 4: Auto-Generated Documentation (1 day)
 ```
@@ -346,18 +336,15 @@ Once 3.2 prerequisites section is complete, 3.3-3.5 can proceed in parallel:
 **Issue**: Implies Phase 4 starts only after Phase 3 complete (6.5 days), but CLI reference could start after Phase 3.1 (1 day).
 
 **Recommended Change**:
-
 ```markdown
 ### Phase 4: Auto-Generated Documentation (1 day)
 
 #### Dependencies:
-
 - CLI reference: Can run after Phase 3.1 (no content dependency)
 - Schema reference: Requires Phase 3.2 completion
 - API reference: Requires Phase 3.5 completion (if applicable)
 
 #### Suggestion for parallel teams:
-
 - Assign schema generation script to Phase 3.2 team (not separate phase)
 - CLI reference can run independently in parallel
 ```
@@ -441,7 +428,6 @@ reference/config/overview.md
 
 ```markdown
 **configuration/overview.md** (Hand-written)
-
 - Configuration file discovery algorithm
 - Precedence order (env vars > config.json > defaults)
 - Minimal configuration example (3-5 lines)
@@ -450,8 +436,7 @@ reference/config/overview.md
   see reference/config/schema.md (auto-generated from Zod schema)
 
 **reference/config/schema.md** (Auto-generated)
-
-- Complete environment variable reference (CORRECTED - includes CODEPIPE\_\* family)
+- Complete environment variable reference (CORRECTED - includes CODEPIPE_* family)
 - .codepipe/config.json field-by-field documentation (nested structure)
 - Complete configuration examples for common scenarios
 - Configuration validation error examples
@@ -464,7 +449,6 @@ reference/config/overview.md
 **Location**: Lines 494-591 (Phase 3.3 - Per-command documentation)
 
 **Problem**: Proposed structure creates 17 separate files:
-
 ```
 docs/user-guide/commands/
 ├─ init.md
@@ -501,14 +485,14 @@ docs/reference/cli/
 
 ### 4.1 Architectural Decisions Made
 
-| Decision                                         | Documented As    | Assessment                               |
-| ------------------------------------------------ | ---------------- | ---------------------------------------- |
-| 7-directory consolidation                        | ✅ Phase 0.2     | Sound, reduces cognitive load            |
-| Progressive disclosure (Guide → Ref → Playbooks) | ✅ Phase 0 intro | Best practice, well-motivated            |
-| Auto-generation for CLI reference                | ✅ Phase 4       | Prevents drift, maintainable             |
-| MkDocs Material for web site                     | ✅ Phase 5       | Industry standard for dev docs           |
-| 5-agent specialized review for docs PRs          | ✅ Phase 7.4     | Reduces errors, cost-effective           |
-| Preserve ADRs + solutions separately             | ✅ Phase 0       | Correct - different consumption patterns |
+| Decision | Documented As | Assessment |
+|----------|---------------|------------|
+| 7-directory consolidation | ✅ Phase 0.2 | Sound, reduces cognitive load |
+| Progressive disclosure (Guide → Ref → Playbooks) | ✅ Phase 0 intro | Best practice, well-motivated |
+| Auto-generation for CLI reference | ✅ Phase 4 | Prevents drift, maintainable |
+| MkDocs Material for web site | ✅ Phase 5 | Industry standard for dev docs |
+| 5-agent specialized review for docs PRs | ✅ Phase 7.4 | Reduces errors, cost-effective |
+| Preserve ADRs + solutions separately | ✅ Phase 0 | Correct - different consumption patterns |
 
 **Assessment**: All major decisions are sound and documented.
 
@@ -543,7 +527,6 @@ The plan assumes these exist/are stable:
 ### 5.1 guide/ Directory (Consolidation of 2 Directories)
 
 **Files Proposed**:
-
 ```
 guide/
 ├─ index.md                      # Entry point, learning path
@@ -562,7 +545,6 @@ guide/
 ### 5.2 reference/ Directory (All Specification Docs)
 
 **Files Proposed**:
-
 ```
 reference/
 ├─ cli/
@@ -592,7 +574,6 @@ reference/
 ### 5.3 playbooks/ Directory (Operational Procedures)
 
 **Files Proposed**:
-
 ```
 playbooks/
 ├─ initialization.md             # Step-by-step init workflow
@@ -622,22 +603,22 @@ playbooks/
 
 **Functional Requirements** (Lines 1234-1272):
 
-| Requirement                      | Addressed In                                     | Status                          |
-| -------------------------------- | ------------------------------------------------ | ------------------------------- |
-| Installation (platform-specific) | Phase 3.1, guide/installation.md                 | ✅ Yes                          |
-| Setup documentation              | Phase 3.1, guide/quick-start.md                  | ✅ Yes                          |
-| Environment variables            | Phase 3.2, reference/config/env-vars.md          | ✅ Yes (CORRECTED)              |
-| Config schema                    | Phase 3.2, reference/config/schema.md            | ✅ Yes                          |
-| CodeMachine CLI resolution       | Phase 3.2, reference/config/codemachine-cli.md   | ✅ Yes                          |
-| Execution engine comparison      | Phase 3.2, reference/config/engines.md           | ⚠️ CORRECTED (added disclaimer) |
-| Workflows (core pipelines)       | Phase 3.3, guide/workflows.md                    | ✅ Yes                          |
-| Per-command documentation        | Phase 3.3, reference/cli/                        | ✅ Yes (17 commands)            |
-| Advanced usage                   | Phase 3.3, guide/advanced-usage.md               | ✅ Yes                          |
-| Common errors                    | Phase 3.4, guide/troubleshooting.md + solutions/ | ✅ Yes                          |
-| Debug instructions               | Phase 3.4, playbooks/debugging.md                | ✅ Yes                          |
-| FAQ                              | Phase 3.4, guide/troubleshooting.md              | ✅ Yes                          |
-| Architecture overview            | Phase 3.5, reference/architecture/overview.md    | ✅ Yes                          |
-| Concepts glossary                | Phase 3.5, reference/architecture/concepts.md    | ✅ Yes                          |
+| Requirement | Addressed In | Status |
+|-------------|--------------|--------|
+| Installation (platform-specific) | Phase 3.1, guide/installation.md | ✅ Yes |
+| Setup documentation | Phase 3.1, guide/quick-start.md | ✅ Yes |
+| Environment variables | Phase 3.2, reference/config/env-vars.md | ✅ Yes (CORRECTED) |
+| Config schema | Phase 3.2, reference/config/schema.md | ✅ Yes |
+| CodeMachine CLI resolution | Phase 3.2, reference/config/codemachine-cli.md | ✅ Yes |
+| Execution engine comparison | Phase 3.2, reference/config/engines.md | ⚠️ CORRECTED (added disclaimer) |
+| Workflows (core pipelines) | Phase 3.3, guide/workflows.md | ✅ Yes |
+| Per-command documentation | Phase 3.3, reference/cli/ | ✅ Yes (17 commands) |
+| Advanced usage | Phase 3.3, guide/advanced-usage.md | ✅ Yes |
+| Common errors | Phase 3.4, guide/troubleshooting.md + solutions/ | ✅ Yes |
+| Debug instructions | Phase 3.4, playbooks/debugging.md | ✅ Yes |
+| FAQ | Phase 3.4, guide/troubleshooting.md | ✅ Yes |
+| Architecture overview | Phase 3.5, reference/architecture/overview.md | ✅ Yes |
+| Concepts glossary | Phase 3.5, reference/architecture/concepts.md | ✅ Yes |
 
 **Assessment**: ✅ 100% coverage of core requirements.
 
@@ -713,17 +694,14 @@ Plan includes detailed checklist:
 ### 8.1 Plan's Risk Identification (Lines 1363-1422)
 
 **High Risk**:
-
 1. Critical questions remain unanswered → Mitigated by Phase 1 ADR
 2. Documentation drift (gets out of sync) → Mitigated by auto-generation + CI
 
 **Medium Risk**:
-
 1. Scope creep → Mitigated by strict phasing
 2. User testing reveals gaps → Mitigated by SpecFlow analysis
 
 **Low Risk**:
-
 1. MkDocs Material updates break site → Mitigated by version pinning
 2. Auto-generation script breaks → Mitigated by fallback to manual
 
@@ -732,17 +710,14 @@ Plan includes detailed checklist:
 ### 8.2 Architectural Risks NOT Addressed
 
 ⚠️ **Risk #1: Phase 0 Sequencing Creates Rework**
-
 - **Problem**: Factual corrections in Phase 0 require Phase 2 audit after correction
 - **Mitigation**: See Section 2.3 - Reorganize Phase 0 as 0.5-day fact-check, move restructuring to Phase 2
 
 ⚠️ **Risk #2: Configuration Documentation Redundancy**
-
 - **Problem**: guide/configuration.md + reference/config/schema.md duplicate info
 - **Mitigation**: See Section 3.2 - Auto-generate schema, hand-write guide overview only
 
 ⚠️ **Risk #3: Command Documentation Depth Unclear**
-
 - **Problem**: 17 files × 3 sections each = 51 new files; unclear who maintains this
 - **Mitigation**: Auto-generate from oclif.manifest.json; hand-write troubleshooting tips only
 
@@ -752,28 +727,28 @@ Plan includes detailed checklist:
 
 ### Strengths
 
-| #   | Aspect                  | Score | Evidence                                                 |
-| --- | ----------------------- | ----- | -------------------------------------------------------- |
-| 1   | Progressive disclosure  | 9/10  | Clear 3-tier hierarchy (Guide → Ref → Playbooks)         |
-| 2   | Directory consolidation | 9/10  | 16 → 7 reduces cognitive load                            |
-| 3   | Single source of truth  | 8/10  | Auto-generation for CLI, auto-gen opportunity for schema |
-| 4   | Phase sequencing        | 7/10  | Mostly correct, but Issue #1 affects foundation          |
-| 5   | Gap coverage            | 9/10  | Addresses 34 original + 31 new gaps                      |
-| 6   | Quality gates           | 9/10  | 5-agent review + automated CI checks                     |
-| 7   | Risk analysis           | 8/10  | Comprehensive, but misses phase sequencing risk          |
-| 8   | Scope management        | 8/10  | Phased approach, clear deliverables                      |
+| # | Aspect | Score | Evidence |
+|---|--------|-------|----------|
+| 1 | Progressive disclosure | 9/10 | Clear 3-tier hierarchy (Guide → Ref → Playbooks) |
+| 2 | Directory consolidation | 9/10 | 16 → 7 reduces cognitive load |
+| 3 | Single source of truth | 8/10 | Auto-generation for CLI, auto-gen opportunity for schema |
+| 4 | Phase sequencing | 7/10 | Mostly correct, but Issue #1 affects foundation |
+| 5 | Gap coverage | 9/10 | Addresses 34 original + 31 new gaps |
+| 6 | Quality gates | 9/10 | 5-agent review + automated CI checks |
+| 7 | Risk analysis | 8/10 | Comprehensive, but misses phase sequencing risk |
+| 8 | Scope management | 8/10 | Phased approach, clear deliverables |
 
 **Overall Score: 8.3/10** ✅ **Sound Architecture**
 
 ### Issues Found
 
-| #   | Issue                                            | Severity | Type          | Section |
-| --- | ------------------------------------------------ | -------- | ------------- | ------- |
-| 1   | Phase 0 conflates "foundational" with "first"    | High     | Dependency    | 2.3     |
-| 2   | Phase 3 parallelization opportunity missed       | Medium   | Optimization  | 2.3     |
-| 3   | Phase 4 dependency clarity needed                | Low      | Documentation | 2.3     |
-| 4   | Configuration doc redundancy (guide + reference) | Medium   | DRY           | 3.2     |
-| 5   | Command documentation maintenance undefined      | Medium   | Clarity       | 5.4     |
+| # | Issue | Severity | Type | Section |
+|---|-------|----------|------|---------|
+| 1 | Phase 0 conflates "foundational" with "first" | High | Dependency | 2.3 |
+| 2 | Phase 3 parallelization opportunity missed | Medium | Optimization | 2.3 |
+| 3 | Phase 4 dependency clarity needed | Low | Documentation | 2.3 |
+| 4 | Configuration doc redundancy (guide + reference) | Medium | DRY | 3.2 |
+| 5 | Command documentation maintenance undefined | Medium | Clarity | 5.4 |
 
 ---
 
@@ -784,7 +759,6 @@ Plan includes detailed checklist:
 **R1: Reorganize Phase 0 (Removes Issue #1)**
 
 Move directory restructuring from Phase 0 to Phase 2:
-
 - Phase 0 becomes 0.5-day fact-check of plan
 - Phase 2 becomes audit + restructuring (1.5 days)
 - Phase 2.5 becomes CI setup (0.5 days)
@@ -793,7 +767,6 @@ Move directory restructuring from Phase 0 to Phase 2:
 **R2: Establish Single Source of Truth for Configuration (Removes Issue #4)**
 
 Create auto-generation script for config schema:
-
 - `guide/configuration.md` (hand-written): Overview, why, where, precedence
 - `reference/config/schema.md` (auto-generated): Field-by-field reference
 - Single source: `src/core/config/RepoConfig.ts` ZodSchema
@@ -804,7 +777,6 @@ Create auto-generation script for config schema:
 **R3: Clarify Command Documentation Ownership (Removes Issue #5)**
 
 Specify CLI documentation strategy:
-
 - Auto-generate command list from `oclif.manifest.json`
 - Hand-write troubleshooting tips specific to common errors
 - Maintenance: Update oclif descriptions once; docs auto-regenerate
@@ -812,7 +784,6 @@ Specify CLI documentation strategy:
 **R4: Document Phase 3 Parallelization Opportunity (Removes Issue #2)**
 
 If executing with team (not solo):
-
 - Phase 3.1 → Phase 3.2.1 → (then parallel 3.2.2 + 3.3 + 3.4 + 3.5)
 - Reduces timeline from 6.5 days to 4 days (38% savings)
 - Requires coordination but feasible with clear task boundaries
@@ -822,18 +793,16 @@ If executing with team (not solo):
 **R5: Add Visual "Progressive Disclosure" Indicator**
 
 In mkdocs.yml, add meta information:
-
 ```yaml
 plugins:
-  - meta # Enable per-document metadata
+  - meta  # Enable per-document metadata
 ```
 
 Then in documents:
-
 ```markdown
 ---
-difficulty: beginner # beginner | intermediate | advanced
-time: 5-10 minutes # how long to read/complete
+difficulty: beginner    # beginner | intermediate | advanced
+time: 5-10 minutes      # how long to read/complete
 ---
 ```
 
@@ -842,7 +811,6 @@ This helps users know what level they're reading.
 **R6: Pre-allocate Documentation Ownership**
 
 In MEMORY.md or README, specify:
-
 - Who maintains CLI reference? (auto-generate script owner)
 - Who maintains config docs? (config schema owner)
 - Who maintains solutions/ KB? (security/ops lead)

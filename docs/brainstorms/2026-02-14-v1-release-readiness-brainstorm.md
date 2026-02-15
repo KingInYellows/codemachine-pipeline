@@ -7,7 +7,6 @@
 ## What We're Building
 
 A "real" v1.0.0 release of codemachine-pipeline that is:
-
 - **CI-green** on main
 - **Functionally verified** end-to-end (init → start → approve → resume)
 - **Published** to GitHub Packages (private npm registry)
@@ -26,26 +25,24 @@ scope of other work. Each step validates the prior one.
 
 ## Key Decisions
 
-| Decision     | Choice              | Rationale                                               |
-| ------------ | ------------------- | ------------------------------------------------------- |
-| Version      | Re-tag as v1.0.0    | Personal project; this IS the first real release        |
-| Scope        | Include Cycle 9     | CodeMachine-CLI integration is part of the product      |
-| Approach     | Sequential          | CI → E2E → fix → docs → npm → release                   |
-| npm registry | GitHub Packages     | Free for private, ties to repo                          |
-| Deployment   | Bare Node.js        | No TUI, CLI is one-shot — Docker overkill for daily use |
-| Branch model | Keep release branch | Follow documented release-branch-strategy.md            |
-| Stale docs   | Clean during audit  | Review untracked brainstorms/research/solutions         |
+| Decision | Choice | Rationale |
+|----------|--------|-----------|
+| Version | Re-tag as v1.0.0 | Personal project; this IS the first real release |
+| Scope | Include Cycle 9 | CodeMachine-CLI integration is part of the product |
+| Approach | Sequential | CI → E2E → fix → docs → npm → release |
+| npm registry | GitHub Packages | Free for private, ties to repo |
+| Deployment | Bare Node.js | No TUI, CLI is one-shot — Docker overkill for daily use |
+| Branch model | Keep release branch | Follow documented release-branch-strategy.md |
+| Stale docs | Clean during audit | Review untracked brainstorms/research/solutions |
 
 ## Work Sequence
 
 ### Step 1: Fix CI (Green Main)
-
 - Fix 26 Prettier formatting violations (`prettier --write`)
 - Fix Docker test: `doctor --json` exits code 20, CI expects 0
 - Verify all CI jobs pass on main
 
 ### Step 2: E2E Functional Testing
-
 - Run `codepipe init` in a test project
 - Run `codepipe start --prompt "..."` and verify PRD generation
 - Run `codepipe approve prd` and verify gate progression
@@ -55,13 +52,11 @@ scope of other work. Each step validates the prior one.
 - Note any functional issues discovered
 
 ### Step 3: Fix Discovered Issues
-
 - Address any bugs found during E2E testing
 - Fix the known `start.ts` dangling code (line ~192-195) if still present
 - Resolve any runtime errors or incorrect output
 
 ### Step 4: Documentation Audit
-
 - **README.md**: Verify feature list, command table, installation instructions match reality
 - **CLI --help**: Verify each command's help text is accurate
 - **Untracked docs**: Review `docs/brainstorms/`, `docs/research/`, `docs/solutions/` — keep accurate material, remove stale/misleading content
@@ -69,14 +64,12 @@ scope of other work. Each step validates the prior one.
 - **CONTRIBUTING.md**: Verify still accurate
 
 ### Step 5: npm Publishing Setup
-
 - Configure `package.json` for GitHub Packages (`publishConfig`, `repository`)
 - Set up `.npmrc` for GitHub Packages auth
 - Add or update CI workflow for automated `npm publish` on release
 - Test publish manually first (`npm publish --dry-run`)
 
 ### Step 6: Cut the Release
-
 - Sync release branch from main (per release-branch-strategy.md)
 - Delete existing v1.0.0 tag (`git tag -d v1.0.0 && git push origin :refs/tags/v1.0.0`)
 - Bump version in package.json if needed (should already be 1.0.0)

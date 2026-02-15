@@ -1,5 +1,5 @@
 ---
-title: 'Research Summary: Graphite PR Fix Patterns for codemachine-pipeline'
+title: "Research Summary: Graphite PR Fix Patterns for codemachine-pipeline"
 date: 2026-02-15
 category: research
 type: summary
@@ -23,7 +23,6 @@ This research documents patterns observed in the codemachine-pipeline project fo
 5. **Testing Patterns** — Verifying fixes don't break existing functionality
 
 **Data Sources**:
-
 - `/home/kinginyellow/projects/codemachine-pipeline/CONTRIBUTING.md` — Official workflow
 - `/home/kinginyellow/projects/codemachine-pipeline/CLAUDE.md` — Development configuration
 - `/home/kinginyellow/projects/codemachine-pipeline/docs/solutions/code-review/` — Solution patterns (5 docs)
@@ -37,14 +36,12 @@ This research documents patterns observed in the codemachine-pipeline project fo
 ### 1. Graphite Branch Management is Strict
 
 **Critical Rules**:
-
 - Never use `git push` directly to main
 - Never use `git rebase -i` on stacked branches
 - Never use `git reset --hard` on stack branches
 - Always use `gt create`, `gt modify`, `gt submit` for stack operations
 
 **Pattern Observed**:
-
 ```bash
 # CORRECT workflow
 git add .
@@ -61,13 +58,11 @@ git push origin branch-name   # Bypasses PR creation ❌
 ### 2. Dependency-Aware Parallel Resolution Works
 
 **Pattern from PR #466 Review Fixes**:
-
 - 16 findings → 3 waves → 9 agents concurrency (Wave 1) → 3 agents (Wave 2) → 1 agent (Wave 3)
 - Total execution: ~21 minutes instead of sequential 60+ minutes
 - Key: Identify file-level dependencies before parallelizing
 
 **Wave Structure**:
-
 ```
 Wave 1: Independent fixes (9 parallel)
   └─→ Wave 2: Fixes depending on Wave 1 (3 parallel)
@@ -79,7 +74,6 @@ Wave 1: Independent fixes (9 parallel)
 ### 3. Documentation Review Has Specialized Patterns
 
 **5-Agent Team for Docs-Only PRs** (vs. 8-12 for code):
-
 1. `comment-analyzer` — Cross-reference claims against source code
 2. `code-simplicity-reviewer` — Identify redundancy/bloat
 3. `pattern-recognition-specialist` — Check formatting consistency
@@ -87,7 +81,6 @@ Wave 1: Independent fixes (9 parallel)
 5. `security-sentinel` — Audit for information disclosure
 
 **Prevention Checklist** (prevents rework):
-
 - Feature/engine names verified vs. source code
 - Relative links validated against filesystem
 - Command tables match oclif manifest
@@ -97,7 +90,6 @@ Wave 1: Independent fixes (9 parallel)
 ### 4. Commit Structure Enables Stack Integrity
 
 **One Logical Fix Per Commit**:
-
 ```bash
 a87d776 docs: correct critical factual errors in documentation plan
 8fde38f fix: resolve release blockers from final review
@@ -105,7 +97,6 @@ c6bc63d chore: address remaining review findings
 ```
 
 **Benefits**:
-
 - History remains bisectable
 - Individual fixes are reversible with `git revert`
 - Stack rebasing is cleaner (fewer conflicts)
@@ -114,7 +105,6 @@ c6bc63d chore: address remaining review findings
 ### 5. Testing is Non-Negotiable
 
 **Pattern Observed**:
-
 ```bash
 # After EACH fix
 npm test && npm run lint && npm run format:check
@@ -124,7 +114,6 @@ npm test && npm run lint && npm run format:check && npm run deps:check
 ```
 
 **Test Failure Handling**:
-
 - Distinguish pre-existing failures from fix-caused failures
 - Stash changes and test original code to verify
 - If fix broke test, update test assertion separately
@@ -177,7 +166,6 @@ npm test && npm run lint && npm run format:check && npm run deps:check
 ## Documentation Created
 
 ### 1. GRAPHITE-PR-FIX-PATTERNS.md (Comprehensive)
-
 - 10 sections covering all aspects of the workflow
 - Real examples from project history
 - Common fix scenarios (security, dead code, documentation)
@@ -185,7 +173,6 @@ npm test && npm run lint && npm run format:check && npm run deps:check
 - **Use for**: Understanding the WHY behind patterns
 
 **Contents**:
-
 - Graphite workflow foundations
 - Core fix patterns (commit structure, `gt modify`, waves)
 - Conventional Commits conventions
@@ -196,7 +183,6 @@ npm test && npm run lint && npm run format:check && npm run deps:check
 - Implementation checklist
 
 ### 2. PR-FIX-WORKFLOW-FOR-STACKS.md (Step-by-Step)
-
 - Phase 1: Preparation (before any changes)
 - Phase 2: Fix Wave 1 (independent fixes)
 - Phase 3: Fix Wave 2 (dependent fixes)
@@ -207,7 +193,6 @@ npm test && npm run lint && npm run format:check && npm run deps:check
 - **Use for**: Tactical execution of fixes
 
 **Contents**:
-
 - Quick reference for 4-PR scenario
 - Step-by-step phases with code examples
 - Specific fix implementations for each PR type
@@ -216,7 +201,6 @@ npm test && npm run lint && npm run format:check && npm run deps:check
 - Key takeaways
 
 ### 3. RESEARCH-SUMMARY.md (This Document)
-
 - High-level overview of findings
 - Key patterns identified
 - Practical applications
@@ -227,22 +211,21 @@ npm test && npm run lint && npm run format:check && npm run deps:check
 
 ## Key Patterns at a Glance
 
-| Pattern                     | When                     | How                                              | Why                                                  |
-| --------------------------- | ------------------------ | ------------------------------------------------ | ---------------------------------------------------- |
-| **Wave-Based Resolution**   | Multiple findings exist  | Plan dependencies, parallelize independent fixes | Reduces execution time from sequential to concurrent |
-| **One Fix Per Commit**      | Any fix being made       | Use `git commit` (not `--amend`)                 | Maintains clean history, enables `gt modify` rebase  |
-| **Use `gt modify --all`**   | After committing fixes   | Never use `git rebase -i`                        | Automatically rebases upstack branches               |
-| **Test After Each Fix**     | After every commit       | `npm test && npm run lint`                       | Catches regressions before submission                |
-| **Documentation Checklist** | Before approving docs PR | Verify names, links, structure vs. source        | Prevents documentation drift                         |
-| **Dependency Awareness**    | Before starting fixes    | Map which fixes depend on which                  | Prevents rework, enables correct wave ordering       |
-| **Conventional Commits**    | Every commit message     | `type: short desc` + optional body               | Aligns with project standards, enables automation    |
+| Pattern | When | How | Why |
+|---------|------|-----|-----|
+| **Wave-Based Resolution** | Multiple findings exist | Plan dependencies, parallelize independent fixes | Reduces execution time from sequential to concurrent |
+| **One Fix Per Commit** | Any fix being made | Use `git commit` (not `--amend`) | Maintains clean history, enables `gt modify` rebase |
+| **Use `gt modify --all`** | After committing fixes | Never use `git rebase -i` | Automatically rebases upstack branches |
+| **Test After Each Fix** | After every commit | `npm test && npm run lint` | Catches regressions before submission |
+| **Documentation Checklist** | Before approving docs PR | Verify names, links, structure vs. source | Prevents documentation drift |
+| **Dependency Awareness** | Before starting fixes | Map which fixes depend on which | Prevents rework, enables correct wave ordering |
+| **Conventional Commits** | Every commit message | `type: short desc` + optional body | Aligns with project standards, enables automation |
 
 ---
 
 ## When to Use Each Document
 
 ### Use GRAPHITE-PR-FIX-PATTERNS.md if you want to:
-
 - Understand WHY these patterns exist
 - Learn from real examples in project history
 - Explore edge cases and troubleshooting
@@ -250,7 +233,6 @@ npm test && npm run lint && npm run format:check && npm run deps:check
 - Reference common scenarios (security fixes, dead code removal, etc.)
 
 ### Use PR-FIX-WORKFLOW-FOR-STACKS.md if you want to:
-
 - Execute a fix workflow step-by-step
 - Get specific copy-paste commands for your scenario
 - Follow a 4-PR stack fix from start to finish
@@ -258,7 +240,6 @@ npm test && npm run lint && npm run format:check && npm run deps:check
 - Troubleshoot issues as they arise
 
 ### Use RESEARCH-SUMMARY.md if you want to:
-
 - Get oriented quickly on the patterns
 - Understand what was researched and why
 - See a quick reference table of patterns
@@ -271,7 +252,6 @@ npm test && npm run lint && npm run format:check && npm run deps:check
 ### For Individual Contributors
 
 **Starting Point**: `PR-FIX-WORKFLOW-FOR-STACKS.md`
-
 1. Read Phase 1 (Preparation)
 2. Map your specific PR findings to the phases
 3. Execute Phase 2-4 following the step-by-step guide
@@ -281,7 +261,6 @@ npm test && npm run lint && npm run format:check && npm run deps:check
 ### For Reviewers
 
 **Starting Point**: `GRAPHITE-PR-FIX-PATTERNS.md` (Section 6)
-
 1. Review the documentation-specific patterns
 2. Use the prevention checklist before approving docs PRs
 3. Reference the 5-agent team recommendations for specialized reviews
@@ -290,7 +269,6 @@ npm test && npm run lint && npm run format:check && npm run deps:check
 ### For Team Leads
 
 **Starting Point**: `GRAPHITE-PR-FIX-PATTERNS.md`
-
 1. Understand the patterns to mentor contributors
 2. Use the implementation readiness checklist to gate PRs
 3. Reference wave-based resolution for capacity planning
@@ -301,7 +279,6 @@ npm test && npm run lint && npm run format:check && npm run deps:check
 ## Observed Success Metrics
 
 **From Recent Project History**:
-
 - PR #466: 16 findings resolved in 3 waves (~21 min execution) vs. ~60 min sequential
 - PR #475-478: 4 stacked PRs with 40+ findings planned for concurrent resolution
 - Documentation PRs: 5-agent reviews vs. 12-agent reviews (60% faster, no quality loss)
@@ -371,7 +348,6 @@ Potential additions to these patterns (not researched in this phase):
 ## Document Locations
 
 All research documents saved in:
-
 ```
 /home/kinginyellow/projects/codemachine-pipeline/docs/research/
 ├── GRAPHITE-PR-FIX-PATTERNS.md        (Comprehensive patterns guide)
@@ -384,3 +360,4 @@ All research documents saved in:
 **Research completed**: 2026-02-15
 **Status**: Ready for implementation
 **Contact for questions**: Refer to CONTRIBUTING.md or project maintainers
+

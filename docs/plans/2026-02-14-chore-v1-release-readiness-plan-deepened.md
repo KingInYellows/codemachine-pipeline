@@ -1,5 +1,5 @@
 ---
-title: 'chore: v1.0.0 release readiness — CI, E2E, docs, publish, deploy'
+title: "chore: v1.0.0 release readiness — CI, E2E, docs, publish, deploy"
 type: chore
 date: 2026-02-14
 brainstorm: docs/brainstorms/2026-02-14-v1-release-readiness-brainstorm.md
@@ -85,7 +85,6 @@ npm run format
 ```
 
 Key files identified in CI failure:
-
 - `src/adapters/codemachine/binaryResolver.ts`
 - `src/adapters/codemachine/CodeMachineCLIAdapter.ts`
 - `src/workflows/cliExecutionEngine.ts`
@@ -99,21 +98,18 @@ Verify: `npm run format:check` exits 0.
 #### Research Insights: Prettier Large Changesets
 
 **Best Practices:**
-
 - **Single-shot approach** (recommended): Fix all 26 files in one commit
   - Prettier is deterministic - same config always produces same output
   - `--write` is safe (non-destructive, only reformats whitespace)
   - Reviewers can use `git show --color-words` to ignore whitespace changes
 
 **Performance Optimization:**
-
 ```bash
 # Add --cache flag for 5-10x faster subsequent runs
 npx prettier --write --cache "src/**/*.ts" "tests/**/*.ts"
 ```
 
 **References:**
-
 - Prettier docs: https://prettier.io/docs/en/options.html#cache
 
 ---
@@ -148,13 +144,11 @@ warnings exist.
 #### Research Insights: Docker CI Best Practices
 
 **Current Implementation is CORRECT:**
-
 - `set -o pipefail` catches JSON parse failures (standard pattern)
 - `|| true` on `--version` is intentional (container startup can be slow)
 - Validation happens on `--help` and `doctor --json` (required checks)
 
 **Docker Build Optimization:**
-
 ```yaml
 # Add to CI workflow for 80% faster rebuilds
 - uses: docker/setup-buildx-action@v3
@@ -166,7 +160,6 @@ warnings exist.
 ```
 
 **Security Hardening:**
-
 ```dockerfile
 # Ensure non-root user (add to Dockerfile if not present)
 USER node
@@ -174,7 +167,6 @@ LABEL security.least-privilege="true"
 ```
 
 **References:**
-
 - Docker best practices: https://docs.docker.com/develop/dev-best-practices/
 
 ---
@@ -182,7 +174,6 @@ LABEL security.least-privilege="true"
 ### 1.3 Clean Up Stale .dockerignore References
 
 Remove references to files that don't exist (harmless but messy):
-
 - `.eslintrc.json` → project uses `eslint.config.cjs`
 - `jest.config.js` → project uses vitest
 
@@ -203,7 +194,7 @@ Remove references to files that don't exist (harmless but messy):
 - uses: actions/setup-node@v4
   with:
     node-version: '24'
-    cache: 'npm' # ← Add this
+    cache: 'npm'  # ← Add this
 
 - uses: docker/setup-buildx-action@v3
 - uses: docker/build-push-action@v5
@@ -246,14 +237,12 @@ jobs:
 #### Research Insights: CI Performance
 
 **Impact of Optimizations:**
-
 - npm cache: ~30s saved per run
 - Docker cache: ~90s saved on rebuilds (80% reduction)
 - Parallel jobs: ~120s saved (run lint/test/docker concurrently)
 - Total: **60% speedup** (4-5min → <2min)
 
 **References:**
-
 - GitHub Actions caching: https://github.com/actions/setup-node#caching-global-packages-data
 - Docker layer caching: https://docs.docker.com/build/cache/backends/gha/
 
@@ -287,7 +276,6 @@ rm -rf package/ *.tgz
 ```
 
 **If bin entry is missing:**
-
 - Check `package.json` bin field format: `"bin": { "codepipe": "bin/run.js" }` (no leading `./`)
 - Verify `bin/run.js` has shebang: `#!/usr/bin/env node`
 - Check `files` array includes `/bin`
@@ -295,7 +283,6 @@ rm -rf package/ *.tgz
 #### Research Insights: Binary CLI Packaging
 
 **Best Practices:**
-
 - Bin path should be relative without leading `./`: `"bin/run.js"` not `"./bin/run.js"`
 - Always test with `npm install -g <tarball>` before publishing
 - Verify shebang is present and executable permissions set
@@ -306,7 +293,6 @@ rm -rf package/ *.tgz
 ### 1.6 Commit and Verify
 
 **Pre-Submit Checklist (from Graphite workflow learnings):**
-
 ```bash
 # ALWAYS run before gt submit
 gt sync --force && \
@@ -347,7 +333,6 @@ Ensure `codepipe` is available via `npm link` from the repo.
 #### Research Insights: Test Environment Isolation
 
 **Pattern from existing integration tests:**
-
 ```typescript
 const testDir = path.join(__dirname, `.test-${Date.now()}`);
 fs.mkdirSync(testDir, { recursive: true });
@@ -364,7 +349,6 @@ if (fs.existsSync(testDir)) {
 ```
 
 **Best Practices:**
-
 - Use unique directory names (timestamps) for parallel test execution
 - Set `stdio: 'pipe'` to suppress noise
 - Clean up in afterEach/finally blocks
@@ -374,21 +358,20 @@ if (fs.existsSync(testDir)) {
 
 ### 2.2 Test Core Pipeline Flow
 
-| Step    | Command                                                | Expected                                  |
-| ------- | ------------------------------------------------------ | ----------------------------------------- |
-| Init    | `codepipe init --yes`                                  | Creates `.codepipe/` scaffolding, exits 0 |
-| Doctor  | `codepipe doctor`                                      | Reports environment health, exits 0       |
-| Health  | `codepipe health`                                      | Quick health check, exits 0               |
-| Start   | `codepipe start --prompt "Add a hello world endpoint"` | Creates run dir, generates PRD, exits 0   |
-| Status  | `codepipe status`                                      | Shows current pipeline state              |
-| Approve | `codepipe approve prd --feature <id> --signer "test"`  | Advances gate, exits 0                    |
-| Resume  | `codepipe resume --feature <id>`                       | Continues pipeline                        |
-| Plan    | `codepipe plan --feature <id>`                         | Shows execution DAG                       |
+| Step | Command | Expected |
+|------|---------|----------|
+| Init | `codepipe init --yes` | Creates `.codepipe/` scaffolding, exits 0 |
+| Doctor | `codepipe doctor` | Reports environment health, exits 0 |
+| Health | `codepipe health` | Quick health check, exits 0 |
+| Start | `codepipe start --prompt "Add a hello world endpoint"` | Creates run dir, generates PRD, exits 0 |
+| Status | `codepipe status` | Shows current pipeline state |
+| Approve | `codepipe approve prd --feature <id> --signer "test"` | Advances gate, exits 0 |
+| Resume | `codepipe resume --feature <id>` | Continues pipeline |
+| Plan | `codepipe plan --feature <id>` | Shows execution DAG |
 
 #### Research Insights: Pipeline Testing Patterns
 
 **From existing tests - Full workflow pattern:**
-
 ```bash
 # Phase 1: Init
 codepipe init --yes
@@ -428,7 +411,6 @@ codepipe start --prompt "test" --json | jq .
 #### Research Insights: JSON Schema Validation
 
 **Enhanced validation with Zod (already in project):**
-
 ```typescript
 import { z } from 'zod';
 
@@ -450,7 +432,6 @@ expect(validation.success).toBe(true);
 ```
 
 **Expected exit codes:**
-
 - `0` = Success
 - `1` = General error
 - `10` = Validation error (config, args)
@@ -495,7 +476,6 @@ codepipe doctor --json | jq '.checks[] | select(.name=="CodeMachine CLI")'
 ```
 
 **Acceptance:**
-
 - [ ] With binary: adapter available, tasks can use codemachine-cli strategy
 - [ ] Without binary: clear warning, fallback works gracefully
 - [ ] Custom path: env var respected
@@ -503,7 +483,6 @@ codepipe doctor --json | jq '.checks[] | select(.name=="CodeMachine CLI")'
 #### Research Insights: Optional Dependencies
 
 **From architecture review:**
-
 - Test both scenarios (with/without) to prevent deployment surprises
 - Verify `doctor` command accurately reports binary availability
 - Ensure error messages provide clear remediation
@@ -529,7 +508,6 @@ codepipe resume  # Should fail with QueueIntegrityError, show remediation
 ```
 
 **Acceptance:**
-
 - [ ] Interrupted start: Resume picks up from last checkpoint
 - [ ] Corrupted queue: Fails with clear error + remediation
 - [ ] Manual repair: Resume succeeds after fixing corruption
@@ -537,7 +515,6 @@ codepipe resume  # Should fail with QueueIntegrityError, show remediation
 #### Research Insights: Crash Recovery
 
 **From E2E testing patterns:**
-
 - Project has existing tests in `tests/integration/crashRecovery.e2e.spec.ts`
 - WAL (Write-Ahead Log) ensures queue persistence
 - `QueueIntegrityMode` can be 'fail-fast' (default) or 'warn-only'
@@ -554,7 +531,6 @@ codepipe resume  # Should fail with QueueIntegrityError, show remediation
 
 **Simplified E2E Approach (from simplicity review):**
 Given 45 existing CLI integration tests, a **smoke test** (5-10 minutes) is sufficient:
-
 - Test init → start → doctor → status with JSON output
 - Verify no runtime errors
 - Skip comprehensive error path testing (already covered by integration tests)
@@ -575,7 +551,6 @@ Scope is TBD based on Phase 2 findings. Known candidates:
 ### Post-Rebase Verification (from Graphite learnings)
 
 After each bug fix PR:
-
 ```bash
 npm run lint
 npm run build
@@ -592,7 +567,6 @@ git diff main...HEAD  # Review final changes
 #### Research Insights: Bug Fix Workflow
 
 **From wave-based execution learnings:**
-
 - If Phase 2 reveals multiple bugs, use dependency analysis for parallel fixes
 - Batch fixes to the same file into a single agent task
 - Test fixes independently before combining
@@ -629,13 +603,11 @@ done < /tmp/actual-commands.txt
 #### Research Insights: Documentation Verification
 
 **From reviewing-documentation-prs.md:**
-
 - **comment-analyzer is most valuable** - cross-references claims against source code
 - Common drift patterns: phantom engines (PR #464 listed 6, only 3 exist), missing commands, outdated structure trees
 - **Automated verification prevents the exact issue from PR #464**
 
 **5-Agent Review Pattern for Docs:**
-
 - comment-analyzer: Cross-reference claims vs source
 - code-simplicity-reviewer: Remove redundancy, YAGNI
 - pattern-recognition-specialist: Format consistency
@@ -668,10 +640,8 @@ done
 ```
 
 **Manual Checklist:**
-
 - [ ] Update line 33: change "From npm (when published)" to:
-
-  ````markdown
+  ```markdown
   ### From GitHub Packages
 
   ```bash
@@ -685,12 +655,8 @@ done
   # Verify
   codepipe --version
   ```
-  ````
 
   **Security Note:** Store your PAT securely. Do NOT commit `.npmrc` to version control.
-
-  ```
-
   ```
 
 - [ ] **VERIFY execution engines table** - only list `claude`, `codex`, `openai` (remove phantom engines)
@@ -719,7 +685,6 @@ the v1.0.0 tag date. Update `[Unreleased]` to document:
 ### Added
 
 #### Cycle 9: CodeMachine-CLI Integration
-
 - CLIExecutionEngine with queue-based task execution
 - CodeMachineRunner with security hardening (argument validation)
 - ResultNormalizer with 18 sensitive data patterns
@@ -727,13 +692,11 @@ the v1.0.0 tag date. Update `[Unreleased]` to document:
 - BinaryResolver with 3-tier resolution (env var → optionalDep → PATH)
 
 #### Cycle 7: Testing & Documentation
-
 - 45 CLI integration tests across 8 commands (init, start, resume, approve, etc.)
 - CONTRIBUTING.md update with Graphite workflow
 - JSDoc documentation for complex modules
 
 #### Cycle 6: Code Quality & Foundations
-
 - LoggerInterface unification (CDMCH-93)
 - getErrorMessage consolidation (CDMCH-94)
 - Record<string, unknown> audit (CDMCH-95)
@@ -743,13 +706,11 @@ the v1.0.0 tag date. Update `[Unreleased]` to document:
 - Zod schema validation foundation (CDMCH-56)
 
 ### Changed
-
 - ESLint 10 compatibility (`preserve-caught-error`, `no-useless-assignment` rules)
 - Package name: `codemachine-pipeline` → `@kinginyellows/codemachine-pipeline` (GitHub Packages)
 - Node requirement: v22+ → v24+ (LTS alignment)
 
 ### Fixed
-
 - Prettier formatting violations (26 files)
 - Docker CI `doctor --json` exit code handling
 - Stale .dockerignore references (jest, eslintrc)
@@ -778,21 +739,18 @@ test "$PKG_VERSION" = "$CHANGELOG_VERSION" || {
 #### Research Insights: CHANGELOG Best Practices
 
 **Keep a Changelog Standard:**
-
 - Use semantic section headings: Added, Changed, Deprecated, Removed, Fixed, Security
 - ISO 8601 date format (YYYY-MM-DD)
 - Newest version first
 - Link to comparison diffs
 
 **Automated validation:**
-
 - Check date format matches ISO 8601
 - Verify version in package.json matches CHANGELOG
 - Ensure all required sections present
 - Validate links to commits/PRs work
 
 **References:**
-
 - https://keepachangelog.com/en/1.1.0/
 
 ---
@@ -825,7 +783,6 @@ jq -r '.commands[] | select(.description == "") | .id' oclif.manifest.json
 ```
 
 **Manual spot-check (3 commands):**
-
 - Pick 3 commands at random
 - Verify description matches behavior
 - Run examples verbatim, ensure they work
@@ -833,14 +790,12 @@ jq -r '.commands[] | select(.description == "") | .id' oclif.manifest.json
 #### Research Insights: CLI Help Validation
 
 **From oclif best practices:**
-
 - Help text is auto-generated from Command class metadata
 - Description comes from `static description` field
 - Flags from `static flags` object
 - Examples from `static examples` array
 
 **Validation strategy:**
-
 - Extract command list from manifest (don't rely on memory)
 - Automated completeness check (all have descriptions)
 - Spot-check examples actually work
@@ -850,14 +805,12 @@ jq -r '.commands[] | select(.description == "") | .id' oclif.manifest.json
 ### 4.4 Untracked Docs Cleanup
 
 Review and decide on untracked directories:
-
 - `docs/brainstorms/` — keep this plan's brainstorm, review others
 - `docs/research/` — review for accuracy, remove stale content
 - `docs/solutions/` — keep accurate solutions, remove outdated ones
 
 **Apply 5-agent review pattern:**
 For kept documents, ensure factual accuracy:
-
 - Cross-reference code examples against source
 - Verify file paths exist
 - Check for exposed secrets (API keys, tokens)
@@ -865,7 +818,6 @@ For kept documents, ensure factual accuracy:
 - Fix formatting inconsistencies
 
 **Archive Strategy (from reviewing-documentation-prs learnings):**
-
 ```bash
 # Preserve removed docs on archive branch
 git checkout main
@@ -888,7 +840,7 @@ File: `CONTRIBUTING.md`
 - [ ] Verify branch/PR workflow matches current Graphite-based process
 - [ ] Add documentation maintenance section:
 
-````markdown
+```markdown
 ## Documentation Maintenance
 
 ### Before Committing
@@ -898,15 +850,13 @@ npm run docs:audit      # Comprehensive check
 npm run docs:cli:check  # CLI reference drift
 npm run docs:links:check # Broken links
 ```
-````
 
 ### Documentation Standards
 
 - Update CHANGELOG.md for all user-facing changes
 - Run `npm run docs:cli` if commands change
 - Test bash examples before documenting them
-
-````
+```
 
 ---
 
@@ -944,7 +894,7 @@ test $readme_count -eq $manifest_count || {
 }
 
 echo "✅ All documentation verification checks passed"
-````
+```
 
 ### Commit Checklist
 
@@ -958,14 +908,12 @@ echo "✅ All documentation verification checks passed"
 #### Research Insights: Automated Documentation Validation
 
 **Tools recommended:**
-
 - **Vale**: Style, grammar, consistency checking
 - **markdownlint**: Markdown structure validation
 - **markdown-link-check**: Broken link detection
 - **Custom validators**: Project-specific checks
 
 **npm scripts to add:**
-
 ```json
 {
   "scripts": {
@@ -1002,7 +950,6 @@ GitHub Packages requires scoped packages. Update `package.json`:
 ```
 
 **Impact of name change:**
-
 - The `bin` entry (`codepipe`) is unaffected — the CLI command name stays the same
 - Internal imports don't reference the package name
 - No downstream consumers exist (first real publish)
@@ -1010,7 +957,6 @@ GitHub Packages requires scoped packages. Update `package.json`:
 #### Research Insights: GitHub Packages Scoping
 
 **Best Practices:**
-
 - Scoped packages (starting with `@`) are required for GitHub Packages
 - `access: "public"` makes the package publicly readable (still requires auth to install)
 - Repository URL must reference GitHub (used by registry for package linking)
@@ -1028,28 +974,24 @@ legacy-peer-deps=true
 ```
 
 **SECURITY WARNING:**
-
 - **DO NOT** add auth tokens to project `.npmrc` (committed file)
 - Auth tokens go in **user-level ~/.npmrc** (homelab) or **CI environment variables**
 
 #### Research Insights: .npmrc Security Patterns
 
 **Project .npmrc (committed):**
-
 ```ini
 # Safe - no secrets
 @kinginyellows:registry=https://npm.pkg.github.com
 ```
 
 **Homelab ~/.npmrc (NOT committed):**
-
 ```ini
 # Contains secrets
 //npm.pkg.github.com/:_authToken=${NPM_TOKEN}
 ```
 
 **CI/CD (environment variable):**
-
 ```yaml
 env:
   NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -1064,14 +1006,12 @@ npm pack --dry-run
 ```
 
 Verify output contains only:
-
 - `bin/run.js`, `bin/run.cmd`, `bin/dev.js`, `bin/dev.cmd`
 - `dist/**` (compiled TypeScript)
 - `oclif.manifest.json`
 - `package.json`, `README.md`, `LICENSE`, `CHANGELOG.md`
 
 **Create .npmignore for strict exclusion:**
-
 ```
 # Development files (never ship)
 tests/
@@ -1095,6 +1035,7 @@ src/
 .claude/
 .deps/
 .mcp.json
+claude-flow.config.json
 specification.md
 CLAUDE.md
 ```
@@ -1104,7 +1045,6 @@ CLAUDE.md
 **Target:** <2MB for CLI tools
 
 **Verification:**
-
 ```bash
 npm pack
 ls -lh *.tgz
@@ -1194,18 +1134,15 @@ jobs:
 #### Research Insights: Publish Workflow Security
 
 **Least-privilege permissions:**
-
 - `contents: read` - Checkout only
 - `packages: write` - Publish only (no other repo permissions)
 
 **Auth patterns:**
-
 - Use `GITHUB_TOKEN` (auto-available in Actions)
 - Set `registry-url` in setup-node action
 - Token passed via `NODE_AUTH_TOKEN` env var
 
 **Supply chain security (future enhancement):**
-
 - Add SBOM generation: `npx @cyclonedx/cyclonedx-npm`
 - Add provenance: `actions/attest-build-provenance@v1`
 - Use signed tags: `git tag -s v1.0.0`
@@ -1221,7 +1158,6 @@ npm publish --dry-run --verbose
 Verify no errors. Do NOT actually publish yet — that happens in Phase 6.
 
 **Check for warnings:**
-
 - No bin path warnings (from Phase 1.5 validation)
 - No missing files warnings
 - No authentication errors
@@ -1274,7 +1210,6 @@ rm -rf /tmp/tarball-validation /tmp/tarball-e2e package/
 ```
 
 **Acceptance Criteria:**
-
 - [ ] Tarball extracts successfully
 - [ ] `package/package.json` has valid bin entry (no "invalid" warning)
 - [ ] Global install from tarball succeeds
@@ -1285,13 +1220,11 @@ rm -rf /tmp/tarball-validation /tmp/tarball-e2e package/
 #### Research Insights: Pre-Production Validation
 
 **Why this matters:**
-
 - Published package may differ from `npm link` testing (file exclusions, bin paths)
 - Testing from tarball catches packaging issues before they reach users
 - Validates `files` array and `.npmignore` are correct
 
 **From deployment verification research:**
-
 - This is the highest-value pre-publish check
 - Prevents "works locally, broken on install" issues
 
@@ -1300,7 +1233,6 @@ rm -rf /tmp/tarball-validation /tmp/tarball-e2e package/
 ### 5.8 Commit Publishing Setup
 
 **Pre-Submit Checklist:**
-
 ```bash
 gt sync --force && \
 gt restack && \
@@ -1327,7 +1259,6 @@ Change the v1.0.0 date in CHANGELOG.md to the actual release date (2026-02-14).
 Fold `[Unreleased]` content into the v1.0.0 entry.
 
 **Verification:**
-
 ```bash
 grep -m1 "^\[1\.0\.0\]" CHANGELOG.md | grep "$(date +%Y-%m-%d)"
 ```
@@ -1358,6 +1289,7 @@ ARTIFACTS=(
   ".claude"
   ".deps"
   ".mcp.json"
+  "claude-flow.config.json"
   "specification.md"
 )
 
@@ -1390,14 +1322,12 @@ npm pack --dry-run
 #### Research Insights: Graphite Sync Protocol
 
 **From graphite-restack-conflicts learnings:**
-
 - **MUST run `gt sync --force`** before branch operations (not just `git pull`)
 - Prevents "branch based on old main" conflicts
 - Run `gt state` to verify no stale stacks
 - Sync frequency: >3 days → sync twice daily
 
 **Artifact Removal Safety:**
-
 - Don't silence errors with `2>/dev/null` - explicitly check each removal
 - Verify artifacts actually removed (prevents shipping sensitive files)
 
@@ -1455,10 +1385,8 @@ git show v1.0.0 | head -20
 #### Research Insights: Tag Management Safety
 
 **Re-tagging justification (add to plan):**
-
 ```markdown
 **Why re-tagging v1.0.0 is safe:**
-
 - Personal project with no external npm dependents
 - Old v1.0.0 tag was a milestone marker, not a published release
 - No risk of breaking downstream consumers (none exist)
@@ -1468,7 +1396,6 @@ git show v1.0.0 | head -20
 ```
 
 **Security enhancement:**
-
 ```bash
 # Use signed tags for releases
 git tag -s v1.0.0 -m "v1.0.0: Initial stable release"
@@ -1476,7 +1403,6 @@ git tag -v v1.0.0  # Verify signature
 ```
 
 **From Graphite learnings:**
-
 - Run `gt state` before re-tagging (ensure branch is standalone, not in a stack)
 - Verify clean working tree before tag operations
 
@@ -1499,13 +1425,11 @@ gh release create v1.0.0 \
 #### Research Insights: GitHub Release Best Practices
 
 **Enhancements:**
-
 - Extract only the relevant CHANGELOG section (not entire file)
 - Verify tag exists before creating release
 - Use `--target release` to specify branch explicitly
 
 **Supply chain security (future):**
-
 - Upload SBOM: `gh release upload v1.0.0 sbom.json`
 - Add checksum file for verification
 
@@ -1524,7 +1448,6 @@ npm publish
 ```
 
 **Post-Publish Verification:**
-
 ```bash
 # Verify package exists in GitHub Packages
 npm view @kinginyellows/codemachine-pipeline@1.0.0 --registry=https://npm.pkg.github.com
@@ -1538,7 +1461,6 @@ npm info @kinginyellows/codemachine-pipeline@1.0.0 --registry=https://npm.pkg.gi
 ### 6.6 Install on Homelab (ENHANCED)
 
 **SECURITY WARNING:**
-
 - Use GitHub PAT with **MINIMAL** scope: ONLY `read:packages`
 - Set PAT expiration to shortest acceptable duration (e.g., 30 days)
 - Never commit `.npmrc` files containing tokens
@@ -1597,7 +1519,6 @@ codepipe health     # Should exit 0
    - Use for monitoring/probes
 
 **Post-Install Functional Test:**
-
 ```bash
 # Create test project
 cd /tmp/homelab-test && git init
@@ -1621,7 +1542,6 @@ codepipe status --json | jq .
 ### 6.7 Post-Release Verification
 
 **Immediate Verification (within 1 hour):**
-
 - [ ] `codepipe --version` shows 1.0.0
 - [ ] `codepipe doctor` passes with 0 errors
 - [ ] `codepipe health` exits 0
@@ -1631,14 +1551,12 @@ codepipe status --json | jq .
 - [ ] Package installs via `npm install -g @kinginyellows/codemachine-pipeline@1.0.0`
 
 **Functional Verification (within 24 hours):**
-
 - [ ] Complete E2E pipeline: init → start → approve → resume
 - [ ] JSON output mode works for all commands
 - [ ] Error paths produce clear messages with remediation
 - [ ] Doctor identifies common issues (missing git, wrong Node version)
 
 **Performance Verification:**
-
 - [ ] `codepipe init` completes in < 5 seconds
 - [ ] `codepipe doctor` runs in < 3 seconds
 - [ ] Package size < 2MB
@@ -1650,7 +1568,6 @@ codepipe status --json | jq .
 **Goal:** Document emergency recovery if v1.0.0 has critical issues.
 
 **Pre-Deployment Backup:**
-
 ```bash
 # On homelab, before installing v1.0.0
 codepipe --version > /tmp/codepipe-pre-v1-version.txt
@@ -1660,15 +1577,14 @@ codepipe doctor --json > /tmp/codepipe-pre-v1-doctor.json
 
 **Emergency Rollback Commands:**
 
-| Scenario                | Action                                                                               |
-| ----------------------- | ------------------------------------------------------------------------------------ |
-| **Install fails**       | `npm cache clean --force && npm install -g <previous-version>`                       |
-| **Runtime failure**     | `npm uninstall -g @kinginyellows/codemachine-pipeline && npm install -g <previous>`  |
-| **Auth failure**        | Verify PAT: `npm whoami --registry https://npm.pkg.github.com`, regenerate if needed |
-| **Broken dependencies** | `npm list -g --depth=0` check conflicts, reinstall in fresh directory                |
+| Scenario | Action |
+|----------|--------|
+| **Install fails** | `npm cache clean --force && npm install -g <previous-version>` |
+| **Runtime failure** | `npm uninstall -g @kinginyellows/codemachine-pipeline && npm install -g <previous>` |
+| **Auth failure** | Verify PAT: `npm whoami --registry https://npm.pkg.github.com`, regenerate if needed |
+| **Broken dependencies** | `npm list -g --depth=0` check conflicts, reinstall in fresh directory |
 
 **Unpublish Procedure (24-72 hour window):**
-
 ```bash
 # 1. Unpublish from GitHub Packages
 npm unpublish @kinginyellows/codemachine-pipeline@1.0.0 --registry=https://npm.pkg.github.com
@@ -1695,7 +1611,6 @@ git tag -a v1.0.0 $(cat .release-backup.txt) -m "Restored original v1.0.0"
 **Goal:** Continuous health verification after deployment.
 
 **Health Check Script:**
-
 ```bash
 #!/usr/bin/env bash
 # /usr/local/bin/codepipe-health-check.sh
@@ -1722,7 +1637,6 @@ fi
 ```
 
 **Monitoring Schedule:**
-
 ```bash
 # Add to crontab
 chmod +x /usr/local/bin/codepipe-health-check.sh
@@ -1735,7 +1649,6 @@ chmod +x /usr/local/bin/codepipe-health-check.sh
 ```
 
 **Baseline Metrics:**
-
 ```bash
 # Capture baseline performance
 echo "Baseline metrics (v1.0.0):" > /var/log/codepipe-baseline.txt
@@ -1744,7 +1657,6 @@ time codepipe init --yes 2>&1 | grep real >> /var/log/codepipe-baseline.txt
 ```
 
 **Alert Conditions:**
-
 - doctor check fails
 - Version changes unexpectedly
 - Disk space > 90% in `.codepipe/`
@@ -1753,14 +1665,12 @@ time codepipe init --yes 2>&1 | grep real >> /var/log/codepipe-baseline.txt
 #### Research Insights: Post-Deployment Monitoring
 
 **From homelab deployment research:**
-
 - Two-tier health check (doctor for comprehensive, health for lightweight)
 - Cron-based periodic validation
 - Log rotation and baseline metrics
 - Alert on anomalies
 
 **Monitoring dashboard (optional):**
-
 ```bash
 codepipe-status-dashboard.sh:
 echo "=== CodePipe Status ==="
@@ -1780,21 +1690,20 @@ echo "Last Check: $(tail -1 /var/log/codepipe-health.log)"
 
 **Independent tasks - can run concurrently:**
 
-| Agent                 | Task                              | Duration |
-| --------------------- | --------------------------------- | -------- |
-| formatter-agent       | Phase 1.1: Prettier formatting    | ~2 min   |
-| docker-diagnostician  | Phase 1.2: Docker verification    | ~3 min   |
-| dockerfile-cleaner    | Phase 1.3: .dockerignore cleanup  | ~1 min   |
-| readme-auditor        | Phase 4.1: README audit           | ~5 min   |
-| changelog-compiler    | Phase 4.2: CHANGELOG update       | ~8 min   |
-| help-verifier         | Phase 4.3: CLI help verification  | ~4 min   |
-| docs-curator          | Phase 4.4: Untracked docs cleanup | ~6 min   |
-| contributing-verifier | Phase 4.5: CONTRIBUTING.md        | ~3 min   |
+| Agent | Task | Duration |
+|-------|------|----------|
+| formatter-agent | Phase 1.1: Prettier formatting | ~2 min |
+| docker-diagnostician | Phase 1.2: Docker verification | ~3 min |
+| dockerfile-cleaner | Phase 1.3: .dockerignore cleanup | ~1 min |
+| readme-auditor | Phase 4.1: README audit | ~5 min |
+| changelog-compiler | Phase 4.2: CHANGELOG update | ~8 min |
+| help-verifier | Phase 4.3: CLI help verification | ~4 min |
+| docs-curator | Phase 4.4: Untracked docs cleanup | ~6 min |
+| contributing-verifier | Phase 4.5: CONTRIBUTING.md | ~3 min |
 
 **Result:** All CI fixes + all documentation audits complete in ~8 minutes (longest pole: changelog).
 
 **Commit:** Combine Wave 1 results into 2 commits:
-
 1. `chore: fix CI (formatting, Docker, dockerignore)`
 2. `docs: audit and update documentation`
 
@@ -1804,11 +1713,11 @@ echo "Last Check: $(tail -1 /var/log/codepipe-health.log)"
 
 **After Wave 1 ensures green CI:**
 
-| Agent            | Task                                      | Duration |
-| ---------------- | ----------------------------------------- | -------- |
-| e2e-tester       | Phase 2: E2E smoke tests                  | ~15 min  |
-| package-scoper   | Phase 5.1-5.3: Scoping, .npmrc, pack test | ~3 min   |
-| workflow-builder | Phase 5.4: Publish workflow               | ~4 min   |
+| Agent | Task | Duration |
+|-------|------|----------|
+| e2e-tester | Phase 2: E2E smoke tests | ~15 min |
+| package-scoper | Phase 5.1-5.3: Scoping, .npmrc, pack test | ~3 min |
+| workflow-builder | Phase 5.4: Publish workflow | ~4 min |
 
 **Result:** E2E validation + npm publishing infrastructure ready in ~15 minutes.
 
@@ -1820,10 +1729,10 @@ echo "Last Check: $(tail -1 /var/log/codepipe-health.log)"
 
 **Depends on Wave 2 E2E results:**
 
-| Agent             | Task                                     | Duration   |
-| ----------------- | ---------------------------------------- | ---------- |
-| bug-fixer         | Phase 3: Fix issues from E2E (scope TBD) | ~10-30 min |
-| publish-validator | Phase 5.7: Pre-production tarball test   | ~5 min     |
+| Agent | Task | Duration |
+|-------|------|----------|
+| bug-fixer | Phase 3: Fix issues from E2E (scope TBD) | ~10-30 min |
+| publish-validator | Phase 5.7: Pre-production tarball test | ~5 min |
 
 **Result:** Fixes applied, package validated and ready to publish.
 
@@ -1833,16 +1742,16 @@ echo "Last Check: $(tail -1 /var/log/codepipe-health.log)"
 
 **Before entering Wave 4 (release execution):**
 
-| Check            | Command                 | Expected          |
-| ---------------- | ----------------------- | ----------------- |
-| lint-checker     | `npm run lint`          | Exits 0           |
-| test-runner      | `npm test`              | All pass          |
-| smoke-tester     | `npm run smoke`         | Exits 0           |
-| build-verifier   | `npm run build`         | Valid artifacts   |
-| exports-auditor  | `npm run exports:check` | No unused exports |
-| deps-auditor     | `npm run deps:check:ci` | No new cycles     |
-| pack-verifier    | `npm pack --dry-run`    | Succeeds          |
-| publish-verifier | `npm publish --dry-run` | Succeeds          |
+| Check | Command | Expected |
+|-------|---------|----------|
+| lint-checker | `npm run lint` | Exits 0 |
+| test-runner | `npm test` | All pass |
+| smoke-tester | `npm run smoke` | Exits 0 |
+| build-verifier | `npm run build` | Valid artifacts |
+| exports-auditor | `npm run exports:check` | No unused exports |
+| deps-auditor | `npm run deps:check:ci` | No new cycles |
+| pack-verifier | `npm pack --dry-run` | Succeeds |
+| publish-verifier | `npm publish --dry-run` | Succeeds |
 
 **Result:** All pre-release checks pass in ~5 minutes (concurrent execution).
 
@@ -1866,16 +1775,18 @@ echo "Last Check: $(tail -1 /var/log/codepipe-health.log)"
 
 ### Wave Execution Summary
 
-| Approach                      | Total Duration | Bottleneck                         |
-| ----------------------------- | -------------- | ---------------------------------- |
-| **Sequential** (current plan) | ~90-120 min    | Each phase waits for previous      |
-| **Wave-based** (enhanced)     | ~45-65 min     | Changelog compilation, E2E testing |
+| Approach | Total Duration | Bottleneck |
+|----------|----------------|------------|
+| **Sequential** (current plan) | ~90-120 min | Each phase waits for previous |
+| **Wave-based** (enhanced) | ~45-65 min | Changelog compilation, E2E testing |
 
 **Time savings:** ~50% reduction via parallelization of independent tasks.
 
 **Implementation via Claude Code:**
-
 ```bash
+# Initialize swarm for Wave 1
+npx @claude-flow/cli@latest swarm init --topology hierarchical --max-agents 8
+
 # Spawn all Wave 1 agents in background (Claude Code Task tool)
 Task({ prompt: "Fix Prettier violations", subagent_type: "coder", run_in_background: true })
 Task({ prompt: "Verify Docker CI step", subagent_type: "tester", run_in_background: true })
@@ -1898,7 +1809,6 @@ Task({ prompt: "Verify Docker CI step", subagent_type: "tester", run_in_backgrou
 ### Re-Tagging Justification
 
 **Why re-tagging v1.0.0 is safe here:**
-
 - Personal project with no external npm dependents
 - Old v1.0.0 tag was a milestone marker, not a published release
 - No risk of breaking downstream consumers (none exist)
@@ -1911,7 +1821,6 @@ Task({ prompt: "Verify Docker CI step", subagent_type: "tester", run_in_backgrou
 ## Acceptance Criteria (Enhanced)
 
 ### Functional Requirements
-
 - [ ] All CI jobs green on main in <2 minutes
 - [ ] E2E pipeline tested: init → start → approve → resume
 - [ ] JSON output mode works for all applicable commands
@@ -1920,7 +1829,6 @@ Task({ prompt: "Verify Docker CI step", subagent_type: "tester", run_in_backgrou
 - [ ] Crash recovery validated (queue integrity, resume behavior)
 
 ### Documentation Requirements
-
 - [ ] README accurately describes installation (GitHub Packages instructions)
 - [ ] README execution engines table verified against source code
 - [ ] README command table matches oclif.manifest.json
@@ -1930,7 +1838,6 @@ Task({ prompt: "Verify Docker CI step", subagent_type: "tester", run_in_backgrou
 - [ ] All documentation links verified (no broken references)
 
 ### Packaging Requirements
-
 - [ ] Package name scoped: `@kinginyellows/codemachine-pipeline`
 - [ ] `publishConfig` configured for GitHub Packages
 - [ ] `.npmignore` excludes dev artifacts (package <2MB)
@@ -1940,7 +1847,6 @@ Task({ prompt: "Verify Docker CI step", subagent_type: "tester", run_in_backgrou
 - [ ] Pre-production tarball validation passed (Phase 5.7)
 
 ### Release Requirements
-
 - [ ] Release branch synced with main (via `gt sync --force`)
 - [ ] Dev artifacts removed from release branch (9 artifacts verified removed)
 - [ ] All tests pass on release branch
@@ -1950,7 +1856,6 @@ Task({ prompt: "Verify Docker CI step", subagent_type: "tester", run_in_backgrou
 - [ ] Package published to GitHub Packages
 
 ### Deployment Requirements
-
 - [ ] `npm install -g @kinginyellows/codemachine-pipeline@1.0.0` works on homelab
 - [ ] `codepipe doctor` passes on homelab (0 errors, warnings OK)
 - [ ] Homelab functional test passes (init → start with test feature)
@@ -1958,7 +1863,6 @@ Task({ prompt: "Verify Docker CI step", subagent_type: "tester", run_in_backgrou
 - [ ] Baseline metrics captured
 
 ### Security Requirements
-
 - [ ] GitHub PAT uses minimal scope (`read:packages` only for homelab)
 - [ ] No auth tokens in committed `.npmrc` file
 - [ ] Docker container runs as non-root user
@@ -1971,18 +1875,18 @@ Task({ prompt: "Verify Docker CI step", subagent_type: "tester", run_in_backgrou
 
 ## Dependencies & Risks (Updated)
 
-| Risk                                 | Likelihood | Impact   | Mitigation                                      | Status     |
-| ------------------------------------ | ---------- | -------- | ----------------------------------------------- | ---------- |
-| **bin path warning breaks CLI**      | HIGH       | CRITICAL | Phase 1.5 validation, tarball testing (5.7)     | Mitigated  |
-| **E2E testing reveals major bugs**   | Medium     | High     | Phase 3 buffer; Wave 3 allows parallel fixes    | Acceptable |
-| **GitHub PAT exposure**              | Medium     | HIGH     | Security warnings, env vars, minimal scope      | Mitigated  |
-| **CodeMachine-CLI adapter fails**    | Medium     | Medium   | Phase 2.5 tests both scenarios (with/without)   | Mitigated  |
-| **GitHub Packages auth issues**      | Low        | Medium   | Well-documented setup; PAT troubleshooting      | Acceptable |
-| **Re-tagging causes confusion**      | Low        | Low      | Backup tag created; delete old release first    | Mitigated  |
-| **Node 24 not available on homelab** | Low        | High     | Check before Phase 1; .nvmrc for auto-switch    | Mitigated  |
-| **CI time regression**               | Low        | Low      | Wave 1 optimizations (caching, parallelization) | Mitigated  |
-| **CHANGELOG date mismatch**          | Medium     | Medium   | Automated validation in Phase 4.2               | Mitigated  |
-| **Docker image size bloat**          | Low        | Low      | .npmignore exclusions; monitor in Phase 5.3     | Acceptable |
+| Risk | Likelihood | Impact | Mitigation | Status |
+|------|-----------|--------|------------|--------|
+| **bin path warning breaks CLI** | HIGH | CRITICAL | Phase 1.5 validation, tarball testing (5.7) | Mitigated |
+| **E2E testing reveals major bugs** | Medium | High | Phase 3 buffer; Wave 3 allows parallel fixes | Acceptable |
+| **GitHub PAT exposure** | Medium | HIGH | Security warnings, env vars, minimal scope | Mitigated |
+| **CodeMachine-CLI adapter fails** | Medium | Medium | Phase 2.5 tests both scenarios (with/without) | Mitigated |
+| **GitHub Packages auth issues** | Low | Medium | Well-documented setup; PAT troubleshooting | Acceptable |
+| **Re-tagging causes confusion** | Low | Low | Backup tag created; delete old release first | Mitigated |
+| **Node 24 not available on homelab** | Low | High | Check before Phase 1; .nvmrc for auto-switch | Mitigated |
+| **CI time regression** | Low | Low | Wave 1 optimizations (caching, parallelization) | Mitigated |
+| **CHANGELOG date mismatch** | Medium | Medium | Automated validation in Phase 4.2 | Mitigated |
+| **Docker image size bloat** | Low | Low | .npmignore exclusions; monitor in Phase 5.3 | Acceptable |
 
 ---
 
@@ -2014,7 +1918,7 @@ Task({ prompt: "Verify Docker CI step", subagent_type: "tester", run_in_backgrou
    - Phase 5 redundant verification (npm pack run twice)
 
 5. **Pattern Recognition** (cosmetic fixes):
-   - Standardize command formatting to `bash` fences
+   - Standardize command formatting to ```bash``` fences
    - Consolidate checklists to phase end
    - Use active voice for goals/checkpoints
    - Document re-tagging justification
@@ -2090,7 +1994,6 @@ Task({ prompt: "Verify Docker CI step", subagent_type: "tester", run_in_backgrou
 ## References
 
 ### Internal
-
 - Release branch strategy: `docs/development/release-branch-strategy.md`
 - Brainstorm: `docs/brainstorms/2026-02-14-v1-release-readiness-brainstorm.md`
 - CI workflow: `.github/workflows/ci.yml`
@@ -2103,7 +2006,6 @@ Task({ prompt: "Verify Docker CI step", subagent_type: "tester", run_in_backgrou
   - `docs/solutions/integration-issues/graphite-restack-conflicts-after-main-advanced.md`
 
 ### External
-
 - GitHub Packages npm: https://docs.github.com/en/packages/working-with-a-github-packages-registry/working-with-the-npm-registry
 - oclif publishing: https://oclif.io/docs/releasing
 - Keep a Changelog: https://keepachangelog.com/en/1.1.0/
@@ -2121,7 +2023,6 @@ Task({ prompt: "Verify Docker CI step", subagent_type: "tester", run_in_backgrou
 **Enhanced:** 6 phases + 7 new sub-phases, ~90 minutes sequential OR ~45 minutes wave-based
 
 **Critical additions:**
-
 - Phase 1.5: Verify package bin path (BLOCKING)
 - Phase 2.5: Test optional dependency scenarios
 - Phase 2.6: Test crash recovery
@@ -2131,7 +2032,6 @@ Task({ prompt: "Verify Docker CI step", subagent_type: "tester", run_in_backgrou
 - Phase 6.9: Post-deployment monitoring
 
 **Key improvements:**
-
 - Automated documentation verification (prevents PR #464 drift pattern)
 - Security hardening (PAT handling, signed tags, least-privilege)
 - CI performance optimization (60% speedup)

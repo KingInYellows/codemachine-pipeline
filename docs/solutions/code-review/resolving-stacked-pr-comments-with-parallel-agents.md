@@ -102,12 +102,12 @@ This divergence from remote is **expected behavior**.
 
 Not all bot comments are valid. Categorize before fixing:
 
-| Bot        | Common False Positives                                 | Action                                                       |
-| ---------- | ------------------------------------------------------ | ------------------------------------------------------------ |
+| Bot | Common False Positives | Action |
+|-----|----------------------|--------|
 | DeepSource | `console.log` in Node.js CLI scripts (assumes browser) | Ignore — add `/* eslint-disable no-console -- CLI script */` |
-| Greptile   | Duplicate of already-fixed issues                      | Resolve as addressed                                         |
-| Devin      | Informational observations (not bugs)                  | Resolve if no action needed                                  |
-| Codex      | Overly broad regex suggestions                         | Evaluate case-by-case                                        |
+| Greptile | Duplicate of already-fixed issues | Resolve as addressed |
+| Devin | Informational observations (not bugs) | Resolve if no action needed |
+| Codex | Overly broad regex suggestions | Evaluate case-by-case |
 
 ### 4. Recover from Race Condition
 
@@ -234,11 +234,11 @@ bash scripts/get-pr-comments <PR_NUMBER>
 
 ## Key Metrics
 
-| Metric                     | Value |
-| -------------------------- | ----- |
-| Total threads resolved     | 132   |
-| PRs in stack               | 5     |
-| Resolution rounds          | 3     |
-| Human review threads       | 74    |
-| Bot review threads         | 58    |
-| False positive bot threads | ~12   |
+| Metric | Value |
+|--------|-------|
+| Total threads resolved | 132 |
+| PRs in stack | 5 |
+| Resolution rounds | 3 |
+| Human review threads | 74 |
+| Bot review threads | 58 |
+| False positive bot threads | ~12 |

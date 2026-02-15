@@ -40,7 +40,6 @@ export class CodeMachineStrategy implements ExecutionStrategy {
 ```
 
 **Problems:**
-
 - Coupling: Strategy tightly bound to CLI details
 - Testability: Cannot mock CLI independently
 - Reusability: CLI logic locked inside strategy
@@ -73,7 +72,6 @@ export class CodeMachineCliStrategy implements ExecutionStrategy {
 ```
 
 **Benefits:**
-
 - Separation: CLI logic isolated from strategy
 - Testability: Can mock adapter, test strategy independently
 - Reusability: Adapter used by multiple strategies
@@ -122,7 +120,6 @@ await adapter.execute('analyze', args);
 ```
 
 **Pros:**
-
 - Multiple independent subscribers
 - Real-time events (no buffering)
 - Standard Node.js pattern
@@ -130,7 +127,6 @@ await adapter.execute('analyze', args);
 - Memory efficient (streaming, not buffering)
 
 **Cons:**
-
 - Implicit contract (events not discoverable)
 - Fire-and-forget (no guaranteed delivery)
 - Error handling via 'error' event only
@@ -177,7 +173,6 @@ const finalOutput = // return value
 ```
 
 **Pros:**
-
 - Explicit control flow
 - Natural error handling (try/catch)
 - Type-safe iteration
@@ -185,7 +180,6 @@ const finalOutput = // return value
 - Sequential processing guaranteed
 
 **Cons:**
-
 - Less familiar pattern
 - Single consumer only
 - Can't attach multiple listeners
@@ -238,13 +232,11 @@ await execute(cliPath, args, {
 ```
 
 **Pros:**
-
 - Simple, familiar API
 - Flexible: inline handlers
 - Easy to test (mock callbacks)
 
 **Cons:**
-
 - Callback pyramid with many handlers
 - Implicit error handling
 - Hard to compose multiple handlers
@@ -257,7 +249,10 @@ await execute(cliPath, args, {
 ### 2.4 Promise-based (Simplest)
 
 ```typescript
-export function execute(cliPath: string, args: string[]): Promise<CliOutput> {
+export function execute(
+  cliPath: string,
+  args: string[]
+): Promise<CliOutput> {
   return new Promise((resolve, reject) => {
     const child = spawn(cliPath, args);
     let output = '';
@@ -288,14 +283,12 @@ const output = await execute(cliPath, args);
 ```
 
 **Pros:**
-
 - Simplest API
 - Uses native promises
 - Easy to understand
 - Easy to test
 
 **Cons:**
-
 - No event streaming
 - Buffers entire output in memory
 - No timeout management
@@ -319,13 +312,11 @@ export function classifyError(exitCode: number): ErrorType {
 ```
 
 **Pros:**
-
 - Fast (single number check)
 - Universal (all CLIs follow Unix conventions)
 - No output parsing needed
 
 **Cons:**
-
 - Loses output context
 - Some CLIs use same exit code for different errors
 
@@ -354,13 +345,11 @@ export function classifyError(stderr: string): ErrorType {
 ```
 
 **Pros:**
-
 - Specific error detection
 - Contextual information
 - Better retry decisions
 
 **Cons:**
-
 - Pattern maintenance overhead
 - Brittle (CLI output may change)
 - Performance (regex parsing)
@@ -408,12 +397,10 @@ child.on('exit', () => clearTimeout(timeout));
 ```
 
 **Pros:**
-
 - Simple implementation
 - Guaranteed termination
 
 **Cons:**
-
 - No grace period
 - Might lose work in progress
 - Abrupt (zombie processes possible)
@@ -440,14 +427,12 @@ child.on('exit', () => clearTimeout(timeout));
 ```
 
 **Pros:**
-
 - Graceful shutdown first
 - Process can cleanup
 - Force kill if needed
 - No zombies
 
 **Cons:**
-
 - Slightly more complex
 - Extra delay possible
 
@@ -466,12 +451,10 @@ const adaptiveTimeout = Math.max(
 ```
 
 **Pros:**
-
 - Handles variable workloads
 - Data-driven
 
 **Cons:**
-
 - Additional complexity
 - Still may timeout on slow systems
 
@@ -500,7 +483,6 @@ export class CliAdapter {
 ```
 
 **Cons:**
-
 - Validates in constructor (anti-pattern)
 - Fails early if CLI not available
 - Synchronous initialization
@@ -536,7 +518,6 @@ await adapter.execute();
 ```
 
 **Pros:**
-
 - Explicit lifecycle
 - Separate construction from initialization
 - Can delay validation
@@ -547,7 +528,9 @@ await adapter.execute();
 ### 5.3 Factory Pattern (Clean)
 
 ```typescript
-export async function createAndInitializeCliAdapter(config: Config): Promise<CliAdapter> {
+export async function createAndInitializeCliAdapter(
+  config: Config
+): Promise<CliAdapter> {
   const adapter = new CliAdapter(config);
   await adapter.initialize();
   return adapter;
@@ -559,13 +542,11 @@ await adapter.execute();
 ```
 
 **Pros:**
-
 - Single-step initialization
 - Factory handles setup
 - Cleaner API
 
 **Cons:**
-
 - Hides initialization step
 - Less control
 
@@ -595,13 +576,11 @@ expect(result.success).toBe(true);
 ```
 
 **Pros:**
-
 - True isolation
 - Fast tests
 - No external dependencies
 
 **Cons:**
-
 - Manual mock maintenance
 - Doesn't test real CLI behavior
 
@@ -616,9 +595,7 @@ it('should handle timeout', async () => {
   const spawnStub = stub(child_process, 'spawn');
   spawnStub.returns({
     // ... mock child process ...
-    kill: () => {
-      /* simulate timeout */
-    },
+    kill: () => { /* simulate timeout */ },
   });
 
   const adapter = new CliAdapter(config);
@@ -627,12 +604,10 @@ it('should handle timeout', async () => {
 ```
 
 **Pros:**
-
 - Tests real adapter code
 - Can simulate failures
 
 **Cons:**
-
 - Requires stubbing
 - Mocking child_process is complex
 
@@ -665,13 +640,11 @@ describe('CodeMachineCLI Integration', () => {
 ```
 
 **Pros:**
-
 - Tests real CLI behavior
 - Production-like environment
 - Catches integration issues
 
 **Cons:**
-
 - Slow (Docker startup)
 - Complex setup
 - Requires Docker
@@ -682,15 +655,15 @@ describe('CodeMachineCLI Integration', () => {
 
 ## 7. Architecture Decision Matrix
 
-| Aspect                   | EventEmitter       | Async Iterator | Callback    | Promise      |
-| ------------------------ | ------------------ | -------------- | ----------- | ------------ |
-| **Streaming**            | ✅ Excellent       | ✅ Good        | ✅ Good     | ❌ Poor      |
-| **Multiple Subscribers** | ✅ Yes             | ❌ No          | ⚠️ Complex  | ❌ No        |
-| **Error Handling**       | ⚠️ Event-based     | ✅ Try/catch   | ⚠️ Callback | ✅ Try/catch |
-| **Familiarity**          | ✅ Standard        | ❌ New         | ✅ Common   | ✅ Standard  |
-| **Memory Efficient**     | ✅ Streaming       | ✅ Streaming   | ⚠️ Buffers  | ❌ Buffers   |
-| **Testing**              | ⚠️ Setup listeners | ✅ Clean       | ✅ Easy     | ✅ Easy      |
-| **Complexity**           | Low                | Medium         | Low         | Minimal      |
+| Aspect | EventEmitter | Async Iterator | Callback | Promise |
+|--------|--------------|----------------|----------|---------|
+| **Streaming** | ✅ Excellent | ✅ Good | ✅ Good | ❌ Poor |
+| **Multiple Subscribers** | ✅ Yes | ❌ No | ⚠️ Complex | ❌ No |
+| **Error Handling** | ⚠️ Event-based | ✅ Try/catch | ⚠️ Callback | ✅ Try/catch |
+| **Familiarity** | ✅ Standard | ❌ New | ✅ Common | ✅ Standard |
+| **Memory Efficient** | ✅ Streaming | ✅ Streaming | ⚠️ Buffers | ❌ Buffers |
+| **Testing** | ⚠️ Setup listeners | ✅ Clean | ✅ Easy | ✅ Easy |
+| **Complexity** | Low | Medium | Low | Minimal |
 
 **Recommendation for CodeMachine:** **EventEmitter** (streaming NDJSON is primary use case)
 
@@ -728,14 +701,12 @@ Testing:
 ### From Monolithic to Adapter
 
 **Phase 1:** Extract CLI logic
-
 ```typescript
 // Before: CLI code in strategy
 // After: Extract to CodeMachineCLIAdapter
 ```
 
 **Phase 2:** Create adapter interface
-
 ```typescript
 interface CliAdapter {
   execute(command: string, args: Record<string, unknown>): Promise<CliOutput>;
@@ -743,13 +714,11 @@ interface CliAdapter {
 ```
 
 **Phase 3:** Implement adapter
-
 ```typescript
 export class CodeMachineCLIAdapter implements CliAdapter { ... }
 ```
 
 **Phase 4:** Update strategy
-
 ```typescript
 export class CodeMachineCliStrategy implements ExecutionStrategy {
   constructor(private adapter: CliAdapter) { }
@@ -760,7 +729,6 @@ export class CodeMachineCliStrategy implements ExecutionStrategy {
 ```
 
 **Phase 5:** Deprecate old code
-
 - Mark monolithic strategy as deprecated
 - Update all references
 - Remove in next major version
@@ -779,3 +747,4 @@ export class CodeMachineCliStrategy implements ExecutionStrategy {
 6. **Testing:** Mock adapters + Docker integration tests
 
 This provides production-grade reliability, testability, observability, and maintainability while following Node.js standards.
+

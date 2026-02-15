@@ -5,7 +5,6 @@ date: 2026-02-15
 ---
 
 # PR #475 Detailed Findings
-
 ## Line-by-Line Architecture Review
 
 ---
@@ -20,11 +19,10 @@ date: 2026-02-15
 
 ### Current Text
 
-````markdown
+```markdown
 ### Phase 0: Architecture Foundation & Critical Corrections (2 days) **NEW**
 
 **Tasks:**
-
 1. **Correct Factual Errors in Plan**
    - [ ] Replace all `CODEMACHINE_CLI_PATH` with `CODEMACHINE_BIN_PATH`
    - [ ] Remove `CODEMACHINE_LOG_LEVEL` or replace with actual debug method
@@ -47,7 +45,7 @@ date: 2026-02-15
    - [ ] Create `.github/workflows/docs-validation.yml`
    - [ ] Configure markdown-link-check with `.github/markdown-link-check.json`
    - [ ] Add factual accuracy checks (engine lists, command counts)
-````
+```
 
 ### Problem Analysis
 
@@ -98,14 +96,12 @@ Phase 3: Content
 Split Phase 0 into two parts:
 
 **Option A (Recommended)**:
-
 ```markdown
 ### Phase 0: Fact-Check Plan (0.5 days)
 
 **Purpose**: Correct factual errors before moving forward.
 
 **Tasks:**
-
 1. Verify environment variable names (find `CODEMACHINE_BIN_PATH` in source)
 2. Verify config.json schema structure (nested, not flat)
 3. Verify all technical claims (Zod schema, 17 commands, etc.)
@@ -123,7 +119,6 @@ Split Phase 0 into two parts:
 **Purpose**: Inventory existing docs, then reorganize structure.
 
 **Tasks:**
-
 1. Audit existing documentation (as before - Phase 2.1-2.3)
 2. Create information architecture (as before - Phase 2.4)
 3. **NEW: Restructure docs/ from 16 → 7 directories**
@@ -139,7 +134,6 @@ Split Phase 0 into two parts:
 **Blocks**: Phase 2.5 (structure must exist before setting up CI)
 
 **Deliverable**:
-
 - Restructured docs/ directory
 - Migration map documenting all changes
 - Archive branch (if applicable)
@@ -151,7 +145,6 @@ Split Phase 0 into two parts:
 **Purpose**: Establish CI validation pipeline.
 
 **Tasks:**
-
 1. Create `.github/workflows/docs-validation.yml`
 2. Configure markdown-link-check with `.github/markdown-link-check.json`
 3. Add factual accuracy checks (engine lists, command counts)
@@ -185,7 +178,6 @@ Split Phase 0 into two parts:
 
 ```markdown
 **Files:**
-
 - `docs/configuration/overview.md`
 - `docs/configuration/environment-variables.md`
 - `docs/configuration/config-file.md`
@@ -194,7 +186,6 @@ Split Phase 0 into two parts:
 ```
 
 Later in plan (mkdocs.yml structure, Lines 945-950):
-
 ```yaml
 - Configuration:
     - reference/config/index.md
@@ -236,7 +227,6 @@ Later in plan (mkdocs.yml structure, Lines 945-950):
 **Scenario**: Config schema changes (new optional field added)
 
 **Current Approach**:
-
 1. Update source: `src/core/config/RepoConfig.ts` (Zod schema)
 2. Manual update #1: `guide/configuration.md` (add to "structure documentation")
 3. Manual update #2: `reference/config/schema.md` (add field-by-field reference)
@@ -244,7 +234,6 @@ Later in plan (mkdocs.yml structure, Lines 945-950):
 5. Risk: Docs drift if maintainer forgets any update
 
 **Better Approach** (Single Source of Truth):
-
 1. Update source: `src/core/config/RepoConfig.ts` (Zod schema)
 2. Auto-generate: `reference/config/schema.md` (runs on CI)
 3. No manual updates to schema docs!
@@ -255,7 +244,6 @@ Later in plan (mkdocs.yml structure, Lines 945-950):
 **Source**: `src/core/config/RepoConfig.ts:1-100` (from plan's own references, line 1513)
 
 Example (hypothetical structure):
-
 ```typescript
 // src/core/config/RepoConfig.ts
 const RepoConfigSchema = z.object({
@@ -269,7 +257,6 @@ const RepoConfigSchema = z.object({
 ```
 
 Auto-generation could extract:
-
 - Field names: `executionEngine`, `githubOrg`, etc.
 - Types: `enum`, `string`, `boolean`, etc.
 - Required: `z.object()` vs `.optional()`
@@ -284,18 +271,15 @@ Auto-generation could extract:
 ### Phase 3.2: Configuration Documentation (1.5 days)
 
 **Files - Hand-Written:**
-
 - `docs/guide/configuration.md` (Overview)
 - `docs/reference/config/environment-variables.md` (Env vars table)
 - `docs/reference/config/codemachine-cli.md` (3-path resolution)
 - `docs/reference/config/execution-engines.md` (Engine comparison)
 
 **Files - Auto-Generated:**
-
 - `docs/reference/config/schema.md` (From `src/core/config/RepoConfig.ts`)
 
 **guide/configuration.md** (Hand-written)
-
 - Configuration file discovery algorithm
 - Precedence order (env vars > config.json > defaults)
 - Minimal configuration example (3-5 lines)
@@ -304,7 +288,6 @@ Auto-generation could extract:
   reference/config/schema.md (auto-generated from Zod schema)
 
 **reference/config/schema.md** (Auto-generated)
-
 - Auto-generated from: `src/core/config/RepoConfig.ts:ZodSchema`
 - Field-by-field documentation:
   - Field name
@@ -331,13 +314,15 @@ const schema = require('../src/core/config/RepoConfig.ts').RepoConfigSchema;
 const markdown = generateMarkdownFromZod(schema);
 
 // Write to reference/config/schema.md
-fs.writeFileSync(path.join(__dirname, '../docs/reference/config/schema.md'), markdown);
+fs.writeFileSync(
+  path.join(__dirname, '../docs/reference/config/schema.md'),
+  markdown
+);
 
 console.log('Generated reference/config/schema.md');
 ```
 
 Add to `package.json` scripts:
-
 ```json
 {
   "scripts": {
@@ -370,15 +355,10 @@ Run in Phase 3.2 or as part of Phase 4.
 ### Phase 3: Content Creation (5 days)
 
 #### 3.1 Getting Started Documentation (1 day)
-
 #### 3.2 Configuration Documentation (1.5 days)
-
 #### 3.3 User Guide Documentation (1.5 days)
-
 #### 3.4 Troubleshooting Documentation (1 day)
-
 #### 3.5 Architecture & Concepts Documentation (1 day)
-
 ────────────────────────────────────────
 Total: 5 days
 ```
@@ -389,18 +369,17 @@ Total: 5 days
 
 ### Dependency Analysis
 
-| Section              | Depends On            | Can Parallel?   | Reason                                  |
-| -------------------- | --------------------- | --------------- | --------------------------------------- |
-| 3.1: Getting Started | Nothing               | ✅ Yes          | Independent (installation, quick start) |
-| 3.2: Configuration   | 3.1.1 (prerequisites) | ⚠️ Partial      | Needs to reference prerequisites.md     |
-| 3.3: User Guide      | 3.1, 3.2              | ✅ After start  | Assumes basic setup known               |
-| 3.4: Troubleshooting | 3.2 (config errors)   | ✅ After config | References config validation errors     |
-| 3.5: Architecture    | 3.1-3.4 (overviews)   | ✅ Partial      | Conceptual, not blocking                |
+| Section | Depends On | Can Parallel? | Reason |
+|---------|------------|---------------|--------|
+| 3.1: Getting Started | Nothing | ✅ Yes | Independent (installation, quick start) |
+| 3.2: Configuration | 3.1.1 (prerequisites) | ⚠️ Partial | Needs to reference prerequisites.md |
+| 3.3: User Guide | 3.1, 3.2 | ✅ After start | Assumes basic setup known |
+| 3.4: Troubleshooting | 3.2 (config errors) | ✅ After config | References config validation errors |
+| 3.5: Architecture | 3.1-3.4 (overviews) | ✅ Partial | Conceptual, not blocking |
 
 ### Wave-Based Parallelization
 
 **Wave 1 (Days 1-2): Foundation**
-
 - 3.1: Getting Started (full 1 day)
   - 3.1.1: prerequisites.md (0.25d)
   - 3.1.2: installation.md (0.5d)
@@ -409,7 +388,6 @@ Total: 5 days
   - 3.2.1: overview.md + env-vars.md (0.5d)
 
 **Wave 2 (Days 2.5-4.5): Parallel Content**
-
 - 3.2: Configuration completed (1.0d remaining)
 - 3.3: User Guide (1.5d parallel)
 - 3.4: Troubleshooting (1d parallel)
@@ -428,25 +406,21 @@ Total: 5 days
 ### Recommended Text Change
 
 **Current** (Line 308):
-
 ```markdown
 ### Phase 3: Content Creation (5 days)
 ```
 
 **Should be**:
-
 ```markdown
 ### Phase 3: Content Creation (5 days serial, 4 days parallel with team)
 
 #### Dependency Structure
 
 **Sequential Requirement**:
-
 - 3.1 (Getting Started) must complete before 3.2 prerequisites section used
 - 3.2 (Configuration) must start early to support 3.3 (User Guide)
 
 **Parallelization Opportunity** (with multiple writers):
-
 1. **Wave 1** (Days 1-2):
    - Writer A: 3.1 (Getting Started, full 1 day)
    - Writer B: 3.2.1 (Configuration overview & env vars, 0.5d)
@@ -458,7 +432,6 @@ Total: 5 days
    - Writer E: 3.5 (Architecture, 1.0d)
 
 **Execution Recommendation**:
-
 - Solo: Use sequential approach (6.5 days)
 - Team (3+ writers): Use wave-based parallel (4 days)
 ```
@@ -466,7 +439,6 @@ Total: 5 days
 ### Timeline Impacts
 
 **Scenario A: Solo execution (current plan)**
-
 - Phase 0: 0.5d (corrected)
 - Phase 1: 2d
 - Phase 2: 1.5d
@@ -479,7 +451,6 @@ Total: 5 days
 - **Total: 16 days** (3.2 weeks)
 
 **Scenario B: Team execution (3+ writers, Phase 3 parallel)**
-
 - Phases 0-2.5: 4.5d (same)
 - Phase 3: 4d (parallel vs 6.5d serial)
 - Phases 4-7: 4.5d (same)
@@ -500,7 +471,6 @@ Total: 5 days
 
 ```markdown
 **Per-command documentation** (template for all 17 commands):
-
 - [ ] Command purpose and when to use it
 - [ ] Syntax: `codepipe <command> [flags]`
 - [ ] Flags/options reference table
@@ -511,7 +481,6 @@ Total: 5 days
 ```
 
 **Proposed Files**:
-
 ```
 docs/user-guide/commands/
 ├─ init.md
@@ -531,7 +500,6 @@ docs/user-guide/commands/
 **Scenario**: CLI flag changes (e.g., `--no-research` renamed to `--skip-research`)
 
 **With current approach**:
-
 1. Update source: `src/cli/commands/start.ts`
 2. Update help text: oclif command class description
 3. Manual update #1: `docs/user-guide/commands/start.md` (flags table)
@@ -540,7 +508,6 @@ docs/user-guide/commands/
 6. Risk: Documentation lags behind code
 
 **Better approach**:
-
 1. Update source: `src/cli/commands/start.ts`
 2. Update help text: oclif command class description
 3. **Auto-generate CLI reference** from `oclif.manifest.json`
@@ -549,16 +516,13 @@ docs/user-guide/commands/
 ### Auto-Generation Opportunity
 
 **oclif provides**:
-
 - `oclif readme` - Generates README section
 - `oclif manifest` - JSON manifest of all commands
 - Available data: command name, description, flags, examples, plugins
 
 **Plan already mentions** (Phase 4, Lines 724-730):
-
 ```markdown
 **CLI Reference Auto-Generation**
-
 - [ ] Verify `npm run docs:cli` command works
 - [ ] Update script to include examples from command implementations
 - [ ] Enhance oclif command descriptions if lacking
@@ -574,21 +538,18 @@ Add to Phase 3.3 (Lines 524-531):
 **Per-command documentation** - Two-Tier Approach:
 
 **Tier 1: Auto-Generated (from oclif.manifest.json)**
-
 - Command purpose and description
 - Syntax and flags
 - Examples
 - Related commands
 
 **Tier 2: Hand-Written (troubleshooting only)**
-
 - Troubleshooting tips specific to this command
 - Common errors and solutions
 - When to use alternate commands
 - Links to guide/troubleshooting.md for common issues
 
 **Maintenance Note**:
-
 - Tier 1 auto-generates during build (`npm run docs:cli`)
 - Update only: oclif command description, examples, flags definitions in source
 - Tier 2 maintained manually (stable, changes rarely)
@@ -598,14 +559,12 @@ Add to Phase 3.3 (Lines 524-531):
 ### Source Reference
 
 **Reference** (from plan, Line 1520):
-
 ```
 - `oclif.manifest.json` - Auto-generated command manifest
 - Auto-generation: `npm run docs:cli` → `docs/ops/cli-reference.md`
 ```
 
 Should be:
-
 ```
 - `oclif.manifest.json` - Auto-generated command manifest
 - Generation script: `scripts/generate-cli-reference.js`
@@ -616,12 +575,12 @@ Should be:
 
 ## Summary of Detailed Findings
 
-| Finding                 | Severity | Line(s) | Type         | Recommendation                                                          |
-| ----------------------- | -------- | ------- | ------------ | ----------------------------------------------------------------------- |
-| Phase 0 sequencing      | High     | 204-237 | Dependency   | Reorganize: split into Phase 0 (0.5d fact-check) + Phase 2.5 (CI setup) |
-| Config doc redundancy   | Medium   | 354-459 | DRY          | Auto-generate schema reference; hand-write overview                     |
-| Phase 3 parallelization | Medium   | 308-591 | Optimization | Document wave-based approach; 4d parallel vs 6.5d serial                |
-| Command doc maintenance | Medium   | 494-591 | Clarity      | Auto-generate flags/syntax; hand-write troubleshooting only             |
+| Finding | Severity | Line(s) | Type | Recommendation |
+|---------|----------|---------|------|-----------------|
+| Phase 0 sequencing | High | 204-237 | Dependency | Reorganize: split into Phase 0 (0.5d fact-check) + Phase 2.5 (CI setup) |
+| Config doc redundancy | Medium | 354-459 | DRY | Auto-generate schema reference; hand-write overview |
+| Phase 3 parallelization | Medium | 308-591 | Optimization | Document wave-based approach; 4d parallel vs 6.5d serial |
+| Command doc maintenance | Medium | 494-591 | Clarity | Auto-generate flags/syntax; hand-write troubleshooting only |
 
 ---
 

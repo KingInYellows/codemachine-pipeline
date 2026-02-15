@@ -56,7 +56,7 @@ static examples = [
 ]
 ```
 
-**Impact:** Users understand _when_ to use each flag combination
+**Impact:** Users understand *when* to use each flag combination
 
 ---
 
@@ -124,7 +124,7 @@ static flags = {
 
 **New script:** `scripts/tooling/generate_command_pages.js`
 
-````javascript
+```javascript
 #!/usr/bin/env node
 'use strict';
 
@@ -203,11 +203,7 @@ function renderCommandPage(cmd) {
       }
 
       lines.push('```bash');
-      lines.push(
-        exampleText
-          .replace(/<%= config.bin %>/g, 'codepipe')
-          .replace(/<%= command.id %>/g, displayId)
-      );
+      lines.push(exampleText.replace(/<%= config.bin %>/g, 'codepipe').replace(/<%= command.id %>/g, displayId));
       lines.push('```');
       lines.push('');
     }
@@ -215,10 +211,9 @@ function renderCommandPage(cmd) {
 
   return lines.join('\n');
 }
-````
+```
 
 **Usage:**
-
 ```bash
 # Add to package.json scripts
 "docs:commands": "node scripts/tooling/generate_command_pages.js"
@@ -276,7 +271,6 @@ if (hasIssues) {
 ```
 
 **Add to CI:**
-
 ```yaml
 # .github/workflows/ci.yml
 - name: Validate CLI documentation
@@ -290,16 +284,16 @@ if (hasIssues) {
 
 ## oclif v4 Flag Properties Reference
 
-| Property      | Type     | Purpose                | Example                                          |
-| ------------- | -------- | ---------------------- | ------------------------------------------------ |
-| `summary`     | string   | Brief flag description | `'Grant approval for this gate'`                 |
-| `description` | string   | Detailed explanation   | `'Approve the PRD and proceed...'`               |
-| `char`        | string   | Short flag (`-a`)      | `'a'`                                            |
-| `helpGroup`   | string   | Group in help output   | `'APPROVAL OPTIONS'`                             |
-| `aliases`     | string[] | Alternative names      | `['confirm', 'yes']`                             |
-| `deprecated`  | object   | Deprecation notice     | `{ message: 'Use --approve', version: '2.0.0' }` |
-| `hidden`      | boolean  | Hide from help         | `true`                                           |
-| `required`    | boolean  | Flag is required       | `true`                                           |
+| Property | Type | Purpose | Example |
+|----------|------|---------|---------|
+| `summary` | string | Brief flag description | `'Grant approval for this gate'` |
+| `description` | string | Detailed explanation | `'Approve the PRD and proceed...'` |
+| `char` | string | Short flag (`-a`) | `'a'` |
+| `helpGroup` | string | Group in help output | `'APPROVAL OPTIONS'` |
+| `aliases` | string[] | Alternative names | `['confirm', 'yes']` |
+| `deprecated` | object | Deprecation notice | `{ message: 'Use --approve', version: '2.0.0' }` |
+| `hidden` | boolean | Hide from help | `true` |
+| `required` | boolean | Flag is required | `true` |
 
 ---
 
@@ -335,17 +329,14 @@ tags: [setup, configuration, initialization]
 ## Common Use Cases
 
 ### First-time setup
-
 ...
 
 ### Re-initialize after config changes
-
 ...
 
 ## Troubleshooting
 
 ### "Not a git repository"
-
 **Cause:** ...
 **Solution:** Run `git init` first
 
@@ -366,19 +357,19 @@ tags: [setup, configuration, initialization]
 # mkdocs.yml
 nav:
   - User Guide:
-      - Commands:
-          - Overview: user-guide/commands/index.md
-          - Core Commands:
-              - init: user-guide/commands/init.md
-              - start: user-guide/commands/start.md
-              - approve: user-guide/commands/approve.md
-              - resume: user-guide/commands/resume.md
-          - Pull Request Commands:
-              - create: user-guide/commands/pr-create.md
-              - status: user-guide/commands/pr-status.md
-          - Research Commands:
-              - create: user-guide/commands/research-create.md
-              - list: user-guide/commands/research-list.md
+    - Commands:
+      - Overview: user-guide/commands/index.md
+      - Core Commands:
+        - init: user-guide/commands/init.md
+        - start: user-guide/commands/start.md
+        - approve: user-guide/commands/approve.md
+        - resume: user-guide/commands/resume.md
+      - Pull Request Commands:
+        - create: user-guide/commands/pr-create.md
+        - status: user-guide/commands/pr-status.md
+      - Research Commands:
+        - create: user-guide/commands/research-create.md
+        - list: user-guide/commands/research-list.md
 ```
 
 ---
@@ -395,13 +386,11 @@ nav:
 **Description:** Configuration or input validation failed
 
 **Common Causes:**
-
 - Missing required config fields in `.codepipe/config.json`
 - Invalid JSON syntax in config file
 - Zod schema validation failure
 
 **Remediation Steps:**
-
 1. Run `codepipe init --validate-only` to check config
 2. Review schema at [Schema Reference](../reference/schema-reference.md)
 3. Check for typos in config file
@@ -429,13 +418,13 @@ How to Fix: Change "5" to 5 (remove quotes)
 
 ## Comparison: Custom Script vs oclif readme
 
-| Feature         | Custom Script            | oclif readme    |
-| --------------- | ------------------------ | --------------- |
-| **Control**     | Full control over format | Standard format |
-| **Maintenance** | Manual updates needed    | Auto-maintained |
-| **Flexibility** | Can match MkDocs theme   | Fixed structure |
-| **Performance** | Single-purpose           | Generic tool    |
-| **Validation**  | Custom checks            | Built-in checks |
+| Feature | Custom Script | oclif readme |
+|---------|--------------|--------------|
+| **Control** | Full control over format | Standard format |
+| **Maintenance** | Manual updates needed | Auto-maintained |
+| **Flexibility** | Can match MkDocs theme | Fixed structure |
+| **Performance** | Single-purpose | Generic tool |
+| **Validation** | Custom checks | Built-in checks |
 
 **Recommendation:** Keep custom script, validate against `oclif readme --dry-run` for completeness
 
@@ -443,15 +432,15 @@ How to Fix: Change "5" to 5 (remove quotes)
 
 ## Time Estimates
 
-| Task                               | Time    | Priority |
-| ---------------------------------- | ------- | -------- |
-| Add `summary` to 17 commands       | 30 min  | High     |
-| Add example descriptions           | 60 min  | High     |
-| Add `helpGroup` to flags           | 45 min  | Medium   |
-| Topic descriptions in package.json | 15 min  | Medium   |
-| Generate per-command pages script  | 2 hours | Medium   |
-| Error code catalog                 | 4 hours | Low      |
-| CI validation scripts              | 1 hour  | Low      |
+| Task | Time | Priority |
+|------|------|----------|
+| Add `summary` to 17 commands | 30 min | High |
+| Add example descriptions | 60 min | High |
+| Add `helpGroup` to flags | 45 min | Medium |
+| Topic descriptions in package.json | 15 min | Medium |
+| Generate per-command pages script | 2 hours | Medium |
+| Error code catalog | 4 hours | Low |
+| CI validation scripts | 1 hour | Low |
 
 **Total:** ~9 hours for complete enhancement
 

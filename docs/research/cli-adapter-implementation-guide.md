@@ -40,7 +40,12 @@ export interface CliValidationResult {
   errors: string[];
 }
 
-export type CliErrorType = 'transient' | 'permanent' | 'human_required' | 'parse_error' | 'timeout';
+export type CliErrorType =
+  | 'transient'
+  | 'permanent'
+  | 'human_required'
+  | 'parse_error'
+  | 'timeout';
 ```
 
 ### Step 2: Define Error Class
@@ -99,11 +104,9 @@ export class CodeMachineCLIAdapter extends EventEmitter {
   constructor(config: CodeMachineCLIAdapterConfig) {
     super();
 
-    this.logger =
-      config.logger ??
-      createLogger({
-        component: 'codemachine-cli-adapter',
-      });
+    this.logger = config.logger ?? createLogger({
+      component: 'codemachine-cli-adapter',
+    });
 
     this.config = {
       cliPath: config.cliPath,
@@ -206,7 +209,9 @@ export class CodeMachineCLIAdapter extends EventEmitter {
     options?: CliExecutionOptions
   ): Promise<CliOutput> {
     if (this.state !== 'ready') {
-      throw new Error(`Cannot execute in state '${this.state}'. Call initialize() first.`);
+      throw new Error(
+        `Cannot execute in state '${this.state}'. Call initialize() first.`
+      );
     }
 
     const startTime = Date.now();
@@ -492,7 +497,9 @@ export class CodeMachineCLIAdapter extends EventEmitter {
   /**
    * Build process environment
    */
-  private buildProcessEnv(overrides?: Record<string, string>): Record<string, string> {
+  private buildProcessEnv(
+    overrides?: Record<string, string>
+  ): Record<string, string> {
     const env = { ...process.env } as Record<string, string>;
 
     // Set working directory
@@ -706,7 +713,10 @@ export class CodeMachineCliStrategy implements ExecutionStrategy {
     return task.task_type === 'codemachine_cli';
   }
 
-  async execute(task: ExecutionTask, context: ExecutionContext): Promise<ExecutionStrategyResult> {
+  async execute(
+    task: ExecutionTask,
+    context: ExecutionContext
+  ): Promise<ExecutionStrategyResult> {
     const startTime = Date.now();
 
     try {
@@ -886,7 +896,7 @@ describe('CodeMachineCLIAdapter', () => {
   describe('initialization', () => {
     it('should initialize successfully', async () => {
       // Skip if CLI not available
-      if (!process.env.CODEMACHINE_BIN_PATH) {
+      if (!process.env.CODEMACHINE_CLI_PATH) {
         vi.skip();
       }
 
@@ -908,11 +918,13 @@ describe('CodeMachineCLIAdapter', () => {
 
   describe('execution', () => {
     it('should reject execution before initialization', async () => {
-      await expect(adapter.execute('test')).rejects.toThrow(/Cannot execute in state/);
+      await expect(adapter.execute('test')).rejects.toThrow(
+        /Cannot execute in state/
+      );
     });
 
     it('should emit events during execution', async () => {
-      if (!process.env.CODEMACHINE_BIN_PATH) {
+      if (!process.env.CODEMACHINE_CLI_PATH) {
         vi.skip();
       }
 
@@ -978,7 +990,7 @@ describe('CodeMachineCLIAdapter', () => {
 // Example 1: Simple execution
 async function analyzeCode() {
   const adapter = createCodeMachineCLIAdapter({
-    cliPath: process.env.CODEMACHINE_BIN_PATH || 'codemachine',
+    cliPath: process.env.CODEMACHINE_CLI || 'codemachine',
     workspaceDir: process.cwd(),
   });
 
@@ -1120,16 +1132,16 @@ async function executeTask() {
 
 ## Key Design Decisions
 
-| Decision                     | Rationale                                               |
-| ---------------------------- | ------------------------------------------------------- |
-| **EventEmitter extends**     | Streaming NDJSON is primary output format               |
-| **State machine lifecycle**  | Prevents invalid operations (execute before init)       |
-| **Argument builder**         | Type-safe, prevents injection attacks, validates count  |
-| **Exit code classification** | Different retry strategies for transient vs permanent   |
-| **Lazy adapter init**        | Strategy can be created early, initialized on first use |
-| **Cause chain preservation** | Debugging support, error context not lost               |
-| **SIGTERM + grace period**   | Graceful shutdown before force kill                     |
-| **Dependency injection**     | Logger, logger testability, configuration flexibility   |
+| Decision | Rationale |
+|----------|-----------|
+| **EventEmitter extends** | Streaming NDJSON is primary output format |
+| **State machine lifecycle** | Prevents invalid operations (execute before init) |
+| **Argument builder** | Type-safe, prevents injection attacks, validates count |
+| **Exit code classification** | Different retry strategies for transient vs permanent |
+| **Lazy adapter init** | Strategy can be created early, initialized on first use |
+| **Cause chain preservation** | Debugging support, error context not lost |
+| **SIGTERM + grace period** | Graceful shutdown before force kill |
+| **Dependency injection** | Logger, logger testability, configuration flexibility |
 
 ---
 
@@ -1140,3 +1152,4 @@ async function executeTask() {
 - **Memory**: NDJSON streaming prevents OOM for large outputs
 - **Timeouts**: SIGTERM grace period (5s) before SIGKILL prevents zombie processes
 - **Logger injection**: Allows callers to disable debug logging in production
+

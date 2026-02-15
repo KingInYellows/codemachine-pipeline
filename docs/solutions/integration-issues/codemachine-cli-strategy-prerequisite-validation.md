@@ -1,5 +1,5 @@
 ---
-title: 'Skip Legacy CLI Check When CodeMachine-CLI Strategy Is Available'
+title: "Skip Legacy CLI Check When CodeMachine-CLI Strategy Is Available"
 date: 2026-02-13
 category: integration-issues
 tags:
@@ -19,7 +19,7 @@ symptoms:
   - Execution blocked despite CodeMachine-CLI binary being available via binaryResolver
   - validatePrerequisites() fails when legacy CLI path is missing, even though new strategy resolved a binary
   - start/resume commands fail in environments where binary is available through optionalDeps but not in PATH
-issue_reference: 'PR #466'
+issue_reference: "PR #466"
 fix_commit: cd48113
 ---
 
@@ -30,7 +30,6 @@ fix_commit: cd48113
 After introducing `CodeMachineCLIStrategy` (which resolves binaries via `binaryResolver` -- env vars, npm optionalDeps, PATH chain), `CLIExecutionEngine.validatePrerequisites()` still always required the legacy `codemachine_cli_path` to be valid. This blocked execution in the primary deployment scenario where the binary is available via optionalDeps but not as a bare `codemachine` command in PATH.
 
 **Observed behavior:**
-
 1. `cliStrategy.checkAvailability()` succeeds (binary found via optionalDep)
 2. `executionEngine.validatePrerequisites()` fails (legacy `codemachine --version` check fails)
 3. Both `start.ts` and `resume.ts` throw on prerequisite failure, blocking all execution
@@ -70,7 +69,9 @@ if (!cliCheck.available) {
     (s) => s.name === 'codemachine-cli' && s.canHandle({} as ExecutionTask)
   );
   if (cliStrategyAvailable) {
-    warnings.push(`Legacy CLI not found at '${cliPath}'; using codemachine-cli strategy`);
+    warnings.push(
+      `Legacy CLI not found at '${cliPath}'; using codemachine-cli strategy`
+    );
   } else {
     errors.push(
       `CodeMachine CLI not available at '${cliPath}': ${cliCheck.error ?? 'unknown error'}`
