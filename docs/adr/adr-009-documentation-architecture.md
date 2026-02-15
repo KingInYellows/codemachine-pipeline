@@ -24,12 +24,12 @@ This ADR documents critical architectural decisions discovered during documentat
 
 ### Q2: Configuration File Discovery Algorithm
 
-**Answer**: **Fixed path at git repository root** - NO directory tree walking
+**Answer**: **Fixed path relative to current working directory** - NO directory tree walking
 
 **Algorithm**:
 
-1. Find git root: `git rev-parse --show-toplevel`
-2. Resolve config path: `{gitRoot}/.codepipe/config.json`
+1. Resolve from current working directory: `process.cwd()`
+2. Resolve config path: `{cwd}/.codepipe/config.json`
 3. Validate file access and permissions
 4. Parse JSON and validate against Zod schema
 5. Apply `CODEPIPE_*` environment variable overrides
@@ -46,7 +46,7 @@ This ADR documents critical architectural decisions discovered during documentat
 - `src/cli/commands/init.ts:498-513` - Git root resolution
 - `src/core/config/RepoConfig.ts:356-365` - Error handling
 
-**Documentation Impact**: Must clarify that config MUST be in git root, not any parent directory
+**Documentation Impact**: Must clarify that config is resolved from current working directory, not via git root resolution
 
 ---
 
@@ -83,7 +83,7 @@ This ADR documents critical architectural decisions discovered during documentat
 
 **Answer**: Seven-gate system with SHA-256 hash validation and two-file state model
 
-**Available Gates**:
+**Available Gates** (7 total):
 
 - `prd` - Product Requirements Document
 - `spec` - Technical Specification
@@ -127,8 +127,8 @@ This ADR documents critical architectural decisions discovered during documentat
 **Sources**:
 
 - `src/cli/commands/approve.ts` - Complete approval logic
-- `src/core/models/ApprovalRecord.ts` - Data structures and gate definitions
-- `src/workflows/approvalRegistry.ts` - State persistence and audit trail
+- `src/core/models/ApprovalRecord.ts` - Data structures and gate definitions (approval types)
+- `src/workflows/approvalRegistry.ts` - State persistence and audit trail (approval storage)
 
 **Documentation Impact**: Must explain hash validation, audit trail, and resume blocking
 
@@ -324,9 +324,8 @@ codepipe resume <feature_id>
 **Manual Recovery** (If Corrupted):
 
 ```bash
-codepipe queue validate <feature_id>     # Validate integrity
-codepipe queue rebuild <feature_id> --from-plan   # Rebuild from plan if corrupted
-codepipe resume --dry-run <feature_id>  # Dry-run diagnostics
+codepipe resume --validate-queue <feature_id>   # Validate queue integrity before resuming
+codepipe resume --dry-run <feature_id>           # Dry-run diagnostics
 ```
 
 **Queue File Format**:
@@ -345,9 +344,9 @@ codepipe resume --dry-run <feature_id>  # Dry-run diagnostics
 
 **Disaster Recovery Best Practices**:
 
-- Daily: `git commit .codepipe/runs/` (if needed)
+- Daily: `cp -r .codepipe/runs/ .codepipe/runs.backup-$(date +%F)` or `tar czf codepipe-runs-backup.tar.gz .codepipe/runs/` (manual backup required since `.codepipe/runs/` is gitignored)
 - Before risky ops: `cp -r .codepipe/runs/<feature_id> .codepipe/runs/<feature_id>.backup`
-- Corruption: Use `codepipe queue rebuild --from-plan`
+- Corruption: Use `codepipe resume --validate-queue <feature_id>` to diagnose, then start a new run if unrecoverable
 
 **Sources**:
 
@@ -399,7 +398,7 @@ Result:
 **Sources**:
 
 - `src/core/config/RepoConfig.ts:527-536` - Override logic
-- `src/cli/pr/shared.ts:168` - GitHub token loading
+- `src/cli/pr/shared.ts:168` - GitHub token loading (shared PR utilities)
 - `src/cli/commands/start.ts:819` - Linear key loading
 
 **Documentation Impact**: Must explain indirection pattern clearly with diagrams
@@ -468,17 +467,23 @@ jq '.component=="http:github"' logs.ndjson
 
 **Answer**: Follows same credential precedence pattern as Q10
 
-**Environment Variables by Engine**:
+**API Key Environment Variables by Engine**:
 
-| Execution Engine | Required Env Var    | Override Env Var                  | Config Field                     |
-| ---------------- | ------------------- | --------------------------------- | -------------------------------- |
-| `claude`         | `ANTHROPIC_API_KEY` | `CODEPIPE_RUNTIME_AGENT_ENDPOINT` | `runtime.agent_endpoint_env_var` |
-| `codex`          | `OPENAI_API_KEY`    | `CODEPIPE_RUNTIME_AGENT_ENDPOINT` | `runtime.agent_endpoint_env_var` |
-| `openai`         | `OPENAI_API_KEY`    | `CODEPIPE_RUNTIME_AGENT_ENDPOINT` | `runtime.agent_endpoint_env_var` |
+| Execution Engine | Required API Key Env Var |
+| ---------------- | ------------------------ |
+| `claude`         | `ANTHROPIC_API_KEY`      |
+| `codex`          | `OPENAI_API_KEY`         |
+| `openai`         | `OPENAI_API_KEY`         |
+
+**Agent Endpoint Configuration** (URL override, not API key):
+
+| Override Env Var                  | Config Field                     | Description                              |
+| --------------------------------- | -------------------------------- | ---------------------------------------- |
+| `CODEPIPE_RUNTIME_AGENT_ENDPOINT` | `runtime.agent_endpoint_env_var` | Overrides the agent endpoint URL (not an API key override) |
 
 **Additional Runtime Overrides**:
 
-- `CODEPIPE_RUNTIME_MAX_CONCURRENT_TASKS` - Max parallel tasks (default: 1)
+- `CODEPIPE_RUNTIME_MAX_CONCURRENT_TASKS` - Max parallel tasks (default: 3)
 - `CODEPIPE_RUNTIME_TIMEOUT_MINUTES` - Global timeout (default: 30)
 - `CODEPIPE_EXECUTION_CLI_PATH` - Legacy CLI path override
 - `CODEPIPE_EXECUTION_DEFAULT_ENGINE` - Override execution engine
@@ -597,7 +602,7 @@ codepipe doctor
 
 - Environment: `CODEPIPE_RUNTIME_MAX_CONCURRENT_TASKS=1-10`
 - Config: `runtime.max_concurrent_tasks`
-- Default: 1 (conservative, scale as needed)
+- Default: 3 (schema default per `runtime.max_concurrent_tasks`)
 
 **Throughput Gains**:
 
@@ -653,18 +658,18 @@ codepipe doctor
 | #   | Question               | Answer Summary                           | Impact on Docs            |
 | --- | ---------------------- | ---------------------------------------- | ------------------------- |
 | 1   | Node.js version        | >=24.0.0                                 | Prerequisites page        |
-| 2   | Config discovery       | Fixed path at git root                   | Configuration overview    |
+| 2   | Config discovery       | Fixed path from cwd (process.cwd())      | Configuration overview    |
 | 3   | CLI resolution         | 3-path priority (env → optional → PATH)  | CodeMachine CLI guide     |
-| 4   | Approval mechanics     | 6 gates, hash validation, two-file model | Workflows, approval guide |
+| 4   | Approval mechanics     | 7 gates, hash validation, two-file model | Workflows, approval guide |
 | 5   | Required fields        | 5 core required fields                   | Config file reference     |
 | 6   | LINEAR_API_KEY         | Optional (warning if enabled)            | Configuration guide       |
 | 7   | Queue locking          | File-based exclusive locks               | Team collaboration        |
-| 8   | .codepipe/ committable | NO - gitignored                          | Team collaboration        |
+| 8   | .codepipe/ committable | Partially - only 4 subdirs gitignored    | Team collaboration        |
 | 9   | Queue backup           | Automatic snapshot + WAL                 | Disaster recovery         |
 | 10  | Credential precedence  | Env var indirection pattern              | Security guide            |
 | 11  | Debug logging          | --verbose/--json flags                   | Troubleshooting           |
 | 12  | AI API keys            | ANTHROPIC_API_KEY, OPENAI_API_KEY        | Configuration             |
-| 13  | Migration v1.0         | Automatic queue, manual config           | Migration guide           |
+| 13  | Migration v1.0         | NO auto queue migration, manual config   | Migration guide           |
 | 14  | Concurrent execution   | YES - via locking                        | Advanced usage            |
 | 15  | Platform support       | All platforms, Node >=24                 | Installation              |
 
