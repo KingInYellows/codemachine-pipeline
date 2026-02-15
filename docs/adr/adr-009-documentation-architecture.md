@@ -27,6 +27,7 @@ This ADR documents critical architectural decisions discovered during documentat
 **Answer**: **Fixed path at git repository root** - NO directory tree walking
 
 **Algorithm**:
+
 1. Find git root: `git rev-parse --show-toplevel`
 2. Resolve config path: `{gitRoot}/.codepipe/config.json`
 3. Validate file access and permissions
@@ -40,6 +41,7 @@ This ADR documents critical architectural decisions discovered during documentat
 **Caching**: None - file read fresh on every command invocation
 
 **Sources**:
+
 - `src/cli/utils/runDirectory.ts:11` - CONFIG_RELATIVE_PATH constant
 - `src/cli/commands/init.ts:350-365` - Git root resolution
 - `src/core/config/RepoConfig.ts:356-365` - Error handling
@@ -53,6 +55,7 @@ This ADR documents critical architectural decisions discovered during documentat
 **Answer**: Three-path resolution with strict priority order
 
 **Priority (Highest to Lowest)**:
+
 1. **`CODEMACHINE_BIN_PATH`** environment variable
    - Allowlist-validated to prevent command injection
    - Must be absolute path to executable
@@ -68,6 +71,7 @@ This ADR documents critical architectural decisions discovered during documentat
    - Uses `which` on Unix, `where` on Windows
 
 **Sources**:
+
 - `src/adapters/codemachine/binaryResolver.ts` - Complete resolution logic
 - `docs/solutions/integration-issues/codemachine-cli-strategy-prerequisite-validation.md` - Strategy documentation
 
@@ -80,6 +84,7 @@ This ADR documents critical architectural decisions discovered during documentat
 **Answer**: Six-gate system with SHA-256 hash validation and two-file state model
 
 **Available Gates**:
+
 - `prd` - Product Requirements Document
 - `spec` - Technical Specification
 - `plan` - Implementation Plan
@@ -101,21 +106,25 @@ This ADR documents critical architectural decisions discovered during documentat
 4. **Resume Check**: `codepipe resume` checks if `pending.length === 0`, blocks if approvals needed
 
 **State Persistence (Two Files)**:
+
 - `manifest.json` - Current state (pending/completed arrays)
 - `approvals/approvals.json` - Complete audit trail (all ApprovalRecords)
 
 **Hash Validation**:
+
 - Prevents approving modified artifacts
 - Exit code 30 if hash mismatch detected
 - User must re-approve if artifact changes
 
 **Exit Codes**:
+
 - 0: Success
 - 10: Validation error (invalid gate, not pending)
 - 30: Artifact modified (hash mismatch)
 - 1: General error
 
 **Sources**:
+
 - `src/cli/commands/approve.ts` - Complete approval logic
 - `src/workflows/approvalTypes.ts` - Data structures
 - `src/persistence/approvalStorage.ts` - State persistence
@@ -129,6 +138,7 @@ This ADR documents critical architectural decisions discovered during documentat
 **Answer**: 5 absolutely required fields, rest have defaults
 
 **Absolutely Required** (no defaults, validation fails if missing):
+
 1. `schema_version` - Semver format (e.g., "1.0.0")
 2. `project.id` - Unique project identifier
 3. `project.repo_url` - Repository URL (https:// or git@)
@@ -136,6 +146,7 @@ This ADR documents critical architectural decisions discovered during documentat
 5. `linear.enabled` - Boolean flag (true/false)
 
 **Required Sections** (parent objects required, but fields inside have defaults):
+
 - `project.*` - Project metadata (name, description optional)
 - `github.*` - GitHub integration config
 - `linear.*` - Linear integration config
@@ -144,6 +155,7 @@ This ADR documents critical architectural decisions discovered during documentat
 - `feature_flags.*` - Feature toggles (all default to false)
 
 **Optional Sections** (entire section can be omitted):
+
 - `validation.*` - Validation command registry
 - `constraints.*` - Resource constraints
 - `execution.*` - CodeMachine CLI settings (falls back to defaults)
@@ -151,6 +163,7 @@ This ADR documents critical architectural decisions discovered during documentat
 - `config_history.*` - Migration tracking
 
 **Minimum Valid Configuration**:
+
 ```json
 {
   "schema_version": "1.0.0",
@@ -167,6 +180,7 @@ This ADR documents critical architectural decisions discovered during documentat
 ```
 
 **Sources**:
+
 - `src/core/config/RepoConfig.ts` - Complete Zod schema (lines 1-520)
 - `docs/reference/config/RepoConfig_schema.md` - Existing comprehensive documentation
 
@@ -179,11 +193,13 @@ This ADR documents critical architectural decisions discovered during documentat
 **Answer**: **Optional** - Required only if Linear integration is enabled
 
 **Validation Logic**:
+
 - If `config.linear.enabled === false` → No validation
 - If `config.linear.enabled === true` AND `LINEAR_API_KEY` missing → **Warning** (not error)
 - Linear features fail gracefully if key invalid
 
 **Sources**:
+
 - `src/core/config/RepoConfig.ts:415, 425, 434` - Credential validation
 - Config validation shows warning: "LINEAR_API_KEY not found (Linear integration disabled)"
 
@@ -196,35 +212,41 @@ This ADR documents critical architectural decisions discovered during documentat
 **Answer**: **YES** - File-based exclusive locking with stale lock detection
 
 **Locking Mechanism**:
+
 - Lock file: `.codepipe/runs/{feature_id}/run.lock`
 - Atomic creation using `fs.writeFile()` with `'wx'` flag (exclusive mode)
 - Stores process metadata: PID, hostname, timestamp, operation type
 - Lock acquired before ANY queue/manifest modification
 
 **Stale Lock Detection**:
+
 - Age-based: 60-second threshold (configurable)
 - Process-based: Unix/Linux checks if PID exists using signal 0
 - Corrupted locks: Treated as stale, removed automatically
 - Timeout: 30 seconds default, 100ms polling interval
 
 **Concurrent Execution Support**:
+
 - ✅ Multiple users on different features (different feature_ids)
 - ✅ Multiple tasks within one pipeline (2-4x throughput)
 - ✅ Resume after crash (automatic via stale lock recovery)
 - ❌ Same feature_id on different machines (30s timeout, then failure)
 
 **TOCTOU Protections**:
+
 - Exclusive file creation prevents simultaneous lock acquisition
 - All manifest operations wrapped in `withLock()`
 - Atomic writes (temp-file-rename pattern)
 - Process-aware cleanup validates process existence
 
 **Limitations**:
+
 - Single machine only (requires POSIX filesystem)
 - Network filesystems not guaranteed (NFS locking unreliable)
 - Windows: PID checking falls back to time-based only
 
 **Sources**:
+
 - `src/persistence/runDirectoryManager.ts:282-481` - Complete locking implementation
 - `docs/reference/parallel-execution.md` - Parallel execution guide
 
@@ -237,6 +259,7 @@ This ADR documents critical architectural decisions discovered during documentat
 **Answer**: **NO** - `.codepipe/` is gitignored by default
 
 **Gitignored Patterns**:
+
 - `.codepipe/runs/` - Execution state (ephemeral)
 - `.codepipe/logs/` - Log files (large, transient)
 - `.codepipe/metrics/` - Metrics data (transient)
@@ -245,12 +268,14 @@ This ADR documents critical architectural decisions discovered during documentat
 **Exception**: `.codepipe/config.json` CAN be committed (but shouldn't if it contains secrets)
 
 **Team Collaboration Strategy**:
+
 - Commit: `.codepipe/config.json` (template with placeholder secrets)
 - Share: Environment variable names in README
 - Each developer: Sets their own `GITHUB_TOKEN`, `LINEAR_API_KEY` locally
 - CI/CD: Injects secrets via GitHub Secrets → `CODEPIPE_*` env vars
 
 **Sources**:
+
 - `.gitignore:15-18` - .codepipe/ patterns
 
 **Documentation Impact**: Must document team collaboration workflow, secret sharing strategy
@@ -281,6 +306,7 @@ This ADR documents critical architectural decisions discovered during documentat
    - Keeps recovery time bounded
 
 **Recovery Procedure** (Automatic):
+
 ```bash
 codepipe resume <feature_id>
 # System automatically:
@@ -291,6 +317,7 @@ codepipe resume <feature_id>
 ```
 
 **Manual Recovery** (If Corrupted):
+
 ```bash
 codepipe queue validate <feature_id>     # Validate integrity
 codepipe queue rebuild <feature_id> --from-plan   # Rebuild from plan if corrupted
@@ -298,23 +325,27 @@ codepipe resume --dry-run <feature_id>  # Dry-run diagnostics
 ```
 
 **Queue File Format**:
+
 - Location: `.codepipe/runs/<feature_id>/queue/`
 - Format: JSON/NDJSON (text-based, human-readable)
 - Portability: ✅ Yes (no binary serialization)
 - Schema: Version 2.0.0
 
 **What's Missing**:
+
 - No `codepipe export` / `codepipe import` commands
 - No remote backup integration
 - No compression utilities
 - External corruption requires manual intervention
 
 **Disaster Recovery Best Practices**:
+
 - Daily: `git commit .codepipe/runs/` (if needed)
 - Before risky ops: `cp -r .codepipe/runs/<feature_id> .codepipe/runs/<feature_id>.backup`
 - Corruption: Use `codepipe queue rebuild --from-plan`
 
 **Sources**:
+
 - `src/workflows/queueSnapshotManager.ts` - Snapshot management
 - `src/workflows/queueOperationsLog.ts` - WAL implementation
 - `src/workflows/queueCompactionEngine.ts` - Compaction logic
@@ -326,7 +357,7 @@ codepipe resume --dry-run <feature_id>  # Dry-run diagnostics
 
 ### Q10: Credential Precedence (Environment Variables vs Config.json)
 
-**Answer**: **Environment variable indirection** - CODEPIPE_* overrides config, which specifies ENV VAR NAMES (not credentials)
+**Answer**: **Environment variable indirection** - CODEPIPE\_\* overrides config, which specifies ENV VAR NAMES (not credentials)
 
 **Precedence Pattern**:
 
@@ -342,6 +373,7 @@ codepipe resume --dry-run <feature_id>  # Dry-run diagnostics
    - `process.env[token_env_var]` → The actual token value
 
 **Example Flow**:
+
 ```
 config.json: { "github": { "token_env_var": "GITHUB_TOKEN" } }
 Environment: CODEPIPE_GITHUB_TOKEN=ghp_custom123
@@ -353,12 +385,14 @@ Result:
 ```
 
 **Security Design**:
+
 - ✅ Credentials never stored in config.json (only env var names)
 - ✅ Supports custom env var names per project
-- ✅ CI/CD compatible (inject secrets via CODEPIPE_*)
+- ✅ CI/CD compatible (inject secrets via CODEPIPE\_\*)
 - ✅ Flexible (different projects can use different var names)
 
 **Sources**:
+
 - `src/core/config/RepoConfig.ts:527-536` - Override logic
 - `src/cli/utils/shared.ts:168` - GitHub token loading
 - `src/cli/commands/start.ts:819` - Linear key loading
@@ -372,19 +406,23 @@ Result:
 **Answer**: `--verbose` and `--json` flags, automatic log persistence
 
 **Command-Line Flags**:
+
 - `--verbose` / `-v` - Show detailed diagnostic information (available on commands like `doctor`)
 - `--json` - Output results in JSON format, disable stderr mirroring
 
 **Environment Variables**:
+
 - `JSON_OUTPUT` - When set, enables pure JSON output mode (machine-readable)
 
 **Log File Locations**:
+
 ```
 <run_directory>/logs/logs.ndjson
 Example: .codepipe/runs/<feature_id>/logs/logs.ndjson
 ```
 
 **Log Levels** (in order of verbosity):
+
 - `DEBUG` - Most detailed (internal state, trace calls)
 - `INFO` - Standard operational events
 - `WARN` - Warnings (degraded performance, deprecations)
@@ -392,6 +430,7 @@ Example: .codepipe/runs/<feature_id>/logs/logs.ndjson
 - `FATAL` - Critical failures (process termination)
 
 **Usage Examples**:
+
 ```bash
 # Verbose diagnostics
 codepipe doctor --verbose
@@ -405,12 +444,14 @@ jq '.component=="http:github"' logs.ndjson
 ```
 
 **Features**:
+
 - Automatic secret redaction (GitHub tokens, API keys, JWTs, AWS credentials)
 - Structured context (component, timestamp, trace_id, custom fields)
 - NDJSON format (one JSON object per line)
 - Async persistence with in-memory fallback
 
 **Sources**:
+
 - `src/telemetry/logger.ts` - Logging implementation
 - `src/cli/commands/doctor.ts` - --verbose flag usage
 
@@ -424,13 +465,14 @@ jq '.component=="http:github"' logs.ndjson
 
 **Environment Variables by Engine**:
 
-| Execution Engine | Required Env Var | Override Env Var | Config Field |
-|------------------|------------------|------------------|--------------|
-| `claude` | `ANTHROPIC_API_KEY` | `CODEPIPE_RUNTIME_AGENT_ENDPOINT` | `runtime.agent_endpoint_env_var` |
-| `codex` | `OPENAI_API_KEY` | `CODEPIPE_RUNTIME_AGENT_ENDPOINT` | `runtime.agent_endpoint_env_var` |
-| `openai` | `OPENAI_API_KEY` | `CODEPIPE_RUNTIME_AGENT_ENDPOINT` | `runtime.agent_endpoint_env_var` |
+| Execution Engine | Required Env Var    | Override Env Var                  | Config Field                     |
+| ---------------- | ------------------- | --------------------------------- | -------------------------------- |
+| `claude`         | `ANTHROPIC_API_KEY` | `CODEPIPE_RUNTIME_AGENT_ENDPOINT` | `runtime.agent_endpoint_env_var` |
+| `codex`          | `OPENAI_API_KEY`    | `CODEPIPE_RUNTIME_AGENT_ENDPOINT` | `runtime.agent_endpoint_env_var` |
+| `openai`         | `OPENAI_API_KEY`    | `CODEPIPE_RUNTIME_AGENT_ENDPOINT` | `runtime.agent_endpoint_env_var` |
 
 **Additional Runtime Overrides**:
+
 - `CODEPIPE_RUNTIME_MAX_CONCURRENT_TASKS` - Max parallel tasks (default: 1)
 - `CODEPIPE_RUNTIME_TIMEOUT_MINUTES` - Global timeout (default: 30)
 - `CODEPIPE_EXECUTION_CLI_PATH` - Legacy CLI path override
@@ -438,7 +480,8 @@ jq '.component=="http:github"' logs.ndjson
 - `CODEPIPE_EXECUTION_TIMEOUT_MS` - Per-task timeout (default: 300000)
 
 **Sources**:
-- `src/core/config/RepoConfig.ts:509-596` - All CODEPIPE_* overrides
+
+- `src/core/config/RepoConfig.ts:509-596` - All CODEPIPE\_\* overrides
 - Same precedence pattern as GitHub/Linear credentials
 
 **Documentation Impact**: Must document all AI API keys with cost protection warnings
@@ -472,6 +515,7 @@ jq '.component=="http:github"' logs.ndjson
    - New `config_history` array for tracking migrations
 
 **Manual Migration Checklist**:
+
 ```bash
 # 1. Backup config
 cp .codepipe/config.json .codepipe/config.json.backup
@@ -493,11 +537,13 @@ codepipe doctor
 ```
 
 **No Automated Migration Script**:
+
 - Intentional design decision
 - Config is governance-critical
 - Requires manual review for compliance
 
 **Sources**:
+
 - `CHANGELOG.md:12-88` - Breaking changes documentation
 - `docs/archive/announcements/v1.0.0-release.md:126-132` - Release announcement
 - `docs/reference/config/config_migrations.md` - Detailed migration guide
@@ -513,19 +559,21 @@ codepipe doctor
 
 **Support Matrix**:
 
-| Scenario | Supported? | Mechanism |
-|----------|------------|-----------|
-| Multiple users, different features | ✅ Yes | Separate run directories, no conflicts |
-| Multiple users, same feature | ❌ No | File lock timeout (30s), then failure |
-| Multiple tasks, same pipeline | ✅ Yes | Dependency-aware scheduling |
-| Resume after crash | ✅ Yes | Stale lock detection + recovery |
+| Scenario                           | Supported? | Mechanism                              |
+| ---------------------------------- | ---------- | -------------------------------------- |
+| Multiple users, different features | ✅ Yes     | Separate run directories, no conflicts |
+| Multiple users, same feature       | ❌ No      | File lock timeout (30s), then failure  |
+| Multiple tasks, same pipeline      | ✅ Yes     | Dependency-aware scheduling            |
+| Resume after crash                 | ✅ Yes     | Stale lock detection + recovery        |
 
 **Configuration**:
+
 - Environment: `CODEPIPE_RUNTIME_MAX_CONCURRENT_TASKS=1-10`
 - Config: `runtime.max_concurrent_tasks`
 - Default: 1 (conservative, scale as needed)
 
 **Throughput Gains**:
+
 - 1 concurrent task: Baseline (sequential)
 - 2-4 concurrent tasks: 2-4x speedup (independent tasks)
 - Dependency-blocked tasks: Wait for prerequisites
@@ -541,25 +589,30 @@ codepipe doctor
 **Answer**: All major platforms supported (Windows, macOS, Linux) with Node.js >=24.0.0
 
 **Supported Platforms**:
+
 - ✅ macOS (darwin-arm64, darwin-x64)
 - ✅ Linux (linux-x64, linux-arm64)
 - ✅ Windows (win32-x64)
 
 **Platform Detection**:
+
 - Uses `process.platform` and `process.arch` for binary resolution
 - Optional dependencies install platform-specific CodeMachine CLI binaries
 
 **Platform-Specific Considerations**:
+
 - **Windows**: PID checking limited (falls back to time-based stale locks)
 - **macOS/Linux**: Full process validation via signal 0
 - **All platforms**: Requires git installed and in PATH
 
 **Version Requirements**:
+
 - Node.js: >=24.0.0 (v24 LTS or higher)
 - npm: >=9.0.0 (implicit from Node.js 24)
 - git: >=2.20.0 (for modern commands)
 
 **Sources**:
+
 - `package.json:23-25` - engines field
 - No `os` field = all platforms supported
 - `src/adapters/codemachine/binaryResolver.ts` - Platform-specific binary selection
@@ -580,23 +633,23 @@ See full answer in Q8 section above.
 
 ## Decision Summary Table
 
-| # | Question | Answer Summary | Impact on Docs |
-|---|----------|----------------|----------------|
-| 1 | Node.js version | >=24.0.0 | Prerequisites page |
-| 2 | Config discovery | Fixed path at git root | Configuration overview |
-| 3 | CLI resolution | 3-path priority (env → optional → PATH) | CodeMachine CLI guide |
-| 4 | Approval mechanics | 6 gates, hash validation, two-file model | Workflows, approval guide |
-| 5 | Required fields | 5 core required fields | Config file reference |
-| 6 | LINEAR_API_KEY | Optional (warning if enabled) | Configuration guide |
-| 7 | Queue locking | File-based exclusive locks | Team collaboration |
-| 8 | .codepipe/ committable | NO - gitignored | Team collaboration |
-| 9 | Queue backup | Automatic snapshot + WAL | Disaster recovery |
-| 10 | Credential precedence | Env var indirection pattern | Security guide |
-| 11 | Debug logging | --verbose/--json flags | Troubleshooting |
-| 12 | AI API keys | ANTHROPIC_API_KEY, OPENAI_API_KEY | Configuration |
-| 13 | Migration v1.0 | Automatic queue, manual config | Migration guide |
-| 14 | Concurrent execution | YES - via locking | Advanced usage |
-| 15 | Platform support | All platforms, Node >=24 | Installation |
+| #   | Question               | Answer Summary                           | Impact on Docs            |
+| --- | ---------------------- | ---------------------------------------- | ------------------------- |
+| 1   | Node.js version        | >=24.0.0                                 | Prerequisites page        |
+| 2   | Config discovery       | Fixed path at git root                   | Configuration overview    |
+| 3   | CLI resolution         | 3-path priority (env → optional → PATH)  | CodeMachine CLI guide     |
+| 4   | Approval mechanics     | 6 gates, hash validation, two-file model | Workflows, approval guide |
+| 5   | Required fields        | 5 core required fields                   | Config file reference     |
+| 6   | LINEAR_API_KEY         | Optional (warning if enabled)            | Configuration guide       |
+| 7   | Queue locking          | File-based exclusive locks               | Team collaboration        |
+| 8   | .codepipe/ committable | NO - gitignored                          | Team collaboration        |
+| 9   | Queue backup           | Automatic snapshot + WAL                 | Disaster recovery         |
+| 10  | Credential precedence  | Env var indirection pattern              | Security guide            |
+| 11  | Debug logging          | --verbose/--json flags                   | Troubleshooting           |
+| 12  | AI API keys            | ANTHROPIC_API_KEY, OPENAI_API_KEY        | Configuration             |
+| 13  | Migration v1.0         | Automatic queue, manual config           | Migration guide           |
+| 14  | Concurrent execution   | YES - via locking                        | Advanced usage            |
+| 15  | Platform support       | All platforms, Node >=24                 | Installation              |
 
 ## Documentation Decisions
 
@@ -605,14 +658,14 @@ See full answer in Q8 section above.
 1. ✅ Environment variable names corrected (CODEMACHINE_BIN_PATH not CLI_PATH)
 2. ✅ Config schema structure corrected (nested, not flat)
 3. ✅ Non-existent CODEMACHINE_LOG_LEVEL removed
-4. ✅ CODEPIPE_* override family documented
+4. ✅ CODEPIPE\_\* override family documented
 
 ### Key Documentation Requirements
 
 1. **Configuration Guide Must Include**:
    - Nested config.json structure examples
    - Environment variable indirection explanation
-   - CODEPIPE_* override table (9 variables)
+   - CODEPIPE\_\* override table (9 variables)
    - Credential security best practices
 
 2. **Installation Guide Must Include**:
@@ -653,6 +706,7 @@ See full answer in Q8 section above.
 ### Next Steps (Phase 2)
 
 With all critical questions answered, Phase 2 (Content Audit) can proceed with confidence:
+
 - Audit existing documentation against these findings
 - Identify factual errors in current docs
 - Plan content rewrites based on verified architecture
@@ -662,19 +716,20 @@ With all critical questions answered, Phase 2 (Content Audit) can proceed with c
 ### Memory Storage
 
 All research findings stored in claude-flow memory system:
+
 - Namespace: `docs-questions`
 - Keys: `q1` through `q15`
 - Retrievable via: `npx @claude-flow/cli@latest memory retrieve --key "q<N>" --namespace "docs-questions"`
 
 ### Source Code References
 
-| Component | File Path | Key Lines |
-|-----------|-----------|-----------|
-| Config loading | src/core/config/RepoConfig.ts | 1-598 |
-| Approval system | src/cli/commands/approve.ts | 1-250 |
-| Queue locking | src/persistence/runDirectoryManager.ts | 282-481 |
-| Binary resolution | src/adapters/codemachine/binaryResolver.ts | 1-200 |
-| Debug logging | src/telemetry/logger.ts | 1-300 |
+| Component         | File Path                                  | Key Lines |
+| ----------------- | ------------------------------------------ | --------- |
+| Config loading    | src/core/config/RepoConfig.ts              | 1-598     |
+| Approval system   | src/cli/commands/approve.ts                | 1-250     |
+| Queue locking     | src/persistence/runDirectoryManager.ts     | 282-481   |
+| Binary resolution | src/adapters/codemachine/binaryResolver.ts | 1-200     |
+| Debug logging     | src/telemetry/logger.ts                    | 1-300     |
 
 ### Related ADRs
 
