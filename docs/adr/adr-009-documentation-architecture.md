@@ -62,9 +62,9 @@ This ADR documents critical architectural decisions discovered during documentat
    - Security: Path traversal protections applied
 
 2. **npm optionalDependency** (platform-specific packages)
-   - `@kinginyellows/codemachine-cli-darwin-arm64`
-   - `@kinginyellows/codemachine-cli-linux-x64`
-   - `@kinginyellows/codemachine-cli-win32-x64`
+   - `codemachine-darwin-arm64`
+   - `codemachine-linux-x64`
+   - `codemachine-windows-x64`
 
 3. **PATH search**
    - Searches system PATH for `codemachine` or `codemachine.exe`
@@ -479,7 +479,7 @@ jq '.component=="http:github"' logs.ndjson
 
 | Override Env Var                  | Config Field                     | Description                              |
 | --------------------------------- | -------------------------------- | ---------------------------------------- |
-| `CODEPIPE_RUNTIME_AGENT_ENDPOINT` | `runtime.agent_endpoint_env_var` | Overrides the agent endpoint URL (not an API key override) |
+| `CODEPIPE_RUNTIME_AGENT_ENDPOINT` | `runtime.agent_endpoint` | Overrides the agent endpoint URL (not an API key override) |
 
 **Additional Runtime Overrides**:
 
@@ -487,7 +487,7 @@ jq '.component=="http:github"' logs.ndjson
 - `CODEPIPE_RUNTIME_TIMEOUT_MINUTES` - Global timeout (default: 30)
 - `CODEPIPE_EXECUTION_CLI_PATH` - Legacy CLI path override
 - `CODEPIPE_EXECUTION_DEFAULT_ENGINE` - Override execution engine
-- `CODEPIPE_EXECUTION_TIMEOUT_MS` - Per-task timeout (default: 300000)
+- `CODEPIPE_EXECUTION_TIMEOUT_MS` - Per-task timeout (default: 1800000)
 
 **Sources**:
 
