@@ -136,8 +136,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Unit tests for CodeMachineRunner, TaskMapper, ResultNormalizer
 - Smoke test updates for execution engine validation
 
-### Changed
-
+#### Queue V2 Implementation Changes
 - Queue format upgraded from V1 (JSONL) to V2 (WAL + snapshots)
 - Improved error handling with context in catch blocks
 - Console logging replaced with StructuredLogger
