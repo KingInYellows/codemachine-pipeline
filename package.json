@@ -1,7 +1,11 @@
 {
-  "name": "codemachine-pipeline",
+  "name": "@kinginyellows/codemachine-pipeline",
   "version": "1.0.0",
   "description": "Autonomous AI-powered feature development pipeline CLI",
+  "publishConfig": {
+    "registry": "https://npm.pkg.github.com",
+    "access": "public"
+  },
   "author": "CodeMachine Team",
   "license": "MIT",
   "repository": {

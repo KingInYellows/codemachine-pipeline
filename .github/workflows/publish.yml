@@ -1,0 +1,66 @@
+name: Publish to GitHub Packages
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  publish:
+    name: Publish Package
+    runs-on: [self-hosted, linux]
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.release.target_commitish || github.ref }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+          registry-url: 'https://npm.pkg.github.com'
+          scope: '@kinginyellows'
+
+      - name: Verify package version
+        run: |
+          PACKAGE_VERSION=$(node -p "require('./package.json').version")
+          echo "Publishing version: $PACKAGE_VERSION"
+
+      - name: Install dependencies
+        run: npm ci --no-audit --no-fund
+
+      - name: Build project
+        run: npm run build
+
+      - name: Run tests
+        run: npm test
+
+      - name: Verify package contents
+        run: |
+          npm pack --dry-run
+          test -f "bin/run.js" || {
+            echo "ERROR: bin/run.js not found"
+            exit 1
+          }
+
+      - name: Run security audit
+        run: npm audit --production --audit-level=high || echo "Audit warnings present"
+
+      - name: Publish to GitHub Packages
+        run: npm publish
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Verify published package
+        run: |
+          sleep 5
+          PACKAGE_VERSION=$(node -p "require('./package.json').version")
+          npm view @kinginyellows/codemachine-pipeline@$PACKAGE_VERSION version || echo "Package propagation pending"
