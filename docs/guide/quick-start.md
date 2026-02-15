@@ -87,7 +87,7 @@ This provisions a run directory at `.codepipe/runs/<feature-id>/` containing:
 - `queue/` - Task queue state (e.g., `queue_snapshot.json`, `queue_operations.log`)
 - `logs/` and `telemetry/` - Execution logs and observability data
 
-For the authoritative structure, see `docs/requirements/run_directory_schema.md` and `docs/operations/queue-v2-operations.md`.
+For the authoritative structure, see `docs/reference/run_directory_schema.md` and `docs/reference/queue-v2-operations.md`.
 
 ---
 
