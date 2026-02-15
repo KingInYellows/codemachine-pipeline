@@ -6,6 +6,9 @@ on:
       - 'docs/**'
       - 'README.md'
       - 'mkdocs.yml'
+      - 'scripts/validate-docs-commands.js'
+      - 'scripts/test-docs-examples.js'
+      - 'scripts/security-scan-docs.sh'
       - '.github/workflows/docs-validation.yml'
   push:
     branches: [main]
@@ -84,11 +87,12 @@ jobs:
       - name: Check for sensitive paths
         run: |
           # Check for internal URLs, IPs, hostnames
-          if grep -rE "(localhost|127\.0\.0\.1|192\.168\.|10\.|172\.)" docs/ README.md | grep -v "example\|placeholder\|EXAMPLE"; then
-            echo "❌ Found potential internal network references"
+          # Uses full IP/URL patterns to avoid false positives on section numbers (10.) or versions (172.x)
+          if grep -rE "(localhost|127\.0\.0\.1|192\.168\.[0-9]+|10\.[0-9]+\.[0-9]+|172\.(1[6-9]|2[0-9]|3[0-1])\.)" docs/ README.md | grep -v "example\|placeholder\|EXAMPLE"; then
+            echo "Found potential internal network references"
             exit 1
           fi
-          echo "✅ No internal network references found"
+          echo "No internal network references found"
 
   code-examples:
     name: Code Example Testing
