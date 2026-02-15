@@ -342,7 +342,7 @@ Configuration validation failed:
     → Use format: "https://github.com/org/repo.git"
 
 For detailed schema documentation, see:
-  docs/requirements/RepoConfig_schema.md
+  docs/reference/config/RepoConfig_schema.md
   .codepipe/templates/config.example.json
 ```
 
@@ -351,7 +351,7 @@ For detailed schema documentation, see:
 When upgrading schema versions:
 
 1. **Backup current config:** `cp .codepipe/config.json .codepipe/config.json.backup`
-2. **Review migration checklist:** See `docs/requirements/config_migrations.md`
+2. **Review migration checklist:** See `docs/reference/config/config_migrations.md`
 3. **Update schema_version:** Change to target version
 4. **Apply migrations:** Run any required migration scripts
 5. **Add history entry:** Document the migration in `config_history`
@@ -365,7 +365,7 @@ See `.codepipe/templates/config.example.json` for a complete annotated example.
 
 - **ADR-2:** State Persistence - Defines run directory structure and deterministic storage
 - **ADR-5:** Approval Workflow - Defines human-in-the-loop gates and accountability
-- **Migration Checklist:** `docs/requirements/config_migrations.md`
+- **Migration Checklist:** `docs/reference/config/config_migrations.md`
 - **Example Config:** `.codepipe/templates/config.example.json`
 
 ## Schema Version History

@@ -361,13 +361,15 @@ LINEAR_ENABLE_PREVIEW=true  # Enable mutating operations
 
 ### RepoConfig Integration
 
-```typescript
-// .codepipe/config.yml
-integrations: linear: enabled: true;
-api_key_env: LINEAR_API_KEY;
-organization: acme - corp;
-preview_features: false;
-cache_ttl: 3600;
+```yaml
+# .codepipe/config.yml
+integrations:
+  linear:
+    enabled: true
+    api_key_env: LINEAR_API_KEY
+    organization: acme-corp
+    preview_features: false
+    cache_ttl: 3600
 ```
 
 ## Testing Strategy

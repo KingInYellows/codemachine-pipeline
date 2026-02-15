@@ -555,7 +555,7 @@ This document provides a comprehensive field-by-field reference for all data mod
 
 ## Diagram References
 
-See [docs/diagrams/data_model.mmd](../diagrams/data_model.mmd) for the Entity-Relationship Diagram.
+See [docs/diagrams/data_model.mmd](../../diagrams/data_model.mmd) for the Entity-Relationship Diagram.
 
 ---
 

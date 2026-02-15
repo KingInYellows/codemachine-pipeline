@@ -471,7 +471,7 @@ if (result.success) {
 
 For the full CLI command reference (17 commands with flags, args, and examples), see:
 
-**[CLI Reference](./cli-reference.md)** — auto-generated from `oclif.manifest.json`
+**[CLI Reference](../cli/cli-reference.md)** — auto-generated from `oclif.manifest.json`
 
 Quick summary of available commands:
 
@@ -501,6 +501,6 @@ Quick summary of available commands:
 
 - [Architecture Diagrams](../architecture/execution_flow.md) — execution engine state machines and data flow
 - [Component Index](../architecture/component_index.md) — system architecture with inline diagrams
-- [Run Directory Schema](../requirements/run_directory_schema.md) — on-disk state persistence
-- [Data Model Dictionary](../requirements/data_model_dictionary.md) — full field-level data model docs
-- [Configuration Schema Reference](../requirements/RepoConfig_schema.md) — extended config docs
+- [Run Directory Schema](../run_directory_schema.md) — on-disk state persistence
+- [Data Model Dictionary](../data_model_dictionary.md) — full field-level data model docs
+- [Configuration Schema Reference](../config/RepoConfig_schema.md) — extended config docs
