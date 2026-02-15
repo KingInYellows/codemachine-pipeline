@@ -1,0 +1,266 @@
+# Site Information
+site_name: Codemachine Pipeline Documentation
+site_url: https://kinginyellows.github.io/codemachine-pipeline/
+site_description: AI-powered code pipeline automation for GitHub repositories
+site_author: KingInYellows
+repo_name: KingInYellows/codemachine-pipeline
+repo_url: https://github.com/KingInYellows/codemachine-pipeline
+edit_uri: edit/main/docs/
+docs_dir: docs
+
+# Theme Configuration
+theme:
+  name: material
+  palette:
+    # Light mode
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: indigo
+      accent: deep purple
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    # Dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: indigo
+      accent: deep purple
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+
+  font:
+    text: Roboto
+    code: Roboto Mono
+
+  features:
+    - navigation.instant
+    - navigation.instant.progress
+    - navigation.tracking
+    - navigation.tabs
+    - navigation.tabs.sticky
+    - navigation.sections
+    - navigation.path
+    - navigation.indexes
+    - navigation.top
+    - navigation.footer
+    - search.suggest
+    - search.highlight
+    - search.share
+    - toc.follow
+    - content.code.copy
+    - content.code.select
+    - content.code.annotate
+    - content.tabs.link
+    - content.tooltips
+
+  icon:
+    repo: fontawesome/brands/github
+    logo: material/library
+
+# Plugins
+plugins:
+  - search:
+      lang: en
+      separator: '[\s\-\.]+'
+
+  - git-revision-date-localized:
+      enable_creation_date: true
+      type: timeago
+      fallback_to_build_date: true
+
+  - minify:
+      minify_html: true
+      # JS/CSS minification only applies to extra_javascript/extra_css assets.
+
+  - meta
+
+# Markdown Extensions
+markdown_extensions:
+  - abbr
+  - admonition
+  - attr_list
+  - def_list
+  - footnotes
+  - md_in_html
+  - tables
+  - toc:
+      permalink: true
+      toc_depth: 3
+
+  # PyMdown Extensions
+  - pymdownx.betterem:
+      smart_enable: all
+  - pymdownx.caret
+  - pymdownx.mark
+  - pymdownx.tilde
+  - pymdownx.critic
+  - pymdownx.details
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+  - pymdownx.inlinehilite
+  - pymdownx.keys
+  - pymdownx.magiclink:
+      repo_url_shorthand: true
+      user: KingInYellows
+      repo: codemachine-pipeline
+  - pymdownx.smartsymbols
+  - pymdownx.snippets
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.tasklist:
+      custom_checkbox: true
+
+# Extra Configuration
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/KingInYellows/codemachine-pipeline
+
+copyright: Copyright &copy; 2026 KingInYellows
+
+# Navigation Structure
+nav:
+  - Home: index.md
+
+  - Guide:
+      # - guide/index.md  # TODO: Create guide index
+      # - Prerequisites: guide/prerequisites.md  # TODO: Create prerequisites guide
+      # - Installation: guide/installation.md  # TODO: Create installation guide
+      - Quick Start: guide/quick-start.md
+      # - Workflows: guide/workflows.md  # TODO: Create workflows guide
+      # - Configuration: guide/configuration.md  # TODO: Create configuration guide
+      # - Team Collaboration: guide/team-collaboration.md  # TODO: Create team collaboration guide
+      # - Troubleshooting: guide/troubleshooting.md  # TODO: Create troubleshooting guide
+
+  - CLI Commands:
+      - CLI Reference: reference/cli/cli-reference.md
+      - CLI Surface Requirements: reference/cli/cli_surface.md
+      - Doctor Reference: reference/cli/doctor_reference.md
+      - Rate Limit Reference: reference/cli/rate_limit_reference.md
+      # Per-command docs below are planned for Phase 3 content creation:
+      # - Initialization:
+      #     - init: reference/cli/init.md
+      #     - doctor: reference/cli/doctor.md
+      #     - health: reference/cli/health.md
+      # - Execution:
+      #     - start: reference/cli/start.md
+      #     - resume: reference/cli/resume.md
+      #     - status: reference/cli/status.md
+      # - Approval:
+      #     - approve: reference/cli/approve.md
+      #     - plan: reference/cli/plan.md
+      # - Integration:
+      #     - pr create: reference/cli/pr-create.md
+      #     - pr status: reference/cli/pr-status.md
+      #     - pr reviewers: reference/cli/pr-reviewers.md
+      #     - pr disable-auto-merge: reference/cli/pr-disable-auto-merge.md
+      #     - research create: reference/cli/research-create.md
+      #     - research list: reference/cli/research-list.md
+      #     - context summarize: reference/cli/context-summarize.md
+      # - Validation:
+      #     - validate: reference/cli/validate.md
+      #     - rate-limits: reference/cli/rate-limits.md
+
+  - Configuration:
+      - Repo Config Schema: reference/config/RepoConfig_schema.md
+      - Config Migrations: reference/config/config_migrations.md
+      - CodeMachine Adapter Guide: reference/config/codemachine_adapter_guide.md
+      - GitHub Adapter: reference/config/github_adapter.md
+      - Linear Adapter: reference/config/linear_adapter.md
+
+  - Playbooks:
+      # - playbooks/index.md  # TODO: Create playbooks index
+      - Agent Manifest Guide: playbooks/agent_manifest_guide.md
+      - Approval Gates: playbooks/approval_gates.md
+      - Initialization: playbooks/init_playbook.md
+      - Approval Workflow: playbooks/approval_playbook.md
+      - Branch Protection: playbooks/branch_protection_playbook.md
+      - Execution Telemetry: playbooks/execution_telemetry.md
+      - Log Rotation: playbooks/log-rotation.md
+      - Patch Workflow: playbooks/patch_playbook.md
+      - Post-Release Monitoring: playbooks/post-release-monitoring.md
+      - Resume & Recovery: playbooks/resume_playbook.md
+      - PR Management: playbooks/pr_playbook.md
+      - PRD Workflow: playbooks/prd_playbook.md
+      - Research Workflow: playbooks/research_playbook.md
+      - Traceability: playbooks/traceability_playbook.md
+      - Troubleshooting: playbooks/troubleshooting.md
+      - Validation Workflow: playbooks/validation_playbook.md
+      - Write Action Workflow: playbooks/write_action_playbook.md
+      - Monitoring: playbooks/observability_baseline.md
+      # - Debugging: playbooks/debugging.md  # TODO: Create debugging playbook
+      # - Disaster Recovery: playbooks/disaster-recovery.md  # TODO: Create disaster recovery playbook
+
+  - Reference:
+      - Architecture:
+          - Component Index: reference/architecture/component_index.md
+          - Execution Flow: reference/architecture/execution_flow.md
+          - Execution Flow Spec: reference/architecture/execution_flow_spec.md
+      - API:
+          - API Reference: reference/api/api-reference.md
+      - General:
+          - Agent Capability Contract: reference/agent_capability_contract.md
+          - Spec Blueprint: reference/spec_blueprint.md
+          - Data Model Dictionary: reference/data_model_dictionary.md
+          - Context Manifest: reference/context_manifest.md
+          - Context Summarization: reference/context_summarization.md
+      - Operations:
+          - CI Stability: reference/ci-stability.md
+          - Integration Testing: reference/integration_testing.md
+          - Smoke Test Guide: reference/smoke_test_guide.md
+          - Run Directory Schema: reference/run_directory_schema.md
+          - Queue v2 Operations: reference/queue-v2-operations.md
+          - Parallel Execution: reference/parallel-execution.md
+          - Rate Limit Dashboard: reference/rate_limit_dashboard.md
+          - GitHub Branch Protection: reference/github_branch_protection.md
+          - Security Advisories: reference/security_advisories.md
+      - Reports:
+          - E2E Test Report v1.0.0: reference/e2e-test-report-v1.0.0.md
+
+  - ADRs:
+      - ADR-009 Documentation Architecture: adr/adr-009-documentation-architecture.md
+      - ADR-8 CodeMachine CLI Integration: adr/ADR-8-codemachine-cli-integration.md
+      - ADR-7 Validation Policy: adr/ADR-7-validation-policy.md
+      - ADR-6 Linear Integration: adr/ADR-6-linear-integration.md
+
+  - Diagrams:
+      - Component Overview: diagrams/component_overview.md
+
+  - Solutions:
+      # - Common Errors: solutions/common-errors.md  # TODO: Create common errors catalog
+      - CI Issues:
+          - Self-Hosted Runner Known Issues: solutions/ci-issues/self-hosted-runner-known-issues.md
+      - Code Review:
+          - PR 475 Review Index: solutions/code-review/PR-475-REVIEW-INDEX.md
+          - PR 475 Architecture Analysis: solutions/code-review/PR-475-architecture-analysis.md
+          - PR 475 Detailed Findings: solutions/code-review/PR-475-detailed-findings.md
+          - PR 475 Executive Summary: solutions/code-review/PR-475-executive-summary.md
+          - PR 478 ADR Review: solutions/code-review/PR-478-ADR-009-architectural-review.md
+          - Documentation PR Review: solutions/code-review/reviewing-documentation-prs.md
+          - Multi-Agent Wave Resolution: solutions/code-review/multi-agent-wave-resolution-pr-findings.md
+          - Resolving Stacked PR Comments: solutions/code-review/resolving-stacked-pr-comments-with-parallel-agents.md
+      - Integration Issues:
+          - CodeMachine CLI Strategy Prerequisite Validation: solutions/integration-issues/codemachine-cli-strategy-prerequisite-validation.md
+          - Graphite Restack Conflicts: solutions/integration-issues/graphite-restack-conflicts-after-main-advanced.md
+      - Linting:
+          - ESLint No-Restricted-Types Evasion: solutions/linting/eslint-no-restricted-types-index-signature-evasion.md
+      - Logic Errors:
+          - Engine Schema CanHandle Overreach: solutions/logic-errors/engine-schema-canhandle-overreach-codeMachineCLI-20260213.md
+      - Security:
+          - PR 477 Recommendations: solutions/security/PR-477-recommendations.md
+          - PR 477 Review Index: solutions/security/PR-477-REVIEW-INDEX.md
+          - PR 477 Security Audit: solutions/security/PR-477-security-audit.md
+          - PR 477 Technical Details: solutions/security/PR-477-technical-details.md
+      # - Graphite Workflow:
+      #     - Fixing Critical Issues in Stacked PRs: solutions/graphite-workflow/fixing-critical-issues-in-stacked-prs.md
