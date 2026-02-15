@@ -20,7 +20,7 @@ console.log('🧪 Testing documentation code examples\n');
 const markdownFiles = glob.sync('docs/**/*.md', {
   cwd: rootDir,
   absolute: true,
-  ignore: ['**/node_modules/**', '**/archive/**']
+  ignore: ['**/node_modules/**', '**/archive/**'],
 });
 
 console.log(`📄 Found ${markdownFiles.length} markdown files\n`);
@@ -33,7 +33,10 @@ const unsafePatterns = [
   { pattern: /chmod\s+777/, message: 'Insecure permissions (chmod 777)' },
   { pattern: /curl.*\|\s*bash/, message: 'Pipe to bash (security risk)' },
   { pattern: /eval\s+\$\(/, message: 'Eval with command substitution' },
-  { pattern: /(ghp_[A-Za-z0-9]{36}|sk-ant-[A-Za-z0-9]{48}|lin_api_[A-Za-z0-9]{40})/, message: 'Real API token detected' }
+  {
+    pattern: /(ghp_[A-Za-z0-9]{36}|sk-ant-[A-Za-z0-9]{48}|lin_api_[A-Za-z0-9]{40})/,
+    message: 'Real API token detected',
+  },
 ];
 
 for (const file of markdownFiles) {
