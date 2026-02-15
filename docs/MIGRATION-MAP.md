@@ -87,7 +87,7 @@ docs/
 | `requirements/rate_limit_dashboard.md`      | `reference/`                                    | Specification                             |
 | `requirements/security_advisories.md`       | `reference/`                                    | Specification                             |
 | `requirements/spec_blueprint.md`            | `reference/`                                    | Specification                             |
-| `ops/execution_telemetry.md`                | `reference/`                                    | Specification                             |
+| `ops/execution_telemetry.md`                | `playbooks/`                                    | Operational monitoring                    |
 | `ops/integration_testing.md`                | `reference/`                                    | Specification                             |
 | `ops/parallel-execution.md`                 | `reference/`                                    | Specification                             |
 | `ops/queue-v2-operations.md`                | `reference/`                                    | Specification                             |
@@ -126,7 +126,7 @@ docs/
 ## Statistics
 
 - **Total files migrated**: 54
-- **Directories archived**: 4 (announcements, development, ui, plans content)
+- **Directories archived**: 3 (announcements, development, ui)
 - **Directories consolidated**: 5 (ops, requirements, architecture, testing)
 - **Empty directories removed**: 7
 - **New directories created**: 9
