@@ -37,13 +37,21 @@ if (!fs.existsSync(cliRefPath)) {
 
 const cliRefContent = fs.readFileSync(cliRefPath, 'utf-8');
 
+// Normalize colon-separated manifest commands to space-separated (matching docs format).
+// oclif manifest uses ":" (e.g. "pr:create") but topicSeparator is " " so docs say "pr create".
+const manifestToDisplay = new Map();
+for (const cmd of actualCommands) {
+  const displayCmd = cmd.replace(/:/g, ' ');
+  manifestToDisplay.set(displayCmd, cmd);
+}
+
 // Check if all commands are documented
 let errors = 0;
-for (const cmd of actualCommands) {
-  // Check if command appears in the documentation
-  const cmdPattern = new RegExp(`codepipe\\s+${cmd}\\b`, 'i');
+for (const [displayCmd] of manifestToDisplay) {
+  const escaped = displayCmd.replace(/\s+/g, '\\s+');
+  const cmdPattern = new RegExp(`codepipe\\s+${escaped}\\b`, 'i');
   if (!cmdPattern.test(cliRefContent)) {
-    console.error('Command not found in docs: %s', cmd);
+    console.error('Command not found in docs: %s', displayCmd);
     errors++;
   }
 }
@@ -56,13 +64,12 @@ const documentedCommands = new Set();
 for (const match of matches) {
   const cmd = match[1];
   if (!cmd.startsWith('-')) {
-    // Skip flags
     documentedCommands.add(cmd);
   }
 }
 
 for (const cmd of documentedCommands) {
-  if (!actualCommands.includes(cmd)) {
+  if (!manifestToDisplay.has(cmd)) {
     console.error('Phantom command in docs (not in manifest): %s', cmd);
     errors++;
   }
