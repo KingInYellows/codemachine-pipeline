@@ -161,14 +161,14 @@ Create a multi-format documentation suite with clear organization, progressive d
 2. **docs/ Directory Structure** (Organized by Topic)
 
    ```
-      docs/
-      ├── guide/
-      │   ├── prerequisites.md          # Node version, tools, accounts
-      │   ├── installation.md           # Platform-specific install instructions
-      │   └── quick-start.md            # 5-min first workflow
-      ├── configuration/
-      │   ├── overview.md               # Config file discovery, precedence
-      │   ├── environment-variables.md  # Complete env var reference
+   docs/
+   ├── getting-started/
+   │   ├── installation.md          # Platform-specific install instructions
+   │   ├── quick-start.md            # 5-min first workflow
+   │   └── prerequisites.md          # Node version, tools, accounts
+   ├── configuration/
+   │   ├── overview.md               # Config file discovery, precedence
+   │   ├── environment-variables.md  # Complete env var reference
    │   ├── config-file.md            # .codepipe/config.json schema
    │   ├── codemachine-cli.md        # 3 resolution paths, priorities
    │   └── execution-engines.md      # Claude, Codex, OpenAI comparison
@@ -215,7 +215,7 @@ Create a multi-format documentation suite with clear organization, progressive d
 
 1. **Correct Factual Errors in Plan**
    - [x] Replace all `CODEMACHINE_CLI_PATH` with `CODEMACHINE_BIN_PATH`
-   - [x] Remove `CODEMACHINE_LOG_LEVEL` or find actual debug method
+   - [x] Remove `CODEMACHINE_LOG_LEVEL` or replace with actual debug method
    - [x] Fix config.json examples to use nested structure
    - [ ] Verify all file paths and line numbers are accurate
 
@@ -231,15 +231,13 @@ Create a multi-format documentation suite with clear organization, progressive d
      ├── diagrams/        # Keep existing (Visual assets)
      └── templates/       # Keep existing (Document templates)
      ```
-   - [ ] Create migration map: existing files → new structure (pending: internal links not yet rewritten)
+   - [x] Create migration map: existing files → new structure
    - [x] Archive transient docs (announcements, development, ui) to `docs/archive/`
 
 3. **Establish Link Validation CI**
-   - [x] Create `.github/workflows/docs-validation.yml`
-   - [x] Configure markdown-link-check with `.github/markdown-link-check.json`
-   - [x] Add factual accuracy checks (engine lists, command counts)
-   - [x] Create validation scripts (validate-docs-commands.js, test-docs-examples.js, security-scan-docs.sh)
-   - [x] Add npm scripts: docs:validate, docs:links:check, docs:commands:check, docs:examples:check, docs:security:check
+   - [ ] Create `.github/workflows/docs-validation.yml`
+   - [ ] Configure markdown-link-check with `.github/markdown-link-check.json`
+   - [ ] Add factual accuracy checks (engine lists, command counts)
 
 **Deliverable:**
 
@@ -327,9 +325,9 @@ Create a multi-format documentation suite with clear organization, progressive d
 
 **Files:**
 
-- `docs/guide/prerequisites.md`
-- `docs/guide/installation.md`
-- `docs/guide/quick-start.md`
+- `docs/getting-started/prerequisites.md`
+- `docs/getting-started/installation.md`
+- `docs/getting-started/quick-start.md`
 
 **Content Requirements:**
 
@@ -375,11 +373,11 @@ Create a multi-format documentation suite with clear organization, progressive d
 
 **Files:**
 
-- `docs/reference/config/overview.md`
-- `docs/reference/config/environment-variables.md`
-- `docs/reference/config/config-file.md`
-- `docs/reference/config/codemachine-cli.md`
-- `docs/reference/config/execution-engines.md`
+- `docs/configuration/overview.md`
+- `docs/configuration/environment-variables.md`
+- `docs/configuration/config-file.md`
+- `docs/configuration/codemachine-cli.md`
+- `docs/configuration/execution-engines.md`
 
 **Content Requirements:**
 
@@ -443,6 +441,11 @@ Create a multi-format documentation suite with clear organization, progressive d
     - Immediate rotation if committed, logged, or shared
     - GitHub token rotation: Settings → Developer settings → Personal access tokens
     - Test after rotation: `codepipe doctor --validate-credentials` (if exists)
+  - [ ] Emergency response for leaked credentials
+    - Revoke compromised token IMMEDIATELY (<5 minutes)
+    - Check GitHub security log for unauthorized access
+    - Use `git filter-repo` or BFG to purge from git history
+    - Rotate ALL related credentials (defense in depth)
   - [ ] Credential scope minimization
     - GitHub: Use minimal scopes (`repo`, `workflow` only - never `admin:org`, `delete_repo`)
     - Linear: Use read-only API key if only linking issues
@@ -531,17 +534,17 @@ Create a multi-format documentation suite with clear organization, progressive d
 
 **Files:**
 
-- `docs/guide/workflows.md`
-- `docs/reference/cli/init.md`
-- `docs/reference/cli/start.md`
-- `docs/reference/cli/approve.md`
-- `docs/reference/cli/resume.md`
-- `docs/reference/cli/doctor.md`
-- `docs/reference/cli/health.md`
-- `docs/reference/cli/status.md` (if exists)
-- `docs/reference/cli/pr-create.md`
+- `docs/user-guide/workflows.md`
+- `docs/user-guide/commands/init.md`
+- `docs/user-guide/commands/start.md`
+- `docs/user-guide/commands/approve.md`
+- `docs/user-guide/commands/resume.md`
+- `docs/user-guide/commands/doctor.md`
+- `docs/user-guide/commands/health.md`
+- `docs/user-guide/commands/status.md` (if exists)
+- `docs/user-guide/commands/pr-create.md`
 - ... (all 17 commands)
-- `docs/guide/advanced-usage.md`
+- `docs/user-guide/advanced-usage.md`
 
 **Content Requirements:**
 
@@ -618,7 +621,7 @@ codepipe start --prompt "Update dependencies" --json
 1. **Context aggregation**: Scans repository for relevant context
 2. **Research detection**: Identifies knowledge gaps (if enabled)
 3. **PRD authoring**: Generates Product Requirements Document
-4. **Approval gate**: Waits for `codepipe approve prd` to proceed
+4. **Approval gate**: Waits for `codepipe approve prd`
 
 ## Troubleshooting
 
@@ -630,12 +633,12 @@ codepipe start --prompt "Update dependencies" --json
 **Error: "GITHUB_TOKEN not found"**
 
 - Set GITHUB_TOKEN environment variable
-- See [Configuration](/reference/config/environment-variables.md)
+- See [Configuration](/configuration/environment-variables.md)
 
 ## Related Commands
 
-- [`codepipe approve`](/reference/cli/approve.md) - Approve generated artifacts
-- [`codepipe resume`](/reference/cli/resume.md) - Resume after errors
+- [`codepipe approve`](/user-guide/commands/approve.md) - Approve generated artifacts
+- [`codepipe resume`](/user-guide/commands/resume.md) - Resume after errors
 
 ````
 
@@ -649,15 +652,15 @@ codepipe start --prompt "Update dependencies" --json
 #### 3.4 Troubleshooting Documentation (1 day)
 
 **Files:**
-- `docs/solutions/common-errors.md`
-- `docs/playbooks/debugging.md`
-- `docs/playbooks/faq.md`
-- `docs/solutions/security.md` **NEW** - Security incident response
-- `docs/playbooks/disaster-recovery.md` **NEW** - Queue corruption, system crashes
-- `docs/guide/team-collaboration.md` **NEW** - Multi-user workflows
-- `docs/reference/config/enterprise-deployment.md` **NEW** - Org-wide patterns
-- `docs/guide/migration-guide.md` **NEW** - Pre-v1.0 → v1.0+ upgrade
-- `docs/reference/performance-tuning.md` **NEW** - Large repo optimization
+- `docs/troubleshooting/common-errors.md`
+- `docs/troubleshooting/debugging.md`
+- `docs/troubleshooting/faq.md`
+- `docs/troubleshooting/security.md` **NEW** - Security incident response
+- `docs/troubleshooting/disaster-recovery.md` **NEW** - Queue corruption, system crashes
+- `docs/user-guide/team-collaboration.md` **NEW** - Multi-user workflows
+- `docs/configuration/enterprise-deployment.md` **NEW** - Org-wide patterns
+- `docs/getting-started/migration-guide.md` **NEW** - Pre-v1.0 → v1.0+ upgrade
+- `docs/advanced/performance-tuning.md` **NEW** - Large repo optimization
 - `docs/reference/platform-specific.md` **NEW** - Windows/macOS/Linux quirks
 - `SECURITY.md` **NEW** - Responsible disclosure policy (root of repo)
 
@@ -719,10 +722,10 @@ codepipe start --prompt "Update dependencies" --json
 
 **Files:**
 
-- `docs/reference/architecture/overview.md`
-- `docs/reference/architecture/concepts.md`
-- `docs/reference/architecture/components.md`
-- `docs/reference/architecture/data-flow.md`
+- `docs/architecture/overview.md`
+- `docs/architecture/concepts.md`
+- `docs/architecture/components.md`
+- `docs/architecture/data-flow.md`
 
 **Content Requirements:**
 
@@ -801,7 +804,7 @@ codepipe start --prompt "Update dependencies" --json
 **Deliverable:**
 
 - `docs/reference/cli-reference.md` (auto-generated)
-- `docs/reference/config/schema-reference.md` (auto-generated if applicable)
+- `docs/reference/schema-reference.md` (auto-generated if applicable)
 - `docs/reference/api-reference.md` (if applicable)
 
 ### Phase 5: MkDocs Material Setup (1 day)
@@ -870,6 +873,11 @@ codepipe start --prompt "Update dependencies" --json
          - content.code.annotate # Code annotations
          - content.tabs.link # Link content tabs across pages
          - content.tooltips # Glossary tooltips
+
+       icon:
+         repo: fontawesome/brands/github
+         logo: material/library
+       favicon: assets/favicon.png
 
      # Plugins (Production Essentials)
      plugins:
@@ -1114,18 +1122,18 @@ AI-powered code pipeline automation for GitHub repositories.
 
 1. Install: `npm install -g @kinginyellows/codemachine-pipeline`
 2. Initialize: `codepipe init`
-3. Start: `codepipe start --prompt "Add README badge"`
+3. Start: `codepipe start --prompt "Add user authentication"`
 
-[Full installation guide →](https://kinginyellow.github.io/codemachine-pipeline/guide/installation/)
+[Full installation guide →](https://kinginyellow.github.io/codemachine-pipeline/getting-started/installation/)
 
 ## Documentation
 
 📚 **[Read the full documentation](https://kinginyellow.github.io/codemachine-pipeline/)**
 
-- [Getting Started](docs/guide/installation.md)
-- [Configuration](docs/reference/config/overview.md)
-- [User Guide](docs/guide/workflows.md)
-- [Troubleshooting](docs/solutions/common-errors.md)
+- [Getting Started](docs/getting-started/installation.md)
+- [Configuration](docs/configuration/overview.md)
+- [User Guide](docs/user-guide/workflows.md)
+- [Troubleshooting](docs/troubleshooting/common-errors.md)
 
 ## Features
 
@@ -1420,9 +1428,8 @@ MIT
 
 - MkDocs Material (Python package)
 - GitHub Pages (deployment target)
-- markdown-link-check, mdspell (validation)
-- Browser (for testing rendered docs)
-- Git, GitHub (version control, Pages deployment)
+- markdown-link-check (validation)
+- mdspell (validation)
 
 **Internal Dependencies:**
 
@@ -1606,7 +1613,7 @@ MIT
 
 - `src/cli/commands/` - All 17 command implementations
 - `oclif.manifest.json` - Auto-generated command manifest
-- Auto-generation: `npm run docs:cli` → `docs/reference/cli-reference.md`
+- Auto-generation: `npm run docs:cli` → `docs/ops/cli-reference.md`
 
 **CodeMachine Integration:**
 
@@ -1617,7 +1624,7 @@ MIT
 **Workflows:**
 
 - `src/workflows/` - 48 workflow files
-- `docs/reference/architecture/execution_flow.md` - Pipeline phases
+- `docs/architecture/execution_flow.md` - Pipeline phases
 - `src/persistence/runDirectoryManager.ts` - Run directory structure
 
 **Documentation Patterns:**
@@ -1713,28 +1720,25 @@ MIT
 ### Phase 3: Content Creation (5 days)
 
 - [ ] 3.1: Getting Started (1 day)
-- [ ] 3.2: Configuration (1.5 days) - includes comprehensive security section
+- [ ] 3.2: Configuration (1.5 days)
 - [ ] 3.3: User Guide (1.5 days)
 - [ ] 3.4: Troubleshooting (1 day)
 - [ ] 3.5: Architecture & Concepts (1 day)
-- [ ] 3.6: **NEW** - Team collaboration, enterprise, disaster recovery, migration, performance tuning (1.5 days)
 
 ### Phase 4: Auto-Generated Docs (1 day)
 
-- [ ] Verify `npm run docs:cli` command works
-- [ ] Update script to include examples from command implementations
-- [ ] Enhance oclif command descriptions if lacking
-- [ ] Add usage examples to each command's `examples` array
-- [ ] Test CI validation: `npm run docs:cli:check`
+- [ ] Verify CLI reference auto-generation
+- [ ] Create schema reference generation script (if needed)
+- [ ] Generate API reference (if applicable)
 
 ### Phase 5: MkDocs Setup (1 day)
 
 - [ ] Install and configure MkDocs Material
-- [ ] Create `mkdocs.yml`
+- [ ] Create mkdocs.yml
 - [ ] Test local build
 - [ ] Set up GitHub Pages deployment
 
-### Phase 6: README.md Consolidation (0.5 days)
+### Phase 6: README Consolidation (0.5 days)
 
 - [ ] Streamline README.md
 - [ ] Update badges
@@ -1827,7 +1831,7 @@ MIT
 - **Premature optimization**: Auto-generation scripts can be deferred (hand-write first, automate if maintenance burden grows)
 - **Scope creep**: Architecture docs are developer-focused, not user-focused (defer to "Developer Guide")
 - **YAGNI violations**: "Future Considerations" section contains 8 features nobody requested (remove)
-- **Recommendation**: Simplify to 6-day MVP (was 11.5 days) by deferring MkDocs, architecture docs, auto-generation
+- **Recommendation**: Simplify to 6-day MVP (was 11.5 days) by deferring MkDocs, auto-generation, architecture docs
 
 **9. Pattern Consistency** (pattern-recognition-specialist)
 
@@ -1847,10 +1851,16 @@ MIT
 **11. Security Gaps** (security-sentinel)
 
 - **7 critical gaps**: Real token examples, insufficient credential security, missing security troubleshooting, no AI API key cost protection, no binary integrity verification, insecure CI/CD examples, no SECURITY.md
-- **Required additions**: Comprehensive credential security section, emergency response procedures, AI API key cost protection, SECURITY.md with responsible disclosure policy
+- **Required additions**: Comprehensive credential security section, emergency response procedures, AI API cost protection, SECURITY.md with responsible disclosure policy
 - **Estimated effort**: +1.5 days for security enhancements
 
-## Key Takeaways for Implementation
+**12. Additional User Flows** (spec-flow-analyzer - second pass)
+
+- **31 NEW flows identified**: Team collaboration (multi-user locking), enterprise deployment (org-wide config), disaster recovery (queue corruption, system crashes), migration paths (pre-v1.0 → v1.0+), performance tuning (large repos), i18n, a11y, advanced error recovery
+- **39 NEW questions**: Concurrent execution, approval delegation, config inheritance, queue backups, credential rotation, platform quirks, compliance auditing
+- **Impact**: +1.5 days for additional documentation files
+
+### Key Takeaways for Implementation
 
 1. **Correct factual errors BEFORE content creation** (Phase 0 mandatory)
 2. **Prioritize security documentation** (cost protection, emergency response)
