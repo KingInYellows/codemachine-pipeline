@@ -231,7 +231,7 @@ Create a multi-format documentation suite with clear organization, progressive d
      ├── diagrams/        # Keep existing (Visual assets)
      └── templates/       # Keep existing (Document templates)
      ```
-   - [x] Create migration map: existing files → new structure
+   - [ ] Create migration map: existing files → new structure (pending: internal links not yet rewritten)
    - [x] Archive transient docs (announcements, development, ui) to `docs/archive/`
 
 3. **Establish Link Validation CI**

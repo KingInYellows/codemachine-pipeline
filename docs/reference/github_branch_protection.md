@@ -696,8 +696,8 @@ if (mismatch.missing_in_registry.length > 0) {
 
 ## Related Documentation
 
-- **Branch Protection Playbook**: `docs/requirements/branch_protection_playbook.md`
-- **Validation Playbook**: `docs/requirements/validation_playbook.md`
+- **Branch Protection Playbook**: `docs/playbooks/branch_protection_playbook.md`
+- **Validation Playbook**: `docs/playbooks/validation_playbook.md`
 - **GitHub API Docs**: https://docs.github.com/en/rest/branches/branch-protection
 - **FR-15**: Status Checks Mandate (specification.md)
 

@@ -40,9 +40,9 @@ docs/
 ├── solutions/       # Troubleshooting KB (kept)
 ├── diagrams/        # Visual assets (kept)
 ├── templates/       # Document templates (kept)
-└── archive/         # Transient content (announcements, plans, etc.)
+├── plans/           # Active planning documents (kept in place)
+└── archive/         # Transient content (announcements, etc.)
     ├── announcements/
-    ├── plans/
     ├── development/
     └── ui/
 ```
@@ -87,7 +87,6 @@ docs/
 | `requirements/rate_limit_dashboard.md`      | `reference/`                                    | Specification                             |
 | `requirements/security_advisories.md`       | `reference/`                                    | Specification                             |
 | `requirements/spec_blueprint.md`            | `reference/`                                    | Specification                             |
-| `ops/execution_telemetry.md`                | `playbooks/`                                    | Operational monitoring                    |
 | `ops/integration_testing.md`                | `reference/`                                    | Specification                             |
 | `ops/parallel-execution.md`                 | `reference/`                                    | Specification                             |
 | `ops/queue-v2-operations.md`                | `reference/`                                    | Specification                             |
@@ -99,6 +98,7 @@ docs/
 
 | Original Location                            | New Location | Purpose               |
 | -------------------------------------------- | ------------ | --------------------- |
+| `ops/execution_telemetry.md`                 | `playbooks/` | Operational monitoring |
 | `ops/agent_manifest_guide.md`                | `playbooks/` | How-to guide          |
 | `ops/approval_gates.md`                      | `playbooks/` | Operational guide     |
 | `ops/approval_playbook.md`                   | `playbooks/` | Operational procedure |
@@ -128,6 +128,7 @@ docs/
 - **Total files migrated**: 54
 - **Directories archived**: 3 (announcements, development, ui)
 - **Directories consolidated**: 5 (ops, requirements, architecture, testing)
+- **Plans directory**: Kept in place (not archived; active planning docs remain under `docs/plans/`)
 - **Empty directories removed**: 7
 - **New directories created**: 9
 
@@ -176,6 +177,8 @@ After this migration:
 4. Update mkdocs.yml navigation to match new structure
 5. Update internal links (many will need updating)
 6. Run link validation: `markdown-link-check docs/**/*.md`
+
+**Known debt:** Approximately 38 broken cross-references within moved documents still point to pre-migration paths (e.g., `docs/requirements/...`, `docs/ops/...`). These will be fixed in a follow-up link-rewriting pass as part of Phase 0 completion.
 
 ## Validation
 

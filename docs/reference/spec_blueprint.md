@@ -203,10 +203,9 @@ The Specification Composer converts an approved Product Requirements Document (P
    - Author, timestamp, description
 
 10. **Traceability**
-
-- PRD hash linkage
-- PRD trace ID
-- Execution plan reference (post-approval)
+    - PRD hash linkage
+    - PRD trace ID
+    - Execution plan reference (post-approval)
 
 ## Integration with ExecutionTask Mapping
 
