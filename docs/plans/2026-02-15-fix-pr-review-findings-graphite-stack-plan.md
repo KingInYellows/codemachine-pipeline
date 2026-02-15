@@ -13,7 +13,6 @@ milestone: Cycle 8
 Address review findings from 4 stacked PRs (#475-478) in the documentation suite implementation. The review identified 11 critical issues across 3 PRs that must be fixed before merge, plus optional scope reduction recommendations.
 
 **Current Stack Status:**
-
 - PR #475: ✅ APPROVE (no fixes needed)
 - PR #476: Fix 1 issue (MIGRATION-MAP.md discrepancy)
 - PR #477: Fix 4 critical security issues (regex patterns, workflow gate)
@@ -26,21 +25,18 @@ Address review findings from 4 stacked PRs (#475-478) in the documentation suite
 ### Review Findings Summary
 
 **PR #475: Factual Error Corrections** ✅
-
 - Status: APPROVE (ready to merge)
 - Agents: 5/5 passed
 - Issues: 0 critical, 0 blocking
 - Optional: Consider scope reduction from 16.5→9 days
 
 **PR #476: Directory Restructuring**
-
 - Status: APPROVE with minor fix
 - Agents: 3/3 found issues
 - Issues: 1 critical (MIGRATION-MAP.md inaccuracy)
 - Fix time: 2 minutes
 
 **PR #477: CI Validation Pipeline** ⚠️
-
 - Status: CONDITIONAL APPROVAL
 - Agents: 3/3 found issues
 - Issues: 4 critical (security regex patterns, workflow gate)
@@ -48,7 +44,6 @@ Address review findings from 4 stacked PRs (#475-478) in the documentation suite
 - Optional: Remove 96% of code (YAGNI - keep link checking only)
 
 **PR #478: ADR-009 Critical Questions** ❌
-
 - Status: DO NOT MERGE
 - Agents: 2/2 found issues
 - Issues: 6 critical (wrong file paths, line numbers, missing gate, misleading claims)
@@ -126,26 +121,22 @@ Fix all critical issues using Graphite's `gt modify` workflow to update commits 
 **Graphite Stack Verification:**
 
 1. **Check Stack Integrity**
-
    ```bash
    gt log --stack
    gt stack --info
    ```
-
    Verify:
    - All 4 PRs in correct order
    - No merge conflicts
    - Each PR builds on previous
 
 2. **Verify PR Links**
-
    ```bash
    gh pr view 475 --json baseRefName,headRefName
    gh pr view 476 --json baseRefName,headRefName
    gh pr view 477 --json baseRefName,headRefName
    gh pr view 478 --json baseRefName,headRefName
    ```
-
    Verify:
    - PR #475 → main
    - PR #476 → PR #475 branch
@@ -153,13 +144,11 @@ Fix all critical issues using Graphite's `gt modify` workflow to update commits 
    - PR #478 → PR #477 branch
 
 3. **Test Local Build**
-
    ```bash
    npm run build
    npm run lint
    npm test
    ```
-
    Verify: All pass on each branch
 
 4. **Verify CI Status**
@@ -180,20 +169,17 @@ Fix all critical issues using Graphite's `gt modify` workflow to update commits 
 When fixing review findings in a Graphite stack:
 
 1. **Checkout the branch with the issue**
-
    ```bash
    git checkout <branch-name>
    ```
 
 2. **Make the fix**
-
    ```bash
    # Edit files
    git add <fixed-files>
    ```
 
 3. **Commit the fix**
-
    ```bash
    git commit -m "fix: <description>"
    ```
@@ -205,7 +191,6 @@ When fixing review findings in a Graphite stack:
    ```
 
 **Key Rules:**
-
 - ✅ Use `git commit` for every fix (never `--amend`)
 - ✅ Use `gt modify --all` to update stack
 - ✅ Use `gt submit` to push updates
@@ -229,7 +214,6 @@ Wave 2 (Depends on Wave 1):
 ### File-Level Batching
 
 **Same-File Batching Rule:**
-
 - If multiple fixes touch the same file, batch them in one commit
 - Example: PR #478 has 6 fixes, but all in one file (adr-009-documentation-architecture.md)
   - Make all 6 fixes
@@ -306,14 +290,12 @@ Wave 2 (Depends on Wave 1):
 #### Stack Integrity Checks
 
 - [ ] View stack structure:
-
   ```bash
   gt log --stack
   gt stack --info
   ```
 
 - [ ] Verify each PR builds on previous:
-
   ```bash
   gh pr view 475 --json baseRefName,headRefName
   gh pr view 476 --json baseRefName,headRefName
@@ -324,13 +306,12 @@ Wave 2 (Depends on Wave 1):
 - [ ] Expected relationships:
   - PR #475 base: main
   - PR #476 base: docs/phase-0-architecture-foundation (PR #475's branch)
-  - PR #477 base: 02-15-docs*restructure_docs_directory_16_7_top-level_dirs* (PR #476's branch)
+  - PR #477 base: 02-15-docs_restructure_docs_directory_16_7_top-level_dirs_ (PR #476's branch)
   - PR #478 base: 02-15-docs_add_ci_validation_pipeline_for_documentation_quality (PR #477's branch)
 
 #### Build & Test Verification
 
 - [ ] On each branch, verify:
-
   ```bash
   npm run build   # TypeScript compiles
   npm run lint    # ESLint passes
@@ -339,14 +320,13 @@ Wave 2 (Depends on Wave 1):
 
 - [ ] Branches to test:
   - [ ] docs/phase-0-architecture-foundation (PR #475)
-  - [ ] 02-15-docs*restructure_docs_directory_16_7_top-level_dirs* (PR #476)
+  - [ ] 02-15-docs_restructure_docs_directory_16_7_top-level_dirs_ (PR #476)
   - [ ] 02-15-docs_add_ci_validation_pipeline_for_documentation_quality (PR #477)
   - [ ] 02-15-docs_answer_critical_architecture_questions_for_documentation (PR #478)
 
 #### CI Status Verification
 
 - [ ] Check GitHub Actions status:
-
   ```bash
   gh pr checks 475
   gh pr checks 476
@@ -360,13 +340,11 @@ Wave 2 (Depends on Wave 1):
 #### Stack Sync Verification
 
 - [ ] Ensure stack is synced with remote:
-
   ```bash
   gt sync
   ```
 
 - [ ] Verify no merge conflicts:
-
   ```bash
   gt stack --info | grep -i conflict
   ```
@@ -404,14 +382,12 @@ Wave 2 (Depends on Wave 1):
 ## Success Metrics
 
 **Quantitative:**
-
 - 11 critical issues → 0 critical issues
 - 4 PRs with findings → 4 PRs approved
 - CI failures → All green
 - Fix time: ~35 minutes (as estimated)
 
 **Qualitative:**
-
 - ADR-009 is factually accurate (can guide Phase 2 documentation)
 - Security scanning works correctly (detects real credentials)
 - Migration map is accurate (future migrations use correct paths)
@@ -452,7 +428,6 @@ gh pr checks <number>
 ### Fix Patterns
 
 **Pattern 1: Simple File Edit**
-
 ```bash
 # Example: Fix MIGRATION-MAP.md
 git checkout 02-15-docs_restructure_docs_directory_16_7_top-level_dirs_
@@ -464,7 +439,6 @@ gt submit --no-edit --publish
 ```
 
 **Pattern 2: Multi-File Fix (Same Commit)**
-
 ```bash
 # Example: Fix PR #477 security issues
 git checkout 02-15-docs_add_ci_validation_pipeline_for_documentation_quality
@@ -476,7 +450,6 @@ gt submit --no-edit --publish
 ```
 
 **Pattern 3: Multi-Issue Fix (One File)**
-
 ```bash
 # Example: Fix PR #478 ADR-009 (6 issues in one file)
 git checkout 02-15-docs_answer_critical_architecture_questions_for_documentation
@@ -513,7 +486,6 @@ None identified. All fixes are independent and can be executed immediately.
 ### High Risk
 
 **Risk: Breaking stack integrity with incorrect git commands**
-
 - **Probability**: Low (Graphite handles this)
 - **Impact**: High (stack corruption, lost work)
 - **Mitigation**:
@@ -524,7 +496,6 @@ None identified. All fixes are independent and can be executed immediately.
 ### Medium Risk
 
 **Risk: Introducing new errors while fixing old ones**
-
 - **Probability**: Medium (human error during editing)
 - **Impact**: Medium (requires re-review)
 - **Mitigation**:
@@ -535,7 +506,6 @@ None identified. All fixes are independent and can be executed immediately.
 ### Low Risk
 
 **Risk: Merge conflicts after rebase**
-
 - **Probability**: Low (documentation-only changes)
 - **Impact**: Low (easy to resolve)
 - **Mitigation**:
@@ -545,14 +515,12 @@ None identified. All fixes are independent and can be executed immediately.
 ## Resource Requirements
 
 **Time Estimate:**
-
 - Phase 1 (Fixes): 35 minutes
 - Phase 2 (Optional): User decision (0-60 minutes depending on scope)
 - Phase 3 (Verification): 10 minutes
 - **Total: 45-105 minutes** (depends on optional improvements)
 
 **Skills Required:**
-
 - Git/Graphite workflow (intermediate)
 - Text editing (basic)
 - Code reading (to verify fixes are correct)
@@ -565,25 +533,20 @@ None identified. All fixes are independent and can be executed immediately.
 **File**: `docs/MIGRATION-MAP.md`
 
 **Current (Wrong)**:
-
 ```markdown
 | ops/execution_telemetry.md | reference/ | Specification |
 ```
 
 **Should Be**:
-
 ```markdown
 | ops/execution_telemetry.md | playbooks/execution_telemetry.md | Operational monitoring |
 ```
 
 **Also Fix Statistics Section**:
-
 ```markdown
 - **Directories archived**: 4 (announcements, development, ui, plans content)
 ```
-
 Change to:
-
 ```markdown
 - **Directories archived**: 3 (announcements, development, ui)
 ```
@@ -595,7 +558,6 @@ Change to:
 **File 1**: `scripts/security-scan-docs.sh`
 
 **Issue 1 - Line 25 (Anthropic key)**:
-
 ```bash
 # WRONG: {48,} allows 48 or more chars (won't detect exact 48-char keys)
 grep -rE "sk-ant-[A-Za-z0-9_-]{48,}" docs/ README.md
@@ -605,7 +567,6 @@ grep -rE "sk-ant-[A-Za-z0-9_-]{48}" docs/ README.md
 ```
 
 **Issue 2 - Line 34 (OpenAI key)**:
-
 ```bash
 # WRONG: {32,} is unbounded, causes false positives
 grep -rE "sk-[A-Za-z0-9]{32,}" docs/ README.md
@@ -615,7 +576,6 @@ grep -rE "sk-[A-Za-z0-9]{32,48}\b" docs/ README.md
 ```
 
 **Issue 3 - Line 7 (Bash strict mode)**:
-
 ```bash
 # WRONG: Missing -u and -o pipefail
 set -e
@@ -627,7 +587,6 @@ set -euo pipefail
 **File 2**: `.github/workflows/docs-validation.yml`
 
 **Issue 4 - Line 185 (Workflow gate)**:
-
 ```yaml
 # WRONG: Runs even if security checks fail
 summary:
@@ -647,64 +606,49 @@ summary:
 **File**: `docs/adr/adr-009-documentation-architecture.md`
 
 **Issue 1 - Q4 Sources (Lines 120-121)**:
-
 ```markdown
 # WRONG
-
 - src/cli/commands/approve.ts - Complete approval logic
 - src/workflows/approvalTypes.ts - Data structures
 - src/persistence/approvalStorage.ts - State persistence
 
 # CORRECT
-
 - src/cli/commands/approve.ts - Complete approval logic
 - src/core/models/ApprovalRecord.ts - Data structures and gate definitions
 - src/workflows/approvalRegistry.ts - State persistence and audit trail
 ```
 
 **Issue 2 - Q10 Source (Line 363-364)**:
-
 ```markdown
 # WRONG
-
 - `src/cli/utils/shared.ts:168` - GitHub token loading
 
 # CORRECT
-
 - `src/cli/pr/shared.ts:168` - GitHub token loading
 ```
 
 **Issue 3 - Q2 Line Reference (Line 44)**:
-
 ```markdown
 # WRONG
-
 - `src/cli/commands/init.ts:350-365` - Git root resolution
 
 # CORRECT
-
 - `src/cli/commands/init.ts:498-513` - Git root resolution
 ```
 
 **Issue 4 - Q8 Line Reference (Line 254)**:
-
 ```markdown
 # WRONG
-
 - `.gitignore:15-18` - .codepipe/ patterns
 
 # CORRECT
-
 - `.gitignore:47-50` - .codepipe/ patterns
 ```
 
 **Issue 5 - Q4 Missing Gate (Line 89)**:
-
 ```markdown
 # CURRENT (6 gates)
-
 **Available Gates**:
-
 - prd (Product Requirements Document)
 - spec (Specification)
 - plan (Implementation Plan)
@@ -713,9 +657,7 @@ summary:
 - deploy (Deployment)
 
 # CORRECT (7 gates)
-
 **Available Gates**:
-
 - prd (Product Requirements Document)
 - spec (Specification)
 - plan (Implementation Plan)
@@ -726,16 +668,12 @@ summary:
 ```
 
 **Issue 6 - Q8 Misleading Claim (Lines 236-239)**:
-
 ```markdown
 # WRONG
-
 **Answer**: **NO** - `.codepipe/` is gitignored by default
 
 # CORRECT
-
 **Answer**: **Partially** - Only specific subdirectories are gitignored by default:
-
 - `.codepipe/runs/` (execution state)
 - `.codepipe/logs/` (log files)
 - `.codepipe/metrics/` (metrics data)
@@ -745,10 +683,8 @@ The `.codepipe/` directory itself and `.codepipe/config.json` CAN be committed f
 ```
 
 **Issue 7 - Duplicate Q8 (Lines 573-578)**:
-
 ```markdown
 # DELETE this entire section (duplicate of lines 233-257)
-
 ## Additional Answers (Quick Lookups)
 
 ### Q8: .codepipe/ Committable to Git?
@@ -773,20 +709,17 @@ See full answer in Q8 section above.
 ### Per-PR Validation
 
 **PR #475:**
-
 - [ ] No changes needed
 - [ ] CI green
 - [ ] Ready to merge
 
 **PR #476:**
-
 - [ ] MIGRATION-MAP.md corrected
 - [ ] File placement documented accurately
 - [ ] Statistics accurate
 - [ ] CI green
 
 **PR #477:**
-
 - [ ] Anthropic key regex: `{48}` (exact length)
 - [ ] OpenAI key regex: `{32,48}\b` (bounded)
 - [ ] Bash strict mode: `set -euo pipefail`
@@ -795,7 +728,6 @@ See full answer in Q8 section above.
 - [ ] Security checks actually fail when they should
 
 **PR #478:**
-
 - [ ] All 3 wrong file paths corrected
 - [ ] All 2 wrong line numbers corrected
 - [ ] Missing `'other'` gate added
@@ -809,13 +741,11 @@ See full answer in Q8 section above.
 If fixes introduce new issues:
 
 1. **Identify problematic commit**:
-
    ```bash
    git log --oneline
    ```
 
 2. **Revert the fix**:
-
    ```bash
    git revert <commit-sha>
    gt modify --all
@@ -831,19 +761,16 @@ If fixes introduce new issues:
 ## Timeline
 
 **Phase 1 Execution:**
-
 - PR #476 fix: 5 minutes (2 min fix + 3 min commit/push)
 - PR #477 fix: 15 minutes (10 min fix + 5 min commit/push)
 - PR #478 fix: 25 minutes (20 min fix + 5 min commit/push)
 - **Total: 45 minutes**
 
 **Phase 2 Optional:**
-
 - Scope decisions: User review time (variable)
 - Simplification implementation: 30-60 minutes (if chosen)
 
 **Phase 3 Verification:**
-
 - Stack health checks: 10 minutes
 - Build/test validation: 15 minutes
 - CI status verification: 5 minutes
@@ -870,7 +797,6 @@ If fixes introduce new issues:
 ### Source Code References
 
 **For Verification:**
-
 - src/core/models/ApprovalRecord.ts - Approval gate definitions
 - src/workflows/approvalRegistry.ts - Approval storage
 - src/cli/pr/shared.ts:168 - GitHub token loading
