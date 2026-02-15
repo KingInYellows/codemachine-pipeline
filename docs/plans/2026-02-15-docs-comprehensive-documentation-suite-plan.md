@@ -419,7 +419,7 @@ Create a multi-format documentation suite with clear organization, progressive d
 | `CODEPIPE_RUNTIME_TIMEOUT_MINUTES`      | 30                  | Global execution timeout          | Cost control, CI time limits          |
 | `CODEPIPE_EXECUTION_CLI_PATH`           | `codemachine`       | Legacy CLI path override          | Backward compatibility                |
 | `CODEPIPE_EXECUTION_DEFAULT_ENGINE`     | `claude`            | Override execution engine         | Switch engines without editing config |
-| `CODEPIPE_EXECUTION_TIMEOUT_MS`         | 300000              | Per-task timeout                  | Fine-grained timeout control          |
+| `CODEPIPE_EXECUTION_TIMEOUT_MS`         | 1800000             | Per-task timeout                  | Fine-grained timeout control          |
 
 **Source**: `src/core/config/RepoConfig.ts:509-596`
 
@@ -466,9 +466,13 @@ Create a multi-format documentation suite with clear organization, progressive d
     "execution": {
       "default_engine": "claude" // Required: claude | codex | openai
     },
+    "project": {
+      "id": "my-project", // Required: Project identifier
+      "repo_url": "https://github.com/my-org/my-repo.git" // Required: Repository URL
+    },
     "github": {
-      "org": "my-org", // Required: GitHub organization or username
-      "repository": "my-repo" // Required: Repository name
+      "enabled": true, // Required: Enable GitHub integration
+      "token_env_var": "GITHUB_TOKEN" // Optional: Env var name for token (default: GITHUB_TOKEN)
     },
     "linear": {
       "team": "ENG", // Optional: Linear team key (if using Linear)
@@ -1505,7 +1509,7 @@ MIT
 - Phase 0: Architecture foundation & corrections (2 days) **NEW**
 - Phase 1: Critical questions & requirements (2 days)
 - Phase 2: Content audit & structure (1.5 days) - includes drift prevention setup
-- Phase 3: Content creation (6.5 days) - includes 10 new documentation files
+- Phase 3: Content creation (7.5 days) - includes 10 new documentation files
   - 3.1: Getting Started (1 day)
   - 3.2: Configuration (1.5 days) - includes comprehensive security section
   - 3.3: User Guide (1.5 days)
@@ -1516,13 +1520,13 @@ MIT
 - Phase 5: MkDocs Material setup (1.5 days) - production-ready configuration
 - Phase 6: README.md consolidation (0.5 days)
 - Phase 7: Validation & testing (1.5 days) - includes automation scripts
-- **Total: ~16.5 days (~3.5 weeks)**
+- **Total: ~17.5 days (~3.5 weeks)**
 
 **Comparison to Original Estimate:**
 
 - Original: 11.5 days (2.5 weeks)
-- Enhanced: 16.5 days (3.5 weeks)
-- **Increase: +5 days** due to:
+- Enhanced: 17.5 days (3.5 weeks)
+- **Increase: +6 days** due to:
   - Architecture restructuring (+2 days)
   - Additional documentation files (+1.5 days)
   - Security enhancements (+1 day)
