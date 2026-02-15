@@ -33,11 +33,20 @@ const unsafePatterns = [
   { pattern: /chmod\s+777/, message: 'Insecure permissions (chmod 777)' },
   { pattern: /curl.*\|\s*bash/, message: 'Pipe to bash (security risk)' },
   { pattern: /eval\s+\$\(/, message: 'Eval with command substitution' },
-  {
-    pattern: /(ghp_[A-Za-z0-9]{36}|sk-ant-[A-Za-z0-9]{48}|lin_api_[A-Za-z0-9]{40})/,
-    message: 'Real API token detected',
-  },
+  { pattern: /ghp_[A-Za-z0-9]{36}/, message: 'Real GitHub token detected' },
+  { pattern: /sk-ant-[A-Za-z0-9_-]{48,}/, message: 'Real Anthropic API key detected' },
+  { pattern: /sk-[A-Za-z0-9]{32,}(?!-ant-)/, message: 'Potential real OpenAI API key detected' },
+  { pattern: /lin_api_[A-Za-z0-9]{40}/, message: 'Real Linear API key detected' },
+  { pattern: /AKIA[0-9A-Z]{16}/, message: 'Real AWS access key detected' },
 ];
+
+// Patterns that indicate placeholder/example tokens (should be ignored)
+const placeholderPatterns = [/EXAMPLE/i, /PLACEHOLDER/i, /DO_NOT_USE/i];
+
+// Helper function to check if a code block contains placeholder markers
+function hasPlaceholderMarker(code) {
+  return placeholderPatterns.some(pattern => pattern.test(code));
+}
 
 for (const file of markdownFiles) {
   const content = fs.readFileSync(file, 'utf-8');
@@ -53,6 +62,11 @@ for (const file of markdownFiles) {
 
     // Check for unsafe patterns in bash/shell blocks
     if (lang === 'bash' || lang === 'shell') {
+      // Skip if code block has placeholder markers (EXAMPLE/PLACEHOLDER/DO_NOT_USE)
+      if (hasPlaceholderMarker(code)) {
+        continue;
+      }
+
       for (const { pattern, message } of unsafePatterns) {
         if (pattern.test(code)) {
           console.error(`❌ ${relativePath}:`);
