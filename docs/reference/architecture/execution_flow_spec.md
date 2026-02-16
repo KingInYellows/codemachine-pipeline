@@ -105,9 +105,9 @@ Each task in the plan is represented as a **TaskNode** with the following proper
 
 ```typescript
 interface TaskNode {
-  task_id: string; // Stable ID (e.g., "I3-T-UNIT-001")
-  title: string; // Human-readable description
-  task_type: string; // "code_generation", "testing", "deployment", etc.
+  task_id: string;              // Stable ID (e.g., "I3-T-UNIT-001")
+  title: string;                // Human-readable description
+  task_type: string;            // "code_generation", "testing", "deployment", etc.
   dependencies: TaskDependency[]; // Required predecessor tasks
   estimated_duration_minutes?: number;
   config?: Record<string, unknown>; // Task-specific parameters
@@ -126,7 +126,7 @@ Dependencies define execution order constraints:
 
 ```typescript
 interface TaskDependency {
-  task_id: string; // ID of prerequisite task
+  task_id: string;  // ID of prerequisite task
   type: 'required' | 'optional'; // Enforcement level
 }
 ```
@@ -146,8 +146,8 @@ The Task Planner builds the dependency graph using these heuristics:
 2. **Test Ordering by Type**
    - Unit tests run first (no dependencies beyond code generation)
    - Integration tests depend on unit tests
-   - E2E tests depend on integration tests
-   - Enforces test pyramid discipline
+- E2E tests depend on integration tests
+- Enforces test pyramid discipline
 
 3. **Deployment Gating**
    - Deployment tasks depend on all testing tasks
@@ -178,14 +178,12 @@ Output: Ordered list of task IDs
 ```
 
 **Depth Calculation:**
-
 - Entry tasks have depth 0
 - Depth of task T = max(depth of all dependencies) + 1
 - Maximum depth indicates critical path length
 - Depth and ordered task IDs are persisted inside `plan.metadata.topological_order` and `plan.metadata.critical_path_depth` for CLI consumers
 
 **Parallel Paths:**
-
 - Count of tasks at each depth level
 - Maximum count across depths indicates parallelization opportunity
 
@@ -240,7 +238,9 @@ The plan is persisted as a **PlanArtifact**:
       "task_id": "I3.T2",
       "title": "Verify plan.json includes nodes/edges",
       "task_type": "testing",
-      "dependencies": [{ "task_id": "I3.T1", "type": "required" }]
+      "dependencies": [
+        { "task_id": "I3.T1", "type": "required" }
+      ]
     }
   ],
   "dag_metadata": {
@@ -333,7 +333,6 @@ Tasks are persisted in append-only JSONL format:
 ```
 
 Benefits:
-
 - Append-only (crash-safe)
 - Supports idempotent replays
 - Easy to parse line-by-line
@@ -369,7 +368,6 @@ Benefits:
 5. **Commit to Branch**
    - Stage changes: `git add <modified_files>`
    - Commit with standardized message:
-
      ```
      feat(I3.T1): Implement Task Planner upgrades
 
@@ -379,7 +377,6 @@ Benefits:
 
      Refs: FEAT-001, T-INT-001
      ```
-
    - Update task status: `completed`
 
 6. **Record Artifacts**
@@ -433,13 +430,11 @@ codepipe plan generate --iteration I3
 ```
 
 **Effects:**
-
 - Validates spec approval
 - Generates plan.json and plan_metadata.json
 - Outputs plan summary
 
 **Output Example:**
-
 ```
 ✓ Spec approved (spec_hash: a3f5e9d8...)
 ✓ Generated 4 tasks
@@ -458,7 +453,6 @@ codepipe plan --json
 ```
 
 **Output Example:**
-
 ```json
 {
   "totalTasks": 4,
@@ -492,7 +486,6 @@ codepipe plan --summary
 ```
 
 **Output Example:**
-
 ```
 Execution Plan Summary
 ======================
@@ -523,7 +516,6 @@ codepipe status
 ```
 
 **Output Example:**
-
 ```
 Feature: FEAT-001
 Status: in_progress
@@ -542,7 +534,6 @@ codepipe resume
 ```
 
 **Output Example:**
-
 ```
 ✓ Loaded plan.json (4 tasks)
 ✓ Last completed: I3.T1
@@ -582,14 +573,14 @@ When execution completes:
 
 ## Error Handling
 
-| Error Condition                 | Recovery Strategy                                                          |
-| ------------------------------- | -------------------------------------------------------------------------- |
-| **Cycle Detected in DAG**       | Fail plan generation; user must fix spec dependencies                      |
-| **Missing Dependency**          | Fail validation; list missing task IDs                                     |
-| **Validation Failure**          | Retry with auto-fix (max 3 attempts); if all fail, pause for manual review |
-| **Patch Apply Failure**         | Record error context; pause execution; wait for resume                     |
-| **Git Commit Failure**          | Retry commit (idempotent); if persistent, escalate to user                 |
-| **Checksum Mismatch on Resume** | Warn user; offer to re-execute or skip task                                |
+| Error Condition | Recovery Strategy |
+|-----------------|-------------------|
+| **Cycle Detected in DAG** | Fail plan generation; user must fix spec dependencies |
+| **Missing Dependency** | Fail validation; list missing task IDs |
+| **Validation Failure** | Retry with auto-fix (max 3 attempts); if all fail, pause for manual review |
+| **Patch Apply Failure** | Record error context; pause execution; wait for resume |
+| **Git Commit Failure** | Retry commit (idempotent); if persistent, escalate to user |
+| **Checksum Mismatch on Resume** | Warn user; offer to re-execute or skip task |
 
 ## Performance Characteristics
 
@@ -636,26 +627,26 @@ The CodeMachine CLI adapter provides a pluggable execution backend via the Strat
 
 **Key Components:**
 
-| Component             | File                                   | Responsibility                                             |
-| --------------------- | -------------------------------------- | ---------------------------------------------------------- |
-| `CLIExecutionEngine`  | `src/workflows/cliExecutionEngine.ts`  | Queue-based task orchestration with retry logic            |
-| `CodeMachineRunner`   | `src/workflows/codeMachineRunner.ts`   | CLI process spawning, log streaming, path validation       |
-| `TaskMapper`          | `src/workflows/taskMapper.ts`          | Maps task types to execution strategies/workflows          |
-| `ResultNormalizer`    | `src/workflows/resultNormalizer.ts`    | Output parsing, error categorization, credential redaction |
-| `CodeMachineStrategy` | `src/workflows/codeMachineStrategy.ts` | Strategy implementation for CodeMachine backend            |
+| Component | File | Responsibility |
+|-----------|------|----------------|
+| `CLIExecutionEngine` | `src/workflows/cliExecutionEngine.ts` | Queue-based task orchestration with retry logic |
+| `CodeMachineRunner` | `src/workflows/codeMachineRunner.ts` | CLI process spawning, log streaming, path validation |
+| `TaskMapper` | `src/workflows/taskMapper.ts` | Maps task types to execution strategies/workflows |
+| `ResultNormalizer` | `src/workflows/resultNormalizer.ts` | Output parsing, error categorization, credential redaction |
+| `CodeMachineStrategy` | `src/workflows/codeMachineStrategy.ts` | Strategy implementation for CodeMachine backend |
 
 ### Task-to-Workflow Mapping
 
 The `TaskMapper` routes task types to appropriate execution strategies:
 
-| Task Type         | Strategy    | Workflow         | Description                             |
-| ----------------- | ----------- | ---------------- | --------------------------------------- |
-| `code_generation` | CodeMachine | `start`          | AI-driven code generation               |
-| `testing`         | Native      | `native-autofix` | Test execution via native AutoFixEngine |
-| `pr_creation`     | CodeMachine | `run pr`         | Pull request creation                   |
-| `review`          | CodeMachine | `run review`     | AI code review                          |
-| `documentation`   | CodeMachine | `run docs`       | Documentation generation                |
-| `deployment`      | Native      | N/A              | Handled by native executor              |
+| Task Type | Strategy | Workflow | Description |
+|-----------|----------|----------|-------------|
+| `code_generation` | CodeMachine | `start` | AI-driven code generation |
+| `testing` | Native | `native-autofix` | Test execution via native AutoFixEngine |
+| `pr_creation` | CodeMachine | `run pr` | Pull request creation |
+| `review` | CodeMachine | `run review` | AI code review |
+| `documentation` | CodeMachine | `run docs` | Documentation generation |
+| `deployment` | Native | N/A | Handled by native executor |
 
 **Engine Detection:**
 
@@ -681,23 +672,22 @@ CodeMachine adapter configuration in `config.json`:
 }
 ```
 
-| Field                  | Type   | Default         | Description                                             |
-| ---------------------- | ------ | --------------- | ------------------------------------------------------- |
-| `default_engine`       | string | `"claude"`      | Default AI engine for code generation                   |
-| `codemachine_cli_path` | string | `"codemachine"` | Path to CodeMachine CLI binary                          |
-| `task_timeout_ms`      | number | `1800000`       | Task timeout (30 minutes)                               |
-| `max_retries`          | number | `3`             | Max retry attempts for recoverable errors               |
-| `max_parallel_tasks`   | number | `1`             | Maximum number of tasks to execute in parallel          |
-| `retry_backoff_ms`     | number | `5000`          | Base backoff delay for exponential retry (milliseconds) |
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| `default_engine` | string | `"claude"` | Default AI engine for code generation |
+| `codemachine_cli_path` | string | `"codemachine"` | Path to CodeMachine CLI binary |
+| `task_timeout_ms` | number | `1800000` | Task timeout (30 minutes) |
+| `max_retries` | number | `3` | Max retry attempts for recoverable errors |
+| `max_parallel_tasks` | number | `1` | Maximum number of tasks to execute in parallel |
+| `retry_backoff_ms` | number | `5000` | Base backoff delay for exponential retry (milliseconds) |
 
 **Environment Overrides:**
 
-| Variable                            | Description                                       |
-| ----------------------------------- | ------------------------------------------------- |
-| `CODEMACHINE_BIN_PATH`              | Override CodeMachine CLI binary location          |
-| `CODEPIPE_EXECUTION_CLI_PATH`       | Override `execution.codemachine_cli_path` via env |
-| `CODEPIPE_EXECUTION_DEFAULT_ENGINE` | Override `execution.default_engine` via env       |
-| `CODEPIPE_EXECUTION_TIMEOUT_MS`     | Override per-task timeout in milliseconds         |
+| Variable | Description |
+|----------|-------------|
+| `CODEMACHINE_BIN_PATH` | Override CodeMachine CLI binary location |
+| `CODEPIPE_EXECUTION_CLI_PATH` | Override `execution.codemachine_cli_path` via env |
+| `CODEPIPE_EXECUTION_TIMEOUT_MS` | Override per-task timeout in milliseconds |
 
 ### CLI Invocation
 
@@ -720,20 +710,20 @@ codemachine run \
 
 The adapter categorizes errors for appropriate recovery:
 
-| Category                | Recoverable | Action                         | Examples                        |
-| ----------------------- | ----------- | ------------------------------ | ------------------------------- |
-| `transient`             | Yes         | Retry with exponential backoff | Network timeout, rate limit     |
-| `permanent`             | No          | Mark task failed               | Invalid config, auth failure    |
-| `timeout`               | Yes         | Retry with extended timeout    | Long-running task               |
-| `human_action_required` | No          | Pause queue, notify operator   | Approval needed, merge conflict |
+| Category | Recoverable | Action | Examples |
+|----------|-------------|--------|----------|
+| `transient` | Yes | Retry with exponential backoff | Network timeout, rate limit |
+| `permanent` | No | Mark task failed | Invalid config, auth failure |
+| `timeout` | Yes | Retry with extended timeout | Long-running task |
+| `human_action_required` | No | Pause queue, notify operator | Approval needed, merge conflict |
 
 **Backoff Schedule:**
 
-| Attempt | Delay      |
-| ------- | ---------- |
-| 1       | 5 seconds  |
-| 2       | 10 seconds |
-| 3       | 20 seconds |
+| Attempt | Delay |
+|---------|-------|
+| 1 | 5 seconds |
+| 2 | 10 seconds |
+| 3 | 20 seconds |
 
 After max retries, task transitions to `failed` state with `recoverable: false`.
 
@@ -741,28 +731,28 @@ After max retries, task transitions to `failed` state with `recoverable: false`.
 
 The adapter interprets CLI exit codes:
 
-| Exit Code | Meaning                         | Recovery             |
-| --------- | ------------------------------- | -------------------- |
-| `0`       | Success                         | Mark completed       |
-| `1`       | General error                   | Retry if transient   |
-| `2`       | Invalid arguments               | Permanent failure    |
-| `124`     | Timeout (via `timeout` command) | Retry with extension |
-| `137`     | Killed (SIGKILL)                | Retry once           |
-| `143`     | Terminated (SIGTERM)            | Graceful stop        |
+| Exit Code | Meaning | Recovery |
+|-----------|---------|----------|
+| `0` | Success | Mark completed |
+| `1` | General error | Retry if transient |
+| `2` | Invalid arguments | Permanent failure |
+| `124` | Timeout (via `timeout` command) | Retry with extension |
+| `137` | Killed (SIGKILL) | Retry once |
+| `143` | Terminated (SIGTERM) | Graceful stop |
 
 ### Credential Redaction
 
 The `ResultNormalizer` automatically redacts 18+ sensitive patterns:
 
-| Pattern Type       | Example                      | Redacted Output     |
-| ------------------ | ---------------------------- | ------------------- |
-| Bearer tokens      | `Bearer eyJ...`              | `Bearer [REDACTED]` |
-| API keys           | `sk-abc123...`               | `[REDACTED]`        |
-| GitHub tokens      | `ghp_xxxxx`                  | `[REDACTED]`        |
-| Private keys       | `-----BEGIN...`              | `[REDACTED]`        |
-| Connection strings | `postgresql://user:pass@...` | `[REDACTED]`        |
-| AWS keys           | `AKIA...`                    | `[REDACTED]`        |
-| JWT tokens         | `eyJhbG...`                  | `[REDACTED]`        |
+| Pattern Type | Example | Redacted Output |
+|--------------|---------|-----------------|
+| Bearer tokens | `Bearer eyJ...` | `Bearer [REDACTED]` |
+| API keys | `sk-abc123...` | `[REDACTED]` |
+| GitHub tokens | `ghp_xxxxx` | `[REDACTED]` |
+| Private keys | `-----BEGIN...` | `[REDACTED]` |
+| Connection strings | `postgresql://user:pass@...` | `[REDACTED]` |
+| AWS keys | `AKIA...` | `[REDACTED]` |
+| JWT tokens | `eyJhbG...` | `[REDACTED]` |
 
 ### Doctor Integration
 
@@ -773,13 +763,11 @@ codepipe doctor
 ```
 
 **Successful Check:**
-
 ```
 ✓ CodeMachine CLI (Execution): /usr/local/bin/codemachine 2.1.0
 ```
 
 **Warning (non-blocking):**
-
 ```
 ⚠ CodeMachine CLI (Execution): codemachine-cli command failed
 → Install codemachine-cli: npm install -g codemachine-cli (optional for execution engine)
@@ -806,7 +794,7 @@ See `docs/ops/codemachine_adapter_guide.md` for comprehensive operational guidan
 
 ## Revision History
 
-| Version | Date       | Author      | Changes                                        |
-| ------- | ---------- | ----------- | ---------------------------------------------- |
-| 1.0.0   | 2025-01-15 | AI Pipeline | Initial execution flow documentation           |
-| 1.1.0   | 2026-01-28 | AI Pipeline | Add CodeMachine CLI Adapter section (CDMCH-31) |
+| Version | Date       | Author       | Changes                          |
+|---------|------------|--------------|----------------------------------|
+| 1.0.0   | 2025-01-15 | AI Pipeline  | Initial execution flow documentation |
+| 1.1.0   | 2026-01-28 | AI Pipeline  | Add CodeMachine CLI Adapter section (CDMCH-31) |

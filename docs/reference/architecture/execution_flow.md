@@ -140,12 +140,12 @@ Events emitted during execution:
 
 ### Environment Variables
 
-| Variable                            | Purpose                                   | Default |
-| ----------------------------------- | ----------------------------------------- | ------- |
-| `CODEMACHINE_BIN_PATH`              | Override CLI binary location              | `-`     |
-| `CODEPIPE_EXECUTION_CLI_PATH`       | Override `execution.codemachine_cli_path` | `-`     |
-| `CODEPIPE_EXECUTION_DEFAULT_ENGINE` | Override `execution.default_engine`       | `-`     |
-| `CODEPIPE_EXECUTION_TIMEOUT_MS`     | Override `execution.task_timeout_ms`      | `-`     |
+| Variable                | Purpose                      | Default       |
+| ----------------------- | ---------------------------- | ------------- |
+| `CODEMACHINE_BIN_PATH`  | Override CLI binary location | `-`           |
+| `CODEPIPE_EXECUTION_CLI_PATH` | Override `execution.codemachine_cli_path` | `-` |
+| `CODEPIPE_EXECUTION_DEFAULT_ENGINE` | Override `execution.default_engine` | `-` |
+| `CODEPIPE_EXECUTION_TIMEOUT_MS` | Override `execution.task_timeout_ms` | `-` |
 
 Verbosity is controlled via CLI flags (e.g. `--verbose`); there is no `CODEMACHINE_LOG_LEVEL` environment variable.
 
