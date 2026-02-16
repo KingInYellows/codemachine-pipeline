@@ -129,10 +129,11 @@ Events emitted during execution:
 ```json
 {
   "execution": {
-    "max_retries": 3,
-    "timeout_seconds": 300,
-    "parallel_tasks": 1,
-    "preferred_engine": "codemachine"
+    "default_engine": "claude",
+    "codemachine_cli_path": "codemachine",
+    "task_timeout_ms": 1800000,
+    "max_parallel_tasks": 1,
+    "max_retries": 3
   }
 }
 ```
@@ -141,8 +142,12 @@ Events emitted during execution:
 
 | Variable                | Purpose                      | Default       |
 | ----------------------- | ---------------------------- | ------------- |
-| `CODEMACHINE_CLI_PATH`  | Override CLI binary location | `codemachine` |
-| `CODEMACHINE_LOG_LEVEL` | CLI verbosity                | `info`        |
+| `CODEMACHINE_BIN_PATH`  | Override CLI binary location | `-`           |
+| `CODEPIPE_EXECUTION_CLI_PATH` | Override `execution.codemachine_cli_path` | `-` |
+| `CODEPIPE_EXECUTION_DEFAULT_ENGINE` | Override `execution.default_engine` | `-` |
+| `CODEPIPE_EXECUTION_TIMEOUT_MS` | Override `execution.task_timeout_ms` | `-` |
+
+Verbosity is controlled via CLI flags (e.g. `--verbose`); there is no `CODEMACHINE_LOG_LEVEL` environment variable.
 
 ## Error Taxonomy
 

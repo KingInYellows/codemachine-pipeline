@@ -685,9 +685,9 @@ CodeMachine adapter configuration in `config.json`:
 
 | Variable | Description |
 |----------|-------------|
-| `CODEMACHINE_CLI_PATH` | Override CLI binary path |
-| `CODEMACHINE_TIMEOUT` | Override timeout in milliseconds |
-| `CODEMACHINE_LOG_LEVEL` | CLI verbosity (debug/info/warn/error) |
+| `CODEMACHINE_BIN_PATH` | Override CodeMachine CLI binary location |
+| `CODEPIPE_EXECUTION_CLI_PATH` | Override `execution.codemachine_cli_path` via env |
+| `CODEPIPE_EXECUTION_TIMEOUT_MS` | Override per-task timeout in milliseconds |
 
 ### CLI Invocation
 

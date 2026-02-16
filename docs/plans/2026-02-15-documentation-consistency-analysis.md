@@ -914,24 +914,32 @@ Configuration file created at .codepipe/config.json
 ```
 ````
 
-````
-
 #### Configuration Examples
 Use JSON with comments explaining each field:
 
-```markdown
+````markdown
 ### Example: Minimal Configuration
 
 ```json
 {
-  "executionEngine": "claude",        // Required: AI model provider
-  "githubOrg": "my-org",              // Required: GitHub organization
-  "repository": "my-repo",            // Required: Repository name
-  "enableResearch": true              // Optional: Enable research phase
-}
-````
+  "schema_version": "1.0.0",          // Required: Config schema semver
+  "project": {                        // Required: Project metadata
+    "id": "my-project",
+    "repo_url": "https://github.com/my-org/my-repo.git"
+  },
+  "github": { "enabled": true },      // Required: Enable GitHub integration
+  "linear": { "enabled": false },     // Required: Enable Linear integration
+  "runtime": {},                      // Required section, fields default
+  "safety": {},                       // Required section, fields default
+  "feature_flags": {},                // Required section, fields default
 
+  // Optional sections below (defaults apply if omitted):
+  "execution": {
+    "default_engine": "claude"
+  }
+}
 ```
+````
 
 #### Error Messages & Solutions
 Use error catalog format:
