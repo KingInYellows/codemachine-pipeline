@@ -3,6 +3,7 @@
 ## Executive Summary
 
 This research documents production-ready TypeScript patterns for building CLI tool adapters, based on analysis of:
+
 - LinearAdapter (reference HTTP adapter from codemachine-pipeline)
 - Production CLI wrappers: Terraform CDK, Pulumi, Docker SDK, Kubernetes client
 - Industry standards for process spawning, error handling, and async patterns
@@ -57,6 +58,7 @@ export function createLinearAdapter(config: LinearAdapterConfig): LinearAdapter 
 ```
 
 **Key patterns:**
+
 - Config object with optional fields (default injection)
 - Logger injection (testability)
 - Internal client initialization in constructor
@@ -126,11 +128,11 @@ export interface CliValidationResult {
 
 // Error taxonomy
 export type CliErrorType =
-  | 'transient'      // Temporary: timeout, rate limit, connection reset
-  | 'permanent'      // Not recoverable: invalid args, missing CLI
+  | 'transient' // Temporary: timeout, rate limit, connection reset
+  | 'permanent' // Not recoverable: invalid args, missing CLI
   | 'human_required' // Needs manual intervention: auth failure, user confirmation
-  | 'parse_error'    // Output parsing failed (code error, not CLI error)
-  | 'timeout';       // Process exceeded timeout
+  | 'parse_error' // Output parsing failed (code error, not CLI error)
+  | 'timeout'; // Process exceeded timeout
 
 // ============================================================================
 // CLI Error
@@ -195,9 +197,11 @@ export class CodeMachineCLIAdapter extends EventEmitter {
   constructor(config: CodeMachineCLIAdapterConfig) {
     super();
 
-    this.logger = config.logger ?? createLogger({
-      component: 'codemachine-cli-adapter',
-    });
+    this.logger =
+      config.logger ??
+      createLogger({
+        component: 'codemachine-cli-adapter',
+      });
 
     this.config = {
       cliPath: config.cliPath,
@@ -757,7 +761,7 @@ try {
     undefined,
     undefined,
     'executeCommand',
-    cause  // Preserve original error
+    cause // Preserve original error
   );
 }
 ```
@@ -785,7 +789,7 @@ export class CliAdapter extends EventEmitter {
         for (let i = 0; i < lines.length - 1; i++) {
           try {
             const event = JSON.parse(lines[i]);
-            this.emit('event', event);  // Emit for subscribers
+            this.emit('event', event); // Emit for subscribers
           } catch {
             // Skip unparseable lines
           }
@@ -809,12 +813,14 @@ await adapter.execute('command');
 ```
 
 **Pros:**
+
 - Streaming support (real-time events)
 - Decoupled: subscribers can attach/detach
 - Standard Node.js pattern (familiar)
 - Memory efficient for large outputs
 
 **Cons:**
+
 - Implicit contract (hard to discover events)
 - Error handling via 'error' event only
 - Can be overkill for small tasks
@@ -857,12 +863,14 @@ for await (const event of executeStream('command', args)) {
 ```
 
 **Pros:**
+
 - Explicit control flow
 - Type-safe iteration
 - Natural error handling (try/catch)
 - Backpressure support
 
 **Cons:**
+
 - Less familiar pattern
 - Cannot attach multiple consumers
 - Harder to reason about state
@@ -900,13 +908,15 @@ export function execute(
 }
 
 // Usage
-await execute('command',
+await execute(
+  'command',
   (event) => console.log('Event:', event),
   (error) => console.error('Parse error:', error)
 );
 ```
 
 **Recommendation for CodeMachine:** Use **EventEmitter** because:
+
 1. Streaming NDJSON is core to CodeMachine's output format
 2. Subscribers can attach/detach dynamically (logging, metrics, processing)
 3. Standard Node.js pattern (team familiarity)
@@ -1022,9 +1032,7 @@ export class CliAdapter extends EventEmitter {
    */
   async initialize(): Promise<void> {
     if (this.state !== 'created') {
-      throw new Error(
-        `Cannot initialize adapter in state '${this.state}'`
-      );
+      throw new Error(`Cannot initialize adapter in state '${this.state}'`);
     }
 
     this.state = 'validating';
@@ -1050,22 +1058,15 @@ export class CliAdapter extends EventEmitter {
   /**
    * Execute command (requires initialized state)
    */
-  async execute(
-    command: string,
-    args?: Record<string, unknown>
-  ): Promise<CliOutput> {
+  async execute(command: string, args?: Record<string, unknown>): Promise<CliOutput> {
     if (this.state !== 'ready') {
-      throw new Error(
-        `Cannot execute in state '${this.state}'. Call initialize() first.`
-      );
+      throw new Error(`Cannot execute in state '${this.state}'. Call initialize() first.`);
     }
 
     this.state = 'executing';
 
     try {
-      const result = await this.executeCommand(
-        this.buildArguments(command, args ?? {})
-      );
+      const result = await this.executeCommand(this.buildArguments(command, args ?? {}));
       this.state = 'ready'; // Return to ready
       return result;
     } catch (error) {
@@ -1154,10 +1155,7 @@ export class CodeMachineStrategy implements ExecutionStrategy {
     return task.task_type === 'codemachine_cli';
   }
 
-  async execute(
-    task: ExecutionTask,
-    context: ExecutionContext
-  ): Promise<ExecutionStrategyResult> {
+  async execute(task: ExecutionTask, context: ExecutionContext): Promise<ExecutionStrategyResult> {
     const startTime = Date.now();
 
     try {
@@ -1344,16 +1342,16 @@ Integration
 
 ### 8.2 Design Principles
 
-| Principle | Implementation |
-|-----------|-----------------|
-| **Dependency Injection** | Config object with optional logger/runDir |
-| **Error Taxonomy** | CliErrorType enum with cause chain preservation |
-| **Type Safety** | Schema validation with Zod, builder pattern |
-| **Testability** | Factory functions, mocking-friendly logger injection |
-| **Streaming** | EventEmitter for NDJSON events |
-| **Lifecycle** | State machine (created → ready → executing → cleaned) |
-| **Timeout** | SIGTERM grace period → SIGKILL force kill |
-| **Observability** | Structured logging, event emission, metrics |
+| Principle                | Implementation                                        |
+| ------------------------ | ----------------------------------------------------- |
+| **Dependency Injection** | Config object with optional logger/runDir             |
+| **Error Taxonomy**       | CliErrorType enum with cause chain preservation       |
+| **Type Safety**          | Schema validation with Zod, builder pattern           |
+| **Testability**          | Factory functions, mocking-friendly logger injection  |
+| **Streaming**            | EventEmitter for NDJSON events                        |
+| **Lifecycle**            | State machine (created → ready → executing → cleaned) |
+| **Timeout**              | SIGTERM grace period → SIGKILL force kill             |
+| **Observability**        | Structured logging, event emission, metrics           |
 
 ---
 
@@ -1363,9 +1361,7 @@ Integration
 
 ```typescript
 export class MockCliAdapter extends EventEmitter {
-  async executeCommand(
-    args: string[]
-  ): Promise<CliOutput> {
+  async executeCommand(args: string[]): Promise<CliOutput> {
     // Return predictable output for testing
     return {
       exitCode: 0,
@@ -1398,7 +1394,7 @@ describe('CodeMachineCLIAdapter', () => {
 
   beforeEach(async () => {
     adapter = createCodeMachineCLIAdapter({
-      cliPath: process.env.CODEMACHINE_CLI_PATH || 'codemachine',
+      cliPath: process.env.CODEMACHINE_BIN_PATH || 'codemachine',
       workspaceDir: process.cwd(),
       timeoutMs: 5000,
     });
@@ -1430,9 +1426,7 @@ describe('CodeMachineCLIAdapter', () => {
   });
 
   it('should timeout if execution exceeds limit', async () => {
-    await expect(
-      adapter.execute('slow-command', { timeout: 100 })
-    ).rejects.toThrow('timeout');
+    await expect(adapter.execute('slow-command', { timeout: 100 })).rejects.toThrow('timeout');
   });
 });
 ```
@@ -1442,18 +1436,21 @@ describe('CodeMachineCLIAdapter', () => {
 ## 10. References & Further Reading
 
 ### Production CLI Adapters
+
 - **Terraform CDK** (TypeScript): `aws-cdk-lib/aws-*.ts` - Uses spawning for nested execution
 - **Pulumi** (TypeScript): `./sdk/python/lib/pulumi/*.ts` - Event-based streaming
 - **Docker SDK** (Node.js): `lib/utils.ts` - Process spawning with backpressure
 - **Kubernetes Client** (JavaScript): `exec.ts` - Stream handling patterns
 
 ### Standard Patterns
+
 - Node.js `child_process` module (stdio, signals, timeouts)
 - `EventEmitter` for pub/sub patterns
 - Unix exit codes (0=success, 1-125=app error, 128+=signal)
 - NDJSON format (newline-delimited JSON)
 
 ### TypeScript Best Practices
+
 - Schema validation: Zod, io-ts, Valibot
 - Error handling: cause chain, error taxonomy
 - Logger injection: structured logging, levels

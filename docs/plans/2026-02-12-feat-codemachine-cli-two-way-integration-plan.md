@@ -536,7 +536,7 @@ if (!resolvedTemplate.startsWith(path.resolve(workflowDir))) {
 - `docs/research/cli-adapter-implementation-guide.md` — Copy-paste ready implementation (1,155 lines)
 - `docs/research/cli-adapter-alternatives-analysis.md` — Architecture decision framework (750 lines)
 - `docs/research/semver_compatibility_checking.md` — Version check patterns (25 KB)
-- `docs/research/version-check-implementation.ts` — Ready-to-copy version check code (23 KB)
+- `docs/research/version-check-implementation.ts.example` — Ready-to-copy version check code (23 KB)
 
 ### Related Work
 

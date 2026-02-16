@@ -1,9 +1,9 @@
 ---
-title: "Graphite Stacked PR Review Fix Patterns"
+title: 'Graphite Stacked PR Review Fix Patterns'
 date: 2026-02-15
 category: research
 tags: [graphite, pr-workflow, code-review, fix-patterns, documentation]
-scope: "Understanding how to fix PR review findings while maintaining Graphite stack integrity"
+scope: 'Understanding how to fix PR review findings while maintaining Graphite stack integrity'
 status: documented
 ---
 
@@ -31,6 +31,7 @@ gh pr view <num>                      # View PR details
 ```
 
 **Branch Naming Convention** (observed):
+
 - Format: `02-15-docs_<description>_<variation>`
 - Example: `02-15-docs_add_ci_validation_pipeline_for_documentation_quality`
 - Pattern: `MM-DD-<type>_<description>_<optional_variation>`
@@ -48,6 +49,7 @@ All PRs in sequence, each with parent dependency on predecessor.
 ### 1.2 Never Use Direct Git Push
 
 **Critical Rule** (from CONTRIBUTING.md):
+
 - Never push directly to `main` or create PRs with `gh pr create`
 - Main branch is protected
 - Only path: create Graphite branch → make changes → `gt submit --no-interactive --publish`
@@ -71,6 +73,7 @@ c6bc63d chore: address remaining review findings
 **Rule**: Each commit addresses ONE review finding category or ONE file's worth of changes.
 
 **Rationale**:
+
 - Keeps history clean and bisectable
 - Makes it easy to revert individual fixes if needed
 - Aligns with Conventional Commits standard
@@ -96,6 +99,7 @@ gt submit --no-interactive --publish
 ```
 
 **Why `gt modify` instead of `git commit --amend`**:
+
 - Automatically rebases any upstack PRs to maintain dependency order
 - Prevents merge conflicts in stacked branches
 - Graphite tracks amendment history in PR version control
@@ -107,18 +111,21 @@ gt submit --no-interactive --publish
 When multiple findings exist, determine safe parallelization:
 
 **Wave 1** (independent fixes):
+
 - 9 agents in parallel
 - Each agent fixes 1-2 findings in separate files
 - No cross-file dependencies within wave
 - Duration: ~12 minutes
 
 **Wave 2** (depends on Wave 1):
+
 - 3 agents in parallel
 - Fixes that depend on Wave 1 completions
 - Example: Strategy registration docs (needs core adapter fixes first)
 - Duration: ~5 minutes
 
 **Wave 3** (depends on Wave 2):
+
 - 1 agent
 - Test coverage additions (needs code stable)
 - Duration: ~4 minutes
@@ -142,6 +149,7 @@ Same file (CodeMachineCLIAdapter.ts) touches:
 For documentation PRs with review findings:
 
 **Agent Selection** (5-agent team for docs, not full 8-12):
+
 - `comment-analyzer` — Cross-reference claims against source
 - `code-simplicity-reviewer` — Identify redundancy/bloat
 - `pattern-recognition-specialist` — Check consistency
@@ -187,6 +195,7 @@ These corrections prevent documentation drift and ensure accuracy.
 ### 3.1 Conventional Commits Style (from CONTRIBUTING.md)
 
 **Format**:
+
 ```
 type: short description
 
@@ -194,6 +203,7 @@ Optional longer body explaining context or rationale.
 ```
 
 **Common Types for Review Fixes**:
+
 - `fix:` — Bug fix from review (most common)
 - `docs:` — Documentation corrections
 - `chore:` — Tooling, cleanup from review
@@ -201,6 +211,7 @@ Optional longer body explaining context or rationale.
 - `test:` — Adding/updating tests to address coverage gaps
 
 **Examples from History**:
+
 ```bash
 fix: resolve release blockers from final review
 chore: address remaining review findings
@@ -246,6 +257,7 @@ Used when AI agents or tools assist in creating the fix.
 ### 4.2 Pattern: Avoiding Stack Breakage
 
 **Safe Pattern**:
+
 ```bash
 # 1. Ensure on correct branch
 git branch --show-current  # Should be your PR branch
@@ -265,6 +277,7 @@ gt submit --no-interactive --publish
 ```
 
 **Dangerous Patterns to Avoid**:
+
 - `git rebase -i main` — breaks Graphite tracking
 - `git reset --hard HEAD~1` — loses amendment history
 - Creating new branch from stack branch — orphans PR
@@ -326,6 +339,7 @@ expect(commandArgs[2]).toContain('Custom prompt from config');
 ```
 
 **Pattern**:
+
 1. Fix the code (argument splitting)
 2. Run tests → see failures
 3. Update test assertions to match new code behavior
@@ -334,10 +348,12 @@ expect(commandArgs[2]).toContain('Custom prompt from config');
 ### 5.3 Pattern: Pre-existing Failure Detection
 
 **Important**: Distinguish between:
+
 - **Failures caused by your fixes** → must fix
 - **Pre-existing failures** → document, note in PR description
 
 **Detection**:
+
 ```bash
 # Stash all changes
 git stash
@@ -373,6 +389,7 @@ git commit -m "chore: remove stale docs from main"
 ```
 
 **Reference in docs/README.md**:
+
 ```markdown
 ## Archived Documentation
 
@@ -385,13 +402,18 @@ git commit -m "chore: remove stale docs from main"
 **Pattern** (from architecture findings):
 
 Don't write config schemas twice:
+
 ```markdown
 # WRONG: Duplicated config structure in two docs
+
 # guide/configuration.md defines one schema
+
 # reference/config-schema.md defines another (drifts over time)
 
 # RIGHT: Single source of truth
+
 # reference/config-schema.md generated from code
+
 # guide/configuration.md references with examples
 ```
 
@@ -400,6 +422,7 @@ Don't write config schemas twice:
 **Pattern** (commit a87d776 demonstrates this):
 
 Before approving docs PRs:
+
 1. Verify feature names exist in source (check `RepoConfig.ts`, `.schema.json`)
 2. Verify commands exist (check oclif manifest or `src/cli/commands/`)
 3. Verify config structure matches actual implementation
@@ -520,6 +543,7 @@ Fix three critical errors:
 ### 9.1 Stack Discipline is Critical
 
 **Most Common Mistakes**:
+
 1. Using `git rebase -i` instead of `gt modify` → breaks Graphite tracking
 2. Using `git reset --hard` → loses PR version history
 3. Creating new branches from stack branches → orphans PRs
@@ -530,6 +554,7 @@ Fix three critical errors:
 ### 9.2 Dependency Awareness Prevents Rework
 
 Before fixing, ask:
+
 - "Does this fix depend on another fix?" → defer to Wave 2+
 - "Does this file touch 3+ other review findings?" → batch them
 - "Does this remove code another fix depends on?" → reorder fixes
@@ -539,6 +564,7 @@ Example: Don't remove unused code (finding #6) before documenting strategy regis
 ### 9.3 Documentation Drift is Preventable
 
 Patterns that work:
+
 - Single source of truth (generated schema docs, not hand-written)
 - Cross-reference checklist in PR template
 - Link validation in CI
@@ -547,6 +573,7 @@ Patterns that work:
 ### 9.4 Testing Prevents Regressions
 
 After each fix, run full suite:
+
 ```bash
 npm test && npm run lint && npm run format:check
 ```
@@ -558,16 +585,19 @@ Don't skip lint/format — they catch subtle issues before merging.
 ## 10. References
 
 **Primary Sources**:
+
 - `/home/kinginyellow/projects/codemachine-pipeline/CONTRIBUTING.md` — Graphite workflow
 - `/home/kinginyellow/projects/codemachine-pipeline/docs/solutions/code-review/reviewing-documentation-prs.md` — Doc review patterns
 - `/home/kinginyellow/projects/codemachine-pipeline/docs/solutions/code-review/multi-agent-wave-resolution-pr-findings.md` — Dependency-aware parallel resolution
 
 **Related Patterns**:
+
 - [Submission Workflow](../../development/submission-workflow.md)
 - [Release Branch Strategy](../../development/release-branch-strategy.md)
 - [Conventional Commits](https://www.conventionalcommits.org/)
 
 **Example Commits**:
+
 - `a87d776` — Documentation factual error fix (3 critical corrections)
 - `8fde38f` — Release blocker fixes (multiple findings)
 - `c6bc63d` — Addressing remaining review findings
@@ -581,4 +611,3 @@ Don't skip lint/format — they catch subtle issues before merging.
 **Scope**: Graphite stacked PR review fix patterns
 **Audience**: Contributors, reviewers, automation specialists
 **Completeness**: ✅ Full patterns documented with examples
-

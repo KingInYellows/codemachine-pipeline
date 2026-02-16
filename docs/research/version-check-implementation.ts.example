@@ -30,10 +30,7 @@ import semver from 'semver';
  * extractVersionFromCli('docker', 'Docker 24.0.0, build abc123')  // '24.0.0'
  * extractVersionFromCli('npm', 'v10.0.0-beta')  // '10.0.0-beta'
  */
-export function extractVersionFromCli(
-  cliName: string,
-  versionOutput: string
-): string | null {
+export function extractVersionFromCli(cliName: string, versionOutput: string): string | null {
   if (!versionOutput || typeof versionOutput !== 'string') {
     return null;
   }
@@ -53,8 +50,7 @@ export function extractVersionFromCli(
   // (?:-[a-zA-Z0-9.]+)? - optional prerelease (e.g., -beta.1)
   // (?:\+[a-zA-Z0-9.]+)? - optional metadata (e.g., +build.123)
   // \b - word boundary
-  const semverRegex =
-    /\bv?(\d+\.\d+\.\d+(?:-[a-zA-Z0-9.]+)?(?:\+[a-zA-Z0-9.]+)?)\b/;
+  const semverRegex = /\bv?(\d+\.\d+\.\d+(?:-[a-zA-Z0-9.]+)?(?:\+[a-zA-Z0-9.]+)?)\b/;
   const match = versionOutput.match(semverRegex);
 
   if (match?.[1]) {
@@ -117,11 +113,7 @@ export function getCliVersion(
     const result = spawnSync(cliName, [versionFlag], {
       encoding: 'utf-8',
       timeout,
-      stdio: [
-        'pipe',
-        'pipe',
-        stderrMode === 'ignore' ? 'ignore' : 'pipe',
-      ] as any,
+      stdio: ['pipe', 'pipe', stderrMode === 'ignore' ? 'ignore' : 'pipe'] as any,
     });
 
     // Handle spawn errors (e.g., command not found)
@@ -178,8 +170,7 @@ export function getCliVersion(
       executedCommand: `${cliName} ${versionFlag}`,
     };
   } catch (error) {
-    const message =
-      error instanceof Error ? error.message : `Unknown error: ${String(error)}`;
+    const message = error instanceof Error ? error.message : `Unknown error: ${String(error)}`;
     return {
       success: false,
       version: null,

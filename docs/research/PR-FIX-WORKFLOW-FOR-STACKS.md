@@ -1,9 +1,9 @@
 ---
-title: "Step-by-Step PR Fix Workflow for Graphite Stacks"
+title: 'Step-by-Step PR Fix Workflow for Graphite Stacks'
 date: 2026-02-15
 category: research
 tags: [graphite, workflow, pr-fixes, documentation]
-scope: "Tactical guide for fixing 4+ PRs in a Graphite stack based on review findings"
+scope: 'Tactical guide for fixing 4+ PRs in a Graphite stack based on review findings'
 ---
 
 # Step-by-Step PR Fix Workflow for Graphite Stacks
@@ -105,6 +105,7 @@ git pull origin 02-15-docs_comprehensive_documentation_suite_plan
 **Step 2: Identify changes needed**
 
 From architecture review findings:
+
 1. Phase 0 sequencing: Split fact-check (PR #478) from restructuring (PR #476)
 2. DRY violation: Config schema appears in guide AND reference — use template
 3. Command documentation: Auto-generate from oclif manifest, don't hand-write
@@ -197,6 +198,7 @@ git pull origin
 **Step 2: Identify changes needed**
 
 From architecture review:
+
 1. Broken relative links (80+ found in validation)
 2. TODO items in directory structure need follow-up
 3. Missing index files in new directories
@@ -271,6 +273,7 @@ At this point, PR #475 and #476 are committed, and your branch is rebased on tho
 **Step 2: Identify changes needed**
 
 From architecture review:
+
 1. Config schema referenced in validation — verify it matches actual schema
 2. Execution engines list in validation — verify against source code
 3. Link validation pipeline — verify it catches broken links
@@ -336,6 +339,7 @@ git pull origin
 **Step 2: Identify changes needed**
 
 From architecture review findings:
+
 1. Q2: Config discovery mechanism — verify documentation
 2. Q4: Approval mechanics — verify 6 gates documented
 3. Q5: Required fields — verify schema matches
@@ -473,6 +477,7 @@ gh pr view 478  # Should show "OPEN" not "DRAFT"
 **Step 4: Await GitHub Actions CI**
 
 CI pipeline will:
+
 - Run all tests (unit, integration, smoke)
 - Run linters (ESLint, Prettier)
 - Build Docker image
@@ -489,6 +494,7 @@ All must pass before merge.
 **Symptom**: After `gt modify`, upstack PR shows merge conflict.
 
 **Solution**:
+
 ```bash
 # This is normal and expected after large changes
 # Graphite handles it automatically when you resubmit
@@ -511,6 +517,7 @@ gt submit --no-interactive --publish
 **Symptom**: `npm test` fails after committing fix.
 
 **Solution**:
+
 ```bash
 # 1. Run specific failing test to understand
 npm run test:integration -- path/to/test.spec.ts
@@ -534,6 +541,7 @@ gt modify --all
 **Symptom**: PR marked as not ready despite all changes made.
 
 **Solution**:
+
 ```bash
 # 1. Check PR version
 gt log --stack
@@ -555,6 +563,7 @@ gh pr view <pr-number>
 **Symptom**: Trying to fix merged PR that's now in main.
 
 **Solution**:
+
 ```bash
 # If PR already merged to main, can't modify its stack
 # Must instead:
@@ -647,4 +656,3 @@ npm run docs:cli:check
 **Scope**: 4-PR Graphite stack fix workflow
 **Status**: Ready for implementation
 **Completeness**: ✅ Full step-by-step workflow
-

@@ -5,6 +5,7 @@ This guide shows how to extend the existing `doctor.ts` command with semantic ve
 ## Current State
 
 The doctor command in `src/cli/commands/doctor.ts` has a basic `checkCodeMachineCli()` method that:
+
 - Attempts to spawn the CLI
 - Checks exit status
 - Returns version if successful
@@ -13,6 +14,7 @@ The doctor command in `src/cli/commands/doctor.ts` has a basic `checkCodeMachine
 ## Proposed Enhancement
 
 Add version compatibility checks using the `semver` package to:
+
 - Extract version from CLI output
 - Validate minimum version requirements
 - Detect feature availability
@@ -29,11 +31,12 @@ npm install --save-dev @types/semver
 
 ### Step 2: Create Version Check Utility Module
 
-Copy the production-ready implementation from `docs/research/version-check-implementation.ts` to:
+Copy the production-ready implementation from `docs/research/version-check-implementation.ts.example` to:
 
 **File:** `src/utils/version-check.ts`
 
 This module provides:
+
 - `extractVersionFromCli()` - Extract semver from CLI output
 - `getCliVersion()` - Get version from external CLI with error handling
 - `checkMinimumVersion()` - Validate version meets minimum
@@ -304,7 +307,11 @@ Create `tests/unit/commands/doctor-semver.spec.ts`:
 
 ```typescript
 import { describe, it, expect, vi } from 'vitest';
-import { checkMinimumVersion, getCliVersion, extractVersionFromCli } from '../../../src/utils/version-check';
+import {
+  checkMinimumVersion,
+  getCliVersion,
+  extractVersionFromCli,
+} from '../../../src/utils/version-check';
 
 describe('Doctor Command - Semver Integration', () => {
   describe('extractVersionFromCli()', () => {
@@ -481,6 +488,7 @@ private async checkExternalCliDependencies(): Promise<DiagnosticCheck[]> {
 ## Exit Codes
 
 The doctor command continues to use:
+
 - `0` - All checks passed
 - `10` - Config validation errors
 - `20` - Environment issues (includes CLI version mismatches)
@@ -499,12 +507,13 @@ Update the doctor reference documentation:
 
 The doctor command checks versions of external CLI dependencies:
 
-| CLI | Minimum Version | Recommended | Optional |
-|-----|-----------------|-------------|----------|
-| CodeMachine CLI | 0.8.0 | 1.5.0 | Yes |
-| Graphite | 0.21.0 | 0.25.0 | Yes |
+| CLI             | Minimum Version | Recommended | Optional |
+| --------------- | --------------- | ----------- | -------- |
+| CodeMachine CLI | 0.8.0           | 1.5.0       | Yes      |
+| Graphite        | 0.21.0          | 0.25.0      | Yes      |
 
 **Remediation:**
+
 - CodeMachine CLI: `npm install -g codemachine-cli@latest`
 - Graphite: Visit https://graphite.dev/getting-started
 

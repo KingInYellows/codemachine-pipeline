@@ -4,13 +4,13 @@ date: 2026-02-13
 problem_type: logic_error
 component: tooling
 symptoms:
-  - "openai engine passes CodeMachineEngineTypeSchema validation but fails at CLI binary level"
-  - "CodeMachineCLIStrategy.canHandle() claims to handle testing/deployment task types that require native engines"
+  - 'openai engine passes CodeMachineEngineTypeSchema validation but fails at CLI binary level'
+  - 'CodeMachineCLIStrategy.canHandle() claims to handle testing/deployment task types that require native engines'
 root_cause: missing_validation
 resolution_type: code_fix
 severity: high
 tags: [engine-validation, strategy-pattern, canhandle, schema, zod]
-issue_reference: "PR #466 review"
+issue_reference: 'PR #466 review'
 fix_commit: 9e7bb08
 ---
 
@@ -21,11 +21,13 @@ fix_commit: 9e7bb08
 Two related validation gaps in `CodeMachineCLIStrategy` allowed invalid configurations to pass the pipeline's validation layer and fail at the CLI binary level with confusing errors. Both were caught during PR #466 code review.
 
 ## Environment
+
 - Module: Workflow (execution strategies)
 - Affected Components: `src/workflows/codemachineTypes.ts`, `src/workflows/codeMachineCLIStrategy.ts`
 - Date: 2026-02-13
 
 ## Symptoms
+
 - When `default_engine` is configured as `'openai'`, the engine validation at `codeMachineCLIStrategy.ts:80` passes (schema allows it), but the CLI binary rejects it with an opaque "unknown engine" error
 - When the CLI binary is available, `canHandle()` returns `true` for ALL task types including `testing` and `deployment`, which should use native engine handling — silently changing execution behavior vs the old `CodeMachineStrategy`
 
@@ -44,14 +46,11 @@ Two related validation gaps in `CodeMachineCLIStrategy` allowed invalid configur
 export const CodeMachineEngineTypeSchema = z.enum([
   'claude',
   'codex',
-  'openai',  // ← passes validation but binary rejects it
+  'openai', // ← passes validation but binary rejects it
 ]);
 
 // After (fixed):
-export const CodeMachineEngineTypeSchema = z.enum([
-  'claude',
-  'codex',
-]);
+export const CodeMachineEngineTypeSchema = z.enum(['claude', 'codex']);
 ```
 
 ### Fix 2: Add `shouldUseNativeEngine()` guard to `canHandle()`
@@ -88,16 +87,19 @@ canHandle(task: ExecutionTask): boolean {
 ## Prevention
 
 ### When adding a new schema that mirrors an existing one:
+
 - Audit whether the schemas serve different validation purposes (pipeline vs binary)
 - Name schemas to clarify their scope (e.g., `CodeMachineEngineTypeSchema` vs `ExecutionEngineType`)
 - Add a comment explaining why they differ
 
 ### When implementing `canHandle()` in a new strategy:
+
 - Check the old strategy's `canHandle()` logic — it may have intentional filters
 - If the new strategy is registered with higher priority, it must not widen the acceptance criteria
 - Test with all task types, not just the happy path
 
 ### General principle
+
 When two schemas or interfaces represent the same concept at different layers (pipeline vs binary, config vs runtime), keep them separate and document why they differ.
 
 ## Related Issues

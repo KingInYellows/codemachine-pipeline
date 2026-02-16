@@ -27,18 +27,23 @@ Based on existing ADRs in the codebase (ADR-6, ADR-7, ADR-8), ADR-009 **MUST** f
 # ADR-9: Documentation Architecture for v1.0.0+ Content Suite
 
 ## Status
+
 [Proposed | Accepted | Deprecated]
 
 ## Context
+
 [Background on why documentation decisions are needed]
 
 ## Decision
+
 [What architectural decisions are being made]
 
 ## Consequences
+
 [Positive and negative impacts]
 
 ## References
+
 [Links to supporting documents and code]
 ```
 
@@ -65,36 +70,42 @@ ADR-009 MUST explicitly answer these 15 questions. Here's the evaluation framewo
 #### GROUP A: Original Critical Questions (6)
 
 **Q1: Node.js Version Requirement**
+
 - **Status**: Already answered ✅
 - **Answer**: >= 24.0.0
 - **Source**: `package.json` `engines` field
 - **ADR Requirement**: Document minimum version and rationale
 
 **Q2: Config File Discovery Algorithm**
+
 - **Status**: Needs verification ❓
 - **Answer**: Must verify actual implementation in `src/core/config/RepoConfig.ts`
 - **Critical For**: Installation troubleshooting guide
 - **ADR Requirement**: Document actual search order (current dir? git root? home? config env var?)
 
 **Q3: CodeMachine CLI Resolution Priority**
+
 - **Status**: Already corrected ✅
 - **Answer**: Priority order is (1) `CODEMACHINE_BIN_PATH` env var, (2) npm optionalDeps, (3) PATH search
 - **Source**: `src/adapters/codemachine/binaryResolver.ts` lines 57-95
 - **ADR Requirement**: Explicitly document the 3-tier fallback chain with precedence
 
 **Q4: Approval Workflow Mechanics**
+
 - **Status**: Needs verification ❓
 - **Answer**: Must verify approval gates and PR approval requirements in `src/cli/commands/approve.ts`
 - **Critical For**: User guide workflows section
 - **ADR Requirement**: Document approval gate types, required reviewers, enforcement mechanism
 
 **Q5: Required vs Optional Config Fields**
+
 - **Status**: Needs extraction ❓
 - **Answer**: Extract from Zod schema in `src/core/config/RepoConfig.ts`
 - **Critical For**: Configuration documentation
 - **ADR Requirement**: Provide field-by-field breakdown (25+ fields likely) with requirement status
 
 **Q6: LINEAR_API_KEY Requirement**
+
 - **Status**: Already answered ✅
 - **Answer**: Optional (required only if Linear integration enabled)
 - **Source**: Config validation in `src/core/config/RepoConfig.ts`
@@ -103,6 +114,7 @@ ADR-009 MUST explicitly answer these 15 questions. Here's the evaluation framewo
 #### GROUP B: New Critical Questions (9)
 
 **Q7: Multi-User Queue Locking Mechanism**
+
 - **Status**: Needs investigation ❓
 - **Critical For**: Team collaboration documentation, disaster recovery procedures
 - **Architectural Concern**: Concurrent execution safety
@@ -112,6 +124,7 @@ ADR-009 MUST explicitly answer these 15 questions. Here's the evaluation framewo
   - Is queue file idempotency guaranteed?
 
 **Q8: `.codepipe/` Git Tracking - Commit to Repo?**
+
 - **Status**: Needs investigation ❓
 - **Critical For**: Team collaboration workflows, config sharing
 - **Implementation Detail**: Check `.gitignore` defaults
@@ -121,6 +134,7 @@ ADR-009 MUST explicitly answer these 15 questions. Here's the evaluation framewo
   - What's the recommended team sharing pattern?
 
 **Q9: Queue Backup/Restore Mechanism**
+
 - **Status**: Needs investigation ❓
 - **Critical For**: Disaster recovery playbook
 - **Risk Mitigation**: Queue corruption recovery
@@ -130,6 +144,7 @@ ADR-009 MUST explicitly answer these 15 questions. Here's the evaluation framewo
   - What data can be recovered?
 
 **Q10: Credential Precedence Order**
+
 - **Status**: Partially documented ⚠️
 - **Sources**:
   - Environment variables (GITHUB_TOKEN, CODEPIPE_GITHUB_TOKEN)
@@ -142,6 +157,7 @@ ADR-009 MUST explicitly answer these 15 questions. Here's the evaluation framewo
   - Per-credential precedence or global order?
 
 **Q11: Debug Logging Enablement Method**
+
 - **Status**: Needs investigation ❓
 - **Critical For**: Troubleshooting guide
 - **User Need**: How to enable verbose output for bug reports?
@@ -151,6 +167,7 @@ ADR-009 MUST explicitly answer these 15 questions. Here's the evaluation framewo
   - How to collect logs for support tickets?
 
 **Q12: AI API Keys - Which Env Vars Control Cost?**
+
 - **Status**: Partially documented ⚠️
 - **Sources**: `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, and `CODEPIPE_RUNTIME_*` overrides
 - **Security Critical**: Leaked keys = $1000s in charges within hours
@@ -160,6 +177,7 @@ ADR-009 MUST explicitly answer these 15 questions. Here's the evaluation framewo
   - Emergency revocation procedures
 
 **Q13: Migration Path from Pre-v1.0**
+
 - **Status**: Needs investigation ❓
 - **Critical For**: Upgrade guide for existing users
 - **User Story**: "I have pre-v1.0 installations running. How do I upgrade safely?"
@@ -169,6 +187,7 @@ ADR-009 MUST explicitly answer these 15 questions. Here's the evaluation framewo
   - What breaks between versions?
 
 **Q14: Concurrent Pipeline Execution Support**
+
 - **Status**: Needs investigation ❓
 - **Critical For**: Production deployment documentation
 - **Data Safety**: Can multiple `start` commands run in parallel safely?
@@ -178,6 +197,7 @@ ADR-009 MUST explicitly answer these 15 questions. Here's the evaluation framewo
   - Performance implications?
 
 **Q15: Platform Support Matrix**
+
 - **Status**: Partially documented ⚠️
 - **Sources**: `package.json` platforms, optionalDependencies
 - **User Need**: Which OS versions are supported?
@@ -190,13 +210,13 @@ ADR-009 MUST explicitly answer these 15 questions. Here's the evaluation framewo
 
 Each answer in ADR-009 MUST meet these standards:
 
-| Criterion | Requirement | Validation |
-|-----------|-------------|-----------|
-| **Completeness** | Answer all sub-questions | No "TBD" without deadline |
-| **Traceability** | Link to source code or config | Line numbers, file paths |
-| **Testability** | Answer is verifiable empirically | Not speculation |
-| **Actionability** | Clear guidance for doc writers | Can document writer use answer directly? |
-| **Precedence** | If multiple answers, clear priority | No ambiguity about which takes effect |
+| Criterion         | Requirement                         | Validation                               |
+| ----------------- | ----------------------------------- | ---------------------------------------- |
+| **Completeness**  | Answer all sub-questions            | No "TBD" without deadline                |
+| **Traceability**  | Link to source code or config       | Line numbers, file paths                 |
+| **Testability**   | Answer is verifiable empirically    | Not speculation                          |
+| **Actionability** | Clear guidance for doc writers      | Can document writer use answer directly? |
+| **Precedence**    | If multiple answers, clear priority | No ambiguity about which takes effect    |
 
 ---
 
@@ -233,6 +253,7 @@ An excellent ADR-009 will:
 Based on ADR-8 (CodeMachine-CLI Integration), ADR-009 should:
 
 **DO:**
+
 - List all source files examined (RepoConfig.ts, binaryResolver.ts, etc.)
 - Quote actual code behavior when relevant
 - Document version-specific behaviors
@@ -240,6 +261,7 @@ Based on ADR-8 (CodeMachine-CLI Integration), ADR-009 should:
 - Acknowledge limitations honestly
 
 **DO NOT:**
+
 - Make aspirational statements ("The system supports X" - check if it actually does)
 - Assume consistency without verification (each question needs individual validation)
 - Document behavior without current testing
@@ -257,6 +279,7 @@ Based on ADR-8 (CodeMachine-CLI Integration), ADR-009 should:
 ## Status: Accepted
 
 ## Context
+
 - Documentation is foundational for v1.0.0+ user adoption
 - PR #475 identified 15 critical questions that must be answered before content creation
 - Without clear answers, documentation will contain inconsistencies, gaps, or speculation
@@ -266,6 +289,7 @@ Based on ADR-8 (CodeMachine-CLI Integration), ADR-009 should:
 ## Decision
 
 ### Part A: Information Architecture (Accepted from PR #475)
+
 - Directory consolidation: 16 → 7 structure approved
 - Progressive disclosure hierarchy: Guide → Reference → Playbooks confirmed
 - Single source of truth enforcement via auto-generation (CLI, schema)
@@ -275,11 +299,13 @@ Based on ADR-8 (CodeMachine-CLI Integration), ADR-009 should:
 #### GROUP A: Original Critical Questions (6)
 
 **Q1: Node.js Version Requirement**
+
 - Answer: >= 24.0.0
 - Source: `package.json:engines`
 - Rationale: Latest LTS + feature requirements
 
 **Q2: Config File Discovery Algorithm**
+
 - Answer: [From investigation of RepoConfig.ts]
 - Search order: [Actual implementation order]
 - Fallback behavior: [What happens if not found]
@@ -295,30 +321,35 @@ Based on ADR-8 (CodeMachine-CLI Integration), ADR-009 should:
 ## Consequences
 
 ### Positive
+
 - Documentation will be based on verified implementation details
 - No speculation or aspirational features documented
 - Answers resolve all gaps identified in PR #475 gap analysis
 - Content writers have single source of truth for each answer
 
 ### Negative
+
 - Discovery may reveal unimplemented features (e.g., no backup command)
 - May require feature implementation before documentation can be written
 - Answers may contradict existing informal documentation
 
 ### Mitigations
+
 - Document limitations clearly (mark features as "planned")
 - Create follow-up feature requests for missing functionality
 - Update ADR quarterly as implementation evolves
 
 ## References
+
 - PR #475: Comprehensive Documentation Suite Plan
 - PR #475 Executive Summary: Architecture review
 - src/core/config/RepoConfig.ts: Config schema
 - src/adapters/codemachine/binaryResolver.ts: CLI resolution
-- src/cli/commands/*.ts: Command implementations
+- src/cli/commands/\*.ts: Command implementations
 - [13 more source files]
 
 ## Decision Log
+
 - Phase 1, Days 2-3: Investigate and answer all 15 questions
 - Phase 1, Day 4: Validate answers against implementation
 - Phase 2: Use answers to audit existing documentation
@@ -366,6 +397,7 @@ Based on ADR-8 (CodeMachine-CLI Integration), ADR-009 should:
 **ADR-009 Expected Length**: 150-200 lines (15 questions will require more detail)
 
 **ADR-009 Quality Targets**:
+
 - Match ADR-8's rigor on implementation details
 - Exceed ADR-8's references (need 20+ sources for 15 questions)
 - More comprehensive "Consequences" (discovery may reveal missing features)
@@ -379,6 +411,7 @@ Based on ADR-8 (CodeMachine-CLI Integration), ADR-009 should:
 **Likelihood**: Medium
 **Impact**: High (documentation becomes inaccurate if questions unanswered)
 **Mitigation**:
+
 - Mandatory review checklist (all 15 questions covered)
 - Code verification step (don't accept speculation)
 
@@ -387,6 +420,7 @@ Based on ADR-8 (CodeMachine-CLI Integration), ADR-009 should:
 **Likelihood**: High
 **Impact**: Medium (requires feature implementation before doc writing)
 **Mitigation**:
+
 - Document clearly as "planned" or "not yet implemented"
 - Create follow-up issues for missing features
 - Adjust Phase 3 timeline if features need implementation
@@ -396,6 +430,7 @@ Based on ADR-8 (CodeMachine-CLI Integration), ADR-009 should:
 **Likelihood**: Medium (code evolves)
 **Impact**: Low (ADR is versioned, updates in new ADRs)
 **Mitigation**:
+
 - Quarterly review of critical answers
 - Update ADR when implementation changes significantly
 
@@ -438,6 +473,7 @@ Based on ADR-8 (CodeMachine-CLI Integration), ADR-009 should:
 **Recommendation: Proceed with ADR-009 Creation**
 
 This review establishes clear acceptance criteria for ADR-009. The document is:
+
 - Required (Phase 1 deliverable)
 - Well-defined (15 specific questions to answer)
 - Achievable (answers exist in codebase)
