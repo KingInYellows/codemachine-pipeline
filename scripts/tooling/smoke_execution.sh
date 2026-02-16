@@ -67,7 +67,7 @@ cleanup() {
 trap cleanup EXIT
 
 check_codemachine_cli() {
-  local cli_path="${CODEMACHINE_CLI_PATH:-codemachine-cli}"
+  local cli_path="${CODEMACHINE_BIN_PATH:-codemachine}"
   
   if command -v "${cli_path}" &> /dev/null; then
     local version
@@ -76,7 +76,7 @@ check_codemachine_cli() {
     CODEMACHINE_CLI_AVAILABLE=true
   else
     log_warning "CodeMachine CLI not found at '${cli_path}' - execution tests will be skipped"
-    log_info "Install: npm install -g codemachine-cli"
+    log_info "Install CodeMachine CLI (ensure 'codemachine' is on PATH) or set CODEMACHINE_BIN_PATH"
     CODEMACHINE_CLI_AVAILABLE=false
   fi
 }
@@ -87,7 +87,7 @@ run_codemachine_tests() {
     return 0
   fi
 
-  local cli_path="${CODEMACHINE_CLI_PATH:-codemachine-cli}"
+  local cli_path="${CODEMACHINE_BIN_PATH:-codemachine}"
   
   log_info "Running CodeMachine CLI dry-run test..."
   if "${cli_path}" --dry-run --engine claude "Test prompt" &> "${RUN_DIR}/codemachine_dryrun.log"; then
