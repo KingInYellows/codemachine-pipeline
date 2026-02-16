@@ -692,22 +692,12 @@ CodeMachine adapter configuration in `config.json`:
 
 **Environment Overrides:**
 
-<<<<<<< HEAD
 | Variable | Description |
-| --------------------------------- | ------------------------------------------------- |
+| --- | --- |
 | `CODEMACHINE_BIN_PATH` | Override CodeMachine CLI binary location |
 | `CODEPIPE_EXECUTION_CLI_PATH` | Override `execution.codemachine_cli_path` via env |
 | `CODEPIPE_EXECUTION_DEFAULT_ENGINE` | Override `execution.default_engine` via env |
 | `CODEPIPE_EXECUTION_TIMEOUT_MS` | Override per-task timeout in milliseconds |
-=======
-| Variable | Description |
-| ----------------------------------- | ------------------------------------------------- |
-| `CODEMACHINE_BIN_PATH` | Override CodeMachine CLI binary location |
-| `CODEPIPE_EXECUTION_CLI_PATH` | Override `execution.codemachine_cli_path` via env |
-| `CODEPIPE_EXECUTION_DEFAULT_ENGINE` | Override `execution.default_engine` via env |
-| `CODEPIPE_EXECUTION_TIMEOUT_MS` | Override per-task timeout in milliseconds |
-
-> > > > > > > 2ab773c (style: format code with Prettier and Ruff Formatter)
 
 ### CLI Invocation
 
