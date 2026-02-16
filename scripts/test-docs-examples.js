@@ -49,7 +49,7 @@ const credentialPatterns = [
   { pattern: /sk-ant-[A-Za-z0-9_-]{48,}/, message: 'Real Anthropic API key detected' },
   { pattern: /sk-(?!ant-)[A-Za-z0-9]{32,}/, message: 'Potential real OpenAI API key detected' },
   { pattern: /lin_api_[A-Za-z0-9]{40}/, message: 'Real Linear API key detected' },
-  { pattern: /AKIA[0-9A-Z]{16}/, message: 'Real AWS access key detected' },
+  { pattern: /(AKIA|ASIA)[0-9A-Z]{16}/, message: 'Real AWS access key detected' },
 ];
 
 // Patterns that indicate placeholder/example tokens
@@ -83,13 +83,16 @@ for (const file of markdownFiles) {
         }
       }
 
-      // Check credential patterns only if no placeholder markers
-      if (!hasPlaceholderMarker(code)) {
+      // Check credential patterns per-line (placeholder markers only exempt the line they appear on,
+      // not the entire block — prevents a placeholder on one line from hiding a real key on another)
+      const lines = code.split('\n');
+      for (const line of lines) {
+        if (hasPlaceholderMarker(line)) continue;
         for (const { pattern, message } of credentialPatterns) {
-          if (pattern.test(code)) {
+          if (pattern.test(line)) {
             console.error('%s:', relativePath);
             console.error('   %s', message);
-            // Do NOT log the matched code — it may contain the credential
+            // Do NOT log the matched line — it may contain the credential
             errors++;
           }
         }
