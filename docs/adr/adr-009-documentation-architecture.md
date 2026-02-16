@@ -64,11 +64,13 @@ This ADR documents critical architectural decisions discovered during documentat
    - Security: Path traversal protections applied
 
 2. **npm optionalDependency** (platform-specific packages)
-   - `codemachine-darwin-arm64`
-   - `codemachine-darwin-x64`
-   - `codemachine-linux-x64`
-   - `codemachine-linux-arm64`
-   - `codemachine-windows-x64`
+   - Project optional dependency: `codemachine` (wrapper package)
+   - `binaryResolver.ts` attempts to resolve platform packages from `node_modules` (typically transitive via `codemachine`):
+     - `codemachine-darwin-arm64`
+     - `codemachine-darwin-x64`
+     - `codemachine-linux-x64`
+     - `codemachine-linux-arm64`
+     - `codemachine-windows-x64`
 
 3. **PATH search**
    - Iterates directories in `PATH` and checks for an executable `codemachine` (`codemachine.exe` on Windows)
@@ -654,9 +656,12 @@ codepipe doctor
 
 **Version Requirements**:
 
-- Node.js: >=24.0.0 (v24 LTS or higher)
-- npm: >=9.0.0 (implicit from Node.js 24)
-- git: >=2.20.0 (for modern commands)
+- Node.js: >=24.0.0 (enforced via `package.json` `engines`)
+
+**Recommended tooling (not currently enforced)**:
+
+- npm: a modern npm (bundled with Node.js; >=9 recommended)
+- git: a modern git (>=2.20 recommended)
 
 **Sources**:
 
