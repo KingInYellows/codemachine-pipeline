@@ -30,9 +30,9 @@ console.log('Commands: %s\n', actualCommands.join(', '));
 // Read CLI reference documentation
 const cliRefPath = path.join(rootDir, 'docs/reference/cli/cli-reference.md');
 if (!fs.existsSync(cliRefPath)) {
-  console.warn('CLI reference not found at docs/reference/cli/cli-reference.md');
-  console.log('This is expected if documentation is not yet created.');
-  process.exit(0);
+  console.error('CLI reference not found at docs/reference/cli/cli-reference.md');
+  console.error('This file is required for command drift detection.');
+  process.exit(1);
 }
 
 const cliRefContent = fs.readFileSync(cliRefPath, 'utf-8');
@@ -91,26 +91,29 @@ for (const match of matches) {
     if (!/^[a-z][a-z0-9-]*$/.test(token)) break;
     commandTokens.push(token);
 
-    // Only attempt to parse a subcommand if the first token is a known topic.
+    // If the first token isn't a known topic, treat this as non-command prose.
     if (commandTokens.length === 1 && !manifestTopics.has(commandTokens[0])) break;
-    // Current command tree depth is 2 (topic + subcommand).
-    if (commandTokens.length === 2) break;
   }
 
   if (commandTokens.length === 0) continue;
 
-  const twoWord = commandTokens.slice(0, 2).join(' ');
-  if (commandTokens.length >= 2) {
-    // When 2 tokens are present, require the full "topic subcommand" to exist (no prefix-matching).
-    if (!manifestDisplayCommands.has(twoWord)) {
-      phantomCommands.add(twoWord);
+  // Accept the longest prefix that matches a real CLI command.
+  // Also allow single-word topic mentions (e.g., "codepipe pr") without flagging as phantom.
+  let matched = false;
+  for (let i = commandTokens.length; i >= 1; i--) {
+    const candidate = commandTokens.slice(0, i).join(' ');
+    if (manifestDisplayCommands.has(candidate)) {
+      matched = true;
+      break;
     }
-    continue;
+    if (i === 1 && manifestTopics.has(candidate)) {
+      matched = true;
+      break;
+    }
   }
 
-  const oneWord = commandTokens[0];
-  if (!manifestDisplayCommands.has(oneWord)) {
-    phantomCommands.add(oneWord);
+  if (!matched) {
+    phantomCommands.add(commandTokens.join(' '));
   }
 }
 

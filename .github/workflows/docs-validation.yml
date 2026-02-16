@@ -42,12 +42,12 @@ jobs:
           shopt -s globstar nullglob
           files=(docs/guide/**/*.md docs/reference/**/*.md docs/playbooks/**/*.md docs/adr/**/*.md docs/templates/**/*.md README.md)
           failed=0
-          for f in "${files[@]}"; do
-            markdown-link-check -q -c .github/markdown-link-check.json "$f" || failed=1
-          done
-          if [ $failed -ne 0 ]; then
-            echo "⚠️ Link check found dead links (non-blocking advisory in this workflow)."
-          fi
+	          for f in "${files[@]}"; do
+	            markdown-link-check -q -c .github/markdown-link-check.json "$f" || failed=1
+	          done
+	          if [ $failed -ne 0 ]; then
+	            echo "::warning::Link check found dead links (advisory; not blocking)."
+	          fi
 
   command-validation:
     name: CLI Command Table Validation
@@ -87,16 +87,16 @@ jobs:
           fi
           echo "✅ No phantom engines found"
 
-      - name: Check for incorrect environment variables
-        run: |
-          DOCS_SCOPE="docs/guide docs/reference docs/playbooks docs/adr docs/templates README.md"
-          # Verify no references to non-existent variables
-          if grep -rE "CODEMACHINE_CLI_PATH|CODEMACHINE_LOG_LEVEL" $DOCS_SCOPE | grep -vEi "non-existent|doesn.t exist|not .*CODEMACHINE_LOG_LEVEL|removed"; then
-            echo "❌ Found incorrect environment variable names"
-            echo "✅ Correct: CODEMACHINE_BIN_PATH (not CODEMACHINE_CLI_PATH)"
-            exit 1
-          fi
-          echo "✅ Environment variables correct"
+	      - name: Check for incorrect environment variables
+	        run: |
+	          DOCS_SCOPE="docs/guide docs/reference docs/playbooks docs/adr docs/templates README.md"
+	          # Verify no references to non-existent variables
+	          if grep -rE "CODEMACHINE_CLI_PATH|CODEMACHINE_LOG_LEVEL" $DOCS_SCOPE | grep -vEi "non-existent|doesn.t exist|not .*CODEMACHINE_LOG_LEVEL|no.*CODEMACHINE_LOG_LEVEL|removed"; then
+	            echo "❌ Found incorrect environment variable names"
+	            echo "✅ Correct: CODEMACHINE_BIN_PATH (not CODEMACHINE_CLI_PATH)"
+	            exit 1
+	          fi
+	          echo "✅ Environment variables correct"
 
   security-scan:
     name: Security & Credential Safety
@@ -156,10 +156,10 @@ jobs:
           SPELLING
           sed -i 's/^[[:space:]]*//' .spelling
 
-          shopt -s globstar
-          if ! mdspell -r -n -a --en-us docs/guide/**/*.md docs/reference/**/*.md docs/playbooks/**/*.md docs/adr/**/*.md docs/templates/**/*.md README.md; then
-            echo "⚠️ Spell check found issues (non-blocking advisory in this workflow)."
-          fi
+	          shopt -s globstar
+	          if ! mdspell -r -n -a --en-us docs/guide/**/*.md docs/reference/**/*.md docs/playbooks/**/*.md docs/adr/**/*.md docs/templates/**/*.md README.md; then
+	            echo "::warning::Spell check found issues (advisory; not blocking)."
+	          fi
 
   structure-validation:
     name: Structure & Formatting
