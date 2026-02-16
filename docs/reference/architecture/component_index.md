@@ -58,7 +58,7 @@ The Component Index serves as:
 
 **File:** [`docs/diagrams/run_directory_schema.mmd`](../diagrams/run_directory_schema.mmd)
 
-**Documentation:** [`docs/requirements/run_directory_schema.md`](../requirements/run_directory_schema.md)
+**Documentation:** [`docs/reference/run_directory_schema.md`](../run_directory_schema.md)
 
 **Description:** Mermaid diagram visualizing the `.codepipe/runs/<feature_id>/` directory structure, including manifest files, artifacts, queue, logs, telemetry, approvals, SQLite indexes, and context caches.
 
@@ -340,7 +340,7 @@ erDiagram
 
 #### 2.1 Run Directory Schema
 
-**File:** [`docs/requirements/run_directory_schema.md`](../requirements/run_directory_schema.md)
+**File:** [`docs/reference/run_directory_schema.md`](../run_directory_schema.md)
 
 **Diagram:** [`docs/diagrams/run_directory_schema.mmd`](../diagrams/run_directory_schema.mmd)
 
@@ -373,9 +373,9 @@ erDiagram
 
 **Status:** ✅ Active
 
-**File:** [`docs/requirements/RepoConfig_schema.md`](../requirements/RepoConfig_schema.md)
+**File:** [`docs/reference/config/RepoConfig_schema.md`](../config/RepoConfig_schema.md)
 
-**API Reference:** [`docs/ops/api-reference.md`](../ops/api-reference.md)
+**API Reference:** [`docs/reference/api/api-reference.md`](../api/api-reference.md)
 
 **Description:** Specification for `.codepipe/config.json` schema, including integration settings (GitHub, Linear, agents), validation policies, and governance metadata. Full field-level documentation with types, defaults, and environment variable overrides.
 
@@ -385,7 +385,7 @@ erDiagram
 
 #### 2.3 Rate Limit Ledger Schema
 
-**File:** [`docs/ops/rate_limit_reference.md`](../ops/rate_limit_reference.md)
+**File:** [`docs/reference/cli/rate_limit_reference.md`](../cli/rate_limit_reference.md)
 
 **Description:** Operational reference for rate limit handling, ledger schema (`rate_limits.json`), retry logic, cooldown states, and operator troubleshooting guidance.
 
@@ -471,7 +471,7 @@ erDiagram
 
 #### 5.1 Rate Limit Reference
 
-**File:** [`docs/ops/rate_limit_reference.md`](../ops/rate_limit_reference.md)
+**File:** [`docs/reference/cli/rate_limit_reference.md`](../cli/rate_limit_reference.md)
 
 **Description:** Operational guide for rate limit monitoring, troubleshooting, and manual intervention.
 
@@ -618,7 +618,7 @@ When modifying system architecture, use this checklist:
 #### Adding New Diagrams
 
 - [ ] Create diagram file in `docs/diagrams/`
-- [ ] Create companion documentation in `docs/diagrams/` or `docs/requirements/`
+- [ ] Create companion documentation in `docs/diagrams/` or `docs/reference/`
 - [ ] Add entry to this index (Section 1 or 2)
 - [ ] Include rendering instructions
 - [ ] Reference related ADRs
@@ -683,20 +683,20 @@ All architecture artifacts must meet these standards:
 **Backend Developers:**
 
 - [Component Overview Diagram](../diagrams/component_overview.puml) - Module boundaries
-- [Run Directory Schema](../requirements/run_directory_schema.md) - Persistence layer
-- [Rate Limit Reference](../ops/rate_limit_reference.md) - HTTP layer
+- [Run Directory Schema](../run_directory_schema.md) - Persistence layer
+- [Rate Limit Reference](../cli/rate_limit_reference.md) - HTTP layer
 
 **DevOps / SREs:**
 
-- [Rate Limit Reference](../ops/rate_limit_reference.md) - Operational troubleshooting
-- [Run Directory Schema](../requirements/run_directory_schema.md) - State persistence
+- [Rate Limit Reference](../cli/rate_limit_reference.md) - Operational troubleshooting
+- [Run Directory Schema](../run_directory_schema.md) - State persistence
 - Cleanup policies (future) - Retention management
 
 **New Team Members:**
 
 1. Start with [Component Overview Documentation](../diagrams/component_overview.md)
 2. Review [Blueprint Foundation](.codemachine/artifacts/architecture/01_Blueprint_Foundation.md)
-3. Explore [Run Directory Schema](../requirements/run_directory_schema.md)
+3. Explore [Run Directory Schema](../run_directory_schema.md)
 4. Read ADRs (pending upload) for decision context
 
 ---
@@ -716,19 +716,19 @@ All architecture artifacts must meet these standards:
 **Adapter Boundary:**
 
 - [Component Overview Diagram](../diagrams/component_overview.puml) (Adapter Section)
-- [Rate Limit Reference](../ops/rate_limit_reference.md) (HTTP Client)
+- [Rate Limit Reference](../cli/rate_limit_reference.md) (HTTP Client)
 - [Blueprint Foundation](.codemachine/artifacts/architecture/01_Blueprint_Foundation.md) (GitHub, Linear, Agent, Git, Deployment, Notification adapters)
 
 **Persistence:**
 
-- [Run Directory Schema](../requirements/run_directory_schema.md)
+- [Run Directory Schema](../run_directory_schema.md)
 - [Run Directory Diagram](../diagrams/run_directory_schema.mmd)
 - [Blueprint Foundation](.codemachine/artifacts/architecture/01_Blueprint_Foundation.md) (Run Directory Manager, Artifact Bundle)
 
 **Observability:**
 
-- [Rate Limit Reference](../ops/rate_limit_reference.md) (Telemetry Writers)
-- [Run Directory Schema](../requirements/run_directory_schema.md) (Telemetry subdirectory)
+- [Rate Limit Reference](../cli/rate_limit_reference.md) (Telemetry Writers)
+- [Run Directory Schema](../run_directory_schema.md) (Telemetry subdirectory)
 - [Blueprint Foundation](.codemachine/artifacts/architecture/01_Blueprint_Foundation.md) (Observability Hub, Security Vault)
 
 ---
@@ -842,8 +842,8 @@ To update architecture documentation:
 
 ### Schemas
 
-- `docs/requirements/run_directory_schema.md` - Run directory specification
-- `docs/ops/rate_limit_reference.md` - Rate limit ledger operational guide
+- `docs/reference/run_directory_schema.md` - Run directory specification
+- `docs/reference/cli/rate_limit_reference.md` - Rate limit ledger operational guide
 
 ### Blueprint
 
@@ -860,4 +860,4 @@ To update architecture documentation:
 
 ### This File
 
-- `docs/architecture/component_index.md` - Architecture component index (you are here)
+- `docs/reference/architecture/component_index.md` - Architecture component index (you are here)
