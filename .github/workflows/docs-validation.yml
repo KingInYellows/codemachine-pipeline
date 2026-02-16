@@ -61,11 +61,8 @@ jobs:
           node-version: '24'
           cache: 'npm'
 
-      - name: Install dependencies
+      - name: Install dependencies (prepare builds manifest)
         run: npm ci
-
-      - name: Build (generates oclif.manifest.json)
-        run: npm run build
 
       - name: Validate Command Documentation
         run: node scripts/validate-docs-commands.js
