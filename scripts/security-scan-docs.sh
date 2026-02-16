@@ -41,8 +41,8 @@ check_secret "real GitHub tokens" "ghp_[A-Za-z0-9]{36}"
 # Check for real Anthropic API keys (sk-ant-*)
 check_secret "real Anthropic API keys" "sk-ant-[A-Za-z0-9_-]{48}"
 
-# Check for real OpenAI API keys (sk-*)
-check_secret "real OpenAI API keys" "sk-[A-Za-z0-9]{32,48}\b" "fail"
+# Check for real OpenAI API keys (sk-proj-*, sk-svcacct-*)
+check_secret "real OpenAI API keys" "sk-(proj|svcacct)-[A-Za-z0-9_-]{32,}" "fail"
 
 # Check for real Linear API keys (lin_api_*)
 check_secret "real Linear API keys" "lin_api_[A-Za-z0-9]{40}"
@@ -53,8 +53,8 @@ check_secret "email addresses" "[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}" 
 # Check for internal URLs
 check_secret "internal URLs/IPs" "https?://(localhost|127\.0\.0\.1|192\.168\.|10\.|172\.16\.|172\.17\.|172\.18\.|172\.19\.|172\.2[0-9]\.|172\.3[0-1]\.)"
 
-# Check for AWS credentials
-check_secret "AWS access keys" "AKIA[0-9A-Z]{16}"
+# Check for AWS credentials (AKIA for long-term, ASIA for temporary/STS)
+check_secret "AWS access keys" "(AKIA|ASIA)[0-9A-Z]{16}"
 
 # Summary
 echo ""
