@@ -426,10 +426,10 @@ fi
 
 ## Reference Links
 
-- **[CLI Patterns](../ui/cli_patterns.md)** - Full JSON schemas and examples
-- **[GitHub Adapter](github_adapter.md)** - GitHub API headers, rate limits, versioning
-- **[Linear Adapter](linear_adapter.md)** - Linear API rate limits, developer-preview caveats
-- **[Resume Playbook](resume_playbook.md)** - Crash recovery, checkpoint restoration
+- **[CLI Patterns](../../archive/ui/cli_patterns.md)** - Full JSON schemas and examples
+- **[GitHub Adapter](../config/github_adapter.md)** - GitHub API headers, rate limits, versioning
+- **[Linear Adapter](../config/linear_adapter.md)** - Linear API rate limits, developer-preview caveats
+- **[Resume Playbook](../../playbooks/resume_playbook.md)** - Crash recovery, checkpoint restoration
 
 ---
 
