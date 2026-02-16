@@ -215,7 +215,7 @@ This surfaces:
 - Recent 429 hit count
 - Whether manual acknowledgement is required
 
-For details, see `docs/ops/rate_limit_reference.md`.
+For details, see `docs/reference/cli/rate_limit_reference.md`.
 
 ### Clearing Cooldowns
 
@@ -455,11 +455,11 @@ This playbook assumes you've reviewed:
 - **IR-6:** GitHub primary/secondary rate-limit handling (retry-after, backoff)
 - **IR-7:** Content creation throttling via queues
 - **FR-3:** Resumability via queue persistence
-- **Section 4:** Rate-limit playbook and ledger management (see `docs/ops/rate_limit_reference.md`)
+- **Section 4:** Rate-limit playbook and ledger management (see `docs/reference/cli/rate_limit_reference.md`)
 
 For additional context on rate limit ledger structure and cooldown thresholds, consult:
 
-- `docs/ops/rate_limit_reference.md`: Ledger schema, inspection commands, manual intervention steps
+- `docs/reference/cli/rate_limit_reference.md`: Ledger schema, inspection commands, manual intervention steps
 
 ## Version History
 
