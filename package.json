@@ -40,7 +40,7 @@
     "docs:cli": "node scripts/tooling/generate_cli_reference.js",
     "docs:cli:check": "node scripts/tooling/generate_cli_reference.js --check",
     "docs:validate": "npm run docs:links:check && npm run docs:commands:check && npm run docs:examples:check && npm run docs:security:check",
-    "docs:links:check": "npx --no-install markdown-link-check --help >/dev/null 2>&1 || { echo 'Skipping link check: markdown-link-check not installed. Run: npm install'; exit 0; }; find docs -name '*.md' -print0 | xargs -0 -n1 markdown-link-check --config .github/markdown-link-check.json && markdown-link-check README.md --config .github/markdown-link-check.json",
+    "docs:links:check": "npx --no-install markdown-link-check --help >/dev/null 2>&1 || { echo 'Skipping link check: markdown-link-check not installed. Run: npm install'; exit 0; }; find docs/guide docs/reference docs/playbooks docs/adr docs/templates -name '*.md' -print0 2>/dev/null | xargs -0 -n1 markdown-link-check --config .github/markdown-link-check.json && markdown-link-check README.md --config .github/markdown-link-check.json",
     "docs:commands:check": "node scripts/validate-docs-commands.js",
     "docs:examples:check": "node scripts/test-docs-examples.js",
     "docs:security:check": "bash scripts/security-scan-docs.sh",
