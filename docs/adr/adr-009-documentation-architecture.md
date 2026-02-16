@@ -83,7 +83,7 @@ This ADR documents critical architectural decisions discovered during documentat
 
 **Answer**: Seven-gate system with SHA-256 hash validation and two-file state model
 
-**Available Gates** (7 total):
+**Available Gates** (7 defined in schema, 6 accepted by CLI):
 
 - `prd` - Product Requirements Document
 - `spec` - Technical Specification
@@ -91,7 +91,7 @@ This ADR documents critical architectural decisions discovered during documentat
 - `code` - Code Implementation
 - `pr` - Pull Request
 - `deploy` - Deployment
-- `other` - Custom/extensibility gate
+- `other` - Custom/extensibility gate (schema only; not accepted by `codepipe approve` CLI)
 
 **Workflow Progression**:
 
@@ -153,7 +153,7 @@ This ADR documents critical architectural decisions discovered during documentat
 - `linear.*` - Linear integration config
 - `runtime.*` - Runtime settings (all have defaults)
 - `safety.*` - Safety controls (all have defaults)
-- `feature_flags.*` - Feature toggles (all default to false)
+- `feature_flags.*` - Feature toggles (most default to false; `enable_context_summarization` and `enable_resumability` default to true)
 
 **Optional Sections** (entire section can be omitted):
 
