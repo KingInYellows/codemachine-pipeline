@@ -367,7 +367,7 @@ codepipe resume --feature <feature_id> --dry-run --verbose # Dry-run diagnostics
 
 ### Q10: Credential Precedence (Environment Variables vs Config.json)
 
-**Answer**: **Environment variable overrides** - Config stores env var *names*; CODEPIPE\_\* overrides can inject credentials directly
+**Answer**: **Environment variable overrides** - Config stores env var _names_; CODEPIPE\_\* overrides can inject credentials directly
 
 **Precedence Pattern**:
 
