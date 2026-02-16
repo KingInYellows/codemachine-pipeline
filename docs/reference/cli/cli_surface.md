@@ -8,10 +8,10 @@ This document defines the command-line interface requirements for AI Feature Pip
 **Last Updated:** 2025-12-17
 **Related Documents:**
 
-- [CLI Patterns](../ui/cli_patterns.md)
-- [GitHub Adapter Requirements](github_adapter.md)
-- [Linear Adapter Requirements](linear_adapter.md)
-- [Resume Playbook](resume_playbook.md)
+- [CLI Patterns](../../archive/ui/cli_patterns.md)
+- [GitHub Adapter Requirements](../config/github_adapter.md)
+- [Linear Adapter Requirements](../config/linear_adapter.md)
+- [Resume Playbook](../../playbooks/resume_playbook.md)
 
 ---
 

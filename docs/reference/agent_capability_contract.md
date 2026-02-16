@@ -474,7 +474,7 @@ Format: JSONL (one record per line)
 
 ### Schema Location
 
-JSON Schema: `docs/requirements/agent_manifest_schema.json`
+JSON Schema: `docs/reference/agent_manifest_schema.json`
 
 ### Required Fields
 
@@ -578,7 +578,7 @@ Per acceptance criteria, manifests MUST include:
 3. **Validate Schema**:
 
    ```bash
-   npx ajv validate -s docs/requirements/agent_manifest_schema.json \
+   npx ajv validate -s docs/reference/agent_manifest_schema.json \
                      -d .codepipe/agents/my-provider.json
    ```
 
@@ -649,7 +649,7 @@ console.log('Total cost:', stats.totalCostUsd);
 
 ## Sample Manifests (Code/Test/Review)
 
-The following manifest fragments demonstrate how providers describe capabilities for the core execution contexts from Section 2.1 while staying compliant with `docs/requirements/agent_manifest_schema.json`.
+The following manifest fragments demonstrate how providers describe capabilities for the core execution contexts from Section 2.1 while staying compliant with `docs/reference/agent_manifest_schema.json`.
 
 ### Code Generation Provider (`code-gen-pro`)
 
@@ -875,8 +875,8 @@ try {
 - **ADR-4**: Context/Token Budget (context window requirements)
 - **ADR-7**: Validation Policy (Zod schema validation)
 - **Section 2.1**: Agent Adapter Contract (architecture blueprint)
-- **Manifest Schema**: `docs/requirements/agent_manifest_schema.json`
-- **Data Model Dictionary**: `docs/requirements/data_model_dictionary.md`
+- **Manifest Schema**: `docs/reference/agent_manifest_schema.json`
+- **Data Model Dictionary**: `docs/reference/data_model_dictionary.md`
 
 ---
 
