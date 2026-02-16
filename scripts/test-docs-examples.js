@@ -79,14 +79,14 @@ for (const file of markdownFiles) {
   const content = fs.readFileSync(file, 'utf-8');
   const relativePath = path.relative(rootDir, file);
 
-    // Extract fenced code blocks (language tag may be anything, or omitted).
-    // Handles optional metadata after language, trailing spaces, and CRLF.
-    const codeBlockPattern = /```[^\S\r\n]*[^\r\n]*\r?\n([\s\S]*?)```/g;
-    const matches = content.matchAll(codeBlockPattern);
+  // Extract fenced code blocks (language tag may be anything, or omitted).
+  // Handles optional metadata after language, trailing spaces, and CRLF.
+  const codeBlockPattern = /```[^\S\r\n]*[^\r\n]*\r?\n([\s\S]*?)```/g;
+  const matches = content.matchAll(codeBlockPattern);
 
-    for (const match of matches) {
-      totalBlocks++;
-      const [, code] = match;
+  for (const match of matches) {
+    totalBlocks++;
+    const [, code] = match;
 
     const normalizedCode = code.replace(/\r\n?/g, '\n');
 
