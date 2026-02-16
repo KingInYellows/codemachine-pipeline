@@ -24,29 +24,31 @@ This ADR documents critical architectural decisions discovered during documentat
 
 ### Q2: Configuration File Discovery Algorithm
 
-**Answer**: **Fixed path relative to current working directory** - NO directory tree walking
+**Answer**: **Two-path behavior by command type** - `init` writes at git root, runtime commands read from current working directory.
 
 **Algorithm**:
 
-1. Resolve from current working directory: `process.cwd()`
-2. Resolve config path: `{cwd}/.codepipe/config.json`
-3. Validate file access and permissions
-4. Parse JSON and validate against Zod schema
-5. Apply `CODEPIPE_*` environment variable overrides
+1. `codepipe init` resolves git root via `git rev-parse --show-toplevel`
+2. `init` writes config to `{gitRoot}/.codepipe/config.json`
+3. Runtime commands resolve from `process.cwd()`
+4. Runtime config path is `{cwd}/.codepipe/config.json`
+5. Validate file access and permissions
+6. Parse JSON and validate against Zod schema
+7. Apply `CODEPIPE_*` environment variable overrides
 
-**Search Behavior**: No fallback locations, no parent directory traversal
+**Search Behavior**: No fallback locations, no parent directory traversal for runtime reads.
 
-**Fallback**: Hard failure with error message: `"Config file not found: {path}. Run 'codepipe init' to create it."`
+**Fallback**: Runtime commands hard-fail with: `"Config file not found: {path}. Run 'codepipe init' to create it."`
 
 **Caching**: None - file read fresh on every command invocation
 
 **Sources**:
 
-- `src/cli/utils/runDirectory.ts:11` - CONFIG_RELATIVE_PATH constant
-- `src/cli/commands/init.ts:498-513` - Git root resolution
+- `src/cli/commands/init.ts:110-112` - Git root config placement during init
+- `src/cli/utils/runDirectory.ts:11,23` - CWD-relative config resolution at runtime
 - `src/core/config/RepoConfig.ts:356-365` - Error handling
 
-**Documentation Impact**: Must clarify that config is resolved from current working directory, not via git root resolution
+**Documentation Impact**: Must clearly document the `init` (git root) vs runtime (CWD) difference to avoid subdirectory confusion.
 
 ---
 
@@ -63,12 +65,14 @@ This ADR documents critical architectural decisions discovered during documentat
 
 2. **npm optionalDependency** (platform-specific packages)
    - `codemachine-darwin-arm64`
+   - `codemachine-darwin-x64`
    - `codemachine-linux-x64`
+   - `codemachine-linux-arm64`
    - `codemachine-windows-x64`
 
 3. **PATH search**
-   - Searches system PATH for `codemachine` or `codemachine.exe`
-   - Uses `which` on Unix, `where` on Windows
+   - Iterates directories in `PATH` and checks for an executable `codemachine` (`codemachine.exe` on Windows)
+   - Does not shell out to `which`/`where` (platform-independent and avoids command injection)
 
 **Sources**:
 
@@ -136,7 +140,7 @@ This ADR documents critical architectural decisions discovered during documentat
 
 ### Q5: Required vs Optional Configuration Fields
 
-**Answer**: 5 absolutely required fields, rest have defaults
+**Answer**: 5 required leaf fields; most other fields have defaults (and required parent objects can be empty)
 
 **Absolutely Required** (no defaults, validation fails if missing):
 
@@ -148,7 +152,7 @@ This ADR documents critical architectural decisions discovered during documentat
 
 **Required Sections** (parent objects required, but fields inside have defaults):
 
-- `project.*` - Project metadata (name, description optional)
+- `project.*` - Project metadata (`default_branch`, `context_paths`, `project_leads` have defaults)
 - `github.*` - GitHub integration config
 - `linear.*` - Linear integration config
 - `runtime.*` - Runtime settings (all have defaults)
@@ -196,13 +200,13 @@ This ADR documents critical architectural decisions discovered during documentat
 **Validation Logic**:
 
 - If `config.linear.enabled === false` → No validation
-- If `config.linear.enabled === true` AND `LINEAR_API_KEY` missing → **Warning** (not error)
+- If `config.linear.enabled === true` AND configured Linear API key env var is missing (defaults to `LINEAR_API_KEY`) → **Warning** (not error)
 - Linear features fail gracefully if key invalid
 
 **Sources**:
 
 - `src/core/config/RepoConfig.ts:415, 425, 434` - Credential validation
-- Config validation shows warning: "LINEAR_API_KEY not found (Linear integration disabled)"
+- Config validation warning: `Linear integration enabled but ${config.linear.api_key_env_var} not set` (defaults to `LINEAR_API_KEY`)
 
 **Documentation Impact**: Must clarify that Linear is optional, key only needed when enabled
 
@@ -313,7 +317,8 @@ This ADR documents critical architectural decisions discovered during documentat
 **Recovery Procedure** (Automatic):
 
 ```bash
-codepipe resume <feature_id>
+codepipe resume --feature <feature_id>
+# (If omitted, --feature defaults to current/latest.)
 # System automatically:
 # 1. Loads latest snapshot
 # 2. Replays WAL operations
@@ -324,8 +329,9 @@ codepipe resume <feature_id>
 **Manual Recovery** (If Corrupted):
 
 ```bash
-codepipe resume --validate-queue <feature_id>   # Validate queue integrity before resuming
-codepipe resume --dry-run <feature_id>           # Dry-run diagnostics
+# By default, --validate-queue=true (use --no-validate-queue to disable)
+codepipe resume --feature <feature_id> --validate-queue    # Explicit validation (default)
+codepipe resume --feature <feature_id> --dry-run --verbose # Dry-run diagnostics
 ```
 
 **Queue File Format**:
@@ -346,7 +352,7 @@ codepipe resume --dry-run <feature_id>           # Dry-run diagnostics
 
 - Daily: `cp -r .codepipe/runs/ .codepipe/runs.backup-$(date +%F)` or `tar czf codepipe-runs-backup.tar.gz .codepipe/runs/` (manual backup required since `.codepipe/runs/` is gitignored)
 - Before risky ops: `cp -r .codepipe/runs/<feature_id> .codepipe/runs/<feature_id>.backup`
-- Corruption: Use `codepipe resume --validate-queue <feature_id>` to diagnose, then start a new run if unrecoverable
+- Corruption: Use `codepipe resume --feature <feature_id> --validate-queue` to diagnose, then start a new run if unrecoverable
 
 **Sources**:
 
@@ -361,13 +367,13 @@ codepipe resume --dry-run <feature_id>           # Dry-run diagnostics
 
 ### Q10: Credential Precedence (Environment Variables vs Config.json)
 
-**Answer**: **Environment variable indirection** - CODEPIPE\_\* overrides config, which specifies ENV VAR NAMES (not credentials)
+**Answer**: **Environment variable overrides** - Config stores env var *names*; CODEPIPE\_\* overrides can inject credentials directly
 
 **Precedence Pattern**:
 
-1. **Override env vars** (highest priority):
-   - `CODEPIPE_GITHUB_TOKEN` → Changes which env var to check
-   - `CODEPIPE_LINEAR_API_KEY` → Changes which env var to check
+1. **Override env vars** (highest priority, contain actual credentials):
+   - `CODEPIPE_GITHUB_TOKEN` → If set, this value is used as the GitHub token
+   - `CODEPIPE_LINEAR_API_KEY` → If set, this value is used as the Linear API key
 
 2. **Config.json env var name** (medium priority):
    - `github.token_env_var` → Defaults to "GITHUB_TOKEN"
@@ -380,12 +386,14 @@ codepipe resume --dry-run <feature_id>           # Dry-run diagnostics
 
 ```
 config.json: { "github": { "token_env_var": "GITHUB_TOKEN" } }
-Environment: CODEPIPE_GITHUB_TOKEN=ghp_custom123
+Environment:
+  GITHUB_TOKEN=ghp_default123
+  CODEPIPE_GITHUB_TOKEN=ghp_override456
 
 Result:
 1. applyEnvironmentOverrides() sees CODEPIPE_GITHUB_TOKEN
 2. Changes token_env_var to "CODEPIPE_GITHUB_TOKEN"
-3. Reads actual token from process.env.CODEPIPE_GITHUB_TOKEN
+3. Reads actual token from process.env.CODEPIPE_GITHUB_TOKEN (ghp_override456)
 ```
 
 **Security Design**:
@@ -401,7 +409,7 @@ Result:
 - `src/cli/pr/shared.ts:168` - GitHub token loading (shared PR utilities)
 - `src/cli/commands/start.ts:819` - Linear key loading
 
-**Documentation Impact**: Must explain indirection pattern clearly with diagrams
+**Documentation Impact**: Must explain the override pattern clearly with diagrams
 
 ---
 
@@ -411,7 +419,7 @@ Result:
 
 **Command-Line Flags**:
 
-- `--verbose` / `-v` - Show detailed diagnostic information (available on commands like `doctor`)
+- `--verbose` / `-v` - Show detailed diagnostic information (supported by `doctor`, `status` (see `src/cli/commands/status/index.ts`), `plan`, `validate`, `resume`, `rate-limits`)
 - `--json` - Output results in JSON format, disable stderr mirroring
 
 **Environment Variables**:
@@ -443,8 +451,8 @@ codepipe doctor --verbose
 codepipe doctor --json
 
 # Analyze logs with jq
-jq '.level=="ERROR"' .codepipe/runs/<feature_id>/logs/logs.ndjson
-jq '.component=="http:github"' logs.ndjson
+jq 'select(.level=="ERROR")' .codepipe/runs/<feature_id>/logs/logs.ndjson
+jq 'select(.component=="http:github")' .codepipe/runs/<feature_id>/logs/logs.ndjson
 ```
 
 **Features**:
@@ -477,17 +485,24 @@ jq '.component=="http:github"' logs.ndjson
 
 **Agent Endpoint Configuration** (URL override, not API key):
 
-| Override Env Var                  | Config Field                     | Description                              |
-| --------------------------------- | -------------------------------- | ---------------------------------------- |
+| Override Env Var                  | Config Field             | Description                                                |
+| --------------------------------- | ------------------------ | ---------------------------------------------------------- |
 | `CODEPIPE_RUNTIME_AGENT_ENDPOINT` | `runtime.agent_endpoint` | Overrides the agent endpoint URL (not an API key override) |
+
+**Agent Endpoint Env Var Indirection**:
+
+- If `runtime.agent_endpoint` is unset, the CLI reads the endpoint from `process.env[runtime.agent_endpoint_env_var]` (default: `AGENT_ENDPOINT`)
+- `CODEPIPE_RUNTIME_AGENT_ENDPOINT` sets `runtime.agent_endpoint` directly and bypasses `runtime.agent_endpoint_env_var`
 
 **Additional Runtime Overrides**:
 
 - `CODEPIPE_RUNTIME_MAX_CONCURRENT_TASKS` - Max parallel tasks (default: 3)
 - `CODEPIPE_RUNTIME_TIMEOUT_MINUTES` - Global timeout (default: 30)
-- `CODEPIPE_EXECUTION_CLI_PATH` - Legacy CLI path override
-- `CODEPIPE_EXECUTION_DEFAULT_ENGINE` - Override execution engine
-- `CODEPIPE_EXECUTION_TIMEOUT_MS` - Per-task timeout (default: 1800000)
+- `CODEPIPE_EXECUTION_CLI_PATH` - Override `execution.codemachine_cli_path` (only applies if `execution` exists in config.json)
+- `CODEPIPE_EXECUTION_DEFAULT_ENGINE` - Override `execution.default_engine` (only applies if `execution` exists in config.json)
+- `CODEPIPE_EXECUTION_TIMEOUT_MS` - Override `execution.task_timeout_ms` (only applies if `execution` exists in config.json)
+
+**Note**: If your `config.json` omits the `execution` section, these `CODEPIPE_EXECUTION_*` overrides are ignored (no warning). The default config created by `codepipe init` includes `execution`.
 
 **Sources**:
 
@@ -508,9 +523,9 @@ jq '.component=="http:github"' logs.ndjson
    - Must upgrade Node.js before upgrading CLI
 
 2. **Package Name**
-   - Pre-v1.0: `codemachine-pipeline`
    - v1.0.0+: `@kinginyellows/codemachine-pipeline`
    - Install: `npm install -g @kinginyellows/codemachine-pipeline`
+   - If you previously installed a different/unscoped package name, uninstall it and install the scoped package above
 
 3. **Queue Format** (V1 → V2) - NO AUTOMATIC MIGRATION
    - V1: JSONL files (`queue.jsonl`, `queue_updates.jsonl`)
@@ -542,7 +557,7 @@ cp .codepipe/config.json .codepipe/config.json.backup
 # Add: "governance": { "approval_workflow": {...}, "accountability": {...} }
 
 # 4. Add config_history
-# Add: "config_history": [{ "version": "1.0.0", "migrated_at": "..." }]
+# Add: "config_history": [{ "timestamp": "2026-02-16T00:00:00Z", "schema_version": "1.0.0", "changed_by": "manual migration", "change_description": "Upgrade config schema to 1.0.0" }]
 
 # 5. Validate
 codepipe init --validate-only
@@ -561,7 +576,7 @@ codepipe doctor
 **What Happens When User Upgrades with V1 Queue**:
 
 1. User upgrades to v1.0.0+
-2. User runs any queue operation (e.g., `codepipe resume <feature_id>`)
+2. User runs any queue operation (e.g., `codepipe resume --feature <feature_id>`)
 3. System calls `getV2IndexCache()` which calls `detectLegacyV1Queue()`
 4. Error is thrown: `Legacy V1 queue format detected in {queueDir}. V1 queues are no longer supported. Please migrate your queue to V2 format or recreate the run.`
 5. User's queue state is NOT migrated
@@ -658,7 +673,7 @@ codepipe doctor
 | #   | Question               | Answer Summary                           | Impact on Docs            |
 | --- | ---------------------- | ---------------------------------------- | ------------------------- |
 | 1   | Node.js version        | >=24.0.0                                 | Prerequisites page        |
-| 2   | Config discovery       | Fixed path from cwd (process.cwd())      | Configuration overview    |
+| 2   | Config discovery       | Two-path: init=git root, runtime=cwd     | Configuration overview    |
 | 3   | CLI resolution         | 3-path priority (env → optional → PATH)  | CodeMachine CLI guide     |
 | 4   | Approval mechanics     | 7 gates, hash validation, two-file model | Workflows, approval guide |
 | 5   | Required fields        | 5 core required fields                   | Config file reference     |
@@ -666,7 +681,7 @@ codepipe doctor
 | 7   | Queue locking          | File-based exclusive locks               | Team collaboration        |
 | 8   | .codepipe/ committable | Partially - only 4 subdirs gitignored    | Team collaboration        |
 | 9   | Queue backup           | Automatic snapshot + WAL                 | Disaster recovery         |
-| 10  | Credential precedence  | Env var indirection pattern              | Security guide            |
+| 10  | Credential precedence  | Env var override pattern                 | Security guide            |
 | 11  | Debug logging          | --verbose/--json flags                   | Troubleshooting           |
 | 12  | AI API keys            | ANTHROPIC_API_KEY, OPENAI_API_KEY        | Configuration             |
 | 13  | Migration v1.0         | NO auto queue migration, manual config   | Migration guide           |
@@ -687,7 +702,7 @@ codepipe doctor
 1. **Configuration Guide Must Include**:
    - Nested config.json structure examples
    - Environment variable indirection explanation
-   - CODEPIPE\_\* override table (9 variables)
+   - CODEPIPE\_\* override table (8 variables)
    - Credential security best practices
 
 2. **Installation Guide Must Include**:
