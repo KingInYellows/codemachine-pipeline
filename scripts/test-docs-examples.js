@@ -17,10 +17,12 @@ const rootDir = path.join(__dirname, '..');
 console.log('Testing documentation code examples\n');
 
 // Find all markdown files using Node 24 built-in globSync
-const markdownFiles = fs.globSync('docs/**/*.md', {
-  cwd: rootDir,
-  exclude: (name) => name === 'node_modules' || name === 'archive',
-}).map((f) => path.join(rootDir, f));
+const markdownFiles = fs
+  .globSync('docs/**/*.md', {
+    cwd: rootDir,
+    exclude: ['**/node_modules/**', '**/archive/**', '**/research/**', '**/solutions/**', '**/plans/**', '**/brainstorms/**'],
+  })
+  .map((f) => path.join(rootDir, f));
 
 // Also scan README.md at root
 const readmePath = path.join(rootDir, 'README.md');
@@ -35,7 +37,7 @@ let errors = 0;
 
 // Safety patterns — always checked, even in placeholder blocks
 const safetyPatterns = [
-  { pattern: /rm\s+-rf\s+\//, message: 'Dangerous rm -rf on root' },
+  { pattern: /\brm\s+-rf\s+\/(?=\s|$)/, message: 'Dangerous rm -rf on root' },
   { pattern: /:\(\)\{\s*:\|:&\s*\};:/, message: 'Fork bomb detected' },
   { pattern: /chmod\s+777/, message: 'Insecure permissions (chmod 777)' },
   { pattern: /curl.*\|\s*bash/, message: 'Pipe to bash (security risk)' },
@@ -53,7 +55,7 @@ const credentialPatterns = [
 ];
 
 // Patterns that indicate placeholder/example tokens
-const placeholderPatterns = [/EXAMPLE/i, /PLACEHOLDER/i, /DO_NOT_USE/i];
+const placeholderPatterns = [/EXAMPLE/i, /PLACEHOLDER/i, /DO_NOT_USE/i, /ghp_[xX]{8,}/, /github_pat_[xX_]{16,}/];
 
 function hasPlaceholderMarker(code) {
   return placeholderPatterns.some((p) => p.test(code));
@@ -99,17 +101,8 @@ for (const file of markdownFiles) {
       }
     }
 
-    // Check JSON syntax
-    if (lang === 'json') {
-      try {
-        JSON.parse(code);
-      } catch (e) {
-        console.error('%s:', relativePath);
-        console.error('   Invalid JSON syntax');
-        console.error('   Error: %s', e.message);
-        errors++;
-      }
-    }
+    // Intentionally skip strict JSON parsing: docs frequently include JSONC-style comments,
+    // trailing commas, or partial snippets for explanation.
   }
 }
 

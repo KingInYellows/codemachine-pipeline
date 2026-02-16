@@ -39,15 +39,12 @@ const cliRefContent = fs.readFileSync(cliRefPath, 'utf-8');
 
 // Normalize colon-separated manifest commands to space-separated (matching docs format).
 // oclif manifest uses ":" (e.g. "pr:create") but topicSeparator is " " so docs say "pr create".
-const manifestToDisplay = new Map();
-for (const cmd of actualCommands) {
-  const displayCmd = cmd.replace(/:/g, ' ');
-  manifestToDisplay.set(displayCmd, cmd);
-}
+const manifestDisplayCommands = new Set(actualCommands.map((cmd) => cmd.replace(/:/g, ' ').toLowerCase()));
 
 // Check if all commands are documented
 let errors = 0;
-for (const [displayCmd] of manifestToDisplay) {
+for (const cmd of actualCommands) {
+  const displayCmd = cmd.replace(/:/g, ' ');
   const escaped = displayCmd.replace(/\s+/g, '\\s+');
   const cmdPattern = new RegExp(`codepipe\\s+${escaped}\\b`, 'i');
   if (!cmdPattern.test(cliRefContent)) {
@@ -56,23 +53,45 @@ for (const [displayCmd] of manifestToDisplay) {
   }
 }
 
-// Check for phantom commands (documented but don't exist)
-const docCommandPattern = /codepipe\s+([a-z]+(?:\s[a-z-]+)*)/gi;
+// Check for phantom commands (documented but don't exist).
+// Parse only tokens that look like command words and stop at flags/arguments.
+const docCommandPattern = /codepipe[ \t]+([^\n`]+)/gi;
 const matches = cliRefContent.matchAll(docCommandPattern);
-const documentedCommands = new Set();
+const phantomCommands = new Set();
 
 for (const match of matches) {
-  const cmd = match[1];
-  if (!cmd.startsWith('-')) {
-    documentedCommands.add(cmd);
+  const tail = match[1].trim();
+  if (!tail) continue;
+
+  const tokens = tail
+    .split(/\s+/)
+    .map((token) => token.replace(/[`,.;:()]/g, '').toLowerCase())
+    .filter(Boolean);
+
+  const commandTokens = [];
+  for (const token of tokens) {
+    if (token.startsWith('-') || token.startsWith('<') || token.startsWith('[') || token.includes('=')) break;
+    if (!/^[a-z][a-z-]*$/.test(token)) break;
+    commandTokens.push(token);
+    // Current command tree depth is 2 (topic + subcommand).
+    if (commandTokens.length === 2) break;
   }
+
+  if (commandTokens.length === 0) continue;
+
+  const twoWord = commandTokens.slice(0, 2).join(' ');
+  const oneWord = commandTokens[0];
+
+  if (manifestDisplayCommands.has(twoWord) || manifestDisplayCommands.has(oneWord)) {
+    continue;
+  }
+
+  phantomCommands.add(commandTokens.join(' '));
 }
 
-for (const cmd of documentedCommands) {
-  if (!manifestToDisplay.has(cmd)) {
-    console.error('Phantom command in docs (not in manifest): %s', cmd);
-    errors++;
-  }
+for (const cmd of phantomCommands) {
+  console.error('Phantom command in docs (not in manifest): %s', cmd);
+  errors++;
 }
 
 // Summary
