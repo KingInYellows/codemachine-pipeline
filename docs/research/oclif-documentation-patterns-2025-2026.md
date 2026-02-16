@@ -13,12 +13,14 @@ status: complete
 This research document provides comprehensive findings on oclif v4 documentation best practices for 2025-2026, with specific recommendations for enhancing codemachine-pipeline's CLI documentation suite (Phase 4: Auto-Generated Documentation & Phase 3.3: User Guide - Commands).
 
 **Key Findings:**
+
 - oclif v4.0+ (released June 2024, latest: v4.5.1 as of Jan 2025) provides mature auto-documentation features
 - The framework separates command metadata (description, examples, flags) from implementation
 - Auto-generation via `oclif manifest` creates `oclif.manifest.json` with complete command metadata
 - Industry leaders (Heroku CLI, Salesforce CLI) demonstrate documentation patterns at scale
 
 **Current codemachine-pipeline Status:**
+
 - ✅ Already uses oclif v4.0.30
 - ✅ Custom `generate_cli_reference.js` script generates `docs/ops/cli-reference.md` from manifest
 - ✅ Manifest generation automated in `postbuild` hook
@@ -56,6 +58,7 @@ oclif v4 provides:
    - Critical for large CLIs (100+ commands like Salesforce CLI)
 
 **Relevance to codemachine-pipeline:**
+
 - Current custom script (`generate_cli_reference.js`) duplicates oclif's built-in `readme` command functionality
 - Consider: Migrate to `oclif readme --multi` + post-processing for custom format
 - Keep: Custom script provides more control over output format for MkDocs integration
@@ -74,9 +77,10 @@ oclif v4 supports two levels of documentation:
 - **`description`**: In-depth overview, can be multi-paragraph
 
 **Best Practice:**
+
 ```typescript
 export default class Start extends Command {
-  static summary = 'Start a new feature development pipeline'
+  static summary = 'Start a new feature development pipeline';
   static description = `
     Initiates a new feature development workflow from a prompt, Linear issue, or spec file.
 
@@ -84,12 +88,13 @@ export default class Start extends Command {
     task execution in a single pipeline. Each stage has configurable approval gates.
 
     Execution can be paused before code generation using --skip-execution for PRD review.
-  `
+  `;
   // ...
 }
 ```
 
 **Current codemachine-pipeline Pattern:**
+
 ```typescript
 // Current: Uses only description
 static description = 'Start a new feature development pipeline'
@@ -116,18 +121,19 @@ static description = `
 
 **Flag Properties (oclif v4):**
 
-| Property | Purpose | Example |
-|----------|---------|---------|
-| `summary` | Brief flag description | `'Grant approval for this gate'` |
-| `description` | Detailed flag explanation | `'Approve the PRD and proceed to code execution. Requires --signer identity.'` |
-| `helpLabel` | Custom display in help | `'[-a] --approve'` (default format) |
-| `helpGroup` | Group flags in help sections | `'APPROVAL OPTIONS'` |
-| `char` | Short flag version | `'a'` for `-a` |
-| `aliases` | Alternative flag names | `['confirm', 'yes']` |
-| `deprecated` | Mark flag as deprecated | `{ message: 'Use --approve instead', version: '2.0.0' }` |
-| `hidden` | Hide from help output | `true` (for internal/experimental flags) |
+| Property      | Purpose                      | Example                                                                        |
+| ------------- | ---------------------------- | ------------------------------------------------------------------------------ |
+| `summary`     | Brief flag description       | `'Grant approval for this gate'`                                               |
+| `description` | Detailed flag explanation    | `'Approve the PRD and proceed to code execution. Requires --signer identity.'` |
+| `helpLabel`   | Custom display in help       | `'[-a] --approve'` (default format)                                            |
+| `helpGroup`   | Group flags in help sections | `'APPROVAL OPTIONS'`                                                           |
+| `char`        | Short flag version           | `'a'` for `-a`                                                                 |
+| `aliases`     | Alternative flag names       | `['confirm', 'yes']`                                                           |
+| `deprecated`  | Mark flag as deprecated      | `{ message: 'Use --approve instead', version: '2.0.0' }`                       |
+| `hidden`      | Hide from help output        | `true` (for internal/experimental flags)                                       |
 
 **Best Practice Example:**
+
 ```typescript
 static flags = {
   approve: Flags.boolean({
@@ -152,6 +158,7 @@ static flags = {
 ```
 
 **Current codemachine-pipeline Pattern:**
+
 - ✅ Uses `char` for common flags
 - ✅ Uses `description` for all flags
 - ⚠️ Missing: `summary` field (new in v4, improves help readability)
@@ -159,6 +166,7 @@ static flags = {
 - ⚠️ Missing: `deprecated` metadata for evolving flags
 
 **Recommendation:**
+
 1. Add `summary` to all flags for concise help text
 2. Use `helpGroup` to organize flags by concern (e.g., "INPUT OPTIONS", "OUTPUT OPTIONS", "EXECUTION OPTIONS")
 3. Add `deprecated` metadata for flags planned for removal (e.g., if transitioning API)
@@ -208,6 +216,7 @@ static examples = [
 **Current codemachine-pipeline Pattern:**
 
 Looking at `src/cli/commands/init.ts`:
+
 ```typescript
 static examples = [
   '<%= config.bin %> <%= command.id %>',
@@ -219,12 +228,14 @@ static examples = [
 ```
 
 **Assessment:**
+
 - ✅ Good coverage of flag combinations
 - ✅ Uses template substitution correctly
 - ⚠️ Missing: Descriptions for each example (why/when to use)
 - ⚠️ Missing: Examples with arguments (for commands that take args)
 
 **Recommendation:**
+
 ```typescript
 static examples = [
   {
@@ -251,6 +262,7 @@ static examples = [
 ```
 
 **Warnings from `generate_cli_reference.js`:**
+
 ```javascript
 // Line 173: Warns if command has no examples
 if (cmd.examples && cmd.examples.length > 0) {
@@ -261,6 +273,7 @@ if (cmd.examples && cmd.examples.length > 0) {
 ```
 
 **Action Items:**
+
 1. Audit all 17 commands for missing examples
 2. Add example descriptions for context
 3. Include argument-based examples for commands with args (e.g., `approve GATE`)
@@ -274,26 +287,29 @@ if (cmd.examples && cmd.examples.length > 0) {
 **Source:** [oclif README Generation Docs](https://github.com/oclif/oclif/blob/main/docs/readme.md)
 
 **Command:**
+
 ```bash
 oclif readme [OPTIONS]
 ```
 
 **Key Options:**
 
-| Flag | Description | Default |
-|------|-------------|---------|
-| `--output-dir` | Output directory for docs | `docs` |
-| `--readme-path` | README file path | `README.md` |
-| `--dry-run` | Print generated README without modifying | - |
-| `--multi` | Create separate markdown pages for each topic | Single file |
-| `--nested-topics-depth` | Max topic nesting depth | No limit |
-| `--[no-]aliases` | Include command aliases | Included |
+| Flag                    | Description                                   | Default     |
+| ----------------------- | --------------------------------------------- | ----------- |
+| `--output-dir`          | Output directory for docs                     | `docs`      |
+| `--readme-path`         | README file path                              | `README.md` |
+| `--dry-run`             | Print generated README without modifying      | -           |
+| `--multi`               | Create separate markdown pages for each topic | Single file |
+| `--nested-topics-depth` | Max topic nesting depth                       | No limit    |
+| `--[no-]aliases`        | Include command aliases                       | Included    |
 
 **Requirements:**
+
 - README.md must contain injection tags: `<!-- usage -->`, `<!-- commands -->`
 - Without tags, generation does nothing (silent failure)
 
 **Example Integration:**
+
 ```json
 {
   "scripts": {
@@ -317,12 +333,13 @@ const OUTPUT_PATH = resolve(ROOT, 'docs', 'ops', 'cli-reference.md');
 
 **Trade-offs:**
 
-| Approach | Pros | Cons |
-|----------|------|------|
-| **Custom Script** | Full control over format, can match MkDocs structure, custom grouping logic | Must maintain script, may diverge from oclif standards |
-| **`oclif readme`** | Official tool, automatic updates, standard format | Less flexible, requires README tags, default format may not match site theme |
+| Approach           | Pros                                                                        | Cons                                                                         |
+| ------------------ | --------------------------------------------------------------------------- | ---------------------------------------------------------------------------- |
+| **Custom Script**  | Full control over format, can match MkDocs structure, custom grouping logic | Must maintain script, may diverge from oclif standards                       |
+| **`oclif readme`** | Official tool, automatic updates, standard format                           | Less flexible, requires README tags, default format may not match site theme |
 
 **Recommendation:**
+
 - **Keep custom script** for now (already mature, produces docs/ops/cli-reference.md)
 - **Add validation** against `oclif readme --dry-run` output to detect drift
 - **Consider hybrid**: Use `oclif readme --multi` to generate per-topic pages, then post-process for MkDocs
@@ -334,12 +351,14 @@ const OUTPUT_PATH = resolve(ROOT, 'docs', 'ops', 'cli-reference.md');
 **How Manifest Works:**
 
 1. **Build Time:**
+
    ```bash
    npm run build         # Compiles TypeScript to dist/
    npm run postbuild     # Runs: node scripts/tooling/oclif_manifest.js
    ```
 
 2. **Manifest Script (`scripts/tooling/oclif_manifest.js`):**
+
    ```javascript
    const oclif = require('@oclif/core');
    // Scans dist/cli/commands/ directory
@@ -360,6 +379,7 @@ const OUTPUT_PATH = resolve(ROOT, 'docs', 'ops', 'cli-reference.md');
 - ⚠️ **Keep manifest in sync with code** (add pre-commit hook or CI check)
 
 **Current codemachine-pipeline Status:**
+
 - ✅ Manifest generated in `postbuild` hook
 - ✅ Manifest committed to repo
 - ✅ CI check exists: `npm run docs:cli:check` validates drift
@@ -367,6 +387,7 @@ const OUTPUT_PATH = resolve(ROOT, 'docs', 'ops', 'cli-reference.md');
 
 **Recommendation:**
 Add to `.git/hooks/pre-commit` or use husky:
+
 ```bash
 #!/bin/sh
 npm run build --silent
@@ -383,6 +404,7 @@ npm run docs:cli:check || {
 **Use Case:** Large CLIs with topic-based command organization
 
 **Example:** Salesforce CLI
+
 ```
 sf (base command)
 sf config (topic)
@@ -396,11 +418,13 @@ sf org (topic)
 ```
 
 **With `--multi` Flag:**
+
 ```bash
 oclif readme --multi --output-dir docs/commands
 ```
 
 **Output Structure:**
+
 ```
 docs/commands/
 ├── README.md           # Command index
@@ -413,6 +437,7 @@ docs/commands/
 **codemachine-pipeline Command Organization:**
 
 Current structure (flat with some topics):
+
 ```
 codepipe (base)
 codepipe approve
@@ -429,12 +454,14 @@ codepipe research list
 **Topics:** `context`, `pr`, `research`
 
 **Recommendation:**
+
 1. **For Phase 3.3 (User Guide - Commands):**
    - Use `--multi` to generate per-command markdown files
    - Post-process to add frontmatter for MkDocs (YAML header)
    - Organize in `docs/user-guide/commands/` directory
 
 2. **Script Enhancement:**
+
    ```javascript
    // Option 1: Extend generate_cli_reference.js to output per-command files
    // Option 2: Use oclif readme --multi + post-processing script
@@ -450,14 +477,14 @@ codepipe research list
    # mkdocs.yml
    nav:
      - User Guide:
-       - Commands:
-         - Overview: user-guide/commands/index.md
-         - Core Commands:
-           - init: user-guide/commands/init.md
-           - start: user-guide/commands/start.md
-           - approve: user-guide/commands/approve.md
-         - Context Commands:
-           - summarize: user-guide/commands/context-summarize.md
+         - Commands:
+             - Overview: user-guide/commands/index.md
+             - Core Commands:
+                 - init: user-guide/commands/init.md
+                 - start: user-guide/commands/start.md
+                 - approve: user-guide/commands/approve.md
+             - Context Commands:
+                 - summarize: user-guide/commands/context-summarize.md
    ```
 
 ---
@@ -481,6 +508,7 @@ codepipe research list
    - Sets exit code and terminates process
 
 **Error Flow:**
+
 ```
 Command.run()
   → throws Error
@@ -489,6 +517,7 @@ Command.run()
 ```
 
 **Custom Error Handling Pattern:**
+
 ```typescript
 // In Command class
 async catch(error: Error): Promise<void> {
@@ -531,12 +560,14 @@ export class CliError extends Error {
 ```
 
 **Error Codes:**
+
 - `VALIDATION_ERROR` (exit 10)
 - `ENVIRONMENT_ERROR` (exit 20)
 - `CREDENTIAL_ERROR` (exit 30)
 - `EXECUTION_ERROR` (exit 40)
 
 **Assessment:**
+
 - ✅ **Rich error metadata** (remediation, howToFix, commonFixes)
 - ✅ **Consistent exit codes** (aligned with Unix conventions)
 - ✅ **JSON output support** (`formatErrorJson()`)
@@ -544,6 +575,7 @@ export class CliError extends Error {
 
 **Recommendation:**
 Document error conventions in:
+
 1. **docs/troubleshooting/error-codes.md** - Error code catalog
 2. **docs/architecture/error-handling.md** - Error handling architecture
 3. **CLI help text** - Reference error docs in command descriptions
@@ -555,28 +587,26 @@ Document error conventions in:
 **Best Practices:**
 
 1. **Show Usage on Invalid Flags**
+
    ```
    Error: Unknown flag: --invalidflag
    See more help with --help
    ```
+
    - oclif does this automatically
    - No custom code needed
 
 2. **Provide Remediation Steps**
+
    ```typescript
-   throw new CliError(
-     'No .codepipe/config.json found',
-     CliErrorCode.VALIDATION_ERROR,
-     10,
-     {
-       remediation: 'Initialize the repository first',
-       howToFix: 'Run: codepipe init',
-       commonFixes: [
-         'Check you are in the repository root directory',
-         'Verify git repository is initialized',
-       ],
-     }
-   );
+   throw new CliError('No .codepipe/config.json found', CliErrorCode.VALIDATION_ERROR, 10, {
+     remediation: 'Initialize the repository first',
+     howToFix: 'Run: codepipe init',
+     commonFixes: [
+       'Check you are in the repository root directory',
+       'Verify git repository is initialized',
+     ],
+   });
    ```
 
 3. **Surface Root Causes**
@@ -604,6 +634,7 @@ if (!isGitRepo) {
 ```
 
 **Output Format:**
+
 ```
 Error: Current directory is not a git repository
 
@@ -612,10 +643,11 @@ How to Fix: Run: git init
 ```
 
 **Recommendation:**
+
 - ✅ Current pattern is excellent
 - Add: Link to troubleshooting docs in error messages
   ```typescript
-  remediation: 'Initialize a git repository first. See: https://docs.example.com/troubleshooting#git-init'
+  remediation: 'Initialize a git repository first. See: https://docs.example.com/troubleshooting#git-init';
   ```
 
 ---
@@ -641,14 +673,17 @@ oclif supports multiple configuration file formats (checked in order):
 9. `package.json` (oclif section)
 
 **Discovery Algorithm:**
+
 1. Search current directory → parent → root
 2. First match wins
 3. Merge with `package.json` oclif section
 
 **Performance Note:**
+
 > "If you choose to use an rc file, there will be a slight performance hit due to needing to search for the rc file in addition to the package.json."
 
 **Recommendation for oclif Configuration:**
+
 - Use `package.json` oclif section (already done)
 - Avoid separate rc files for oclif-specific config
 
@@ -659,6 +694,7 @@ oclif supports multiple configuration file formats (checked in order):
 File: `.codepipe/config.json`
 
 **Current Discovery Logic** (from MEMORY.md plan assumptions):
+
 - Git root only
 - No upward traversal
 - No environment variable override for config path
@@ -671,6 +707,7 @@ File: `.codepipe/config.json`
    - Closer configs override ancestors
 
 2. **Environment Variable Override**
+
    ```bash
    CODEPIPE_CONFIG_PATH=/path/to/config.json codepipe start
    ```
@@ -685,11 +722,13 @@ File: `.codepipe/config.json`
 Question 2: "Config file discovery algorithm?"
 
 **Research needed:**
+
 1. Read `src/core/config/RepoConfig.ts` loader logic
 2. Determine if upward traversal is needed (monorepo support?)
 3. Document actual behavior in `docs/configuration/overview.md`
 
 **If implementing hierarchical discovery:**
+
 ```typescript
 // Pseudocode
 function findConfig(startDir: string): string | null {
@@ -717,11 +756,13 @@ function findConfig(startDir: string): string | null {
 **Source:** [oclif Topics Documentation](https://oclif.io/docs/topics/)
 
 **What are Topics?**
+
 - Organizational unit for grouping related commands
 - Implemented as subdirectories in `src/commands/`
 - Support nested topics (but max 1-2 levels recommended)
 
 **Directory Structure:**
+
 ```
 src/commands/
 ├── init.ts              # Top-level: codepipe init
@@ -736,10 +777,12 @@ src/commands/
 ```
 
 **Command Syntax:**
+
 - Separator: space (configurable via `topicSeparator` in package.json)
 - Example: `codepipe pr create` (space-separated, not colon)
 
 **codemachine-pipeline Configuration:**
+
 ```json
 // package.json
 "oclif": {
@@ -751,6 +794,7 @@ src/commands/
 ```
 
 **Current Topics:**
+
 1. `context` - Context management commands
 2. `pr` - Pull request commands
 3. `research` - Research task commands
@@ -759,15 +803,18 @@ src/commands/
 **Topic Help Descriptions:**
 
 From oclif docs:
+
 > "The help descriptions will be the description of the first command within a directory. You can customize the help description by adding it to the package.json in the oclif configuration."
 
 **Current Implementation:**
+
 - No topic-level descriptions in package.json
 - Uses first command's description (e.g., `pr/create.ts` describes `pr` topic)
 
 **Recommendation:**
 
 1. **Add topic descriptions to package.json:**
+
    ```json
    "oclif": {
      "topics": {
@@ -800,15 +847,17 @@ From oclif docs:
 **Customizing Topic Help:**
 
 Option 1: First command in directory defines topic description
+
 ```typescript
 // src/commands/pr/create.ts
 export default class PrCreate extends Command {
-  static description = 'Create a pull request on GitHub for the feature branch'
+  static description = 'Create a pull request on GitHub for the feature branch';
   // This description appears for "codepipe pr --help" if no custom topic config
 }
 ```
 
 Option 2: Custom topic configuration in package.json
+
 ```json
 "oclif": {
   "topics": {
@@ -821,6 +870,7 @@ Option 2: Custom topic configuration in package.json
 ```
 
 **Hidden Topics:**
+
 ```json
 "topics": {
   "internal": {
@@ -831,6 +881,7 @@ Option 2: Custom topic configuration in package.json
 ```
 
 **Recommendation:**
+
 - Use package.json topic descriptions for clarity
 - Reserve first-command descriptions for command-specific help
 - Mark experimental topics as `hidden: true` during development
@@ -859,6 +910,7 @@ Option 2: Custom topic configuration in package.json
 **Priority 2: Improve Auto-Generation Script**
 
 1. **Validate against `oclif readme`**
+
    ```bash
    npm run docs:cli:check  # Already exists, enhance
    # Add: Compare custom output with oclif readme --dry-run
@@ -868,6 +920,7 @@ Option 2: Custom topic configuration in package.json
    - Extend script to output `docs/user-guide/commands/*.md`
    - Add frontmatter for MkDocs integration
    - Template:
+
      ```markdown
      ---
      title: codepipe init
@@ -879,6 +932,7 @@ Option 2: Custom topic configuration in package.json
      {{ auto-generated content }}
 
      ## Related Commands
+
      - [codepipe start](start.md)
      - [codepipe validate](validate.md)
      ```
@@ -892,15 +946,18 @@ Option 2: Custom topic configuration in package.json
 1. **Create error code catalog**
    - File: `docs/troubleshooting/error-codes.md`
    - Format:
+
      ```markdown
      ## VALIDATION_ERROR (exit 10)
 
      **Causes:**
+
      - Missing required config fields
      - Invalid JSON in config file
      - Schema validation failure
 
      **Remediation:**
+
      - Run `codepipe init --validate-only` to check config
      - Review schema at docs/reference/schema-reference.md
      - Check for typos in .codepipe/config.json
@@ -917,6 +974,7 @@ Option 2: Custom topic configuration in package.json
 **Approach:**
 
 1. **Auto-generate baseline docs**
+
    ```bash
    npm run docs:commands  # New script
    # Generates docs/user-guide/commands/*.md from manifest
@@ -933,14 +991,15 @@ Option 2: Custom topic configuration in package.json
    # mkdocs.yml
    nav:
      - User Guide:
-       - Commands:
-         - index: user-guide/commands/index.md
-         - init: user-guide/commands/init.md
-         - start: user-guide/commands/start.md
-         # ... all 17 commands
+         - Commands:
+             - index: user-guide/commands/index.md
+             - init: user-guide/commands/init.md
+             - start: user-guide/commands/start.md
+           # ... all 17 commands
    ```
 
 **Template Structure:**
+
 ```markdown
 ---
 title: codepipe start
@@ -955,19 +1014,23 @@ tags: [workflow, execution, pipeline]
 ## Common Use Cases
 
 ### Use Case 1: Start from Linear issue
+
 ...
 
 ### Use Case 2: Start from spec file
+
 ...
 
 ## Advanced Examples
 
 ### Example 1: Dry-run execution plan
+
 ...
 
 ## Troubleshooting
 
 ### Issue: "No context files found"
+
 **Cause:** Empty repository or all files excluded by .gitignore
 **Solution:** ...
 
@@ -996,7 +1059,7 @@ if (process.argv.includes('--per-command')) {
 
   for (const cmd of commands) {
     const filename = cmd.id.replace(/:/g, '-') + '.md';
-    const content = renderCommandPage(cmd);  // New function
+    const content = renderCommandPage(cmd); // New function
     writeFileSync(resolve(commandsDir, filename), content);
   }
 
@@ -1046,7 +1109,7 @@ if (process.argv.includes('--compare-oclif')) {
   const oclifCommands = extractCommandList(oclifOutput);
   const customCommands = extractCommandList(customOutput);
 
-  const missing = oclifCommands.filter(c => !customCommands.includes(c));
+  const missing = oclifCommands.filter((c) => !customCommands.includes(c));
   if (missing.length > 0) {
     console.error(`Missing commands: ${missing.join(', ')}`);
     process.exit(1);
@@ -1092,7 +1155,7 @@ for (const [id, cmd] of Object.entries(manifest.commands)) {
   }
 
   // Check for example descriptions (if examples are objects)
-  if (cmd.examples && cmd.examples.some(ex => typeof ex === 'object' && !ex.description)) {
+  if (cmd.examples && cmd.examples.some((ex) => typeof ex === 'object' && !ex.description)) {
     console.error(`❌ ${id}: Some examples lack descriptions`);
     hasIssues = true;
   }
@@ -1121,12 +1184,14 @@ if (hasIssues) {
 **Scale:** 100+ commands, 20+ topics
 
 **Documentation Strategy:**
+
 - Official docs site: [Salesforce CLI Plugin Developer Guide](https://developer.salesforce.com/docs/platform/salesforce-cli-plugin/guide/conceptual-overview.html)
 - Per-command reference pages
 - Topic-based organization
 - Rich examples with explanations
 
 **Key Takeaways:**
+
 - Topic descriptions in package.json
 - Comprehensive examples (5-10 per command)
 - Clear flag groupings (`helpGroup`)
@@ -1137,12 +1202,14 @@ if (hasIssues) {
 **Scale:** 50+ commands, 10+ topics
 
 **Documentation Strategy:**
+
 - Heroku Dev Center: [Heroku CLI](https://devcenter.heroku.com/articles/heroku-cli)
 - Auto-generated from manifest
 - Interactive help in terminal
 - Web-based search
 
 **Key Takeaways:**
+
 - `oclif readme --multi` for per-topic pages
 - Clear command descriptions with context
 - Usage examples with real scenarios

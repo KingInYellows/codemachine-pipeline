@@ -1,5 +1,5 @@
 ---
-title: "chore: v1.0.0 release readiness — CI, E2E, docs, publish, deploy"
+title: 'chore: v1.0.0 release readiness — CI, E2E, docs, publish, deploy'
 type: chore
 date: 2026-02-14
 brainstorm: docs/brainstorms/2026-02-14-v1-release-readiness-brainstorm.md
@@ -44,6 +44,7 @@ npx prettier --write "src/**/*.ts" "tests/**/*.ts"
 ```
 
 Key files identified in CI failure:
+
 - `src/adapters/codemachine/binaryResolver.ts`
 - `src/adapters/codemachine/CodeMachineCLIAdapter.ts`
 - `src/workflows/cliExecutionEngine.ts`
@@ -71,6 +72,7 @@ warnings exist.
 ### 1.3 Clean Up Stale .dockerignore References
 
 Remove references to files that don't exist (harmless but messy):
+
 - `.eslintrc.json` → project uses `eslint.config.cjs`
 - `jest.config.js` → project uses vitest
 
@@ -100,20 +102,21 @@ Ensure `codepipe` is available via `npm link` from the repo.
 
 ### 2.2 Test Core Pipeline Flow
 
-| Step | Command | Expected |
-|------|---------|----------|
-| Init | `codepipe init --yes` | Creates `.codepipe/` scaffolding, exits 0 |
-| Doctor | `codepipe doctor` | Reports environment health, exits 0 |
-| Health | `codepipe health` | Quick health check, exits 0 |
-| Start | `codepipe start --prompt "Add a hello world endpoint"` | Creates run dir, generates PRD, exits 0 |
-| Status | `codepipe status` | Shows current pipeline state |
-| Approve | `codepipe approve prd --feature <id> --signer "test"` | Advances gate, exits 0 |
-| Resume | `codepipe resume --feature <id>` | Continues pipeline |
-| Plan | `codepipe plan --feature <id>` | Shows execution DAG |
+| Step    | Command                                                | Expected                                  |
+| ------- | ------------------------------------------------------ | ----------------------------------------- |
+| Init    | `codepipe init --yes`                                  | Creates `.codepipe/` scaffolding, exits 0 |
+| Doctor  | `codepipe doctor`                                      | Reports environment health, exits 0       |
+| Health  | `codepipe health`                                      | Quick health check, exits 0               |
+| Start   | `codepipe start --prompt "Add a hello world endpoint"` | Creates run dir, generates PRD, exits 0   |
+| Status  | `codepipe status`                                      | Shows current pipeline state              |
+| Approve | `codepipe approve prd --feature <id> --signer "test"`  | Advances gate, exits 0                    |
+| Resume  | `codepipe resume --feature <id>`                       | Continues pipeline                        |
+| Plan    | `codepipe plan --feature <id>`                         | Shows execution DAG                       |
 
 ### 2.3 Test JSON Output Mode
 
 Re-run key commands with `--json` flag and verify valid JSON output:
+
 - `codepipe status --json`
 - `codepipe doctor --json`
 - `codepipe start --prompt "test" --json`
@@ -183,6 +186,7 @@ Since we're re-tagging as v1.0.0, this content will be folded into the v1.0.0 en
 ### 4.3 CLI --help Text
 
 For each command, run `codepipe <command> --help` and verify:
+
 - Description matches actual behavior
 - All flags are documented
 - Examples work as shown
@@ -193,6 +197,7 @@ Commands to verify: `init`, `start`, `status`, `resume`, `approve`, `doctor`, `h
 ### 4.4 Untracked Docs Cleanup
 
 Review and decide on untracked directories:
+
 - `docs/brainstorms/` — keep this plan's brainstorm, review others
 - `docs/research/` — review for accuracy, remove stale content
 - `docs/solutions/` — keep accurate solutions, remove outdated ones
@@ -230,6 +235,7 @@ GitHub Packages requires scoped packages. Update `package.json`:
 ```
 
 **Impact of name change:**
+
 - The `bin` entry (`codepipe`) is unaffected — the CLI command name stays the same
 - Internal imports don't reference the package name
 - No downstream consumers exist (first real publish)
@@ -250,6 +256,7 @@ npm pack --dry-run
 ```
 
 Verify output contains only:
+
 - `bin/run.js`, `bin/run.cmd`, `bin/dev.js`, `bin/dev.cmd`
 - `dist/**` (compiled TypeScript)
 - `oclif.manifest.json`
@@ -258,6 +265,7 @@ Verify output contains only:
 ### 5.4 Add GitHub Actions Publish Workflow
 
 Create `.github/workflows/publish.yml`:
+
 - Trigger: on GitHub Release published
 - Steps: checkout, setup Node 24, `npm ci`, `npm run build`, `npm publish`
 - Auth: `NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}`
@@ -385,17 +393,18 @@ codepipe doctor
 
 ## Dependencies & Risks
 
-| Risk | Likelihood | Impact | Mitigation |
-|------|-----------|--------|------------|
-| E2E testing reveals major bugs | Medium | High | Phase 3 is a buffer; scope may expand |
-| CodeMachine-CLI adapter fails without `codemachine` binary | Medium | Medium | Verify optional dependency behavior; document prerequisites |
-| GitHub Packages auth issues on homelab | Low | Low | Well-documented process; test with `npm whoami --registry` |
-| Re-tagging causes GitHub Release confusion | Low | Low | Delete old release first, then re-create |
-| Node 24 not available on homelab | Low | High | Check before starting; upgrade if needed |
+| Risk                                                       | Likelihood | Impact | Mitigation                                                  |
+| ---------------------------------------------------------- | ---------- | ------ | ----------------------------------------------------------- |
+| E2E testing reveals major bugs                             | Medium     | High   | Phase 3 is a buffer; scope may expand                       |
+| CodeMachine-CLI adapter fails without `codemachine` binary | Medium     | Medium | Verify optional dependency behavior; document prerequisites |
+| GitHub Packages auth issues on homelab                     | Low        | Low    | Well-documented process; test with `npm whoami --registry`  |
+| Re-tagging causes GitHub Release confusion                 | Low        | Low    | Delete old release first, then re-create                    |
+| Node 24 not available on homelab                           | Low        | High   | Check before starting; upgrade if needed                    |
 
 ## References
 
 ### Internal
+
 - Release branch strategy: `docs/development/release-branch-strategy.md`
 - Brainstorm: `docs/brainstorms/2026-02-14-v1-release-readiness-brainstorm.md`
 - CI workflow: `.github/workflows/ci.yml`
@@ -404,5 +413,6 @@ codepipe doctor
 - Changelog: `CHANGELOG.md`
 
 ### External
+
 - GitHub Packages npm docs: https://docs.github.com/en/packages/working-with-a-github-packages-registry/working-with-the-npm-registry
 - oclif publishing guide: https://oclif.io/docs/releasing

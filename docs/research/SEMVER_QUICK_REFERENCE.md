@@ -10,15 +10,16 @@ npm install --save-dev @types/semver  # TypeScript
 ## Key Functions (Cheat Sheet)
 
 ### Version Comparison
+
 ```typescript
 import semver from 'semver';
 
 // Simple comparisons
-semver.gt('1.2.3', '1.2.2')       // true
-semver.gte('1.2.3', '1.2.3')      // true
-semver.lt('1.2.2', '1.2.3')       // true
-semver.lte('1.2.3', '1.2.3')      // true
-semver.eq('1.2.3', '1.2.3')       // true
+semver.gt('1.2.3', '1.2.2'); // true
+semver.gte('1.2.3', '1.2.3'); // true
+semver.lt('1.2.2', '1.2.3'); // true
+semver.lte('1.2.3', '1.2.3'); // true
+semver.eq('1.2.3', '1.2.3'); // true
 
 // Minimum version enforcement (MOST COMMON)
 if (semver.gte(foundVersion, '1.0.0')) {
@@ -27,25 +28,28 @@ if (semver.gte(foundVersion, '1.0.0')) {
 ```
 
 ### Version Validation
-```typescript
-semver.valid('1.2.3')             // '1.2.3' (valid, normalized)
-semver.valid('v1.2.3')            // '1.2.3' (strips v prefix)
-semver.valid('1.2')               // null (invalid)
 
-semver.clean('v1.2.3')            // '1.2.3'
-semver.clean('  1.2.3  ')         // '1.2.3'
+```typescript
+semver.valid('1.2.3'); // '1.2.3' (valid, normalized)
+semver.valid('v1.2.3'); // '1.2.3' (strips v prefix)
+semver.valid('1.2'); // null (invalid)
+
+semver.clean('v1.2.3'); // '1.2.3'
+semver.clean('  1.2.3  '); // '1.2.3'
 ```
 
 ### Range Matching
+
 ```typescript
 // Most flexible - test against range specification
-semver.satisfies('1.5.0', '>=1.0.0')         // true
-semver.satisfies('1.5.0', '1.x')             // true
-semver.satisfies('1.5.0', '>=1.0.0 <2.0.0') // true
-semver.satisfies('2.5.0', '>=1.0.0 <2.0.0') // false
+semver.satisfies('1.5.0', '>=1.0.0'); // true
+semver.satisfies('1.5.0', '1.x'); // true
+semver.satisfies('1.5.0', '>=1.0.0 <2.0.0'); // true
+semver.satisfies('2.5.0', '>=1.0.0 <2.0.0'); // false
 ```
 
 ### Extract Version from Text
+
 ```typescript
 const regex = /\bv?(\d+\.\d+\.\d+(?:-[a-zA-Z0-9.]+)?(?:\+[a-zA-Z0-9.]+)?)\b/;
 const match = 'Docker 24.0.0, build abc123'.match(regex);
@@ -56,16 +60,18 @@ const clean = semver.clean(match[1]); // '24.0.0'
 ```
 
 ### Pre-release Handling
+
 ```typescript
-semver.prerelease('1.2.3-beta.1')  // ['beta', '1']
-semver.prerelease('1.2.3')         // null
+semver.prerelease('1.2.3-beta.1'); // ['beta', '1']
+semver.prerelease('1.2.3'); // null
 
 // Pre-releases require matching major.minor.patch in range
-semver.satisfies('1.2.3-beta', '>=1.2.3')  // false (different tuple)
-semver.satisfies('1.2.3-beta', '>=1.2.3-alpha')  // true (same tuple)
+semver.satisfies('1.2.3-beta', '>=1.2.3'); // false (different tuple)
+semver.satisfies('1.2.3-beta', '>=1.2.3-alpha'); // true (same tuple)
 ```
 
 ### Parse Version
+
 ```typescript
 const v = semver.parse('1.2.3-beta+build');
 // {
@@ -86,6 +92,7 @@ if (v?.prerelease?.length > 0) {
 ## Common Patterns
 
 ### Pattern 1: Check Minimum Version
+
 ```typescript
 const minVersion = '1.0.0';
 const foundVersion = '0.9.5';
@@ -102,6 +109,7 @@ if (!foundVersion) {
 ```
 
 ### Pattern 2: Get Version from CLI
+
 ```typescript
 import { spawnSync } from 'node:child_process';
 
@@ -117,6 +125,7 @@ if (result.status === 0) {
 ```
 
 ### Pattern 3: Extract from Messy Output
+
 ```typescript
 const output = 'Docker version 24.0.0, build abc123';
 
@@ -133,6 +142,7 @@ if (!version) {
 ```
 
 ### Pattern 4: Handle Pre-releases
+
 ```typescript
 const version = '1.0.0-beta.1';
 const minVersion = '1.0.0';
@@ -148,6 +158,7 @@ const ok = semver.satisfies(version, `>=${minVersion}`);
 ```
 
 ### Pattern 5: Complex Range
+
 ```typescript
 // Support multiple versions or ranges
 const supported = '>=1.0.0 || 0.8.x';
@@ -159,6 +170,7 @@ if (semver.satisfies(version, supported)) {
 ```
 
 ### Pattern 6: 0.x Version Strictness
+
 ```typescript
 // For 0.x versions, minor version changes are breaking
 const found = semver.parse('0.1.5');
@@ -283,14 +295,14 @@ describe('Version checking', () => {
 
 ## When to Use Each Function
 
-| Function | Use Case | Example |
-|----------|----------|---------|
-| `gte()`, `gt()`, `lt()` | Simple comparison | `semver.gte(found, min)` |
-| `satisfies()` | Complex ranges | `semver.satisfies(v, '>=1.0.0 <2.0.0')` |
-| `valid()` | Validate input | `if (!semver.valid(input)) error()` |
-| `clean()` | Normalize output | `semver.clean('v1.2.3')` → `'1.2.3'` |
-| `parse()` | Inspect components | `parse(v).prerelease` |
-| `prerelease()` | Check if pre-release | `if (semver.prerelease(v)) warn()` |
+| Function                | Use Case             | Example                                 |
+| ----------------------- | -------------------- | --------------------------------------- |
+| `gte()`, `gt()`, `lt()` | Simple comparison    | `semver.gte(found, min)`                |
+| `satisfies()`           | Complex ranges       | `semver.satisfies(v, '>=1.0.0 <2.0.0')` |
+| `valid()`               | Validate input       | `if (!semver.valid(input)) error()`     |
+| `clean()`               | Normalize output     | `semver.clean('v1.2.3')` → `'1.2.3'`    |
+| `parse()`               | Inspect components   | `parse(v).prerelease`                   |
+| `prerelease()`          | Check if pre-release | `if (semver.prerelease(v)) warn()`      |
 
 ## Performance Considerations
 
@@ -317,10 +329,10 @@ const result = spawnSync('cli', ['--version']);
 const result = spawnSync('cli', ['--version'], { timeout: 5000 });
 
 // ✗ DON'T - pre-release satisfies stable range
-semver.satisfies('1.2.3-beta', '>=1.2.3') // false!
+semver.satisfies('1.2.3-beta', '>=1.2.3'); // false!
 
 // ✓ DO - pre-release needs matching range
-semver.satisfies('1.2.3-beta', '>=1.2.3-alpha') // true
+semver.satisfies('1.2.3-beta', '>=1.2.3-alpha'); // true
 ```
 
 ## References
@@ -328,4 +340,4 @@ semver.satisfies('1.2.3-beta', '>=1.2.3-alpha') // true
 - **npm semver package**: https://www.npmjs.com/package/semver
 - **Full API docs**: https://github.com/npm/node-semver
 - **SemVer spec**: https://semver.org/
-- **Implementation code**: See `version-check-implementation.ts` in this directory
+- **Implementation code**: See `version-check-implementation.ts.example` in this directory

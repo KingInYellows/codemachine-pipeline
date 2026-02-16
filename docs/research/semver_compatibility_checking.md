@@ -5,6 +5,7 @@
 This document provides comprehensive research on best practices for enforcing minimum version requirements on external CLI dependencies in Node.js TypeScript projects. It covers the `semver` npm package (the standard used by npm itself), version extraction patterns, and real-world implementation strategies.
 
 **Key Findings:**
+
 - **Standard Library**: `semver` package by npm organization (actively maintained, battle-tested)
 - **Version Detection**: Extract semver from CLI output using `semver.clean()` + regex fallback
 - **Compatibility Strategy**: Use `semver.gte()` for minimum enforcement, `satisfies()` for ranges
@@ -21,6 +22,7 @@ This document provides comprehensive research on best practices for enforcing mi
 The [`semver` npm package](https://www.npmjs.com/package/semver) is the official semantic versioning implementation used by npm itself. It's maintained by the npm organization and is the industry standard.
 
 **Advantages:**
+
 - Battle-tested in npm ecosystem (billions of installations)
 - Actively maintained with regular updates
 - Zero dependencies
@@ -29,6 +31,7 @@ The [`semver` npm package](https://www.npmjs.com/package/semver) is the official
 - Pre-release and metadata support
 
 **Installation:**
+
 ```bash
 npm install semver
 npm install --save-dev @types/semver  # For TypeScript
@@ -36,12 +39,12 @@ npm install --save-dev @types/semver  # For TypeScript
 
 ### Alternative Libraries
 
-| Package | Use Case | Pros | Cons |
-|---------|----------|------|------|
-| `semver` | General semver tasks | Standard, well-tested | More functions than needed for simple checks |
-| `compare-versions` | Simple version comparison | Lightweight, focused | Limited to comparison, no ranges |
-| `semver-regex` | Extracting semver from text | Fast regex matching | Only extracts, doesn't validate ranges |
-| `is-semver` | Validation only | Minimal overhead | Limited functionality |
+| Package            | Use Case                    | Pros                  | Cons                                         |
+| ------------------ | --------------------------- | --------------------- | -------------------------------------------- |
+| `semver`           | General semver tasks        | Standard, well-tested | More functions than needed for simple checks |
+| `compare-versions` | Simple version comparison   | Lightweight, focused  | Limited to comparison, no ranges             |
+| `semver-regex`     | Extracting semver from text | Fast regex matching   | Only extracts, doesn't validate ranges       |
+| `is-semver`        | Validation only             | Minimal overhead      | Limited functionality                        |
 
 **Recommendation:** Use `semver` for comprehensive features, but if you only need to compare two versions, `compare-versions` is adequate.
 
@@ -55,32 +58,32 @@ npm install --save-dev @types/semver  # For TypeScript
 import semver from 'semver';
 
 // Basic comparisons (all return boolean)
-semver.gt('1.2.3', '1.2.2')      // true - greater than
-semver.gte('1.2.3', '1.2.3')     // true - greater than or equal
-semver.lt('1.2.2', '1.2.3')      // true - less than
-semver.lte('1.2.3', '1.2.3')     // true - less than or equal
-semver.eq('1.2.3', '1.2.3')      // true - equal
+semver.gt('1.2.3', '1.2.2'); // true - greater than
+semver.gte('1.2.3', '1.2.3'); // true - greater than or equal
+semver.lt('1.2.2', '1.2.3'); // true - less than
+semver.lte('1.2.3', '1.2.3'); // true - less than or equal
+semver.eq('1.2.3', '1.2.3'); // true - equal
 
 // Comparison for sorting
-semver.compare('1.2.3', '1.2.4') // -1 (first < second)
-semver.compare('1.2.4', '1.2.3') // 1 (first > second)
-semver.compare('1.2.3', '1.2.3') // 0 (equal)
+semver.compare('1.2.3', '1.2.4'); // -1 (first < second)
+semver.compare('1.2.4', '1.2.3'); // 1 (first > second)
+semver.compare('1.2.3', '1.2.3'); // 0 (equal)
 ```
 
 ### Version Validation and Cleaning
 
 ```typescript
 // Validate if string is valid semver
-semver.valid('1.2.3')              // '1.2.3' (returns normalized)
-semver.valid('v1.2.3')             // '1.2.3' (strips 'v' prefix)
-semver.valid('1.2.3-beta')         // '1.2.3-beta'
-semver.valid('1.2')                // null (invalid - missing patch)
-semver.valid('not-a-version')      // null
+semver.valid('1.2.3'); // '1.2.3' (returns normalized)
+semver.valid('v1.2.3'); // '1.2.3' (strips 'v' prefix)
+semver.valid('1.2.3-beta'); // '1.2.3-beta'
+semver.valid('1.2'); // null (invalid - missing patch)
+semver.valid('not-a-version'); // null
 
 // Clean a version string (normalize variations)
-semver.clean('v1.2.3')             // '1.2.3'
-semver.clean('  =  1.2.3  ')       // '1.2.3'
-semver.clean('1.2.3.4')            // null (too many parts)
+semver.clean('v1.2.3'); // '1.2.3'
+semver.clean('  =  1.2.3  '); // '1.2.3'
+semver.clean('1.2.3.4'); // null (too many parts)
 
 // Parse into SemVer object
 const v = semver.parse('1.2.3-beta.1+build.123');
@@ -100,17 +103,17 @@ const v = semver.parse('1.2.3-beta.1+build.123');
 
 ```typescript
 // Satisfies - most common for minimum version enforcement
-semver.satisfies('1.5.0', '>=1.0.0')              // true
-semver.satisfies('0.9.0', '>=1.0.0')              // false
-semver.satisfies('1.2.3-alpha', '>=1.2.3')       // false (prerelease)
-semver.satisfies('1.2.3', '1.x || >=2.5.0')      // true (complex range)
+semver.satisfies('1.5.0', '>=1.0.0'); // true
+semver.satisfies('0.9.0', '>=1.0.0'); // false
+semver.satisfies('1.2.3-alpha', '>=1.2.3'); // false (prerelease)
+semver.satisfies('1.2.3', '1.x || >=2.5.0'); // true (complex range)
 
 // Max/Min in a range
-semver.maxSatisfying(['1.2.3', '1.2.4', '1.3.0'], '^1.2') // '1.2.4'
-semver.minSatisfying(['1.2.3', '1.2.4', '1.3.0'], '^1.2') // '1.2.3'
+semver.maxSatisfying(['1.2.3', '1.2.4', '1.3.0'], '^1.2'); // '1.2.4'
+semver.minSatisfying(['1.2.3', '1.2.4', '1.3.0'], '^1.2'); // '1.2.3'
 
 // Check if version is outside range
-semver.outside('1.2.3', '1.4.x', '>')  // true (1.2.3 > 1.4.x range)
+semver.outside('1.2.3', '1.4.x', '>'); // true (1.2.3 > 1.4.x range)
 ```
 
 ---
@@ -120,6 +123,7 @@ semver.outside('1.2.3', '1.4.x', '>')  // true (1.2.3 > 1.4.x range)
 ### The Challenge
 
 CLI `--version` output varies widely:
+
 ```
 git --version
 → "git version 2.40.0"
@@ -265,7 +269,10 @@ const testCases = [
 
 for (const { input, expected } of testCases) {
   const result = extractVersionFromCli('test', input);
-  console.assert(result === expected, `Failed: "${input}" -> got "${result}", expected "${expected}"`);
+  console.assert(
+    result === expected,
+    `Failed: "${input}" -> got "${result}", expected "${expected}"`
+  );
 }
 ```
 

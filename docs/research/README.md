@@ -7,6 +7,7 @@ Research documentation on building production-grade TypeScript adapters for wrap
 ### 1. [cli-adapter-patterns-research.md](./cli-adapter-patterns-research.md) — Comprehensive Reference
 
 **What it covers:**
+
 - CLI wrapper adapter architecture (LinearAdapter reference pattern)
 - Proposed CodeMachineCLIAdapter structure
 - Error handling taxonomy (exit codes, stderr patterns, error classification)
@@ -20,6 +21,7 @@ Research documentation on building production-grade TypeScript adapters for wrap
 **Best for:** Understanding the full design, making architectural decisions
 
 **Key sections:**
+
 - Section 1: CLI Wrapper Adapter Architecture
 - Section 2: Error Handling Taxonomy
 - Section 3: Event Emitter Pattern vs Alternatives
@@ -36,6 +38,7 @@ Research documentation on building production-grade TypeScript adapters for wrap
 ### 2. [cli-adapter-implementation-guide.md](./cli-adapter-implementation-guide.md) — Copy-Paste Ready Code
 
 **What it covers:**
+
 - Step-by-step implementation of CodeMachineCLIAdapter
 - Type definitions and config interfaces
 - Error class implementation
@@ -49,6 +52,7 @@ Research documentation on building production-grade TypeScript adapters for wrap
 **Best for:** Actually building the adapter
 
 **Key sections:**
+
 - Part 1: Core Adapter Structure (5 steps)
 - Part 2: Integration with ExecutionStrategy
 - Part 3: Testing
@@ -61,6 +65,7 @@ Research documentation on building production-grade TypeScript adapters for wrap
 ### 3. [cli-adapter-alternatives-analysis.md](./cli-adapter-alternatives-analysis.md) — Decision Framework
 
 **What it covers:**
+
 - Monolithic vs Adapter pattern (costs/benefits)
 - Streaming patterns (EventEmitter vs async iterator vs callback vs promise)
 - Error handling strategies (exit code, pattern matching, hybrid)
@@ -73,6 +78,7 @@ Research documentation on building production-grade TypeScript adapters for wrap
 **Best for:** Making design trade-offs, justifying architectural decisions
 
 **Key sections:**
+
 - Section 1: Monolithic vs Adapter Pattern
 - Section 2: Streaming Patterns Comparison
 - Section 3: Error Handling Strategies
@@ -88,17 +94,20 @@ Research documentation on building production-grade TypeScript adapters for wrap
 ## Quick Start
 
 ### For Architects/Decision Makers
+
 1. Read [cli-adapter-alternatives-analysis.md](./cli-adapter-alternatives-analysis.md) Section 7-9
 2. Review the decision matrix
 3. Review recommended architecture summary
 
 ### For Developers
+
 1. Read [cli-adapter-patterns-research.md](./cli-adapter-patterns-research.md) Sections 1-5
 2. Follow [cli-adapter-implementation-guide.md](./cli-adapter-implementation-guide.md) Part 1-3
 3. Copy code from Part 2-4
 4. Run tests from Part 3
 
 ### For Reviewers
+
 1. Skim [cli-adapter-patterns-research.md](./cli-adapter-patterns-research.md) Sections 1-2
 2. Compare implementation against [cli-adapter-implementation-guide.md](./cli-adapter-implementation-guide.md)
 3. Verify testing against Part 3
@@ -108,6 +117,7 @@ Research documentation on building production-grade TypeScript adapters for wrap
 ## Recommended Implementation Summary
 
 ### Architecture Decisions
+
 - **Pattern:** Adapter (CLI logic isolated from strategy)
 - **Streaming:** EventEmitter (for NDJSON real-time events)
 - **Errors:** Hybrid (exit code fast path + pattern matching)
@@ -117,18 +127,19 @@ Research documentation on building production-grade TypeScript adapters for wrap
 
 ### Key Design Principles
 
-| Principle | Implementation |
-|-----------|-----------------|
-| **Dependency Injection** | Config object + optional logger |
-| **Error Taxonomy** | CliErrorType enum with ErrorType classification |
-| **Type Safety** | Zod schemas for argument validation |
-| **Testability** | Factory functions, mock-friendly logger |
-| **Streaming** | EventEmitter for NDJSON events |
-| **Lifecycle** | State machine prevents invalid operations |
-| **Timeout** | Graceful shutdown with force-kill fallback |
-| **Observability** | Structured logging + event emission |
+| Principle                | Implementation                                  |
+| ------------------------ | ----------------------------------------------- |
+| **Dependency Injection** | Config object + optional logger                 |
+| **Error Taxonomy**       | CliErrorType enum with ErrorType classification |
+| **Type Safety**          | Zod schemas for argument validation             |
+| **Testability**          | Factory functions, mock-friendly logger         |
+| **Streaming**            | EventEmitter for NDJSON events                  |
+| **Lifecycle**            | State machine prevents invalid operations       |
+| **Timeout**              | Graceful shutdown with force-kill fallback      |
+| **Observability**        | Structured logging + event emission             |
 
 ### File Structure
+
 ```
 src/
 ├── adapters/
@@ -153,6 +164,7 @@ tests/
 ```
 
 ### Implementation Steps
+
 1. Create `src/adapters/cli/types.ts` with type definitions
 2. Create `src/adapters/cli/CliAdapterError.ts` with error class
 3. Create `src/adapters/cli/CodeMachineCLIAdapter.ts` with main adapter
@@ -167,6 +179,7 @@ tests/
 ## Key Code Examples
 
 ### Type-Safe Execution
+
 ```typescript
 const adapter = createCodeMachineCLIAdapter({
   cliPath: '/usr/local/bin/codemachine',
@@ -185,6 +198,7 @@ const result = await adapter.execute('analyze', {
 ```
 
 ### Event Streaming
+
 ```typescript
 adapter.on('event', (event) => {
   console.log('Parsed NDJSON event:', event);
@@ -198,6 +212,7 @@ await adapter.execute('command', args);
 ```
 
 ### Error Handling
+
 ```typescript
 try {
   await adapter.execute('command', args);
@@ -215,6 +230,7 @@ try {
 ```
 
 ### ExecutionStrategy Integration
+
 ```typescript
 const strategy = createCodeMachineCliStrategy({
   cliPath: 'codemachine',
@@ -240,6 +256,7 @@ if (result.success) {
 ## Error Classification
 
 ### Exit Code Mapping
+
 ```
 0      = Success
 1      = General error (classify by stderr patterns)
@@ -249,6 +266,7 @@ if (result.success) {
 ```
 
 ### Stderr Pattern Examples
+
 ```
 timeout              → TRANSIENT (can retry)
 connection refused   → TRANSIENT (can retry)
@@ -262,16 +280,19 @@ out of memory        → TRANSIENT (retry later)
 ## Testing Strategy
 
 ### Unit Tests (Fast, Isolated)
+
 - Mock adapter for strategy tests
 - No external dependencies
 - Test error handling, argument building, timeout logic
 
 ### Integration Tests (Medium, Real CLI)
+
 - Use real CodeMachine CLI
 - Docker container for isolation
 - Test streaming, output parsing, real behavior
 
 ### E2E Tests (Slow, Full Stack)
+
 - Real CLI, real files, real network
 - Verify end-to-end task execution
 - Only for critical paths
@@ -280,14 +301,14 @@ out of memory        → TRANSIENT (retry later)
 
 ## Performance Characteristics
 
-| Operation | Time | Notes |
-|-----------|------|-------|
-| Adapter initialization | ~100ms | CLI version check |
-| Command execution (small) | ~500ms | Typical command |
-| Event emission | <1ms | Per event, async |
-| Argument building | <1ms | Type-safe validation |
-| Timeout + cleanup | ~5s | Graceful shutdown |
-| Memory (1GB output) | ~1GB | Streamed (not buffered) |
+| Operation                 | Time   | Notes                   |
+| ------------------------- | ------ | ----------------------- |
+| Adapter initialization    | ~100ms | CLI version check       |
+| Command execution (small) | ~500ms | Typical command         |
+| Event emission            | <1ms   | Per event, async        |
+| Argument building         | <1ms   | Type-safe validation    |
+| Timeout + cleanup         | ~5s    | Graceful shutdown       |
+| Memory (1GB output)       | ~1GB   | Streamed (not buffered) |
 
 ---
 
@@ -304,6 +325,7 @@ If adapting an existing monolithic ExecutionStrategy:
 7. Gradually migrate clients to use new adapter directly
 
 Example migration:
+
 ```typescript
 // Before: CLI code in strategy
 export class CodeMachineStrategy implements ExecutionStrategy {
@@ -329,17 +351,20 @@ export class CodeMachineStrategy implements ExecutionStrategy {
 ## Further Reading
 
 ### Related Technologies
+
 - Node.js `child_process` module: Process spawning, signals
 - EventEmitter: Pub/sub pattern for streaming events
 - NDJSON format: Newline-delimited JSON for streaming
 - Unix signals: SIGTERM (graceful), SIGKILL (force)
 
 ### Related ADRs/Patterns
+
 - ADR-3: Execution Strategy Pattern (decision to use strategies)
 - ADR-6: Linear Adapter Pattern (HTTP adapter reference)
 - ADR-7: Error Taxonomy (classification approach)
 
 ### Production Examples
+
 - Terraform CDK (TypeScript): CLI spawning with backpressure
 - Pulumi (TypeScript): Event-based streaming output
 - Docker SDK (Node.js): Process management patterns
@@ -350,8 +375,8 @@ export class CodeMachineStrategy implements ExecutionStrategy {
 ## Questions?
 
 For questions about this research:
+
 1. Check the specific document (patterns, implementation, or alternatives)
 2. Review the code examples in the implementation guide
 3. Compare against decision matrix in alternatives analysis
 4. Refer to "Testing Patterns" for test examples
-

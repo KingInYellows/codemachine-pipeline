@@ -111,6 +111,7 @@ Exit Code Analysis
 ```
 
 **Implementation:**
+
 ```typescript
 export function classifyError(exitCode: number, stderr: string): ErrorType {
   // Fast path: exit codes
@@ -153,6 +154,7 @@ Timeline with Graceful Shutdown
 ```
 
 **Code:**
+
 ```typescript
 const timeout1 = setTimeout(() => {
   child.kill('SIGTERM'); // Graceful
@@ -221,12 +223,12 @@ await adapter.execute('command', args);
 // Solution: Type-safe builder with validation
 
 interface BuilderConfig {
-  command: string;           // string
-  target: string;            // string
-  verbose?: boolean;         // boolean → --verbose (no value)
-  exclude?: string[];        // array → --exclude a --exclude b
-  timeout?: number;          // number → --timeout 30
-  maxArgs?: number;          // override default 1000
+  command: string; // string
+  target: string; // string
+  verbose?: boolean; // boolean → --verbose (no value)
+  exclude?: string[]; // array → --exclude a --exclude b
+  timeout?: number; // number → --timeout 30
+  maxArgs?: number; // override default 1000
 }
 
 class ArgumentBuilder {
@@ -270,7 +272,7 @@ class ArgumentBuilder {
 const args = new ArgumentBuilder()
   .add('command', 'analyze', true) // Required
   .add('target', './src', true)
-  .add('verbose', true)             // Boolean flag
+  .add('verbose', true) // Boolean flag
   .add('exclude', ['node_modules', 'dist'])
   .add('timeout', 30000)
   .build();
@@ -306,6 +308,7 @@ Rules:
 ```
 
 **Implementation:**
+
 ```typescript
 type State = 'created' | 'validating' | 'ready' | 'executing' | 'error' | 'cleaned';
 
@@ -354,10 +357,7 @@ export class MockCliAdapter extends EventEmitter {
     // Instantly ready
   }
 
-  async execute(
-    command: string,
-    args?: Record<string, unknown>
-  ): Promise<CliOutput> {
+  async execute(command: string, args?: Record<string, unknown>): Promise<CliOutput> {
     // Simulate streaming events
     setImmediate(() => {
       this.emit('event', { type: 'analysis_started', command });
@@ -428,42 +428,46 @@ if (result.success) {
 
 ## Card 9: Common Pitfalls & Fixes
 
-| Pitfall | Fix |
-|---------|-----|
-| **Not clearing timeouts** | Always `clearTimeout()` in exit handler |
-| **Buffering large output** | Use events instead, stream data |
-| **Ignoring stderr** | Parse stderr for error classification |
-| **Synchronous initialization** | Make initialize() async with validation |
-| **No error cause chain** | Always wrap errors: `{ cause: originalError }` |
-| **Killing immediately** | Use SIGTERM first, SIGKILL after grace period |
-| **Leaking processes** | Call cleanup() in finally blocks |
-| **Not validating CLI** | Call validateCli() during initialize() |
-| **Escaping without shell** | With `shell: false`, minimal escaping needed |
-| **No timeout management** | Always set timeout and handle cleanup |
+| Pitfall                        | Fix                                            |
+| ------------------------------ | ---------------------------------------------- |
+| **Not clearing timeouts**      | Always `clearTimeout()` in exit handler        |
+| **Buffering large output**     | Use events instead, stream data                |
+| **Ignoring stderr**            | Parse stderr for error classification          |
+| **Synchronous initialization** | Make initialize() async with validation        |
+| **No error cause chain**       | Always wrap errors: `{ cause: originalError }` |
+| **Killing immediately**        | Use SIGTERM first, SIGKILL after grace period  |
+| **Leaking processes**          | Call cleanup() in finally blocks               |
+| **Not validating CLI**         | Call validateCli() during initialize()         |
+| **Escaping without shell**     | With `shell: false`, minimal escaping needed   |
+| **No timeout management**      | Always set timeout and handle cleanup          |
 
 ---
 
 ## Card 10: Pattern Selection Checklist
 
 **Choose EventEmitter if:**
+
 - [ ] Output is streaming (NDJSON, large files)
 - [ ] Multiple consumers need events (logging, metrics, processing)
 - [ ] Real-time progress indication needed
 - [ ] Output is unbounded in size
 
 **Choose Async Iterator if:**
+
 - [ ] Sequential processing needed
 - [ ] Backpressure handling required
 - [ ] Single consumer
 - [ ] Want natural error handling (try/catch)
 
 **Choose Promise if:**
+
 - [ ] Small, one-shot execution
 - [ ] Need simple API
 - [ ] No event streaming
 - [ ] Output fits in memory
 
 **Choose Callback if:**
+
 - [ ] Legacy codebase
 - [ ] Simple one-off scripts
 - [ ] Multiple independent handlers (but prefer EventEmitter)
@@ -473,6 +477,7 @@ if (result.success) {
 ## Card 11: Testing Checklist
 
 **Unit Tests (Mock Adapter)**
+
 - [ ] Error handling (exit codes, stderr patterns)
 - [ ] Argument building (boolean flags, arrays, escaping)
 - [ ] Timeout logic (SIGTERM, grace period, SIGKILL)
@@ -480,6 +485,7 @@ if (result.success) {
 - [ ] State machine (invalid state transitions)
 
 **Integration Tests (Real CLI)**
+
 - [ ] CLI available and valid
 - [ ] Simple command execution
 - [ ] Large output streaming
@@ -488,6 +494,7 @@ if (result.success) {
 - [ ] Process cleanup
 
 **E2E Tests (Full Stack)**
+
 - [ ] Real task execution
 - [ ] File I/O
 - [ ] Network (if applicable)
@@ -498,16 +505,17 @@ if (result.success) {
 
 ## Card 12: Performance Optimization Tips
 
-| Optimization | Impact | Cost |
-|--------------|--------|------|
-| Event streaming (no buffering) | Memory: O(1) vs O(n) | Low |
-| Exit code fast path | Error classification: ~1ms | Low |
-| Lazy initialization | Startup: -CLI check time | Low |
-| Argument validation | Prevents bad requests | Negligible |
-| Process pooling | Startup: -spawn overhead | High (complexity) |
-| Caching results | Memory usage: +cache size | Medium |
+| Optimization                   | Impact                     | Cost              |
+| ------------------------------ | -------------------------- | ----------------- |
+| Event streaming (no buffering) | Memory: O(1) vs O(n)       | Low               |
+| Exit code fast path            | Error classification: ~1ms | Low               |
+| Lazy initialization            | Startup: -CLI check time   | Low               |
+| Argument validation            | Prevents bad requests      | Negligible        |
+| Process pooling                | Startup: -spawn overhead   | High (complexity) |
+| Caching results                | Memory usage: +cache size  | Medium            |
 
 **Recommended priorities:**
+
 1. Event streaming (required for large output)
 2. Exit code classification (fast, accurate)
 3. Lazy initialization (defers expensive work)
@@ -530,7 +538,9 @@ const { exitCode, output } = await adapter.execute('analyze', { target: './src' 
 adapter.on('event', (e) => console.log(e));
 
 // Classify error
-if (error instanceof CliAdapterError && error.isRetryable()) { retry(); }
+if (error instanceof CliAdapterError && error.isRetryable()) {
+  retry();
+}
 
 // Cleanup
 await adapter.cleanup();
@@ -591,12 +601,15 @@ Testing?
 ## Quick Copy-Paste Templates
 
 ### Template 1: Minimal Adapter
+
 ```typescript
 import { spawn } from 'node:child_process';
 import { EventEmitter } from 'node:events';
 
 export class MinimalCliAdapter extends EventEmitter {
-  constructor(private cliPath: string) { super(); }
+  constructor(private cliPath: string) {
+    super();
+  }
 
   async execute(cmd: string, args: string[] = []): Promise<{ exitCode: number; output: string }> {
     return new Promise((resolve, reject) => {
@@ -618,6 +631,7 @@ export class MinimalCliAdapter extends EventEmitter {
 ```
 
 ### Template 2: With Error Classification
+
 ```typescript
 function classifyError(code: number, stderr: string): 'transient' | 'permanent' {
   if (code === 0) return 'transient'; // But shouldn't get here
@@ -634,6 +648,7 @@ function classifyError(code: number, stderr: string): 'transient' | 'permanent' 
 ```
 
 ### Template 3: With Timeout
+
 ```typescript
 const timeout = setTimeout(() => {
   child.kill('SIGTERM');
@@ -644,4 +659,3 @@ child.on('exit', () => clearTimeout(timeout));
 ```
 
 ---
-
