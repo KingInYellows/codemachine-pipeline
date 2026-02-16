@@ -4,7 +4,7 @@
 /**
  * CLI Reference Generator (CDMCH-58 / #211)
  *
- * Reads oclif.manifest.json and generates docs/ops/cli-reference.md.
+ * Reads oclif.manifest.json and generates docs/reference/cli/cli-reference.md.
  * The output is fully auto-generated — do not manually edit the target file.
  *
  * Usage:
@@ -17,7 +17,7 @@ const { resolve } = require('node:path');
 
 const ROOT = resolve(__dirname, '..', '..');
 const MANIFEST_PATH = resolve(ROOT, 'oclif.manifest.json');
-const OUTPUT_PATH = resolve(ROOT, 'docs', 'ops', 'cli-reference.md');
+const OUTPUT_PATH = resolve(ROOT, 'docs', 'reference', 'cli', 'cli-reference.md');
 const BIN_NAME = 'codepipe';
 
 // ---------------------------------------------------------------------------
@@ -253,22 +253,22 @@ const markdown = generateDocument();
 if (process.argv.includes('--check')) {
   // Drift detection mode
   if (!existsSync(OUTPUT_PATH)) {
-    console.error('Drift detected: docs/ops/cli-reference.md does not exist.');
+    console.error('Drift detected: docs/reference/cli/cli-reference.md does not exist.');
     console.error('Run "npm run docs:cli" and commit the generated file.');
     process.exit(1);
   }
 
   const committed = readFileSync(OUTPUT_PATH, 'utf8');
   if (committed !== markdown) {
-    console.error('Drift detected: docs/ops/cli-reference.md is out of date.');
+    console.error('Drift detected: docs/reference/cli/cli-reference.md is out of date.');
     console.error('Run "npm run docs:cli" and commit the updated file.');
     process.exit(1);
   }
 
-  console.log('✔ No drift detected in docs/ops/cli-reference.md');
+  console.log('✔ No drift detected in docs/reference/cli/cli-reference.md');
   process.exit(0);
 }
 
 // Generate mode
 writeFileSync(OUTPUT_PATH, markdown);
-console.log(`✔ Generated docs/ops/cli-reference.md (${commands.length} commands)`);
+console.log(`✔ Generated docs/reference/cli/cli-reference.md (${commands.length} commands)`);

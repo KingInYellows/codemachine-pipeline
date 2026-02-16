@@ -385,7 +385,7 @@ For monitoring-related issues:
 
 - Check `codepipe doctor --verbose` for diagnostic details
 - Review `.codepipe/logs/codepipe.log` for error patterns
-- Consult `docs/ops/doctor_reference.md` for check interpretations
+- Consult `docs/reference/cli/doctor_reference.md` for check interpretations
 - Report persistent issues: https://github.com/KingInYellows/codemachine-pipeline/issues
 
 ---
