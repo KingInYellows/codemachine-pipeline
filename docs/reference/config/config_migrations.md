@@ -2,7 +2,7 @@
 
 **Purpose:** This document provides a systematic checklist for migrating RepoConfig schema versions, ensuring deterministic upgrades without data loss.
 
-**Related:** ADR-2 (State Persistence), `docs/requirements/RepoConfig_schema.md`
+**Related:** ADR-2 (State Persistence), `docs/reference/config/RepoConfig_schema.md`
 
 ---
 
@@ -179,7 +179,7 @@ _This section will be populated when version 2.0.0 is released._
 **Resolution:**
 
 1. Check error message for specific missing field
-2. Consult `docs/requirements/RepoConfig_schema.md` for field requirements
+2. Consult `docs/reference/config/RepoConfig_schema.md` for field requirements
 3. Add missing fields with appropriate defaults
 4. Re-run validation
 
@@ -195,7 +195,7 @@ _This section will be populated when version 2.0.0 is released._
 1. Verify environment variables are still set: `env | grep AI_FEATURE`
 2. Check if variable names changed in migration
 3. Update environment variable names if needed
-4. Review `docs/requirements/RepoConfig_schema.md` for current env var names
+4. Review `docs/reference/config/RepoConfig_schema.md` for current env var names
 
 ### Issue: JSON syntax errors after manual edit
 
@@ -314,7 +314,7 @@ _Note: Always use the latest CLI version for best compatibility._
 If you encounter issues during migration:
 
 1. **Check documentation:**
-   - `docs/requirements/RepoConfig_schema.md` - Full schema reference
+   - `docs/reference/config/RepoConfig_schema.md` - Full schema reference
    - `.codepipe/templates/config.example.json` - Example config
 
 2. **Validation command:**

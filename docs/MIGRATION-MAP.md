@@ -96,26 +96,26 @@ docs/
 
 ### Moved to playbooks/ (Operational Procedures)
 
-| Original Location                            | New Location | Purpose               |
-| -------------------------------------------- | ------------ | --------------------- |
+| Original Location                            | New Location | Purpose                |
+| -------------------------------------------- | ------------ | ---------------------- |
 | `ops/execution_telemetry.md`                 | `playbooks/` | Operational monitoring |
-| `ops/agent_manifest_guide.md`                | `playbooks/` | How-to guide          |
-| `ops/approval_gates.md`                      | `playbooks/` | Operational guide     |
-| `ops/approval_playbook.md`                   | `playbooks/` | Operational procedure |
-| `ops/init_playbook.md`                       | `playbooks/` | Operational procedure |
-| `ops/patch_playbook.md`                      | `playbooks/` | Operational procedure |
-| `ops/prd_playbook.md`                        | `playbooks/` | Operational procedure |
-| `ops/troubleshooting.md`                     | `playbooks/` | Operational guide     |
-| `ops/log-rotation.md`                        | `playbooks/` | Operational procedure |
-| `ops/observability_baseline.md`              | `playbooks/` | Operational guide     |
-| `ops/post-release-monitoring.md`             | `playbooks/` | Operational procedure |
-| `requirements/branch_protection_playbook.md` | `playbooks/` | Operational procedure |
-| `requirements/pr_playbook.md`                | `playbooks/` | Operational procedure |
-| `requirements/research_playbook.md`          | `playbooks/` | Operational procedure |
-| `requirements/resume_playbook.md`            | `playbooks/` | Operational procedure |
-| `requirements/traceability_playbook.md`      | `playbooks/` | Operational procedure |
-| `requirements/validation_playbook.md`        | `playbooks/` | Operational procedure |
-| `requirements/write_action_playbook.md`      | `playbooks/` | Operational procedure |
+| `ops/agent_manifest_guide.md`                | `playbooks/` | How-to guide           |
+| `ops/approval_gates.md`                      | `playbooks/` | Operational guide      |
+| `ops/approval_playbook.md`                   | `playbooks/` | Operational procedure  |
+| `ops/init_playbook.md`                       | `playbooks/` | Operational procedure  |
+| `ops/patch_playbook.md`                      | `playbooks/` | Operational procedure  |
+| `ops/prd_playbook.md`                        | `playbooks/` | Operational procedure  |
+| `ops/troubleshooting.md`                     | `playbooks/` | Operational guide      |
+| `ops/log-rotation.md`                        | `playbooks/` | Operational procedure  |
+| `ops/observability_baseline.md`              | `playbooks/` | Operational guide      |
+| `ops/post-release-monitoring.md`             | `playbooks/` | Operational procedure  |
+| `requirements/branch_protection_playbook.md` | `playbooks/` | Operational procedure  |
+| `requirements/pr_playbook.md`                | `playbooks/` | Operational procedure  |
+| `requirements/research_playbook.md`          | `playbooks/` | Operational procedure  |
+| `requirements/resume_playbook.md`            | `playbooks/` | Operational procedure  |
+| `requirements/traceability_playbook.md`      | `playbooks/` | Operational procedure  |
+| `requirements/validation_playbook.md`        | `playbooks/` | Operational procedure  |
+| `requirements/write_action_playbook.md`      | `playbooks/` | Operational procedure  |
 
 ### Moved to guide/ (User-Facing Guides)
 
