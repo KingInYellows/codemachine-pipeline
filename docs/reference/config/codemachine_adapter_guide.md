@@ -64,42 +64,12 @@ Add CodeMachine settings to your `config.json`:
 
 ### Environment Variables
 
-<<<<<<< HEAD
 | Variable                            | Description                                          |
 | ----------------------------------- | ---------------------------------------------------- |
 | `CODEMACHINE_BIN_PATH`              | Override CodeMachine CLI binary location (preferred) |
 | `CODEPIPE_EXECUTION_CLI_PATH`       | Override `execution.codemachine_cli_path` via env    |
 | `CODEPIPE_EXECUTION_DEFAULT_ENGINE` | Override `execution.default_engine` via env          |
 | `CODEPIPE_EXECUTION_TIMEOUT_MS`     | Override per-task timeout in milliseconds            |
-=======
-| Variable | Description |
-| ------------------------------- | ---------------------------------------------------- |
-| `CODEMACHINE_BIN_PATH`          | Override CodeMachine CLI binary location (preferred) |
-<<<<<<< HEAD
-| `CODEPIPE_EXECUTION_CLI_PATH`   | Override `execution.codemachine_cli_path` via env    |
-| `CODEPIPE_EXECUTION_DEFAULT_ENGINE` | Override `execution.default_engine` via env       |
-| `CODEPIPE_EXECUTION_TIMEOUT_MS` | Override per-task timeout in milliseconds            |
-=======
-<<<<<<< HEAD
-| Variable | Description |
-| ----------------------- | ------------------------------------------------ |
-| `CODEMACHINE_BIN_PATH` | Override CodeMachine CLI binary location (preferred) |
-| `CODEPIPE_EXECUTION_CLI_PATH` | Override `execution.codemachine_cli_path` via env |
-| `CODEPIPE_EXECUTION_TIMEOUT_MS` | Override per-task timeout in milliseconds |
-=======
-| Variable | Description |
-| ---------------------- | -------------------------------- |
-| `CODEMACHINE_BIN_PATH` | Override CLI path from config |
-| `CODEMACHINE_TIMEOUT` | Override timeout in milliseconds |
-
-> > > > > > > dda6d15 (style: format code with Prettier and Ruff Formatter)
->>>>>>> a9d3941 (style: format code with Prettier and Ruff Formatter)
-=======
-| `CODEPIPE_EXECUTION_CLI_PATH`   | Override `execution.codemachine_cli_path` via env     |
-| `CODEPIPE_EXECUTION_DEFAULT_ENGINE` | Override `execution.default_engine` via env       |
-| `CODEPIPE_EXECUTION_TIMEOUT_MS` | Override per-task timeout in milliseconds             |
->>>>>>> e55825b (style: format code with Prettier and Ruff Formatter)
->>>>>>> dc6a72f (style: format code with Prettier and Ruff Formatter)
 
 ## CLI Availability Check
 
