@@ -978,7 +978,7 @@ describe('CodeMachineCLIAdapter', () => {
 // Example 1: Simple execution
 async function analyzeCode() {
   const adapter = createCodeMachineCLIAdapter({
-    cliPath: process.env.CODEMACHINE_CLI || 'codemachine',
+    cliPath: process.env.CODEMACHINE_BIN_PATH || 'codemachine',
     workspaceDir: process.cwd(),
   });
 
