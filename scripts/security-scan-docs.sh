@@ -29,11 +29,13 @@ check_secret() {
   if [ -n "$matches" ]; then
     if [ "$severity" = "fail" ]; then
       echo "❌ Found potential ${description}:"
-      echo "$matches"
+      # Do NOT print the matched line content to CI logs (may contain real credentials).
+      echo "$matches" | sed 's/:[^:]*$/: [REDACTED]/'
       errors=$((errors + 1))
     else
       echo "⚠️  Found ${description} (verify not sensitive):"
-      echo "$matches"
+      # Do NOT print the matched line content to CI logs (may contain PII/secrets).
+      echo "$matches" | sed 's/:[^:]*$/: [REDACTED]/'
     fi
   else
     echo "✅ No ${description} found"
@@ -44,7 +46,7 @@ check_secret() {
 check_secret "real GitHub tokens" "ghp_[A-Za-z0-9]{36}" "fail" "ghp_[xX]{36}"
 
 # Check for real Anthropic API keys (sk-ant-*)
-check_secret "real Anthropic API keys" "sk-ant-[A-Za-z0-9_-]{48}"
+check_secret "real Anthropic API keys" "sk-ant-[A-Za-z0-9_-]{48,}"
 
 # Check for real OpenAI API keys (sk-proj-*, sk-svcacct-*)
 check_secret "real OpenAI API keys" "sk-(proj|svcacct)-[A-Za-z0-9_-]{32,}" "fail"

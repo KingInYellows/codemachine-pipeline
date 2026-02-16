@@ -44,10 +44,10 @@ let errors = 0;
 
 // Safety patterns — always checked, even in placeholder blocks
 const safetyPatterns = [
-  { pattern: /\brm\s+-rf\s+\/(?=\s|$)/, message: 'Dangerous rm -rf on root' },
+  { pattern: /\brm\s+-rf\s+\/(\*|[\s;]|$)/, message: 'Dangerous rm -rf on root' },
   { pattern: /:\(\)\{\s*:\|:&\s*\};:/, message: 'Fork bomb detected' },
   { pattern: /chmod\s+777/, message: 'Insecure permissions (chmod 777)' },
-  { pattern: /curl[\s\S]*\|\s*bash/, message: 'Pipe to bash (security risk)' },
+  { pattern: /\b(curl|wget)[\s\S]*\|\s*bash/, message: 'Pipe to bash (security risk)' },
   { pattern: /eval\s+\$\(/, message: 'Eval with command substitution' },
 ];
 
@@ -57,6 +57,7 @@ const credentialPatterns = [
   { pattern: /github_pat_[A-Za-z0-9_]{82}/, message: 'Real GitHub fine-grained token detected' },
   { pattern: /sk-ant-[A-Za-z0-9_-]{48,}/, message: 'Real Anthropic API key detected' },
   { pattern: /sk-(proj|svcacct)-[A-Za-z0-9_-]{32,}/, message: 'Real OpenAI API key detected' },
+  { pattern: /sk-[A-Za-z0-9]{48}/, message: 'Real OpenAI API key detected' },
   { pattern: /lin_api_[A-Za-z0-9]{40}/, message: 'Real Linear API key detected' },
   { pattern: /(AKIA|ASIA)[0-9A-Z]{16}/, message: 'Real AWS access key detected' },
 ];
@@ -78,14 +79,14 @@ for (const file of markdownFiles) {
   const content = fs.readFileSync(file, 'utf-8');
   const relativePath = path.relative(rootDir, file);
 
-  // Extract code blocks (bash, shell, json, javascript)
-  // Handles optional metadata after language, trailing spaces, and CRLF
-  const codeBlockPattern = /```(bash|shell|json|javascript|js)[^\S\r\n]*\r?\n([\s\S]*?)```/g;
-  const matches = content.matchAll(codeBlockPattern);
+    // Extract fenced code blocks (language tag may be anything, or omitted).
+    // Handles optional metadata after language, trailing spaces, and CRLF.
+    const codeBlockPattern = /```[^\S\r\n]*[^\r\n]*\r?\n([\s\S]*?)```/g;
+    const matches = content.matchAll(codeBlockPattern);
 
-  for (const match of matches) {
-    totalBlocks++;
-    const [, lang, code] = match;
+    for (const match of matches) {
+      totalBlocks++;
+      const [, code] = match;
 
     const normalizedCode = code.replace(/\r\n?/g, '\n');
 
