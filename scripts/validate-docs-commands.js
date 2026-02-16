@@ -39,7 +39,18 @@ const cliRefContent = fs.readFileSync(cliRefPath, 'utf-8');
 
 // Normalize colon-separated manifest commands to space-separated (matching docs format).
 // oclif manifest uses ":" (e.g. "pr:create") but topicSeparator is " " so docs say "pr create".
-const manifestDisplayCommands = new Set(actualCommands.map((cmd) => cmd.replace(/:/g, ' ').toLowerCase()));
+const manifestDisplayCommands = new Set(
+  actualCommands.map((cmd) => cmd.replace(/:/g, ' ').toLowerCase())
+);
+
+// Topics are the first word of any multi-word command in the manifest (e.g. "pr" in "pr create").
+// Used to avoid misclassifying positional arguments as subcommands.
+const manifestTopics = new Set(
+  Array.from(manifestDisplayCommands)
+    .map((cmd) => cmd.split(/\s+/).filter(Boolean))
+    .filter((parts) => parts.length >= 2)
+    .map((parts) => parts[0])
+);
 
 // Check if all commands are documented
 let errors = 0;
@@ -70,9 +81,18 @@ for (const match of matches) {
 
   const commandTokens = [];
   for (const token of tokens) {
-    if (token.startsWith('-') || token.startsWith('<') || token.startsWith('[') || token.includes('=')) break;
-    if (!/^[a-z][a-z-]*$/.test(token)) break;
+    if (
+      token.startsWith('-') ||
+      token.startsWith('<') ||
+      token.startsWith('[') ||
+      token.includes('=')
+    )
+      break;
+    if (!/^[a-z][a-z0-9-]*$/.test(token)) break;
     commandTokens.push(token);
+
+    // Only attempt to parse a subcommand if the first token is a known topic.
+    if (commandTokens.length === 1 && !manifestTopics.has(commandTokens[0])) break;
     // Current command tree depth is 2 (topic + subcommand).
     if (commandTokens.length === 2) break;
   }
@@ -80,13 +100,18 @@ for (const match of matches) {
   if (commandTokens.length === 0) continue;
 
   const twoWord = commandTokens.slice(0, 2).join(' ');
-  const oneWord = commandTokens[0];
-
-  if (manifestDisplayCommands.has(twoWord) || manifestDisplayCommands.has(oneWord)) {
+  if (commandTokens.length >= 2) {
+    // When 2 tokens are present, require the full "topic subcommand" to exist (no prefix-matching).
+    if (!manifestDisplayCommands.has(twoWord)) {
+      phantomCommands.add(twoWord);
+    }
     continue;
   }
 
-  phantomCommands.add(commandTokens.join(' '));
+  const oneWord = commandTokens[0];
+  if (!manifestDisplayCommands.has(oneWord)) {
+    phantomCommands.add(oneWord);
+  }
 }
 
 for (const cmd of phantomCommands) {
