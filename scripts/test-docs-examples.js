@@ -57,7 +57,7 @@ const credentialPatterns = [
   { pattern: /github_pat_[A-Za-z0-9_]{82}/, message: 'Real GitHub fine-grained token detected' },
   { pattern: /sk-ant-[A-Za-z0-9_-]{48,}/, message: 'Real Anthropic API key detected' },
   { pattern: /sk-(proj|svcacct)-[A-Za-z0-9_-]{32,}/, message: 'Real OpenAI API key detected' },
-  { pattern: /sk-[A-Za-z0-9]{48}/, message: 'Real OpenAI API key detected' },
+  { pattern: /sk-(?!ant-)[A-Za-z0-9]{48}/, message: 'Real OpenAI API key detected' },
   { pattern: /lin_api_[A-Za-z0-9]{40}/, message: 'Real Linear API key detected' },
   { pattern: /(AKIA|ASIA)[0-9A-Z]{16}/, message: 'Real AWS access key detected' },
 ];
