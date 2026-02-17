@@ -22,7 +22,7 @@ permissions:
 
 jobs:
   link-check:
-    name: Link Validation
+    name: Link Validation (Advisory)
     runs-on: [self-hosted, linux]
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.2.2
@@ -46,6 +46,8 @@ jobs:
             markdown-link-check -q -c .github/markdown-link-check.json "$f" || failed=1
           done
           if [ $failed -ne 0 ]; then
+            # Intentionally non-blocking for now: the docs set includes legacy links we haven't cleaned up yet.
+            # Once the baseline is green, flip this to `exit $failed` to turn it into a strict quality gate.
             echo "::warning::Link check found dead links (advisory; not blocking)."
           fi
 

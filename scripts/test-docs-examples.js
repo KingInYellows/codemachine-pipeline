@@ -16,19 +16,19 @@ const rootDir = path.join(__dirname, '..');
 
 console.log('Testing documentation code examples\n');
 
-// Find all markdown files using Node 24 built-in globSync
+const isExcludedMarkdownPath = (entry) =>
+  /(^|\/)node_modules\//.test(entry) ||
+  /(^|\/)archive\//.test(entry) ||
+  /(^|\/)research\//.test(entry) ||
+  /(^|\/)solutions\//.test(entry) ||
+  /(^|\/)plans\//.test(entry) ||
+  /(^|\/)brainstorms\//.test(entry);
+
+// Find all markdown files using Node 24 built-in globSync.
+// Filter exclusions in userland to avoid relying on Node's glob `exclude` option semantics.
 const markdownFiles = fs
-  .globSync('docs/**/*.md', {
-    cwd: rootDir,
-    // Use a callback so exclusion behavior is explicit across Node 24.x patch versions.
-    exclude: (entry) =>
-      /(^|\/)node_modules\//.test(entry) ||
-      /(^|\/)archive\//.test(entry) ||
-      /(^|\/)research\//.test(entry) ||
-      /(^|\/)solutions\//.test(entry) ||
-      /(^|\/)plans\//.test(entry) ||
-      /(^|\/)brainstorms\//.test(entry),
-  })
+  .globSync('docs/**/*.md', { cwd: rootDir })
+  .filter((entry) => !isExcludedMarkdownPath(entry))
   .map((f) => path.join(rootDir, f));
 
 // Also scan README.md at root
