@@ -123,7 +123,6 @@ Snapshot note: counts reflect repository state as of 2026-02-16 and include file
 - ⚠️ Archive directory has 6 files (candidates for removal)
 - ⚠️ Duplicate: execution_flow.md in diagrams/ AND reference/architecture/
 - ⚠️ Naming inconsistency: ADR-6 vs adr-009 (mixed casing)
-- ⚠️ Corrupted artifact: `docs/{guide,reference` directory (malformed, needs cleanup)
 - ⚠️ Limited guide/ section (only 1 file - needs expansion to ~10 files)
 
 ### Content Gaps
@@ -243,7 +242,7 @@ Snapshot note: counts reflect repository state as of 2026-02-16 and include file
   - 2026-02-14-v1-release-readiness-brainstorm.md (completed, v1.0.0 released)
 - **Space recovery**: 12 KB
 
-**Category 3: Completed Plans (3 files, ~100 KB)** 🗑️ ARCHIVE COMPLETED ONLY
+**Category 3: Completed Plans (2 files, ~80 KB)** 🗑️ ARCHIVE COMPLETED ONLY
 
 - **Status**: Archive release plans - release completed Feb 15, 2026
 - **Files**:
@@ -429,11 +428,12 @@ Based on audit findings, confirm the 7-directory structure:
 
 ```
 docs/
-├── guide/           # Tier 1: Learn (expand from 1 → 8 files)
+├── guide/           # Tier 1: Learn (expand from 1 → 9 files)
 │   ├── index.md
 │   ├── prerequisites.md
 │   ├── installation.md
 │   ├── quick-start.md
+│   ├── concepts.md
 │   ├── workflows.md
 │   ├── configuration.md
 │   ├── team-collaboration.md
@@ -456,65 +456,35 @@ docs/
 ### MkDocs Site Navigation (Excerpt; mkdocs.yml is source of truth)
 
 ```yaml
-# Nav excerpt for audit purposes (see mkdocs.yml for the full nav).
-# Only existing files are active; planned files are commented out.
 docs_dir: docs
 nav:
   - Home: index.md
 
   - Guide:
       - Quick Start: guide/quick-start.md
-      # Planned: index, prerequisites, installation, workflows, configuration,
-      #          team-collaboration, troubleshooting
+      # Planned (Phase 3): index, prerequisites, installation, concepts, workflows,
+      #                    configuration, team-collaboration, troubleshooting
 
   - CLI Commands:
       - CLI Reference: reference/cli/cli-reference.md
       - CLI Surface Requirements: reference/cli/cli_surface.md
       - Doctor Reference: reference/cli/doctor_reference.md
       - Rate Limit Reference: reference/cli/rate_limit_reference.md
-      # Planned: 17 per-command docs (Phase 3)
+      # Planned (Phase 3): 17 per-command docs
 
-  # - Configuration:  # TODO: Create config index, schema, env vars, CLI, engines
+  - Configuration:
+      - Repo Config Schema: reference/config/RepoConfig_schema.md
+      - Config Migrations: reference/config/config_migrations.md
+      - CodeMachine Adapter Guide: reference/config/codemachine_adapter_guide.md
+      - GitHub Adapter: reference/config/github_adapter.md
+      - Linear Adapter: reference/config/linear_adapter.md
 
-  - Playbooks:
-      - Initialization: playbooks/init_playbook.md
-      - Approval Workflow: playbooks/approval_playbook.md
-      - Resume & Recovery: playbooks/resume_playbook.md
-      - PR Management: playbooks/pr_playbook.md
-      - Monitoring: playbooks/observability_baseline.md
-      # Planned: index, debugging, disaster-recovery
-
-  - Reference:
-      - Architecture:
-          - Component Index: reference/architecture/component_index.md
-          - Execution Flow: reference/architecture/execution_flow.md
-          - Execution Flow Spec: reference/architecture/execution_flow_spec.md
-      - API:
-          - API Reference: reference/api/api-reference.md
-
-  - ADRs:
-      - ADR-009 Documentation Architecture: adr/adr-009-documentation-architecture.md
-      - ADR-8 CodeMachine CLI Integration: adr/ADR-8-codemachine-cli-integration.md
-      - ADR-7 Validation Policy: adr/ADR-7-validation-policy.md
-      - ADR-6 Linear Integration: adr/ADR-6-linear-integration.md
-
-  - Diagrams:
-      - Component Overview: diagrams/component_overview.md
-
-  - Solutions:
-      - Code Review:
-          - Documentation PR Review: solutions/code-review/reviewing-documentation-prs.md
-          - Multi-Agent Wave Resolution: solutions/code-review/multi-agent-wave-resolution-pr-findings.md
-      - Integration Issues:
-          - Graphite Restack Conflicts: solutions/integration-issues/graphite-restack-conflicts-after-main-advanced.md
-      - Security:
-          - PR 477 Recommendations: solutions/security/PR-477-recommendations.md
-          - PR 477 Review Index: solutions/security/PR-477-REVIEW-INDEX.md
-          - PR 477 Security Audit: solutions/security/PR-477-security-audit.md
-          - PR 477 Technical Details: solutions/security/PR-477-technical-details.md
-      - Graphite Workflow:
-          - Fixing Critical Issues in Stacked PRs: solutions/graphite-workflow/fixing-critical-issues-in-stacked-prs.md
-      # Planned: common-errors catalog
+  # Remaining sections omitted for brevity (see mkdocs.yml):
+  # - Playbooks
+  # - Reference
+  # - ADRs
+  # - Diagrams
+  # - Solutions
 ```
 
 ## Recommendations
