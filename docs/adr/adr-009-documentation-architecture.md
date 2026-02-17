@@ -126,8 +126,8 @@ This ADR documents critical architectural decisions discovered during documentat
 **Exit Codes**:
 
 - 0: Success
-- 10: Validation error (invalid gate, not pending)
-- 30: Artifact modified (hash mismatch)
+- 10: Validation error (missing --approve/--deny, invalid gate, feature not found, gate not pending)
+- 30: Artifact modified (hash mismatch; human action required)
 - 1: General error
 
 **Sources**:
