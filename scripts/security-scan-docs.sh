@@ -30,12 +30,12 @@ check_secret() {
     if [ "$severity" = "fail" ]; then
       echo "❌ Found potential ${description}:"
       # Do NOT print the matched line content to CI logs (may contain real credentials).
-      echo "$matches" | sed 's/:[^:]*$/: [REDACTED]/'
+      echo "$matches" | sed -E 's/^([^:]*:[0-9]+):.*/\1: [REDACTED]/'
       errors=$((errors + 1))
     else
       echo "⚠️  Found ${description} (verify not sensitive):"
       # Do NOT print the matched line content to CI logs (may contain PII/secrets).
-      echo "$matches" | sed 's/:[^:]*$/: [REDACTED]/'
+      echo "$matches" | sed -E 's/^([^:]*:[0-9]+):.*/\1: [REDACTED]/'
     fi
   else
     echo "✅ No ${description} found"

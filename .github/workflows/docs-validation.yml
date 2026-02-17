@@ -42,12 +42,12 @@ jobs:
           shopt -s globstar nullglob
           files=(docs/guide/**/*.md docs/reference/**/*.md docs/playbooks/**/*.md docs/adr/**/*.md docs/templates/**/*.md README.md)
           failed=0
-	          for f in "${files[@]}"; do
-	            markdown-link-check -q -c .github/markdown-link-check.json "$f" || failed=1
-	          done
-	          if [ $failed -ne 0 ]; then
-	            echo "::warning::Link check found dead links (advisory; not blocking)."
-	          fi
+          for f in "${files[@]}"; do
+            markdown-link-check -q -c .github/markdown-link-check.json "$f" || failed=1
+          done
+          if [ $failed -ne 0 ]; then
+            echo "::warning::Link check found dead links (advisory; not blocking)."
+          fi
 
   command-validation:
     name: CLI Command Table Validation
@@ -153,10 +153,10 @@ jobs:
           SPELLING
           sed -i 's/^[[:space:]]*//' .spelling
 
-	          shopt -s globstar
-	          if ! mdspell -r -n -a --en-us docs/guide/**/*.md docs/reference/**/*.md docs/playbooks/**/*.md docs/adr/**/*.md docs/templates/**/*.md README.md; then
-	            echo "::warning::Spell check found issues (advisory; not blocking)."
-	          fi
+          shopt -s globstar
+          if ! mdspell -r -n -a --en-us docs/guide/**/*.md docs/reference/**/*.md docs/playbooks/**/*.md docs/adr/**/*.md docs/templates/**/*.md README.md; then
+            echo "::warning::Spell check found issues (advisory; not blocking)."
+          fi
 
   structure-validation:
     name: Structure & Formatting

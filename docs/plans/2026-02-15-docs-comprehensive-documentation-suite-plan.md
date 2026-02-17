@@ -161,14 +161,14 @@ Create a multi-format documentation suite with clear organization, progressive d
 2. **docs/ Directory Structure** (Organized by Topic)
 
    ```
-   docs/
-   ├── guide/
-   │   ├── prerequisites.md          # Platform-specific install instructions
-   │   ├── installation.md            # 5-min first workflow
-   │   └── prerequisites.md          # Node version, tools, accounts
-   ├── configuration/
-   │   ├── overview.md               # Config file discovery, precedence
-   │   ├── environment-variables.md  # Complete env var reference
+	   docs/
+	   ├── guide/
+	   │   ├── prerequisites.md          # Node version, tools, accounts
+	   │   ├── installation.md           # Platform-specific install instructions
+	   │   └── quick-start.md            # 5-min first workflow
+	   ├── configuration/
+	   │   ├── overview.md               # Config file discovery, precedence
+	   │   ├── environment-variables.md  # Complete env var reference
    │   ├── config-file.md            # .codepipe/config.json schema
    │   ├── codemachine-cli.md        # 3 resolution paths, priorities
    │   └── execution-engines.md      # Claude, Codex, OpenAI comparison
