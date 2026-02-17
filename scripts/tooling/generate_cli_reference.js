@@ -4,7 +4,7 @@
 /**
  * CLI Reference Generator (CDMCH-58 / #211)
  *
- * Reads oclif.manifest.json and generates docs/ops/cli-reference.md.
+ * Reads oclif.manifest.json and generates docs/reference/cli/cli-reference.md.
  * The output is fully auto-generated — do not manually edit the target file.
  *
  * Usage:
@@ -17,7 +17,7 @@ const { resolve } = require('node:path');
 
 const ROOT = resolve(__dirname, '..', '..');
 const MANIFEST_PATH = resolve(ROOT, 'oclif.manifest.json');
-const OUTPUT_PATH = resolve(ROOT, 'docs', 'ops', 'cli-reference.md');
+const OUTPUT_PATH = resolve(ROOT, 'docs', 'reference', 'cli', 'cli-reference.md');
 const BIN_NAME = 'codepipe';
 
 // ---------------------------------------------------------------------------
@@ -42,9 +42,7 @@ if (!manifest.commands || typeof manifest.commands !== 'object') {
   process.exit(2);
 }
 
-const commands = Object.values(manifest.commands).sort((a, b) =>
-  a.id.localeCompare(b.id),
-);
+const commands = Object.values(manifest.commands).sort((a, b) => a.id.localeCompare(b.id));
 
 // ---------------------------------------------------------------------------
 // 2. Group commands by topic
@@ -67,15 +65,11 @@ function groupCommands(cmds) {
 
 function resolveExampleForCommand(example, cmd) {
   const displayId = cmd.id.replace(/:/g, ' ');
-  return example
-    .replace(/<%= config\.bin %>/g, BIN_NAME)
-    .replace(/<%= command\.id %>/g, displayId);
+  return example.replace(/<%= config\.bin %>/g, BIN_NAME).replace(/<%= command\.id %>/g, displayId);
 }
 
 function renderFlagsTable(flags) {
-  const entries = Object.values(flags).sort((a, b) =>
-    a.name.localeCompare(b.name),
-  );
+  const entries = Object.values(flags).sort((a, b) => a.name.localeCompare(b.name));
   if (entries.length === 0) return '';
 
   const lines = [];
@@ -96,9 +90,7 @@ function renderFlagsTable(flags) {
 }
 
 function renderArgsTable(args) {
-  const entries = Object.values(args).sort((a, b) =>
-    (a.name || '').localeCompare(b.name || ''),
-  );
+  const entries = Object.values(args).sort((a, b) => (a.name || '').localeCompare(b.name || ''));
   if (entries.length === 0) return '';
 
   const lines = [];
@@ -193,7 +185,9 @@ function generateDocument() {
   lines.push('');
   lines.push('# CLI Command Reference');
   lines.push('');
-  lines.push(`The \`${BIN_NAME}\` CLI is the primary interface for managing feature development pipelines. This reference is auto-generated from the oclif command manifest.`);
+  lines.push(
+    `The \`${BIN_NAME}\` CLI is the primary interface for managing feature development pipelines. This reference is auto-generated from the oclif command manifest.`
+  );
   lines.push('');
   lines.push(`**Total commands:** ${commands.length}`);
   lines.push('');
@@ -211,7 +205,8 @@ function generateDocument() {
   };
 
   for (const [topic, cmds] of groups) {
-    const label = topicLabels[topic] || `${topic.charAt(0).toUpperCase() + topic.slice(1)} Commands`;
+    const label =
+      topicLabels[topic] || `${topic.charAt(0).toUpperCase() + topic.slice(1)} Commands`;
     lines.push(`### ${label}`);
     lines.push('');
     for (const cmd of cmds) {
@@ -231,7 +226,8 @@ function generateDocument() {
   lines.push('');
 
   for (const [topic, cmds] of groups) {
-    const label = topicLabels[topic] || `${topic.charAt(0).toUpperCase() + topic.slice(1)} Commands`;
+    const label =
+      topicLabels[topic] || `${topic.charAt(0).toUpperCase() + topic.slice(1)} Commands`;
 
     lines.push(`### ${label}`);
     lines.push('');
@@ -253,22 +249,22 @@ const markdown = generateDocument();
 if (process.argv.includes('--check')) {
   // Drift detection mode
   if (!existsSync(OUTPUT_PATH)) {
-    console.error('Drift detected: docs/ops/cli-reference.md does not exist.');
+    console.error('Drift detected: docs/reference/cli/cli-reference.md does not exist.');
     console.error('Run "npm run docs:cli" and commit the generated file.');
     process.exit(1);
   }
 
   const committed = readFileSync(OUTPUT_PATH, 'utf8');
   if (committed !== markdown) {
-    console.error('Drift detected: docs/ops/cli-reference.md is out of date.');
+    console.error('Drift detected: docs/reference/cli/cli-reference.md is out of date.');
     console.error('Run "npm run docs:cli" and commit the updated file.');
     process.exit(1);
   }
 
-  console.log('✔ No drift detected in docs/ops/cli-reference.md');
+  console.log('✔ No drift detected in docs/reference/cli/cli-reference.md');
   process.exit(0);
 }
 
 // Generate mode
 writeFileSync(OUTPUT_PATH, markdown);
-console.log(`✔ Generated docs/ops/cli-reference.md (${commands.length} commands)`);
+console.log(`✔ Generated docs/reference/cli/cli-reference.md (${commands.length} commands)`);

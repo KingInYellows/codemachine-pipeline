@@ -491,7 +491,7 @@ export default class Resume extends Command {
       }),
       recommendations: analysis.recommendations,
       dry_run: dryRun,
-      playbook_reference: 'docs/requirements/resume_playbook.md',
+      playbook_reference: 'docs/playbooks/resume_playbook.md',
       last_error: analysis.lastError ?? null,
     };
 

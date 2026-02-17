@@ -733,7 +733,7 @@ export function createDefaultConfig(
       },
       compliance_tags: [],
       governance_notes:
-        'Configure integrations and adjust governance settings according to your organization requirements. See docs/requirements/RepoConfig_schema.md for details.',
+        'Configure integrations and adjust governance settings according to your organization requirements. See docs/reference/config/RepoConfig_schema.md for details.',
     };
   }
 
@@ -757,7 +757,7 @@ export function formatValidationErrors(errors: ValidationError[]): string {
 
   lines.push('');
   lines.push('For detailed schema documentation, see:');
-  lines.push('  docs/requirements/RepoConfig_schema.md');
+  lines.push('  docs/reference/config/RepoConfig_schema.md');
   lines.push('  .codepipe/templates/config.example.json');
 
   return lines.join('\n');

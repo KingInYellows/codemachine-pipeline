@@ -381,7 +381,7 @@ export function checkSchemaCompatibility(
     breakingChanges.push(
       `Major version upgrade from ${current} to ${targetVersion} may contain breaking changes`
     );
-    migrationNotes.push('Review docs/requirements/config_migrations.md before upgrading');
+    migrationNotes.push('Review docs/reference/config/config_migrations.md before upgrading');
     migrationNotes.push('Create backup of current config before migration');
     migrationNotes.push('Test migration in non-production environment first');
   }

@@ -811,7 +811,7 @@ export default class Doctor extends Command {
       this.log('');
     }
 
-    this.log('For detailed documentation, see: docs/ops/doctor_reference.md');
+    this.log('For detailed documentation, see: docs/reference/cli/doctor_reference.md');
     this.log('');
   }
 }

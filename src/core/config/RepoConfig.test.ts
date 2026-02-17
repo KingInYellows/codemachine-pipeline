@@ -462,7 +462,7 @@ describe('formatValidationErrors', () => {
     expect(formatted).toContain('schema_version: Invalid format');
     expect(formatted).toContain('Use semver format: "1.0.0"');
     expect(formatted).toContain('project.repo_url: Invalid URL');
-    expect(formatted).toContain('docs/requirements/RepoConfig_schema.md');
+    expect(formatted).toContain('docs/reference/config/RepoConfig_schema.md');
   });
 
   it('should handle empty errors array', () => {
