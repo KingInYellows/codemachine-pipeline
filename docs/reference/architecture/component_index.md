@@ -433,7 +433,7 @@ erDiagram
 
 #### 4.1 Blueprint Foundation
 
-**File:** `.codemachine/artifacts/architecture/01_Blueprint_Foundation.md`
+**Generated Artifact (not committed):** `.codemachine/artifacts/architecture/01_Blueprint_Foundation.md`
 
 **Anchor:** `4-0-the-blueprint`
 
@@ -446,13 +446,13 @@ erDiagram
 - Key Components/Services catalog (20+ components)
 - Component responsibilities and boundaries
 
-**Status:** ✅ Active (authoritative source)
+**Status:** ✅ Active (generated during runs; not committed to this repo)
 
 ---
 
 #### 4.2 System Structure and Data
 
-**File:** `.codemachine/artifacts/architecture/02_System_Structure_and_Data.md`
+**Generated Artifact (not committed):** `.codemachine/artifacts/architecture/02_System_Structure_and_Data.md`
 
 **Anchors:** `3-1-architectural-style`, `3-2-technology-stack-summary`
 
@@ -463,7 +463,7 @@ erDiagram
 - Architectural style (Modular Layered Orchestrator with Pluggable Adapters)
 - Technology stack per layer (CLI, Orchestration, HTTP, Adapters, Persistence, Observability, Validation, Containerization, Distribution)
 
-**Status:** ✅ Active (authoritative source)
+**Status:** ✅ Active (generated during runs; not committed to this repo)
 
 ---
 
@@ -677,7 +677,7 @@ All architecture artifacts must meet these standards:
 **Architects / Technical Leads:**
 
 - [Component Overview Diagram](../diagrams/component_overview.puml) - System architecture
-- [Blueprint Foundation](.codemachine/artifacts/architecture/01_Blueprint_Foundation.md) - Core principles
+- Blueprint Foundation (generated: `.codemachine/artifacts/architecture/01_Blueprint_Foundation.md`) - Core principles
 - ADRs (pending upload) - Architectural decisions
 
 **Backend Developers:**
@@ -695,7 +695,7 @@ All architecture artifacts must meet these standards:
 **New Team Members:**
 
 1. Start with [Component Overview Documentation](../diagrams/component_overview.md)
-2. Review [Blueprint Foundation](.codemachine/artifacts/architecture/01_Blueprint_Foundation.md)
+2. Review Blueprint Foundation (generated: `.codemachine/artifacts/architecture/01_Blueprint_Foundation.md`)
 3. Explore [Run Directory Schema](../run_directory_schema.md)
 4. Read ADRs (pending upload) for decision context
 
@@ -706,30 +706,30 @@ All architecture artifacts must meet these standards:
 **CLI Presentation:**
 
 - [Component Overview Diagram](../diagrams/component_overview.puml) (CLI Section)
-- [Blueprint Foundation](.codemachine/artifacts/architecture/01_Blueprint_Foundation.md) (CLI Orchestrator, RepoConfig Manager)
+- Blueprint Foundation (generated: `.codemachine/artifacts/architecture/01_Blueprint_Foundation.md`) (CLI Orchestrator, RepoConfig Manager)
 
 **Orchestration Core:**
 
 - [Component Overview Diagram](../diagrams/component_overview.puml) (Orchestration Section)
-- [Blueprint Foundation](.codemachine/artifacts/architecture/01_Blueprint_Foundation.md) (Context, Research, PRD, Spec, Task Planning, Execution, Resume, Validation)
+- Blueprint Foundation (generated: `.codemachine/artifacts/architecture/01_Blueprint_Foundation.md`) (Context, Research, PRD, Spec, Task Planning, Execution, Resume, Validation)
 
 **Adapter Boundary:**
 
 - [Component Overview Diagram](../diagrams/component_overview.puml) (Adapter Section)
 - [Rate Limit Reference](../cli/rate_limit_reference.md) (HTTP Client)
-- [Blueprint Foundation](.codemachine/artifacts/architecture/01_Blueprint_Foundation.md) (GitHub, Linear, Agent, Git, Deployment, Notification adapters)
+- Blueprint Foundation (generated: `.codemachine/artifacts/architecture/01_Blueprint_Foundation.md`) (GitHub, Linear, Agent, Git, Deployment, Notification adapters)
 
 **Persistence:**
 
 - [Run Directory Schema](../run_directory_schema.md)
 - [Run Directory Diagram](../diagrams/run_directory_schema.mmd)
-- [Blueprint Foundation](.codemachine/artifacts/architecture/01_Blueprint_Foundation.md) (Run Directory Manager, Artifact Bundle)
+- Blueprint Foundation (generated: `.codemachine/artifacts/architecture/01_Blueprint_Foundation.md`) (Run Directory Manager, Artifact Bundle)
 
 **Observability:**
 
 - [Rate Limit Reference](../cli/rate_limit_reference.md) (Telemetry Writers)
 - [Run Directory Schema](../run_directory_schema.md) (Telemetry subdirectory)
-- [Blueprint Foundation](.codemachine/artifacts/architecture/01_Blueprint_Foundation.md) (Observability Hub, Security Vault)
+- Blueprint Foundation (generated: `.codemachine/artifacts/architecture/01_Blueprint_Foundation.md`) (Observability Hub, Security Vault)
 
 ---
 
@@ -847,8 +847,8 @@ To update architecture documentation:
 
 ### Blueprint
 
-- `.codemachine/artifacts/architecture/01_Blueprint_Foundation.md` - Blueprint foundation
-- `.codemachine/artifacts/architecture/02_System_Structure_and_Data.md` - System structure
+- (Generated) `.codemachine/artifacts/architecture/01_Blueprint_Foundation.md` - Blueprint foundation
+- (Generated) `.codemachine/artifacts/architecture/02_System_Structure_and_Data.md` - System structure
 
 ### ADRs (Planned)
 
