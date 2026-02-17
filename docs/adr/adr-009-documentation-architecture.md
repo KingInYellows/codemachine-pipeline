@@ -102,7 +102,7 @@ This ADR documents critical architectural decisions discovered during documentat
 **Workflow Progression**:
 
 1. **Pipeline Stage Completes** → Gate added to `manifest.approvals.pending[]`
-2. **User Runs** `codepipe approve <gate>` or `codepipe approve <gate> --deny`
+2. **User Runs** `codepipe approve <gate> --approve` or `codepipe approve <gate> --deny`
 3. **System Actions**:
    - Validates gate is in pending array
    - Computes SHA-256 hash of artifact (e.g., PRD.md)
@@ -767,11 +767,11 @@ All research findings stored in claude-flow memory system:
 
 | Component         | File Path                                  | Key Lines |
 | ----------------- | ------------------------------------------ | --------- |
-| Config loading    | src/core/config/RepoConfig.ts              | 1-598     |
-| Approval system   | src/cli/commands/approve.ts                | 1-250     |
-| Queue locking     | src/persistence/runDirectoryManager.ts     | 282-481   |
-| Binary resolution | src/adapters/codemachine/binaryResolver.ts | 1-200     |
-| Debug logging     | src/telemetry/logger.ts                    | 1-300     |
+| Config loading    | src/core/config/RepoConfig.ts              | 1-805     |
+| Approval system   | src/cli/commands/approve.ts                | 1-521     |
+| Queue locking     | src/persistence/runDirectoryManager.ts     | 1-1112    |
+| Binary resolution | src/adapters/codemachine/binaryResolver.ts | 1-125     |
+| Debug logging     | src/telemetry/logger.ts                    | 1-640     |
 
 ### Related ADRs
 
