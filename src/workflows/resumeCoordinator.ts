@@ -507,7 +507,7 @@ function generateRecommendations(analysis: ResumeAnalysis): void {
         );
       } else if (blocker.code === 'NON_RECOVERABLE_ERROR') {
         analysis.recommendations.push(
-          '   • Manual intervention required. See docs/requirements/resume_playbook.md'
+          '   • Manual intervention required. See docs/playbooks/resume_playbook.md'
         );
       } else if (blocker.code === 'QUEUE_CORRUPTED') {
         analysis.recommendations.push(
@@ -560,7 +560,7 @@ function generateRecommendations(analysis: ResumeAnalysis): void {
   // Always add playbook reference
   analysis.recommendations.push('');
   analysis.recommendations.push(
-    '📚 For detailed recovery guidance, see: docs/requirements/resume_playbook.md'
+    '📚 For detailed recovery guidance, see: docs/playbooks/resume_playbook.md'
   );
 }
 

@@ -257,7 +257,7 @@ export function formatResearchTaskValidationErrors(
 
   lines.push('');
   lines.push('For schema documentation, see:');
-  lines.push('  docs/requirements/data_model_dictionary.md');
+  lines.push('  docs/reference/data_model_dictionary.md');
 
   return lines.join('\n');
 }

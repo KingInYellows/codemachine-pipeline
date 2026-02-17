@@ -349,7 +349,7 @@ export default class Plan extends Command {
         `Plan DAG contains ${planSummary.totalTasks} tasks with ${planSummary.entryTasks.length} entry points`
       );
       payload.notes.push(
-        `See docs/requirements/execution_flow.md for DAG semantics and resume behavior`
+        `See docs/reference/architecture/execution_flow_spec.md for DAG semantics and resume behavior`
       );
     } else {
       payload.notes.push('No plan.json found. Ensure spec is approved and run plan generation.');

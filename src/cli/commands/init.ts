@@ -315,7 +315,7 @@ export default class Init extends Command {
         exit_code: 0,
         config: validationResult.config,
         warnings: validationResult.warnings || [],
-        manifest_schema_doc: 'docs/requirements/run_directory_schema.md',
+        manifest_schema_doc: 'docs/reference/run_directory_schema.md',
         readiness_checklist: 'plan/readiness_checklist.md',
         next_steps: [
           'Review and edit: .codepipe/config.json',

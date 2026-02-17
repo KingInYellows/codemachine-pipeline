@@ -458,7 +458,7 @@ export class ManifestLoader {
       throw new Error(
         `Invalid agent manifest at ${manifestPath}:\n${errorMsg}\n\n` +
           'Manifests MUST include "rateLimits" and "costConfig" per acceptance criteria. ' +
-          'See docs/requirements/agent_manifest_schema.json for the complete schema.'
+          'See docs/reference/agent_manifest_schema.json for the complete schema.'
       );
     }
 

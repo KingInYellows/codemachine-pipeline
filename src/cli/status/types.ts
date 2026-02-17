@@ -2,7 +2,7 @@ export type { RunManifest } from '../../persistence/runDirectoryManager';
 export type { ValidationMismatch } from '../../workflows/branchProtectionReporter';
 
 export const MANIFEST_FILE = 'manifest.json';
-export const MANIFEST_SCHEMA_DOC = 'docs/requirements/run_directory_schema.md';
+export const MANIFEST_SCHEMA_DOC = 'docs/reference/run_directory_schema.md';
 export const MANIFEST_TEMPLATE = '.codepipe/templates/run_manifest.json';
 
 export type StatusFlags = {
