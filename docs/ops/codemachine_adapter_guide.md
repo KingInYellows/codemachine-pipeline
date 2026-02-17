@@ -46,7 +46,7 @@ Add CodeMachine settings to your `config.json`:
   "execution": {
     "default_engine": "claude",
     "codemachine_cli_path": "codemachine",
-    "task_timeout_ms": 300000,
+    "task_timeout_ms": 1800000,
     "max_retries": 3,
     "max_log_buffer_size": 10485760
   }
@@ -58,17 +58,18 @@ Add CodeMachine settings to your `config.json`:
 | Field                  | Type   | Default       | Description                                     |
 | ---------------------- | ------ | ------------- | ----------------------------------------------- |
 | `codemachine_cli_path` | string | `codemachine` | Path to CodeMachine CLI binary                  |
-| `task_timeout_ms`      | number | 300000        | Task execution timeout (5 min default)          |
+| `task_timeout_ms`      | number | 1800000       | Task execution timeout (30 min default)         |
 | `max_retries`          | number | 3             | Maximum retry attempts for recoverable failures |
 | `max_log_buffer_size`  | number | 10485760      | Max log buffer size (10MB default)              |
 
 ### Environment Variables
 
-| Variable                | Description                                      |
-| ----------------------- | ------------------------------------------------ |
-| `CODEMACHINE_CLI_PATH`  | Override CLI path from config                    |
-| `CODEMACHINE_TIMEOUT`   | Override timeout in milliseconds                 |
-| `CODEMACHINE_LOG_LEVEL` | Set CLI log verbosity (debug, info, warn, error) |
+| Variable                            | Description                                          |
+| ----------------------------------- | ---------------------------------------------------- |
+| `CODEMACHINE_BIN_PATH`              | Override CodeMachine CLI binary location (preferred) |
+| `CODEPIPE_EXECUTION_CLI_PATH`       | Override `execution.codemachine_cli_path` via env    |
+| `CODEPIPE_EXECUTION_DEFAULT_ENGINE` | Override `execution.default_engine` via env          |
+| `CODEPIPE_EXECUTION_TIMEOUT_MS`     | Override per-task timeout in milliseconds            |
 
 ## CLI Availability Check
 
@@ -170,15 +171,15 @@ After max retries, task is marked failed with `recoverable: false`.
 ```
 Error: CodeMachine CLI not found
 Category: permanent
-Resolution: Install CLI or set CODEMACHINE_CLI_PATH
+Resolution: Install CLI or set CODEMACHINE_BIN_PATH
 ```
 
 #### Execution Timeout
 
 ```
-Error: Task execution timed out after 300000ms
+Error: Task execution timed out after 1800000ms
 Category: timeout
-Resolution: Increase timeout_ms or optimize task scope
+Resolution: Increase task_timeout_ms or optimize task scope
 ```
 
 ## Security

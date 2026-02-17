@@ -1,5 +1,5 @@
 ---
-title: "feat: CodeMachine-CLI Two-Way Integration"
+title: 'feat: CodeMachine-CLI Two-Way Integration'
 type: feat
 date: 2026-02-12
 deepened: 2026-02-13
@@ -36,6 +36,7 @@ brainstorm: docs/brainstorms/2026-02-12-codemachine-cli-integration-brainstorm.m
 **Review agents:** Architecture Strategist, Security Sentinel, Pattern Recognition, Code Simplicity, Comment Analyzer
 
 **Applied fixes (24 findings across P1/P2/P3):**
+
 - Corrected 3 factual errors (non-existent config field, "stub" mislabel, stale task type list)
 - Fixed cross-layer type dependency (workflow types moved to `src/workflows/`)
 - Replaced `startsWith` telemetry check with explicit Set
@@ -74,6 +75,7 @@ The pipeline was designed to delegate code generation to an external `codemachin
 ### Research Insights: Actual CodeMachine-CLI v0.8.0 API
 
 **The `run` command uses a coordination syntax, not the format we assumed:**
+
 ```bash
 # Single agent
 codemachine run "claude 'build a login page'"
@@ -94,6 +96,7 @@ codemachine run "claude 'task A' & codex 'task B'"
 | `codemachine --version` | Version check |
 
 **Workflow files are JavaScript modules** (`.workflow.js`), not JSON:
+
 ```javascript
 // example.workflow.js
 module.exports = {
@@ -120,7 +123,7 @@ module.exports = {
 
 **Telemetry fix needed:** `cliExecutionEngine.ts` hardcodes `strategy.name === 'codemachine'` at lines 495 and 531. This must be changed to check against an explicit Set — `new Set(['codemachine', 'codemachine-cli']).has(strategy.name)` — to avoid breaking telemetry when the new strategy is registered. Avoid `startsWith('codemachine')` which could match unintended future strategies.
 
-**canHandle() design:** Separate capability (`canHandle`) from availability. The strategy should always be *capable* of handling tasks; availability (binary exists, version compatible) should be checked at registration time and cached.
+**canHandle() design:** Separate capability (`canHandle`) from availability. The strategy should always be _capable_ of handling tasks; availability (binary exists, version compatible) should be checked at registration time and cached.
 
 ## Technical Approach
 
@@ -167,6 +170,7 @@ module.exports = {
 ```
 
 **Key design decisions:**
+
 - `CLIExecutionEngine` is **unchanged** — the new strategy slots into the existing `strategies[]` array
 - Engine selection is **passthrough** — pipeline sends task type, not engine name; CodeMachine-CLI handles routing
 - Existing security controls preserved: `shell: false`, environment allowlist, path validation, log rotation
@@ -189,6 +193,7 @@ codemachine (wrapper package, 95 KB)
 ```
 
 **Resolution strategy (in order):**
+
 1. `CODEMACHINE_BIN_PATH` env var (user override)
 2. Platform binary from `node_modules/codemachine-<platform>-<arch>/codemachine`
 3. Global `codemachine` in PATH (fallback)
@@ -263,6 +268,7 @@ const platformMap: Record<string, { pkg: string; bin: string }> = {
   - Reference ADR-6 (external integration pattern) and ADR-7 (Zod validation)
 
 **Files:**
+
 - `package.json` (add dependency)
 - `src/adapters/codemachine/binaryResolver.ts` (new)
 - `src/adapters/codemachine/CodeMachineCLIAdapter.ts` (new)
@@ -276,6 +282,7 @@ const platformMap: Record<string, { pkg: string; bin: string }> = {
 - `docs/adr/ADR-8-codemachine-cli-integration.md` (new)
 
 **Success criteria:**
+
 - `npm install` installs `codemachine` + correct platform binary
 - Binary resolves correctly without Bun installed
 - `codepipe start --prompt "add a login page"` dispatches to CodeMachine-CLI and captures output
@@ -312,12 +319,14 @@ const platformMap: Record<string, { pkg: string; bin: string }> = {
   - Clear error messages with remediation when template not found
 
 **Files:**
+
 - `src/workflows/workflowTemplateMapper.ts` (new — in workflows/, NOT adapters/)
 - `src/workflows/codemachineTypes.ts` (workflow type additions — lives in workflows layer, not adapters)
 - `src/workflows/taskMapper.ts` (issue metadata passthrough; also remove deprecated `mapTaskToCommand()` if no longer referenced)
 - `src/adapters/codemachine/CodeMachineCLIAdapter.ts` (accept coordination syntax)
 
 **Success criteria:**
+
 - `codepipe start --linear ISSUE-123` maps Linear issue to appropriate CodeMachine coordination
 - Different task types trigger different coordination patterns
 - Custom workflow overrides in `.codepipe/workflows/` are loaded and used
@@ -358,6 +367,7 @@ const platformMap: Record<string, { pkg: string; bin: string }> = {
   - Troubleshooting common failures
 
 **Files:**
+
 - `tests/unit/binaryResolver.test.ts` (new)
 - `tests/unit/codeMachineCLIAdapter.test.ts` (new)
 - `tests/unit/workflowTemplateMapper.test.ts` (new)
@@ -366,6 +376,7 @@ const platformMap: Record<string, { pkg: string; bin: string }> = {
 - `src/adapters/codemachine/CodeMachineCLIAdapter.ts` (PID tracking, stdin credentials)
 
 **Success criteria:**
+
 - All new code has unit test coverage
 - Integration test exercises: prompt → template mapping → CLI execution → output capture
 - Pipeline crash + restart identifies orphaned process via PID file
@@ -375,15 +386,15 @@ const platformMap: Record<string, { pkg: string; bin: string }> = {
 
 These items were in the original plan but should only be built when needed:
 
-| Item | Why Deferred |
-|------|-------------|
-| NDJSON event classification/schemas | CodeMachine-CLI doesn't output NDJSON — would need upstream support or MCP router |
-| Sequence number gap detection | Premature — no structured events to sequence |
-| Replay buffer (100 events in memory) | No structured events to replay |
-| Idempotency framework (`idempotency_key` field) | Over-engineering for initial integration |
-| `codemachine list-workflows` capability query | Verify if this command exists first |
-| MCP router integration | Most promising path for structured output, but adds complexity — evaluate after basic execution works |
-| Event stream force-flush | No structured stream to flush |
+| Item                                            | Why Deferred                                                                                          |
+| ----------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| NDJSON event classification/schemas             | CodeMachine-CLI doesn't output NDJSON — would need upstream support or MCP router                     |
+| Sequence number gap detection                   | Premature — no structured events to sequence                                                          |
+| Replay buffer (100 events in memory)            | No structured events to replay                                                                        |
+| Idempotency framework (`idempotency_key` field) | Over-engineering for initial integration                                                              |
+| `codemachine list-workflows` capability query   | Verify if this command exists first                                                                   |
+| MCP router integration                          | Most promising path for structured output, but adds complexity — evaluate after basic execution works |
+| Event stream force-flush                        | No structured stream to flush                                                                         |
 
 ## Alternative Approaches Considered
 
@@ -440,25 +451,26 @@ Benefits: typed requests/responses, progress callbacks, error codes. Risk: MCP r
 
 ## Risk Analysis & Mitigation
 
-| Risk | Severity | Status | Mitigation |
-|------|----------|--------|------------|
-| CodeMachine-CLI not on npm | ~~High~~ | **Resolved** | Confirmed on npm as `codemachine@0.8.0` with platform binaries |
-| Bun vs Node.js runtime conflicts | ~~Medium~~ | **Resolved** | Platform binaries embed Bun runtime; bypass wrapper, resolve binary directly |
-| CLI API changes between 0.8.0 and 0.9.0 | High | Open | Pin to `^0.8.0`, use `semver` for minimum version enforcement, 0.x minor = breaking |
-| Plain text output (no NDJSON) | Medium | Open | Parse stdout for status patterns; evaluate MCP router for structured output in future phase |
-| Credential file persistence after crash | ~~Critical~~ | **Mitigated** | Use stdin piping instead of temp files |
-| Template injection via task_type | Critical | Open | Validate task_type against allowlist before path interpolation |
-| PID reuse race condition | Medium | Open | Atomic PID file writes via temp-then-rename; store PID + start timestamp |
-| State desync on crash | Medium | Open | PID tracking + liveness check on resume |
-| `validateCliPath` blocklist bypass | High | Open | Switch to allowlist regex: `/^[a-zA-Z0-9_\-./]+$/` |
-| `buildSequentialScript`/`buildParallelScript` shell injection | High | Pre-existing | `taskMapper.ts:563-591` concatenates prompts into shell strings with `&&`/`&` — must switch to array-based spawn or shell-escape inputs |
-| `extractSummary()` uses raw stdout pre-redaction | Medium | Pre-existing | `resultNormalizer.ts:195` passes unredacted stdout to summary — must use redacted output |
-| `isValidArtifactPath` incomplete dangerous path check | Medium | Pre-existing | `resultNormalizer.ts` missing `/proc/`, `/sys/`, `/dev/` from dangerous paths |
-| Credential redaction for new engine key formats | Low | Open | Current redaction regex only covers Anthropic/OpenAI key patterns — new engines (Mistral, etc.) have different formats |
+| Risk                                                          | Severity     | Status        | Mitigation                                                                                                                              |
+| ------------------------------------------------------------- | ------------ | ------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
+| CodeMachine-CLI not on npm                                    | ~~High~~     | **Resolved**  | Confirmed on npm as `codemachine@0.8.0` with platform binaries                                                                          |
+| Bun vs Node.js runtime conflicts                              | ~~Medium~~   | **Resolved**  | Platform binaries embed Bun runtime; bypass wrapper, resolve binary directly                                                            |
+| CLI API changes between 0.8.0 and 0.9.0                       | High         | Open          | Pin to `^0.8.0`, use `semver` for minimum version enforcement, 0.x minor = breaking                                                     |
+| Plain text output (no NDJSON)                                 | Medium       | Open          | Parse stdout for status patterns; evaluate MCP router for structured output in future phase                                             |
+| Credential file persistence after crash                       | ~~Critical~~ | **Mitigated** | Use stdin piping instead of temp files                                                                                                  |
+| Template injection via task_type                              | Critical     | Open          | Validate task_type against allowlist before path interpolation                                                                          |
+| PID reuse race condition                                      | Medium       | Open          | Atomic PID file writes via temp-then-rename; store PID + start timestamp                                                                |
+| State desync on crash                                         | Medium       | Open          | PID tracking + liveness check on resume                                                                                                 |
+| `validateCliPath` blocklist bypass                            | High         | Open          | Switch to allowlist regex: `/^[a-zA-Z0-9_\-./]+$/`                                                                                      |
+| `buildSequentialScript`/`buildParallelScript` shell injection | High         | Pre-existing  | `taskMapper.ts:563-591` concatenates prompts into shell strings with `&&`/`&` — must switch to array-based spawn or shell-escape inputs |
+| `extractSummary()` uses raw stdout pre-redaction              | Medium       | Pre-existing  | `resultNormalizer.ts:195` passes unredacted stdout to summary — must use redacted output                                                |
+| `isValidArtifactPath` incomplete dangerous path check         | Medium       | Pre-existing  | `resultNormalizer.ts` missing `/proc/`, `/sys/`, `/dev/` from dangerous paths                                                           |
+| Credential redaction for new engine key formats               | Low          | Open          | Current redaction regex only covers Anthropic/OpenAI key patterns — new engines (Mistral, etc.) have different formats                  |
 
 ### Research Insights: Security Recommendations
 
 **Credential delegation (Critical):**
+
 ```typescript
 // RECOMMENDED: Pipe credentials via stdin
 const child = spawn(binaryPath, args, { stdio: ['pipe', 'pipe', 'pipe'] });
@@ -471,6 +483,7 @@ child.stdin.end();
 ```
 
 **Path validation (High):**
+
 ```typescript
 // RECOMMENDED: Allowlist regex
 const SAFE_PATH = /^[a-zA-Z0-9_\-./]+$/;
@@ -482,12 +495,19 @@ if (!SAFE_PATH.test(cliPath)) {
 ```
 
 **Template path traversal (Critical):**
+
 ```typescript
 // ALWAYS validate task_type before using in path
 // Must match ExecutionTaskTypeSchema in src/core/models/ExecutionTask.ts
 const ALLOWED_TASK_TYPES = new Set([
-  'code_generation', 'testing', 'pr_creation', 'deployment',
-  'review', 'refactoring', 'documentation', 'other',
+  'code_generation',
+  'testing',
+  'pr_creation',
+  'deployment',
+  'review',
+  'refactoring',
+  'documentation',
+  'other',
 ]);
 if (!ALLOWED_TASK_TYPES.has(task.type)) {
   throw new Error(`Unknown task type: ${task.type}`);
@@ -536,7 +556,7 @@ if (!resolvedTemplate.startsWith(path.resolve(workflowDir))) {
 - `docs/research/cli-adapter-implementation-guide.md` — Copy-paste ready implementation (1,155 lines)
 - `docs/research/cli-adapter-alternatives-analysis.md` — Architecture decision framework (750 lines)
 - `docs/research/semver_compatibility_checking.md` — Version check patterns (25 KB)
-- `docs/research/version-check-implementation.ts` — Ready-to-copy version check code (23 KB)
+- `docs/research/version-check-implementation.ts.example` — Ready-to-copy version check code (23 KB)
 
 ### Related Work
 
