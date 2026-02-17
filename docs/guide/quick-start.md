@@ -68,7 +68,7 @@ To actually run pipelines, you also need an agent endpoint configured via:
 export AGENT_ENDPOINT="https://your-agent-service.example.com/v1"
 ```
 
-Or by setting `runtime.agent_endpoint` in `.codepipe/config.json`. See `docs/requirements/RepoConfig_schema.md`.
+Or by setting `runtime.agent_endpoint` in `.codepipe/config.json`. See `docs/reference/config/RepoConfig_schema.md`.
 
 ---
 
