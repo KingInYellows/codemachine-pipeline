@@ -1,0 +1,209 @@
+name: Documentation Quality Gates
+
+on:
+  pull_request:
+    paths:
+      - 'docs/**'
+      - 'README.md'
+      - 'mkdocs.yml'
+      - 'scripts/validate-docs-commands.js'
+      - 'scripts/test-docs-examples.js'
+      - 'scripts/security-scan-docs.sh'
+      - '.github/workflows/docs-validation.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'docs/**'
+      - 'README.md'
+      - 'mkdocs.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  link-check:
+    name: Link Validation (Advisory)
+    runs-on: [self-hosted, linux]
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.2.2
+
+      - name: Setup Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.1.0
+        with:
+          node-version: '24'
+          cache: 'npm'
+
+      - name: Install markdown-link-check
+        run: npm install -g markdown-link-check
+
+      - name: Check Markdown Links
+        run: |
+          set -euo pipefail
+          shopt -s globstar nullglob
+          files=(docs/guide/**/*.md docs/reference/**/*.md docs/playbooks/**/*.md docs/adr/**/*.md docs/templates/**/*.md README.md)
+          failed=0
+          for f in "${files[@]}"; do
+            markdown-link-check -q -c .github/markdown-link-check.json "$f" || failed=1
+          done
+          if [ $failed -ne 0 ]; then
+            # Intentionally non-blocking for now: the docs set includes legacy links we haven't cleaned up yet.
+            # Once the baseline is green, flip this to `exit $failed` to turn it into a strict quality gate.
+            echo "::warning::Link check found dead links (advisory; not blocking)."
+          fi
+
+  command-validation:
+    name: CLI Command Table Validation
+    runs-on: [self-hosted, linux]
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.2.2
+
+      - name: Setup Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.1.0
+        with:
+          node-version: '24'
+          cache: 'npm'
+
+      - name: Install dependencies (prepare builds manifest)
+        run: npm ci
+
+      - name: Validate Command Documentation
+        run: node scripts/validate-docs-commands.js
+
+  factual-accuracy:
+    name: Factual Accuracy Check
+    runs-on: [self-hosted, linux]
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.2.2
+
+      - name: Check for phantom engines
+        run: |
+          DOCS_SCOPE="docs/guide docs/reference docs/playbooks docs/adr docs/templates README.md"
+          # Verify engines list only contains: claude, codex, openai
+          if grep -rE "executionEngine.*(cursor|auggie|ccr|opencode|gpt-4|claude-3)" $DOCS_SCOPE; then
+            echo "❌ Found phantom/incorrect execution engine names"
+            echo "✅ Valid engines: claude, codex, openai"
+            exit 1
+          fi
+          echo "✅ No phantom engines found"
+
+      - name: Check for incorrect environment variables
+        run: |
+          DOCS_SCOPE="docs/guide docs/reference docs/playbooks docs/adr docs/templates README.md"
+          # Verify no references to non-existent variables
+          if grep -rE "CODEMACHINE_CLI_PATH|CODEMACHINE_LOG_LEVEL" $DOCS_SCOPE | grep -vEi "non-existent|doesn.t exist|not .*CODEMACHINE_LOG_LEVEL|no.*CODEMACHINE_LOG_LEVEL|removed"; then
+            echo "❌ Found incorrect environment variable names"
+            echo "✅ Correct: CODEMACHINE_BIN_PATH (not CODEMACHINE_CLI_PATH)"
+            exit 1
+          fi
+          echo "✅ Environment variables correct"
+
+  security-scan:
+    name: Security & Credential Safety
+    runs-on: [self-hosted, linux]
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.2.2
+
+      - name: Scan for Real Credentials
+        run: bash scripts/security-scan-docs.sh
+
+  code-examples:
+    name: Code Example Testing
+    runs-on: [self-hosted, linux]
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.2.2
+
+      - name: Setup Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.1.0
+        with:
+          node-version: '24'
+
+      - name: Test Code Examples
+        run: node scripts/test-docs-examples.js
+
+  spell-check:
+    name: Spell Check
+    runs-on: [self-hosted, linux]
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.2.2
+
+      - name: Install markdown-spellcheck
+        run: npm install -g markdown-spellcheck
+
+      - name: Run Spell Check
+        run: |
+          # Create spell check config
+          cat > .spelling <<'SPELLING'
+          codemachine
+          codepipe
+          oclif
+          zod
+          mkdocs
+          graphite
+          GitHub
+          Linear
+          CodeMachine
+          npm
+          nodejs
+          TypeScript
+          JSON
+          API
+          CLI
+          PR
+          PRD
+          CI
+          CD
+          SPELLING
+          sed -i 's/^[[:space:]]*//' .spelling
+
+          shopt -s globstar
+          if ! mdspell -r -n -a --en-us docs/guide/**/*.md docs/reference/**/*.md docs/playbooks/**/*.md docs/adr/**/*.md docs/templates/**/*.md README.md; then
+            echo "::warning::Spell check found issues (advisory; not blocking)."
+          fi
+
+  structure-validation:
+    name: Structure & Formatting
+    runs-on: [self-hosted, linux]
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.2.2
+
+      - name: Validate Directory Structure
+        run: |
+          # Verify new 7-directory structure exists
+          required_dirs="guide reference playbooks adr solutions diagrams templates"
+          for dir in $required_dirs; do
+            if [ ! -d "docs/$dir" ]; then
+              echo "❌ Missing required directory: docs/$dir"
+              exit 1
+            fi
+          done
+          echo "✅ All required directories present"
+
+      - name: Check for old directories
+        run: |
+          # Verify old directories are removed
+          old_dirs="ops requirements announcements development testing ui"
+          found_old=false
+          for dir in $old_dirs; do
+            if [ -d "docs/$dir" ] && [ "$(ls -A docs/$dir)" ]; then
+              echo "⚠️  Old directory still exists with content: docs/$dir"
+              found_old=true
+            fi
+          done
+          if [ "$found_old" = true ]; then
+            exit 1
+          fi
+          echo "✅ Old directories cleaned up"
+
+  summary:
+    name: Documentation Quality Summary
+    runs-on: [self-hosted, linux]
+    needs: [link-check, command-validation, factual-accuracy, security-scan, code-examples, spell-check, structure-validation]
+    if: failure()
+    steps:
+      - name: Summary
+        run: |
+          echo "## Documentation Quality Gates Summary"
+          echo ""
+          echo "❌ One or more validation checks failed."
+          echo "Review results above and fix issues before merging."
+          exit 1
