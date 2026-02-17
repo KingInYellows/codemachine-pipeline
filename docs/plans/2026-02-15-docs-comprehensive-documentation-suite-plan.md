@@ -513,14 +513,16 @@ Create a multi-format documentation suite with clear organization, progressive d
 
 - [ ] Execution engine comparison table:
 
+  **Note:** Treat engine metadata (model, pricing, speed, context) as placeholders until sourced from the CodeMachine CLI and/or provider documentation. The current codebase only enumerates supported engines (`claude`, `codex`, `openai`) and does not include authoritative cost/speed/context metadata.
+
 | Feature              | claude                            | codex                     | openai                 |
 | -------------------- | --------------------------------- | ------------------------- | ---------------------- |
 | **Provider**         | Anthropic                         | OpenAI                    | OpenAI                 |
-| **Model**            | Claude 3 Opus                     | Codex                     | GPT-4                  |
-| **Cost (1M tokens)** | ~$15                              | ~$0.002                   | ~$30                   |
-| **Speed**            | Medium                            | Fast                      | Medium                 |
-| **Code Quality**     | Excellent                         | Good                      | Excellent              |
-| **Context Window**   | 200K                              | 8K                        | 128K                   |
+| **Model**            | TBD (depends on CodeMachine CLI)  | TBD                       | TBD                    |
+| **Cost (1M tokens)** | TBD                               | TBD                       | TBD                    |
+| **Speed**            | TBD                               | TBD                       | TBD                    |
+| **Code Quality**     | TBD                               | TBD                       | TBD                    |
+| **Context Window**   | TBD                               | TBD                       | TBD                    |
 | **Best For**         | Complex refactoring, architecture | Quick fixes, autocomplete | General-purpose coding |
 
 - [ ] How to switch engines (edit config.json, restart pipeline)
