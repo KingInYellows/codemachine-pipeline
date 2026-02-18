@@ -120,8 +120,7 @@ codepipe init --dry-run --json
     "Linear integration enabled but LINEAR_API_KEY not set",
     "Agent endpoint not configured. Set AGENT_ENDPOINT or add runtime.agent_endpoint to config"
   ],
-  "manifest_schema_doc": "docs/requirements/run_directory_schema.md",
-  "readiness_checklist": "plan/readiness_checklist.md",
+  "manifest_schema_doc": "docs/reference/run_directory_schema.md",
   "next_steps": [
     "Review and edit: .codepipe/config.json",
     "Enable integrations and set credentials (GITHUB_TOKEN, LINEAR_API_KEY, AGENT_ENDPOINT)",
@@ -179,7 +178,7 @@ Validating existing configuration...
     → Use format: "https://github.com/org/repo.git" or "git@github.com:org/repo.git"
 
 For detailed schema documentation, see:
-  docs/requirements/RepoConfig_schema.md
+  docs/reference/config/codemachine_adapter_guide.md
   .codepipe/templates/config.example.json
 ```
 
@@ -505,11 +504,8 @@ fi
 
 ## Related Documentation
 
-- [RepoConfig Schema](../requirements/RepoConfig_schema.md) - Detailed configuration schema reference
-- [Run Directory Schema](../requirements/run_directory_schema.md) - Run directory structure and manifests
-- [ADR-5: Approval Workflow](../adr/005-approval-workflow.md) - Governance and approval controls
-- [Doctor Reference](./doctor_reference.md) - Environment diagnostics command
-- [Readiness Checklist](../../plan/readiness_checklist.md) - Pre-flight checklist for pipeline readiness
+- [Run Directory Schema](../reference/run_directory_schema.md) - Run directory structure and manifests
+- [Doctor Reference](../reference/cli/doctor_reference.md) - Environment diagnostics command
 
 ---
 

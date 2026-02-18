@@ -604,4 +604,4 @@ git rev-list --left-right --count @{u}...HEAD
 - `src/workflows/patchManager.ts`: Patch Manager implementation
 - `src/workflows/branchManager.ts`: Branch Manager implementation
 - `src/core/config/RepoConfig.ts`: Configuration schema
-- `docs/requirements/RepoConfig_schema.md`: Configuration documentation
+- `docs/reference/config/codemachine_adapter_guide.md`: Configuration documentation

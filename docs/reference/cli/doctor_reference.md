@@ -81,7 +81,7 @@ Exit code reference:
   20 = Environment issues (missing tools, permissions)
   30 = Credential issues (missing tokens/keys)
 
-For detailed documentation, see: docs/ops/doctor_reference.md
+For detailed documentation, see: docs/reference/cli/doctor_reference.md
 ```
 
 ### JSON Output (for Automation)
@@ -781,10 +781,8 @@ All telemetry respects `safety.redact_secrets: true` to prevent credential leaka
 
 ## Related Documentation
 
-- [Init Playbook](./init_playbook.md) - Initialization command reference
-- [RepoConfig Schema](../requirements/RepoConfig_schema.md) - Configuration schema documentation
-- [Readiness Checklist](../../plan/readiness_checklist.md) - Pre-flight checklist
-- [Observability Baseline](./observability_baseline.md) - Telemetry and logging reference
+- [Init Playbook](../../playbooks/init_playbook.md) - Initialization command reference
+- [Observability Baseline](../../playbooks/observability_baseline.md) - Telemetry and logging reference
 
 ---
 

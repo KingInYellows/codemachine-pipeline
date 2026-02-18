@@ -785,7 +785,7 @@ codepipe doctor
 → Install codemachine-cli: npm install -g codemachine-cli (optional for execution engine)
 ```
 
-See `docs/ops/codemachine_adapter_guide.md` for comprehensive operational guidance.
+See `docs/reference/config/codemachine_adapter_guide.md` for comprehensive operational guidance.
 
 ## Related Requirements
 

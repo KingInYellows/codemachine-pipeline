@@ -27,12 +27,12 @@ describe('README.md documentation links', () => {
 
   // Specific critical files that must exist
   const criticalFiles = [
-    'docs/ops/execution_telemetry.md',
-    'docs/ops/codemachine_adapter_guide.md',
+    'docs/playbooks/execution_telemetry.md',
+    'docs/reference/config/codemachine_adapter_guide.md',
     'docs/README.md',
-    'docs/ops/queue-v2-operations.md',
-    'docs/ops/parallel-execution.md',
-    'docs/ops/log-rotation.md',
+    'docs/reference/queue-v2-operations.md',
+    'docs/reference/parallel-execution.md',
+    'docs/playbooks/log-rotation.md',
   ];
 
   it.each(criticalFiles)('critical file %s should exist', (href) => {

@@ -138,7 +138,7 @@ Each run directory:
 
 **Purpose:** File-based mutex preventing concurrent modifications to the same run directory.
 
-**Lifecycle:** Created during lock acquisition, deleted on release. Automatically cleaned up if stale (> 5 minutes or owning process no longer exists).
+**Lifecycle:** Created during lock acquisition, deleted on release. Automatically cleaned up if stale (> 60 seconds or owning process no longer exists).
 
 **Structure:**
 
@@ -357,7 +357,7 @@ Operators can define policies like:
 
 **Stale Lock Detection:**
 
-- Age-based: Locks older than 5 minutes are stale
+- Age-based: Locks older than 60 seconds are stale
 - Process-based: If owning PID no longer exists (Unix only)
 
 **Best Practices:**

@@ -249,7 +249,7 @@ codepipe resume [FLAGS]
 | `--feature`                | `-f`  | string  | Feature ID to resume (defaults to current/latest)              |         |
 | `--force`                  |       | boolean | Override blockers (integrity warnings) - use with caution      |         |
 | `--json`                   |       | boolean | Output results in JSON format                                  |         |
-| `--max-parallel`           |       | string  | Maximum parallel tasks during execution (1-10)                 | `1`     |
+| `--max-parallel`           |       | integer | Maximum parallel tasks during execution (1-10)                 | `1`     |
 | `--skip-hash-verification` |       | boolean | Skip artifact integrity checks (dangerous, for debugging only) |         |
 | `--validate-queue`         |       | boolean | Validate queue files before resuming                           |         |
 | `--verbose`                | `-v`  | boolean | Show detailed diagnostics                                      |         |
@@ -283,7 +283,7 @@ codepipe start [FLAGS]
 | `--dry-run`        |       | boolean | Simulate execution without making changes          |         |
 | `--json`           |       | boolean | Output results in JSON format                      |         |
 | `--linear`         | `-l`  | string  | Linear issue ID to import as feature specification |         |
-| `--max-parallel`   |       | string  | Maximum parallel tasks during execution (1-10)     | `1`     |
+| `--max-parallel`   |       | integer | Maximum parallel tasks during execution (1-10)     | `1`     |
 | `--prompt`         | `-p`  | string  | Feature description prompt                         |         |
 | `--skip-execution` |       | boolean | Skip task execution phase (stop after PRD)         |         |
 | `--spec`           | `-s`  | string  | Path to existing specification file                |         |
@@ -540,7 +540,7 @@ codepipe research create [FLAGS]
 | `--feature`     | `-f`  | string  | Feature ID to attach the research task to (defaults to latest run)             |         |
 | `--force-fresh` |       | boolean | Force new research even if cache exists                                        |         |
 | `--json`        |       | boolean | Emit machine-readable JSON output                                              |         |
-| `--max-age`     |       | string  | Freshness window in hours for cached results (default 24)                      |         |
+| `--max-age`     |       | integer | Freshness window in hours for cached results (default 24)                      |         |
 | `--objective`   | `-o`  | string  | Research objective/question (repeat for multiples) **(required)**              |         |
 | `--source`      | `-s`  | string  | Source to consult formatted as type:identifier or type:identifier\|description |         |
 | `--title`       | `-t`  | string  | Research task title **(required)**                                             |         |
@@ -570,7 +570,7 @@ codepipe research list [FLAGS]
 | ----------- | ----- | ------- | --------------------------------------------------- | ------- |
 | `--feature` | `-f`  | string  | Feature ID to inspect (defaults to most recent run) |         |
 | `--json`    |       | boolean | Emit machine-readable JSON output                   |         |
-| `--limit`   |       | string  | Limit the number of tasks returned                  |         |
+| `--limit`   |       | integer | Limit the number of tasks returned                  |         |
 | `--stale`   |       | boolean | Show only tasks whose cached results are stale      |         |
 | `--status`  | `-s`  | string  | Filter by task status (repeatable)                  |         |
 

@@ -512,7 +512,7 @@ The diagram follows the **Modular Layered Orchestrator with Pluggable Adapters**
 - Section 3.0: Rate Limit Discipline
 
 **Related Documentation:**
-- `docs/ops/rate_limit_reference.md` (operational guide)
+- `docs/reference/cli/rate_limit_reference.md` (operational guide)
 
 ---
 
@@ -543,7 +543,7 @@ The diagram follows the **Modular Layered Orchestrator with Pluggable Adapters**
 - Section 2.1: Directory Structure
 
 **Related Documentation:**
-- `docs/requirements/run_directory_schema.md` (schema spec)
+- `docs/reference/run_directory_schema.md` (schema spec)
 - `docs/diagrams/run_directory_schema.mmd` (visual representation)
 
 ---
@@ -679,7 +679,7 @@ The diagram follows the **Modular Layered Orchestrator with Pluggable Adapters**
 - Section 2.3: Telemetry & Cost Tracking
 
 **Related Documentation:**
-- `docs/ops/rate_limit_reference.md` (rate_limits.json schema)
+- `docs/reference/cli/rate_limit_reference.md` (rate_limits.json schema)
 
 ---
 
