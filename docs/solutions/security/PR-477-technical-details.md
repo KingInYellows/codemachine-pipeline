@@ -488,7 +488,7 @@ The base64url_string portion is approximately:
 - Could vary by key type
 - May change in future API versions
 
-Example: lin_api_4f6e8e9c1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d
+Example: lin_api_YOUR_KEY_HERE
 ```
 
 ### Verification Steps
@@ -498,11 +498,11 @@ Example: lin_api_4f6e8e9c1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d
 curl -s https://api.linear.app/graphql/docs | grep -i "api.*key"
 
 # 2. Test the regex pattern
-echo "lin_api_4f6e8e9c1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d" | \
+echo "lin_api_EXAMPLE_REPLACE_WITH_ACTUAL_KEY_12345678" | \
   grep -E "lin_api_[A-Za-z0-9]{40}"
 
 # 3. Compare length
-echo "lin_api_4f6e8e9c1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d" | \
+echo "lin_api_EXAMPLE_REPLACE_WITH_ACTUAL_KEY_12345678" | \
   cut -d_ -f3 | wc -c  # Shows actual character count
 ```
 
