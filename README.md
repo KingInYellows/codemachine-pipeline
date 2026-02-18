@@ -210,7 +210,7 @@ All checks run on Node v24.x.
 
 The pipeline operates on a state machine model with phases: Initialize, Specify, Plan, Implement, Review, Deploy. Each phase is idempotent and resumable. Artifacts are stored in `.codepipe/runs/<feature-id>/`.
 
-See [Execution Flow](docs/diagrams/execution_flow.puml) for details.
+See [Execution Flow](docs/reference/architecture/execution_flow.md) for details.
 
 ## Execution Engine
 

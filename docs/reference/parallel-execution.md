@@ -549,5 +549,5 @@ codepipe resume --validate-queue --dry-run
 ### Related Documentation
 
 - [Queue V2 Operations](./queue-v2-operations.md) - Queue performance and management
-- [Execution Telemetry](./execution_telemetry.md) - Metrics and observability
-- [CodeMachine Adapter Guide](./codemachine_adapter_guide.md) - Task execution details
+- [Execution Telemetry](../playbooks/execution_telemetry.md) - Metrics and observability
+- [CodeMachine Adapter Guide](./config/codemachine_adapter_guide.md) - Task execution details

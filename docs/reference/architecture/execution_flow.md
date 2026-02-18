@@ -345,9 +345,9 @@ plan.json → CLIExecutionEngine → Strategy → Runner → Subprocess
 ## Related Documentation
 
 - [Component Overview](../diagrams/component_overview.md) - System architecture
-- [Run Directory Schema](../requirements/run_directory_schema.md) - State persistence
-- [CodeMachine Adapter Guide](../ops/codemachine_adapter_guide.md) - Operational guide
-- [Agent Manifest Schema](../requirements/agent_manifest_schema.json) - Task definitions
+- [Run Directory Schema](../run_directory_schema.md) - State persistence
+- [CodeMachine Adapter Guide](../config/codemachine_adapter_guide.md) - Operational guide
+- [Agent Manifest Schema](../agent_manifest_schema.json) - Task definitions
 
 ## Change Log
 

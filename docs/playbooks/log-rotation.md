@@ -522,5 +522,5 @@ export CODEPIPE_LOG_ROTATION_COMPRESS=true
 ### Related Documentation
 
 - [Execution Telemetry](./execution_telemetry.md) - Logging and metrics
-- [Doctor Reference](./doctor_reference.md) - Environment validation
+- [Doctor Reference](../reference/cli/doctor_reference.md) - Environment validation
 - [Observability Baseline](./observability_baseline.md) - Monitoring best practices

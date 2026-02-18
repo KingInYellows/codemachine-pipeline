@@ -121,6 +121,7 @@ codepipe init --dry-run --json
     "Agent endpoint not configured. Set AGENT_ENDPOINT or add runtime.agent_endpoint to config"
   ],
   "manifest_schema_doc": "docs/reference/run_directory_schema.md",
+  "readiness_checklist": "plan/readiness_checklist.md",
   "next_steps": [
     "Review and edit: .codepipe/config.json",
     "Enable integrations and set credentials (GITHUB_TOKEN, LINEAR_API_KEY, AGENT_ENDPOINT)",
@@ -178,7 +179,7 @@ Validating existing configuration...
     → Use format: "https://github.com/org/repo.git" or "git@github.com:org/repo.git"
 
 For detailed schema documentation, see:
-  docs/reference/config/codemachine_adapter_guide.md
+  docs/reference/config/RepoConfig_schema.md
   .codepipe/templates/config.example.json
 ```
 
