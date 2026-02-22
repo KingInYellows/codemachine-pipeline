@@ -778,6 +778,14 @@ function buildCommandTemplateContext(
   commandCwd: string,
   templateContext?: Record<string, string>
 ): Record<string, string> {
+  // Reject user-supplied context values that contain shell metacharacters
+  for (const [key, value] of Object.entries(templateContext ?? {})) {
+    if (SHELL_METACHARACTERS.test(value)) {
+      throw new Error(
+        `Template context value for "${key}" contains shell metacharacters which are not permitted`
+      );
+    }
+  }
   return {
     feature_id: path.basename(runDir),
     run_dir: runDir,

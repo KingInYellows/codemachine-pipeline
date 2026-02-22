@@ -156,11 +156,7 @@ export class HttpClient {
     body?: unknown,
     options?: HttpRequestOptions
   ): Promise<HttpResponse<T>> {
-    return this.request<T>('POST', path, {
-      ...options,
-      body: JSON.stringify(body),
-      idempotent: true, // POST requests get idempotency keys by default
-    });
+    return this.mutationRequest<T>('POST', path, body, options);
   }
 
   /**
@@ -171,11 +167,7 @@ export class HttpClient {
     body?: unknown,
     options?: HttpRequestOptions
   ): Promise<HttpResponse<T>> {
-    return this.request<T>('PUT', path, {
-      ...options,
-      body: JSON.stringify(body),
-      idempotent: true,
-    });
+    return this.mutationRequest<T>('PUT', path, body, options);
   }
 
   /**
@@ -186,19 +178,25 @@ export class HttpClient {
     body?: unknown,
     options?: HttpRequestOptions
   ): Promise<HttpResponse<T>> {
-    return this.request<T>('PATCH', path, {
-      ...options,
-      body: JSON.stringify(body),
-      idempotent: true,
-    });
+    return this.mutationRequest<T>('PATCH', path, body, options);
   }
 
   /**
    * Perform a DELETE request
    */
   async delete<T = unknown>(path: string, options?: HttpRequestOptions): Promise<HttpResponse<T>> {
-    return this.request<T>('DELETE', path, {
+    return this.request<T>('DELETE', path, { ...options, idempotent: true });
+  }
+
+  private mutationRequest<T>(
+    method: 'POST' | 'PUT' | 'PATCH',
+    path: string,
+    body?: unknown,
+    options?: HttpRequestOptions
+  ): Promise<HttpResponse<T>> {
+    return this.request<T>(method, path, {
       ...options,
+      body: JSON.stringify(body),
       idempotent: true,
     });
   }

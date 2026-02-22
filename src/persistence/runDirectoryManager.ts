@@ -864,36 +864,16 @@ export async function getRunState(runDir: string): Promise<{
   total_steps?: number;
 }> {
   const manifest = await readManifest(runDir);
+  const exec = manifest.execution;
 
-  const state: {
-    status: RunManifest['status'];
-    last_step?: string;
-    current_step?: string;
-    last_error?: RunManifest['execution']['last_error'];
-    completed_steps: number;
-    total_steps?: number;
-  } = {
+  return {
     status: manifest.status,
-    completed_steps: manifest.execution.completed_steps,
+    completed_steps: exec.completed_steps,
+    ...(exec.last_step !== undefined && { last_step: exec.last_step }),
+    ...(exec.current_step !== undefined && { current_step: exec.current_step }),
+    ...(exec.last_error !== undefined && { last_error: exec.last_error }),
+    ...(exec.total_steps !== undefined && { total_steps: exec.total_steps }),
   };
-
-  if (manifest.execution.last_step) {
-    state.last_step = manifest.execution.last_step;
-  }
-
-  if (manifest.execution.current_step) {
-    state.current_step = manifest.execution.current_step;
-  }
-
-  if (manifest.execution.last_error) {
-    state.last_error = manifest.execution.last_error;
-  }
-
-  if (manifest.execution.total_steps) {
-    state.total_steps = manifest.execution.total_steps;
-  }
-
-  return state;
 }
 
 /**
