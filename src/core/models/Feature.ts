@@ -6,12 +6,6 @@ import { z } from 'zod';
  * Represents a complete feature execution lifecycle record including metadata,
  * status, artifacts, telemetry, approvals, and resumability information.
  *
- * Implements:
- * - FR-2 (Run Directory): Feature metadata persistence
- * - FR-3 (Resumability): Last step/error tracking
- * - ADR-5 (Approval Workflow): Approval records
- * - ADR-7 (Validation Policy): Zod-based validation
- *
  * Used by CLI commands: init, start, status, resume
  */
 

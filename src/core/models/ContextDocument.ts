@@ -6,11 +6,6 @@ import { z } from 'zod';
  * Hash manifests tying context files, summaries, token costs,
  * and provenance data to Features.
  *
- * Implements:
- * - FR-1 (Initialize): Context discovery and caching
- * - ADR-2 (State Persistence): Hash-based integrity
- * - ADR-7 (Validation Policy): Zod-based validation
- *
  * Used by CLI commands: init, start, context
  */
 

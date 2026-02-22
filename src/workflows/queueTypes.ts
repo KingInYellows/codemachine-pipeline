@@ -3,11 +3,6 @@
  *
  * Write-Ahead Log (WAL) based queue types for optimized task queue operations.
  * Provides interfaces for atomic operations, snapshots, and migration support.
- *
- * Implements:
- * - Issue #45: Queue WAL Optimization Layer 1
- * - FR-3 (Resumability): Enhanced crash recovery via WAL
- * - ADR-2 (State Persistence): Monotonic sequence-based operations
  */
 
 import type { ExecutionTask } from '../core/models/ExecutionTask';

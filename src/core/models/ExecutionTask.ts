@@ -6,11 +6,6 @@ import { z } from 'zod';
  * Units of work (code_generation, testing, pr_creation, deployment)
  * with statuses, retries, logs, cost tracking, and assigned agents.
  *
- * Implements:
- * - FR-2 (Run Directory): Task queue persistence
- * - FR-3 (Resumability): Retry and error tracking
- * - ADR-7 (Validation Policy): Zod-based validation
- *
  * Used by CLI commands: start, resume, status
  */
 

@@ -2,20 +2,9 @@
  * Write Action Queue
  *
  * Manages throttled GitHub write operations (PR comments, labels, review requests)
- * to prevent secondary rate limits and abuse detection.
- *
- * Implements:
- * - IR-6/IR-7: GitHub rate-limit handling with retry-after/backoff
- * - FR-3: Queue persistence to run directory for resumability
- * - ADR-2: State persistence with JSONL format and checksums
- *
- * Key features:
- * - Serialized write actions with deduplication via idempotency keys
- * - Automatic cooldown on secondary limit detection (429 responses)
- * - Backoff and retry logic with exponential delays
- * - Integration with RateLimitLedger for cooldown state management
- * - Telemetry emission for queue depth and action outcomes
- * - CLI-friendly status reporting
+ * to prevent secondary rate limits and abuse detection. Serialized write actions
+ * with deduplication via idempotency keys, automatic cooldown on 429 responses,
+ * and integration with RateLimitLedger for cooldown state management.
  */
 
 import * as fs from 'node:fs/promises';
@@ -36,15 +25,10 @@ import { withLock } from '../persistence/runDirectoryManager';
  * Write action types supported by the queue
  */
 export enum WriteActionType {
-  /** Create PR comment */
   PR_COMMENT = 'pr_comment',
-  /** Add PR labels */
   PR_LABEL = 'pr_label',
-  /** Request PR reviewers */
   PR_REVIEW_REQUEST = 'pr_review_request',
-  /** Update PR */
   PR_UPDATE = 'pr_update',
-  /** Create issue comment */
   ISSUE_COMMENT = 'issue_comment',
 }
 
@@ -52,13 +36,9 @@ export enum WriteActionType {
  * Write action status
  */
 export enum WriteActionStatus {
-  /** Pending execution */
   PENDING = 'pending',
-  /** Currently being executed */
   IN_PROGRESS = 'in_progress',
-  /** Successfully completed */
   COMPLETED = 'completed',
-  /** Failed after retries */
   FAILED = 'failed',
   /** Skipped due to deduplication */
   SKIPPED = 'skipped',
