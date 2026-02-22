@@ -338,6 +338,7 @@ function buildDependencyGraph(
 ): PlanDiagnostics['blockers'] {
   const blockers: PlanDiagnostics['blockers'] = [];
   const taskIndex = new Map(tasks.map((task) => [task.task_id, task]));
+  const taskDepSets = new Map(tasks.map((t) => [t.task_id, new Set(t.dependencies.map((d) => d.task_id))]));
 
   for (const req of options.requirements) {
     const taskId = req.requirementId
@@ -351,6 +352,8 @@ function buildDependencyGraph(
     if (!task || !req.dependsOn || req.dependsOn.length === 0) {
       continue;
     }
+
+    const depSet = taskDepSets.get(taskId)!;
 
     for (const dependencyRequirement of req.dependsOn) {
       const dependencyTaskId = options.requirementTaskMap.get(dependencyRequirement);
@@ -372,54 +375,56 @@ function buildDependencyGraph(
         continue;
       }
 
-      if (!task.dependencies.some((dep) => dep.task_id === dependencyTaskId)) {
-        task.dependencies.push({
-          task_id: dependencyTaskId,
-          type: 'required',
-        });
+      if (!depSet.has(dependencyTaskId)) {
+        task.dependencies.push({ task_id: dependencyTaskId, type: 'required' });
+        depSet.add(dependencyTaskId);
       }
     }
   }
 
   // Simple heuristic: testing tasks depend on code_generation tasks
-  const codeGenTasks = tasks.filter((t) => t.task_type === 'code_generation');
+  const codeGenTaskIds = new Set(
+    tasks.filter((t) => t.task_type === 'code_generation').map((t) => t.task_id)
+  );
   const testingTasks = tasks.filter((t) => t.task_type === 'testing');
 
   // Make all testing tasks depend on all code generation tasks
   for (const testTask of testingTasks) {
-    for (const codeTask of codeGenTasks) {
-      testTask.dependencies.push({
-        task_id: codeTask.task_id,
-        type: 'required',
-      });
+    const existingDeps = new Set(testTask.dependencies.map((d) => d.task_id));
+    for (const codeTaskId of codeGenTaskIds) {
+      if (!existingDeps.has(codeTaskId)) {
+        testTask.dependencies.push({ task_id: codeTaskId, type: 'required' });
+        existingDeps.add(codeTaskId);
+      }
     }
   }
 
   // Sort testing tasks by type priority (unit -> integration -> e2e)
-  const unitTests = testingTasks.filter((t) => t.config?.test_type === 'unit');
+  const unitTestIds = new Set(
+    testingTasks.filter((t) => t.config?.test_type === 'unit').map((t) => t.task_id)
+  );
   const integrationTests = testingTasks.filter((t) => t.config?.test_type === 'integration');
   const e2eTests = testingTasks.filter((t) => t.config?.test_type === 'e2e');
 
   // Integration tests depend on unit tests
   for (const intTest of integrationTests) {
-    for (const unitTest of unitTests) {
-      if (!intTest.dependencies.some((d) => d.task_id === unitTest.task_id)) {
-        intTest.dependencies.push({
-          task_id: unitTest.task_id,
-          type: 'required',
-        });
+    const existingDeps = new Set(intTest.dependencies.map((d) => d.task_id));
+    for (const unitId of unitTestIds) {
+      if (!existingDeps.has(unitId)) {
+        intTest.dependencies.push({ task_id: unitId, type: 'required' });
+        existingDeps.add(unitId);
       }
     }
   }
 
   // E2E tests depend on integration tests
+  const integrationTestIds = new Set(integrationTests.map((t) => t.task_id));
   for (const e2eTest of e2eTests) {
-    for (const intTest of integrationTests) {
-      if (!e2eTest.dependencies.some((d) => d.task_id === intTest.task_id)) {
-        e2eTest.dependencies.push({
-          task_id: intTest.task_id,
-          type: 'required',
-        });
+    const existingDeps = new Set(e2eTest.dependencies.map((d) => d.task_id));
+    for (const intId of integrationTestIds) {
+      if (!existingDeps.has(intId)) {
+        e2eTest.dependencies.push({ task_id: intId, type: 'required' });
+        existingDeps.add(intId);
       }
     }
   }

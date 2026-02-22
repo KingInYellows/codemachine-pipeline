@@ -489,33 +489,29 @@ async function checkQueueFiles(
  * Generate actionable recommendations based on diagnostics
  */
 function generateRecommendations(analysis: ResumeAnalysis): void {
+  const fid = analysis.featureId;
+  const blockerMessages = new Map<string, (d: ResumeDiagnostic) => string>([
+    ['APPROVALS_PENDING', (d) => `   • Complete pending approvals: ${((d.context?.approvals as string[]) || []).join(', ')}`],
+    ['INTEGRITY_HASH_MISMATCH', () => '   • Artifacts have been modified. Restore from backup or use --force (risky)'],
+    ['NON_RECOVERABLE_ERROR', () => '   • Manual intervention required. See docs/playbooks/resume_playbook.md'],
+    ['QUEUE_CORRUPTED', () => `   • Queue files are corrupted. Run 'codepipe queue validate --feature ${fid}' and rebuild with 'codepipe queue rebuild --feature ${fid} --from-plan'`],
+  ]);
+  const warningMessages = new Map<string, () => string>([
+    ['ERROR_RATE_LIMIT', () => '   • Wait for rate limit reset before resuming'],
+    ['ERROR_NETWORK', () => '   • Check network connectivity before resuming'],
+    ['QUEUE_HAS_FAILURES', () => '   • Review failed tasks in queue before resuming'],
+    ['QUEUE_VALIDATION_WARNINGS', () => `   • Inspect queue warnings with 'codepipe queue validate --feature ${fid} --verbose'`],
+  ]);
+
   const blockers = analysis.diagnostics.filter((d) => d.severity === 'blocker');
   const errors = analysis.diagnostics.filter((d) => d.severity === 'error');
   const warnings = analysis.diagnostics.filter((d) => d.severity === 'warning');
 
   if (blockers.length > 0) {
     analysis.recommendations.push('🚫 Resume is blocked. Address the following issues:');
-
     for (const blocker of blockers) {
-      if (blocker.code === 'APPROVALS_PENDING') {
-        analysis.recommendations.push(
-          `   • Complete pending approvals: ${((blocker.context?.approvals as string[]) || []).join(', ')}`
-        );
-      } else if (blocker.code === 'INTEGRITY_HASH_MISMATCH') {
-        analysis.recommendations.push(
-          '   • Artifacts have been modified. Restore from backup or use --force (risky)'
-        );
-      } else if (blocker.code === 'NON_RECOVERABLE_ERROR') {
-        analysis.recommendations.push(
-          '   • Manual intervention required. See docs/playbooks/resume_playbook.md'
-        );
-      } else if (blocker.code === 'QUEUE_CORRUPTED') {
-        analysis.recommendations.push(
-          `   • Queue files are corrupted. Run 'codepipe queue validate --feature ${analysis.featureId}' and rebuild with 'codepipe queue rebuild --feature ${analysis.featureId} --from-plan'`
-        );
-      } else {
-        analysis.recommendations.push(`   • ${blocker.message}`);
-      }
+      const fn = blockerMessages.get(blocker.code ?? '');
+      analysis.recommendations.push(fn ? fn(blocker) : `   • ${blocker.message}`);
     }
   }
 
@@ -529,17 +525,8 @@ function generateRecommendations(analysis: ResumeAnalysis): void {
   if (warnings.length > 0 && blockers.length === 0) {
     analysis.recommendations.push('⚠️  Warnings (resume may proceed with caution):');
     for (const warning of warnings) {
-      if (warning.code === 'ERROR_RATE_LIMIT') {
-        analysis.recommendations.push('   • Wait for rate limit reset before resuming');
-      } else if (warning.code === 'ERROR_NETWORK') {
-        analysis.recommendations.push('   • Check network connectivity before resuming');
-      } else if (warning.code === 'QUEUE_HAS_FAILURES') {
-        analysis.recommendations.push('   • Review failed tasks in queue before resuming');
-      } else if (warning.code === 'QUEUE_VALIDATION_WARNINGS') {
-        analysis.recommendations.push(
-          `   • Inspect queue warnings with 'codepipe queue validate --feature ${analysis.featureId} --verbose'`
-        );
-      }
+      const fn = warningMessages.get(warning.code ?? '');
+      if (fn) analysis.recommendations.push(fn());
     }
   }
 
