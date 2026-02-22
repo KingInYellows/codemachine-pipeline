@@ -22,6 +22,14 @@ import type { MetricsCollector } from '../../telemetry/metrics';
 import type { TraceManager, ActiveSpan } from '../../telemetry/traces';
 import { formatErrorMessage, setJsonOutputMode } from '../utils/cliErrors';
 
+interface CommandTelemetryContext {
+  startTime: number;
+  metrics?: MetricsCollector;
+  commandSpan?: ActiveSpan;
+  traceManager?: TraceManager;
+  logger?: StructuredLogger;
+}
+
 interface ConfigValidationPayload {
   status: 'not_found' | 'validation_error' | 'valid';
   config_path: string;
@@ -104,6 +112,7 @@ export default class Init extends Command {
     let traceManager: TraceManager | undefined;
     let commandSpan: ActiveSpan | undefined;
     let exitCode = 0;
+    const ctx: CommandTelemetryContext = { startTime };
 
     try {
       // Step 1: Detect git repository root
@@ -125,6 +134,10 @@ export default class Init extends Command {
         metrics = createRunMetricsCollector(pipelineDir, 'bootstrap');
         traceManager = createRunTraceManager(pipelineDir, 'bootstrap', logger);
         commandSpan = traceManager.startSpan('cli.init');
+        ctx.logger = logger;
+        ctx.metrics = metrics;
+        ctx.traceManager = traceManager;
+        ctx.commandSpan = commandSpan;
         commandSpan.setAttribute('dry_run', flags['dry-run']);
         commandSpan.setAttribute('json_mode', flags.json);
         commandSpan.setAttribute('yes_mode', flags.yes);
@@ -153,17 +166,10 @@ export default class Init extends Command {
         }
 
         if (exitCode !== 0) {
-          await this.exitCommand(exitCode, startTime, metrics, commandSpan, traceManager, logger);
+          await this.exitCommand(exitCode, ctx);
         }
 
-        await this.finalizeTelemetry(
-          exitCode,
-          startTime,
-          metrics,
-          commandSpan,
-          traceManager,
-          logger
-        );
+        await this.finalizeTelemetry(exitCode, ctx);
         return;
       }
 
@@ -199,7 +205,7 @@ export default class Init extends Command {
             this.log('\nExisting configuration has validation errors:');
             this.log(formatValidationErrors(result.errors!));
           }
-          await this.exitCommand(exitCode, startTime, metrics, commandSpan, traceManager, logger);
+          await this.exitCommand(exitCode, ctx);
         }
 
         if (flags.json) {
@@ -225,14 +231,7 @@ export default class Init extends Command {
           }
           this.log('\n✓ Configuration is valid');
         }
-        await this.finalizeTelemetry(
-          exitCode,
-          startTime,
-          metrics,
-          commandSpan,
-          traceManager,
-          logger
-        );
+        await this.finalizeTelemetry(exitCode, ctx);
         return;
       }
 
@@ -253,14 +252,7 @@ export default class Init extends Command {
           if (!flags.json) {
             this.warn('Initialization cancelled by user input.');
           }
-          await this.finalizeTelemetry(
-            exitCode,
-            startTime,
-            metrics,
-            commandSpan,
-            traceManager,
-            logger
-          );
+          await this.finalizeTelemetry(exitCode, ctx);
           return;
         }
       }
@@ -305,7 +297,7 @@ export default class Init extends Command {
           this.log('\n❌ Configuration validation failed after creation:\n');
           this.log(formatValidationErrors(validationResult.errors!));
         }
-        await this.exitCommand(exitCode, startTime, metrics, commandSpan, traceManager, logger);
+        await this.exitCommand(exitCode, ctx);
       }
 
       // Build result payload
@@ -356,7 +348,7 @@ export default class Init extends Command {
         this.log('');
       }
 
-      await this.finalizeTelemetry(exitCode, startTime, metrics, commandSpan, traceManager, logger);
+      await this.finalizeTelemetry(exitCode, ctx);
     } catch (error) {
       // Determine exit code based on error type
       let errorExitCode = 1;
@@ -371,15 +363,7 @@ export default class Init extends Command {
         }
       }
 
-      await this.finalizeTelemetry(
-        errorExitCode,
-        startTime,
-        metrics,
-        commandSpan,
-        traceManager,
-        logger,
-        error
-      );
+      await this.finalizeTelemetry(errorExitCode, ctx, error);
 
       // Re-throw oclif errors to preserve exit codes
       if (error && typeof error === 'object' && 'oclif' in error) {
@@ -399,13 +383,11 @@ export default class Init extends Command {
    */
   private async finalizeTelemetry(
     exitCode: number,
-    startTime: number,
-    metrics?: MetricsCollector,
-    commandSpan?: ActiveSpan,
-    traceManager?: TraceManager,
-    logger?: StructuredLogger,
+    ctx: CommandTelemetryContext,
     error?: unknown
   ): Promise<void> {
+    const { startTime, metrics, commandSpan, traceManager, logger } = ctx;
+
     if (metrics) {
       const duration = Date.now() - startTime;
       metrics.observe(StandardMetrics.COMMAND_EXECUTION_DURATION_MS, duration, { command: 'init' });
@@ -461,22 +443,10 @@ export default class Init extends Command {
 
   private async exitCommand(
     exitCode: number,
-    startTime: number,
-    metrics?: MetricsCollector,
-    commandSpan?: ActiveSpan,
-    traceManager?: TraceManager,
-    logger?: StructuredLogger,
+    ctx: CommandTelemetryContext,
     error?: unknown
   ): Promise<never> {
-    await this.finalizeTelemetry(
-      exitCode,
-      startTime,
-      metrics,
-      commandSpan,
-      traceManager,
-      logger,
-      error
-    );
+    await this.finalizeTelemetry(exitCode, ctx, error);
     process.exit(exitCode);
   }
 
