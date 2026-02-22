@@ -24,16 +24,8 @@ export enum ErrorType {
   HUMAN_ACTION_REQUIRED = 'human_action_required',
 }
 
-/**
- * HTTP provider type (GitHub, Linear, etc.)
- */
-export enum Provider {
-  GITHUB = 'github',
-  LINEAR = 'linear',
-  GRAPHITE = 'graphite',
-  CODEMACHINE = 'codemachine',
-  CUSTOM = 'custom',
-}
+import { Provider } from '../../core/sharedTypes.js';
+export { Provider };
 
 // ============================================================================
 // Interfaces

@@ -28,6 +28,7 @@ import {
   getRequiredCommands,
 } from './validationRegistry';
 import { getErrorMessage } from '../utils/errors.js';
+import { filterEnvironment } from '../utils/envFilter.js';
 
 /**
  * Auto-Fix Engine
@@ -173,12 +174,9 @@ export async function executeValidationWithAutoFix(
     const result = await executeValidationCommand(
       runDir,
       command,
-      attemptNumber,
-      isAutoFixAttempt,
+      { attemptNumber, isAutoFixAttempt },
       options,
-      logger,
-      metrics,
-      telemetry
+      { logger, metrics, telemetry }
     );
 
     lastResult = result;
@@ -383,19 +381,31 @@ export async function executeAllValidations(
 // Internal Helpers
 // ============================================================================
 
+interface AttemptContext {
+  attemptNumber: number;
+  isAutoFixAttempt: boolean;
+}
+
+interface TelemetryContext {
+  logger?: StructuredLogger | undefined;
+  metrics?: MetricsCollector | undefined;
+  telemetry?: ExecutionTelemetry | undefined;
+}
+
 /**
  * Execute a single validation command
  */
 async function executeValidationCommand(
   runDir: string,
   command: ValidationCommandConfig,
-  attemptNumber: number,
-  isAutoFixAttempt: boolean,
+  attemptCtx: AttemptContext,
   options: AutoFixOptions,
-  logger?: StructuredLogger,
-  metrics?: MetricsCollector,
-  telemetry?: ExecutionTelemetry
+  telemetryCtx?: TelemetryContext
 ): Promise<ValidationResult> {
+  const { attemptNumber, isAutoFixAttempt } = attemptCtx;
+  const logger = telemetryCtx?.logger;
+  const metrics = telemetryCtx?.metrics;
+  const telemetry = telemetryCtx?.telemetry;
   const attemptId = generateAttemptId();
   const startedAt = new Date().toISOString();
   const repoRoot = resolveRepoRoot(runDir);
@@ -416,9 +426,14 @@ async function executeValidationCommand(
   );
   const renderedCommand = applyCommandTemplate(commandTemplate, templateContext);
 
-  // Merge environment variables
+  // Merge environment variables (filtered to avoid leaking secrets)
+  const filteredBase = filterEnvironment({
+    additional: [],
+    includeDebug: true,
+    includeTmpdir: true,
+  });
   const env = {
-    ...process.env,
+    ...filteredBase,
     ...(command.env ?? {}),
     ...(options.envOverride ?? {}),
   };

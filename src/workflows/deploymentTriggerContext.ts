@@ -13,7 +13,7 @@ import * as crypto from 'node:crypto';
 import type { BranchProtectionReport } from './branchProtectionReporter';
 import { loadReport as loadBranchProtectionReport } from './branchProtectionReporter';
 import type { RepoConfig } from '../core/config/RepoConfig';
-import type { PRMetadata } from '../cli/pr/shared';
+import type { PRMetadata } from '../core/models/index.js';
 import type { LoggerInterface } from '../telemetry/logger';
 import { readManifest, withLock, type RunManifest } from '../persistence/runDirectoryManager';
 import { computeContentHash } from './approvalRegistry';

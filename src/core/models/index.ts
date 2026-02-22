@@ -216,3 +216,5 @@ export {
   TraceLinkSchema,
   parseTraceLink,
 } from './TraceLink';
+
+export type { PRMetadata } from './prMetadata';

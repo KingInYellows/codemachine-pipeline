@@ -23,6 +23,7 @@ import * as crypto from 'node:crypto';
 import * as path from 'node:path';
 import { createLogger, LogLevel, type LoggerInterface } from '../telemetry/logger';
 import { getErrorMessage } from '../utils/errors.js';
+import { isFileNotFound } from '../utils/safeJson.js';
 import { RateLimitLedger } from '../telemetry/rateLimitLedger';
 import type { MetricsCollector } from '../telemetry/metrics';
 import { withLock } from '../persistence/runDirectoryManager';
@@ -246,18 +247,6 @@ async function computeQueueChecksum(queuePath: string): Promise<string> {
     }
     throw error;
   }
-}
-
-/**
- * Check if error is file not found
- */
-function isFileNotFound(error: unknown): error is NodeJS.ErrnoException {
-  return Boolean(
-    error &&
-    typeof error === 'object' &&
-    'code' in error &&
-    (error as NodeJS.ErrnoException).code === 'ENOENT'
-  );
 }
 
 /**

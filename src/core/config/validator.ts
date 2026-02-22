@@ -341,7 +341,10 @@ export function validateEnvironmentVariables(
   result[endpointVar] = {
     required: !config.runtime.agent_endpoint, // Required if not in config
     present: !!endpointValue || !!config.runtime.agent_endpoint,
-    value: endpointValue || config.runtime.agent_endpoint || undefined,
+    value:
+      endpointValue || config.runtime.agent_endpoint
+        ? '***REDACTED***'
+        : undefined,
   };
 
   return result;

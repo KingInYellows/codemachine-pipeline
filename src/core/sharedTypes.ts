@@ -45,6 +45,21 @@ export interface SerializedError {
   responseBody?: string | undefined;
 }
 
+// ============================================================================
+// Provider Types
+// ============================================================================
+
+/**
+ * HTTP provider type (GitHub, Linear, etc.)
+ */
+export enum Provider {
+  GITHUB = 'github',
+  LINEAR = 'linear',
+  GRAPHITE = 'graphite',
+  CODEMACHINE = 'codemachine',
+  CUSTOM = 'custom',
+}
+
 /**
  * Type guard for SerializedError
  *

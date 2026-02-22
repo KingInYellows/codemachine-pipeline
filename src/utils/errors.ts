@@ -122,6 +122,42 @@ export function classifyError(error: unknown): ErrorType {
   return ErrorType.PERMANENT;
 }
 
+/**
+ * Base class for adapter-specific errors with error taxonomy.
+ * Extend this class in each adapter and set `this.name` to the subclass name.
+ */
+export class AdapterError extends Error {
+  constructor(
+    message: string,
+    public readonly errorType: ErrorType,
+    public readonly statusCode?: number,
+    public readonly requestId?: string,
+    public readonly operation?: string
+  ) {
+    super(message);
+    this.name = 'AdapterError';
+    Object.setPrototypeOf(this, new.target.prototype);
+  }
+
+  toJSON(): {
+    name: string;
+    message: string;
+    errorType: ErrorType;
+    statusCode?: number | undefined;
+    requestId?: string | undefined;
+    operation?: string | undefined;
+  } {
+    return {
+      name: this.name,
+      message: this.message,
+      errorType: this.errorType,
+      statusCode: this.statusCode,
+      requestId: this.requestId,
+      operation: this.operation,
+    };
+  }
+}
+
 export function createErrorNormalizer<T extends Error>(
   AdapterErrorClass: new (
     message: string,

@@ -20,7 +20,7 @@
 
 import { HttpClient, Provider, ErrorType } from '../http/client';
 import type { HttpClientConfig } from '../http/client';
-import { serializeError, createErrorNormalizer } from '../../utils/errors';
+import { serializeError, createErrorNormalizer, AdapterError } from '../../utils/errors';
 import { createLogger, LogLevel, type LoggerInterface } from '../../telemetry/logger';
 import type {
   GitHubAdapterConfig,
@@ -168,7 +168,7 @@ export class GitHubAdapter {
 
     try {
       const response = await this.client.get<GitReference>(
-        `/repos/${this.owner}/${this.repo}/git/ref/heads/${branch}`,
+        `/repos/${this.owner}/${this.repo}/git/ref/heads/${encodeURIComponent(branch)}`,
         {
           metadata: { operation: 'getBranch', branch },
         }
@@ -307,7 +307,7 @@ export class GitHubAdapter {
     try {
       // GitHub REST API v3 uses check-suites endpoint
       const response = await this.client.get<{ check_suites: StatusCheck[] }>(
-        `/repos/${this.owner}/${this.repo}/commits/${sha}/check-suites`,
+        `/repos/${this.owner}/${this.repo}/commits/${encodeURIComponent(sha)}/check-suites`,
         {
           metadata: { operation: 'getStatusChecks', sha },
         }
@@ -591,7 +591,7 @@ export class GitHubAdapter {
 
     try {
       await this.client.post(
-        `/repos/${this.owner}/${this.repo}/actions/workflows/${params.workflow_id}/dispatches`,
+        `/repos/${this.owner}/${this.repo}/actions/workflows/${encodeURIComponent(params.workflow_id)}/dispatches`,
         {
           ref: params.ref,
           inputs: params.inputs ?? {},
@@ -639,35 +639,16 @@ export class GitHubAdapter {
 /**
  * GitHub adapter error with error taxonomy
  */
-export class GitHubAdapterError extends Error {
+export class GitHubAdapterError extends AdapterError {
   constructor(
     message: string,
-    public readonly errorType: ErrorType,
-    public readonly statusCode?: number,
-    public readonly requestId?: string,
-    public readonly operation?: string
+    errorType: ErrorType,
+    statusCode?: number,
+    requestId?: string,
+    operation?: string
   ) {
-    super(message);
+    super(message, errorType, statusCode, requestId, operation);
     this.name = 'GitHubAdapterError';
-    Object.setPrototypeOf(this, GitHubAdapterError.prototype);
-  }
-
-  toJSON(): {
-    name: string;
-    message: string;
-    errorType: ErrorType;
-    statusCode?: number | undefined;
-    requestId?: string | undefined;
-    operation?: string | undefined;
-  } {
-    return {
-      name: this.name,
-      message: this.message,
-      errorType: this.errorType,
-      statusCode: this.statusCode,
-      requestId: this.requestId,
-      operation: this.operation,
-    };
   }
 }
 
