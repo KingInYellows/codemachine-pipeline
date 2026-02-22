@@ -55,17 +55,9 @@ ISSUE_RESOLUTION_PLAN.md
 .serena/
 .claude/
 .mcp.json
-claude-flow.config.json
 .deps/
 CLAUDE.md
 tools/
-
-# Claude Flow runtime state
-.claude-flow/
-.swarm/
-vectors.db
-tmp/
-my-ruvector/
 
 # Working notes
 thoughts/

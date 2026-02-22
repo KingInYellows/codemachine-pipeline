@@ -758,14 +758,6 @@ With all critical questions answered, Phase 2 (Content Audit) can proceed with c
 
 ## References
 
-### Memory Storage
-
-All research findings stored in claude-flow memory system:
-
-- Namespace: `docs-questions`
-- Keys: `q1` through `q15`
-- Retrievable via: `npx @claude-flow/cli@latest memory retrieve --key "q<N>" --namespace "docs-questions"`
-
 ### Source Code References
 
 | Component         | File Path                                  | Key Lines |

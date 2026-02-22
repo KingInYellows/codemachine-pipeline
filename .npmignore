@@ -17,7 +17,6 @@ vitest.config.ts
 .serena/
 .claude/
 .mcp.json
-claude-flow.config.json
 .deps/
 CLAUDE.md
 tools/
