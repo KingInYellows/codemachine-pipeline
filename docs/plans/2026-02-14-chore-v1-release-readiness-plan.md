@@ -307,7 +307,7 @@ git checkout -b release
 
 # Remove development artifacts
 git rm -r CLAUDE.md .codemachine/ .serena/ .claude/ .deps/ .mcp.json \
-  claude-flow.config.json specification.md 2>/dev/null
+  specification.md 2>/dev/null
 git commit -m "chore: prepare release branch — remove dev artifacts"
 
 # Verify

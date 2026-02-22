@@ -44,7 +44,6 @@ main (default)              release
 | IDE plugin    | `.serena/`                | Serena IDE cache               |
 | Claude config | `.claude/`                | Claude Code settings           |
 | MCP config    | `.mcp.json`               | MCP server config              |
-| Claude Flow   | `claude-flow.config.json` | Claude Flow config             |
 | Dep baseline  | `.deps/`                  | Circular dependency baseline   |
 | Legacy tools  | `tools/`                  | Superseded by scripts/tooling/ |
 | Original spec | `specification.md`        | Archived to docs/archive/      |
@@ -61,7 +60,7 @@ git checkout -b release
 # Remove excluded files
 git rm CLAUDE.md
 git rm -r .codemachine/ .serena/ .claude/ .deps/ tools/ 2>/dev/null
-git rm .mcp.json claude-flow.config.json 2>/dev/null
+git rm .mcp.json 2>/dev/null
 git rm specification.md 2>/dev/null
 
 # Commit
@@ -90,7 +89,7 @@ git checkout -b release
 # Remove excluded files (same as initial creation)
 git rm CLAUDE.md
 git rm -r .codemachine/ .serena/ .claude/ .deps/ tools/ 2>/dev/null
-git rm .mcp.json claude-flow.config.json 2>/dev/null
+git rm .mcp.json 2>/dev/null
 git rm specification.md 2>/dev/null
 
 git commit -m "chore: sync release branch with main"
