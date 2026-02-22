@@ -631,33 +631,15 @@ export class WriteActionQueue {
 
     await this.saveQueue(actions);
 
-    // Update manifest counts
-    const pendingDelta =
-      status === WriteActionStatus.PENDING ? 1 : oldStatus === WriteActionStatus.PENDING ? -1 : 0;
-    const inProgressDelta =
-      status === WriteActionStatus.IN_PROGRESS
-        ? 1
-        : oldStatus === WriteActionStatus.IN_PROGRESS
-          ? -1
-          : 0;
-    const completedDelta =
-      status === WriteActionStatus.COMPLETED
-        ? 1
-        : oldStatus === WriteActionStatus.COMPLETED
-          ? -1
-          : 0;
-    const failedDelta =
-      status === WriteActionStatus.FAILED ? 1 : oldStatus === WriteActionStatus.FAILED ? -1 : 0;
-    const skippedDelta =
-      status === WriteActionStatus.SKIPPED ? 1 : oldStatus === WriteActionStatus.SKIPPED ? -1 : 0;
-
+    // Update manifest counts: +1 for entering a status, -1 for leaving it
+    const delta = (s: WriteActionStatus) => (status === s ? 1 : 0) - (oldStatus === s ? 1 : 0);
     await this.updateManifestCounts(
       0,
-      pendingDelta,
-      inProgressDelta,
-      completedDelta,
-      failedDelta,
-      skippedDelta
+      delta(WriteActionStatus.PENDING),
+      delta(WriteActionStatus.IN_PROGRESS),
+      delta(WriteActionStatus.COMPLETED),
+      delta(WriteActionStatus.FAILED),
+      delta(WriteActionStatus.SKIPPED)
     );
   }
 

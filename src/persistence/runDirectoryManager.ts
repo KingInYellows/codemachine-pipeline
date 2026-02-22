@@ -293,6 +293,20 @@ export function getSubdirectoryPath(
  * @param options - Lock acquisition options
  * @throws Error if lock cannot be acquired within timeout
  */
+/**
+ * Remove a stale lock file, tolerating concurrent removal (ENOENT).
+ */
+async function removeStaleLock(lockPath: string): Promise<void> {
+  try {
+    await fs.unlink(lockPath);
+  } catch (error) {
+    if (!isFileNotFound(error)) {
+      throw wrapError(error, 'remove stale lock');
+    }
+    // ENOENT: already removed by another process — that's fine
+  }
+}
+
 export async function acquireLock(runDir: string, options: LockOptions = {}): Promise<void> {
   const {
     timeout = DEFAULT_LOCK_TIMEOUT,
@@ -305,53 +319,25 @@ export async function acquireLock(runDir: string, options: LockOptions = {}): Pr
 
   while (Date.now() - startTime < timeout) {
     try {
-      // Try to create lock file exclusively
       const lockData: LockFile = {
         pid: process.pid,
         hostname: os.hostname(),
         acquired_at: new Date().toISOString(),
         operation,
       };
-
-      // Use wx flag for exclusive creation
-      await fs.writeFile(lockPath, JSON.stringify(lockData, null, 2), {
-        flag: 'wx',
-        encoding: 'utf-8',
-      });
-
-      // Lock acquired successfully
+      await fs.writeFile(lockPath, JSON.stringify(lockData, null, 2), { flag: 'wx', encoding: 'utf-8' });
       return;
     } catch (error: unknown) {
-      if (error && typeof error === 'object' && 'code' in error && error.code === 'EEXIST') {
-        // Lock file exists, check if stale
-        const isStale = await isLockStale(lockPath);
+      if (!(error && typeof error === 'object' && 'code' in error && error.code === 'EEXIST')) {
+        throw wrapError(error, `acquire lock for ${runDir}`);
+      }
 
-        if (isStale) {
-          // Remove stale lock and retry
-          try {
-            await fs.unlink(lockPath);
-            continue;
-          } catch (unlinkError) {
-            // If file doesn't exist (ENOENT), another process removed it - continue retry
-            if (
-              unlinkError &&
-              typeof unlinkError === 'object' &&
-              'code' in unlinkError &&
-              unlinkError.code === 'ENOENT'
-            ) {
-              continue;
-            }
-            throw wrapError(unlinkError, 'remove stale lock');
-          }
-        }
-
-        // Lock is valid, wait and retry
-        await sleep(pollInterval);
+      if (await isLockStale(lockPath)) {
+        await removeStaleLock(lockPath);
         continue;
       }
 
-      // Other error, propagate
-      throw wrapError(error, `acquire lock for ${runDir}`);
+      await sleep(pollInterval);
     }
   }
 
