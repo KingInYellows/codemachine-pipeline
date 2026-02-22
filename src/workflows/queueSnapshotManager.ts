@@ -24,6 +24,7 @@ import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 import * as crypto from 'node:crypto';
 import { getErrorMessage } from '../utils/errors.js';
+import { isFileNotFound } from '../utils/safeJson.js';
 
 // ============================================================================
 // Constants
@@ -266,7 +267,7 @@ export async function deleteSnapshot(queueDir: string): Promise<void> {
     await fs.unlink(snapshotPath);
   } catch (error) {
     // Ignore if file doesn't exist
-    if (error && typeof error === 'object' && 'code' in error && error.code === 'ENOENT') {
+    if (isFileNotFound(error)) {
       return;
     }
     throw error;

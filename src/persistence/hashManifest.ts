@@ -1,6 +1,7 @@
 import * as fs from 'node:fs/promises';
 import * as crypto from 'node:crypto';
 import * as path from 'node:path';
+import { isFileNotFound } from '../utils/safeJson';
 
 /**
  * Hash Manifest Utilities
@@ -300,7 +301,7 @@ export async function verifyHashManifest(
       }
     } catch (error) {
       result.valid = false;
-      if (error && typeof error === 'object' && 'code' in error && error.code === 'ENOENT') {
+      if (isFileNotFound(error)) {
         result.missing.push(filePath);
       } else {
         result.failed.push({

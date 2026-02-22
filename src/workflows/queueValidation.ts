@@ -16,6 +16,7 @@ import * as crypto from 'node:crypto';
 import * as path from 'node:path';
 import { parseExecutionTask } from '../core/models/ExecutionTask';
 import { readManifest } from '../persistence/runDirectoryManager';
+import { isFileNotFound } from '../utils/safeJson.js';
 
 import { QUEUE_FILE, QUEUE_MANIFEST_FILE } from './queueConstants.js';
 import type { QueueManifest, QueueValidationResult } from './queueTypes.js';
@@ -35,7 +36,7 @@ async function computeFileChecksum(filePath: string): Promise<string> {
     const content = await fs.readFile(filePath, 'utf-8');
     return crypto.createHash('sha256').update(content).digest('hex');
   } catch (error) {
-    if (error && typeof error === 'object' && 'code' in error && error.code === 'ENOENT') {
+    if (isFileNotFound(error)) {
       return computeEmptyQueueChecksum();
     }
     throw error;
@@ -128,7 +129,7 @@ export async function validateQueue(runDir: string): Promise<QueueValidationResu
       });
     }
   } catch (error) {
-    if (error && typeof error === 'object' && 'code' in error && error.code === 'ENOENT') {
+    if (isFileNotFound(error)) {
       // Queue file doesn't exist yet
       result.totalTasks = 0;
     } else {
