@@ -350,112 +350,57 @@ export default class Doctor extends Command {
     }
   }
 
-  /**
-   * Check if git CLI is installed and accessible
-   */
+  private checkToolVersion(options: {
+    name: string;
+    command: string;
+    failStatus: 'fail' | 'warn';
+    failRemediation: string;
+    messageFormatter?: (version: string) => string;
+  }): DiagnosticCheck {
+    const { name, command, failStatus, failRemediation, messageFormatter } = options;
+    try {
+      const result = spawnSync(command, ['--version'], { encoding: 'utf-8', timeout: 5000 });
+      if (result.status === 0) {
+        const version = result.stdout.trim();
+        return {
+          name,
+          status: 'pass',
+          message: messageFormatter ? messageFormatter(version) : version,
+          details: { version },
+        };
+      }
+      return { name, status: failStatus, message: `${name} command failed`, remediation: failRemediation };
+    } catch {
+      return { name, status: failStatus, message: `${name} not found`, remediation: failRemediation };
+    }
+  }
+
   private checkGitInstalled(): DiagnosticCheck {
-    try {
-      const result = spawnSync('git', ['--version'], {
-        encoding: 'utf-8',
-        timeout: 5000,
-      });
-
-      if (result.status === 0) {
-        const version = result.stdout.trim();
-        return {
-          name: 'Git CLI',
-          status: 'pass',
-          message: version,
-          details: { version },
-        };
-      } else {
-        return {
-          name: 'Git CLI',
-          status: 'fail',
-          message: 'Git command failed',
-          remediation: 'Install git from https://git-scm.com/',
-        };
-      }
-    } catch {
-      return {
-        name: 'Git CLI',
-        status: 'fail',
-        message: 'Git not found',
-        remediation: 'Install git from https://git-scm.com/',
-      };
-    }
+    return this.checkToolVersion({
+      name: 'Git CLI',
+      command: 'git',
+      failStatus: 'fail',
+      failRemediation: 'Install git from https://git-scm.com/',
+    });
   }
 
-  /**
-   * Check if npm is installed
-   */
   private checkNpmInstalled(): DiagnosticCheck {
-    try {
-      const result = spawnSync('npm', ['--version'], {
-        encoding: 'utf-8',
-        timeout: 5000,
-      });
-
-      if (result.status === 0) {
-        const version = result.stdout.trim();
-        return {
-          name: 'npm',
-          status: 'pass',
-          message: `npm ${version}`,
-          details: { version },
-        };
-      } else {
-        return {
-          name: 'npm',
-          status: 'fail',
-          message: 'npm command failed',
-          remediation: 'npm should be installed with Node.js',
-        };
-      }
-    } catch {
-      return {
-        name: 'npm',
-        status: 'fail',
-        message: 'npm not found',
-        remediation: 'npm should be installed with Node.js',
-      };
-    }
+    return this.checkToolVersion({
+      name: 'npm',
+      command: 'npm',
+      failStatus: 'fail',
+      failRemediation: 'npm should be installed with Node.js',
+      messageFormatter: (v) => `npm ${v}`,
+    });
   }
 
-  /**
-   * Check if Docker is installed and accessible
-   */
   private checkDockerInstalled(): DiagnosticCheck {
-    try {
-      const result = spawnSync('docker', ['--version'], {
-        encoding: 'utf-8',
-        timeout: 5000,
-      });
-
-      if (result.status === 0) {
-        const version = result.stdout.trim();
-        return {
-          name: 'Docker',
-          status: 'pass',
-          message: version,
-          details: { version },
-        };
-      } else {
-        return {
-          name: 'Docker',
-          status: 'warn',
-          message: 'Docker command failed',
-          remediation: 'Install Docker from https://docker.com/ (optional but recommended)',
-        };
-      }
-    } catch {
-      return {
-        name: 'Docker',
-        status: 'warn',
-        message: 'Docker not found',
-        remediation: 'Install Docker from https://docker.com/ (optional but recommended)',
-      };
-    }
+    return this.checkToolVersion({
+      name: 'Docker',
+      command: 'docker',
+      failStatus: 'warn',
+      failRemediation: 'Install Docker from https://docker.com/ (optional but recommended)',
+    });
   }
 
   /**

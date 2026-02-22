@@ -40,7 +40,6 @@ import {
 // Re-export types and enums for backward compatibility
 export { ErrorType, Provider } from './httpTypes.js';
 export type { HttpClientConfig, HttpRequestOptions, HttpResponse } from './httpTypes.js';
-export type { LoggerInterface } from '../../telemetry/logger';
 export {
   generateRequestId,
   generateIdempotencyKey,
