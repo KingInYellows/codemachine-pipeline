@@ -43,6 +43,24 @@ export function buildMetadata(
   };
 }
 
+export function buildOutcome(
+  context: DeploymentContext,
+  readiness: MergeReadiness,
+  overrides: Omit<DeploymentOutcome, 'schema_version' | 'feature_id' | 'timestamp' | 'pr_number' | 'head_sha' | 'base_sha' | 'metadata'>
+): DeploymentOutcome {
+  const { pr, featureId } = context;
+  return {
+    schema_version: DEPLOYMENT_SCHEMA_VERSION,
+    feature_id: featureId,
+    timestamp: new Date().toISOString(),
+    pr_number: pr.pr_number,
+    head_sha: pr.head_sha,
+    base_sha: pr.base_sha,
+    metadata: buildMetadata(context, readiness),
+    ...overrides,
+  };
+}
+
 /**
  * Execute auto-merge strategy
  *
@@ -61,7 +79,7 @@ export async function executeAutoMerge(
   githubAdapter: GitHubAdapter,
   options?: DeploymentOptions
 ): Promise<DeploymentOutcome> {
-  const { pr, logger, featureId } = context;
+  const { pr, logger } = context;
   const mergeMethod = options?.merge_method ?? context.config.merge_method ?? 'merge';
 
   logger.info('Executing auto-merge', { pr_number: pr.pr_number, merge_method: mergeMethod });
@@ -78,43 +96,29 @@ export async function executeAutoMerge(
       merge_method: mergeMethod,
     });
 
-    return {
-      schema_version: DEPLOYMENT_SCHEMA_VERSION,
-      feature_id: featureId,
-      timestamp: new Date().toISOString(),
+    return buildOutcome(context, readiness, {
       strategy: DeploymentStrategy.AUTO_MERGE,
       action: 'auto-merge',
       success: true,
-      pr_number: pr.pr_number,
-      head_sha: pr.head_sha,
-      base_sha: pr.base_sha,
       blockers: [],
-      metadata: buildMetadata(context, readiness),
-    };
+    });
   } catch (error) {
     logger.error('Failed to enable auto-merge', {
       pr_number: pr.pr_number,
       error: getErrorMessage(error),
     });
 
-    return {
-      schema_version: DEPLOYMENT_SCHEMA_VERSION,
-      feature_id: featureId,
-      timestamp: new Date().toISOString(),
+    return buildOutcome(context, readiness, {
       strategy: DeploymentStrategy.AUTO_MERGE,
       action: 'auto-merge',
       success: false,
-      pr_number: pr.pr_number,
-      head_sha: pr.head_sha,
-      base_sha: pr.base_sha,
       blockers: [],
-      metadata: buildMetadata(context, readiness),
       error: {
         message: getErrorMessage(error),
         type: 'AUTO_MERGE_FAILED',
         stack: error instanceof Error ? error.stack : undefined,
       },
-    };
+    });
   }
 }
 
@@ -135,7 +139,7 @@ export async function executeManualMerge(
   githubAdapter: GitHubAdapter,
   options?: DeploymentOptions
 ): Promise<DeploymentOutcome> {
-  const { pr, logger, featureId } = context;
+  const { pr, logger } = context;
   const mergeMethod = options?.merge_method ?? context.config.merge_method ?? 'merge';
 
   logger.info('Executing manual merge', { pr_number: pr.pr_number, merge_method: mergeMethod });
@@ -157,45 +161,31 @@ export async function executeManualMerge(
       merge_sha: result.sha,
     });
 
-    return {
-      schema_version: DEPLOYMENT_SCHEMA_VERSION,
-      feature_id: featureId,
-      timestamp: new Date().toISOString(),
+    return buildOutcome(context, readiness, {
       strategy: DeploymentStrategy.MANUAL_MERGE,
       action: 'merge',
       success: result.merged,
-      pr_number: pr.pr_number,
-      head_sha: pr.head_sha,
-      base_sha: pr.base_sha,
       merge_sha: result.sha,
       blockers: [],
       github_response: { ...result },
-      metadata: buildMetadata(context, readiness),
-    };
+    });
   } catch (error) {
     logger.error('Failed to merge PR', {
       pr_number: pr.pr_number,
       error: getErrorMessage(error),
     });
 
-    return {
-      schema_version: DEPLOYMENT_SCHEMA_VERSION,
-      feature_id: featureId,
-      timestamp: new Date().toISOString(),
+    return buildOutcome(context, readiness, {
       strategy: DeploymentStrategy.MANUAL_MERGE,
       action: 'merge',
       success: false,
-      pr_number: pr.pr_number,
-      head_sha: pr.head_sha,
-      base_sha: pr.base_sha,
       blockers: [],
-      metadata: buildMetadata(context, readiness),
       error: {
         message: getErrorMessage(error),
         type: 'MERGE_FAILED',
         stack: error instanceof Error ? error.stack : undefined,
       },
-    };
+    });
   }
 }
 
@@ -216,7 +206,7 @@ export async function executeWorkflowDispatch(
   githubAdapter: GitHubAdapter,
   options?: DeploymentOptions
 ): Promise<DeploymentOutcome> {
-  const { pr, config, logger, featureId } = context;
+  const { pr, config, logger } = context;
 
   // Determine workflow ID and inputs
   const workflowId = config.workflow_dispatch?.workflow_id;
@@ -224,23 +214,16 @@ export async function executeWorkflowDispatch(
 
   if (!workflowId) {
     logger.error('Workflow dispatch requested but no workflow_id configured');
-    return {
-      schema_version: DEPLOYMENT_SCHEMA_VERSION,
-      feature_id: featureId,
-      timestamp: new Date().toISOString(),
+    return buildOutcome(context, readiness, {
       strategy: DeploymentStrategy.WORKFLOW_DISPATCH,
       action: 'workflow-dispatch',
       success: false,
-      pr_number: pr.pr_number,
-      head_sha: pr.head_sha,
-      base_sha: pr.base_sha,
       blockers: [],
-      metadata: buildMetadata(context, readiness),
       error: {
         message: 'Workflow dispatch requested but no workflow_id configured',
         type: 'CONFIG_ERROR',
       },
-    };
+    });
   }
 
   logger.info('Executing workflow dispatch', {
@@ -262,43 +245,29 @@ export async function executeWorkflowDispatch(
       ref: pr.branch,
     });
 
-    return {
-      schema_version: DEPLOYMENT_SCHEMA_VERSION,
-      feature_id: featureId,
-      timestamp: new Date().toISOString(),
+    return buildOutcome(context, readiness, {
       strategy: DeploymentStrategy.WORKFLOW_DISPATCH,
       action: 'workflow-dispatch',
       success: true,
-      pr_number: pr.pr_number,
-      head_sha: pr.head_sha,
-      base_sha: pr.base_sha,
       blockers: [],
-      metadata: buildMetadata(context, readiness),
-    };
+    });
   } catch (error) {
     logger.error('Failed to trigger workflow dispatch', {
       workflow_id: workflowId,
       error: getErrorMessage(error),
     });
 
-    return {
-      schema_version: DEPLOYMENT_SCHEMA_VERSION,
-      feature_id: featureId,
-      timestamp: new Date().toISOString(),
+    return buildOutcome(context, readiness, {
       strategy: DeploymentStrategy.WORKFLOW_DISPATCH,
       action: 'workflow-dispatch',
       success: false,
-      pr_number: pr.pr_number,
-      head_sha: pr.head_sha,
-      base_sha: pr.base_sha,
       blockers: [],
-      metadata: buildMetadata(context, readiness),
       error: {
         message: getErrorMessage(error),
         type: 'WORKFLOW_DISPATCH_FAILED',
         stack: error instanceof Error ? error.stack : undefined,
       },
-    };
+    });
   }
 }
 
@@ -476,7 +445,7 @@ export function handleBlocked(
   context: DeploymentContext,
   readiness: MergeReadiness
 ): DeploymentOutcome {
-  const { pr, logger, featureId } = context;
+  const { pr, logger } = context;
 
   logger.warn('Deployment blocked', {
     pr_number: pr.pr_number,
@@ -484,17 +453,10 @@ export function handleBlocked(
     blockers: readiness.blockers.map((b) => b.message),
   });
 
-  return {
-    schema_version: DEPLOYMENT_SCHEMA_VERSION,
-    feature_id: featureId,
-    timestamp: new Date().toISOString(),
+  return buildOutcome(context, readiness, {
     strategy: DeploymentStrategy.BLOCKED,
     action: 'none',
     success: false,
-    pr_number: pr.pr_number,
-    head_sha: pr.head_sha,
-    base_sha: pr.base_sha,
     blockers: readiness.blockers,
-    metadata: buildMetadata(context, readiness),
-  };
+  });
 }

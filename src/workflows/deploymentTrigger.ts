@@ -54,7 +54,7 @@ export {
 
 import {
   assessMergeReadiness,
-  buildMetadata,
+  buildOutcome,
   executeAutoMerge,
   executeManualMerge,
   executeWorkflowDispatch,
@@ -209,19 +209,12 @@ export async function triggerDeployment(
     // Dry run - return assessment without executing
     if (options?.dry_run) {
       logger.info('Dry run mode - skipping execution', { strategy });
-      return {
-        schema_version: DEPLOYMENT_SCHEMA_VERSION,
-        feature_id: featureId,
-        timestamp: new Date().toISOString(),
+      return buildOutcome(context, readiness, {
         strategy,
         action: 'none',
         success: false,
-        pr_number: context.pr.pr_number,
-        head_sha: context.pr.head_sha,
-        base_sha: context.pr.base_sha,
         blockers: readiness.blockers,
-        metadata: buildMetadata(context, readiness),
-      };
+      });
     }
 
     // Step 4: Execute strategy

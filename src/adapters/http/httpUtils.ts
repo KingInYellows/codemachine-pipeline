@@ -7,8 +7,6 @@
 
 import type { Headers } from 'undici-types';
 import * as crypto from 'node:crypto';
-import { createLogger, LogLevel } from '../../telemetry/logger';
-import type { LoggerInterface } from '../../telemetry/logger';
 
 // ============================================================================
 // Sensitive Data Constants
@@ -118,9 +116,3 @@ export function sleep(ms: number): Promise<void> {
 // Logger Factory
 // ============================================================================
 
-/**
- * Create a default logger implementation using StructuredLogger
- */
-export function createConsoleLogger(): LoggerInterface {
-  return createLogger({ component: 'http-client', minLevel: LogLevel.DEBUG, mirrorToStderr: true });
-}

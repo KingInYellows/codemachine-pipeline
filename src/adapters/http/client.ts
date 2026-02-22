@@ -13,6 +13,7 @@ import {
 } from './httpTypes.js';
 import type { HttpClientConfig, HttpRequestOptions, HttpResponse } from './httpTypes.js';
 import type { LoggerInterface } from '../../telemetry/logger';
+import { createConsoleLogger, LogLevel } from '../../telemetry/logger';
 import {
   generateRequestId,
   generateIdempotencyKey,
@@ -21,7 +22,6 @@ import {
   sanitizeHeaders,
   truncate,
   sleep,
-  createConsoleLogger,
 } from './httpUtils.js';
 
 /**
@@ -48,7 +48,6 @@ export {
   sanitizeHeaders,
   truncate,
   sleep,
-  createConsoleLogger,
   SENSITIVE_HEADERS,
   SENSITIVE_KEYWORDS,
 } from './httpUtils.js';
@@ -125,7 +124,7 @@ export class HttpClient {
       maxRetries: config.maxRetries ?? DEFAULT_MAX_RETRIES,
       initialBackoff: config.initialBackoff ?? DEFAULT_INITIAL_BACKOFF,
       maxBackoff: config.maxBackoff ?? DEFAULT_MAX_BACKOFF,
-      logger: config.logger ?? createConsoleLogger(),
+      logger: config.logger ?? createConsoleLogger('http-client', LogLevel.DEBUG),
     };
 
     this.logger = this.config.logger;
