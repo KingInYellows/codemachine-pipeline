@@ -1,4 +1,4 @@
-import type { StatusPayload, StatusFlags } from './types';
+import type { StatusPayload, StatusFlags, StatusBranchProtectionPayload } from './types';
 
 export interface RenderCallbacks {
   log: (msg: string) => void;
@@ -153,56 +153,7 @@ export function renderHumanReadable(
   }
 
   if (payload.branch_protection) {
-    const bp = payload.branch_protection;
-    log('');
-    log('Branch Protection:');
-    log(`  Protected: ${bp.protected ? 'Yes' : 'No'}`);
-    log(`  Compliant: ${bp.compliant ? 'Yes' : 'No'}`);
-
-    if (bp.blockers_count > 0) {
-      warn(`  Blockers (${bp.blockers_count}):`);
-      bp.blockers.forEach((blocker) => {
-        warn(`    \u2022 ${blocker}`);
-      });
-    }
-
-    if (bp.missing_checks.length > 0) {
-      log(`  Missing Checks:`);
-      bp.missing_checks.forEach((check) => {
-        log(`    - ${check}`);
-      });
-    }
-
-    log(
-      `  Reviews: ${bp.reviews_status.completed}/${bp.reviews_status.required} (${bp.reviews_status.satisfied ? 'satisfied' : 'not satisfied'})`
-    );
-    log(`  Branch Up-to-date: ${bp.branch_status.up_to_date ? 'Yes' : 'No'}`);
-    log(`  Auto-merge Allowed: ${bp.auto_merge.allowed ? 'Yes' : 'No'}`);
-
-    if (bp.validation_mismatch) {
-      const { missing_in_registry, extra_in_registry, recommendations } = bp.validation_mismatch;
-      if (missing_in_registry.length === 0 && extra_in_registry.length === 0) {
-        log('  Validation Alignment: ExecutionTask validations cover all required checks');
-      } else {
-        log('  Validation Alignment:');
-        if (missing_in_registry.length > 0) {
-          warn(`    Missing ExecutionTask validations for: ${missing_in_registry.join(', ')}`);
-        }
-        if (extra_in_registry.length > 0) {
-          log(
-            `    Extra validations not required by branch protection: ${extra_in_registry.join(', ')}`
-          );
-        }
-        if (flags.verbose && recommendations.length > 0) {
-          log('    Recommendations:');
-          recommendations.forEach((rec) => log(`      \u2022 ${rec}`));
-        }
-      }
-    }
-
-    if (flags.verbose && bp.evaluated_at) {
-      log(`  Last Evaluated: ${bp.evaluated_at}`);
-    }
+    renderBranchProtection(payload.branch_protection, flags, { log, warn });
   }
 
   // Rate limits section (API ledger block per architecture)
@@ -362,6 +313,57 @@ export function renderHumanReadable(
     log(`\u2022 ${note}`);
   }
   log('');
+}
+
+function renderBranchProtection(
+  bp: StatusBranchProtectionPayload,
+  flags: StatusFlags,
+  callbacks: RenderCallbacks
+): void {
+  const { log, warn } = callbacks;
+  log('');
+  log('Branch Protection:');
+  log(`  Protected: ${bp.protected ? 'Yes' : 'No'}`);
+  log(`  Compliant: ${bp.compliant ? 'Yes' : 'No'}`);
+
+  if (bp.blockers_count > 0) {
+    warn(`  Blockers (${bp.blockers_count}):`);
+    bp.blockers.forEach((blocker) => warn(`    \u2022 ${blocker}`));
+  }
+
+  if (bp.missing_checks.length > 0) {
+    log(`  Missing Checks:`);
+    bp.missing_checks.forEach((check) => log(`    - ${check}`));
+  }
+
+  log(
+    `  Reviews: ${bp.reviews_status.completed}/${bp.reviews_status.required} (${bp.reviews_status.satisfied ? 'satisfied' : 'not satisfied'})`
+  );
+  log(`  Branch Up-to-date: ${bp.branch_status.up_to_date ? 'Yes' : 'No'}`);
+  log(`  Auto-merge Allowed: ${bp.auto_merge.allowed ? 'Yes' : 'No'}`);
+
+  if (bp.validation_mismatch) {
+    const { missing_in_registry, extra_in_registry, recommendations } = bp.validation_mismatch;
+    if (missing_in_registry.length === 0 && extra_in_registry.length === 0) {
+      log('  Validation Alignment: ExecutionTask validations cover all required checks');
+    } else {
+      log('  Validation Alignment:');
+      if (missing_in_registry.length > 0) {
+        warn(`    Missing ExecutionTask validations for: ${missing_in_registry.join(', ')}`);
+      }
+      if (extra_in_registry.length > 0) {
+        log(`    Extra validations not required by branch protection: ${extra_in_registry.join(', ')}`);
+      }
+      if (flags.verbose && recommendations.length > 0) {
+        log('    Recommendations:');
+        recommendations.forEach((rec) => log(`      \u2022 ${rec}`));
+      }
+    }
+  }
+
+  if (flags.verbose && bp.evaluated_at) {
+    log(`  Last Evaluated: ${bp.evaluated_at}`);
+  }
 }
 
 export function truncateSummary(summary: string, maxLength = 240): string {

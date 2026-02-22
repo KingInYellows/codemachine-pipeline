@@ -116,7 +116,6 @@ export async function executeAutoMerge(
       error: {
         message: getErrorMessage(error),
         type: 'AUTO_MERGE_FAILED',
-        stack: error instanceof Error ? error.stack : undefined,
       },
     });
   }
@@ -183,7 +182,6 @@ export async function executeManualMerge(
       error: {
         message: getErrorMessage(error),
         type: 'MERGE_FAILED',
-        stack: error instanceof Error ? error.stack : undefined,
       },
     });
   }
@@ -265,7 +263,6 @@ export async function executeWorkflowDispatch(
       error: {
         message: getErrorMessage(error),
         type: 'WORKFLOW_DISPATCH_FAILED',
-        stack: error instanceof Error ? error.stack : undefined,
       },
     });
   }
