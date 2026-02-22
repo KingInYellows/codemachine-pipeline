@@ -9,6 +9,7 @@ import { CodeMachineCLIAdapter, type AvailabilityResult } from '../adapters/code
 import type { StructuredLogger } from '../telemetry/logger.js';
 import { CodeMachineEngineTypeSchema } from './codemachineTypes.js';
 import { shouldUseNativeEngine } from './taskMapper.js';
+import { normalizeResult } from './resultNormalizer.js';
 
 export interface CodeMachineCLIStrategyOptions {
   config: ExecutionConfig;
@@ -115,32 +116,28 @@ export class CodeMachineCLIStrategy implements ExecutionStrategy {
     }
 
     const result = await this.adapter.execute(args, executeOptions);
-
+    const normalized = normalizeResult(
+      { ...result, taskId: task.task_id },
+      this.logger
+    );
     const durationMs = result.durationMs ?? Date.now() - startTime;
 
-    if (result.exitCode === 0) {
-      return {
-        success: true,
-        status: 'completed',
-        summary: result.stdout.slice(0, 500),
-        recoverable: false,
-        durationMs,
-        artifacts: [],
-      };
+    const strategyResult: ExecutionStrategyResult = {
+      success: normalized.success,
+      status: normalized.status,
+      summary: normalized.success
+        ? normalized.redactedStdout.slice(0, 500)
+        : normalized.redactedStderr.slice(0, 500),
+      recoverable: normalized.recoverable,
+      durationMs,
+      artifacts: normalized.artifacts,
+    };
+
+    if (!normalized.success) {
+      strategyResult.errorMessage = normalized.redactedStderr || `Exit code ${result.exitCode}`;
     }
 
-    const status = result.timedOut ? 'timeout' : result.killed ? 'killed' : 'failed';
-    const recoverable = result.timedOut || result.exitCode === 137; // SIGKILL
-
-    return {
-      success: false,
-      status,
-      summary: result.stderr.slice(0, 500),
-      errorMessage: result.stderr || `Exit code ${result.exitCode}`,
-      recoverable,
-      durationMs,
-      artifacts: [],
-    };
+    return strategyResult;
   }
 
   /** Expose adapter for direct use (e.g., doctor command). */
