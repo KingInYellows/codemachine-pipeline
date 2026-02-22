@@ -4,8 +4,10 @@ import * as path from 'node:path';
 import * as crypto from 'node:crypto';
 import * as os from 'node:os';
 import { Buffer } from 'node:buffer';
+import { z } from 'zod';
 import { wrapError, getErrorMessage } from '../utils/errors.js';
 import { isFileNotFound } from '../utils/safeJson';
+import { validateOrThrow } from '../validation/helpers';
 import {
   createHashManifest,
   verifyHashManifest,
@@ -122,6 +124,71 @@ export interface RunManifest {
   /** Intentional: run manifest metadata is consumer-defined */
   metadata?: Record<string, unknown>;
 }
+
+/**
+ * Zod schema for RunManifest — validates persisted/deserialized data at the security boundary.
+ */
+const RunManifestSchema = z.object({
+  schema_version: z.string().min(1),
+  feature_id: z.string().min(1),
+  title: z.string().optional(),
+  source: z.string().optional(),
+  repo: z.object({
+    url: z.string().min(1),
+    default_branch: z.string().min(1),
+  }),
+  status: z.enum(['pending', 'in_progress', 'paused', 'completed', 'failed']),
+  execution: z.object({
+    last_step: z.string().optional(),
+    last_error: z.object({
+      step: z.string(),
+      message: z.string(),
+      timestamp: z.string(),
+      recoverable: z.boolean(),
+    }).optional(),
+    current_step: z.string().optional(),
+    total_steps: z.number().int().nonnegative().optional(),
+    completed_steps: z.number().int().nonnegative(),
+  }),
+  timestamps: z.object({
+    created_at: z.string(),
+    updated_at: z.string(),
+    started_at: z.string().nullable().optional(),
+    completed_at: z.string().nullable().optional(),
+  }),
+  approvals: z.object({
+    approvals_file: z.string().optional(),
+    pending: z.array(z.string()),
+    completed: z.array(z.string()),
+  }),
+  queue: z.object({
+    queue_dir: z.string(),
+    pending_count: z.number().int().nonnegative(),
+    completed_count: z.number().int().nonnegative(),
+    failed_count: z.number().int().nonnegative(),
+    sqlite_index: z.object({
+      database: z.string(),
+      wal: z.string(),
+      shm: z.string(),
+    }).optional(),
+  }),
+  artifacts: z.object({
+    prd: z.string().optional(),
+    spec: z.string().optional(),
+    plan: z.string().optional(),
+    hash_manifest: z.string().optional(),
+  }),
+  telemetry: z.object({
+    logs_dir: z.string(),
+    metrics_file: z.string().optional(),
+    traces_file: z.string().optional(),
+    costs_file: z.string().optional(),
+  }),
+  rate_limits: z.object({
+    rate_limits_file: z.string().optional(),
+  }).optional(),
+  metadata: z.record(z.string(), z.unknown()).optional(),
+});
 
 /**
  * Lock file metadata
@@ -705,14 +772,8 @@ export async function readManifest(runDir: string): Promise<RunManifest> {
 
   try {
     const content = await fs.readFile(manifestPath, 'utf-8');
-    const manifest = JSON.parse(content) as RunManifest;
-
-    // Basic validation
-    if (!manifest.schema_version || !manifest.feature_id) {
-      throw new Error('Invalid manifest: missing required fields');
-    }
-
-    return manifest;
+    const parsed: unknown = JSON.parse(content);
+    return validateOrThrow(RunManifestSchema, parsed, 'run manifest') as RunManifest;
   } catch (error) {
     throw wrapError(error, 'Failed to read manifest');
   }
