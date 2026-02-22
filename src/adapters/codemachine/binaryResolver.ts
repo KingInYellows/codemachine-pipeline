@@ -24,7 +24,9 @@ export interface BinaryResolutionResult {
   error?: string;
 }
 
+const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
 let cachedResult: BinaryResolutionResult | undefined;
+let cachedAt = 0;
 
 /**
  * Resolve the CodeMachine-CLI binary path.
@@ -36,13 +38,14 @@ let cachedResult: BinaryResolutionResult | undefined;
  * 4. Not found — caller should skip this strategy
  */
 export async function resolveBinary(): Promise<BinaryResolutionResult> {
-  if (cachedResult) {
+  if (cachedResult && Date.now() - cachedAt < CACHE_TTL_MS) {
     return cachedResult;
   }
 
   const result = await resolveBinaryUncached();
   if (result.resolved) {
     cachedResult = result;
+    cachedAt = Date.now();
   }
   return result;
 }
@@ -50,6 +53,7 @@ export async function resolveBinary(): Promise<BinaryResolutionResult> {
 /** Clear the cached binary resolution (useful for testing). */
 export function clearBinaryCache(): void {
   cachedResult = undefined;
+  cachedAt = 0;
 }
 
 async function resolveBinaryUncached(): Promise<BinaryResolutionResult> {

@@ -199,7 +199,7 @@ const DEFAULT_LOCK_TIMEOUT = 30000; // 30 seconds
 const DEFAULT_POLL_INTERVAL = 100; // 100ms
 
 // Export for testing (CDMCH-71)
-export const STALE_LOCK_THRESHOLD_MS = 60000; // 60 seconds - reduced for faster crash recovery in homelab use
+export const STALE_LOCK_THRESHOLD_MS = 300000; // 5 minutes - sufficient for long operations while still recovering from crashes
 
 const SQLITE_DIR_NAME = 'sqlite';
 const SQLITE_DB_NAME = 'run_queue.db';

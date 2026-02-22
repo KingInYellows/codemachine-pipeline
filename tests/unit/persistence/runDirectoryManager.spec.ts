@@ -546,11 +546,11 @@ describe('Run Directory Manager', () => {
   });
 
   describe('Stale lock threshold (CDMCH-71)', () => {
-    it('should be 60 seconds (60000ms)', async () => {
+    it('should be 5 minutes (300000ms)', async () => {
       // Import and test the constant directly instead of source inspection
       const { STALE_LOCK_THRESHOLD_MS } =
         await import('../../../src/persistence/runDirectoryManager.js');
-      expect(STALE_LOCK_THRESHOLD_MS).toBe(60000);
+      expect(STALE_LOCK_THRESHOLD_MS).toBe(300000);
     });
   });
 

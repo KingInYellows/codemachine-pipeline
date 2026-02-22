@@ -610,15 +610,31 @@ export class HttpClient {
    * Parse response body as JSON
    */
   private async parseResponseBody<T>(response: Response): Promise<T> {
-    const contentType = response.headers.get('content-type');
+    const contentType = response.headers.get('content-type') ?? '';
 
-    if (contentType && contentType.includes('application/json')) {
+    if (contentType.includes('application/json')) {
       return (await response.json()) as T;
     }
 
-    // For non-JSON responses, return text as data
-    const text = await response.text();
-    return text as unknown as T;
+    // No content-type or non-JSON: try JSON parsing first (many APIs omit the header),
+    // fall back to text. Avoids the unsafe `as unknown as T` silent cast.
+    const text = await this.safeReadText(response);
+    if (!text) {
+      return undefined as unknown as T;
+    }
+    try {
+      return JSON.parse(text) as T;
+    } catch {
+      throw new HttpError(
+        `Non-JSON response with content type: ${contentType || '(none)'}`,
+        ErrorType.PERMANENT,
+        response.status,
+        extractHeaders(response.headers),
+        text,
+        undefined,
+        false
+      );
+    }
   }
 
   /**
