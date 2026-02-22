@@ -32,10 +32,7 @@ describe('queueStore - initializeQueueFromPlan', () => {
     tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'queuestore-test-'));
     runDir = await createRunDirectory(tempDir, 'FEATURE-TEST', {
       title: 'Test Feature',
-      repo: {
-        url: 'https://github.com/test/repo',
-        default_branch: 'main',
-      },
+      repoUrl: 'https://github.com/test/repo',
     });
   });
 
@@ -491,10 +488,7 @@ describe('queueStore - snapshots', () => {
     tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'queuestore-snap-test-'));
     runDir = await createRunDirectory(tempDir, 'FEATURE-SNAP', {
       title: 'Snapshot Feature',
-      repo: {
-        url: 'https://github.com/test/repo',
-        default_branch: 'main',
-      },
+      repoUrl: 'https://github.com/test/repo',
     });
   });
 
@@ -537,10 +531,7 @@ describe('queueStore - verifyQueueIntegrity (CDMCH-69)', () => {
     tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'queuestore-integrity-'));
     runDir = await createRunDirectory(tempDir, 'FEATURE-INTEGRITY', {
       title: 'Integrity Test',
-      repo: {
-        url: 'https://github.com/test/repo',
-        default_branch: 'main',
-      },
+      repoUrl: 'https://github.com/test/repo',
     });
   });
 

@@ -43,10 +43,7 @@ describe('queueStore V2 Integration', () => {
     tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'queuestore-v2-test-'));
     runDir = await createRunDirectory(tempDir, 'FEATURE-V2-TEST', {
       title: 'V2 Test Feature',
-      repo: {
-        url: 'https://github.com/test/repo',
-        default_branch: 'main',
-      },
+      repoUrl: 'https://github.com/test/repo',
     });
   });
 
