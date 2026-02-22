@@ -292,7 +292,6 @@ export async function triggerDeployment(
       error: {
         message: getErrorMessage(error),
         type: 'UNEXPECTED_ERROR',
-        stack: error instanceof Error ? error.stack : undefined,
       },
     };
 

@@ -603,6 +603,13 @@ export class LinearAdapter {
       const content = await fs.readFile(snapshotPath, 'utf-8');
       const snapshot = JSON.parse(content) as IssueSnapshot;
 
+      // Verify snapshot integrity
+      const expectedHash = this.computeSnapshotHash({ issue: snapshot.issue, comments: snapshot.comments });
+      if (snapshot.metadata.hash !== expectedHash) {
+        this.logger.warn('Cached snapshot hash mismatch — discarding', { issueId });
+        return null;
+      }
+
       this.logger.debug('Loaded cached snapshot', {
         issueId,
         retrievedAt: snapshot.metadata.retrieved_at,

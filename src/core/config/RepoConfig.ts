@@ -99,9 +99,11 @@ export type Project = z.infer<typeof ProjectSchema>;
 // Integration Toggles - GitHub
 // ============================================================================
 
+const ENV_VAR_NAME = z.string().regex(/^[A-Z][A-Z0-9_]*$/, 'Must be a valid env var name (uppercase letters, digits, underscores)');
+
 const GitHubSchema = z.object({
   enabled: z.boolean(),
-  token_env_var: z.string().default('GITHUB_TOKEN'),
+  token_env_var: ENV_VAR_NAME.default('GITHUB_TOKEN'),
   api_base_url: z.string().url().default('https://api.github.com'),
   required_scopes: z
     .array(z.enum(['repo', 'workflow', 'read:org', 'write:org']))
@@ -123,7 +125,7 @@ export type GitHub = z.infer<typeof GitHubSchema>;
 
 const LinearSchema = z.object({
   enabled: z.boolean(),
-  api_key_env_var: z.string().default('LINEAR_API_KEY'),
+  api_key_env_var: ENV_VAR_NAME.default('LINEAR_API_KEY'),
   team_id: z.string().optional(),
   project_id: z.string().optional(),
   auto_link_issues: z.boolean().default(true),
@@ -137,7 +139,7 @@ export type Linear = z.infer<typeof LinearSchema>;
 
 const RuntimeSchema = z.object({
   agent_endpoint: z.string().url().optional(),
-  agent_endpoint_env_var: z.string().default('AGENT_ENDPOINT'),
+  agent_endpoint_env_var: ENV_VAR_NAME.default('AGENT_ENDPOINT'),
   max_concurrent_tasks: z.number().int().min(1).max(10).default(3),
   timeout_minutes: z.number().int().min(5).max(120).default(30),
   context_token_budget: z.number().int().min(1000).max(100000).default(32000),
