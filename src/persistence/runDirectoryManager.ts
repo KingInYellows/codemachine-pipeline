@@ -412,6 +412,20 @@ export async function isLocked(runDir: string): Promise<boolean> {
  * @param lockPath - Path to lock file
  * @returns True if stale, false otherwise
  */
+/** Check if a process exists (Unix-like systems only). Returns null on Windows. */
+function isProcessRunning(pid: number): boolean | null {
+  if (process.platform === 'win32') return null;
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch (error) {
+    if (error && typeof error === 'object' && 'code' in error && (error as NodeJS.ErrnoException).code === 'ESRCH') {
+      return false;
+    }
+    throw wrapError(error, `check if lock process ${pid} exists`);
+  }
+}
+
 async function isLockStale(lockPath: string): Promise<boolean> {
   try {
     const content = await fs.readFile(lockPath, 'utf-8');
@@ -423,37 +437,13 @@ async function isLockStale(lockPath: string): Promise<boolean> {
 
     const lockData: LockFile = parsed;
 
-    // Check age
-    const acquiredAt = new Date(lockData.acquired_at).getTime();
-    const now = Date.now();
-
-    if (now - acquiredAt > STALE_LOCK_THRESHOLD_MS) {
+    if (Date.now() - new Date(lockData.acquired_at).getTime() > STALE_LOCK_THRESHOLD_MS) {
       return true;
     }
 
-    // Check if process still exists (Unix-like systems only)
-    if (process.platform !== 'win32') {
-      try {
-        // Signal 0 checks if process exists without killing it
-        process.kill(lockData.pid, 0);
-        return false; // Process exists
-      } catch (killError) {
-        // ESRCH means process doesn't exist - lock is stale
-        if (
-          killError &&
-          typeof killError === 'object' &&
-          'code' in killError &&
-          killError.code === 'ESRCH'
-        ) {
-          return true;
-        }
-        throw wrapError(killError, `check if lock process ${lockData.pid} exists`);
-      }
-    }
-
-    return false;
+    const running = isProcessRunning(lockData.pid);
+    return running === false; // null (Windows) → not stale; false (no process) → stale
   } catch {
-    // Unreadable or malformed lock file should be treated as stale
     return true;
   }
 }
