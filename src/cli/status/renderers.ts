@@ -256,61 +256,50 @@ export function renderHumanReadable(
     log('');
     log('Integration Status:');
 
+    const renderIntegration = (
+      name: string,
+      data: {
+        enabled: boolean;
+        rate_limit?: { remaining: number; reset_at: string; in_cooldown: boolean };
+        warnings: string[];
+      },
+      renderStatus: () => void
+    ) => {
+      log(`  ${name}:`);
+      log(`    Enabled: ${data.enabled ? 'Yes' : 'No'}`);
+      if (data.rate_limit) {
+        log(`    Rate Limit: ${data.rate_limit.remaining} remaining`);
+        if (data.rate_limit.in_cooldown) {
+          warn(`    \u26a0 In cooldown until ${data.rate_limit.reset_at}`);
+        }
+      }
+      renderStatus();
+      data.warnings.forEach((warning) => warn(`    \u26a0 ${warning}`));
+    };
+
     if (integrations.github) {
-      log('  GitHub:');
-      log(`    Enabled: ${integrations.github.enabled ? 'Yes' : 'No'}`);
-
-      if (integrations.github.rate_limit) {
-        log(`    Rate Limit: ${integrations.github.rate_limit.remaining} remaining`);
-        if (integrations.github.rate_limit.in_cooldown) {
-          warn(`    \u26a0 In cooldown until ${integrations.github.rate_limit.reset_at}`);
+      renderIntegration('GitHub', integrations.github, () => {
+        if (integrations.github!.pr_status) {
+          const pr = integrations.github!.pr_status;
+          log(`    PR #${pr.number}: ${pr.state}`);
+          log(`    Mergeable: ${pr.mergeable === null ? 'Unknown' : pr.mergeable ? 'Yes' : 'No'}`);
+          if (flags.verbose && pr.url) {
+            log(`    URL: ${pr.url}`);
+          }
         }
-      }
-
-      if (integrations.github.pr_status) {
-        log(
-          `    PR #${integrations.github.pr_status.number}: ${integrations.github.pr_status.state}`
-        );
-        log(
-          `    Mergeable: ${integrations.github.pr_status.mergeable === null ? 'Unknown' : integrations.github.pr_status.mergeable ? 'Yes' : 'No'}`
-        );
-        if (flags.verbose && integrations.github.pr_status.url) {
-          log(`    URL: ${integrations.github.pr_status.url}`);
-        }
-      }
-
-      if (integrations.github.warnings.length > 0) {
-        integrations.github.warnings.forEach((warning) => {
-          warn(`    \u26a0 ${warning}`);
-        });
-      }
+      });
     }
 
     if (integrations.linear) {
-      log('  Linear:');
-      log(`    Enabled: ${integrations.linear.enabled ? 'Yes' : 'No'}`);
-
-      if (integrations.linear.rate_limit) {
-        log(`    Rate Limit: ${integrations.linear.rate_limit.remaining} remaining`);
-        if (integrations.linear.rate_limit.in_cooldown) {
-          warn(`    \u26a0 In cooldown until ${integrations.linear.rate_limit.reset_at}`);
+      renderIntegration('Linear', integrations.linear, () => {
+        if (integrations.linear!.issue_status) {
+          const issue = integrations.linear!.issue_status;
+          log(`    Issue: ${issue.identifier} (${issue.state})`);
+          if (flags.verbose && issue.url) {
+            log(`    URL: ${issue.url}`);
+          }
         }
-      }
-
-      if (integrations.linear.issue_status) {
-        log(
-          `    Issue: ${integrations.linear.issue_status.identifier} (${integrations.linear.issue_status.state})`
-        );
-        if (flags.verbose && integrations.linear.issue_status.url) {
-          log(`    URL: ${integrations.linear.issue_status.url}`);
-        }
-      }
-
-      if (integrations.linear.warnings.length > 0) {
-        integrations.linear.warnings.forEach((warning) => {
-          warn(`    \u26a0 ${warning}`);
-        });
-      }
+      });
     }
   }
 

@@ -438,21 +438,24 @@ function computeTopologicalOrder(tasks: TaskNode[]): {
   const inDegree = new Map<string, number>();
   const depths = new Map<string, number>();
 
-  // Initialize in-degrees
+  // Build reverse adjacency map once (O(V+E)) to avoid O(V) scan per node
+  const reverseAdj = new Map<string, string[]>();
   for (const task of tasks) {
     inDegree.set(task.task_id, task.dependencies.length);
     depths.set(task.task_id, 0);
+    for (const dep of task.dependencies) {
+      if (!reverseAdj.has(dep.task_id)) reverseAdj.set(dep.task_id, []);
+      reverseAdj.get(dep.task_id)!.push(task.task_id);
+    }
   }
 
   // Kahn's algorithm for topological sort
   const queue: string[] = [];
   const order: string[] = [];
 
-  // Start with tasks that have no dependencies
   for (const task of tasks) {
     if (task.dependencies.length === 0) {
       queue.push(task.task_id);
-      depths.set(task.task_id, 0);
     }
   }
 
@@ -462,20 +465,14 @@ function computeTopologicalOrder(tasks: TaskNode[]): {
 
     const currentDepth = depths.get(current) ?? 0;
 
-    // Find tasks that depend on current
-    for (const task of tasks) {
-      if (task.dependencies.some((d) => d.task_id === current)) {
-        const remaining = (inDegree.get(task.task_id) ?? 0) - 1;
-        inDegree.set(task.task_id, remaining);
+    for (const taskId of reverseAdj.get(current) ?? []) {
+      const remaining = (inDegree.get(taskId) ?? 0) - 1;
+      inDegree.set(taskId, remaining);
 
-        // Update depth
-        const newDepth = currentDepth + 1;
-        const existingDepth = depths.get(task.task_id) ?? 0;
-        depths.set(task.task_id, Math.max(existingDepth, newDepth));
+      depths.set(taskId, Math.max(depths.get(taskId) ?? 0, currentDepth + 1));
 
-        if (remaining === 0) {
-          queue.push(task.task_id);
-        }
+      if (remaining === 0) {
+        queue.push(taskId);
       }
     }
   }
