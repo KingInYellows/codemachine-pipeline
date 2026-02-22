@@ -245,7 +245,7 @@ export class BranchProtectionAdapter {
   constructor(config: BranchProtectionConfig) {
     this.owner = config.owner;
     this.repo = config.repo;
-    this.logger = config.logger ?? this.createDefaultLogger();
+    this.logger = config.logger ?? createLogger({ component: 'branch-protection', minLevel: LogLevel.DEBUG, mirrorToStderr: true });
 
     const baseUrl = config.baseUrl ?? 'https://api.github.com';
 
@@ -725,16 +725,6 @@ export class BranchProtectionAdapter {
     'Branch protection'
   );
 
-  /**
-   * Create default logger
-   */
-  private createDefaultLogger(): LoggerInterface {
-    return createLogger({
-      component: 'branch-protection',
-      minLevel: LogLevel.DEBUG,
-      mirrorToStderr: true,
-    });
-  }
 }
 
 // ============================================================================

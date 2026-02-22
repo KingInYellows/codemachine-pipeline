@@ -27,6 +27,7 @@ import type { HttpClientConfig } from '../http/client';
 import { RateLimitLedger } from '../../telemetry/rateLimitLedger';
 import { serializeError, createErrorNormalizer, AdapterError } from '../../utils/errors';
 import { createLogger, LogLevel, type LoggerInterface } from '../../telemetry/logger';
+import { isFileNotFound } from '../../utils/safeJson';
 
 // ============================================================================
 // Types & Schemas
@@ -318,7 +319,7 @@ export class LinearAdapter {
   private readonly requestTimestamps: number[] = [];
 
   constructor(config: LinearAdapterConfig) {
-    this.logger = config.logger ?? this.createDefaultLogger();
+    this.logger = config.logger ?? createLogger({ component: 'linear-adapter', minLevel: LogLevel.DEBUG, mirrorToStderr: true });
     this.runDir = config.runDir;
     this.enablePreviewFeatures = config.enablePreviewFeatures ?? false;
 
@@ -666,7 +667,7 @@ export class LinearAdapter {
 
       return snapshot;
     } catch (error) {
-      if (this.isFileNotFoundError(error)) {
+      if (isFileNotFound(error)) {
         this.logger.debug('No cached snapshot found', { issueId });
         return null;
       }
@@ -740,20 +741,11 @@ export class LinearAdapter {
    * Get snapshot file path
    */
   private getSnapshotPath(issueId: string): string {
+    if (!issueId || issueId.length > 100 || !/^[A-Z][A-Z0-9]*-\d+$/.test(issueId)) {
+      throw new Error(`Invalid Linear issue ID: ${JSON.stringify(issueId)}`);
+    }
     const sanitized = issueId.replace(/[^a-zA-Z0-9-]/g, '_');
     return path.join(this.runDir!, SNAPSHOT_DIR, `linear_issue_${sanitized}.json`);
-  }
-
-  /**
-   * Check if error is file not found
-   */
-  private isFileNotFoundError(error: unknown): boolean {
-    return Boolean(
-      error &&
-      typeof error === 'object' &&
-      'code' in error &&
-      (error as NodeJS.ErrnoException).code === 'ENOENT'
-    );
   }
 
   private readonly normalizeError = createErrorNormalizer(LinearAdapterError, 'Linear');
@@ -843,16 +835,6 @@ export class LinearAdapter {
     }
   }
 
-  /**
-   * Create default logger
-   */
-  private createDefaultLogger(): LoggerInterface {
-    return createLogger({
-      component: 'linear-adapter',
-      minLevel: LogLevel.DEBUG,
-      mirrorToStderr: true,
-    });
-  }
 }
 
 // ============================================================================

@@ -12,7 +12,7 @@ import {
   type RepoConfig,
   type ValidationResult,
   type ValidationError,
-} from '../../core/config/repo_config';
+} from '../../core/config/RepoConfig';
 import type { ZodIssue } from 'zod';
 import { createCliLogger, LogLevel } from '../../telemetry/logger';
 import { createRunMetricsCollector, StandardMetrics } from '../../telemetry/metrics';

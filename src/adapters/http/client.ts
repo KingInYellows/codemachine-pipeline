@@ -57,20 +57,25 @@ export {
 /**
  * Structured HTTP error with metadata
  */
+const MAX_RESPONSE_BODY_SIZE = 2048;
+
 export class HttpError extends Error {
   constructor(
     message: string,
     public readonly type: ErrorType,
     public readonly statusCode?: number,
     public readonly headers?: Record<string, string>,
-    public readonly responseBody?: string,
+    responseBody?: string,
     public readonly requestId?: string,
     public readonly retryable: boolean = false
   ) {
     super(message);
     this.name = 'HttpError';
+    this.responseBody = responseBody ? truncate(responseBody, MAX_RESPONSE_BODY_SIZE) : undefined;
     Object.setPrototypeOf(this, HttpError.prototype);
   }
+
+  public readonly responseBody: string | undefined;
 
   /**
    * Convert to JSON-serializable object for logging

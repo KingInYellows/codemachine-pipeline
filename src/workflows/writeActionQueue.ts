@@ -249,17 +249,6 @@ async function computeQueueChecksum(queuePath: string): Promise<string> {
   }
 }
 
-/**
- * Create console logger using StructuredLogger (includes redaction)
- */
-function createConsoleLogger(): LoggerInterface {
-  return createLogger({
-    component: 'write-action-queue',
-    minLevel: LogLevel.DEBUG,
-    mirrorToStderr: true,
-  });
-}
-
 // ============================================================================
 // Write Action Queue Class
 // ============================================================================
@@ -289,7 +278,7 @@ export class WriteActionQueue {
     this.queueDir = path.join(this.runDir, QUEUE_SUBDIR);
     this.queuePath = path.join(this.queueDir, QUEUE_FILE);
     this.manifestPath = path.join(this.queueDir, MANIFEST_FILE);
-    this.logger = config.logger ?? createConsoleLogger();
+    this.logger = config.logger ?? createLogger({ component: 'write-action-queue', minLevel: LogLevel.DEBUG, mirrorToStderr: true });
     this.metrics = config.metrics;
     this.maxRetries = config.maxRetries ?? DEFAULT_MAX_RETRIES;
     this.concurrencyLimit = config.concurrencyLimit ?? DEFAULT_CONCURRENCY_LIMIT;

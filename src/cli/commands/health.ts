@@ -1,7 +1,7 @@
 import { Command, Flags } from '@oclif/core';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
-import { loadRepoConfig } from '../../core/config/repo_config';
+import { loadRepoConfig } from '../../core/config/RepoConfig';
 import { getErrorMessage } from '../../utils/errors.js';
 
 const CONFIG_RELATIVE_PATH = path.join('.codepipe', 'config.json');

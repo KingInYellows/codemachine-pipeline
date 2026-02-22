@@ -441,7 +441,7 @@ export function getManifestTotalSize(manifest: HashManifest): number {
  * @returns Filtered hash manifest
  */
 export function filterManifest(manifest: HashManifest, pattern: RegExp | string): HashManifest {
-  const regex = typeof pattern === 'string' ? new RegExp(pattern) : pattern;
+  const regex = typeof pattern === 'string' ? new RegExp(pattern.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')) : pattern;
   const filteredFiles: Record<string, FileHashRecord> = {};
 
   for (const [filePath, record] of Object.entries(manifest.files)) {
