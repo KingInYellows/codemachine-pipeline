@@ -26,6 +26,7 @@ import {
   PRExitCode,
   type PRMetadata,
 } from '../../pr/shared';
+import { setJsonOutputMode } from '../../utils/cliErrors';
 
 type ReviewersFlags = {
   feature?: string;
@@ -71,7 +72,7 @@ export default class PRReviewers extends Command {
     const typedFlags = flags as ReviewersFlags;
 
     if (typedFlags.json) {
-      process.env.JSON_OUTPUT = '1';
+      setJsonOutputMode();
     }
 
     const startTime = Date.now();

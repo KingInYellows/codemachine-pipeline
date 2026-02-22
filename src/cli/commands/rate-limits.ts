@@ -18,6 +18,7 @@ import {
   type RateLimitReport,
 } from '../../telemetry/rateLimitReporter';
 import { RateLimitLedger } from '../../telemetry/rateLimitLedger';
+import { setJsonOutputMode } from '../utils/cliErrors';
 
 type RateLimitsFlags = {
   feature?: string;
@@ -78,7 +79,7 @@ export default class RateLimits extends Command {
     const typedFlags = flags as RateLimitsFlags;
 
     if (typedFlags.json) {
-      process.env.JSON_OUTPUT = '1';
+      setJsonOutputMode();
     }
 
     // Initialize telemetry

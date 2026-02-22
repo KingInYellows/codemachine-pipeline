@@ -9,6 +9,7 @@ import {
   type ResearchTaskFilters,
 } from '../../../workflows/researchCoordinator';
 import type { ResearchTask } from '../../../core/models/ResearchTask';
+import { setJsonOutputMode } from '../../utils/cliErrors';
 
 type ListFlags = {
   feature?: string;
@@ -65,7 +66,7 @@ export default class ResearchList extends Command {
     const typedFlags = flags as ListFlags;
 
     if (typedFlags.json) {
-      process.env.JSON_OUTPUT = '1';
+      setJsonOutputMode();
     }
 
     const startTime = Date.now();

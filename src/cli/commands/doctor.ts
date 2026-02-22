@@ -10,8 +10,8 @@ import type { StructuredLogger } from '../../telemetry/logger';
 import type { MetricsCollector } from '../../telemetry/metrics';
 import type { TraceManager, ActiveSpan } from '../../telemetry/traces';
 import { checkCodeMachineCli } from '../diagnostics';
-
-const CONFIG_RELATIVE_PATH = path.join('.codepipe', 'config.json');
+import { setJsonOutputMode } from '../utils/cliErrors';
+import { CONFIG_RELATIVE_PATH } from '../utils/runDirectory';
 
 /**
  * Diagnostic check result
@@ -79,7 +79,7 @@ export default class Doctor extends Command {
 
     // Set JSON output mode environment variable
     if (flags.json) {
-      process.env.JSON_OUTPUT = '1';
+      setJsonOutputMode();
     }
 
     // Initialize telemetry (logger, metrics, traces)

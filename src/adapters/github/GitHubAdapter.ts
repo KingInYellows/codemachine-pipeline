@@ -52,6 +52,38 @@ export type {
 } from './GitHubAdapterTypes.js';
 
 // ============================================================================
+// GraphQL Mutations
+// ============================================================================
+
+const ENABLE_AUTO_MERGE_MUTATION = `
+  mutation EnableAutoMerge($pullRequestId: ID!, $mergeMethod: PullRequestMergeMethod!) {
+    enablePullRequestAutoMerge(input: {
+      pullRequestId: $pullRequestId
+      mergeMethod: $mergeMethod
+    }) {
+      pullRequest {
+        id
+        autoMergeRequest {
+          enabledAt
+        }
+      }
+    }
+  }
+` as const;
+
+const DISABLE_AUTO_MERGE_MUTATION = `
+  mutation DisableAutoMerge($pullRequestId: ID!) {
+    disablePullRequestAutoMerge(input: {
+      pullRequestId: $pullRequestId
+    }) {
+      pullRequest {
+        id
+      }
+    }
+  }
+` as const;
+
+// ============================================================================
 // GitHub Adapter
 // ============================================================================
 
@@ -461,23 +493,7 @@ export class GitHubAdapter {
     try {
       const prNodeId = await this.getPRNodeId(pull_number);
 
-      const mutation = `
-        mutation EnableAutoMerge($pullRequestId: ID!, $mergeMethod: PullRequestMergeMethod!) {
-          enablePullRequestAutoMerge(input: {
-            pullRequestId: $pullRequestId
-            mergeMethod: $mergeMethod
-          }) {
-            pullRequest {
-              id
-              autoMergeRequest {
-                enabledAt
-              }
-            }
-          }
-        }
-      `;
-
-      await this.executeGraphQLMutation(mutation, { pullRequestId: prNodeId, mergeMethod: merge_method ?? 'MERGE' }, 'enableAutoMerge', pull_number);
+      await this.executeGraphQLMutation(ENABLE_AUTO_MERGE_MUTATION, { pullRequestId: prNodeId, mergeMethod: merge_method ?? 'MERGE' }, 'enableAutoMerge', pull_number);
       this.logger.info('Auto-merge enabled successfully', { pull_number });
     } catch (error) {
       this.logger.error('Failed to enable auto-merge', { pull_number, error: serializeError(error) });
@@ -496,19 +512,7 @@ export class GitHubAdapter {
     try {
       const prNodeId = await this.getPRNodeId(pull_number);
 
-      const mutation = `
-        mutation DisableAutoMerge($pullRequestId: ID!) {
-          disablePullRequestAutoMerge(input: {
-            pullRequestId: $pullRequestId
-          }) {
-            pullRequest {
-              id
-            }
-          }
-        }
-      `;
-
-      await this.executeGraphQLMutation(mutation, { pullRequestId: prNodeId }, 'disableAutoMerge', pull_number);
+      await this.executeGraphQLMutation(DISABLE_AUTO_MERGE_MUTATION, { pullRequestId: prNodeId }, 'disableAutoMerge', pull_number);
       this.logger.info('Auto-merge disabled successfully', { pull_number });
     } catch (error) {
       this.logger.error('Failed to disable auto-merge', { pull_number, error: serializeError(error) });

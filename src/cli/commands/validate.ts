@@ -27,6 +27,7 @@ import {
   type AutoFixOptions,
   type AutoFixResult,
 } from '../../workflows/autoFixEngine';
+import { setJsonOutputMode } from '../utils/cliErrors';
 
 /**
  * Validate command - Execute validation commands (lint/test/typecheck/build)
@@ -97,7 +98,7 @@ export default class Validate extends Command {
     const { flags } = await this.parse(Validate);
 
     if (flags.json) {
-      process.env.JSON_OUTPUT = '1';
+      setJsonOutputMode();
     }
 
     // Initialize telemetry

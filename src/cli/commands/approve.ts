@@ -26,7 +26,7 @@ import {
   selectFeatureId,
   ensureTelemetryReferences,
 } from '../utils/runDirectory';
-import { formatErrorMessage } from '../utils/cliErrors';
+import { formatErrorMessage, setJsonOutputMode } from '../utils/cliErrors';
 
 /**
  * Approve Command
@@ -136,7 +136,7 @@ export default class Approve extends Command {
     }
 
     if (typedFlags.json) {
-      process.env.JSON_OUTPUT = '1';
+      setJsonOutputMode();
     }
 
     const startTime = Date.now();

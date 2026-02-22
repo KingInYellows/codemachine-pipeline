@@ -8,6 +8,7 @@ import {
   type CreateResearchTaskOptions,
 } from '../../../workflows/researchCoordinator';
 import type { FreshnessRequirement, ResearchSource } from '../../../core/models/ResearchTask';
+import { setJsonOutputMode } from '../../utils/cliErrors';
 
 type CreateFlags = {
   feature?: string;
@@ -79,7 +80,7 @@ export default class ResearchCreate extends Command {
     const startTime = Date.now();
 
     if (typedFlags.json) {
-      process.env.JSON_OUTPUT = '1';
+      setJsonOutputMode();
     }
 
     if (!typedFlags.objective || typedFlags.objective.length === 0) {

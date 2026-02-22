@@ -31,6 +31,7 @@ import {
 import { loadPlanSummary } from '../../workflows/taskPlanner';
 import { RateLimitReporter } from '../../telemetry/rateLimitReporter';
 import { loadReport as loadBranchProtectionReport } from '../../workflows/branchProtectionReporter';
+import { setJsonOutputMode } from '../utils/cliErrors';
 
 type ResumeFlags = {
   feature?: string;
@@ -185,7 +186,7 @@ export default class Resume extends Command {
     const typedFlags = flags as ResumeFlags;
 
     if (typedFlags.json) {
-      process.env.JSON_OUTPUT = '1';
+      setJsonOutputMode();
     }
 
     // Initialize telemetry

@@ -40,6 +40,7 @@ import {
   serializeContextDocument,
   type ContextDocument,
 } from '../../../core/models/ContextDocument';
+import { setJsonOutputMode } from '../../utils/cliErrors';
 
 type SummarizeFlags = {
   feature?: string;
@@ -118,7 +119,7 @@ export default class ContextSummarize extends Command {
     const typedFlags = flags as SummarizeFlags;
 
     if (typedFlags.json) {
-      process.env.JSON_OUTPUT = '1';
+      setJsonOutputMode();
     }
 
     const startTime = Date.now();

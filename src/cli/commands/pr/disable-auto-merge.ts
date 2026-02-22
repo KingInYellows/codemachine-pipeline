@@ -26,6 +26,7 @@ import {
   PRExitCode,
   type PRMetadata,
 } from '../../pr/shared';
+import { setJsonOutputMode } from '../../utils/cliErrors';
 
 type DisableAutoMergeFlags = {
   feature?: string;
@@ -71,7 +72,7 @@ export default class PRDisableAutoMerge extends Command {
     const typedFlags = flags as DisableAutoMergeFlags;
 
     if (typedFlags.json) {
-      process.env.JSON_OUTPUT = '1';
+      setJsonOutputMode();
     }
 
     const startTime = Date.now();

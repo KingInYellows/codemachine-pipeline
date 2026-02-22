@@ -442,7 +442,7 @@ export class StructuredLogger implements LoggerInterface {
 
     // Append log line
     try {
-      await fs.appendFile(this.logFilePath, `${line}\n`, 'utf-8');
+      await fs.appendFile(this.logFilePath, `${line}\n`, { encoding: 'utf-8', mode: 0o600 });
     } catch (appendError) {
       const error = appendError instanceof Error ? appendError : new Error(String(appendError));
       console.error('[LOGGER_ERROR] Failed to append log to file:', error.message);

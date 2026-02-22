@@ -35,7 +35,7 @@ import { CLIExecutionEngine } from '../../workflows/cliExecutionEngine';
 import { loadQueue } from '../../workflows/queueStore';
 import { createCodeMachineStrategy } from '../../workflows/codeMachineStrategy';
 import { createCodeMachineCLIStrategy } from '../../workflows/codeMachineCLIStrategy';
-import { CliError, CliErrorCode, formatErrorMessage, formatErrorJson } from '../utils/cliErrors';
+import { CliError, CliErrorCode, formatErrorMessage, formatErrorJson, setJsonOutputMode } from '../utils/cliErrors';
 import { getErrorMessage } from '../../utils/errors.js';
 import { DEFAULT_EXECUTION_CONFIG } from '../../core/config/RepoConfig.js';
 
@@ -153,7 +153,7 @@ export default class Start extends Command {
     const typedFlags = flags as StartFlags;
 
     if (typedFlags.json) {
-      process.env.JSON_OUTPUT = '1';
+      setJsonOutputMode();
     }
 
     // Early validation with proper error handling

@@ -455,28 +455,16 @@ export class LinearAdapter {
     this.logger.debug('Fetching issue from API', { issueId });
 
     try {
-      const timestamp = await this.assertRateLimitHeadroom('fetchIssue');
-      this.recordRequest(timestamp);
-      const response = await this.client.post<{ data: { issue: LinearIssue } }>(
-        GRAPHQL_ENDPOINT,
-        {
-          query: ISSUE_QUERY,
-          variables: { issueId },
-        },
-        {
-          metadata: {
-            operation: 'fetchIssue',
-            issueId,
-          },
-        }
+      const data = await this.executeGraphQL<{ data: { issue: LinearIssue } }>(
+        'fetchIssue', ISSUE_QUERY, { issueId }, { issueId }
       );
 
-      if (!response.data.data?.issue) {
+      if (!data.data?.issue) {
         throw new Error(`Issue ${issueId} not found`);
       }
 
       // Transform labels from GraphQL response
-      const issue = response.data.data.issue;
+      const issue = data.data.issue;
       if (issue.labels && 'nodes' in issue.labels) {
         issue.labels = (issue.labels as { nodes: LinearIssue['labels'] }).nodes;
       }
@@ -498,25 +486,11 @@ export class LinearAdapter {
     this.logger.debug('Fetching comments from API', { issueId });
 
     try {
-      const timestamp = await this.assertRateLimitHeadroom('fetchComments');
-      this.recordRequest(timestamp);
-      const response = await this.client.post<{
+      const data = await this.executeGraphQL<{
         data: { issue: { comments: { nodes: LinearComment[] } } };
-      }>(
-        GRAPHQL_ENDPOINT,
-        {
-          query: COMMENTS_QUERY,
-          variables: { issueId },
-        },
-        {
-          metadata: {
-            operation: 'fetchComments',
-            issueId,
-          },
-        }
-      );
+      }>('fetchComments', COMMENTS_QUERY, { issueId }, { issueId });
 
-      return response.data.data?.issue?.comments?.nodes ?? [];
+      return data.data?.issue?.comments?.nodes ?? [];
     } catch (error) {
       this.logger.error('Failed to fetch comments', {
         issueId,
@@ -560,25 +534,11 @@ export class LinearAdapter {
       if (params.priority !== undefined) variables.priority = params.priority;
       if (params.assigneeId !== undefined) variables.assigneeId = params.assigneeId;
 
-      const timestamp = await this.assertRateLimitHeadroom('updateIssue');
-      this.recordRequest(timestamp);
-      const response = await this.client.post<{
+      const data = await this.executeGraphQL<{
         data: { issueUpdate: { success: boolean } };
-      }>(
-        GRAPHQL_ENDPOINT,
-        {
-          query: UPDATE_ISSUE_MUTATION,
-          variables,
-        },
-        {
-          metadata: {
-            operation: 'updateIssue',
-            issueId: params.issueId,
-          },
-        }
-      );
+      }>('updateIssue', UPDATE_ISSUE_MUTATION, variables, { issueId: params.issueId });
 
-      if (!response.data.data?.issueUpdate?.success) {
+      if (!data.data?.issueUpdate?.success) {
         throw new Error('Issue update failed');
       }
 
@@ -612,28 +572,11 @@ export class LinearAdapter {
     });
 
     try {
-      const timestamp = await this.assertRateLimitHeadroom('postComment');
-      this.recordRequest(timestamp);
-      const response = await this.client.post<{
+      const data = await this.executeGraphQL<{
         data: { commentCreate: { success: boolean } };
-      }>(
-        GRAPHQL_ENDPOINT,
-        {
-          query: POST_COMMENT_MUTATION,
-          variables: {
-            issueId: params.issueId,
-            body: params.body,
-          },
-        },
-        {
-          metadata: {
-            operation: 'postComment',
-            issueId: params.issueId,
-          },
-        }
-      );
+      }>('postComment', POST_COMMENT_MUTATION, { issueId: params.issueId, body: params.body }, { issueId: params.issueId });
 
-      if (!response.data.data?.commentCreate?.success) {
+      if (!data.data?.commentCreate?.success) {
         throw new Error('Comment creation failed');
       }
 
@@ -746,6 +689,22 @@ export class LinearAdapter {
     }
     const sanitized = issueId.replace(/[^a-zA-Z0-9-]/g, '_');
     return path.join(this.runDir!, SNAPSHOT_DIR, `linear_issue_${sanitized}.json`);
+  }
+
+  private async executeGraphQL<T>(
+    operation: string,
+    query: string,
+    variables: Record<string, unknown>,
+    context: Record<string, unknown>
+  ): Promise<T> {
+    const timestamp = await this.assertRateLimitHeadroom(operation);
+    this.recordRequest(timestamp);
+    const response = await this.client.post<T>(
+      GRAPHQL_ENDPOINT,
+      { query, variables },
+      { metadata: { operation, ...context } }
+    );
+    return response.data;
   }
 
   private readonly normalizeError = createErrorNormalizer(LinearAdapterError, 'Linear');

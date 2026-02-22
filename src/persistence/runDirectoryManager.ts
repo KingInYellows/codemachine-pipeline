@@ -5,6 +5,7 @@ import * as crypto from 'node:crypto';
 import * as os from 'node:os';
 import { Buffer } from 'node:buffer';
 import { wrapError, getErrorMessage } from '../utils/errors.js';
+import { isFileNotFound } from '../utils/safeJson';
 import {
   createHashManifest,
   verifyHashManifest,
@@ -372,7 +373,7 @@ export async function releaseLock(runDir: string): Promise<void> {
     await fs.unlink(lockPath);
   } catch (error) {
     // Ignore errors if lock file doesn't exist
-    if (error && typeof error === 'object' && 'code' in error && error.code === 'ENOENT') {
+    if (isFileNotFound(error)) {
       return;
     }
     throw wrapError(error, `release lock for ${runDir}`);
@@ -394,7 +395,7 @@ export async function isLocked(runDir: string): Promise<boolean> {
     return !isStale;
   } catch (error) {
     // If lock file doesn't exist (ENOENT), not locked
-    if (error && typeof error === 'object' && 'code' in error && error.code === 'ENOENT') {
+    if (isFileNotFound(error)) {
       return false;
     }
     throw wrapError(error, `check lock status for ${runDir}`);
@@ -596,7 +597,7 @@ export async function listRunDirectories(baseDir: string): Promise<string[]> {
     const entries = await fs.readdir(baseDir, { withFileTypes: true });
     return entries.filter((entry) => entry.isDirectory()).map((entry) => entry.name);
   } catch (error) {
-    if (error && typeof error === 'object' && 'code' in error && error.code === 'ENOENT') {
+    if (isFileNotFound(error)) {
       return [];
     }
     throw wrapError(error, `list run directories in ${baseDir}`);

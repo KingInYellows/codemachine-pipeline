@@ -16,6 +16,7 @@ import {
 import { loadPlanSummary, type PlanSummary } from '../../workflows/taskPlanner';
 import { loadSpecMetadata } from '../../workflows/specComposer';
 import { comparePlanDiff, type PlanDiff } from '../../workflows/planDiffer';
+import { setJsonOutputMode } from '../utils/cliErrors';
 
 type PlanFlags = {
   feature?: string;
@@ -95,7 +96,7 @@ export default class Plan extends Command {
     const typedFlags = flags as PlanFlags;
 
     if (typedFlags.json) {
-      process.env.JSON_OUTPUT = '1';
+      setJsonOutputMode();
     }
 
     // Initialize telemetry

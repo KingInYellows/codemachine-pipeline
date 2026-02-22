@@ -29,6 +29,7 @@ import {
   PRExitCode,
   type PRMetadata,
 } from '../../pr/shared';
+import { setJsonOutputMode } from '../../utils/cliErrors';
 
 type CreateFlags = {
   feature?: string;
@@ -96,7 +97,7 @@ export default class PRCreate extends Command {
     const typedFlags = flags as CreateFlags;
 
     if (typedFlags.json) {
-      process.env.JSON_OUTPUT = '1';
+      setJsonOutputMode();
     }
 
     const startTime = Date.now();

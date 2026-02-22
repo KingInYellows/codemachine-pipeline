@@ -20,7 +20,7 @@ import { createRunTraceManager, SpanStatusCode } from '../../telemetry/traces';
 import type { StructuredLogger } from '../../telemetry/logger';
 import type { MetricsCollector } from '../../telemetry/metrics';
 import type { TraceManager, ActiveSpan } from '../../telemetry/traces';
-import { formatErrorMessage } from '../utils/cliErrors';
+import { formatErrorMessage, setJsonOutputMode } from '../utils/cliErrors';
 
 interface ConfigValidationPayload {
   status: 'not_found' | 'validation_error' | 'valid';
@@ -95,7 +95,7 @@ export default class Init extends Command {
 
     // Set JSON output mode environment variable
     if (flags.json) {
-      process.env.JSON_OUTPUT = '1';
+      setJsonOutputMode();
     }
 
     // Initialize telemetry (logger, metrics, traces)

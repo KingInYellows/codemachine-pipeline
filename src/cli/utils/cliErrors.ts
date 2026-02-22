@@ -183,3 +183,12 @@ export function getDocsUrl(code: CliErrorCode): string | undefined {
   const anchor = DOCS_ANCHOR_MAP[code];
   return anchor ? `${DOCS_BASE_URL}${anchor}` : undefined;
 }
+
+/**
+ * Enable JSON output mode for the current CLI command.
+ * Centralizes the process.env.JSON_OUTPUT convention so callers
+ * don't hard-code the env-var name.
+ */
+export function setJsonOutputMode(): void {
+  process.env['JSON_OUTPUT'] = '1';
+}

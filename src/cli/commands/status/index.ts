@@ -42,7 +42,7 @@ import {
   refreshBranchProtectionArtifact,
 } from '../../status/data';
 import { renderHumanReadable } from '../../status/renderers';
-import { CliError, CliErrorCode, formatErrorMessage, formatErrorJson } from '../../utils/cliErrors';
+import { CliError, CliErrorCode, formatErrorMessage, formatErrorJson, setJsonOutputMode } from '../../utils/cliErrors';
 
 /**
  * Status command - Display current state of a feature pipeline
@@ -88,7 +88,7 @@ export default class Status extends Command {
     const typedFlags = flags as StatusFlags;
 
     if (typedFlags.json) {
-      process.env.JSON_OUTPUT = '1';
+      setJsonOutputMode();
     }
 
     // Initialize telemetry (logger, metrics, traces)
