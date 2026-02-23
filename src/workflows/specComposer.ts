@@ -750,13 +750,14 @@ export function generateSpecMarkdown(
 ): string {
   const lines: string[] = [];
 
-  // Front matter
+  // Front matter — strip newlines to prevent YAML front matter injection
+  const sanitize = (s: string): string => s.replace(/[\n\r]/g, ' ');
   lines.push('---');
-  lines.push(`spec_id: ${specification.spec_id}`);
-  lines.push(`feature_id: ${specification.feature_id}`);
-  lines.push(`title: ${specification.title}`);
-  lines.push(`status: ${specification.status}`);
-  lines.push(`created_at: ${specification.created_at}`);
+  lines.push(`spec_id: ${sanitize(specification.spec_id)}`);
+  lines.push(`feature_id: ${sanitize(specification.feature_id)}`);
+  lines.push(`title: ${sanitize(specification.title)}`);
+  lines.push(`status: ${sanitize(specification.status)}`);
+  lines.push(`created_at: ${sanitize(specification.created_at)}`);
   lines.push('---');
   lines.push('');
 
@@ -796,7 +797,7 @@ export function generateSpecMarkdown(
       lines.push(`### ${test.test_id}: ${test.description}`);
       lines.push('');
       lines.push(`- **Type:** ${test.test_type}`);
-      lines.push(`- **Acceptance Criteria:**`);
+      lines.push('- **Acceptance Criteria:**');
       test.acceptance_criteria.forEach((criterion) => {
         lines.push(`  - ${criterion}`);
       });
@@ -896,7 +897,7 @@ export function generateSpecMarkdown(
   lines.push('');
   lines.push(`- **PRD Hash:** \`${prdMetadata.prdHash}\``);
   lines.push(`- **PRD Trace ID:** \`${prdMetadata.traceId || 'N/A'}\``);
-  lines.push(`- **Execution Plan:** _Pending spec approval_`);
+  lines.push('- **Execution Plan:** _Pending spec approval_');
   lines.push('');
 
   return lines.join('\n');
