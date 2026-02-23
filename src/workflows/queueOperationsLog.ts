@@ -1,18 +1,9 @@
 /**
  * Queue Operations Log (Write-Ahead Log)
  *
- * Implements a Write-Ahead Log (WAL) for queue operations with O(1) appends.
- * Uses NDJSON format (newline-delimited JSON) for efficient streaming.
- *
- * Implements:
- * - Issue #45: Queue WAL Optimization Layer 2
- * - FR-3 (Resumability): Crash-safe operation logging
- * - ADR-2 (State Persistence): Monotonic sequence-based operations
- *
- * WAL Format (NDJSON):
- * - Each line is a complete JSON object representing a QueueOperation
- * - Operations are ordered by monotonically increasing sequence numbers
- * - Checksum validation for operation integrity
+ * Write-Ahead Log (WAL) for queue operations with O(1) appends.
+ * Uses NDJSON format where each line is a QueueOperation with monotonically
+ * increasing sequence numbers and checksum validation for integrity.
  */
 
 import { QueueOperation, isQueueOperation } from './queueTypes';

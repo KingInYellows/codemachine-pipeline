@@ -6,14 +6,8 @@ import { isFileNotFound } from '../utils/safeJson';
 /**
  * Hash Manifest Utilities
  *
- * Provides deterministic file integrity tracking via SHA-256 hashing.
- * Implements ADR-2 (State Persistence) hash manifest requirements.
- *
- * Key features:
- * - File content hashing with SHA-256
- * - Manifest generation and validation
- * - Incremental manifest updates
- * - Integrity verification
+ * Deterministic file integrity tracking via SHA-256 hashing.
+ * Supports manifest generation, validation, incremental updates, and verification.
  */
 
 // ============================================================================

@@ -4,20 +4,6 @@
  * Converts approved specification requirements and traceability entries into
  * an ExecutionTask DAG, persists plan.json, manages dependencies, and supports
  * deterministic resume/replay scenarios.
- *
- * Key features:
- * - Deterministic task ID generation from spec requirements
- * - DAG construction with topological sorting
- * - Cycle detection and validation
- * - Plan persistence with checksum integrity
- * - Integration with traceability mapper
- * - CLI outputs for plan visualization
- *
- * Implements:
- * - FR-12: Execution Task Generation
- * - FR-13: Dependency Management
- * - FR-14: Plan Persistence and Resume
- * - ADR-7: Validation Policy (Zod-based)
  */
 
 import * as fs from 'node:fs/promises';

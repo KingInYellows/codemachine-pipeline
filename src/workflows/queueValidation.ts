@@ -3,12 +3,6 @@
  *
  * Validates queue integrity by checking JSONL parsing, task schema validity,
  * and manifest checksum consistency.
- *
- * Extracted from queueStore.ts for maintainability.
- *
- * Implements:
- * - FR-3 (Resumability): Integrity checks for crash recovery
- * - ADR-2 (State Persistence): Checksum validation
  */
 
 import * as fs from 'node:fs/promises';
