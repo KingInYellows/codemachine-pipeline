@@ -641,6 +641,69 @@ async function loadTraceabilityTaskIds(runDir: string): Promise<RequirementTaskM
 // ============================================================================
 
 /**
+ * Load an existing plan.json if present and force-regeneration is not requested.
+ * Returns the plan result if found, null if generation should proceed.
+ */
+async function loadExistingPlanIfPresent(
+  config: TaskPlannerConfig,
+  planPath: string,
+  logger: StructuredLogger
+): Promise<TaskPlannerResult | null> {
+  if (config.force) return null;
+
+  try {
+    await fs.access(planPath);
+    logger.info('plan.json already exists, loading existing plan', { planPath });
+
+    const existingContent = await fs.readFile(planPath, 'utf-8');
+    const existingPlan = JSON.parse(existingContent) as PlanArtifact;
+    const existingSummary = createPlanSummary(existingPlan, planPath);
+
+    return {
+      planPath,
+      plan: existingPlan,
+      summary: existingSummary,
+      statistics: {
+        totalTasks: existingPlan.tasks.length,
+        entryTasks: existingSummary.entryTasks.length,
+        blockedTasks: existingSummary.blockedTasks,
+        maxDepth: existingSummary.dag?.criticalPathDepth ?? 0,
+        parallelPaths: existingSummary.dag?.parallelPaths ?? 0,
+      },
+      diagnostics: {
+        warnings: ['plan.json already exists; use --force to regenerate'],
+        blockers: existingSummary.queueState.blockers,
+      },
+    };
+  } catch {
+    return null; // File doesn't exist, proceed with generation
+  }
+}
+
+/**
+ * Collect blockers for tasks whose declared dependencies are not present in the plan.
+ */
+function collectMissingDepBlockers(
+  tasks: TaskNode[],
+  dependencyBlockers: PlanDiagnostics['blockers']
+): PlanDiagnostics['blockers'] {
+  const blockers: PlanDiagnostics['blockers'] = [...dependencyBlockers];
+  for (const task of tasks) {
+    const missingDeps = task.dependencies.filter(
+      (dep) => !tasks.some((t) => t.task_id === dep.task_id)
+    );
+    if (missingDeps.length > 0) {
+      blockers.push({
+        taskId: task.task_id,
+        reason: 'Missing dependencies',
+        missingDependencies: missingDeps.map((d) => d.task_id),
+      });
+    }
+  }
+  return blockers;
+}
+
+/**
  * Generate execution plan from approved specification
  */
 export async function generateExecutionPlan(
@@ -656,36 +719,8 @@ export async function generateExecutionPlan(
 
   const planPath = path.join(config.runDir, 'plan.json');
 
-  // Check if plan.json already exists
-  if (!config.force) {
-    try {
-      await fs.access(planPath);
-      logger.info('plan.json already exists, loading existing plan', { planPath });
-
-      const existingContent = await fs.readFile(planPath, 'utf-8');
-      const existingPlan = JSON.parse(existingContent) as PlanArtifact;
-      const existingSummary = createPlanSummary(existingPlan, planPath);
-
-      return {
-        planPath,
-        plan: existingPlan,
-        summary: existingSummary,
-        statistics: {
-          totalTasks: existingPlan.tasks.length,
-          entryTasks: existingSummary.entryTasks.length,
-          blockedTasks: existingSummary.blockedTasks,
-          maxDepth: existingSummary.dag?.criticalPathDepth ?? 0,
-          parallelPaths: existingSummary.dag?.parallelPaths ?? 0,
-        },
-        diagnostics: {
-          warnings: ['plan.json already exists; use --force to regenerate'],
-          blockers: existingSummary.queueState.blockers,
-        },
-      };
-    } catch {
-      // File doesn't exist, continue with generation
-    }
-  }
+  const existing = await loadExistingPlanIfPresent(config, planPath, logger);
+  if (existing) return existing;
 
   // Step 1: Verify spec approval
   const specMetadata = await loadSpecMetadata(config.runDir);
@@ -780,20 +815,7 @@ export async function generateExecutionPlan(
   });
 
   // Step 8: Identify blockers
-  const blockers: PlanDiagnostics['blockers'] = [...dependencyBlockers];
-  for (const task of tasks) {
-    const missingDeps = task.dependencies.filter(
-      (dep) => !tasks.some((t) => t.task_id === dep.task_id)
-    );
-
-    if (missingDeps.length > 0) {
-      blockers.push({
-        taskId: task.task_id,
-        reason: 'Missing dependencies',
-        missingDependencies: missingDeps.map((d) => d.task_id),
-      });
-    }
-  }
+  const blockers = collectMissingDepBlockers(tasks, dependencyBlockers);
 
   // Step 9: Persist plan
   const { path: persistedPath, planWithChecksum } = await persistPlan(
