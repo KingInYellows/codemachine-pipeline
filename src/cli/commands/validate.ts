@@ -1,7 +1,7 @@
 import { Command, Flags } from '@oclif/core';
 import { getRunDirectoryPath } from '../../persistence/runDirectoryManager';
 import { createCliLogger, LogLevel } from '../../telemetry/logger';
-import { createRunMetricsCollector } from '../../telemetry/metrics';
+import { createRunMetricsCollector, StandardMetrics } from '../../telemetry/metrics';
 import { createRunTraceManager } from '../../telemetry/traces';
 import { createExecutionTelemetry } from '../../telemetry/executionTelemetry';
 import type { StructuredLogger } from '../../telemetry/logger';
@@ -322,7 +322,7 @@ export default class Validate extends Command {
     this.log('Run "codepipe validate" to execute validation commands.');
     this.log('');
 
-    metrics.increment('command_invocations_total', {
+    metrics.increment(StandardMetrics.COMMAND_INVOCATIONS_TOTAL, {
       command: 'validate.init',
       exit_code: '0',
     });

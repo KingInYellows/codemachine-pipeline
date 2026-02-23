@@ -12,7 +12,7 @@
 
 import { HttpClient, Provider, HttpError, ErrorType } from '../http/client';
 import type { HttpClientConfig } from '../http/client';
-import { serializeError, createErrorNormalizer } from '../../utils/errors';
+import { serializeError, createErrorNormalizer, AdapterError } from '../../utils/errors';
 import { createLogger, LogLevel, type LoggerInterface } from '../../telemetry/logger';
 
 // ============================================================================
@@ -739,35 +739,16 @@ export class BranchProtectionAdapter {
 /**
  * Branch protection error with error taxonomy
  */
-export class BranchProtectionError extends Error {
+export class BranchProtectionError extends AdapterError {
   constructor(
     message: string,
-    public readonly errorType: ErrorType,
-    public readonly statusCode?: number,
-    public readonly requestId?: string,
-    public readonly operation?: string
+    errorType: ErrorType,
+    statusCode?: number,
+    requestId?: string,
+    operation?: string
   ) {
-    super(message);
+    super(message, errorType, statusCode, requestId, operation);
     this.name = 'BranchProtectionError';
-    Object.setPrototypeOf(this, BranchProtectionError.prototype);
-  }
-
-  toJSON(): {
-    name: string;
-    message: string;
-    errorType: ErrorType;
-    statusCode?: number | undefined;
-    requestId?: string | undefined;
-    operation?: string | undefined;
-  } {
-    return {
-      name: this.name,
-      message: this.message,
-      errorType: this.errorType,
-      statusCode: this.statusCode,
-      requestId: this.requestId,
-      operation: this.operation,
-    };
   }
 }
 

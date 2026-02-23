@@ -63,6 +63,8 @@ export interface AutoFixOptions {
   cwdOverride?: string;
   /** Environment variables to merge */
   envOverride?: Record<string, string>;
+  /** Additional environment variable names to pass through to subprocesses */
+  envAllowlist?: string[];
 }
 
 /**
@@ -163,7 +165,10 @@ function finalizeValidationFailure(
   span?.setAttribute('validation.attempts', attemptNumber);
   span?.setAttribute('validation.success', false);
   endExecutionSpan(span, false, failureError.message);
-  return lastResult!;
+  if (lastResult === undefined) {
+    throw new Error(`Validation command "${commandType}" failed with no recorded attempt`);
+  }
+  return lastResult;
 }
 
 /**
@@ -454,7 +459,7 @@ async function executeValidationCommand(
 
   // Merge environment variables (filtered to avoid leaking secrets)
   const filteredBase = filterEnvironment({
-    additional: [],
+    additional: options.envAllowlist ?? [],
     includeDebug: true,
     includeTmpdir: true,
   });
