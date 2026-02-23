@@ -25,7 +25,7 @@ import * as crypto from 'node:crypto';
 import { HttpClient, Provider, HttpError, ErrorType } from '../http/client';
 import type { HttpClientConfig } from '../http/client';
 import { RateLimitLedger } from '../../telemetry/rateLimitLedger';
-import { serializeError, createErrorNormalizer, AdapterError } from '../../utils/errors';
+import { serializeError, createErrorNormalizer } from '../../utils/errors';
 import { createLogger, LogLevel, type LoggerInterface } from '../../telemetry/logger';
 import { isFileNotFound } from '../../utils/safeJson';
 import { validateOrThrow } from '../../validation/helpers.js';
@@ -39,7 +39,8 @@ export type {
   UpdateIssueParams,
   PostCommentParams,
 } from './LinearAdapterTypes.js';
-import { IssueSnapshotSchema } from './LinearAdapterTypes.js';
+export { LinearAdapterError } from './LinearAdapterTypes.js';
+import { IssueSnapshotSchema, LinearAdapterError } from './LinearAdapterTypes.js';
 import type {
   LinearAdapterConfig,
   LinearIssue,
@@ -667,24 +668,6 @@ export class LinearAdapter {
 
 // ============================================================================
 // Error Classes
-// ============================================================================
-
-/**
- * Linear adapter error with error taxonomy
- */
-export class LinearAdapterError extends AdapterError {
-  constructor(
-    message: string,
-    errorType: ErrorType,
-    statusCode?: number,
-    requestId?: string,
-    operation?: string
-  ) {
-    super(message, errorType, statusCode, requestId, operation);
-    this.name = 'LinearAdapterError';
-  }
-}
-
 // ============================================================================
 // Factory Functions
 // ============================================================================

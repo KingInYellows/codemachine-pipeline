@@ -7,6 +7,7 @@
 import { z } from 'zod';
 import type { ErrorType } from '../http/client';
 import type { LoggerInterface } from '../../telemetry/logger';
+import { AdapterError } from '../../utils/errors';
 
 /**
  * Linear adapter configuration
@@ -132,4 +133,20 @@ export interface UpdateIssueParams {
 export interface PostCommentParams {
   issueId: string;
   body: string;
+}
+
+/**
+ * Linear adapter error with error taxonomy
+ */
+export class LinearAdapterError extends AdapterError {
+  constructor(
+    message: string,
+    errorType: ErrorType,
+    statusCode?: number,
+    requestId?: string,
+    operation?: string
+  ) {
+    super(message, errorType, statusCode, requestId, operation);
+    this.name = 'LinearAdapterError';
+  }
 }
