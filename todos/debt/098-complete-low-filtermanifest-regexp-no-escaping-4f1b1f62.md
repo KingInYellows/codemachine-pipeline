@@ -1,5 +1,5 @@
 ---
-status: ready
+status: complete
 priority: p4
 issue_id: debt-098
 category: security
