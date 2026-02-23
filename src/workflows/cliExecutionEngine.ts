@@ -318,6 +318,7 @@ export class CLIExecutionEngine {
       if (!this.stopped) {
         const done = await this.fillTaskBatch(inFlight, maxParallelTasks, runTask);
         if (done) break;
+        if (inFlight.size === 0) continue;
       } else if (inFlight.size === 0) {
         break;
       }
@@ -340,6 +341,9 @@ export class CLIExecutionEngine {
   /**
    * Fill the in-flight map up to capacity with ready tasks.
    *
+   * @param inFlight - Mutated in-place; ready tasks are added up to capacity.
+   * @param maxParallelTasks - Upper bound on concurrent tasks.
+   * @param runTask - Factory that starts a task and returns its outcome promise.
    * @returns `true` when there are no more tasks to schedule and the queue is
    *   drained (caller should break the execute loop).
    */
