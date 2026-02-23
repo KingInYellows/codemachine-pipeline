@@ -842,11 +842,8 @@ describe('Deployment Trigger Module', () => {
 
       // Execute
       const outcome = await triggerDeployment(
-        runDirectory,
-        'feature-auth-123',
-        mockConfig,
-        mockGitHubAdapter,
-        mockLogger
+        { runDirectory, featureId: 'feature-auth-123', config: mockConfig, logger: mockLogger },
+        mockGitHubAdapter
       );
 
       // Assert
@@ -898,11 +895,8 @@ describe('Deployment Trigger Module', () => {
 
       // Execute
       const outcome = await triggerDeployment(
-        runDirectory,
-        'feature-auth-123',
-        mockConfig,
-        mockGitHubAdapter,
-        mockLogger
+        { runDirectory, featureId: 'feature-auth-123', config: mockConfig, logger: mockLogger },
+        mockGitHubAdapter
       );
 
       // Assert
@@ -954,14 +948,14 @@ describe('Deployment Trigger Module', () => {
 
       // Execute
       const outcome = await triggerDeployment(
-        runDirectory,
-        'feature-auth-123',
-        configWithWorkflow,
-        mockGitHubAdapter,
-        mockLogger,
         {
-          workflow_inputs: { environment: 'production', notify: 'true' },
-        }
+          runDirectory,
+          featureId: 'feature-auth-123',
+          config: configWithWorkflow,
+          logger: mockLogger,
+        },
+        mockGitHubAdapter,
+        { workflow_inputs: { environment: 'production', notify: 'true' } }
       );
 
       // Assert
@@ -1000,11 +994,8 @@ describe('Deployment Trigger Module', () => {
 
       // Execute
       const outcome = await triggerDeployment(
-        runDirectory,
-        'feature-auth-123',
-        mockConfig,
-        mockGitHubAdapter,
-        mockLogger
+        { runDirectory, featureId: 'feature-auth-123', config: mockConfig, logger: mockLogger },
+        mockGitHubAdapter
       );
 
       // Assert
@@ -1046,11 +1037,8 @@ describe('Deployment Trigger Module', () => {
       } as PullRequest);
 
       const outcome = await triggerDeployment(
-        runDirectory,
-        'feature-auth-123',
-        mockConfig,
-        mockGitHubAdapter,
-        mockLogger
+        { runDirectory, featureId: 'feature-auth-123', config: mockConfig, logger: mockLogger },
+        mockGitHubAdapter
       );
 
       expect(outcome.success).toBe(false);
@@ -1084,11 +1072,8 @@ describe('Deployment Trigger Module', () => {
 
       // Execute
       const outcome = await triggerDeployment(
-        runDirectory,
-        'feature-auth-123',
-        mockConfig,
+        { runDirectory, featureId: 'feature-auth-123', config: mockConfig, logger: mockLogger },
         mockGitHubAdapter,
-        mockLogger,
         { dry_run: true }
       );
 
@@ -1133,11 +1118,8 @@ describe('Deployment Trigger Module', () => {
 
       // First attempt - should be blocked
       const outcome1 = await triggerDeployment(
-        runDirectory,
-        'feature-auth-123',
-        mockConfig,
-        mockGitHubAdapter,
-        mockLogger
+        { runDirectory, featureId: 'feature-auth-123', config: mockConfig, logger: mockLogger },
+        mockGitHubAdapter
       );
 
       expect(outcome1.success).toBe(false);
@@ -1169,11 +1151,8 @@ describe('Deployment Trigger Module', () => {
 
       // Second attempt - should succeed
       const outcome2 = await triggerDeployment(
-        runDirectory,
-        'feature-auth-123',
-        mockConfig,
-        mockGitHubAdapter,
-        mockLogger
+        { runDirectory, featureId: 'feature-auth-123', config: mockConfig, logger: mockLogger },
+        mockGitHubAdapter
       );
 
       expect(outcome2.success).toBe(true);

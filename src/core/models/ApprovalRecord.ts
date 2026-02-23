@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { createModelParser } from './modelParser.js';
 
 /**
  * ApprovalRecord Model
@@ -12,9 +13,7 @@ import { z } from 'zod';
  * Used by CLI commands: approve, status
  */
 
-// ============================================================================
 // Approval Gate Type Enum
-// ============================================================================
 
 export const ApprovalGateTypeSchema = z.enum([
   'prd',
@@ -28,17 +27,13 @@ export const ApprovalGateTypeSchema = z.enum([
 
 export type ApprovalGateType = z.infer<typeof ApprovalGateTypeSchema>;
 
-// ============================================================================
 // Approval Verdict Enum
-// ============================================================================
 
 export const ApprovalVerdictSchema = z.enum(['approved', 'rejected', 'requested_changes']);
 
 export type ApprovalVerdict = z.infer<typeof ApprovalVerdictSchema>;
 
-// ============================================================================
 // ApprovalRecord Schema
-// ============================================================================
 
 export const ApprovalRecordSchema = z
   .object({
@@ -74,46 +69,11 @@ export const ApprovalRecordSchema = z
 
 export type ApprovalRecord = Readonly<z.infer<typeof ApprovalRecordSchema>>;
 
-// ============================================================================
 // Serialization Helpers
-// ============================================================================
 
-/**
- * Parse and validate ApprovalRecord from JSON
- */
-export function parseApprovalRecord(json: unknown):
-  | {
-      success: true;
-      data: ApprovalRecord;
-    }
-  | {
-      success: false;
-      errors: Array<{ path: string; message: string }>;
-    } {
-  const result = ApprovalRecordSchema.safeParse(json);
-
-  if (result.success) {
-    return {
-      success: true,
-      data: result.data as ApprovalRecord,
-    };
-  }
-
-  return {
-    success: false,
-    errors: result.error.issues.map((err) => ({
-      path: err.path.join('.') || 'root',
-      message: err.message,
-    })),
-  };
-}
-
-/**
- * Serialize ApprovalRecord to JSON string
- */
-export function serializeApprovalRecord(record: ApprovalRecord, pretty = true): string {
-  return JSON.stringify(record, null, pretty ? 2 : 0);
-}
+const { parse: parseApprovalRecord, serialize: serializeApprovalRecord } =
+  createModelParser<ApprovalRecord>(ApprovalRecordSchema);
+export { parseApprovalRecord, serializeApprovalRecord };
 
 /**
  * Create a new ApprovalRecord

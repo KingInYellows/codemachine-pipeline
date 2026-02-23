@@ -3,17 +3,7 @@
  *
  * Manages periodic snapshots of queue state for fast recovery.
  * Works with WAL from queueOperationsLog.ts for point-in-time recovery.
- *
- * Implements:
- * - Issue #45: Queue WAL Optimization Layer 3
- * - FR-3 (Resumability): Snapshot-based fast recovery
- * - ADR-2 (State Persistence): Atomic snapshot writes with checksums
- *
- * Features:
- * - Atomic writes via write-temp-rename pattern
- * - SHA-256 checksum for integrity validation
- * - File locking for concurrent access safety
- * - Graceful handling of malformed data
+ * Uses atomic write-temp-rename pattern with SHA-256 checksums and file locking.
  */
 
 import type { QueueSnapshotV2, QueueCounts, ExecutionTaskData } from './queueTypes';
@@ -24,6 +14,7 @@ import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 import * as crypto from 'node:crypto';
 import { getErrorMessage } from '../utils/errors.js';
+import { isFileNotFound } from '../utils/safeJson.js';
 
 // ============================================================================
 // Constants
@@ -266,7 +257,7 @@ export async function deleteSnapshot(queueDir: string): Promise<void> {
     await fs.unlink(snapshotPath);
   } catch (error) {
     // Ignore if file doesn't exist
-    if (error && typeof error === 'object' && 'code' in error && error.code === 'ENOENT') {
+    if (isFileNotFound(error)) {
       return;
     }
     throw error;

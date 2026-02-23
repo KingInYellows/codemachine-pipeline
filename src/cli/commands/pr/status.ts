@@ -26,6 +26,7 @@ import {
   type PRMetadata,
 } from '../../pr/shared';
 import type { StatusCheck } from '../../../adapters/github/GitHubAdapter';
+import { setJsonOutputMode } from '../../utils/cliErrors';
 
 type StatusFlags = {
   feature?: string;
@@ -71,7 +72,7 @@ export default class PRStatus extends Command {
     const typedFlags = flags as StatusFlags;
 
     if (typedFlags.json) {
-      process.env.JSON_OUTPUT = '1';
+      setJsonOutputMode();
     }
 
     const startTime = Date.now();

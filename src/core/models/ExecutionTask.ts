@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { createModelParser } from './modelParser.js';
 
 /**
  * ExecutionTask Model
@@ -6,17 +7,10 @@ import { z } from 'zod';
  * Units of work (code_generation, testing, pr_creation, deployment)
  * with statuses, retries, logs, cost tracking, and assigned agents.
  *
- * Implements:
- * - FR-2 (Run Directory): Task queue persistence
- * - FR-3 (Resumability): Retry and error tracking
- * - ADR-7 (Validation Policy): Zod-based validation
- *
  * Used by CLI commands: start, resume, status
  */
 
-// ============================================================================
 // Execution Task Type Enum
-// ============================================================================
 
 export const ExecutionTaskTypeSchema = z.enum([
   'code_generation',
@@ -27,13 +21,15 @@ export const ExecutionTaskTypeSchema = z.enum([
   'refactoring',
   'documentation',
   'other',
+  'validation',
+  'patch_application',
+  'git_operation',
+  'custom',
 ]);
 
 export type ExecutionTaskType = z.infer<typeof ExecutionTaskTypeSchema>;
 
-// ============================================================================
 // Execution Task Status Enum
-// ============================================================================
 
 export const ExecutionTaskStatusSchema = z.enum([
   'pending',
@@ -46,9 +42,7 @@ export const ExecutionTaskStatusSchema = z.enum([
 
 export type ExecutionTaskStatus = z.infer<typeof ExecutionTaskStatusSchema>;
 
-// ============================================================================
 // Task Error Schema
-// ============================================================================
 
 const TaskErrorSchema = z.object({
   /** Error message */
@@ -57,7 +51,6 @@ const TaskErrorSchema = z.object({
   code: z.string().optional(),
   /** Stack trace or detailed error info */
   details: z.string().optional(),
-  /** ISO 8601 timestamp when error occurred */
   timestamp: z.string().datetime(),
   /** Whether error is recoverable */
   recoverable: z.boolean().default(true),
@@ -65,26 +58,19 @@ const TaskErrorSchema = z.object({
 
 export type TaskError = z.infer<typeof TaskErrorSchema>;
 
-// ============================================================================
 // Cost Tracking Schema
-// ============================================================================
 
 const CostTrackingSchema = z.object({
-  /** Total cost in USD */
   total_usd: z.number().nonnegative().default(0),
   /** Provider-specific cost breakdown */
   breakdown: z.record(z.string(), z.number().nonnegative()).optional(),
-  /** Number of API calls made */
   api_calls: z.number().int().nonnegative().default(0),
-  /** Tokens consumed (input + output) */
   tokens_consumed: z.number().int().nonnegative().default(0),
 });
 
 export type CostTracking = z.infer<typeof CostTrackingSchema>;
 
-// ============================================================================
 // Rate Limit Budget Schema
-// ============================================================================
 
 const RateLimitBudgetSchema = z.object({
   /** Provider identifier (e.g., 'openai', 'anthropic', 'github') */
@@ -101,106 +87,45 @@ const RateLimitBudgetSchema = z.object({
 
 export type RateLimitBudget = z.infer<typeof RateLimitBudgetSchema>;
 
-// ============================================================================
 // ExecutionTask Schema
-// ============================================================================
 
 export const ExecutionTaskSchema = z
   .object({
     /** Schema version for future migrations (semver) */
     schema_version: z.string().regex(/^[0-9]+\.[0-9]+\.[0-9]+$/, 'Invalid semver format'),
-    /** Unique execution task identifier */
     task_id: z.string().min(1),
-    /** Feature ID this task belongs to */
     feature_id: z.string().min(1),
-    /** Task title or description */
     title: z.string().min(1),
-    /** Task type classification */
     task_type: ExecutionTaskTypeSchema,
-    /** Current task status */
     status: ExecutionTaskStatusSchema,
     /** Task-specific configuration or parameters */
     config: z.record(z.string(), z.unknown()).optional(),
-    /** Assigned agent or executor identifier */
     assigned_agent: z.string().optional(),
     /** Task dependency IDs (must complete before this task starts) */
     dependency_ids: z.array(z.string()).default([]),
-    /** Number of retry attempts made */
     retry_count: z.number().int().nonnegative().default(0),
-    /** Maximum retry attempts allowed */
     max_retries: z.number().int().nonnegative().default(3),
-    /** Last error encountered (if any) */
     last_error: TaskErrorSchema.optional(),
     /** Path to task execution logs (relative to run directory) */
     logs_path: z.string().optional(),
-    /** Cost tracking for this task */
     cost: CostTrackingSchema.optional(),
-    /** Rate limit budget tracking */
     rate_limit_budget: RateLimitBudgetSchema.optional(),
-    /** Trace ID for distributed tracing */
     trace_id: z.string().optional(),
-    /** ISO 8601 timestamp when task was created */
     created_at: z.string().datetime(),
-    /** ISO 8601 timestamp when task was last updated */
     updated_at: z.string().datetime(),
-    /** ISO 8601 timestamp when task started */
     started_at: z.string().datetime().nullable().optional(),
-    /** ISO 8601 timestamp when task completed */
     completed_at: z.string().datetime().nullable().optional(),
-    /** Optional task metadata */
     metadata: z.record(z.string(), z.unknown()).optional(),
   })
   .strict();
 
 export type ExecutionTask = Readonly<z.infer<typeof ExecutionTaskSchema>>;
 
-// ============================================================================
 // Serialization Helpers
-// ============================================================================
 
-/**
- * Parse and validate ExecutionTask from JSON
- *
- * @param json - Raw JSON object or string
- * @returns Parsed ExecutionTask or error details
- */
-export function parseExecutionTask(json: unknown):
-  | {
-      success: true;
-      data: ExecutionTask;
-    }
-  | {
-      success: false;
-      errors: Array<{ path: string; message: string }>;
-    } {
-  const result = ExecutionTaskSchema.safeParse(json);
-
-  if (result.success) {
-    return {
-      success: true,
-      data: result.data as ExecutionTask,
-    };
-  }
-
-  return {
-    success: false,
-    errors: result.error.issues.map((err) => ({
-      path: err.path.join('.') || 'root',
-      message: err.message,
-    })),
-  };
-}
-
-/**
- * Serialize ExecutionTask to JSON string
- *
- * @param executionTask - ExecutionTask object to serialize
- * @param pretty - Whether to format output with indentation
- * @returns JSON string representation
- */
-export function serializeExecutionTask(executionTask: ExecutionTask, pretty = true): string {
-  return JSON.stringify(executionTask, null, pretty ? 2 : 0);
-}
+const { parse: parseExecutionTask, serialize: serializeExecutionTask } =
+  createModelParser<ExecutionTask>(ExecutionTaskSchema);
+export { parseExecutionTask, serializeExecutionTask };
 
 /**
  * Create a new ExecutionTask

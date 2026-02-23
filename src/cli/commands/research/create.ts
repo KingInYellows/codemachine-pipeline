@@ -2,12 +2,14 @@ import { Command, Flags } from '@oclif/core';
 import { getRunDirectoryPath } from '../../../persistence/runDirectoryManager';
 import { resolveRunDirectorySettings, selectFeatureId } from '../../utils/runDirectory';
 import { createCliLogger } from '../../../telemetry/logger';
-import { createRunMetricsCollector, StandardMetrics } from '../../../telemetry/metrics';
+import { createRunMetricsCollector } from '../../../telemetry/metrics';
 import {
   createResearchCoordinator,
   type CreateResearchTaskOptions,
 } from '../../../workflows/researchCoordinator';
 import type { FreshnessRequirement, ResearchSource } from '../../../core/models/ResearchTask';
+import { setJsonOutputMode } from '../../utils/cliErrors';
+import { flushTelemetrySuccess, flushTelemetryError } from '../../utils/telemetryLifecycle';
 
 type CreateFlags = {
   feature?: string;
@@ -79,7 +81,7 @@ export default class ResearchCreate extends Command {
     const startTime = Date.now();
 
     if (typedFlags.json) {
-      process.env.JSON_OUTPUT = '1';
+      setJsonOutputMode();
     }
 
     if (!typedFlags.objective || typedFlags.objective.length === 0) {
@@ -150,21 +152,9 @@ export default class ResearchCreate extends Command {
         `Objectives: ${queueResult.task.objectives.length} | Sources: ${queueResult.task.sources?.length ?? 0} | Cache: ${queueResult.task.cache_key ?? 'n/a'}`
       );
 
-      const duration = Date.now() - startTime;
-      metrics.observe(StandardMetrics.COMMAND_EXECUTION_DURATION_MS, duration, {
-        command: 'research:create',
-      });
-      metrics.increment(StandardMetrics.COMMAND_INVOCATIONS_TOTAL, {
-        command: 'research:create',
-        exit_code: '0',
-      });
-      await metrics.flush();
+      await flushTelemetrySuccess({ commandName: 'research:create', startTime, metrics });
     } catch (error) {
-      metrics.increment(StandardMetrics.COMMAND_INVOCATIONS_TOTAL, {
-        command: 'research:create',
-        exit_code: '1',
-      });
-      await metrics.flush();
+      await flushTelemetryError({ commandName: 'research:create', startTime, metrics }, error);
 
       logger.error('Failed to create research task', {
         error: error instanceof Error ? error.message : 'unknown error',

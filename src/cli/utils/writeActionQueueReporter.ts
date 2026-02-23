@@ -8,6 +8,7 @@
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 import type { WriteActionQueueManifest } from '../../workflows/writeActionQueue';
+import { isFileNotFound } from '../../utils/safeJson.js';
 
 // ============================================================================
 // Types
@@ -365,18 +366,6 @@ export function formatWriteActionQueueJSON(
     },
     recommendations: generateRecommendations(report),
   };
-}
-
-/**
- * Check if error is file not found
- */
-function isFileNotFound(error: unknown): error is NodeJS.ErrnoException {
-  return Boolean(
-    error &&
-    typeof error === 'object' &&
-    'code' in error &&
-    (error as NodeJS.ErrnoException).code === 'ENOENT'
-  );
 }
 
 // ============================================================================

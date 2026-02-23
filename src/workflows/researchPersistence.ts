@@ -16,9 +16,7 @@ import {
   type FreshnessRequirement,
 } from '../core/models/ResearchTask';
 
-// ============================================================================
 // Research Directory Structure
-// ============================================================================
 
 /**
  * Get path to research directory
@@ -59,9 +57,7 @@ export async function ensureResearchDirectories(runDir: string): Promise<void> {
   await fs.mkdir(tasksDir, { recursive: true });
 }
 
-// ============================================================================
 // Task Persistence
-// ============================================================================
 
 /**
  * Save research task to disk
@@ -132,9 +128,7 @@ export async function listTaskIds(runDir: string): Promise<string[]> {
   }
 }
 
-// ============================================================================
 // Cache Management
-// ============================================================================
 
 /**
  * Find existing task with matching cache key

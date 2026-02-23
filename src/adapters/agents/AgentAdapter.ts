@@ -22,299 +22,52 @@
 import * as crypto from 'node:crypto';
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
-import { z } from 'zod';
+import type { ManifestLoader, AgentManifest, ProviderRequirements } from './manifestLoader';
 import type { StructuredLogger } from '../../telemetry/logger';
 import type { CostTracker } from '../../telemetry/costTracker';
-import type {
-  ManifestLoader,
-  AgentManifest,
-  ProviderRequirements,
-  Features,
-  Tools,
-} from './manifestLoader';
-import type { ExecutionTaskType } from '../../core/models/ExecutionTask';
 import { getErrorMessage } from '../../utils/errors.js';
 
-// ============================================================================
-// Error Taxonomy
-// ============================================================================
+// Import from companion module for local use
+import { AgentAdapterError, AgentErrorSchema, CONTEXT_REQUIREMENTS } from './AgentAdapterTypes.js';
 
-/**
- * Error classification for deterministic failure handling
- * Per acceptance criteria: error taxonomy alignment for orchestration
- */
-const AgentErrorCategorySchema = z.enum([
-  'transient', // Retry automatically (network, rate-limit, timeout)
-  'permanent', // Do not retry (invalid input, unsupported feature, auth failure)
-  'humanAction', // Requires human intervention (ambiguous requirements, policy violation)
-]);
+// Re-export companion module symbols for backward compatibility
+export type {
+  AgentErrorCategory,
+  AgentError,
+  ExecutionContext,
+  ContextCapabilityRequirements,
+  AgentSessionRequest,
+  AgentSessionResponse,
+  ProviderInvoker,
+  SessionTelemetry,
+  AgentAdapterConfig,
+} from './AgentAdapterTypes.js';
 
-export type AgentErrorCategory = z.infer<typeof AgentErrorCategorySchema>;
+export {
+  AgentAdapterError,
+  AgentErrorSchema,
+  ExecutionContextSchema,
+  CONTEXT_REQUIREMENTS,
+  mapTaskTypeToContext,
+  SessionTelemetrySchema,
+} from './AgentAdapterTypes.js';
 
-/**
- * Structured agent error with taxonomy classification
- */
-const AgentErrorSchema = z
-  .object({
-    category: AgentErrorCategorySchema,
-    message: z.string().min(1),
-    code: z.string().optional(),
-    details: z.string().optional(),
-    providerId: z.string().optional(),
-    retryAfterSeconds: z.number().int().nonnegative().optional(),
-    fallbackAttempts: z.number().int().nonnegative().optional(),
-    timestamp: z.string().datetime(),
-  })
-  .strict();
-
-export type AgentError = z.infer<typeof AgentErrorSchema>;
-
-/**
- * Runtime error class for agent adapter failures
- */
-export class AgentAdapterError extends Error implements AgentError {
-  readonly category: AgentErrorCategory;
-  readonly code: string | undefined;
-  readonly details: string | undefined;
-  readonly providerId: string | undefined;
-  readonly retryAfterSeconds: number | undefined;
-  fallbackAttempts: number | undefined;
-  readonly timestamp: string;
-
-  constructor(params: AgentError) {
-    super(params.message);
-    this.name = 'AgentAdapterError';
-    this.category = params.category;
-    this.code = params.code;
-    this.details = params.details;
-    this.providerId = params.providerId;
-    this.retryAfterSeconds = params.retryAfterSeconds;
-    this.timestamp = params.timestamp;
-    this.fallbackAttempts = params.fallbackAttempts;
-    Object.setPrototypeOf(this, new.target.prototype);
-  }
-}
-
-// ============================================================================
-// Execution Context & Capability Mapping
-// ============================================================================
-
-/**
- * Execution context classification for capability negotiation
- * Maps ExecutionTask types to provider capability requirements
- */
-const ExecutionContextSchema = z.enum([
-  'code_generation',
-  'code_review',
-  'test_generation',
-  'refactoring',
-  'documentation',
-  'prd_generation',
-  'spec_generation',
-  'summarization',
-]);
-
-export type ExecutionContext = z.infer<typeof ExecutionContextSchema>;
-
-/**
- * Context-specific capability requirements
- * Used to translate ExecutionTask needs into manifest feature/tool guards
- */
-export interface ContextCapabilityRequirements {
-  minContextWindow: number;
-  requiredFeatures: Partial<Features>;
-  requiredTools?: Partial<Tools>;
-  preferredModelPattern?: RegExp;
-  maxCostPer1kTokens?: number;
-}
-
-/**
- * Map execution context to capability requirements
- * Per acceptance criteria: execution tasks specify capability needs
- */
-export const CONTEXT_REQUIREMENTS: Record<ExecutionContext, ContextCapabilityRequirements> = {
-  code_generation: {
-    minContextWindow: 8000,
-    requiredFeatures: { codeGeneration: true },
-    requiredTools: { functionCalling: true, jsonMode: true },
-    maxCostPer1kTokens: 0.15,
-  },
-  code_review: {
-    minContextWindow: 16000,
-    requiredFeatures: { codeReview: true },
-    requiredTools: { jsonMode: true },
-    maxCostPer1kTokens: 0.1,
-  },
-  test_generation: {
-    minContextWindow: 8000,
-    requiredFeatures: { testGeneration: true },
-    requiredTools: { functionCalling: true, jsonMode: true },
-    maxCostPer1kTokens: 0.12,
-  },
-  refactoring: {
-    minContextWindow: 12000,
-    requiredFeatures: { codeGeneration: true },
-    requiredTools: { functionCalling: true },
-    maxCostPer1kTokens: 0.15,
-  },
-  documentation: {
-    minContextWindow: 6000,
-    requiredFeatures: { summarization: true },
-    maxCostPer1kTokens: 0.08,
-  },
-  prd_generation: {
-    minContextWindow: 10000,
-    requiredFeatures: { prdGeneration: true },
-    requiredTools: { jsonMode: true },
-    maxCostPer1kTokens: 0.1,
-  },
-  spec_generation: {
-    minContextWindow: 12000,
-    requiredFeatures: { specGeneration: true },
-    requiredTools: { jsonMode: true },
-    maxCostPer1kTokens: 0.12,
-  },
-  summarization: {
-    minContextWindow: 4000,
-    requiredFeatures: { summarization: true },
-    maxCostPer1kTokens: 0.05,
-  },
-};
-
-/**
- * Map ExecutionTaskType to ExecutionContext
- * Handles legacy task types and provides sensible defaults
- */
-export function mapTaskTypeToContext(taskType: ExecutionTaskType): ExecutionContext {
-  const mapping: Record<ExecutionTaskType, ExecutionContext> = {
-    code_generation: 'code_generation',
-    testing: 'test_generation',
-    review: 'code_review',
-    refactoring: 'refactoring',
-    documentation: 'documentation',
-    pr_creation: 'summarization', // PR descriptions use summarization
-    deployment: 'documentation', // Deployment docs use documentation context
-    other: 'summarization', // Generic fallback
-  };
-
-  return mapping[taskType];
-}
-
-// ============================================================================
-// Agent Session
-// ============================================================================
-
-/**
- * Agent session request parameters
- */
-export interface AgentSessionRequest {
-  /** Execution context for capability negotiation */
-  context: ExecutionContext;
-  /** Structured prompt/input data */
-  prompt: unknown;
-  /** Execution task ID for tracing */
-  taskId: string;
-  /** Feature ID for cost attribution */
-  featureId: string;
-  /** Optional preferred provider ID */
-  preferredProviderId?: string;
-  /** Optional model override */
-  modelId?: string;
-  /** Optional context window override */
-  maxTokens?: number;
-  /** Intentional: agent session metadata varies by provider and use case */
-  metadata?: Record<string, unknown>;
-}
-
-/**
- * Agent session response
- */
-export interface AgentSessionResponse {
-  /** Generated output from agent */
-  output: unknown;
-  /** Selected provider ID */
-  providerId: string;
-  /** Selected model ID */
-  modelId: string;
-  /** Session ID for telemetry tracking */
-  sessionId: string;
-  /** Tokens consumed (input + output) */
-  tokensConsumed: number;
-  /** Cost in USD */
-  costUsd: number;
-  /** Processing duration in milliseconds */
-  durationMs: number;
-  /** Manifest hash for reproducibility */
-  manifestHash: string;
-  /** Whether fallback was used */
-  usedFallback: boolean;
-  /** Number of fallback attempts performed */
-  fallbackAttempts: number;
-}
-
-/**
- * Provider invocation function signature (used for dependency injection/testing)
- */
-export type ProviderInvoker = (
-  manifest: AgentManifest,
-  request: AgentSessionRequest,
-  sessionId: string,
-  startTime: number,
-  fallbackAttempts: number
-) => Promise<AgentSessionResponse>;
-
-/**
- * Session telemetry record for audit trails
- * Schema is used for type inference only; runtime validation is not required for internal telemetry
- */
-export const SessionTelemetrySchema = z
-  .object({
-    sessionId: z.string().min(1),
-    taskId: z.string().min(1),
-    featureId: z.string().min(1),
-    context: ExecutionContextSchema,
-    providerId: z.string().min(1),
-    modelId: z.string().min(1),
-    manifestHash: z.string().length(64), // SHA-256 hex
-    promptHash: z.string().length(64), // SHA-256 hex for context redaction
-    tokensConsumed: z.number().int().nonnegative(),
-    costUsd: z.number().nonnegative(),
-    durationMs: z.number().nonnegative(),
-    usedFallback: z.boolean(),
-    fallbackAttempts: z.number().int().nonnegative().default(0),
-    errorCategory: AgentErrorCategorySchema.optional(),
-    timestamp: z.string().datetime(),
-    metadata: z.record(z.string(), z.unknown()).optional(),
-  })
-  .strict();
-
-export type SessionTelemetry = z.infer<typeof SessionTelemetrySchema>;
+import type {
+  AgentErrorCategory,
+  ExecutionContext,
+  AgentSessionRequest,
+  AgentSessionResponse,
+  ProviderInvoker,
+  SessionTelemetry,
+  AgentAdapterConfig,
+} from './AgentAdapterTypes.js';
 
 const TELEMETRY_FILENAME = 'agent_sessions.jsonl';
+const RATE_LIMIT_WINDOW_MS = 60 * 60 * 1000; // 1 hour sliding window
 
 // ============================================================================
 // Agent Adapter
 // ============================================================================
-
-/**
- * Agent Adapter configuration
- */
-export interface AgentAdapterConfig {
-  /** Manifest loader instance */
-  manifestLoader: ManifestLoader;
-  /** Structured logger */
-  logger: StructuredLogger;
-  /** Cost tracker for spend attribution */
-  costTracker?: CostTracker;
-  /** Enable automatic fallback on transient errors */
-  enableFallback?: boolean;
-  /** Maximum fallback retry attempts */
-  maxFallbackAttempts?: number;
-  /** Session telemetry output directory */
-  telemetryDir?: string;
-  /** Optional custom provider invoker (used for testing/mocking) */
-  providerInvoker?: ProviderInvoker;
-}
 
 /**
  * Agent Adapter - Provider session orchestration with capability routing
@@ -340,6 +93,8 @@ export class AgentAdapter {
   private readonly telemetryDir: string | undefined;
   private readonly sessionHistory: SessionTelemetry[] = [];
   private readonly providerInvoker: ProviderInvoker;
+  private readonly rateLimitPerHour: number;
+  private readonly requestTimestamps: number[] = [];
 
   constructor(config: AgentAdapterConfig) {
     this.manifestLoader = config.manifestLoader;
@@ -348,6 +103,7 @@ export class AgentAdapter {
     this.enableFallback = config.enableFallback ?? true;
     this.maxFallbackAttempts = config.maxFallbackAttempts ?? 2;
     this.telemetryDir = config.telemetryDir;
+    this.rateLimitPerHour = config.rateLimitPerHour ?? 100;
     this.providerInvoker =
       config.providerInvoker ??
       ((manifest, request, sessionId, startTime, fallbackAttempts) =>
@@ -385,6 +141,10 @@ export class AgentAdapter {
     });
 
     try {
+      // 0. Enforce client-side rate limit before any provider work
+      const requestTimestamp = this.assertRateLimitHeadroom(request.context);
+      this.recordRequest(requestTimestamp);
+
       // 1. Map context to capability requirements
       const capabilityReqs = this.getCapabilityRequirements(request.context);
 
@@ -631,6 +391,57 @@ export class AgentAdapter {
       usedFallback: fallbackAttempts > 0,
       fallbackAttempts,
     };
+  }
+
+  /**
+   * Enforce client-side hourly rate limit using a sliding window.
+   * Returns the current timestamp so it can be recorded after the check passes.
+   */
+  private assertRateLimitHeadroom(operation: string): number {
+    const now = Date.now();
+    this.trimRequestWindow(now);
+
+    if (this.requestTimestamps.length >= this.rateLimitPerHour) {
+      const oldestRequest = this.requestTimestamps[0];
+      const retryAt = (oldestRequest ?? now) + RATE_LIMIT_WINDOW_MS;
+      const waitMs = Math.max(0, retryAt - now);
+      const waitMinutes = Math.max(1, Math.ceil(waitMs / 60000));
+
+      this.logger.warn('Agent request blocked to respect hourly budget', {
+        operation,
+        rateLimitPerHour: this.rateLimitPerHour,
+        waitMs,
+      });
+
+      throw this.createError(
+        'transient',
+        `Agent ${operation} blocked to respect the ${this.rateLimitPerHour} requests/hour budget. Try again in approximately ${waitMinutes} minute(s).`,
+        'RATE_LIMIT_EXCEEDED',
+        undefined,
+        undefined,
+        Math.ceil(waitMs / 1000),
+        0
+      );
+    }
+
+    return now;
+  }
+
+  /**
+   * Record request timestamp for sliding window tracking
+   */
+  private recordRequest(timestamp: number): void {
+    this.requestTimestamps.push(timestamp);
+  }
+
+  /**
+   * Remove timestamps that are outside the sliding window
+   */
+  private trimRequestWindow(now: number): void {
+    const windowStart = now - RATE_LIMIT_WINDOW_MS;
+    while (this.requestTimestamps.length > 0 && (this.requestTimestamps[0] ?? 0) < windowStart) {
+      this.requestTimestamps.shift();
+    }
   }
 
   /**

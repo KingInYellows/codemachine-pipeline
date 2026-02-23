@@ -13,18 +13,29 @@ import * as path from 'node:path';
 import type { ContextDocument } from '../core/models/ContextDocument';
 import type { RepoConfig } from '../core/config/RepoConfig';
 
-// ============================================================================
 // Types
-// ============================================================================
 
 /**
  * Structured sections extracted from PRD markdown
  */
 export type PRDSections = ReturnType<typeof extractPRDSections>;
 
-// ============================================================================
 // PRD Section Extraction
-// ============================================================================
+
+/**
+ * Extract bullet-list items from a named markdown section.
+ * Returns an empty array if the section is not found.
+ */
+function extractBulletSection(markdown: string, sectionPattern: string): string[] {
+  const regex = new RegExp(`## ${sectionPattern}\\s+([\\s\\S]*?)(?=##|$)`, 'i');
+  const match = markdown.match(regex);
+  if (!match) return [];
+  return match[1]
+    .trim()
+    .split('\n')
+    .filter((line) => line.trim().startsWith('-'))
+    .map((line) => line.replace(/^-\s*/, '').trim());
+}
 
 /**
  * Extract structured data from PRD markdown
@@ -37,74 +48,18 @@ export function extractPRDSections(prdMarkdown: string): {
   risks: string[];
   openQuestions: string[];
 } {
-  const sections = {
-    problemStatement: '',
-    goals: [] as string[],
-    nonGoals: [] as string[],
-    acceptanceCriteria: [] as string[],
-    risks: [] as string[],
-    openQuestions: [] as string[],
-  };
-
-  // Simple extraction logic - can be enhanced with proper markdown parsing
   const problemMatch = prdMarkdown.match(/## Problem Statement\s+([\s\S]*?)(?=##|$)/i);
-  if (problemMatch) {
-    sections.problemStatement = problemMatch[1].trim();
-  }
-
-  const goalsMatch = prdMarkdown.match(/## Goals\s+([\s\S]*?)(?=##|$)/i);
-  if (goalsMatch) {
-    const goalsList = goalsMatch[1]
-      .trim()
-      .split('\n')
-      .filter((line) => line.trim().startsWith('-'));
-    sections.goals = goalsList.map((g) => g.replace(/^-\s*/, '').trim());
-  }
-
-  const nonGoalsMatch = prdMarkdown.match(/## Non-Goals\s+([\s\S]*?)(?=##|$)/i);
-  if (nonGoalsMatch) {
-    const nonGoalsList = nonGoalsMatch[1]
-      .trim()
-      .split('\n')
-      .filter((line) => line.trim().startsWith('-'));
-    sections.nonGoals = nonGoalsList.map((g) => g.replace(/^-\s*/, '').trim());
-  }
-
-  const acceptanceMatch = prdMarkdown.match(
-    /## Success Criteria & Acceptance Criteria\s+([\s\S]*?)(?=##|$)/i
-  );
-  if (acceptanceMatch) {
-    const acceptanceList = acceptanceMatch[1]
-      .trim()
-      .split('\n')
-      .filter((line) => line.trim().startsWith('-'));
-    sections.acceptanceCriteria = acceptanceList.map((a) => a.replace(/^-\s*/, '').trim());
-  }
-
-  const risksMatch = prdMarkdown.match(/## Risks & Mitigations\s+([\s\S]*?)(?=##|$)/i);
-  if (risksMatch) {
-    const risksList = risksMatch[1]
-      .trim()
-      .split('\n')
-      .filter((line) => line.trim().startsWith('-'));
-    sections.risks = risksList.map((r) => r.replace(/^-\s*/, '').trim());
-  }
-
-  const questionsMatch = prdMarkdown.match(/## Open Questions\s+([\s\S]*?)(?=##|$)/i);
-  if (questionsMatch) {
-    const questionsList = questionsMatch[1]
-      .trim()
-      .split('\n')
-      .filter((line) => line.trim().startsWith('-'));
-    sections.openQuestions = questionsList.map((q) => q.replace(/^-\s*/, '').trim());
-  }
-
-  return sections;
+  return {
+    problemStatement: problemMatch ? problemMatch[1].trim() : '',
+    goals: extractBulletSection(prdMarkdown, 'Goals'),
+    nonGoals: extractBulletSection(prdMarkdown, 'Non-Goals'),
+    acceptanceCriteria: extractBulletSection(prdMarkdown, 'Success Criteria & Acceptance Criteria'),
+    risks: extractBulletSection(prdMarkdown, 'Risks & Mitigations'),
+    openQuestions: extractBulletSection(prdMarkdown, 'Open Questions'),
+  };
 }
 
-// ============================================================================
 // Constraint and File Glob Extraction
-// ============================================================================
 
 /**
  * Extract technical constraints from PRD and context
@@ -206,9 +161,7 @@ export function deriveReferencedFileGlobs(
   return Array.from(globs).slice(0, 20);
 }
 
-// ============================================================================
 // Unknown Detection
-// ============================================================================
 
 /**
  * Detect unknowns in specification content

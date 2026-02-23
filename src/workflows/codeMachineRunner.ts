@@ -1,4 +1,3 @@
-import { spawn, type ChildProcess } from 'node:child_process';
 import * as fs from 'node:fs/promises';
 import { createWriteStream, type WriteStream } from 'node:fs';
 import * as path from 'node:path';
@@ -7,6 +6,9 @@ import type { ExecutionConfig, ExecutionEngineType } from '../core/config/RepoCo
 import type { StructuredLogger } from '../telemetry/logger.js';
 import { getErrorMessage } from '../utils/errors.js';
 import { filterEnvironment as filterEnv } from '../utils/envFilter.js';
+import { validateCliPath } from '../adapters/codemachine/types.js';
+import { runProcess } from '../utils/processRunner.js';
+export { validateCliPath };
 
 export const EXIT_CODES = {
   SUCCESS: 0,
@@ -29,7 +31,6 @@ export interface RunnerOptions {
   logPath?: string;
 }
 
-const DEFAULT_MAX_BUFFER_SIZE = 10 * 1024 * 1024;
 const DEFAULT_LOG_ROTATION_MB = 100;
 const DEFAULT_LOG_ROTATION_KEEP = 3;
 
@@ -106,36 +107,6 @@ async function rotateLogFiles(
 }
 
 /**
- * Validate CLI path for security issues.
- * Uses an allowlist regex instead of a blocklist to prevent bypass
- * via `$()`, backticks, or Unicode homoglyphs.
- */
-const SAFE_CLI_PATH_PATTERN = /^[a-zA-Z0-9_\-./:\\]+$/;
-
-export function validateCliPath(cliPath: string): { valid: boolean; error?: string } {
-  if (cliPath.length === 0) {
-    return { valid: false, error: 'CLI path is empty' };
-  }
-  if (cliPath.trim() !== cliPath) {
-    return { valid: false, error: 'CLI path contains leading or trailing whitespace' };
-  }
-  if (!SAFE_CLI_PATH_PATTERN.test(cliPath)) {
-    // Provide specific error messages for common attack vectors
-    if (/[\n\r]/.test(cliPath)) {
-      return { valid: false, error: 'CLI path contains newline characters' };
-    }
-    if (/[;|&`$(){}]/.test(cliPath)) {
-      return { valid: false, error: 'CLI path contains shell metacharacters' };
-    }
-    return { valid: false, error: 'CLI path contains invalid characters' };
-  }
-  if (cliPath.split(/[\\/]/).includes('..')) {
-    return { valid: false, error: 'CLI path contains path traversal segments (..)' };
-  }
-  return { valid: true };
-}
-
-/**
  * Check if CodeMachine CLI is available and get version
  */
 export async function validateCliAvailability(
@@ -158,44 +129,17 @@ export async function validateCliAvailability(
   }
 
   // Try to get version
-  return new Promise((resolve) => {
-    const childProcess = spawn(cliPath, ['--version'], {
-      shell: false,
-      stdio: ['ignore', 'pipe', 'pipe'],
-      timeout: 5000,
-    });
+  const result = await runProcess(cliPath, ['--version'], { timeoutMs: 5000 });
 
-    let stdout = '';
-    let stderr = '';
+  if (result.exitCode === 0) {
+    const version = result.stdout.trim().split('\n')[0]?.trim();
+    return { available: true, version };
+  }
 
-    childProcess.stdout?.on('data', (chunk: Buffer) => {
-      stdout += chunk.toString('utf-8');
-    });
-
-    childProcess.stderr?.on('data', (chunk: Buffer) => {
-      stderr += chunk.toString('utf-8');
-    });
-
-    childProcess.on('close', (code) => {
-      if (code === 0) {
-        // Extract version from output (typically first line)
-        const version = stdout.trim().split('\n')[0]?.trim();
-        resolve({ available: true, version });
-      } else {
-        resolve({
-          available: false,
-          error: `CLI returned exit code ${code}: ${stderr || stdout}`.trim(),
-        });
-      }
-    });
-
-    childProcess.on('error', (error) => {
-      resolve({
-        available: false,
-        error: `Failed to execute CLI: ${error.message}`,
-      });
-    });
-  });
+  return {
+    available: false,
+    error: `CLI returned exit code ${result.exitCode}: ${result.stderr || result.stdout}`.trim(),
+  };
 }
 
 function filterEnvironment(allowlist: string[]): Record<string, string> {
@@ -258,6 +202,7 @@ export async function runCodeMachine(
     timeout_ms: options.timeoutMs,
   });
 
+  // ── Log-stream setup (specific to codeMachineRunner) ────────────────────
   let initialLogSize = 0;
   if (options.logPath) {
     try {
@@ -268,239 +213,128 @@ export async function runCodeMachine(
     }
   }
 
-  return new Promise((resolve) => {
-    const stdoutChunks: Buffer[] = [];
-    const stderrChunks: Buffer[] = [];
-    let timedOut = false;
-    let killed = false;
+  let logStream: WriteStream | undefined;
+  let logSize = initialLogSize;
+  let logQueue: Promise<void> = Promise.resolve();
+  let enqueueLogWrite: (chunk: Buffer) => void = () => undefined;
 
-    let childProcess: ChildProcess;
-    try {
-      childProcess = spawn(config.codemachine_cli_path, args, {
-        cwd: options.workspaceDir,
-        env,
-        shell: false,
-        stdio: ['ignore', 'pipe', 'pipe'],
-      });
-    } catch (error) {
-      const message = getErrorMessage(error);
-      resolve({
-        taskId: options.taskId,
-        exitCode: EXIT_CODES.FAILURE,
-        stdout: '',
-        stderr: `Failed to spawn CodeMachine CLI: ${message}`,
-        durationMs: Date.now() - startTime,
-        timedOut: false,
-        killed: false,
-      });
-      return;
-    }
-
-    const timeoutHandle = setTimeout(() => {
-      timedOut = true;
-      childProcess.kill('SIGTERM');
-
-      setTimeout(() => {
-        if (!childProcess.killed) {
-          killed = true;
-          childProcess.kill('SIGKILL');
-        }
-      }, 5000);
-    }, options.timeoutMs);
-
-    let logStream: WriteStream | undefined;
-    let logSize = initialLogSize;
-    let logQueue: Promise<void> = Promise.resolve();
-    let enqueueLogWrite: (chunk: Buffer) => void = () => undefined;
-    let totalBufferSize = 0;
-    let bufferLimitReached = false;
-    const maxBuffer =
-      config.max_log_buffer_size && config.max_log_buffer_size > 0
-        ? config.max_log_buffer_size
-        : DEFAULT_MAX_BUFFER_SIZE;
-
-    if (options.logPath) {
-      const logPath = options.logPath;
-      const attachLogStream = (): WriteStream => {
-        const stream = createWriteStream(logPath, { flags: 'a', mode: 0o600 });
-        stream.on('error', (err) => {
-          options.logger?.warn('Log stream error, disabling file logging', {
-            task_id: options.taskId,
-            logPath,
-            error: err.message,
-          });
-          logStream = undefined;
+  if (options.logPath) {
+    const logPath = options.logPath;
+    const attachLogStream = (): WriteStream => {
+      const stream = createWriteStream(logPath, { flags: 'a', mode: 0o600 });
+      stream.on('error', (err) => {
+        options.logger?.warn('Log stream error, disabling file logging', {
+          task_id: options.taskId,
+          logPath,
+          error: err.message,
         });
-        return stream;
-      };
+        logStream = undefined;
+      });
+      return stream;
+    };
 
-      logStream = attachLogStream();
+    logStream = attachLogStream();
 
-      enqueueLogWrite = (chunk: Buffer): void => {
-        if (!logPath || !logStream) {
+    enqueueLogWrite = (chunk: Buffer): void => {
+      if (!logPath || !logStream) {
+        return;
+      }
+
+      logQueue = logQueue.then(async () => {
+        if (!logStream) {
           return;
         }
 
-        logQueue = logQueue.then(async () => {
-          if (!logStream) {
-            return;
-          }
+        if (logSize + chunk.length > logRotationBytes) {
+          const streamToClose = logStream;
+          logStream = undefined;
+          logSize = 0;
 
-          if (logSize + chunk.length > logRotationBytes) {
-            const streamToClose = logStream;
-            logStream = undefined;
-            logSize = 0;
-
-            await new Promise<void>((resolve) => {
-              if (!streamToClose) {
-                resolve();
-                return;
-              }
-              streamToClose.end(() => resolve());
-            });
-
-            await rotateLogFiles(
-              logPath,
-              logRotationKeep,
-              logRotationCompress,
-              options.logger,
-              options.taskId
-            );
-
-            logStream = attachLogStream();
-          }
-
-          logStream?.write(chunk);
-          logSize += chunk.length;
-        });
-      };
-    }
-
-    childProcess.stdout?.on('data', (chunk: Buffer) => {
-      enqueueLogWrite(chunk);
-      if (!bufferLimitReached) {
-        totalBufferSize += chunk.length;
-        if (totalBufferSize > maxBuffer) {
-          bufferLimitReached = true;
-          options.logger?.warn('Large output detected, streaming to file only', {
-            task_id: options.taskId,
-            buffer_size: totalBufferSize,
+          await new Promise<void>((innerResolve) => {
+            if (!streamToClose) {
+              innerResolve();
+              return;
+            }
+            streamToClose.end(() => innerResolve());
           });
-        } else {
-          stdoutChunks.push(chunk);
-        }
-      }
-    });
 
-    childProcess.stderr?.on('data', (chunk: Buffer) => {
-      enqueueLogWrite(chunk);
-      if (!bufferLimitReached) {
-        totalBufferSize += chunk.length;
-        if (totalBufferSize > maxBuffer) {
-          bufferLimitReached = true;
-          options.logger?.warn('Large output detected, streaming to file only', {
-            task_id: options.taskId,
-            buffer_size: totalBufferSize,
-          });
-        } else {
-          stderrChunks.push(chunk);
-        }
-      }
-    });
+          await rotateLogFiles(
+            logPath,
+            logRotationKeep,
+            logRotationCompress,
+            options.logger,
+            options.taskId
+          );
 
-    childProcess.on('close', (code, signal) => {
-      clearTimeout(timeoutHandle);
-      const finalize = async (): Promise<void> => {
-        try {
-          await logQueue;
-        } catch {
-          // Ignore log queue errors on shutdown
+          logStream = attachLogStream();
         }
 
-        if (logStream) {
-          await new Promise<void>((flushResolve) => {
-            logStream?.end(() => flushResolve());
-          });
-        }
+        logStream?.write(chunk);
+        logSize += chunk.length;
+      });
+    };
+  }
 
-        const stdout = Buffer.concat(stdoutChunks).toString('utf-8');
-        const stderr = Buffer.concat(stderrChunks).toString('utf-8');
-        const durationMs = Date.now() - startTime;
+  // ── Spawn via shared utility ─────────────────────────────────────────────
+  const maxBufferSize =
+    config.max_log_buffer_size && config.max_log_buffer_size > 0
+      ? config.max_log_buffer_size
+      : undefined;
 
-        let exitCode: number;
-        if (timedOut) {
-          exitCode = EXIT_CODES.TIMEOUT;
-        } else if (signal === 'SIGKILL') {
-          exitCode = EXIT_CODES.SIGKILL;
-        } else {
-          exitCode = code ?? EXIT_CODES.FAILURE;
-        }
-
-        if (timedOut) {
-          options.logger?.warn('CodeMachine execution timed out', {
-            task_id: options.taskId,
-            timeout_ms: options.timeoutMs,
-            duration_ms: durationMs,
-            killed,
-          });
-        } else {
-          options.logger?.info('CodeMachine execution completed', {
-            task_id: options.taskId,
-            exit_code: exitCode,
-            duration_ms: durationMs,
-          });
-        }
-
-        resolve({
-          taskId: options.taskId,
-          exitCode,
-          stdout,
-          stderr: timedOut
-            ? `${stderr}\n\nExecution timed out after ${options.timeoutMs}ms`
-            : stderr,
-          durationMs,
-          timedOut,
-          killed,
-        });
-      };
-
-      void finalize();
-    });
-
-    childProcess.on('error', (error) => {
-      clearTimeout(timeoutHandle);
-      const finalize = async (): Promise<void> => {
-        try {
-          await logQueue;
-        } catch {
-          // Ignore log queue errors on shutdown
-        }
-
-        if (logStream) {
-          await new Promise<void>((flushResolve) => {
-            logStream?.end(() => flushResolve());
-          });
-        }
-
-        options.logger?.error('CodeMachine execution error', {
-          task_id: options.taskId,
-          error: error.message,
-        });
-
-        resolve({
-          taskId: options.taskId,
-          exitCode: EXIT_CODES.FAILURE,
-          stdout: Buffer.concat(stdoutChunks).toString('utf-8'),
-          stderr: `Execution error: ${error.message}`,
-          durationMs: Date.now() - startTime,
-          timedOut: false,
-          killed: false,
-        });
-      };
-
-      void finalize();
-    });
+  const result = await runProcess(config.codemachine_cli_path, args, {
+    cwd: options.workspaceDir,
+    env,
+    timeoutMs: options.timeoutMs,
+    ...(maxBufferSize !== undefined ? { maxBufferSize } : {}),
+    onStdoutChunk: enqueueLogWrite,
+    onStderrChunk: enqueueLogWrite,
+    onBufferLimitExceeded: (totalBytes) => {
+      options.logger?.warn('Large output detected, streaming to file only', {
+        task_id: options.taskId,
+        buffer_size: totalBytes,
+      });
+    },
   });
+
+  // Flush log stream after process exits
+  try {
+    await logQueue;
+  } catch {
+    // Ignore log queue errors on shutdown
+  }
+  if (logStream) {
+    await new Promise<void>((flushResolve) => {
+      logStream?.end(() => flushResolve());
+    });
+  }
+
+  // ── Map result to RunnerResult ───────────────────────────────────────────
+  if (result.timedOut) {
+    options.logger?.warn('CodeMachine execution timed out', {
+      task_id: options.taskId,
+      timeout_ms: options.timeoutMs,
+      duration_ms: result.durationMs,
+      killed: result.killed,
+    });
+  } else {
+    options.logger?.info('CodeMachine execution completed', {
+      task_id: options.taskId,
+      exit_code: result.exitCode,
+      duration_ms: result.durationMs,
+    });
+  }
+
+  return {
+    taskId: options.taskId,
+    exitCode: result.exitCode,
+    stdout: result.stdout,
+    stderr: result.timedOut
+      ? `${result.stderr}\n\nExecution timed out after ${options.timeoutMs}ms`
+      : result.stderr,
+    durationMs: result.durationMs,
+    timedOut: result.timedOut,
+    killed: result.killed,
+  };
 }
 
 export function isSuccess(result: RunnerResult): boolean {

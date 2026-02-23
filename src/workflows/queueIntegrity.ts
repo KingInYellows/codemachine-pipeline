@@ -11,14 +11,12 @@ import * as path from 'node:path';
 import { readManifest } from '../persistence/runDirectoryManager';
 import { loadSnapshot } from './queueSnapshotManager.js';
 import { readOperationsWithStats } from './queueOperationsLog.js';
-import { QUEUE_SNAPSHOT_FILE } from './queueConstants.js';
+import { QUEUE_SNAPSHOT_FILE } from './queueTypes.js';
 import type { QueueIntegrityMode } from './queueTypes.js';
 import { QueueIntegrityError } from './queueTypes.js';
 import { getErrorMessage } from '../utils/errors.js';
 
-// ============================================================================
 // Integrity State
-// ============================================================================
 
 /** Set of runDirs whose integrity has already been verified this process. */
 export const integrityVerifiedDirs = new Set<string>();
@@ -33,9 +31,7 @@ export function invalidateIntegrityVerification(runDir: string): void {
   integrityVerifiedDirs.delete(runDir);
 }
 
-// ============================================================================
 // Integrity Mode
-// ============================================================================
 
 /** Read the integrity mode from environment, defaulting to fail-fast. */
 export function getQueueIntegrityMode(): QueueIntegrityMode {
@@ -44,9 +40,7 @@ export function getQueueIntegrityMode(): QueueIntegrityMode {
   return 'fail-fast';
 }
 
-// ============================================================================
 // Integrity Result
-// ============================================================================
 
 /** Result of queue integrity verification. */
 export interface QueueIntegrityResult {
@@ -58,9 +52,7 @@ export interface QueueIntegrityResult {
   errors: string[];
 }
 
-// ============================================================================
 // Integrity Verification
-// ============================================================================
 
 /**
  * Verify queue integrity by checking snapshot checksum and WAL sequence continuity.

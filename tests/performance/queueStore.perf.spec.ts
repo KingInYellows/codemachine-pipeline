@@ -62,10 +62,7 @@ async function setupBenchmark(taskCount: number): Promise<{ runDir: string; temp
   const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), `queue-perf-${taskCount}-`));
   const runDir = await createRunDirectory(tempDir, `PERF-${taskCount}`, {
     title: `Performance Test ${taskCount} tasks`,
-    repo: {
-      url: 'https://github.com/test/perf',
-      default_branch: 'main',
-    },
+    repoUrl: 'https://github.com/test/perf',
   });
 
   const plan = createPlan(taskCount);

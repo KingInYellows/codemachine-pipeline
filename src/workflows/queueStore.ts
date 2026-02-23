@@ -1,7 +1,13 @@
 import * as fs from 'node:fs/promises';
 import * as crypto from 'node:crypto';
 import * as path from 'node:path';
-import { type ExecutionTask, serializeExecutionTask } from '../core/models/ExecutionTask';
+import { z } from 'zod';
+import {
+  type ExecutionTask,
+  ExecutionTaskSchema,
+  serializeExecutionTask,
+} from '../core/models/ExecutionTask';
+import { validateOrThrow } from '../validation/helpers.js';
 import { readManifest, writeManifest, withLock } from '../persistence/runDirectoryManager';
 import { createLogger, type StructuredLogger, LogLevel } from '../telemetry/logger';
 import { getErrorMessage } from '../utils/errors.js';
@@ -10,7 +16,7 @@ import { getErrorMessage } from '../utils/errors.js';
 import { getCounts, addTask as addTaskToIndex } from './queueMemoryIndex.js';
 import { appendOperationsBatch } from './queueOperationsLog.js';
 import { compact } from './queueCompactionEngine.js';
-import { QUEUE_FILE, QUEUE_MANIFEST_FILE, QUEUE_SNAPSHOT_FILE } from './queueConstants.js';
+import { QUEUE_FILE, QUEUE_MANIFEST_FILE, QUEUE_SNAPSHOT_FILE } from './queueTypes.js';
 import type {
   QueueOperation,
   QueueManifest,
@@ -42,6 +48,15 @@ import {
   invalidateIntegrityVerification,
   verifyQueueIntegrity,
 } from './queueIntegrity.js';
+
+const QueueSnapshotSchema = z.object({
+  schema_version: z.string(),
+  feature_id: z.string(),
+  tasks: z.record(z.string(), ExecutionTaskSchema),
+  dependency_graph: z.record(z.string(), z.array(z.string())),
+  timestamp: z.string(),
+  checksum: z.string(),
+});
 
 /**
  * Invalidate all process-local queue state for a run directory.
@@ -358,7 +373,7 @@ export async function loadQueueSnapshot(runDir: string): Promise<QueueSnapshot |
 
   try {
     const content = await fs.readFile(snapshotPath, 'utf-8');
-    const snapshot = JSON.parse(content) as QueueSnapshot;
+    const snapshot = validateOrThrow(QueueSnapshotSchema, JSON.parse(content), 'queue snapshot');
 
     // Verify snapshot integrity
     const dataToHash = JSON.stringify({

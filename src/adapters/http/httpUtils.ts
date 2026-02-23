@@ -6,14 +6,9 @@
  */
 
 import type { Headers } from 'undici-types';
-import type { LogContext } from '../../core/sharedTypes';
 import * as crypto from 'node:crypto';
-import { createLogger, type StructuredLogger, LogLevel } from '../../telemetry/logger';
-import type { LoggerInterface } from '../../telemetry/logger';
 
-// ============================================================================
 // Sensitive Data Constants
-// ============================================================================
 
 export const SENSITIVE_HEADERS = new Set([
   'authorization',
@@ -26,9 +21,7 @@ export const SENSITIVE_HEADERS = new Set([
 
 export const SENSITIVE_KEYWORDS = ['token', 'secret', 'password', 'credential'];
 
-// ============================================================================
 // ID Generation
-// ============================================================================
 
 /**
  * Generate unique request ID for tracing
@@ -44,9 +37,7 @@ export function generateIdempotencyKey(): string {
   return `idem_${crypto.randomBytes(16).toString('hex')}`;
 }
 
-// ============================================================================
 // Header & URL Utilities
-// ============================================================================
 
 /**
  * Extract headers from Headers object to plain object
@@ -94,9 +85,7 @@ export function sanitizeHeaders(headers: Record<string, string>): Record<string,
   return sanitized;
 }
 
-// ============================================================================
 // String & Timing Utilities
-// ============================================================================
 
 /**
  * Truncate string to maximum length
@@ -115,32 +104,4 @@ export function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-// ============================================================================
 // Logger Factory
-// ============================================================================
-
-/**
- * Create a default logger implementation using StructuredLogger
- */
-export function createConsoleLogger(): LoggerInterface {
-  const logger: StructuredLogger = createLogger({
-    component: 'http-client',
-    minLevel: LogLevel.DEBUG,
-    mirrorToStderr: true,
-  });
-
-  return {
-    debug: (message: string, context?: LogContext) => {
-      logger.debug(message, context);
-    },
-    info: (message: string, context?: LogContext) => {
-      logger.info(message, context);
-    },
-    warn: (message: string, context?: LogContext) => {
-      logger.warn(message, context);
-    },
-    error: (message: string, context?: LogContext) => {
-      logger.error(message, context);
-    },
-  };
-}

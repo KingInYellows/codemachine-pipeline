@@ -115,6 +115,3 @@ export {
   type CodeMachineExecutionResult,
   type CodeMachineEngineType,
 } from './codemachine/index.js';
-
-// Telemetry exports (legacy / for backward compatibility)
-export { type LoggerInterface } from '../telemetry/logger.js';

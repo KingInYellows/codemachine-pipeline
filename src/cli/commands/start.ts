@@ -1,9 +1,17 @@
 import { Command, Flags } from '@oclif/core';
 import * as path from 'node:path';
 import * as fs from 'node:fs/promises';
-import { execSync } from 'node:child_process';
-import { randomUUID } from 'node:crypto';
 import type { StructuredLogger } from '../../telemetry/logger';
+import {
+  type StartFlags,
+  resolveFeatureTitle,
+  resolveSourceDescriptor,
+  generateFeatureId,
+  findGitRoot,
+  prdApprovalRequired,
+  fetchLinearIssue,
+  formatLinearContext,
+} from '../startHelpers.js';
 import { createCliLogger, LogLevel } from '../../telemetry/logger';
 import type { MetricsCollector } from '../../telemetry/metrics';
 import { createRunMetricsCollector, StandardMetrics } from '../../telemetry/metrics';
@@ -30,13 +38,19 @@ import {
 } from '../../workflows/researchCoordinator';
 import type { ResearchTask } from '../../core/models/ResearchTask';
 import { draftPRD } from '../../workflows/prdAuthoringEngine';
-import { createLinearAdapter, type IssueSnapshot } from '../../adapters/linear/LinearAdapter';
+import type { IssueSnapshot } from '../../adapters/linear/LinearAdapter';
 import { CLIExecutionEngine } from '../../workflows/cliExecutionEngine';
 import { loadQueue } from '../../workflows/queueStore';
 import { createCodeMachineStrategy } from '../../workflows/codeMachineStrategy';
 import { createCodeMachineCLIStrategy } from '../../workflows/codeMachineCLIStrategy';
-import { CliError, CliErrorCode, formatErrorMessage, formatErrorJson } from '../utils/cliErrors';
-import { getErrorMessage } from '../../utils/errors.js';
+import {
+  CliError,
+  CliErrorCode,
+  formatErrorMessage,
+  formatErrorJson,
+  setJsonOutputMode,
+} from '../utils/cliErrors';
+import { flushTelemetryError } from '../utils/telemetryLifecycle';
 import { DEFAULT_EXECUTION_CONFIG } from '../../core/config/RepoConfig.js';
 
 const EXECUTION_STEPS = {
@@ -45,16 +59,6 @@ const EXECUTION_STEPS = {
   PRD: 'prd_authoring',
   Execution: 'task_execution',
 } as const;
-
-type StartFlags = {
-  prompt?: string;
-  linear?: string;
-  spec?: string;
-  json: boolean;
-  'dry-run': boolean;
-  'max-parallel'?: number;
-  'skip-execution': boolean;
-};
 
 type ResearchDetectionOptions = {
   repoRoot: string;
@@ -153,7 +157,7 @@ export default class Start extends Command {
     const typedFlags = flags as StartFlags;
 
     if (typedFlags.json) {
-      process.env.JSON_OUTPUT = '1';
+      setJsonOutputMode();
     }
 
     // Early validation with proper error handling
@@ -199,12 +203,12 @@ export default class Start extends Command {
     let currentStepLabel: string | undefined;
 
     const repoConfig = settings.config;
-    const repoRoot = this.findGitRoot();
+    const repoRoot = findGitRoot();
     await fs.mkdir(settings.baseDir, { recursive: true });
 
-    const featureId = this.generateFeatureId();
-    const featureTitle = this.resolveFeatureTitle(typedFlags);
-    const featureSource = this.resolveSourceDescriptor(typedFlags);
+    const featureId = generateFeatureId();
+    const featureTitle = resolveFeatureTitle(typedFlags);
+    const featureSource = resolveSourceDescriptor(typedFlags);
     const resolvedSpecPath = typedFlags.spec ? path.resolve(typedFlags.spec) : undefined;
     const runDir = await createRunDirectory(settings.baseDir, featureId, {
       title: featureTitle,
@@ -257,7 +261,7 @@ export default class Start extends Command {
       // Fetch Linear issue snapshot if --linear flag is provided
       let linearSnapshot: IssueSnapshot | undefined;
       if (typedFlags.linear) {
-        linearSnapshot = await this.fetchLinearIssue(typedFlags.linear, runDir, logger);
+        linearSnapshot = await fetchLinearIssue(typedFlags.linear, runDir, logger);
       }
 
       currentStepLabel = EXECUTION_STEPS.Context;
@@ -270,29 +274,17 @@ export default class Start extends Command {
       });
 
       currentStepLabel = EXECUTION_STEPS.Research;
-      const researchOptions: ResearchDetectionOptions = {
-        repoRoot,
-        runDir,
-        featureId,
-        logger,
-        metrics,
-        contextDocument: contextResult.contextDocument,
-      };
-
-      if (typedFlags.prompt) {
-        researchOptions.promptText = typedFlags.prompt;
-      }
-
-      if (specText) {
-        researchOptions.specText = specText;
-      }
-
-      // Include Linear issue data in research context
-      if (linearSnapshot) {
-        const linearContext = this.formatLinearContext(linearSnapshot);
-        researchOptions.specText = specText ? `${specText}\n\n${linearContext}` : linearContext;
-      }
-
+      const researchOptions = this.buildResearchOptions(
+        {
+          repoRoot,
+          runDir,
+          featureId,
+          logger,
+          metrics,
+          contextDocument: contextResult.contextDocument,
+        },
+        { promptText: typedFlags.prompt, specText, linearSnapshot }
+      );
       const researchTasks = await this.runResearchDetection(researchOptions);
 
       currentStepLabel = EXECUTION_STEPS.PRD;
@@ -309,7 +301,7 @@ export default class Start extends Command {
         metrics,
       });
 
-      const approvalRequired = this.prdApprovalRequired(repoConfig);
+      const approvalRequired = prdApprovalRequired(repoConfig);
 
       await updateManifest(runDir, (manifest) => ({
         artifacts: {
@@ -397,12 +389,10 @@ export default class Start extends Command {
         this.exit(exitCode);
       }
     } catch (error) {
-      metrics.increment(StandardMetrics.COMMAND_INVOCATIONS_TOTAL, {
-        command: 'start',
-        exit_code: '1',
-      });
-      await metrics.flush();
-      commandSpan.end({ code: SpanStatusCode.ERROR, message: formatErrorMessage(error) });
+      await flushTelemetryError(
+        { commandName: 'start', startTime, logger, metrics, traceManager, commandSpan },
+        error
+      );
 
       await setLastError(runDir, currentStepLabel ?? 'start', formatErrorMessage(error), true);
 
@@ -454,6 +444,41 @@ export default class Start extends Command {
 
     await updateExecutionProgress(runDir, 1);
     return result;
+  }
+
+  /**
+   * Build research detection options, merging prompt, spec text, and Linear context.
+   */
+  private buildResearchOptions(
+    base: {
+      repoRoot: string;
+      runDir: string;
+      featureId: string;
+      logger: StructuredLogger;
+      metrics: MetricsCollector;
+      contextDocument: ResearchDetectionOptions['contextDocument'];
+    },
+    input: {
+      promptText?: string | undefined;
+      specText?: string | undefined;
+      linearSnapshot?: IssueSnapshot | undefined;
+    }
+  ): ResearchDetectionOptions {
+    const options: ResearchDetectionOptions = { ...base };
+    if (input.promptText) {
+      options.promptText = input.promptText;
+    }
+    const linearContext = input.linearSnapshot
+      ? formatLinearContext(input.linearSnapshot)
+      : undefined;
+    if (input.specText && linearContext) {
+      options.specText = `${input.specText}\n\n${linearContext}`;
+    } else if (input.specText) {
+      options.specText = input.specText;
+    } else if (linearContext) {
+      options.specText = linearContext;
+    }
+    return options;
   }
 
   private async runResearchDetection(options: ResearchDetectionOptions): Promise<ResearchTask[]> {
@@ -656,39 +681,6 @@ export default class Start extends Command {
     return results;
   }
 
-  private resolveFeatureTitle(flags: StartFlags): string {
-    if (flags.prompt) {
-      return flags.prompt.slice(0, 80);
-    }
-
-    if (flags.linear) {
-      return `Feature from Linear issue ${flags.linear}`;
-    }
-
-    if (flags.spec) {
-      return `Feature from spec ${path.basename(flags.spec)}`;
-    }
-
-    return 'New Feature';
-  }
-
-  private resolveSourceDescriptor(flags: StartFlags): string {
-    if (flags.prompt) {
-      return 'prompt';
-    }
-    if (flags.linear) {
-      return `linear:${flags.linear}`;
-    }
-    if (flags.spec) {
-      return `spec:${flags.spec}`;
-    }
-    return 'unknown';
-  }
-
-  private generateFeatureId(): string {
-    return `FEAT-${randomUUID().split('-')[0]}`;
-  }
-
   private emitStartSummary(payload: StartResultPayload, jsonMode: boolean): void {
     if (jsonMode) {
       this.log(JSON.stringify(payload, null, 2));
@@ -776,167 +768,6 @@ export default class Start extends Command {
       plan.planned_steps.forEach((step) => this.log(`  • ${step}`));
       this.log('');
     }
-  }
-
-  private findGitRoot(): string {
-    try {
-      return execSync('git rev-parse --show-toplevel', {
-        encoding: 'utf-8',
-        stdio: ['pipe', 'pipe', 'pipe'],
-      }).trim();
-    } catch (error) {
-      throw new CliError(
-        `Failed to determine git repository root: ${formatErrorMessage(error)}`,
-        CliErrorCode.GIT_NOT_REPO,
-        {
-          remediation: 'Ensure you are running inside a git repository.',
-          howToFix: 'Run "git init" to initialize a repository, or cd into an existing repo.',
-          commonFixes: [
-            'Run the command from within a git repository',
-            'Initialize a new repo with "git init"',
-            'Check that .git directory exists in parent directories',
-          ],
-          ...(error instanceof Error && { cause: error }),
-        }
-      );
-    }
-  }
-
-  private prdApprovalRequired(config: RepoConfig): boolean {
-    if (config.governance?.approval_workflow) {
-      return config.governance.approval_workflow.require_approval_for_prd;
-    }
-    return config.safety.require_approval_for_prd;
-  }
-
-  private async fetchLinearIssue(
-    issueId: string,
-    runDir: string,
-    logger: StructuredLogger
-  ): Promise<IssueSnapshot> {
-    logger.info('Fetching Linear issue snapshot', { issueId });
-
-    const apiKey = process.env.LINEAR_API_KEY;
-    if (!apiKey) {
-      throw new CliError(
-        'LINEAR_API_KEY environment variable is required when using --linear flag',
-        CliErrorCode.TOKEN_MISSING,
-        {
-          remediation: 'Set the LINEAR_API_KEY environment variable.',
-          howToFix: 'Export your Linear API key: export LINEAR_API_KEY="lin_api_..."',
-          commonFixes: [
-            'Create a Linear API key at https://linear.app/settings/api',
-            'Add LINEAR_API_KEY to your .env or shell profile',
-          ],
-        }
-      );
-    }
-
-    const adapter = createLinearAdapter({
-      apiKey,
-      runDir,
-      logger,
-      enablePreviewFeatures: process.env.LINEAR_ENABLE_PREVIEW === 'true',
-    });
-
-    try {
-      const snapshot = await adapter.fetchIssueSnapshot(issueId);
-      logger.info('Linear issue snapshot loaded', {
-        issueId: snapshot.issue.identifier,
-        title: snapshot.issue.title,
-        commentsCount: snapshot.comments.length,
-        cached: snapshot.metadata.last_error !== undefined,
-      });
-      return snapshot;
-    } catch (error) {
-      logger.error('Failed to fetch Linear issue', {
-        issueId,
-        error: getErrorMessage(error),
-      });
-      throw new CliError(
-        `Failed to fetch Linear issue ${issueId}: ${getErrorMessage(error)}`,
-        CliErrorCode.LINEAR_API_FAILED,
-        {
-          remediation: 'Check your LINEAR_API_KEY and network connectivity.',
-          howToFix: 'Verify the issue ID exists and your API key has read access.',
-          commonFixes: [
-            'Verify the Linear issue ID is correct',
-            'Check that LINEAR_API_KEY has not expired',
-            'Ensure network connectivity to api.linear.app',
-          ],
-          ...(error instanceof Error && { cause: error }),
-        }
-      );
-    }
-  }
-
-  private formatLinearContext(snapshot: IssueSnapshot): string {
-    const { issue, comments } = snapshot;
-    const parts: string[] = [];
-
-    parts.push('# Linear Issue Context');
-    parts.push('');
-    parts.push(`**Issue**: ${issue.identifier} - ${issue.title}`);
-    parts.push(`**URL**: ${issue.url}`);
-    parts.push(`**State**: ${issue.state.name} (${issue.state.type})`);
-    parts.push(`**Priority**: ${this.formatPriority(issue.priority)}`);
-
-    if (issue.assignee) {
-      parts.push(`**Assignee**: ${issue.assignee.name} (${issue.assignee.email})`);
-    }
-
-    if (issue.team) {
-      parts.push(`**Team**: ${issue.team.name} (${issue.team.key})`);
-    }
-
-    if (issue.project) {
-      parts.push(`**Project**: ${issue.project.name}`);
-    }
-
-    if (issue.labels.length > 0) {
-      parts.push(`**Labels**: ${issue.labels.map((l) => l.name).join(', ')}`);
-    }
-
-    parts.push('');
-    parts.push('## Description');
-    parts.push('');
-    parts.push(issue.description || '_No description provided_');
-
-    if (comments.length > 0) {
-      parts.push('');
-      parts.push('## Comments');
-      parts.push('');
-
-      for (const comment of comments) {
-        parts.push(
-          `### ${comment.user.name} - ${new Date(comment.createdAt).toLocaleDateString()}`
-        );
-        parts.push('');
-        parts.push(comment.body);
-        parts.push('');
-      }
-    }
-
-    parts.push('');
-    parts.push('---');
-    parts.push(`_Snapshot retrieved at: ${snapshot.metadata.retrieved_at}_`);
-
-    if (snapshot.metadata.last_error) {
-      parts.push(`_Note: Using cached snapshot due to API unavailability_`);
-    }
-
-    return parts.join('\n');
-  }
-
-  private formatPriority(priority: number): string {
-    const priorityMap: Record<number, string> = {
-      0: 'No priority',
-      1: 'Low',
-      2: 'Medium',
-      3: 'High',
-      4: 'Urgent',
-    };
-    return priorityMap[priority] || `Priority ${priority}`;
   }
 }
 

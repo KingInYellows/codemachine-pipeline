@@ -4,7 +4,10 @@ import * as path from 'node:path';
 import * as crypto from 'node:crypto';
 import * as os from 'node:os';
 import { Buffer } from 'node:buffer';
+import { z } from 'zod';
 import { wrapError, getErrorMessage } from '../utils/errors.js';
+import { isFileNotFound } from '../utils/safeJson';
+import { validateOrThrow } from '../validation/helpers';
 import {
   createHashManifest,
   verifyHashManifest,
@@ -123,6 +126,77 @@ export interface RunManifest {
 }
 
 /**
+ * Zod schema for RunManifest — validates persisted/deserialized data at the security boundary.
+ */
+const RunManifestSchema = z.object({
+  schema_version: z.string().min(1),
+  feature_id: z.string().min(1),
+  title: z.string().optional(),
+  source: z.string().optional(),
+  repo: z.object({
+    url: z.string().min(1),
+    default_branch: z.string().min(1),
+  }),
+  status: z.enum(['pending', 'in_progress', 'paused', 'completed', 'failed']),
+  execution: z.object({
+    last_step: z.string().optional(),
+    last_error: z
+      .object({
+        step: z.string(),
+        message: z.string(),
+        timestamp: z.string(),
+        recoverable: z.boolean(),
+      })
+      .optional(),
+    current_step: z.string().optional(),
+    total_steps: z.number().int().nonnegative().optional(),
+    completed_steps: z.number().int().nonnegative(),
+  }),
+  timestamps: z.object({
+    created_at: z.string(),
+    updated_at: z.string(),
+    started_at: z.string().nullable().optional(),
+    completed_at: z.string().nullable().optional(),
+  }),
+  approvals: z.object({
+    approvals_file: z.string().optional(),
+    pending: z.array(z.string()),
+    completed: z.array(z.string()),
+  }),
+  queue: z.object({
+    queue_dir: z.string(),
+    pending_count: z.number().int().nonnegative(),
+    completed_count: z.number().int().nonnegative(),
+    failed_count: z.number().int().nonnegative(),
+    sqlite_index: z
+      .object({
+        database: z.string(),
+        wal: z.string(),
+        shm: z.string(),
+      })
+      .optional(),
+  }),
+  artifacts: z.object({
+    prd: z.string().optional(),
+    spec: z.string().optional(),
+    plan: z.string().optional(),
+    hash_manifest: z.string().optional(),
+  }),
+  telemetry: z.object({
+    logs_dir: z.string(),
+    metrics_file: z.string().optional(),
+    traces_file: z.string().optional(),
+    costs_file: z.string().optional(),
+  }),
+  rate_limits: z
+    .object({
+      rate_limits_file: z.string().optional(),
+    })
+    .optional(),
+  metadata: z.record(z.string(), z.unknown()).optional(),
+});
+
+/**
  * Lock file metadata
  */
 interface LockFile {
@@ -198,7 +272,7 @@ const DEFAULT_LOCK_TIMEOUT = 30000; // 30 seconds
 const DEFAULT_POLL_INTERVAL = 100; // 100ms
 
 // Export for testing (CDMCH-71)
-export const STALE_LOCK_THRESHOLD_MS = 60000; // 60 seconds - reduced for faster crash recovery in homelab use
+export const STALE_LOCK_THRESHOLD_MS = 300000; // 5 minutes - sufficient for long operations while still recovering from crashes
 
 const SQLITE_DIR_NAME = 'sqlite';
 const SQLITE_DB_NAME = 'run_queue.db';
@@ -292,6 +366,20 @@ export function getSubdirectoryPath(
  * @param options - Lock acquisition options
  * @throws Error if lock cannot be acquired within timeout
  */
+/**
+ * Remove a stale lock file, tolerating concurrent removal (ENOENT).
+ */
+async function removeStaleLock(lockPath: string): Promise<void> {
+  try {
+    await fs.unlink(lockPath);
+  } catch (error) {
+    if (!isFileNotFound(error)) {
+      throw wrapError(error, 'remove stale lock');
+    }
+    // ENOENT: already removed by another process — that's fine
+  }
+}
+
 export async function acquireLock(runDir: string, options: LockOptions = {}): Promise<void> {
   const {
     timeout = DEFAULT_LOCK_TIMEOUT,
@@ -304,53 +392,28 @@ export async function acquireLock(runDir: string, options: LockOptions = {}): Pr
 
   while (Date.now() - startTime < timeout) {
     try {
-      // Try to create lock file exclusively
       const lockData: LockFile = {
         pid: process.pid,
         hostname: os.hostname(),
         acquired_at: new Date().toISOString(),
         operation,
       };
-
-      // Use wx flag for exclusive creation
       await fs.writeFile(lockPath, JSON.stringify(lockData, null, 2), {
         flag: 'wx',
         encoding: 'utf-8',
       });
-
-      // Lock acquired successfully
       return;
     } catch (error: unknown) {
-      if (error && typeof error === 'object' && 'code' in error && error.code === 'EEXIST') {
-        // Lock file exists, check if stale
-        const isStale = await isLockStale(lockPath);
+      if (!(error && typeof error === 'object' && 'code' in error && error.code === 'EEXIST')) {
+        throw wrapError(error, `acquire lock for ${runDir}`);
+      }
 
-        if (isStale) {
-          // Remove stale lock and retry
-          try {
-            await fs.unlink(lockPath);
-            continue;
-          } catch (unlinkError) {
-            // If file doesn't exist (ENOENT), another process removed it - continue retry
-            if (
-              unlinkError &&
-              typeof unlinkError === 'object' &&
-              'code' in unlinkError &&
-              unlinkError.code === 'ENOENT'
-            ) {
-              continue;
-            }
-            throw wrapError(unlinkError, 'remove stale lock');
-          }
-        }
-
-        // Lock is valid, wait and retry
-        await sleep(pollInterval);
+      if (await isLockStale(lockPath)) {
+        await removeStaleLock(lockPath);
         continue;
       }
 
-      // Other error, propagate
-      throw wrapError(error, `acquire lock for ${runDir}`);
+      await sleep(pollInterval);
     }
   }
 
@@ -372,7 +435,7 @@ export async function releaseLock(runDir: string): Promise<void> {
     await fs.unlink(lockPath);
   } catch (error) {
     // Ignore errors if lock file doesn't exist
-    if (error && typeof error === 'object' && 'code' in error && error.code === 'ENOENT') {
+    if (isFileNotFound(error)) {
       return;
     }
     throw wrapError(error, `release lock for ${runDir}`);
@@ -394,7 +457,7 @@ export async function isLocked(runDir: string): Promise<boolean> {
     return !isStale;
   } catch (error) {
     // If lock file doesn't exist (ENOENT), not locked
-    if (error && typeof error === 'object' && 'code' in error && error.code === 'ENOENT') {
+    if (isFileNotFound(error)) {
       return false;
     }
     throw wrapError(error, `check lock status for ${runDir}`);
@@ -411,6 +474,25 @@ export async function isLocked(runDir: string): Promise<boolean> {
  * @param lockPath - Path to lock file
  * @returns True if stale, false otherwise
  */
+/** Check if a process exists (Unix-like systems only). Returns null on Windows. */
+function isProcessRunning(pid: number): boolean | null {
+  if (process.platform === 'win32') return null;
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch (error) {
+    if (
+      error &&
+      typeof error === 'object' &&
+      'code' in error &&
+      (error as NodeJS.ErrnoException).code === 'ESRCH'
+    ) {
+      return false;
+    }
+    throw wrapError(error, `check if lock process ${pid} exists`);
+  }
+}
+
 async function isLockStale(lockPath: string): Promise<boolean> {
   try {
     const content = await fs.readFile(lockPath, 'utf-8');
@@ -422,37 +504,13 @@ async function isLockStale(lockPath: string): Promise<boolean> {
 
     const lockData: LockFile = parsed;
 
-    // Check age
-    const acquiredAt = new Date(lockData.acquired_at).getTime();
-    const now = Date.now();
-
-    if (now - acquiredAt > STALE_LOCK_THRESHOLD_MS) {
+    if (Date.now() - new Date(lockData.acquired_at).getTime() > STALE_LOCK_THRESHOLD_MS) {
       return true;
     }
 
-    // Check if process still exists (Unix-like systems only)
-    if (process.platform !== 'win32') {
-      try {
-        // Signal 0 checks if process exists without killing it
-        process.kill(lockData.pid, 0);
-        return false; // Process exists
-      } catch (killError) {
-        // ESRCH means process doesn't exist - lock is stale
-        if (
-          killError &&
-          typeof killError === 'object' &&
-          'code' in killError &&
-          killError.code === 'ESRCH'
-        ) {
-          return true;
-        }
-        throw wrapError(killError, `check if lock process ${lockData.pid} exists`);
-      }
-    }
-
-    return false;
+    const running = isProcessRunning(lockData.pid);
+    return running === false; // null (Windows) → not stale; false (no process) → stale
   } catch {
-    // Unreadable or malformed lock file should be treated as stale
     return true;
   }
 }
@@ -596,7 +654,7 @@ export async function listRunDirectories(baseDir: string): Promise<string[]> {
     const entries = await fs.readdir(baseDir, { withFileTypes: true });
     return entries.filter((entry) => entry.isDirectory()).map((entry) => entry.name);
   } catch (error) {
-    if (error && typeof error === 'object' && 'code' in error && error.code === 'ENOENT') {
+    if (isFileNotFound(error)) {
       return [];
     }
     throw wrapError(error, `list run directories in ${baseDir}`);
@@ -728,14 +786,8 @@ export async function readManifest(runDir: string): Promise<RunManifest> {
 
   try {
     const content = await fs.readFile(manifestPath, 'utf-8');
-    const manifest = JSON.parse(content) as RunManifest;
-
-    // Basic validation
-    if (!manifest.schema_version || !manifest.feature_id) {
-      throw new Error('Invalid manifest: missing required fields');
-    }
-
-    return manifest;
+    const parsed: unknown = JSON.parse(content);
+    return validateOrThrow(RunManifestSchema, parsed, 'run manifest') as RunManifest;
   } catch (error) {
     throw wrapError(error, 'Failed to read manifest');
   }
@@ -863,36 +915,16 @@ export async function getRunState(runDir: string): Promise<{
   total_steps?: number;
 }> {
   const manifest = await readManifest(runDir);
+  const exec = manifest.execution;
 
-  const state: {
-    status: RunManifest['status'];
-    last_step?: string;
-    current_step?: string;
-    last_error?: RunManifest['execution']['last_error'];
-    completed_steps: number;
-    total_steps?: number;
-  } = {
+  return {
     status: manifest.status,
-    completed_steps: manifest.execution.completed_steps,
+    completed_steps: exec.completed_steps,
+    ...(exec.last_step !== undefined && { last_step: exec.last_step }),
+    ...(exec.current_step !== undefined && { current_step: exec.current_step }),
+    ...(exec.last_error !== undefined && { last_error: exec.last_error }),
+    ...(exec.total_steps !== undefined && { total_steps: exec.total_steps }),
   };
-
-  if (manifest.execution.last_step) {
-    state.last_step = manifest.execution.last_step;
-  }
-
-  if (manifest.execution.current_step) {
-    state.current_step = manifest.execution.current_step;
-  }
-
-  if (manifest.execution.last_error) {
-    state.last_error = manifest.execution.last_error;
-  }
-
-  if (manifest.execution.total_steps) {
-    state.total_steps = manifest.execution.total_steps;
-  }
-
-  return state;
 }
 
 /**

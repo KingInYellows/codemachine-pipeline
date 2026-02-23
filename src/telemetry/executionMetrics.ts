@@ -20,6 +20,8 @@ import type { LogContext } from '../core/sharedTypes';
 import type { LoggerInterface } from './logger';
 import { LATENCY_BUCKETS } from './metrics';
 import { getErrorMessage } from '../utils/errors.js';
+import { type ExecutionTaskType } from '../core/models/ExecutionTask.js';
+export type { ExecutionTaskType } from '../core/models/ExecutionTask.js';
 
 // ============================================================================
 // Types & Interfaces
@@ -33,24 +35,6 @@ export enum ExecutionTaskStatus {
   COMPLETED = 'completed',
   FAILED = 'failed',
   SKIPPED = 'skipped',
-}
-
-/**
- * Execution task type (mirrors ExecutionTask schema)
- */
-export enum ExecutionTaskType {
-  CODE_GENERATION = 'code_generation',
-  TESTING = 'testing',
-  PR_CREATION = 'pr_creation',
-  DEPLOYMENT = 'deployment',
-  REVIEW = 'review',
-  REFACTORING = 'refactoring',
-  DOCUMENTATION = 'documentation',
-  OTHER = 'other',
-  VALIDATION = 'validation',
-  PATCH_APPLICATION = 'patch_application',
-  GIT_OPERATION = 'git_operation',
-  CUSTOM = 'custom',
 }
 
 /**
