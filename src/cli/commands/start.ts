@@ -36,6 +36,7 @@ import { loadQueue } from '../../workflows/queueStore';
 import { createCodeMachineStrategy } from '../../workflows/codeMachineStrategy';
 import { createCodeMachineCLIStrategy } from '../../workflows/codeMachineCLIStrategy';
 import { CliError, CliErrorCode, formatErrorMessage, formatErrorJson, setJsonOutputMode } from '../utils/cliErrors';
+import { flushTelemetryError } from '../utils/telemetryLifecycle';
 import { getErrorMessage } from '../../utils/errors.js';
 import { DEFAULT_EXECUTION_CONFIG } from '../../core/config/RepoConfig.js';
 
@@ -270,29 +271,10 @@ export default class Start extends Command {
       });
 
       currentStepLabel = EXECUTION_STEPS.Research;
-      const researchOptions: ResearchDetectionOptions = {
-        repoRoot,
-        runDir,
-        featureId,
-        logger,
-        metrics,
-        contextDocument: contextResult.contextDocument,
-      };
-
-      if (typedFlags.prompt) {
-        researchOptions.promptText = typedFlags.prompt;
-      }
-
-      if (specText) {
-        researchOptions.specText = specText;
-      }
-
-      // Include Linear issue data in research context
-      if (linearSnapshot) {
-        const linearContext = this.formatLinearContext(linearSnapshot);
-        researchOptions.specText = specText ? `${specText}\n\n${linearContext}` : linearContext;
-      }
-
+      const researchOptions = this.buildResearchOptions(
+        { repoRoot, runDir, featureId, logger, metrics, contextDocument: contextResult.contextDocument },
+        { promptText: typedFlags.prompt, specText, linearSnapshot }
+      );
       const researchTasks = await this.runResearchDetection(researchOptions);
 
       currentStepLabel = EXECUTION_STEPS.PRD;
@@ -397,12 +379,10 @@ export default class Start extends Command {
         this.exit(exitCode);
       }
     } catch (error) {
-      metrics.increment(StandardMetrics.COMMAND_INVOCATIONS_TOTAL, {
-        command: 'start',
-        exit_code: '1',
-      });
-      await metrics.flush();
-      commandSpan.end({ code: SpanStatusCode.ERROR, message: formatErrorMessage(error) });
+      await flushTelemetryError(
+        { commandName: 'start', startTime, logger, metrics, traceManager, commandSpan },
+        error
+      );
 
       await setLastError(runDir, currentStepLabel ?? 'start', formatErrorMessage(error), true);
 
@@ -454,6 +434,41 @@ export default class Start extends Command {
 
     await updateExecutionProgress(runDir, 1);
     return result;
+  }
+
+  /**
+   * Build research detection options, merging prompt, spec text, and Linear context.
+   */
+  private buildResearchOptions(
+    base: {
+      repoRoot: string;
+      runDir: string;
+      featureId: string;
+      logger: StructuredLogger;
+      metrics: MetricsCollector;
+      contextDocument: ResearchDetectionOptions['contextDocument'];
+    },
+    input: {
+      promptText?: string | undefined;
+      specText?: string | undefined;
+      linearSnapshot?: IssueSnapshot | undefined;
+    }
+  ): ResearchDetectionOptions {
+    const options: ResearchDetectionOptions = { ...base };
+    if (input.promptText) {
+      options.promptText = input.promptText;
+    }
+    const linearContext = input.linearSnapshot
+      ? this.formatLinearContext(input.linearSnapshot)
+      : undefined;
+    if (input.specText && linearContext) {
+      options.specText = `${input.specText}\n\n${linearContext}`;
+    } else if (input.specText) {
+      options.specText = input.specText;
+    } else if (linearContext) {
+      options.specText = linearContext;
+    }
+    return options;
   }
 
   private async runResearchDetection(options: ResearchDetectionOptions): Promise<ResearchTask[]> {
