@@ -91,6 +91,13 @@ export { loadDeploymentContext, persistDeploymentOutcome } from './deploymentTri
  * @param options Deployment options
  * @returns Selected deployment strategy
  */
+type StrategyRule = {
+  predicate: () => boolean;
+  strategy: DeploymentStrategy;
+  message: string;
+  logContext?: Record<string, unknown>;
+};
+
 export function selectDeploymentStrategy(
   context: DeploymentContext,
   readiness: MergeReadiness,
@@ -106,47 +113,46 @@ export function selectDeploymentStrategy(
     workflow_dispatch: !!options?.workflow_inputs,
   });
 
-  // 1. If blockers exist and not forcing → BLOCKED
-  if (!readiness.eligible && !options?.force) {
-    logger.info('Deployment blocked due to unmet requirements', {
-      blockers_count: readiness.blockers.length,
-    });
-    return DeploymentStrategy.BLOCKED;
+  const rules: StrategyRule[] = [
+    {
+      predicate: () => !readiness.eligible && !options?.force,
+      strategy: DeploymentStrategy.BLOCKED,
+      message: 'Deployment blocked due to unmet requirements',
+      logContext: { blockers_count: readiness.blockers.length },
+    },
+    {
+      predicate: () => !!(options?.workflow_inputs || config.workflow_dispatch),
+      strategy: DeploymentStrategy.WORKFLOW_DISPATCH,
+      message: 'Selected WORKFLOW_DISPATCH strategy',
+      logContext: { workflow_id: config.workflow_dispatch?.workflow_id },
+    },
+    {
+      predicate: () => !!config.prevent_auto_merge,
+      strategy: DeploymentStrategy.MANUAL_MERGE,
+      message: 'Selected MANUAL_MERGE strategy (governance prevents auto-merge)',
+      logContext: { reason: 'governance.risk_controls.prevent_auto_merge = true' },
+    },
+    {
+      predicate: () => !config.enable_auto_merge,
+      strategy: DeploymentStrategy.MANUAL_MERGE,
+      message: 'Selected MANUAL_MERGE strategy (auto-merge feature disabled)',
+      logContext: { reason: 'feature_flags.enable_auto_merge = false' },
+    },
+    {
+      predicate: () => !!(branchProtection && !branchProtection.allows_auto_merge),
+      strategy: DeploymentStrategy.MANUAL_MERGE,
+      message: 'Selected MANUAL_MERGE strategy (branch protection disallows auto-merge)',
+      logContext: { reason: 'Branch protection rules prevent auto-merge' },
+    },
+  ];
+
+  for (const rule of rules) {
+    if (rule.predicate()) {
+      logger.info(rule.message, rule.logContext);
+      return rule.strategy;
+    }
   }
 
-  // 2. If workflow dispatch inputs provided or configured → WORKFLOW_DISPATCH
-  if (options?.workflow_inputs || config.workflow_dispatch) {
-    logger.info('Selected WORKFLOW_DISPATCH strategy', {
-      workflow_id: config.workflow_dispatch?.workflow_id,
-    });
-    return DeploymentStrategy.WORKFLOW_DISPATCH;
-  }
-
-  // 3. If auto-merge disabled by governance risk controls → MANUAL_MERGE
-  if (config.prevent_auto_merge) {
-    logger.info('Selected MANUAL_MERGE strategy (governance prevents auto-merge)', {
-      reason: 'governance.risk_controls.prevent_auto_merge = true',
-    });
-    return DeploymentStrategy.MANUAL_MERGE;
-  }
-
-  // 4. If auto-merge disabled by feature flag → MANUAL_MERGE
-  if (!config.enable_auto_merge) {
-    logger.info('Selected MANUAL_MERGE strategy (auto-merge feature disabled)', {
-      reason: 'feature_flags.enable_auto_merge = false',
-    });
-    return DeploymentStrategy.MANUAL_MERGE;
-  }
-
-  // 5. If branch protection disallows auto-merge → MANUAL_MERGE
-  if (branchProtection && !branchProtection.allows_auto_merge) {
-    logger.info('Selected MANUAL_MERGE strategy (branch protection disallows auto-merge)', {
-      reason: 'Branch protection rules prevent auto-merge',
-    });
-    return DeploymentStrategy.MANUAL_MERGE;
-  }
-
-  // 6. Auto-merge is enabled and allowed → AUTO_MERGE
   logger.info('Selected AUTO_MERGE strategy', {
     reason: 'All requirements met and auto-merge enabled',
   });
