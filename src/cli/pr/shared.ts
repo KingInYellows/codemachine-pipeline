@@ -15,7 +15,11 @@ import {
   type RunManifest,
 } from '../../persistence/runDirectoryManager';
 import { safeJsonParse } from '../../utils/safeJson';
-import { createGitHubAdapter, GitHubAdapter } from '../../adapters/github/GitHubAdapter';
+import {
+  createGitHubAdapter,
+  GitHubAdapter,
+  type GitHubAdapterConfig,
+} from '../../adapters/github/GitHubAdapter';
 import { createCliLogger, LogLevel, type StructuredLogger } from '../../telemetry/logger';
 import type { RepoConfig } from '../../core/config/RepoConfig';
 import { getErrorMessage } from '../../utils/errors.js';
@@ -133,13 +137,18 @@ export async function loadPRContext(
 }
 
 /**
- * Create GitHub adapter instance from context
+ * Create GitHub adapter instance from context.
  *
  * @param context PR command context
+ * @param adapterFactory Optional factory override — inject in tests to avoid
+ *   real network calls without module-level mocking.
  * @returns Configured GitHub adapter
  * @throws Error if GitHub token is not available
  */
-export function getPRAdapter(context: PRContext): GitHubAdapter {
+export function getPRAdapter(
+  context: PRContext,
+  adapterFactory: (config: GitHubAdapterConfig) => GitHubAdapter = createGitHubAdapter
+): GitHubAdapter {
   const { config, runDir, logger } = context;
 
   // Get GitHub token from environment
@@ -165,7 +174,7 @@ export function getPRAdapter(context: PRContext): GitHubAdapter {
     base_url: config.github.api_base_url,
   });
 
-  return createGitHubAdapter({
+  return adapterFactory({
     owner,
     repo,
     token,

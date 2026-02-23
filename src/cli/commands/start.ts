@@ -51,7 +51,8 @@ import {
   setJsonOutputMode,
 } from '../utils/cliErrors';
 import { flushTelemetryError } from '../utils/telemetryLifecycle';
-import { DEFAULT_EXECUTION_CONFIG } from '../../core/config/RepoConfig.js';
+import { DEFAULT_EXECUTION_CONFIG, type ExecutionConfig } from '../../core/config/RepoConfig.js';
+import type { ExecutionStrategy } from '../../workflows/executionStrategy.js';
 
 const EXECUTION_STEPS = {
   Context: 'context_aggregation',
@@ -619,22 +620,13 @@ export default class Start extends Command {
     };
 
     // Create strategies — CLI strategy takes priority when binary is available
-    const cliStrategy = createCodeMachineCLIStrategy({
-      config: mergedConfig.execution!,
-      logger,
-    });
-    await cliStrategy.checkAvailability();
-
-    const legacyStrategy = createCodeMachineStrategy({
-      config: mergedConfig.execution!,
-      logger,
-    });
+    const strategies = await buildExecutionStrategies(mergedConfig.execution!, logger);
 
     // Create execution engine
     const executionEngine = new CLIExecutionEngine({
       runDir,
       config: mergedConfig,
-      strategies: [cliStrategy, legacyStrategy],
+      strategies,
       dryRun: false,
       logger,
       telemetry,
@@ -769,6 +761,29 @@ export default class Start extends Command {
       this.log('');
     }
   }
+}
+
+/**
+ * Build the ordered list of execution strategies.
+ *
+ * Accepts optional overrides for the factory functions to allow injection
+ * in unit tests without module-level mocking.
+ */
+async function buildExecutionStrategies(
+  config: ExecutionConfig,
+  logger: StructuredLogger,
+  factories?: {
+    cli?: typeof createCodeMachineCLIStrategy;
+    legacy?: typeof createCodeMachineStrategy;
+  }
+): Promise<ExecutionStrategy[]> {
+  const cliFactory = factories?.cli ?? createCodeMachineCLIStrategy;
+  const legacyFactory = factories?.legacy ?? createCodeMachineStrategy;
+
+  const cliStrategy = cliFactory({ config, logger });
+  await cliStrategy.checkAvailability();
+  const legacyStrategy = legacyFactory({ config, logger });
+  return [cliStrategy, legacyStrategy];
 }
 
 async function updateExecutionProgress(runDir: string, completedSteps: number): Promise<void> {
