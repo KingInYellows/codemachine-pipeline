@@ -1,7 +1,7 @@
 import { spawn } from 'node:child_process';
 import * as semver from 'semver';
 import { resolveBinary, type BinaryResolutionResult } from './binaryResolver.js';
-import type { CodeMachineExecutionResult } from '../../workflows/codemachineTypes.js';
+import type { CodeMachineExecutionResult } from './types.js';
 import type { ExecutionConfig } from '../../core/config/RepoConfig.js';
 import type { StructuredLogger } from '../../telemetry/logger.js';
 import { getErrorMessage } from '../../utils/errors.js';

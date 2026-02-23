@@ -8,25 +8,8 @@
 import type { RequestInit } from 'undici-types';
 import type { LoggerInterface } from '../../telemetry/logger';
 import type { RateLimitEnvelope } from '../../telemetry/rateLimitLedger';
-
-// ============================================================================
-// Enums
-// ============================================================================
-
-/**
- * Error taxonomy for structured error handling
- */
-export enum ErrorType {
-  /** Transient errors that should trigger retries (429, 503, network resets) */
-  TRANSIENT = 'transient',
-  /** Permanent errors that fail fast (validation, missing config, 404) */
-  PERMANENT = 'permanent',
-  /** Errors requiring human intervention (approval needed, token expired) */
-  HUMAN_ACTION_REQUIRED = 'human_action_required',
-}
-
-import { Provider } from '../../core/sharedTypes.js';
-export { Provider };
+import { ErrorType, Provider } from '../../core/sharedTypes.js';
+export { ErrorType, Provider };
 
 // ============================================================================
 // Interfaces

@@ -1,6 +1,6 @@
 import * as path from 'node:path';
 import * as fs from 'node:fs/promises';
-import { validateCliPath } from '../../workflows/codeMachineRunner.js';
+import { validateCliPath } from './types.js';
 
 /**
  * Platform-specific binary package mapping for CodeMachine-CLI.

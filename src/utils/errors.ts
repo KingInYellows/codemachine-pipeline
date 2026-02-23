@@ -1,5 +1,5 @@
-import { ErrorType, HttpError } from '../adapters/http/client';
-import { SerializedError } from '../core/sharedTypes';
+import { HttpError } from '../adapters/http/client';
+import { ErrorType, SerializedError } from '../core/sharedTypes';
 
 /**
  * Error Handling Utilities

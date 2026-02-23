@@ -46,6 +46,24 @@ export interface SerializedError {
 }
 
 // ============================================================================
+// Error Types
+// ============================================================================
+
+/**
+ * Error taxonomy for structured error handling.
+ * Defined here (core layer) so utils and adapters can both depend on it
+ * without creating circular imports.
+ */
+export enum ErrorType {
+  /** Transient errors that should trigger retries (429, 503, network resets) */
+  TRANSIENT = 'transient',
+  /** Permanent errors that fail fast (validation, missing config, 404) */
+  PERMANENT = 'permanent',
+  /** Errors requiring human intervention (approval needed, token expired) */
+  HUMAN_ACTION_REQUIRED = 'human_action_required',
+}
+
+// ============================================================================
 // Provider Types
 // ============================================================================
 

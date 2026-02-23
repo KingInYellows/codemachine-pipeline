@@ -7,6 +7,8 @@ import type { ExecutionConfig, ExecutionEngineType } from '../core/config/RepoCo
 import type { StructuredLogger } from '../telemetry/logger.js';
 import { getErrorMessage } from '../utils/errors.js';
 import { filterEnvironment as filterEnv } from '../utils/envFilter.js';
+import { validateCliPath } from '../adapters/codemachine/types.js';
+export { validateCliPath };
 
 export const EXIT_CODES = {
   SUCCESS: 0,
@@ -103,36 +105,6 @@ async function rotateLogFiles(
     rotated_path: rotatedPath,
     compressed: compress,
   });
-}
-
-/**
- * Validate CLI path for security issues.
- * Uses an allowlist regex instead of a blocklist to prevent bypass
- * via `$()`, backticks, or Unicode homoglyphs.
- */
-const SAFE_CLI_PATH_PATTERN = /^[a-zA-Z0-9_\-./:\\]+$/;
-
-export function validateCliPath(cliPath: string): { valid: boolean; error?: string } {
-  if (cliPath.length === 0) {
-    return { valid: false, error: 'CLI path is empty' };
-  }
-  if (cliPath.trim() !== cliPath) {
-    return { valid: false, error: 'CLI path contains leading or trailing whitespace' };
-  }
-  if (!SAFE_CLI_PATH_PATTERN.test(cliPath)) {
-    // Provide specific error messages for common attack vectors
-    if (/[\n\r]/.test(cliPath)) {
-      return { valid: false, error: 'CLI path contains newline characters' };
-    }
-    if (/[;|&`$(){}]/.test(cliPath)) {
-      return { valid: false, error: 'CLI path contains shell metacharacters' };
-    }
-    return { valid: false, error: 'CLI path contains invalid characters' };
-  }
-  if (cliPath.split(/[\\/]/).includes('..')) {
-    return { valid: false, error: 'CLI path contains path traversal segments (..)' };
-  }
-  return { valid: true };
 }
 
 /**

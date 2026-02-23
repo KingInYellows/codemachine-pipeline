@@ -10,9 +10,8 @@ export {
 
 export { resolveBinary, clearBinaryCache, type BinaryResolutionResult } from './binaryResolver.js';
 
-// Re-export workflow-layer types for adapter consumers
 export {
   type CodeMachineExecutionResult,
   type CodeMachineEngineType,
   CODEMACHINE_STRATEGY_NAMES,
-} from '../../workflows/codemachineTypes.js';
+} from './types.js';
