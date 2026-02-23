@@ -105,6 +105,10 @@ export class HttpError extends Error {
 // HTTP Client
 // ============================================================================
 
+type AttemptResult<T> =
+  | { ok: true; result: HttpResponse<T> }
+  | { ok: false; error: HttpError; rateLimitEnvelope: RateLimitEnvelope | undefined };
+
 /**
  * Unified HTTP client with rate limiting, retries, and structured errors
  */
@@ -210,116 +214,55 @@ export class HttpClient {
     const url = new URL(path, this.config.baseUrl).toString();
     const requestId = generateRequestId();
     const idempotencyKey = options.idempotent ? generateIdempotencyKey() : undefined;
-
     const headers = this.buildHeaders(requestId, idempotencyKey, options.headers);
 
-    const retryConfig = {
-      enabled: options.retry?.enabled !== false,
-      maxAttempts: options.retry?.maxAttempts ?? this.config.maxRetries,
+    const retryEnabled = options.retry?.enabled !== false;
+    const maxAttempts = retryEnabled ? (options.retry?.maxAttempts ?? this.config.maxRetries) + 1 : 1;
+
+    const baseFetchOptions: Omit<RequestInit, 'signal'> = {
+      method,
+      headers: headers as HeadersInit,
     };
+    if (options.body) {
+      baseFetchOptions.body = options.body;
+    }
 
     let lastError: HttpError | undefined;
-    const maxAttempts = retryConfig.enabled ? retryConfig.maxAttempts + 1 : 1;
 
     for (let attempt = 0; attempt < maxAttempts; attempt++) {
-      try {
-        // Log sanitized request metadata
-        this.logger.debug('HTTP request', {
-          method,
-          url: sanitizeUrl(url),
+      const outcome = await this.executeOnce<T>(
+        method,
+        url,
+        baseFetchOptions,
+        requestId,
+        attempt + 1,
+        maxAttempts,
+        options.metadata
+      );
+
+      if (outcome.ok) return outcome.result;
+
+      lastError = outcome.error;
+
+      if (outcome.error.retryable && attempt < maxAttempts - 1) {
+        const backoffMs = this.calculateBackoff(attempt, outcome.rateLimitEnvelope);
+        const logMessage =
+          outcome.error.statusCode !== undefined
+            ? 'Retrying after error'
+            : 'Retrying after network error';
+        this.logger.warn(logMessage, {
           requestId,
           attempt: attempt + 1,
-          maxAttempts,
-          metadata: options.metadata,
+          backoffMs,
+          errorType: outcome.error.type,
+          statusCode: outcome.error.statusCode,
+          errorMessage: outcome.error.message,
         });
-
-        const fetchOptions: RequestInit = {
-          method,
-          headers: headers as HeadersInit,
-          signal: AbortSignal.timeout(this.config.timeout),
-        };
-
-        if (options.body) {
-          fetchOptions.body = options.body;
-        }
-
-        const response = await fetch(url, fetchOptions);
-
-        // Extract rate limit envelope
-        const rateLimitEnvelope = this.extractRateLimitEnvelope(response, requestId);
-
-        // Persist rate limit data if ledger is available
-        if (rateLimitEnvelope && this.rateLimitLedger) {
-          await this.rateLimitLedger.recordEnvelope(rateLimitEnvelope);
-        }
-
-        // Handle error responses
-        if (!response.ok) {
-          const error = await this.handleErrorResponse(response, requestId, rateLimitEnvelope);
-
-          // Check if error is retryable
-          if (error.retryable && attempt < maxAttempts - 1) {
-            const backoffMs = this.calculateBackoff(attempt, rateLimitEnvelope);
-            this.logger.warn('Retrying after error', {
-              requestId,
-              attempt: attempt + 1,
-              backoffMs,
-              errorType: error.type,
-              statusCode: error.statusCode,
-            });
-            await sleep(backoffMs);
-            lastError = error;
-            continue;
-          }
-
-          throw error;
-        }
-
-        // Parse response body
-        const data = await this.parseResponseBody<T>(response);
-
-        // Log sanitized response metadata
-        this.logger.debug('HTTP response', {
-          requestId,
-          status: response.status,
-          rateLimitRemaining: rateLimitEnvelope?.remaining,
-        });
-
-        const result: HttpResponse<T> = {
-          status: response.status,
-          headers: extractHeaders(response.headers),
-          data,
-          requestId,
-        };
-
-        if (rateLimitEnvelope) {
-          result.rateLimitEnvelope = rateLimitEnvelope;
-        }
-
-        return result;
-      } catch (error) {
-        // Handle network errors and timeouts
-        if (error instanceof HttpError) {
-          throw error;
-        }
-
-        const networkError = this.handleNetworkError(error, requestId);
-
-        if (networkError.retryable && attempt < maxAttempts - 1) {
-          const backoffMs = this.calculateBackoff(attempt);
-          this.logger.warn('Retrying after network error', {
-            requestId,
-            attempt: attempt + 1,
-            backoffMs,
-            errorMessage: networkError.message,
-          });
-          await sleep(backoffMs);
-          lastError = networkError;
-          continue;
-        }
-
-        throw networkError;
+        await sleep(backoffMs);
+        continue;
       }
+
+      throw outcome.error;
     }
 
     // Should never reach here, but TypeScript doesn't know that
@@ -335,6 +278,74 @@ export class HttpClient {
         false
       )
     );
+  }
+
+  /**
+   * Execute a single HTTP attempt: fetch, extract rate limits, handle response.
+   * Returns a discriminated union so the retry loop can decide what to do next.
+   * A fresh AbortSignal timeout is created per attempt so retries get their own deadline.
+   */
+  private async executeOnce<T>(
+    method: string,
+    url: string,
+    baseFetchOptions: Omit<RequestInit, 'signal'>,
+    requestId: string,
+    attemptNumber: number,
+    maxAttempts: number,
+    metadata?: Record<string, unknown>
+  ): Promise<AttemptResult<T>> {
+    this.logger.debug('HTTP request', {
+      method,
+      url: sanitizeUrl(url),
+      requestId,
+      attempt: attemptNumber,
+      maxAttempts,
+      metadata,
+    });
+
+    try {
+      const fetchOptions: RequestInit = {
+        ...baseFetchOptions,
+        signal: AbortSignal.timeout(this.config.timeout),
+      };
+
+      const response = await fetch(url, fetchOptions);
+
+      const rateLimitEnvelope = this.extractRateLimitEnvelope(response, requestId);
+      if (rateLimitEnvelope && this.rateLimitLedger) {
+        await this.rateLimitLedger.recordEnvelope(rateLimitEnvelope);
+      }
+
+      if (!response.ok) {
+        const error = await this.handleErrorResponse(response, requestId, rateLimitEnvelope);
+        return { ok: false, error, rateLimitEnvelope };
+      }
+
+      const data = await this.parseResponseBody<T>(response);
+      this.logger.debug('HTTP response', {
+        requestId,
+        status: response.status,
+        rateLimitRemaining: rateLimitEnvelope?.remaining,
+      });
+
+      const result: HttpResponse<T> = {
+        status: response.status,
+        headers: extractHeaders(response.headers),
+        data,
+        requestId,
+      };
+      if (rateLimitEnvelope) {
+        result.rateLimitEnvelope = rateLimitEnvelope;
+      }
+
+      return { ok: true, result };
+    } catch (error) {
+      if (error instanceof HttpError) {
+        throw error;
+      }
+      const networkError = this.handleNetworkError(error, requestId);
+      return { ok: false, error: networkError, rateLimitEnvelope: undefined };
+    }
   }
 
   /**
