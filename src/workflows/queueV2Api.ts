@@ -31,7 +31,6 @@ import { getV2IndexCache, buildDependencyGraph, toExecutionTask } from './queueC
  * Get queue counts using V2 index.
  * Returns O(1) counts from the in-memory index.
  *
- * @param runDir - Run directory path
  * @returns Queue counts by status
  */
 export async function getQueueCountsV2(runDir: string): Promise<QueueCounts> {
@@ -43,7 +42,6 @@ export async function getQueueCountsV2(runDir: string): Promise<QueueCounts> {
  * Get all ready tasks using V2 index.
  * Returns pending tasks with all dependencies completed.
  *
- * @param runDir - Run directory path
  * @returns Array of ready-to-execute tasks
  */
 export async function getReadyTasksV2(runDir: string): Promise<ExecutionTask[]> {
@@ -58,7 +56,6 @@ export async function getReadyTasksV2(runDir: string): Promise<ExecutionTask[]> 
  * Get the V2 index state for advanced operations.
  * Use with caution - modifying state directly may cause inconsistencies.
  *
- * @param runDir - Run directory path
  * @returns V2 index state
  */
 export async function getV2IndexState(runDir: string): Promise<QueueIndexState> {
@@ -70,7 +67,6 @@ export async function getV2IndexState(runDir: string): Promise<QueueIndexState> 
  * Force compaction of the V2 queue.
  * Creates a new snapshot and truncates the WAL.
  *
- * @param runDir - Run directory path
  * @returns Compaction result
  */
 export async function forceCompactV2(
@@ -95,7 +91,6 @@ export async function forceCompactV2(
 /**
  * Export V2 queue state for debugging or backup.
  *
- * @param runDir - Run directory path
  * @returns Exported index state
  */
 export async function exportV2State(runDir: string): Promise<{
