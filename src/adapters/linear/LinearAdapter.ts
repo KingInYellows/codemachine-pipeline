@@ -28,6 +28,7 @@ import { RateLimitLedger } from '../../telemetry/rateLimitLedger';
 import { serializeError, createErrorNormalizer, AdapterError } from '../../utils/errors';
 import { createLogger, LogLevel, type LoggerInterface } from '../../telemetry/logger';
 import { isFileNotFound } from '../../utils/safeJson';
+import { validateOrThrow } from '../../validation/helpers.js';
 
 export type {
   LinearAdapterConfig,
@@ -38,6 +39,7 @@ export type {
   UpdateIssueParams,
   PostCommentParams,
 } from './LinearAdapterTypes.js';
+import { IssueSnapshotSchema } from './LinearAdapterTypes.js';
 import type {
   LinearAdapterConfig,
   LinearIssue,
@@ -461,7 +463,7 @@ export class LinearAdapter {
     try {
       const snapshotPath = this.getSnapshotPath(issueId);
       const content = await fs.readFile(snapshotPath, 'utf-8');
-      const snapshot = JSON.parse(content) as IssueSnapshot;
+      const snapshot = validateOrThrow(IssueSnapshotSchema, JSON.parse(content), 'issue snapshot') as IssueSnapshot;
 
       // Verify snapshot integrity
       const expectedHash = this.computeSnapshotHash({ issue: snapshot.issue, comments: snapshot.comments });

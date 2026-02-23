@@ -4,6 +4,7 @@
  * Shared interfaces for the LinearAdapter module.
  */
 
+import { z } from 'zod';
 import type { ErrorType } from '../http/client';
 import type { LoggerInterface } from '../../telemetry/logger';
 
@@ -75,6 +76,43 @@ export interface IssueSnapshot {
   comments: LinearComment[];
   metadata: SnapshotMetadata;
 }
+
+export const IssueSnapshotSchema = z.object({
+  issue: z.object({
+    id: z.string(),
+    identifier: z.string(),
+    title: z.string(),
+    description: z.string().nullable(),
+    state: z.object({ id: z.string(), name: z.string(), type: z.string() }),
+    priority: z.number(),
+    labels: z.array(z.object({ id: z.string(), name: z.string(), color: z.string() })),
+    assignee: z.object({ id: z.string(), name: z.string(), email: z.string() }).nullable(),
+    team: z.object({ id: z.string(), name: z.string(), key: z.string() }),
+    project: z.object({ id: z.string(), name: z.string() }).nullable(),
+    createdAt: z.string(),
+    updatedAt: z.string(),
+    url: z.string(),
+  }),
+  comments: z.array(z.object({
+    id: z.string(),
+    body: z.string(),
+    user: z.object({ id: z.string(), name: z.string(), email: z.string() }),
+    createdAt: z.string(),
+    updatedAt: z.string(),
+  })),
+  metadata: z.object({
+    issueId: z.string(),
+    retrieved_at: z.string(),
+    hash: z.string(),
+    ttl: z.number().optional(),
+    isPreview: z.boolean().optional(),
+    last_error: z.object({
+      timestamp: z.string(),
+      message: z.string(),
+      type: z.string(),
+    }).optional(),
+  }),
+});
 
 /**
  * Update issue parameters

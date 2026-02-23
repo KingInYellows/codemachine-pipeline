@@ -10,10 +10,12 @@ import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 import * as crypto from 'node:crypto';
 import { withLock, getSubdirectoryPath } from '../persistence/runDirectoryManager';
+import { z } from 'zod';
 import {
   createPlanArtifact,
   validateDAG,
   getEntryTasks,
+  PlanArtifactSchema,
   type PlanArtifact,
   type TaskNode,
 } from '../core/models/PlanArtifact';
@@ -21,6 +23,7 @@ import { loadSpecMetadata } from './specComposer';
 import type { StructuredLogger } from '../telemetry/logger';
 import type { MetricsCollector } from '../telemetry/metrics';
 import type { TraceLink } from '../core/models/TraceLink';
+import { validateOrThrow } from '../validation/helpers.js';
 
 // ============================================================================
 // Types
@@ -142,12 +145,28 @@ interface PlanMetadata {
   entry_tasks: string[];
 }
 
+const PlanMetadataSchema = z.object({
+  schema_version: z.string(),
+  feature_id: z.string(),
+  plan_hash: z.string(),
+  spec_hash: z.string(),
+  iteration_id: z.string().optional(),
+  created_at: z.string(),
+  updated_at: z.string(),
+  total_tasks: z.number(),
+  entry_tasks: z.array(z.string()),
+});
+
 /**
  * Trace document subset for requirement → task mapping
  */
 interface TraceDocument {
   links?: TraceLink[];
 }
+
+const TraceDocumentSchema = z.object({
+  links: z.array(z.unknown()).optional(),
+});
 
 /**
  * Map of spec requirements to previously generated task IDs
@@ -615,7 +634,7 @@ async function loadTraceabilityTaskIds(runDir: string): Promise<RequirementTaskM
 
   try {
     const traceContent = await fs.readFile(tracePath, 'utf-8');
-    const traceDoc = JSON.parse(traceContent) as TraceDocument;
+    const traceDoc = validateOrThrow(TraceDocumentSchema, JSON.parse(traceContent), 'trace document') as TraceDocument;
     if (!traceDoc.links) {
       return mapping;
     }
@@ -656,7 +675,7 @@ async function loadExistingPlanIfPresent(
     logger.info('plan.json already exists, loading existing plan', { planPath });
 
     const existingContent = await fs.readFile(planPath, 'utf-8');
-    const existingPlan = JSON.parse(existingContent) as PlanArtifact;
+    const existingPlan = validateOrThrow(PlanArtifactSchema, JSON.parse(existingContent), 'plan artifact');
     const existingSummary = createPlanSummary(existingPlan, planPath);
 
     return {
@@ -878,7 +897,7 @@ export async function loadPlanSummary(runDir: string): Promise<PlanSummary | nul
 
   try {
     const content = await fs.readFile(planPath, 'utf-8');
-    const plan = JSON.parse(content) as PlanArtifact;
+    const plan = validateOrThrow(PlanArtifactSchema, JSON.parse(content), 'plan artifact');
     return createPlanSummary(plan, planPath);
   } catch {
     return null;
@@ -893,7 +912,7 @@ export async function loadPlanMetadata(runDir: string): Promise<PlanMetadata | n
 
   try {
     const content = await fs.readFile(metadataPath, 'utf-8');
-    return JSON.parse(content) as PlanMetadata;
+    return validateOrThrow(PlanMetadataSchema, JSON.parse(content), 'plan metadata');
   } catch {
     return null;
   }

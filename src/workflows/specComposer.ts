@@ -21,6 +21,8 @@
 
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
+import { z } from 'zod';
+import { validateOrThrow } from '../validation/helpers.js';
 import { computeFileHash } from '../persistence/hashManifest';
 import { withLock, getSubdirectoryPath } from '../persistence/runDirectoryManager';
 import type { StructuredLogger } from '../telemetry/logger';
@@ -44,6 +46,7 @@ import {
   createApprovalRecord,
   serializeApprovalRecord,
   parseApprovalRecord,
+  ApprovalRecordSchema,
   type ApprovalRecord,
   type ApprovalVerdict,
 } from '../core/models/ApprovalRecord';
@@ -108,6 +111,19 @@ export interface SpecMetadata {
   /** Trace identifier linking to PRD */
   traceId?: string;
 }
+
+const SpecMetadataSchema = z.object({
+  featureId: z.string(),
+  specId: z.string(),
+  specHash: z.string(),
+  prdHash: z.string(),
+  createdAt: z.string(),
+  updatedAt: z.string(),
+  approvalStatus: z.enum(['pending', 'approved', 'rejected', 'changes_requested']),
+  approvals: z.array(z.string()),
+  version: z.string(),
+  traceId: z.string().optional(),
+});
 
 /**
  * Result of specification generation
@@ -383,7 +399,7 @@ export async function recordSpecApproval(
     let metadata: SpecMetadata;
     try {
       const metadataContent = await fs.readFile(metadataPath, 'utf-8');
-      metadata = JSON.parse(metadataContent) as SpecMetadata;
+      metadata = validateOrThrow(SpecMetadataSchema, JSON.parse(metadataContent), 'spec metadata') as SpecMetadata;
     } catch (error) {
       throw new Error(
         `Failed to load spec metadata: ${error instanceof Error ? error.message : 'Unknown error'}`,
@@ -457,7 +473,11 @@ export async function recordSpecApproval(
 
     try {
       const existingIndex = await fs.readFile(approvalsIndexPath, 'utf-8');
-      approvalsIndex = JSON.parse(existingIndex) as { approvals: ApprovalRecord[] };
+      approvalsIndex = validateOrThrow(
+        z.object({ approvals: z.array(ApprovalRecordSchema) }),
+        JSON.parse(existingIndex),
+        'approvals index'
+      );
     } catch (error) {
       if (!isFileNotFound(error)) {
         // Log non-ENOENT errors (e.g., JSON parse failures) but continue with empty index
@@ -497,7 +517,7 @@ export async function loadSpecMetadata(runDir: string): Promise<SpecMetadata | n
 
   try {
     const content = await fs.readFile(metadataPath, 'utf-8');
-    return JSON.parse(content) as SpecMetadata;
+    return validateOrThrow(SpecMetadataSchema, JSON.parse(content), 'spec metadata') as SpecMetadata;
   } catch {
     return null;
   }

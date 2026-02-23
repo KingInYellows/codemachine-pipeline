@@ -1,6 +1,8 @@
 import * as fs from 'node:fs/promises';
 import * as crypto from 'node:crypto';
 import * as path from 'node:path';
+import { z } from 'zod';
+import { validateOrThrow } from '../validation/helpers.js';
 import { isFileNotFound } from '../utils/safeJson';
 
 /**
@@ -45,6 +47,22 @@ export interface HashManifest {
   /** Intentional: manifest-level metadata varies by consumer */
   metadata?: Record<string, unknown>;
 }
+
+const FileHashRecordSchema = z.object({
+  path: z.string(),
+  hash: z.string(),
+  size: z.number(),
+  timestamp: z.string(),
+  metadata: z.record(z.string(), z.unknown()).optional(),
+});
+
+const HashManifestSchema = z.object({
+  schema_version: z.string(),
+  created_at: z.string(),
+  updated_at: z.string(),
+  files: z.record(z.string(), FileHashRecordSchema),
+  metadata: z.record(z.string(), z.unknown()).optional(),
+});
 
 /**
  * Result of hash verification
@@ -388,14 +406,7 @@ export async function saveHashManifest(manifest: HashManifest, outputPath: strin
 export async function loadHashManifest(manifestPath: string): Promise<HashManifest> {
   try {
     const content = await fs.readFile(manifestPath, 'utf-8');
-    const manifest = JSON.parse(content) as HashManifest;
-
-    // Basic validation
-    if (!manifest.schema_version || !manifest.files) {
-      throw new Error('Invalid manifest format: missing required fields');
-    }
-
-    return manifest;
+    return validateOrThrow(HashManifestSchema, JSON.parse(content), 'hash manifest') as HashManifest;
   } catch (error) {
     if (error instanceof Error) {
       throw new Error(`Failed to load hash manifest: ${error.message}`, { cause: error });
