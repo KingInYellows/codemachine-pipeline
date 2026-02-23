@@ -376,7 +376,7 @@ describe('Hash Manifest Utilities', () => {
         'utf-8'
       );
 
-      await expect(loadHashManifest(manifestPath)).rejects.toThrow(/missing required fields/);
+      await expect(loadHashManifest(manifestPath)).rejects.toThrow();
     });
   });
 

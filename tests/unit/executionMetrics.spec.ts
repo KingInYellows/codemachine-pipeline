@@ -6,7 +6,6 @@ import { createRunMetricsCollector } from '../../src/telemetry/metrics';
 import { createLogger, LogLevel } from '../../src/telemetry/logger';
 import {
   createExecutionMetrics,
-  ExecutionTaskType,
   ExecutionTaskStatus,
   type DiffStats,
   type ValidationResult,
@@ -98,7 +97,7 @@ describe('ExecutionMetricsHelper', () => {
 
       executionMetrics.recordTaskLifecycle(
         'I3.T6',
-        ExecutionTaskType.CODE_GENERATION,
+        'code_generation',
         ExecutionTaskStatus.STARTED
       );
 
@@ -122,7 +121,7 @@ describe('ExecutionMetricsHelper', () => {
 
       executionMetrics.recordTaskLifecycle(
         'I3.T6',
-        ExecutionTaskType.CODE_GENERATION,
+        'code_generation',
         ExecutionTaskStatus.COMPLETED,
         94555
       );
@@ -150,7 +149,7 @@ describe('ExecutionMetricsHelper', () => {
 
       executionMetrics.recordTaskLifecycle(
         'I3.T7',
-        ExecutionTaskType.VALIDATION,
+        'validation',
         ExecutionTaskStatus.FAILED,
         1234
       );
@@ -173,25 +172,25 @@ describe('ExecutionMetricsHelper', () => {
 
       executionMetrics.recordTaskLifecycle(
         'T1',
-        ExecutionTaskType.CODE_GENERATION,
+        'code_generation',
         ExecutionTaskStatus.COMPLETED,
         1000
       );
       executionMetrics.recordTaskLifecycle(
         'T2',
-        ExecutionTaskType.VALIDATION,
+        'validation',
         ExecutionTaskStatus.COMPLETED,
         2000
       );
       executionMetrics.recordTaskLifecycle(
         'T3',
-        ExecutionTaskType.PATCH_APPLICATION,
+        'patch_application',
         ExecutionTaskStatus.COMPLETED,
         3000
       );
       executionMetrics.recordTaskLifecycle(
         'T4',
-        ExecutionTaskType.GIT_OPERATION,
+        'git_operation',
         ExecutionTaskStatus.COMPLETED,
         4000
       );
@@ -482,7 +481,7 @@ describe('ExecutionMetricsHelper', () => {
       expect(() => {
         executionMetrics.recordTaskLifecycle(
           'T1',
-          ExecutionTaskType.CODE_GENERATION,
+          'code_generation',
           ExecutionTaskStatus.STARTED
         );
         executionMetrics.recordValidationRun({ passed: true, durationMs: 1000 });
@@ -523,7 +522,7 @@ describe('ExecutionLogWriter', () => {
         runId: 'test-run-123',
       });
 
-      logWriter.taskStarted('I3.T6', ExecutionTaskType.CODE_GENERATION);
+      logWriter.taskStarted('I3.T6', 'code_generation');
       await logWriter.flush();
 
       const logPath = path.join(tempDir, 'logs', 'logs.ndjson');
@@ -552,7 +551,7 @@ describe('ExecutionLogWriter', () => {
         runId: 'test-run-123',
       });
 
-      logWriter.taskCompleted('I3.T6', ExecutionTaskType.CODE_GENERATION, 94555);
+      logWriter.taskCompleted('I3.T6', 'code_generation', 94555);
       await logWriter.flush();
 
       const logPath = path.join(tempDir, 'logs', 'logs.ndjson');
@@ -579,7 +578,7 @@ describe('ExecutionLogWriter', () => {
       });
 
       const error = new Error('Validation failed');
-      logWriter.taskFailed('I3.T7', ExecutionTaskType.VALIDATION, error, 1234);
+      logWriter.taskFailed('I3.T7', 'validation', error, 1234);
       await logWriter.flush();
 
       const logPath = path.join(tempDir, 'logs', 'logs.ndjson');
@@ -612,7 +611,7 @@ describe('ExecutionLogWriter', () => {
         runId: 'test-run-123',
       });
 
-      logWriter.taskSkipped('I3.T8', ExecutionTaskType.CUSTOM, 'Dependencies not met');
+      logWriter.taskSkipped('I3.T8', 'custom', 'Dependencies not met');
       await logWriter.flush();
 
       const logPath = path.join(tempDir, 'logs', 'logs.ndjson');
