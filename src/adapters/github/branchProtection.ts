@@ -301,7 +301,7 @@ export class BranchProtectionAdapter {
         lock_branch?: { enabled: boolean };
         required_linear_history?: { enabled: boolean };
         required_conversation_resolution?: { enabled: boolean };
-      }>(`/repos/${this.owner}/${this.repo}/branches/${branch}/protection`, {
+      }>(`/repos/${this.owner}/${this.repo}/branches/${branch.split('/').map(encodeURIComponent).join('/')}/protection`, {
         metadata: { operation: 'getBranchProtection', branch },
       });
 

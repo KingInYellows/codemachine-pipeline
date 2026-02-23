@@ -202,7 +202,7 @@ export class GitHubAdapter {
 
     try {
       const response = await this.client.get<GitReference>(
-        `/repos/${this.owner}/${this.repo}/git/ref/heads/${encodeURIComponent(branch)}`,
+        `/repos/${this.owner}/${this.repo}/git/ref/heads/${branch.split('/').map(encodeURIComponent).join('/')}`,
         {
           metadata: { operation: 'getBranch', branch },
         }
