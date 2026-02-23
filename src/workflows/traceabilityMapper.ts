@@ -19,13 +19,13 @@
 
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
-import { withLock, getSubdirectoryPath } from '../persistence/runDirectoryManager';
+import { withLock, getSubdirectoryPath } from '../persistence';
 import { parseTraceLink, type TraceLink } from '../core/models/TraceLink';
 import { loadPRDMetadata } from './prdAuthoringEngine';
 import { loadSpecMetadata } from './specComposer';
 import type { StructuredLogger } from '../telemetry/logger';
 import type { MetricsCollector } from '../telemetry/metrics';
-import { computeFileHash } from '../persistence/hashManifest';
+import { computeFileHash } from '../persistence';
 import { isFileNotFound } from '../utils/safeJson';
 import { getErrorMessage } from '../utils/errors.js';
 

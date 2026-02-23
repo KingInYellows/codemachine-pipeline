@@ -9,7 +9,7 @@
 import type { QueueSnapshotV2, QueueCounts, ExecutionTaskData } from './queueTypes';
 import { isQueueSnapshotV2 } from './queueTypes';
 import type { ExecutionTask } from '../core/models/ExecutionTask';
-import { withLock } from '../persistence/runDirectoryManager';
+import { withLock } from '../persistence';
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 import * as crypto from 'node:crypto';

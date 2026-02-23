@@ -542,7 +542,7 @@ export async function generateExecutionPlan(
   const { order, depths, maxDepth } = computeTopologicalOrder(tasks);
   const parallelPaths = calculateParallelPaths(depths);
 
-  // Step 5: Create plan artifact
+  // Step 6: Create plan artifact
   const plan = createPlanArtifact(config.featureId, tasks, {
     generatedBy: 'task-planner:v1.0.0',
     metadata: {
@@ -570,7 +570,7 @@ export async function generateExecutionPlan(
     parallelPaths,
   });
 
-  // Step 6: Validate DAG
+  // Step 7: Validate DAG
   const validation = validateDAG(planWithDag);
   if (!validation.valid) {
     throw new Error(`Plan validation failed:\n${validation.errors.join('\n')}`);
@@ -578,7 +578,7 @@ export async function generateExecutionPlan(
 
   logger.info('DAG validation passed');
 
-  // Step 7: Identify entry tasks
+  // Step 8: Identify entry tasks
   const entryTaskIds = getEntryTasks(planWithDag);
 
   logger.info('Identified entry tasks', {
@@ -586,10 +586,10 @@ export async function generateExecutionPlan(
     tasks: entryTaskIds,
   });
 
-  // Step 8: Identify blockers
+  // Step 9: Identify blockers
   const blockers = collectMissingDepBlockers(tasks, dependencyBlockers);
 
-  // Step 9: Persist plan
+  // Step 10: Persist plan
   const { path: persistedPath, planWithChecksum } = await persistPlan(
     config.runDir,
     planWithDag,
