@@ -12,7 +12,7 @@ import { parseExecutionTask } from '../core/models/ExecutionTask';
 import { readManifest } from '../persistence/runDirectoryManager';
 import { isFileNotFound } from '../utils/safeJson.js';
 
-import { QUEUE_FILE, QUEUE_MANIFEST_FILE } from './queueConstants.js';
+import { QUEUE_FILE, QUEUE_MANIFEST_FILE } from './queueTypes.js';
 import type { QueueManifest, QueueValidationResult } from './queueTypes.js';
 
 /**

@@ -11,7 +11,7 @@ import * as path from 'node:path';
 import { readManifest } from '../persistence/runDirectoryManager';
 import { loadSnapshot } from './queueSnapshotManager.js';
 import { readOperationsWithStats } from './queueOperationsLog.js';
-import { QUEUE_SNAPSHOT_FILE } from './queueConstants.js';
+import { QUEUE_SNAPSHOT_FILE } from './queueTypes.js';
 import type { QueueIntegrityMode } from './queueTypes.js';
 import { QueueIntegrityError } from './queueTypes.js';
 import { getErrorMessage } from '../utils/errors.js';

@@ -10,7 +10,7 @@ import { getErrorMessage } from '../utils/errors.js';
 import { getCounts, addTask as addTaskToIndex } from './queueMemoryIndex.js';
 import { appendOperationsBatch } from './queueOperationsLog.js';
 import { compact } from './queueCompactionEngine.js';
-import { QUEUE_FILE, QUEUE_MANIFEST_FILE, QUEUE_SNAPSHOT_FILE } from './queueConstants.js';
+import { QUEUE_FILE, QUEUE_MANIFEST_FILE, QUEUE_SNAPSHOT_FILE } from './queueTypes.js';
 import type {
   QueueOperation,
   QueueManifest,

@@ -393,58 +393,22 @@ export class WriteActionQueue {
     this.logger.info('Draining write action queue');
 
     try {
-      // Check for rate limit cooldown
-      const inCooldown = await this.rateLimitLedger.isInCooldown(this.provider);
-      if (inCooldown) {
-        const requiresAck = await this.rateLimitLedger.requiresManualAcknowledgement(this.provider);
+      const cooldownResult = await this.checkRateLimitGuard();
+      if (cooldownResult) return cooldownResult;
 
-        if (requiresAck) {
-          this.logger.warn('Rate limit cooldown requires manual acknowledgement', {
-            provider: this.provider,
-          });
-
-          return {
-            success: false,
-            message:
-              'Queue draining paused: manual acknowledgement required due to repeated rate limits',
-            actionsAffected: 0,
-          };
-        }
-
-        this.logger.warn('Rate limit cooldown active, pausing queue drain', {
-          provider: this.provider,
-        });
-
-        return {
-          success: true,
-          message: 'Queue draining paused: waiting for rate limit cooldown to expire',
-          actionsAffected: 0,
-        };
-      }
-
-      // Load all actions
       const actions = await this.loadQueue();
-
-      // Get pending actions
       const pendingActions = Array.from(actions.values())
         .filter((a) => a.status === WriteActionStatus.PENDING)
         .sort((a, b) => a.created_at.localeCompare(b.created_at));
 
       if (pendingActions.length === 0) {
         this.logger.info('No pending actions to drain');
-        return {
-          success: true,
-          message: 'No pending actions',
-          actionsAffected: 0,
-        };
+        return { success: true, message: 'No pending actions', actionsAffected: 0 };
       }
 
-      // Get current in-progress count
       const inProgressCount = Array.from(actions.values()).filter(
         (a) => a.status === WriteActionStatus.IN_PROGRESS
       ).length;
-
-      // Calculate how many actions we can execute
       const availableSlots = Math.max(0, this.concurrencyLimit - inProgressCount);
       const actionsToExecute = pendingActions.slice(0, availableSlots);
 
@@ -455,38 +419,9 @@ export class WriteActionQueue {
         to_execute: actionsToExecute.length,
       });
 
-      let successCount = 0;
-      let failureCount = 0;
-      const errors: string[] = [];
-
-      // Execute actions
-      for (const action of actionsToExecute) {
-        try {
-          await this.executeAction(action, executor);
-          successCount++;
-        } catch (error) {
-          failureCount++;
-          const errorMessage = getErrorMessage(error);
-          errors.push(`${action.action_id}: ${errorMessage}`);
-        }
-      }
-
-      const result: QueueOperationResult = {
-        success: failureCount === 0,
-        message: `Executed ${successCount} action(s), ${failureCount} failed`,
-        actionsAffected: successCount + failureCount,
-      };
-
-      if (errors.length > 0) {
-        result.errors = errors;
-      }
-
-      return result;
+      return await this.executeActionsSequentially(actionsToExecute, executor);
     } catch (error) {
-      this.logger.error('Failed to drain queue', {
-        error: getErrorMessage(error),
-      });
-
+      this.logger.error('Failed to drain queue', { error: getErrorMessage(error) });
       return {
         success: false,
         message: getErrorMessage(error),
@@ -494,6 +429,64 @@ export class WriteActionQueue {
         errors: [error instanceof Error && error.stack ? error.stack : getErrorMessage(error)],
       };
     }
+  }
+
+  /**
+   * Guard that checks rate limit cooldown state before draining.
+   * Returns a result to return immediately, or null to proceed.
+   */
+  private async checkRateLimitGuard(): Promise<QueueOperationResult | null> {
+    const inCooldown = await this.rateLimitLedger.isInCooldown(this.provider);
+    if (!inCooldown) return null;
+
+    const requiresAck = await this.rateLimitLedger.requiresManualAcknowledgement(this.provider);
+    if (requiresAck) {
+      this.logger.warn('Rate limit cooldown requires manual acknowledgement', {
+        provider: this.provider,
+      });
+      return {
+        success: false,
+        message: 'Queue draining paused: manual acknowledgement required due to repeated rate limits',
+        actionsAffected: 0,
+      };
+    }
+
+    this.logger.warn('Rate limit cooldown active, pausing queue drain', { provider: this.provider });
+    return {
+      success: true,
+      message: 'Queue draining paused: waiting for rate limit cooldown to expire',
+      actionsAffected: 0,
+    };
+  }
+
+  /**
+   * Execute a batch of actions sequentially, collecting results.
+   */
+  private async executeActionsSequentially(
+    actionsToExecute: WriteAction[],
+    executor: ActionExecutor
+  ): Promise<QueueOperationResult> {
+    let successCount = 0;
+    let failureCount = 0;
+    const errors: string[] = [];
+
+    for (const action of actionsToExecute) {
+      try {
+        await this.executeAction(action, executor);
+        successCount++;
+      } catch (error) {
+        failureCount++;
+        errors.push(`${action.action_id}: ${getErrorMessage(error)}`);
+      }
+    }
+
+    const result: QueueOperationResult = {
+      success: failureCount === 0,
+      message: `Executed ${successCount} action(s), ${failureCount} failed`,
+      actionsAffected: successCount + failureCount,
+    };
+    if (errors.length > 0) result.errors = errors;
+    return result;
   }
 
   /**
