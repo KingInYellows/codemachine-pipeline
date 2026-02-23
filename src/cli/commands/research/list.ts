@@ -2,7 +2,7 @@ import { Command, Flags } from '@oclif/core';
 import { getRunDirectoryPath } from '../../../persistence/runDirectoryManager';
 import { resolveRunDirectorySettings, selectFeatureId } from '../../utils/runDirectory';
 import { createCliLogger } from '../../../telemetry/logger';
-import { createRunMetricsCollector, StandardMetrics } from '../../../telemetry/metrics';
+import { createRunMetricsCollector } from '../../../telemetry/metrics';
 import {
   createResearchCoordinator,
   type ResearchDiagnostics,
@@ -10,6 +10,7 @@ import {
 } from '../../../workflows/researchCoordinator';
 import type { ResearchTask } from '../../../core/models/ResearchTask';
 import { setJsonOutputMode } from '../../utils/cliErrors';
+import { flushTelemetrySuccess, flushTelemetryError } from '../../utils/telemetryLifecycle';
 
 type ListFlags = {
   feature?: string;
@@ -128,21 +129,9 @@ export default class ResearchList extends Command {
         this.printHumanReadable(payload);
       }
 
-      const duration = Date.now() - startTime;
-      metrics.observe(StandardMetrics.COMMAND_EXECUTION_DURATION_MS, duration, {
-        command: 'research:list',
-      });
-      metrics.increment(StandardMetrics.COMMAND_INVOCATIONS_TOTAL, {
-        command: 'research:list',
-        exit_code: '0',
-      });
-      await metrics.flush();
+      await flushTelemetrySuccess({ commandName: 'research:list', startTime, metrics });
     } catch (error) {
-      metrics?.increment(StandardMetrics.COMMAND_INVOCATIONS_TOTAL, {
-        command: 'research:list',
-        exit_code: '1',
-      });
-      await metrics?.flush();
+      await flushTelemetryError({ commandName: 'research:list', startTime, metrics }, error);
 
       logger.error('Failed to list research tasks', {
         error: error instanceof Error ? error.message : 'unknown error',

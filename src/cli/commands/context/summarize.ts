@@ -8,7 +8,6 @@ import {
 } from '../../../persistence/runDirectoryManager';
 import { safeJsonParse } from '../../../utils/safeJson';
 import {
-  ensureTelemetryReferences,
   resolveRunDirectorySettings,
   selectFeatureId,
   type RunDirectorySettings,
@@ -16,12 +15,10 @@ import {
 import { createCliLogger, LogLevel, RedactionEngine } from '../../../telemetry/logger';
 import {
   createRunMetricsCollector,
-  StandardMetrics,
   type MetricsCollector,
 } from '../../../telemetry/metrics';
 import {
   createRunTraceManager,
-  SpanStatusCode,
   type TraceManager,
   type ActiveSpan,
 } from '../../../telemetry/traces';
@@ -41,6 +38,7 @@ import {
   type ContextDocument,
 } from '../../../core/models/ContextDocument';
 import { setJsonOutputMode } from '../../utils/cliErrors';
+import { flushTelemetrySuccess, flushTelemetryError } from '../../utils/telemetryLifecycle';
 
 type SummarizeFlags = {
   feature?: string;
@@ -128,6 +126,7 @@ export default class ContextSummarize extends Command {
     let metrics: MetricsCollector | undefined;
     let traceManager: TraceManager | undefined;
     let commandSpan: ActiveSpan | undefined;
+    let runDir: string | undefined;
 
     try {
       const settings = await resolveRunDirectorySettings();
@@ -140,7 +139,7 @@ export default class ContextSummarize extends Command {
         });
       }
 
-      const runDir = getRunDirectoryPath(settings.baseDir, featureId);
+      runDir = getRunDirectoryPath(settings.baseDir, featureId);
       logger = createCliLogger('context:summarize', featureId, runDir, {
         minLevel: typedFlags.json ? LogLevel.WARN : LogLevel.INFO,
         mirrorToStderr: !typedFlags.json,
@@ -220,8 +219,6 @@ export default class ContextSummarize extends Command {
       await costTracker.flush();
       const budgetWarnings = costTracker.getBudgetWarnings().map((warning) => warning.message);
 
-      await ensureTelemetryReferences(runDir);
-
       const output = {
         feature_id: featureId,
         run_directory: runDir,
@@ -259,58 +256,15 @@ export default class ContextSummarize extends Command {
         this.log('');
       }
 
-      const duration = Date.now() - startTime;
-      if (metrics) {
-        metrics.observe(StandardMetrics.COMMAND_EXECUTION_DURATION_MS, duration, {
-          command: 'context:summarize',
-        });
-        metrics.increment(StandardMetrics.COMMAND_INVOCATIONS_TOTAL, {
-          command: 'context:summarize',
-          exit_code: '0',
-        });
-        await metrics.flush();
-      }
-
-      if (commandSpan) {
-        commandSpan.setAttribute('exit_code', 0);
-        commandSpan.end({ code: SpanStatusCode.OK });
-      }
-
-      if (traceManager) {
-        await traceManager.flush();
-      }
-
-      if (logger) {
-        logger.info('Context summarization completed', { duration_ms: duration });
-        await logger.flush();
-      }
+      await flushTelemetrySuccess(
+        { commandName: 'context:summarize', startTime, logger, metrics, traceManager, commandSpan, runDirPath: runDir },
+        { files: output.files, summaries: output.summaries }
+      );
     } catch (error) {
-      if (metrics) {
-        metrics.increment(StandardMetrics.COMMAND_INVOCATIONS_TOTAL, {
-          command: 'context:summarize',
-          exit_code: '1',
-        });
-        await metrics.flush();
-      }
-      if (commandSpan) {
-        commandSpan.setAttribute('exit_code', 1);
-        if (error instanceof Error) {
-          commandSpan.setAttribute('error.message', error.message);
-        }
-        commandSpan.end({
-          code: SpanStatusCode.ERROR,
-          message: error instanceof Error ? error.message : 'unknown error',
-        });
-      }
-      if (traceManager) {
-        await traceManager.flush();
-      }
-      if (logger) {
-        if (error instanceof Error) {
-          logger.error('Context summarization failed', { error: error.message });
-        }
-        await logger.flush();
-      }
+      await flushTelemetryError(
+        { commandName: 'context:summarize', startTime, logger, metrics, traceManager, commandSpan, runDirPath: runDir },
+        error
+      );
 
       if (error && typeof error === 'object' && 'oclif' in error) {
         throw error;

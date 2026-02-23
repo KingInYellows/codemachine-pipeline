@@ -5,10 +5,9 @@ import * as os from 'node:os';
 import { createCliLogger, LogLevel, type StructuredLogger } from '../../telemetry/logger';
 import {
   createRunMetricsCollector,
-  StandardMetrics,
   type MetricsCollector,
 } from '../../telemetry/metrics';
-import { createRunTraceManager, SpanStatusCode } from '../../telemetry/traces';
+import { createRunTraceManager } from '../../telemetry/traces';
 import { getRunDirectoryPath, readManifest } from '../../persistence/runDirectoryManager';
 import {
   grantApproval,
@@ -24,9 +23,9 @@ import { updateTraceMapOnSpecChange } from '../../workflows/traceabilityMapper';
 import {
   resolveRunDirectorySettings,
   selectFeatureId,
-  ensureTelemetryReferences,
 } from '../utils/runDirectory';
 import { formatErrorMessage, setJsonOutputMode } from '../utils/cliErrors';
+import { flushTelemetrySuccess, flushTelemetryError } from '../utils/telemetryLifecycle';
 
 /**
  * Approve Command
@@ -310,39 +309,9 @@ export default class Approve extends Command {
 
       this.emitApprovalSummary(payload, typedFlags.json);
 
-      const duration = Date.now() - startTime;
-      metrics.observe(StandardMetrics.COMMAND_EXECUTION_DURATION_MS, duration, {
-        command: 'approve',
-      });
-      metrics.increment(StandardMetrics.COMMAND_INVOCATIONS_TOTAL, {
-        command: 'approve',
-        exit_code: '0',
-      });
-      await metrics.flush();
-      commandSpan.end({ code: SpanStatusCode.OK });
-      await traceManager.flush();
-      await ensureTelemetryReferences(runDir);
-      await logger.flush();
+      await flushTelemetrySuccess({ commandName: 'approve', startTime, logger, metrics, traceManager, commandSpan, runDirPath: runDir });
     } catch (error) {
-      metrics.increment(StandardMetrics.COMMAND_INVOCATIONS_TOTAL, {
-        command: 'approve',
-        exit_code: '1',
-      });
-      await metrics.flush();
-      commandSpan.end({
-        code: SpanStatusCode.ERROR,
-        message: formatErrorMessage(error),
-      });
-      await traceManager.flush();
-      await ensureTelemetryReferences(runDir);
-
-      if (error instanceof Error) {
-        logger.error('Approve command failed', {
-          error: error.message,
-          stack: error.stack,
-        });
-      }
-      await logger.flush();
+      await flushTelemetryError({ commandName: 'approve', startTime, logger, metrics, traceManager, commandSpan, runDirPath: runDir }, error);
 
       // Check for hash mismatch error (exit 30)
       if (error instanceof Error && error.message.includes('hash mismatch')) {

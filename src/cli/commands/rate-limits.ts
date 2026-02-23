@@ -1,13 +1,13 @@
 import { Command, Flags } from '@oclif/core';
 import { getRunDirectoryPath } from '../../persistence/runDirectoryManager';
 import { createCliLogger, LogLevel } from '../../telemetry/logger';
-import { createRunMetricsCollector, StandardMetrics } from '../../telemetry/metrics';
-import { createRunTraceManager, SpanStatusCode } from '../../telemetry/traces';
+import { createRunMetricsCollector } from '../../telemetry/metrics';
+import { createRunTraceManager } from '../../telemetry/traces';
 import type { StructuredLogger } from '../../telemetry/logger';
 import type { MetricsCollector } from '../../telemetry/metrics';
 import type { TraceManager, ActiveSpan } from '../../telemetry/traces';
+import { flushTelemetrySuccess, flushTelemetryError } from '../utils/telemetryLifecycle';
 import {
-  ensureTelemetryReferences,
   resolveRunDirectorySettings,
   selectFeatureId,
 } from '../utils/runDirectory';
@@ -129,41 +129,11 @@ export default class RateLimits extends Command {
       // Handle clear operation
       if (typedFlags.clear) {
         await this.handleClearCooldown(runDirPath, typedFlags.clear, logger, typedFlags.json);
-
-        // Record success
-        if (metrics) {
-          const duration = Date.now() - startTime;
-          metrics.observe(StandardMetrics.COMMAND_EXECUTION_DURATION_MS, duration, {
-            command: 'rate-limits',
-          });
-          metrics.increment(StandardMetrics.COMMAND_INVOCATIONS_TOTAL, {
-            command: 'rate-limits',
-            exit_code: '0',
-          });
-          await metrics.flush();
-        }
-
-        if (commandSpan) {
-          commandSpan.setAttribute('exit_code', 0);
-          commandSpan.setAttribute('clear_provider', typedFlags.clear);
-          commandSpan.end({ code: SpanStatusCode.OK });
-        }
-
-        if (traceManager) {
-          await traceManager.flush();
-        }
-
-        if (runDirPath) {
-          await ensureTelemetryReferences(runDirPath);
-        }
-
-        if (logger) {
-          logger.info('Rate-limits command completed (clear operation)', {
-            duration_ms: Date.now() - startTime,
-          });
-          await logger.flush();
-        }
-
+        commandSpan?.setAttribute('clear_provider', typedFlags.clear);
+        await flushTelemetrySuccess(
+          { commandName: 'rate-limits', startTime, logger, metrics, traceManager, commandSpan, runDirPath },
+          { operation: 'clear' }
+        );
         return;
       }
 
@@ -192,82 +162,10 @@ export default class RateLimits extends Command {
         }
       }
 
-      // Record success
-      if (metrics) {
-        const duration = Date.now() - startTime;
-        metrics.observe(StandardMetrics.COMMAND_EXECUTION_DURATION_MS, duration, {
-          command: 'rate-limits',
-        });
-        metrics.increment(StandardMetrics.COMMAND_INVOCATIONS_TOTAL, {
-          command: 'rate-limits',
-          exit_code: '0',
-        });
-        await metrics.flush();
-      }
-
-      if (commandSpan) {
-        commandSpan.setAttribute('exit_code', 0);
-        commandSpan.setAttribute('provider_count', Object.keys(filteredReport.providers).length);
-        commandSpan.end({ code: SpanStatusCode.OK });
-      }
-
-      if (traceManager) {
-        await traceManager.flush();
-      }
-
-      if (runDirPath) {
-        await ensureTelemetryReferences(runDirPath);
-      }
-
-      if (logger) {
-        logger.info('Rate-limits command completed', { duration_ms: Date.now() - startTime });
-        await logger.flush();
-      }
+      commandSpan?.setAttribute('provider_count', Object.keys(filteredReport.providers).length);
+      await flushTelemetrySuccess({ commandName: 'rate-limits', startTime, logger, metrics, traceManager, commandSpan, runDirPath });
     } catch (error) {
-      // Record error
-      if (metrics) {
-        const duration = Date.now() - startTime;
-        metrics.observe(StandardMetrics.COMMAND_EXECUTION_DURATION_MS, duration, {
-          command: 'rate-limits',
-        });
-        metrics.increment(StandardMetrics.COMMAND_INVOCATIONS_TOTAL, {
-          command: 'rate-limits',
-          exit_code: '1',
-        });
-        await metrics.flush();
-      }
-
-      if (commandSpan) {
-        commandSpan.setAttribute('exit_code', 1);
-        commandSpan.setAttribute('error', true);
-        if (error instanceof Error) {
-          commandSpan.setAttribute('error.message', error.message);
-          commandSpan.setAttribute('error.name', error.name);
-        }
-        commandSpan.end({
-          code: SpanStatusCode.ERROR,
-          message: error instanceof Error ? error.message : 'unknown error',
-        });
-      }
-
-      if (traceManager) {
-        await traceManager.flush();
-      }
-
-      if (runDirPath) {
-        await ensureTelemetryReferences(runDirPath);
-      }
-
-      if (logger) {
-        if (error instanceof Error) {
-          logger.error('Rate-limits command failed', {
-            error: error.message,
-            stack: error.stack,
-            duration_ms: Date.now() - startTime,
-          });
-        }
-        await logger.flush();
-      }
+      await flushTelemetryError({ commandName: 'rate-limits', startTime, logger, metrics, traceManager, commandSpan, runDirPath }, error);
 
       // Re-throw oclif errors to preserve exit codes
       if (error && typeof error === 'object' && 'oclif' in error) {

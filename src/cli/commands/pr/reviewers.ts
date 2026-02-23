@@ -10,10 +10,10 @@
  */
 
 import { Command, Flags } from '@oclif/core';
-import { createRunMetricsCollector, StandardMetrics } from '../../../telemetry/metrics';
-import { createRunTraceManager, SpanStatusCode, withSpan } from '../../../telemetry/traces';
+import { createRunMetricsCollector } from '../../../telemetry/metrics';
+import { createRunTraceManager, withSpan } from '../../../telemetry/traces';
+import { flushTelemetrySuccess, flushTelemetryError } from '../../utils/telemetryLifecycle';
 import {
-  ensureTelemetryReferences,
   resolveRunDirectorySettings,
   selectFeatureId,
 } from '../../utils/runDirectory';
@@ -195,66 +195,17 @@ export default class PRReviewers extends Command {
 
         this.log(output);
 
-        // Record success metrics
-        const duration = Date.now() - startTime;
-        metrics.observe(StandardMetrics.COMMAND_EXECUTION_DURATION_MS, duration, {
-          command: 'pr.reviewers',
-        });
-        metrics.increment(StandardMetrics.COMMAND_INVOCATIONS_TOTAL, {
-          command: 'pr.reviewers',
-          exit_code: '0',
-        });
-        await metrics.flush();
-
-        commandSpan.setAttribute('exit_code', 0);
         commandSpan.setAttribute('pr_number', prMetadata.pr_number);
         commandSpan.setAttribute('reviewers_added', reviewersToAdd.length);
-        commandSpan.end({ code: SpanStatusCode.OK });
-
-        await traceManager.flush();
-        await ensureTelemetryReferences(runDir);
-
-        logger.info('PR reviewers command completed', {
-          duration_ms: duration,
-          pr_number: prMetadata.pr_number,
-          reviewers_added: reviewersToAdd.length,
-        });
-        await logger.flush();
+        await flushTelemetrySuccess(
+          { commandName: 'pr.reviewers', startTime, logger, metrics, traceManager, commandSpan, runDirPath: runDir },
+          { pr_number: prMetadata.pr_number, reviewers_added: reviewersToAdd.length }
+        );
       } catch (error) {
-        // Record error metrics
-        const duration = Date.now() - startTime;
-        metrics.observe(StandardMetrics.COMMAND_EXECUTION_DURATION_MS, duration, {
-          command: 'pr.reviewers',
-        });
-        metrics.increment(StandardMetrics.COMMAND_INVOCATIONS_TOTAL, {
-          command: 'pr.reviewers',
-          exit_code: '1',
-        });
-        await metrics.flush();
-
-        commandSpan.setAttribute('exit_code', 1);
-        commandSpan.setAttribute('error', true);
-        if (error instanceof Error) {
-          commandSpan.setAttribute('error.message', error.message);
-          commandSpan.setAttribute('error.name', error.name);
-        }
-        commandSpan.end({
-          code: SpanStatusCode.ERROR,
-          message: error instanceof Error ? error.message : 'unknown error',
-        });
-
-        await traceManager.flush();
-        await ensureTelemetryReferences(runDir);
-
-        if (error instanceof Error) {
-          logger.error('PR reviewers command failed', {
-            error: error.message,
-            stack: error.stack,
-            duration_ms: duration,
-          });
-        }
-        await logger.flush();
-
+        await flushTelemetryError(
+          { commandName: 'pr.reviewers', startTime, logger, metrics, traceManager, commandSpan, runDirPath: runDir },
+          error
+        );
         throw error;
       }
     } catch (error) {
