@@ -621,7 +621,9 @@ export default class Start extends Command {
 
     // Create strategies — CLI strategy takes priority when binary is available
     if (!mergedConfig.execution) {
-      throw new Error('Execution config is required. Ensure your .codepipe/config.json includes an "execution" section.');
+      throw new Error(
+        'Execution config is required. Ensure your .codepipe/config.json includes an "execution" section.'
+      );
     }
     const strategies = await buildExecutionStrategies(mergedConfig.execution, logger);
 
