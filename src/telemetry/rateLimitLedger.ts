@@ -1,7 +1,8 @@
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
-import type { Provider } from '../adapters/http/client';
+import type { Provider } from '../core/sharedTypes';
 import type { LoggerInterface } from './logger';
+import { isFileNotFound } from '../utils/safeJson.js';
 
 /**
  * Rate Limit Ledger
@@ -138,15 +139,6 @@ async function loadLedgerFile(ledgerPath: string): Promise<RateLimitLedgerData> 
 async function saveLedgerFile(ledgerPath: string, ledger: RateLimitLedgerData): Promise<void> {
   const content = JSON.stringify(ledger, null, 2);
   await fs.writeFile(ledgerPath, content, 'utf-8');
-}
-
-function isFileNotFound(error: unknown): error is NodeJS.ErrnoException {
-  return Boolean(
-    error &&
-    typeof error === 'object' &&
-    'code' in error &&
-    (error as NodeJS.ErrnoException).code === 'ENOENT'
-  );
 }
 
 // ============================================================================

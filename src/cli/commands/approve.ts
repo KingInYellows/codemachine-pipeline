@@ -3,12 +3,8 @@ import * as path from 'node:path';
 import { execSync } from 'node:child_process';
 import * as os from 'node:os';
 import { createCliLogger, LogLevel, type StructuredLogger } from '../../telemetry/logger';
-import {
-  createRunMetricsCollector,
-  StandardMetrics,
-  type MetricsCollector,
-} from '../../telemetry/metrics';
-import { createRunTraceManager, SpanStatusCode } from '../../telemetry/traces';
+import { createRunMetricsCollector, type MetricsCollector } from '../../telemetry/metrics';
+import { createRunTraceManager } from '../../telemetry/traces';
 import { getRunDirectoryPath, readManifest } from '../../persistence/runDirectoryManager';
 import {
   grantApproval,
@@ -21,12 +17,9 @@ import {
 } from '../../workflows/approvalRegistry';
 import { ApprovalGateType } from '../../core/models/ApprovalRecord';
 import { updateTraceMapOnSpecChange } from '../../workflows/traceabilityMapper';
-import {
-  resolveRunDirectorySettings,
-  selectFeatureId,
-  ensureTelemetryReferences,
-} from '../utils/runDirectory';
-import { formatErrorMessage } from '../utils/cliErrors';
+import { resolveRunDirectorySettings, selectFeatureId } from '../utils/runDirectory';
+import { formatErrorMessage, setJsonOutputMode } from '../utils/cliErrors';
+import { flushTelemetrySuccess, flushTelemetryError } from '../utils/telemetryLifecycle';
 
 /**
  * Approve Command
@@ -136,7 +129,7 @@ export default class Approve extends Command {
     }
 
     if (typedFlags.json) {
-      process.env.JSON_OUTPUT = '1';
+      setJsonOutputMode();
     }
 
     const startTime = Date.now();
@@ -310,39 +303,28 @@ export default class Approve extends Command {
 
       this.emitApprovalSummary(payload, typedFlags.json);
 
-      const duration = Date.now() - startTime;
-      metrics.observe(StandardMetrics.COMMAND_EXECUTION_DURATION_MS, duration, {
-        command: 'approve',
+      await flushTelemetrySuccess({
+        commandName: 'approve',
+        startTime,
+        logger,
+        metrics,
+        traceManager,
+        commandSpan,
+        runDirPath: runDir,
       });
-      metrics.increment(StandardMetrics.COMMAND_INVOCATIONS_TOTAL, {
-        command: 'approve',
-        exit_code: '0',
-      });
-      await metrics.flush();
-      commandSpan.end({ code: SpanStatusCode.OK });
-      await traceManager.flush();
-      await ensureTelemetryReferences(runDir);
-      await logger.flush();
     } catch (error) {
-      metrics.increment(StandardMetrics.COMMAND_INVOCATIONS_TOTAL, {
-        command: 'approve',
-        exit_code: '1',
-      });
-      await metrics.flush();
-      commandSpan.end({
-        code: SpanStatusCode.ERROR,
-        message: formatErrorMessage(error),
-      });
-      await traceManager.flush();
-      await ensureTelemetryReferences(runDir);
-
-      if (error instanceof Error) {
-        logger.error('Approve command failed', {
-          error: error.message,
-          stack: error.stack,
-        });
-      }
-      await logger.flush();
+      await flushTelemetryError(
+        {
+          commandName: 'approve',
+          startTime,
+          logger,
+          metrics,
+          traceManager,
+          commandSpan,
+          runDirPath: runDir,
+        },
+        error
+      );
 
       // Check for hash mismatch error (exit 30)
       if (error instanceof Error && error.message.includes('hash mismatch')) {

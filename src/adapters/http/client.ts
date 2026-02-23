@@ -13,6 +13,7 @@ import {
 } from './httpTypes.js';
 import type { HttpClientConfig, HttpRequestOptions, HttpResponse } from './httpTypes.js';
 import type { LoggerInterface } from '../../telemetry/logger';
+import { createConsoleLogger, LogLevel } from '../../telemetry/logger';
 import {
   generateRequestId,
   generateIdempotencyKey,
@@ -21,7 +22,6 @@ import {
   sanitizeHeaders,
   truncate,
   sleep,
-  createConsoleLogger,
 } from './httpUtils.js';
 
 /**
@@ -40,7 +40,6 @@ import {
 // Re-export types and enums for backward compatibility
 export { ErrorType, Provider } from './httpTypes.js';
 export type { HttpClientConfig, HttpRequestOptions, HttpResponse } from './httpTypes.js';
-export type { LoggerInterface } from '../../telemetry/logger';
 export {
   generateRequestId,
   generateIdempotencyKey,
@@ -49,7 +48,6 @@ export {
   sanitizeHeaders,
   truncate,
   sleep,
-  createConsoleLogger,
   SENSITIVE_HEADERS,
   SENSITIVE_KEYWORDS,
 } from './httpUtils.js';
@@ -57,20 +55,25 @@ export {
 /**
  * Structured HTTP error with metadata
  */
+const MAX_RESPONSE_BODY_SIZE = 2048;
+
 export class HttpError extends Error {
   constructor(
     message: string,
     public readonly type: ErrorType,
     public readonly statusCode?: number,
     public readonly headers?: Record<string, string>,
-    public readonly responseBody?: string,
+    responseBody?: string,
     public readonly requestId?: string,
     public readonly retryable: boolean = false
   ) {
     super(message);
     this.name = 'HttpError';
+    this.responseBody = responseBody ? truncate(responseBody, MAX_RESPONSE_BODY_SIZE) : undefined;
     Object.setPrototypeOf(this, HttpError.prototype);
   }
+
+  public readonly responseBody: string | undefined;
 
   /**
    * Convert to JSON-serializable object for logging
@@ -102,6 +105,10 @@ export class HttpError extends Error {
 // HTTP Client
 // ============================================================================
 
+type AttemptResult<T> =
+  | { ok: true; result: HttpResponse<T> }
+  | { ok: false; error: HttpError; rateLimitEnvelope: RateLimitEnvelope | undefined };
+
 /**
  * Unified HTTP client with rate limiting, retries, and structured errors
  */
@@ -121,7 +128,7 @@ export class HttpClient {
       maxRetries: config.maxRetries ?? DEFAULT_MAX_RETRIES,
       initialBackoff: config.initialBackoff ?? DEFAULT_INITIAL_BACKOFF,
       maxBackoff: config.maxBackoff ?? DEFAULT_MAX_BACKOFF,
-      logger: config.logger ?? createConsoleLogger(),
+      logger: config.logger ?? createConsoleLogger('http-client', LogLevel.DEBUG),
     };
 
     this.logger = this.config.logger;
@@ -151,11 +158,7 @@ export class HttpClient {
     body?: unknown,
     options?: HttpRequestOptions
   ): Promise<HttpResponse<T>> {
-    return this.request<T>('POST', path, {
-      ...options,
-      body: JSON.stringify(body),
-      idempotent: true, // POST requests get idempotency keys by default
-    });
+    return this.mutationRequest<T>('POST', path, body, options);
   }
 
   /**
@@ -166,11 +169,7 @@ export class HttpClient {
     body?: unknown,
     options?: HttpRequestOptions
   ): Promise<HttpResponse<T>> {
-    return this.request<T>('PUT', path, {
-      ...options,
-      body: JSON.stringify(body),
-      idempotent: true,
-    });
+    return this.mutationRequest<T>('PUT', path, body, options);
   }
 
   /**
@@ -181,19 +180,25 @@ export class HttpClient {
     body?: unknown,
     options?: HttpRequestOptions
   ): Promise<HttpResponse<T>> {
-    return this.request<T>('PATCH', path, {
-      ...options,
-      body: JSON.stringify(body),
-      idempotent: true,
-    });
+    return this.mutationRequest<T>('PATCH', path, body, options);
   }
 
   /**
    * Perform a DELETE request
    */
   async delete<T = unknown>(path: string, options?: HttpRequestOptions): Promise<HttpResponse<T>> {
-    return this.request<T>('DELETE', path, {
+    return this.request<T>('DELETE', path, { ...options, idempotent: true });
+  }
+
+  private mutationRequest<T>(
+    method: 'POST' | 'PUT' | 'PATCH',
+    path: string,
+    body?: unknown,
+    options?: HttpRequestOptions
+  ): Promise<HttpResponse<T>> {
+    return this.request<T>(method, path, {
       ...options,
+      body: JSON.stringify(body),
       idempotent: true,
     });
   }
@@ -209,116 +214,57 @@ export class HttpClient {
     const url = new URL(path, this.config.baseUrl).toString();
     const requestId = generateRequestId();
     const idempotencyKey = options.idempotent ? generateIdempotencyKey() : undefined;
-
     const headers = this.buildHeaders(requestId, idempotencyKey, options.headers);
 
-    const retryConfig = {
-      enabled: options.retry?.enabled !== false,
-      maxAttempts: options.retry?.maxAttempts ?? this.config.maxRetries,
+    const retryEnabled = options.retry?.enabled !== false;
+    const maxAttempts = retryEnabled
+      ? (options.retry?.maxAttempts ?? this.config.maxRetries) + 1
+      : 1;
+
+    const baseFetchOptions: Omit<RequestInit, 'signal'> = {
+      method,
+      headers: headers as HeadersInit,
     };
+    if (options.body) {
+      baseFetchOptions.body = options.body;
+    }
 
     let lastError: HttpError | undefined;
-    const maxAttempts = retryConfig.enabled ? retryConfig.maxAttempts + 1 : 1;
 
     for (let attempt = 0; attempt < maxAttempts; attempt++) {
-      try {
-        // Log sanitized request metadata
-        this.logger.debug('HTTP request', {
-          method,
-          url: sanitizeUrl(url),
+      const outcome = await this.executeOnce<T>(
+        method,
+        url,
+        baseFetchOptions,
+        requestId,
+        attempt + 1,
+        maxAttempts,
+        options.metadata
+      );
+
+      if (outcome.ok) return outcome.result;
+
+      lastError = outcome.error;
+
+      if (outcome.error.retryable && attempt < maxAttempts - 1) {
+        const backoffMs = this.calculateBackoff(attempt, outcome.rateLimitEnvelope);
+        const logMessage =
+          outcome.error.statusCode !== undefined
+            ? 'Retrying after error'
+            : 'Retrying after network error';
+        this.logger.warn(logMessage, {
           requestId,
           attempt: attempt + 1,
-          maxAttempts,
-          metadata: options.metadata,
+          backoffMs,
+          errorType: outcome.error.type,
+          statusCode: outcome.error.statusCode,
+          errorMessage: outcome.error.message,
         });
-
-        const fetchOptions: RequestInit = {
-          method,
-          headers: headers as HeadersInit,
-          signal: AbortSignal.timeout(this.config.timeout),
-        };
-
-        if (options.body) {
-          fetchOptions.body = options.body;
-        }
-
-        const response = await fetch(url, fetchOptions);
-
-        // Extract rate limit envelope
-        const rateLimitEnvelope = this.extractRateLimitEnvelope(response, requestId);
-
-        // Persist rate limit data if ledger is available
-        if (rateLimitEnvelope && this.rateLimitLedger) {
-          await this.rateLimitLedger.recordEnvelope(rateLimitEnvelope);
-        }
-
-        // Handle error responses
-        if (!response.ok) {
-          const error = await this.handleErrorResponse(response, requestId, rateLimitEnvelope);
-
-          // Check if error is retryable
-          if (error.retryable && attempt < maxAttempts - 1) {
-            const backoffMs = this.calculateBackoff(attempt, rateLimitEnvelope);
-            this.logger.warn('Retrying after error', {
-              requestId,
-              attempt: attempt + 1,
-              backoffMs,
-              errorType: error.type,
-              statusCode: error.statusCode,
-            });
-            await sleep(backoffMs);
-            lastError = error;
-            continue;
-          }
-
-          throw error;
-        }
-
-        // Parse response body
-        const data = await this.parseResponseBody<T>(response);
-
-        // Log sanitized response metadata
-        this.logger.debug('HTTP response', {
-          requestId,
-          status: response.status,
-          rateLimitRemaining: rateLimitEnvelope?.remaining,
-        });
-
-        const result: HttpResponse<T> = {
-          status: response.status,
-          headers: extractHeaders(response.headers),
-          data,
-          requestId,
-        };
-
-        if (rateLimitEnvelope) {
-          result.rateLimitEnvelope = rateLimitEnvelope;
-        }
-
-        return result;
-      } catch (error) {
-        // Handle network errors and timeouts
-        if (error instanceof HttpError) {
-          throw error;
-        }
-
-        const networkError = this.handleNetworkError(error, requestId);
-
-        if (networkError.retryable && attempt < maxAttempts - 1) {
-          const backoffMs = this.calculateBackoff(attempt);
-          this.logger.warn('Retrying after network error', {
-            requestId,
-            attempt: attempt + 1,
-            backoffMs,
-            errorMessage: networkError.message,
-          });
-          await sleep(backoffMs);
-          lastError = networkError;
-          continue;
-        }
-
-        throw networkError;
+        await sleep(backoffMs);
+        continue;
       }
+
+      throw outcome.error;
     }
 
     // Should never reach here, but TypeScript doesn't know that
@@ -334,6 +280,74 @@ export class HttpClient {
         false
       )
     );
+  }
+
+  /**
+   * Execute a single HTTP attempt: fetch, extract rate limits, handle response.
+   * Returns a discriminated union so the retry loop can decide what to do next.
+   * A fresh AbortSignal timeout is created per attempt so retries get their own deadline.
+   */
+  private async executeOnce<T>(
+    method: string,
+    url: string,
+    baseFetchOptions: Omit<RequestInit, 'signal'>,
+    requestId: string,
+    attemptNumber: number,
+    maxAttempts: number,
+    metadata?: Record<string, unknown>
+  ): Promise<AttemptResult<T>> {
+    this.logger.debug('HTTP request', {
+      method,
+      url: sanitizeUrl(url),
+      requestId,
+      attempt: attemptNumber,
+      maxAttempts,
+      metadata,
+    });
+
+    try {
+      const fetchOptions: RequestInit = {
+        ...baseFetchOptions,
+        signal: AbortSignal.timeout(this.config.timeout),
+      };
+
+      const response = await fetch(url, fetchOptions);
+
+      const rateLimitEnvelope = this.extractRateLimitEnvelope(response, requestId);
+      if (rateLimitEnvelope && this.rateLimitLedger) {
+        await this.rateLimitLedger.recordEnvelope(rateLimitEnvelope);
+      }
+
+      if (!response.ok) {
+        const error = await this.handleErrorResponse(response, requestId, rateLimitEnvelope);
+        return { ok: false, error, rateLimitEnvelope };
+      }
+
+      const data = await this.parseResponseBody<T>(response);
+      this.logger.debug('HTTP response', {
+        requestId,
+        status: response.status,
+        rateLimitRemaining: rateLimitEnvelope?.remaining,
+      });
+
+      const result: HttpResponse<T> = {
+        status: response.status,
+        headers: extractHeaders(response.headers),
+        data,
+        requestId,
+      };
+      if (rateLimitEnvelope) {
+        result.rateLimitEnvelope = rateLimitEnvelope;
+      }
+
+      return { ok: true, result };
+    } catch (error) {
+      if (error instanceof HttpError) {
+        throw error;
+      }
+      const networkError = this.handleNetworkError(error, requestId);
+      return { ok: false, error: networkError, rateLimitEnvelope: undefined };
+    }
   }
 
   /**
@@ -605,15 +619,31 @@ export class HttpClient {
    * Parse response body as JSON
    */
   private async parseResponseBody<T>(response: Response): Promise<T> {
-    const contentType = response.headers.get('content-type');
+    const contentType = response.headers.get('content-type') ?? '';
 
-    if (contentType && contentType.includes('application/json')) {
+    if (contentType.includes('application/json')) {
       return (await response.json()) as T;
     }
 
-    // For non-JSON responses, return text as data
-    const text = await response.text();
-    return text as unknown as T;
+    // No content-type or non-JSON: try JSON parsing first (many APIs omit the header),
+    // fall back to text. Avoids the unsafe `as unknown as T` silent cast.
+    const text = await this.safeReadText(response);
+    if (!text) {
+      return undefined as unknown as T;
+    }
+    try {
+      return JSON.parse(text) as T;
+    } catch {
+      throw new HttpError(
+        `Non-JSON response with content type: ${contentType || '(none)'}`,
+        ErrorType.PERMANENT,
+        response.status,
+        extractHeaders(response.headers),
+        text,
+        undefined,
+        false
+      );
+    }
   }
 
   /**

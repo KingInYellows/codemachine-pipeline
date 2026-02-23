@@ -2,13 +2,13 @@ import { Command, Flags } from '@oclif/core';
 import * as path from 'node:path';
 import { getRunDirectoryPath } from '../../../persistence/runDirectoryManager';
 import { createCliLogger, LogLevel } from '../../../telemetry/logger';
-import { createRunMetricsCollector, StandardMetrics } from '../../../telemetry/metrics';
-import { createRunTraceManager, SpanStatusCode } from '../../../telemetry/traces';
+import { createRunMetricsCollector } from '../../../telemetry/metrics';
+import { createRunTraceManager } from '../../../telemetry/traces';
 import type { StructuredLogger } from '../../../telemetry/logger';
 import type { MetricsCollector } from '../../../telemetry/metrics';
 import type { TraceManager, ActiveSpan } from '../../../telemetry/traces';
+import { flushTelemetrySuccess, flushTelemetryError } from '../../utils/telemetryLifecycle';
 import {
-  ensureTelemetryReferences,
   resolveRunDirectorySettings,
   selectFeatureId,
   type RunDirectorySettings,
@@ -42,7 +42,13 @@ import {
   refreshBranchProtectionArtifact,
 } from '../../status/data';
 import { renderHumanReadable } from '../../status/renderers';
-import { CliError, CliErrorCode, formatErrorMessage, formatErrorJson } from '../../utils/cliErrors';
+import {
+  CliError,
+  CliErrorCode,
+  formatErrorMessage,
+  formatErrorJson,
+  setJsonOutputMode,
+} from '../../utils/cliErrors';
 
 /**
  * Status command - Display current state of a feature pipeline
@@ -88,7 +94,7 @@ export default class Status extends Command {
     const typedFlags = flags as StatusFlags;
 
     if (typedFlags.json) {
-      process.env.JSON_OUTPUT = '1';
+      setJsonOutputMode();
     }
 
     // Initialize telemetry (logger, metrics, traces)
@@ -216,81 +222,28 @@ export default class Status extends Command {
         });
       }
 
-      // Record success metrics
-      if (metrics) {
-        const duration = Date.now() - startTime;
-        metrics.observe(StandardMetrics.COMMAND_EXECUTION_DURATION_MS, duration, {
-          command: 'status',
-        });
-        metrics.increment(StandardMetrics.COMMAND_INVOCATIONS_TOTAL, {
-          command: 'status',
-          exit_code: '0',
-        });
-        await metrics.flush();
-      }
-
-      if (commandSpan) {
-        commandSpan.setAttribute('exit_code', 0);
-        commandSpan.end({ code: SpanStatusCode.OK });
-      }
-
-      if (traceManager) {
-        await traceManager.flush();
-      }
-
-      if (runDirPath) {
-        await ensureTelemetryReferences(runDirPath);
-      }
-
-      if (logger) {
-        logger.info('Status command completed', { duration_ms: Date.now() - startTime });
-        await logger.flush();
-      }
+      await flushTelemetrySuccess({
+        commandName: 'status',
+        startTime,
+        logger,
+        metrics,
+        traceManager,
+        commandSpan,
+        runDirPath,
+      });
     } catch (error) {
-      // Record error metrics
-      if (metrics) {
-        const duration = Date.now() - startTime;
-        metrics.observe(StandardMetrics.COMMAND_EXECUTION_DURATION_MS, duration, {
-          command: 'status',
-        });
-        metrics.increment(StandardMetrics.COMMAND_INVOCATIONS_TOTAL, {
-          command: 'status',
-          exit_code: '1',
-        });
-        await metrics.flush();
-      }
-
-      if (commandSpan) {
-        commandSpan.setAttribute('exit_code', 1);
-        commandSpan.setAttribute('error', true);
-        if (error instanceof Error) {
-          commandSpan.setAttribute('error.message', error.message);
-          commandSpan.setAttribute('error.name', error.name);
-        }
-        commandSpan.end({
-          code: SpanStatusCode.ERROR,
-          message: error instanceof Error ? error.message : 'unknown error',
-        });
-      }
-
-      if (traceManager) {
-        await traceManager.flush();
-      }
-
-      if (runDirPath) {
-        await ensureTelemetryReferences(runDirPath);
-      }
-
-      if (logger) {
-        if (error instanceof Error) {
-          logger.error('Status command failed', {
-            error: error.message,
-            stack: error.stack,
-            duration_ms: Date.now() - startTime,
-          });
-        }
-        await logger.flush();
-      }
+      await flushTelemetryError(
+        {
+          commandName: 'status',
+          startTime,
+          logger,
+          metrics,
+          traceManager,
+          commandSpan,
+          runDirPath,
+        },
+        error
+      );
 
       // Re-throw oclif errors to preserve exit codes
       if (error && typeof error === 'object' && 'oclif' in error) {

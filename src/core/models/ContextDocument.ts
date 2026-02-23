@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { createModelParser } from './modelParser.js';
 
 /**
  * ContextDocument Model
@@ -6,17 +7,10 @@ import { z } from 'zod';
  * Hash manifests tying context files, summaries, token costs,
  * and provenance data to Features.
  *
- * Implements:
- * - FR-1 (Initialize): Context discovery and caching
- * - ADR-2 (State Persistence): Hash-based integrity
- * - ADR-7 (Validation Policy): Zod-based validation
- *
  * Used by CLI commands: init, start, context
  */
 
-// ============================================================================
 // Context File Record Schema
-// ============================================================================
 
 const ContextFileRecordSchema = z.object({
   /** Relative path to context file (from repository root) */
@@ -33,9 +27,7 @@ const ContextFileRecordSchema = z.object({
 
 export type ContextFileRecord = z.infer<typeof ContextFileRecordSchema>;
 
-// ============================================================================
 // Context Summary Schema
-// ============================================================================
 
 const ContextSummarySchema = z.object({
   /** Chunk identifier (hash-derived) */
@@ -64,9 +56,7 @@ const ContextSummarySchema = z.object({
 
 export type ContextSummary = z.infer<typeof ContextSummarySchema>;
 
-// ============================================================================
 // Provenance Data Schema
-// ============================================================================
 
 const ProvenanceDataSchema = z.object({
   /** Source URL or identifier where context originated */
@@ -86,9 +76,7 @@ const ProvenanceDataSchema = z.object({
 
 export type ProvenanceData = z.infer<typeof ProvenanceDataSchema>;
 
-// ============================================================================
 // ContextDocument Schema
-// ============================================================================
 
 export const ContextDocumentSchema = z
   .object({
@@ -115,46 +103,11 @@ export const ContextDocumentSchema = z
 
 export type ContextDocument = Readonly<z.infer<typeof ContextDocumentSchema>>;
 
-// ============================================================================
 // Serialization Helpers
-// ============================================================================
 
-/**
- * Parse and validate ContextDocument from JSON
- */
-export function parseContextDocument(json: unknown):
-  | {
-      success: true;
-      data: ContextDocument;
-    }
-  | {
-      success: false;
-      errors: Array<{ path: string; message: string }>;
-    } {
-  const result = ContextDocumentSchema.safeParse(json);
-
-  if (result.success) {
-    return {
-      success: true,
-      data: result.data as ContextDocument,
-    };
-  }
-
-  return {
-    success: false,
-    errors: result.error.issues.map((err) => ({
-      path: err.path.join('.') || 'root',
-      message: err.message,
-    })),
-  };
-}
-
-/**
- * Serialize ContextDocument to JSON string
- */
-export function serializeContextDocument(contextDocument: ContextDocument, pretty = true): string {
-  return JSON.stringify(contextDocument, null, pretty ? 2 : 0);
-}
+const { parse: parseContextDocument, serialize: serializeContextDocument } =
+  createModelParser<ContextDocument>(ContextDocumentSchema);
+export { parseContextDocument, serializeContextDocument };
 
 /**
  * Create a new ContextDocument

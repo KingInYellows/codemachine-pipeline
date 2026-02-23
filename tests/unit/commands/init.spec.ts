@@ -1,7 +1,7 @@
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { execSync } from 'node:child_process';
-import { loadRepoConfig } from '../../../src/core/config/repo_config';
+import { loadRepoConfig } from '../../../src/core/config/RepoConfig';
 
 describe('init command', () => {
   const testDir = path.join(__dirname, '../../../.test-temp');

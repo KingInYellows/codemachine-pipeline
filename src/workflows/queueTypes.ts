@@ -3,17 +3,13 @@
  *
  * Write-Ahead Log (WAL) based queue types for optimized task queue operations.
  * Provides interfaces for atomic operations, snapshots, and migration support.
- *
- * Implements:
- * - Issue #45: Queue WAL Optimization Layer 1
- * - FR-3 (Resumability): Enhanced crash recovery via WAL
- * - ADR-2 (State Persistence): Monotonic sequence-based operations
  */
 
 import type { ExecutionTask } from '../core/models/ExecutionTask';
 
-// Re-export constants for modules that import from queueTypes
-export { QUEUE_FILE, QUEUE_MANIFEST_FILE, QUEUE_SNAPSHOT_FILE } from './queueConstants.js';
+export const QUEUE_FILE = 'queue.jsonl';
+export const QUEUE_MANIFEST_FILE = 'queue_manifest.json';
+export const QUEUE_SNAPSHOT_FILE = 'queue_snapshot.json';
 
 // ============================================================================
 // Queue Store Types (shared across companion modules)

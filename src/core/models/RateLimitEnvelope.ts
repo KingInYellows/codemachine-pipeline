@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { createModelParser } from './modelParser.js';
 
 /**
  * RateLimitEnvelope Model
@@ -12,9 +13,7 @@ import { z } from 'zod';
  * Used by CLI commands: status, http client
  */
 
-// ============================================================================
 // RateLimitEnvelope Schema
-// ============================================================================
 
 export const RateLimitEnvelopeSchema = z
   .object({
@@ -47,46 +46,11 @@ export const RateLimitEnvelopeSchema = z
 
 export type RateLimitEnvelope = Readonly<z.infer<typeof RateLimitEnvelopeSchema>>;
 
-// ============================================================================
 // Serialization Helpers
-// ============================================================================
 
-/**
- * Parse and validate RateLimitEnvelope from JSON
- */
-export function parseRateLimitEnvelope(json: unknown):
-  | {
-      success: true;
-      data: RateLimitEnvelope;
-    }
-  | {
-      success: false;
-      errors: Array<{ path: string; message: string }>;
-    } {
-  const result = RateLimitEnvelopeSchema.safeParse(json);
-
-  if (result.success) {
-    return {
-      success: true,
-      data: result.data as RateLimitEnvelope,
-    };
-  }
-
-  return {
-    success: false,
-    errors: result.error.issues.map((err) => ({
-      path: err.path.join('.') || 'root',
-      message: err.message,
-    })),
-  };
-}
-
-/**
- * Serialize RateLimitEnvelope to JSON string
- */
-export function serializeRateLimitEnvelope(envelope: RateLimitEnvelope, pretty = true): string {
-  return JSON.stringify(envelope, null, pretty ? 2 : 0);
-}
+const { parse: parseRateLimitEnvelope, serialize: serializeRateLimitEnvelope } =
+  createModelParser<RateLimitEnvelope>(RateLimitEnvelopeSchema);
+export { parseRateLimitEnvelope, serializeRateLimitEnvelope };
 
 /**
  * Create a new RateLimitEnvelope

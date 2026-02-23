@@ -1,18 +1,9 @@
 /**
  * Queue Operations Log (Write-Ahead Log)
  *
- * Implements a Write-Ahead Log (WAL) for queue operations with O(1) appends.
- * Uses NDJSON format (newline-delimited JSON) for efficient streaming.
- *
- * Implements:
- * - Issue #45: Queue WAL Optimization Layer 2
- * - FR-3 (Resumability): Crash-safe operation logging
- * - ADR-2 (State Persistence): Monotonic sequence-based operations
- *
- * WAL Format (NDJSON):
- * - Each line is a complete JSON object representing a QueueOperation
- * - Operations are ordered by monotonically increasing sequence numbers
- * - Checksum validation for operation integrity
+ * Write-Ahead Log (WAL) for queue operations with O(1) appends.
+ * Uses NDJSON format where each line is a QueueOperation with monotonically
+ * increasing sequence numbers and checksum validation for integrity.
  */
 
 import { QueueOperation, isQueueOperation } from './queueTypes';
@@ -21,6 +12,7 @@ import * as path from 'node:path';
 import { createHash } from 'node:crypto';
 import { withLock } from '../persistence/runDirectoryManager';
 import { getErrorMessage } from '../utils/errors.js';
+import { isFileNotFound } from '../utils/safeJson.js';
 
 // ============================================================================
 // Constants
@@ -167,7 +159,7 @@ async function scanLastSequence(queueDir: string): Promise<number> {
 
     return 0;
   } catch (error) {
-    if (error && typeof error === 'object' && 'code' in error && error.code === 'ENOENT') {
+    if (isFileNotFound(error)) {
       return 0;
     }
     throw error;
@@ -309,7 +301,7 @@ export async function readOperationsWithStats(
 
     return { operations, checksumFailures, parseErrors };
   } catch (error) {
-    if (error && typeof error === 'object' && 'code' in error && error.code === 'ENOENT') {
+    if (isFileNotFound(error)) {
       return { operations: [], checksumFailures: 0, parseErrors: 0 };
     }
     throw error;
@@ -424,7 +416,7 @@ export async function getOperationsLogStats(queueDir: string): Promise<{
       operationCount: lines.length,
     };
   } catch (error) {
-    if (error && typeof error === 'object' && 'code' in error && error.code === 'ENOENT') {
+    if (isFileNotFound(error)) {
       return {
         exists: false,
         sizeBytes: 0,

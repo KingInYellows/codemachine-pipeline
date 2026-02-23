@@ -1,11 +1,10 @@
-import { spawn } from 'node:child_process';
 import * as semver from 'semver';
 import { resolveBinary, type BinaryResolutionResult } from './binaryResolver.js';
-import type { CodeMachineExecutionResult } from '../../workflows/codemachineTypes.js';
+import type { CodeMachineExecutionResult } from './types.js';
 import type { ExecutionConfig } from '../../core/config/RepoConfig.js';
 import type { StructuredLogger } from '../../telemetry/logger.js';
-import { getErrorMessage } from '../../utils/errors.js';
 import { filterEnvironment as filterEnv } from '../../utils/envFilter.js';
+import { runProcess } from '../../utils/processRunner.js';
 
 export interface CodeMachineCLIAdapterOptions {
   config: ExecutionConfig;
@@ -144,12 +143,10 @@ export class CodeMachineCLIAdapter {
     }
 
     const binaryPath = resolution.binaryPath;
-    const maxBuffer =
+    const maxBufferSize =
       this.config.max_log_buffer_size && this.config.max_log_buffer_size > 0
         ? this.config.max_log_buffer_size
-        : 10 * 1024 * 1024; // 10 MB default
-    let totalBufferSize = 0;
-    let bufferLimitReached = false;
+        : undefined; // processRunner uses its own default (10 MiB)
 
     this.logger?.info('Starting CodeMachine-CLI execution', {
       binary: binaryPath,
@@ -159,140 +156,44 @@ export class CodeMachineCLIAdapter {
       timeoutMs: options.timeoutMs,
     });
 
-    // Filter environment
     const env = this.filterEnvironment();
 
-    return new Promise((resolve) => {
-      const stdoutChunks: Buffer[] = [];
-      const stderrChunks: Buffer[] = [];
-      let timedOut = false;
-      let killed = false;
-      let hasExited = false;
+    // Credentials with non-empty values are forwarded via stdin
+    const stdinData =
+      options.credentials && Object.keys(options.credentials).length > 0
+        ? options.credentials
+        : undefined;
 
-      let child;
-      try {
-        child = spawn(binaryPath, args, {
-          cwd: options.workspaceDir,
-          env,
-          shell: false,
-          stdio: ['pipe', 'pipe', 'pipe'],
+    const result = await runProcess(binaryPath, args, {
+      cwd: options.workspaceDir,
+      env,
+      timeoutMs: options.timeoutMs,
+      ...(maxBufferSize !== undefined ? { maxBufferSize } : {}),
+      ...(stdinData !== undefined ? { stdinData } : {}),
+      onBufferLimitExceeded: (totalBytes) => {
+        this.logger?.warn('Large output detected, truncating in-memory buffer', {
+          taskId: options.taskId,
+          bufferSize: totalBytes,
         });
-      } catch (error) {
-        resolve({
-          exitCode: 1,
-          stdout: '',
-          stderr: `Failed to spawn: ${getErrorMessage(error)}`,
-          durationMs: Date.now() - startTime,
-          timedOut: false,
-          killed: false,
-        });
-        return;
-      }
-
-      const pid = child.pid;
-
-      // Pipe credentials via stdin if provided
-      if (options.credentials && Object.keys(options.credentials).length > 0) {
-        try {
-          child.stdin.write(JSON.stringify(options.credentials) + '\n');
-        } catch (error) {
-          this.logger?.warn('Failed to write credentials to stdin, killing process', {
-            taskId: options.taskId,
-            error: getErrorMessage(error),
-          });
-          child.kill('SIGTERM');
-          resolve({
-            exitCode: 1,
-            stdout: '',
-            stderr: `Failed to deliver credentials: ${getErrorMessage(error)}`,
-            durationMs: Date.now() - startTime,
-            timedOut: false,
-            killed: false,
-          });
-          return;
-        }
-      }
-      child.stdin.end();
-
-      // Timeout: SIGTERM → 5s grace → SIGKILL
-      const timeoutHandle = setTimeout(() => {
-        timedOut = true;
-        child.kill('SIGTERM');
-        setTimeout(() => {
-          if (!hasExited) {
-            killed = true;
-            child.kill('SIGKILL');
-          }
-        }, 5000);
-      }, options.timeoutMs);
-
-      child.stdout?.on('data', (chunk: Buffer) => {
-        if (!bufferLimitReached) {
-          totalBufferSize += chunk.length;
-          if (totalBufferSize > maxBuffer) {
-            bufferLimitReached = true;
-            this.logger?.warn('Large output detected, truncating in-memory buffer', {
-              taskId: options.taskId,
-              bufferSize: totalBufferSize,
-            });
-          } else {
-            stdoutChunks.push(chunk);
-          }
-        }
-      });
-
-      child.stderr?.on('data', (chunk: Buffer) => {
-        if (!bufferLimitReached) {
-          totalBufferSize += chunk.length;
-          if (totalBufferSize > maxBuffer) {
-            bufferLimitReached = true;
-            this.logger?.warn('Large output detected, truncating in-memory buffer', {
-              taskId: options.taskId,
-              bufferSize: totalBufferSize,
-            });
-          } else {
-            stderrChunks.push(chunk);
-          }
-        }
-      });
-
-      child.on('close', (code) => {
-        hasExited = true;
-        clearTimeout(timeoutHandle);
-        const durationMs = Date.now() - startTime;
-
-        this.logger?.info('CodeMachine-CLI execution completed', {
-          exitCode: code,
-          durationMs,
-          timedOut,
-          killed,
-        });
-
-        resolve({
-          exitCode: timedOut ? 124 : (code ?? 1),
-          stdout: Buffer.concat(stdoutChunks).toString('utf-8'),
-          stderr: Buffer.concat(stderrChunks).toString('utf-8'),
-          durationMs,
-          timedOut,
-          killed,
-          pid,
-        });
-      });
-
-      child.on('error', (error) => {
-        clearTimeout(timeoutHandle);
-
-        resolve({
-          exitCode: 1,
-          stdout: Buffer.concat(stdoutChunks).toString('utf-8'),
-          stderr: `Execution error: ${getErrorMessage(error)}`,
-          durationMs: Date.now() - startTime,
-          timedOut: false,
-          killed: false,
-          pid,
-        });
-      });
+      },
     });
+
+    this.logger?.info('CodeMachine-CLI execution completed', {
+      exitCode: result.exitCode,
+      durationMs: result.durationMs,
+      timedOut: result.timedOut,
+      killed: result.killed,
+    });
+
+    return {
+      exitCode: result.exitCode,
+      stdout: result.stdout,
+      stderr: result.stderr,
+      durationMs: result.durationMs,
+      timedOut: result.timedOut,
+      killed: result.killed,
+      pid: result.pid,
+    };
   }
 
   private async runCommand(
@@ -300,31 +201,8 @@ export class CodeMachineCLIAdapter {
     args: string[],
     opts: { timeoutMs: number }
   ): Promise<{ exitCode: number; stdout: string; stderr: string }> {
-    return new Promise((resolve) => {
-      const child = spawn(binaryPath, args, {
-        shell: false,
-        stdio: ['ignore', 'pipe', 'pipe'],
-        timeout: opts.timeoutMs,
-      });
-
-      let stdout = '';
-      let stderr = '';
-
-      child.stdout?.on('data', (chunk: Buffer) => {
-        stdout += chunk.toString('utf-8');
-      });
-      child.stderr?.on('data', (chunk: Buffer) => {
-        stderr += chunk.toString('utf-8');
-      });
-
-      child.on('close', (code) => {
-        resolve({ exitCode: code ?? 1, stdout, stderr });
-      });
-
-      child.on('error', (error) => {
-        resolve({ exitCode: 1, stdout, stderr: getErrorMessage(error) });
-      });
-    });
+    const result = await runProcess(binaryPath, args, { timeoutMs: opts.timeoutMs });
+    return { exitCode: result.exitCode, stdout: result.stdout, stderr: result.stderr };
   }
 
   private filterEnvironment(): Record<string, string> {

@@ -20,6 +20,8 @@
 
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
+import { z } from 'zod';
+import { validateOrThrow } from '../validation/helpers.js';
 import { exec } from 'node:child_process';
 import { promisify } from 'node:util';
 import { wrapError } from '../utils/errors';
@@ -65,6 +67,21 @@ export interface BranchMetadata {
   remote_commits_behind?: number;
   sync_status: 'synced' | 'ahead' | 'behind' | 'diverged' | 'unknown';
 }
+
+const BranchMetadataSchema = z.object({
+  schema_version: z.string(),
+  feature_id: z.string(),
+  branch_name: z.string(),
+  base_branch: z.string(),
+  created_at: z.string(),
+  updated_at: z.string(),
+  last_commit_sha: z.string().optional(),
+  remote_tracking_branch: z.string().optional(),
+  remote_url: z.string().optional(),
+  local_commits_ahead: z.number().optional(),
+  remote_commits_behind: z.number().optional(),
+  sync_status: z.enum(['synced', 'ahead', 'behind', 'diverged', 'unknown']),
+});
 
 /**
  * Branch creation options
@@ -588,7 +605,11 @@ export async function updateBranchMetadata(
       let metadata: BranchMetadata;
       try {
         const content = await fs.readFile(metadataPath, 'utf-8');
-        metadata = JSON.parse(content) as BranchMetadata;
+        metadata = validateOrThrow(
+          BranchMetadataSchema,
+          JSON.parse(content),
+          'branch metadata'
+        ) as BranchMetadata;
       } catch {
         // If metadata doesn't exist, create minimal metadata
         metadata = {
@@ -624,7 +645,11 @@ export async function loadBranchMetadata(config: BranchConfig): Promise<BranchMe
 
   try {
     const content = await fs.readFile(metadataPath, 'utf-8');
-    return JSON.parse(content) as BranchMetadata;
+    return validateOrThrow(
+      BranchMetadataSchema,
+      JSON.parse(content),
+      'branch metadata'
+    ) as BranchMetadata;
   } catch {
     return null;
   }

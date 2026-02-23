@@ -4,30 +4,18 @@
  * Converts approved specification requirements and traceability entries into
  * an ExecutionTask DAG, persists plan.json, manages dependencies, and supports
  * deterministic resume/replay scenarios.
- *
- * Key features:
- * - Deterministic task ID generation from spec requirements
- * - DAG construction with topological sorting
- * - Cycle detection and validation
- * - Plan persistence with checksum integrity
- * - Integration with traceability mapper
- * - CLI outputs for plan visualization
- *
- * Implements:
- * - FR-12: Execution Task Generation
- * - FR-13: Dependency Management
- * - FR-14: Plan Persistence and Resume
- * - ADR-7: Validation Policy (Zod-based)
  */
 
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 import * as crypto from 'node:crypto';
 import { withLock, getSubdirectoryPath } from '../persistence/runDirectoryManager';
+import { z } from 'zod';
 import {
   createPlanArtifact,
   validateDAG,
   getEntryTasks,
+  PlanArtifactSchema,
   type PlanArtifact,
   type TaskNode,
 } from '../core/models/PlanArtifact';
@@ -35,6 +23,16 @@ import { loadSpecMetadata } from './specComposer';
 import type { StructuredLogger } from '../telemetry/logger';
 import type { MetricsCollector } from '../telemetry/metrics';
 import type { TraceLink } from '../core/models/TraceLink';
+import { validateOrThrow } from '../validation/helpers.js';
+import {
+  buildDependencyGraph,
+  computeTopologicalOrder,
+  calculateParallelPaths,
+  createPlanSummary,
+  type PlanDiagnostics,
+  type SpecRequirement,
+  type RequirementTaskMap,
+} from './taskPlannerGraph.js';
 
 // ============================================================================
 // Types
@@ -121,26 +119,6 @@ export interface PlanSummary {
   frReferences: string[];
 }
 
-interface PlanDiagnostics {
-  warnings: string[];
-  blockers: Array<{
-    taskId: string;
-    reason: string;
-    missingDependencies?: string[];
-  }>;
-}
-
-/**
- * Spec requirement extracted from spec.json
- */
-interface SpecRequirement {
-  requirementId: string;
-  description: string;
-  testType?: string | undefined;
-  priority?: string | undefined;
-  dependsOn?: string[];
-}
-
 /**
  * Plan metadata persisted alongside plan.json
  */
@@ -156,6 +134,18 @@ interface PlanMetadata {
   entry_tasks: string[];
 }
 
+const PlanMetadataSchema = z.object({
+  schema_version: z.string(),
+  feature_id: z.string(),
+  plan_hash: z.string(),
+  spec_hash: z.string(),
+  iteration_id: z.string().optional(),
+  created_at: z.string(),
+  updated_at: z.string(),
+  total_tasks: z.number(),
+  entry_tasks: z.array(z.string()),
+});
+
 /**
  * Trace document subset for requirement → task mapping
  */
@@ -163,10 +153,9 @@ interface TraceDocument {
   links?: TraceLink[];
 }
 
-/**
- * Map of spec requirements to previously generated task IDs
- */
-type RequirementTaskMap = Map<string, string>;
+const TraceDocumentSchema = z.object({
+  links: z.array(z.unknown()).optional(),
+});
 
 // ============================================================================
 // Spec Loading
@@ -326,243 +315,6 @@ function deriveTaskType(testType?: string): string {
   return testingIndicators.has(type) ? 'testing' : 'code_generation';
 }
 
-/**
- * Build dependency graph based on task types and logical ordering
- */
-function buildDependencyGraph(
-  tasks: TaskNode[],
-  options: {
-    requirements: SpecRequirement[];
-    requirementTaskMap: RequirementTaskMap;
-  }
-): PlanDiagnostics['blockers'] {
-  const blockers: PlanDiagnostics['blockers'] = [];
-  const taskIndex = new Map(tasks.map((task) => [task.task_id, task]));
-
-  for (const req of options.requirements) {
-    const taskId = req.requirementId
-      ? options.requirementTaskMap.get(req.requirementId)
-      : undefined;
-    if (!taskId) {
-      continue;
-    }
-
-    const task = taskIndex.get(taskId);
-    if (!task || !req.dependsOn || req.dependsOn.length === 0) {
-      continue;
-    }
-
-    for (const dependencyRequirement of req.dependsOn) {
-      const dependencyTaskId = options.requirementTaskMap.get(dependencyRequirement);
-      if (!dependencyTaskId) {
-        blockers.push({
-          taskId,
-          reason: 'Missing dependency requirement',
-          missingDependencies: [dependencyRequirement],
-        });
-        continue;
-      }
-
-      if (dependencyTaskId === taskId) {
-        blockers.push({
-          taskId,
-          reason: 'Task cannot depend on itself',
-          missingDependencies: [dependencyRequirement],
-        });
-        continue;
-      }
-
-      if (!task.dependencies.some((dep) => dep.task_id === dependencyTaskId)) {
-        task.dependencies.push({
-          task_id: dependencyTaskId,
-          type: 'required',
-        });
-      }
-    }
-  }
-
-  // Simple heuristic: testing tasks depend on code_generation tasks
-  const codeGenTasks = tasks.filter((t) => t.task_type === 'code_generation');
-  const testingTasks = tasks.filter((t) => t.task_type === 'testing');
-
-  // Make all testing tasks depend on all code generation tasks
-  for (const testTask of testingTasks) {
-    for (const codeTask of codeGenTasks) {
-      testTask.dependencies.push({
-        task_id: codeTask.task_id,
-        type: 'required',
-      });
-    }
-  }
-
-  // Sort testing tasks by type priority (unit -> integration -> e2e)
-  const unitTests = testingTasks.filter((t) => t.config?.test_type === 'unit');
-  const integrationTests = testingTasks.filter((t) => t.config?.test_type === 'integration');
-  const e2eTests = testingTasks.filter((t) => t.config?.test_type === 'e2e');
-
-  // Integration tests depend on unit tests
-  for (const intTest of integrationTests) {
-    for (const unitTest of unitTests) {
-      if (!intTest.dependencies.some((d) => d.task_id === unitTest.task_id)) {
-        intTest.dependencies.push({
-          task_id: unitTest.task_id,
-          type: 'required',
-        });
-      }
-    }
-  }
-
-  // E2E tests depend on integration tests
-  for (const e2eTest of e2eTests) {
-    for (const intTest of integrationTests) {
-      if (!e2eTest.dependencies.some((d) => d.task_id === intTest.task_id)) {
-        e2eTest.dependencies.push({
-          task_id: intTest.task_id,
-          type: 'required',
-        });
-      }
-    }
-  }
-
-  return blockers;
-}
-
-/**
- * Compute topological ordering and depth levels
- */
-function computeTopologicalOrder(tasks: TaskNode[]): {
-  order: string[];
-  depths: Map<string, number>;
-  maxDepth: number;
-} {
-  const inDegree = new Map<string, number>();
-  const depths = new Map<string, number>();
-
-  // Initialize in-degrees
-  for (const task of tasks) {
-    inDegree.set(task.task_id, task.dependencies.length);
-    depths.set(task.task_id, 0);
-  }
-
-  // Kahn's algorithm for topological sort
-  const queue: string[] = [];
-  const order: string[] = [];
-
-  // Start with tasks that have no dependencies
-  for (const task of tasks) {
-    if (task.dependencies.length === 0) {
-      queue.push(task.task_id);
-      depths.set(task.task_id, 0);
-    }
-  }
-
-  while (queue.length > 0) {
-    const current = queue.shift()!;
-    order.push(current);
-
-    const currentDepth = depths.get(current) ?? 0;
-
-    // Find tasks that depend on current
-    for (const task of tasks) {
-      if (task.dependencies.some((d) => d.task_id === current)) {
-        const remaining = (inDegree.get(task.task_id) ?? 0) - 1;
-        inDegree.set(task.task_id, remaining);
-
-        // Update depth
-        const newDepth = currentDepth + 1;
-        const existingDepth = depths.get(task.task_id) ?? 0;
-        depths.set(task.task_id, Math.max(existingDepth, newDepth));
-
-        if (remaining === 0) {
-          queue.push(task.task_id);
-        }
-      }
-    }
-  }
-
-  const maxDepth = Math.max(...Array.from(depths.values()), 0);
-
-  return { order, depths, maxDepth };
-}
-
-/**
- * Calculate number of parallel execution paths
- */
-function calculateParallelPaths(depths: Map<string, number>): number {
-  const depthGroups = new Map<number, number>();
-
-  for (const depth of depths.values()) {
-    depthGroups.set(depth, (depthGroups.get(depth) ?? 0) + 1);
-  }
-
-  // Maximum tasks at any depth level represents parallel paths
-  if (depthGroups.size === 0) {
-    return 0;
-  }
-  return Math.max(...depthGroups.values());
-}
-
-/**
- * Build task type breakdown map
- */
-function buildTaskTypeBreakdown(tasks: TaskNode[]): Record<string, number> {
-  return tasks.reduce<Record<string, number>>((acc, task) => {
-    acc[task.task_type] = (acc[task.task_type] ?? 0) + 1;
-    return acc;
-  }, {});
-}
-
-/**
- * Create plan summary for CLI output or JSON mode
- */
-function createPlanSummary(
-  plan: PlanArtifact,
-  planPath: string,
-  diagnostics?: PlanDiagnostics
-): PlanSummary {
-  const entryTaskIds = getEntryTasks(plan);
-  const blockedDetails = plan.tasks
-    .filter((task) => task.dependencies.length > 0)
-    .map((task) => ({
-      taskId: task.task_id,
-      waitingOn: task.dependencies.map((dep) => dep.task_id),
-    }));
-
-  const defaultBlockers: PlanDiagnostics['blockers'] = blockedDetails.map((detail) => ({
-    taskId: detail.taskId,
-    reason: 'Waiting for dependency completion',
-    ...(detail.waitingOn.length > 0 ? { missingDependencies: detail.waitingOn } : {}),
-  }));
-
-  const summaryDiagnostics = diagnostics?.blockers.length ? diagnostics.blockers : defaultBlockers;
-  const dagSummary: PlanSummary['dag'] = {
-    generatedAt: plan.dag_metadata.generated_at,
-    ...(plan.dag_metadata.parallel_paths !== undefined
-      ? { parallelPaths: plan.dag_metadata.parallel_paths }
-      : {}),
-    ...(typeof plan.metadata?.critical_path_depth === 'number'
-      ? { criticalPathDepth: plan.metadata.critical_path_depth }
-      : {}),
-  };
-
-  return {
-    planPath,
-    totalTasks: plan.tasks.length,
-    entryTasks: entryTaskIds,
-    blockedTasks: blockedDetails.length,
-    taskTypeBreakdown: buildTaskTypeBreakdown(plan.tasks),
-    queueState: {
-      ready: entryTaskIds,
-      blocked: blockedDetails,
-      blockers: summaryDiagnostics,
-    },
-    dag: dagSummary,
-    checksum: plan.checksum,
-    lastUpdated: plan.updated_at,
-    frReferences: ['FR-12', 'FR-13', 'FR-14'],
-  };
-}
-
 // ============================================================================
 // Plan Persistence
 // ============================================================================
@@ -627,7 +379,11 @@ async function loadTraceabilityTaskIds(runDir: string): Promise<RequirementTaskM
 
   try {
     const traceContent = await fs.readFile(tracePath, 'utf-8');
-    const traceDoc = JSON.parse(traceContent) as TraceDocument;
+    const traceDoc = validateOrThrow(
+      TraceDocumentSchema,
+      JSON.parse(traceContent),
+      'trace document'
+    ) as TraceDocument;
     if (!traceDoc.links) {
       return mapping;
     }
@@ -653,6 +409,73 @@ async function loadTraceabilityTaskIds(runDir: string): Promise<RequirementTaskM
 // ============================================================================
 
 /**
+ * Load an existing plan.json if present and force-regeneration is not requested.
+ * Returns the plan result if found, null if generation should proceed.
+ */
+async function loadExistingPlanIfPresent(
+  config: TaskPlannerConfig,
+  planPath: string,
+  logger: StructuredLogger
+): Promise<TaskPlannerResult | null> {
+  if (config.force) return null;
+
+  try {
+    await fs.access(planPath);
+    logger.info('plan.json already exists, loading existing plan', { planPath });
+
+    const existingContent = await fs.readFile(planPath, 'utf-8');
+    const existingPlan = validateOrThrow(
+      PlanArtifactSchema,
+      JSON.parse(existingContent),
+      'plan artifact'
+    );
+    const existingSummary = createPlanSummary(existingPlan, planPath);
+
+    return {
+      planPath,
+      plan: existingPlan,
+      summary: existingSummary,
+      statistics: {
+        totalTasks: existingPlan.tasks.length,
+        entryTasks: existingSummary.entryTasks.length,
+        blockedTasks: existingSummary.blockedTasks,
+        maxDepth: existingSummary.dag?.criticalPathDepth ?? 0,
+        parallelPaths: existingSummary.dag?.parallelPaths ?? 0,
+      },
+      diagnostics: {
+        warnings: ['plan.json already exists; use --force to regenerate'],
+        blockers: existingSummary.queueState.blockers,
+      },
+    };
+  } catch {
+    return null; // File doesn't exist, proceed with generation
+  }
+}
+
+/**
+ * Collect blockers for tasks whose declared dependencies are not present in the plan.
+ */
+function collectMissingDepBlockers(
+  tasks: TaskNode[],
+  dependencyBlockers: PlanDiagnostics['blockers']
+): PlanDiagnostics['blockers'] {
+  const blockers: PlanDiagnostics['blockers'] = [...dependencyBlockers];
+  for (const task of tasks) {
+    const missingDeps = task.dependencies.filter(
+      (dep) => !tasks.some((t) => t.task_id === dep.task_id)
+    );
+    if (missingDeps.length > 0) {
+      blockers.push({
+        taskId: task.task_id,
+        reason: 'Missing dependencies',
+        missingDependencies: missingDeps.map((d) => d.task_id),
+      });
+    }
+  }
+  return blockers;
+}
+
+/**
  * Generate execution plan from approved specification
  */
 export async function generateExecutionPlan(
@@ -668,36 +491,8 @@ export async function generateExecutionPlan(
 
   const planPath = path.join(config.runDir, 'plan.json');
 
-  // Check if plan.json already exists
-  if (!config.force) {
-    try {
-      await fs.access(planPath);
-      logger.info('plan.json already exists, loading existing plan', { planPath });
-
-      const existingContent = await fs.readFile(planPath, 'utf-8');
-      const existingPlan = JSON.parse(existingContent) as PlanArtifact;
-      const existingSummary = createPlanSummary(existingPlan, planPath);
-
-      return {
-        planPath,
-        plan: existingPlan,
-        summary: existingSummary,
-        statistics: {
-          totalTasks: existingPlan.tasks.length,
-          entryTasks: existingSummary.entryTasks.length,
-          blockedTasks: existingSummary.blockedTasks,
-          maxDepth: existingSummary.dag?.criticalPathDepth ?? 0,
-          parallelPaths: existingSummary.dag?.parallelPaths ?? 0,
-        },
-        diagnostics: {
-          warnings: ['plan.json already exists; use --force to regenerate'],
-          blockers: existingSummary.queueState.blockers,
-        },
-      };
-    } catch {
-      // File doesn't exist, continue with generation
-    }
-  }
+  const existing = await loadExistingPlanIfPresent(config, planPath, logger);
+  if (existing) return existing;
 
   // Step 1: Verify spec approval
   const specMetadata = await loadSpecMetadata(config.runDir);
@@ -792,20 +587,7 @@ export async function generateExecutionPlan(
   });
 
   // Step 8: Identify blockers
-  const blockers: PlanDiagnostics['blockers'] = [...dependencyBlockers];
-  for (const task of tasks) {
-    const missingDeps = task.dependencies.filter(
-      (dep) => !tasks.some((t) => t.task_id === dep.task_id)
-    );
-
-    if (missingDeps.length > 0) {
-      blockers.push({
-        taskId: task.task_id,
-        reason: 'Missing dependencies',
-        missingDependencies: missingDeps.map((d) => d.task_id),
-      });
-    }
-  }
+  const blockers = collectMissingDepBlockers(tasks, dependencyBlockers);
 
   // Step 9: Persist plan
   const { path: persistedPath, planWithChecksum } = await persistPlan(
@@ -868,7 +650,7 @@ export async function loadPlanSummary(runDir: string): Promise<PlanSummary | nul
 
   try {
     const content = await fs.readFile(planPath, 'utf-8');
-    const plan = JSON.parse(content) as PlanArtifact;
+    const plan = validateOrThrow(PlanArtifactSchema, JSON.parse(content), 'plan artifact');
     return createPlanSummary(plan, planPath);
   } catch {
     return null;
@@ -883,7 +665,7 @@ export async function loadPlanMetadata(runDir: string): Promise<PlanMetadata | n
 
   try {
     const content = await fs.readFile(metadataPath, 'utf-8');
-    return JSON.parse(content) as PlanMetadata;
+    return validateOrThrow(PlanMetadataSchema, JSON.parse(content), 'plan metadata');
   } catch {
     return null;
   }

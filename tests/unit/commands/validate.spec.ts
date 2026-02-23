@@ -69,6 +69,7 @@ describe('validate command', () => {
         timestamps: { created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
         approvals: { pending: [], completed: [] },
         queue: { queue_dir: 'queue', pending_count: 0, completed_count: 0, failed_count: 0 },
+        artifacts: {},
         telemetry: { logs_dir: 'logs' },
       };
       fs.writeFileSync(path.join(runDir, 'manifest.json'), JSON.stringify(manifest, null, 2));
@@ -285,6 +286,7 @@ describe('validate command', () => {
         timestamps: { created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
         approvals: { pending: [], completed: [] },
         queue: { queue_dir: 'queue', pending_count: 0, completed_count: 0, failed_count: 0 },
+        artifacts: {},
         telemetry: { logs_dir: 'logs' },
       };
       fs.writeFileSync(path.join(runDir, 'manifest.json'), JSON.stringify(manifest, null, 2));

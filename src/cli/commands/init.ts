@@ -12,7 +12,7 @@ import {
   type RepoConfig,
   type ValidationResult,
   type ValidationError,
-} from '../../core/config/repo_config';
+} from '../../core/config/RepoConfig';
 import type { ZodIssue } from 'zod';
 import { createCliLogger, LogLevel } from '../../telemetry/logger';
 import { createRunMetricsCollector, StandardMetrics } from '../../telemetry/metrics';
@@ -20,7 +20,15 @@ import { createRunTraceManager, SpanStatusCode } from '../../telemetry/traces';
 import type { StructuredLogger } from '../../telemetry/logger';
 import type { MetricsCollector } from '../../telemetry/metrics';
 import type { TraceManager, ActiveSpan } from '../../telemetry/traces';
-import { formatErrorMessage } from '../utils/cliErrors';
+import { formatErrorMessage, setJsonOutputMode } from '../utils/cliErrors';
+
+interface CommandTelemetryContext {
+  startTime: number;
+  metrics?: MetricsCollector;
+  commandSpan?: ActiveSpan;
+  traceManager?: TraceManager;
+  logger?: StructuredLogger;
+}
 
 interface ConfigValidationPayload {
   status: 'not_found' | 'validation_error' | 'valid';
@@ -95,7 +103,7 @@ export default class Init extends Command {
 
     // Set JSON output mode environment variable
     if (flags.json) {
-      process.env.JSON_OUTPUT = '1';
+      setJsonOutputMode();
     }
 
     // Initialize telemetry (logger, metrics, traces)
@@ -104,6 +112,7 @@ export default class Init extends Command {
     let traceManager: TraceManager | undefined;
     let commandSpan: ActiveSpan | undefined;
     let exitCode = 0;
+    const ctx: CommandTelemetryContext = { startTime };
 
     try {
       // Step 1: Detect git repository root
@@ -125,6 +134,10 @@ export default class Init extends Command {
         metrics = createRunMetricsCollector(pipelineDir, 'bootstrap');
         traceManager = createRunTraceManager(pipelineDir, 'bootstrap', logger);
         commandSpan = traceManager.startSpan('cli.init');
+        ctx.logger = logger;
+        ctx.metrics = metrics;
+        ctx.traceManager = traceManager;
+        ctx.commandSpan = commandSpan;
         commandSpan.setAttribute('dry_run', flags['dry-run']);
         commandSpan.setAttribute('json_mode', flags.json);
         commandSpan.setAttribute('yes_mode', flags.yes);
@@ -142,28 +155,7 @@ export default class Init extends Command {
 
       // Validate-only mode
       if (flags['validate-only']) {
-        if (!flags.json) {
-          this.log('Validating existing configuration...');
-        }
-        const validationPayload = await this.validateExistingConfig(configPath, flags.json);
-        exitCode = validationPayload.exit_code;
-
-        if (flags.json) {
-          this.log(JSON.stringify(validationPayload, null, 2));
-        }
-
-        if (exitCode !== 0) {
-          await this.exitCommand(exitCode, startTime, metrics, commandSpan, traceManager, logger);
-        }
-
-        await this.finalizeTelemetry(
-          exitCode,
-          startTime,
-          metrics,
-          commandSpan,
-          traceManager,
-          logger
-        );
+        await this.handleValidateOnlyMode(configPath, flags, ctx);
         return;
       }
 
@@ -172,67 +164,7 @@ export default class Init extends Command {
       }
 
       // Step 2: Check if already initialized
-      if (fs.existsSync(configPath) && !flags.force && !flags['dry-run']) {
-        const result = await loadRepoConfig(configPath);
-
-        if (!flags.json) {
-          this.warn(`Configuration already exists at: ${configPath}`);
-          this.warn('Use --force to re-initialize or --validate-only to check configuration');
-        }
-
-        if (!result.success) {
-          exitCode = 10;
-          if (flags.json) {
-            this.log(
-              JSON.stringify(
-                {
-                  status: 'validation_error',
-                  config_path: configPath,
-                  exit_code: exitCode,
-                  errors: result.errors,
-                },
-                null,
-                2
-              )
-            );
-          } else {
-            this.log('\nExisting configuration has validation errors:');
-            this.log(formatValidationErrors(result.errors!));
-          }
-          await this.exitCommand(exitCode, startTime, metrics, commandSpan, traceManager, logger);
-        }
-
-        if (flags.json) {
-          this.log(
-            JSON.stringify(
-              {
-                status: 'already_initialized',
-                config_path: configPath,
-                exit_code: 0,
-                warnings: result.warnings || [],
-                config: result.config,
-              },
-              null,
-              2
-            )
-          );
-        } else {
-          if (result.warnings && result.warnings.length > 0) {
-            this.log('\nWarnings:');
-            for (const warning of result.warnings) {
-              this.warn(warning);
-            }
-          }
-          this.log('\n✓ Configuration is valid');
-        }
-        await this.finalizeTelemetry(
-          exitCode,
-          startTime,
-          metrics,
-          commandSpan,
-          traceManager,
-          logger
-        );
+      if (await this.handleAlreadyInitialized(configPath, flags, ctx)) {
         return;
       }
 
@@ -253,14 +185,7 @@ export default class Init extends Command {
           if (!flags.json) {
             this.warn('Initialization cancelled by user input.');
           }
-          await this.finalizeTelemetry(
-            exitCode,
-            startTime,
-            metrics,
-            commandSpan,
-            traceManager,
-            logger
-          );
+          await this.finalizeTelemetry(exitCode, ctx);
           return;
         }
       }
@@ -289,23 +214,18 @@ export default class Init extends Command {
       if (!validationResult.success) {
         exitCode = 10;
         if (flags.json) {
-          this.log(
-            JSON.stringify(
-              {
-                status: 'validation_error',
-                config_path: configPath,
-                exit_code: exitCode,
-                errors: validationResult.errors,
-              },
-              null,
-              2
-            )
-          );
+          const errorPayload: ConfigValidationPayload = {
+            status: 'validation_error',
+            config_path: configPath,
+            exit_code: exitCode,
+            ...(validationResult.errors !== undefined && { errors: validationResult.errors }),
+          };
+          this.log(JSON.stringify(errorPayload, null, 2));
         } else {
           this.log('\n❌ Configuration validation failed after creation:\n');
           this.log(formatValidationErrors(validationResult.errors!));
         }
-        await this.exitCommand(exitCode, startTime, metrics, commandSpan, traceManager, logger);
+        await this.exitCommand(exitCode, ctx);
       }
 
       // Build result payload
@@ -327,36 +247,9 @@ export default class Init extends Command {
       };
 
       // Output results
-      if (flags.json) {
-        this.log(JSON.stringify(resultPayload, null, 2));
-      } else {
-        // Display warnings about missing credentials
-        if (validationResult.warnings && validationResult.warnings.length > 0) {
-          this.log('\n⚠ Configuration created with warnings:');
-          for (const warning of validationResult.warnings) {
-            this.warn(warning);
-          }
-          this.log('');
-        }
+      this.renderInitResult(flags, resultPayload);
 
-        // Success message
-        this.log('');
-        if (flags['dry-run']) {
-          this.log('✓ Dry run completed successfully (no files written)');
-        } else {
-          this.log('✓ codemachine-pipeline initialized successfully!');
-        }
-        this.log('');
-        this.log('Configuration file: ' + configPath);
-        this.log('');
-        this.log('Next steps:');
-        for (const step of resultPayload.next_steps) {
-          this.log(`  • ${step}`);
-        }
-        this.log('');
-      }
-
-      await this.finalizeTelemetry(exitCode, startTime, metrics, commandSpan, traceManager, logger);
+      await this.finalizeTelemetry(exitCode, ctx);
     } catch (error) {
       // Determine exit code based on error type
       let errorExitCode = 1;
@@ -371,15 +264,7 @@ export default class Init extends Command {
         }
       }
 
-      await this.finalizeTelemetry(
-        errorExitCode,
-        startTime,
-        metrics,
-        commandSpan,
-        traceManager,
-        logger,
-        error
-      );
+      await this.finalizeTelemetry(errorExitCode, ctx, error);
 
       // Re-throw oclif errors to preserve exit codes
       if (error && typeof error === 'object' && 'oclif' in error) {
@@ -395,17 +280,83 @@ export default class Init extends Command {
   }
 
   /**
+   * Handle --validate-only mode: validate existing config and exit.
+   */
+  private async handleValidateOnlyMode(
+    configPath: string,
+    flags: { json: boolean; 'validate-only': boolean },
+    ctx: CommandTelemetryContext
+  ): Promise<void> {
+    if (!flags.json) {
+      this.log('Validating existing configuration...');
+    }
+    const validationPayload = await this.validateExistingConfig(configPath, flags.json);
+    const exitCode = validationPayload.exit_code;
+
+    if (flags.json) {
+      this.log(JSON.stringify(validationPayload, null, 2));
+    }
+
+    if (exitCode !== 0) {
+      await this.exitCommand(exitCode, ctx);
+    }
+
+    await this.finalizeTelemetry(exitCode, ctx);
+  }
+
+  /**
+   * Render the final success output for the init command (json or human-readable).
+   */
+  private renderInitResult(
+    flags: { json: boolean; 'dry-run': boolean },
+    resultPayload: {
+      status: string;
+      config_path: string;
+      exit_code: number;
+      warnings: string[];
+      next_steps: string[];
+      config?: RepoConfig | undefined;
+    }
+  ): void {
+    if (flags.json) {
+      this.log(JSON.stringify(resultPayload, null, 2));
+      return;
+    }
+
+    if (resultPayload.warnings.length > 0) {
+      this.log('\n⚠ Configuration created with warnings:');
+      for (const warning of resultPayload.warnings) {
+        this.warn(warning);
+      }
+      this.log('');
+    }
+
+    this.log('');
+    if (flags['dry-run']) {
+      this.log('✓ Dry run completed successfully (no files written)');
+    } else {
+      this.log('✓ codemachine-pipeline initialized successfully!');
+    }
+    this.log('');
+    this.log('Configuration file: ' + resultPayload.config_path);
+    this.log('');
+    this.log('Next steps:');
+    for (const step of resultPayload.next_steps) {
+      this.log(`  • ${step}`);
+    }
+    this.log('');
+  }
+
+  /**
    * Flush telemetry artifacts consistently for all exit paths.
    */
   private async finalizeTelemetry(
     exitCode: number,
-    startTime: number,
-    metrics?: MetricsCollector,
-    commandSpan?: ActiveSpan,
-    traceManager?: TraceManager,
-    logger?: StructuredLogger,
+    ctx: CommandTelemetryContext,
     error?: unknown
   ): Promise<void> {
+    const { startTime, metrics, commandSpan, traceManager, logger } = ctx;
+
     if (metrics) {
       const duration = Date.now() - startTime;
       metrics.observe(StandardMetrics.COMMAND_EXECUTION_DURATION_MS, duration, { command: 'init' });
@@ -461,23 +412,75 @@ export default class Init extends Command {
 
   private async exitCommand(
     exitCode: number,
-    startTime: number,
-    metrics?: MetricsCollector,
-    commandSpan?: ActiveSpan,
-    traceManager?: TraceManager,
-    logger?: StructuredLogger,
+    ctx: CommandTelemetryContext,
     error?: unknown
   ): Promise<never> {
-    await this.finalizeTelemetry(
-      exitCode,
-      startTime,
-      metrics,
-      commandSpan,
-      traceManager,
-      logger,
-      error
-    );
+    await this.finalizeTelemetry(exitCode, ctx, error);
     process.exit(exitCode);
+  }
+
+  /**
+   * Handle the case where config already exists (no --force, no --dry-run).
+   * Returns true if the command should return early (already initialized path handled).
+   */
+  private async handleAlreadyInitialized(
+    configPath: string,
+    flags: { json: boolean; force: boolean; 'dry-run': boolean },
+    ctx: CommandTelemetryContext
+  ): Promise<boolean> {
+    if (!fs.existsSync(configPath) || flags.force || flags['dry-run']) {
+      return false;
+    }
+
+    const result = await loadRepoConfig(configPath);
+
+    if (!flags.json) {
+      this.warn(`Configuration already exists at: ${configPath}`);
+      this.warn('Use --force to re-initialize or --validate-only to check configuration');
+    }
+
+    if (!result.success) {
+      const exitCode = 10;
+      if (flags.json) {
+        const errorPayload: ConfigValidationPayload = {
+          status: 'validation_error',
+          config_path: configPath,
+          exit_code: exitCode,
+          ...(result.errors !== undefined && { errors: result.errors }),
+        };
+        this.log(JSON.stringify(errorPayload, null, 2));
+      } else {
+        this.log('\nExisting configuration has validation errors:');
+        this.log(formatValidationErrors(result.errors!));
+      }
+      await this.exitCommand(exitCode, ctx);
+    }
+
+    if (flags.json) {
+      this.log(
+        JSON.stringify(
+          {
+            status: 'already_initialized',
+            config_path: configPath,
+            exit_code: 0,
+            warnings: result.warnings ?? [],
+            config: result.config,
+          },
+          null,
+          2
+        )
+      );
+    } else {
+      if (result.warnings && result.warnings.length > 0) {
+        this.log('\nWarnings:');
+        for (const warning of result.warnings) {
+          this.warn(warning);
+        }
+      }
+      this.log('\n✓ Configuration is valid');
+    }
+    await this.finalizeTelemetry(0, ctx);
+    return true;
   }
 
   /**

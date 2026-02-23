@@ -27,165 +27,29 @@ import type { HttpClientConfig } from '../http/client';
 import { RateLimitLedger } from '../../telemetry/rateLimitLedger';
 import { serializeError, createErrorNormalizer } from '../../utils/errors';
 import { createLogger, LogLevel, type LoggerInterface } from '../../telemetry/logger';
+import { isFileNotFound } from '../../utils/safeJson';
+import { validateOrThrow } from '../../validation/helpers.js';
 
-// ============================================================================
-// Types & Schemas
-// ============================================================================
-
-/**
- * Linear adapter configuration
- */
-export interface LinearAdapterConfig {
-  /** Linear organization/team identifier */
-  organization?: string;
-  /** Linear API key */
-  apiKey: string;
-  /** Optional MCP endpoint URL */
-  mcpEndpoint?: string;
-  /** Run directory for caching and rate limit ledger */
-  runDir?: string;
-  /** Logger instance */
-  logger?: LoggerInterface;
-  /** HTTP client timeout in milliseconds */
-  timeout?: number;
-  /** Maximum retry attempts */
-  maxRetries?: number;
-  /** Enable developer preview features */
-  enablePreviewFeatures?: boolean;
-}
-
-/**
- * Linear issue snapshot
- */
-export interface LinearIssue {
-  /** Issue ID */
-  id: string;
-  /** Issue identifier (e.g., ENG-123) */
-  identifier: string;
-  /** Issue title */
-  title: string;
-  /** Issue description */
-  description: string | null;
-  /** Issue state (triage, backlog, in_progress, done, canceled) */
-  state: {
-    id: string;
-    name: string;
-    type: string;
-  };
-  /** Issue priority (0-4, where 0 is no priority, 4 is urgent) */
-  priority: number;
-  /** Issue labels */
-  labels: Array<{
-    id: string;
-    name: string;
-    color: string;
-  }>;
-  /** Assignee */
-  assignee: {
-    id: string;
-    name: string;
-    email: string;
-  } | null;
-  /** Team */
-  team: {
-    id: string;
-    name: string;
-    key: string;
-  };
-  /** Project */
-  project: {
-    id: string;
-    name: string;
-  } | null;
-  /** Creation timestamp */
-  createdAt: string;
-  /** Last update timestamp */
-  updatedAt: string;
-  /** URL to issue */
-  url: string;
-}
-
-/**
- * Linear issue comment
- */
-export interface LinearComment {
-  /** Comment ID */
-  id: string;
-  /** Comment body */
-  body: string;
-  /** Author */
-  user: {
-    id: string;
-    name: string;
-    email: string;
-  };
-  /** Creation timestamp */
-  createdAt: string;
-  /** Last update timestamp */
-  updatedAt: string;
-}
-
-/**
- * Cached snapshot metadata
- */
-export interface SnapshotMetadata {
-  /** Issue identifier */
-  issueId: string;
-  /** Timestamp when snapshot was retrieved */
-  retrieved_at: string;
-  /** SHA-256 hash of snapshot content */
-  hash: string;
-  /** TTL in seconds (default: 3600) */
-  ttl?: number;
-  /** Whether this is from a preview API */
-  isPreview?: boolean;
-  /** Last error if snapshot is stale */
-  last_error?: {
-    timestamp: string;
-    message: string;
-    type: ErrorType;
-  };
-}
-
-/**
- * Issue snapshot with metadata
- */
-export interface IssueSnapshot {
-  /** Issue data */
-  issue: LinearIssue;
-  /** Comments on the issue */
-  comments: LinearComment[];
-  /** Snapshot metadata */
-  metadata: SnapshotMetadata;
-}
-
-/**
- * Update issue parameters
- */
-export interface UpdateIssueParams {
-  /** Issue ID */
-  issueId: string;
-  /** New title */
-  title?: string;
-  /** New description */
-  description?: string;
-  /** New state ID */
-  stateId?: string;
-  /** New priority */
-  priority?: number;
-  /** New assignee ID */
-  assigneeId?: string;
-}
-
-/**
- * Post comment parameters
- */
-export interface PostCommentParams {
-  /** Issue ID */
-  issueId: string;
-  /** Comment body */
-  body: string;
-}
+export type {
+  LinearAdapterConfig,
+  LinearIssue,
+  LinearComment,
+  SnapshotMetadata,
+  IssueSnapshot,
+  UpdateIssueParams,
+  PostCommentParams,
+} from './LinearAdapterTypes.js';
+export { LinearAdapterError } from './LinearAdapterTypes.js';
+import { IssueSnapshotSchema, LinearAdapterError } from './LinearAdapterTypes.js';
+import type {
+  LinearAdapterConfig,
+  LinearIssue,
+  LinearComment,
+  SnapshotMetadata,
+  IssueSnapshot,
+  UpdateIssueParams,
+  PostCommentParams,
+} from './LinearAdapterTypes.js';
 
 // ============================================================================
 // GraphQL Queries
@@ -318,7 +182,9 @@ export class LinearAdapter {
   private readonly requestTimestamps: number[] = [];
 
   constructor(config: LinearAdapterConfig) {
-    this.logger = config.logger ?? this.createDefaultLogger();
+    this.logger =
+      config.logger ??
+      createLogger({ component: 'linear-adapter', minLevel: LogLevel.DEBUG, mirrorToStderr: true });
     this.runDir = config.runDir;
     this.enablePreviewFeatures = config.enablePreviewFeatures ?? false;
 
@@ -454,28 +320,19 @@ export class LinearAdapter {
     this.logger.debug('Fetching issue from API', { issueId });
 
     try {
-      const timestamp = await this.assertRateLimitHeadroom('fetchIssue');
-      this.recordRequest(timestamp);
-      const response = await this.client.post<{ data: { issue: LinearIssue } }>(
-        GRAPHQL_ENDPOINT,
-        {
-          query: ISSUE_QUERY,
-          variables: { issueId },
-        },
-        {
-          metadata: {
-            operation: 'fetchIssue',
-            issueId,
-          },
-        }
+      const data = await this.executeGraphQL<{ data: { issue: LinearIssue } }>(
+        'fetchIssue',
+        ISSUE_QUERY,
+        { issueId },
+        { issueId }
       );
 
-      if (!response.data.data?.issue) {
+      if (!data.data?.issue) {
         throw new Error(`Issue ${issueId} not found`);
       }
 
       // Transform labels from GraphQL response
-      const issue = response.data.data.issue;
+      const issue = data.data.issue;
       if (issue.labels && 'nodes' in issue.labels) {
         issue.labels = (issue.labels as { nodes: LinearIssue['labels'] }).nodes;
       }
@@ -497,25 +354,11 @@ export class LinearAdapter {
     this.logger.debug('Fetching comments from API', { issueId });
 
     try {
-      const timestamp = await this.assertRateLimitHeadroom('fetchComments');
-      this.recordRequest(timestamp);
-      const response = await this.client.post<{
+      const data = await this.executeGraphQL<{
         data: { issue: { comments: { nodes: LinearComment[] } } };
-      }>(
-        GRAPHQL_ENDPOINT,
-        {
-          query: COMMENTS_QUERY,
-          variables: { issueId },
-        },
-        {
-          metadata: {
-            operation: 'fetchComments',
-            issueId,
-          },
-        }
-      );
+      }>('fetchComments', COMMENTS_QUERY, { issueId }, { issueId });
 
-      return response.data.data?.issue?.comments?.nodes ?? [];
+      return data.data?.issue?.comments?.nodes ?? [];
     } catch (error) {
       this.logger.error('Failed to fetch comments', {
         issueId,
@@ -559,25 +402,11 @@ export class LinearAdapter {
       if (params.priority !== undefined) variables.priority = params.priority;
       if (params.assigneeId !== undefined) variables.assigneeId = params.assigneeId;
 
-      const timestamp = await this.assertRateLimitHeadroom('updateIssue');
-      this.recordRequest(timestamp);
-      const response = await this.client.post<{
+      const data = await this.executeGraphQL<{
         data: { issueUpdate: { success: boolean } };
-      }>(
-        GRAPHQL_ENDPOINT,
-        {
-          query: UPDATE_ISSUE_MUTATION,
-          variables,
-        },
-        {
-          metadata: {
-            operation: 'updateIssue',
-            issueId: params.issueId,
-          },
-        }
-      );
+      }>('updateIssue', UPDATE_ISSUE_MUTATION, variables, { issueId: params.issueId });
 
-      if (!response.data.data?.issueUpdate?.success) {
+      if (!data.data?.issueUpdate?.success) {
         throw new Error('Issue update failed');
       }
 
@@ -611,28 +440,16 @@ export class LinearAdapter {
     });
 
     try {
-      const timestamp = await this.assertRateLimitHeadroom('postComment');
-      this.recordRequest(timestamp);
-      const response = await this.client.post<{
+      const data = await this.executeGraphQL<{
         data: { commentCreate: { success: boolean } };
       }>(
-        GRAPHQL_ENDPOINT,
-        {
-          query: POST_COMMENT_MUTATION,
-          variables: {
-            issueId: params.issueId,
-            body: params.body,
-          },
-        },
-        {
-          metadata: {
-            operation: 'postComment',
-            issueId: params.issueId,
-          },
-        }
+        'postComment',
+        POST_COMMENT_MUTATION,
+        { issueId: params.issueId, body: params.body },
+        { issueId: params.issueId }
       );
 
-      if (!response.data.data?.commentCreate?.success) {
+      if (!data.data?.commentCreate?.success) {
         throw new Error('Comment creation failed');
       }
 
@@ -657,7 +474,21 @@ export class LinearAdapter {
     try {
       const snapshotPath = this.getSnapshotPath(issueId);
       const content = await fs.readFile(snapshotPath, 'utf-8');
-      const snapshot = JSON.parse(content) as IssueSnapshot;
+      const snapshot = validateOrThrow(
+        IssueSnapshotSchema,
+        JSON.parse(content),
+        'issue snapshot'
+      ) as IssueSnapshot;
+
+      // Verify snapshot integrity
+      const expectedHash = this.computeSnapshotHash({
+        issue: snapshot.issue,
+        comments: snapshot.comments,
+      });
+      if (snapshot.metadata.hash !== expectedHash) {
+        this.logger.warn('Cached snapshot hash mismatch — discarding', { issueId });
+        return null;
+      }
 
       this.logger.debug('Loaded cached snapshot', {
         issueId,
@@ -666,7 +497,7 @@ export class LinearAdapter {
 
       return snapshot;
     } catch (error) {
-      if (this.isFileNotFoundError(error)) {
+      if (isFileNotFound(error)) {
         this.logger.debug('No cached snapshot found', { issueId });
         return null;
       }
@@ -740,20 +571,27 @@ export class LinearAdapter {
    * Get snapshot file path
    */
   private getSnapshotPath(issueId: string): string {
+    if (!issueId || issueId.length > 100 || !/^[A-Z][A-Z0-9]*-\d+$/.test(issueId)) {
+      throw new Error(`Invalid Linear issue ID: ${JSON.stringify(issueId)}`);
+    }
     const sanitized = issueId.replace(/[^a-zA-Z0-9-]/g, '_');
     return path.join(this.runDir!, SNAPSHOT_DIR, `linear_issue_${sanitized}.json`);
   }
 
-  /**
-   * Check if error is file not found
-   */
-  private isFileNotFoundError(error: unknown): boolean {
-    return Boolean(
-      error &&
-      typeof error === 'object' &&
-      'code' in error &&
-      (error as NodeJS.ErrnoException).code === 'ENOENT'
+  private async executeGraphQL<T>(
+    operation: string,
+    query: string,
+    variables: Record<string, unknown>,
+    context: Record<string, unknown>
+  ): Promise<T> {
+    const timestamp = await this.assertRateLimitHeadroom(operation);
+    this.recordRequest(timestamp);
+    const response = await this.client.post<T>(
+      GRAPHQL_ENDPOINT,
+      { query, variables },
+      { metadata: { operation, ...context } }
     );
+    return response.data;
   }
 
   private readonly normalizeError = createErrorNormalizer(LinearAdapterError, 'Linear');
@@ -842,58 +680,10 @@ export class LinearAdapter {
       this.requestTimestamps.shift();
     }
   }
-
-  /**
-   * Create default logger
-   */
-  private createDefaultLogger(): LoggerInterface {
-    return createLogger({
-      component: 'linear-adapter',
-      minLevel: LogLevel.DEBUG,
-      mirrorToStderr: true,
-    });
-  }
 }
 
 // ============================================================================
 // Error Classes
-// ============================================================================
-
-/**
- * Linear adapter error with error taxonomy
- */
-export class LinearAdapterError extends Error {
-  constructor(
-    message: string,
-    public readonly errorType: ErrorType,
-    public readonly statusCode?: number,
-    public readonly requestId?: string,
-    public readonly operation?: string
-  ) {
-    super(message);
-    this.name = 'LinearAdapterError';
-    Object.setPrototypeOf(this, LinearAdapterError.prototype);
-  }
-
-  toJSON(): {
-    name: string;
-    message: string;
-    errorType: ErrorType;
-    statusCode?: number | undefined;
-    requestId?: string | undefined;
-    operation?: string | undefined;
-  } {
-    return {
-      name: this.name,
-      message: this.message,
-      errorType: this.errorType,
-      statusCode: this.statusCode,
-      requestId: this.requestId,
-      operation: this.operation,
-    };
-  }
-}
-
 // ============================================================================
 // Factory Functions
 // ============================================================================

@@ -9,9 +9,7 @@
  * 2. LogContext - Structured logging context
  */
 
-// ============================================================================
 // SerializedError Types
-// ============================================================================
 
 /**
  * Represents a serialized error for logging/telemetry purposes.
@@ -43,6 +41,35 @@ export interface SerializedError {
   headers?: Record<string, string> | undefined;
   /** Truncated response body (for HTTP errors) */
   responseBody?: string | undefined;
+}
+
+// Error Types
+
+/**
+ * Error taxonomy for structured error handling.
+ * Defined here (core layer) so utils and adapters can both depend on it
+ * without creating circular imports.
+ */
+export enum ErrorType {
+  /** Transient errors that should trigger retries (429, 503, network resets) */
+  TRANSIENT = 'transient',
+  /** Permanent errors that fail fast (validation, missing config, 404) */
+  PERMANENT = 'permanent',
+  /** Errors requiring human intervention (approval needed, token expired) */
+  HUMAN_ACTION_REQUIRED = 'human_action_required',
+}
+
+// Provider Types
+
+/**
+ * HTTP provider type (GitHub, Linear, etc.)
+ */
+export enum Provider {
+  GITHUB = 'github',
+  LINEAR = 'linear',
+  GRAPHITE = 'graphite',
+  CODEMACHINE = 'codemachine',
+  CUSTOM = 'custom',
 }
 
 /**
@@ -118,9 +145,7 @@ export function isSerializedError(value: unknown): value is SerializedError {
   return true;
 }
 
-// ============================================================================
 // LogContext Types
-// ============================================================================
 
 /**
  * Common log context properties used across the codebase.

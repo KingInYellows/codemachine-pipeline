@@ -343,13 +343,14 @@ describe('autoFixEngine security - command execution', () => {
   describe('security improvements verification', () => {
     test('SECURITY FIX: execFile is used instead of spawn with shell:true', async () => {
       const fsSync = await import('node:fs');
-      const autoFixEnginePath = path.join(__dirname, '../../src/workflows/autoFixEngine.ts');
-      const sourceCode = fsSync.readFileSync(autoFixEnginePath, 'utf-8');
+      // execFile is implemented in commandRunner.ts (extracted from autoFixEngine.ts)
+      const commandRunnerPath = path.join(__dirname, '../../src/workflows/commandRunner.ts');
+      const commandRunnerSource = fsSync.readFileSync(commandRunnerPath, 'utf-8');
 
-      expect(sourceCode).toContain("import { execFile } from 'node:child_process'");
-      expect(sourceCode).not.toContain('shell: true');
-      expect(sourceCode).toContain('command injection');
-      expect(sourceCode).toContain('SECURITY');
+      expect(commandRunnerSource).toContain("import { execFile } from 'node:child_process'");
+      expect(commandRunnerSource).not.toContain('shell: true');
+      expect(commandRunnerSource).toContain('command injection');
+      expect(commandRunnerSource).toContain('SECURITY');
     });
 
     test('SECURITY FIX: Shell metacharacter detection is implemented', async () => {
@@ -363,12 +364,13 @@ describe('autoFixEngine security - command execution', () => {
 
     test('SECURITY FIX: Command parsing function prevents shell interpretation', async () => {
       const fsSync = await import('node:fs');
-      const autoFixEnginePath = path.join(__dirname, '../../src/workflows/autoFixEngine.ts');
-      const sourceCode = fsSync.readFileSync(autoFixEnginePath, 'utf-8');
+      // parseCommandString is implemented in commandRunner.ts (extracted from autoFixEngine.ts)
+      const commandRunnerPath = path.join(__dirname, '../../src/workflows/commandRunner.ts');
+      const commandRunnerSource = fsSync.readFileSync(commandRunnerPath, 'utf-8');
 
-      expect(sourceCode).toContain('parseCommandString');
-      expect(sourceCode).toContain('inSingleQuote');
-      expect(sourceCode).toContain('inDoubleQuote');
+      expect(commandRunnerSource).toContain('parseCommandString');
+      expect(commandRunnerSource).toContain('inSingleQuote');
+      expect(commandRunnerSource).toContain('inDoubleQuote');
     });
   });
 });

@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { createModelParser } from './modelParser.js';
 
 /**
  * AgentProviderCapability Model
@@ -35,16 +36,6 @@ export const AgentProviderCapabilitySchema = z
 
 export type AgentProviderCapability = Readonly<z.infer<typeof AgentProviderCapabilitySchema>>;
 
-export function parseAgentProviderCapability(json: unknown) {
-  const result = AgentProviderCapabilitySchema.safeParse(json);
-  if (result.success) {
-    return { success: true as const, data: result.data as AgentProviderCapability };
-  }
-  return {
-    success: false as const,
-    errors: result.error.issues.map((err) => ({
-      path: err.path.join('.') || 'root',
-      message: err.message,
-    })),
-  };
-}
+const { parse: parseAgentProviderCapability, serialize: serializeAgentProviderCapability } =
+  createModelParser<AgentProviderCapability>(AgentProviderCapabilitySchema);
+export { parseAgentProviderCapability, serializeAgentProviderCapability };

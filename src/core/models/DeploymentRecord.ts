@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { createModelParser } from './modelParser.js';
 
 /**
  * DeploymentRecord Model
@@ -12,9 +13,7 @@ import { z } from 'zod';
  * Used by CLI commands: deploy, status
  */
 
-// ============================================================================
 // Deployment Status Enum
-// ============================================================================
 
 export const DeploymentStatusSchema = z.enum([
   'pending',
@@ -27,9 +26,7 @@ export const DeploymentStatusSchema = z.enum([
 
 export type DeploymentStatus = z.infer<typeof DeploymentStatusSchema>;
 
-// ============================================================================
 // Status Check Schema
-// ============================================================================
 
 const StatusCheckSchema = z.object({
   /** Status check name */
@@ -44,9 +41,7 @@ const StatusCheckSchema = z.object({
 
 export type StatusCheck = z.infer<typeof StatusCheckSchema>;
 
-// ============================================================================
 // Review Record Schema
-// ============================================================================
 
 const ReviewRecordSchema = z.object({
   /** Reviewer username or ID */
@@ -59,9 +54,7 @@ const ReviewRecordSchema = z.object({
 
 export type ReviewRecord = z.infer<typeof ReviewRecordSchema>;
 
-// ============================================================================
 // DeploymentRecord Schema
-// ============================================================================
 
 export const DeploymentRecordSchema = z
   .object({
@@ -109,46 +102,11 @@ export const DeploymentRecordSchema = z
 
 export type DeploymentRecord = Readonly<z.infer<typeof DeploymentRecordSchema>>;
 
-// ============================================================================
 // Serialization Helpers
-// ============================================================================
 
-/**
- * Parse and validate DeploymentRecord from JSON
- */
-export function parseDeploymentRecord(json: unknown):
-  | {
-      success: true;
-      data: DeploymentRecord;
-    }
-  | {
-      success: false;
-      errors: Array<{ path: string; message: string }>;
-    } {
-  const result = DeploymentRecordSchema.safeParse(json);
-
-  if (result.success) {
-    return {
-      success: true,
-      data: result.data as DeploymentRecord,
-    };
-  }
-
-  return {
-    success: false,
-    errors: result.error.issues.map((err) => ({
-      path: err.path.join('.') || 'root',
-      message: err.message,
-    })),
-  };
-}
-
-/**
- * Serialize DeploymentRecord to JSON string
- */
-export function serializeDeploymentRecord(record: DeploymentRecord, pretty = true): string {
-  return JSON.stringify(record, null, pretty ? 2 : 0);
-}
+const { parse: parseDeploymentRecord, serialize: serializeDeploymentRecord } =
+  createModelParser<DeploymentRecord>(DeploymentRecordSchema);
+export { parseDeploymentRecord, serializeDeploymentRecord };
 
 /**
  * Create a new DeploymentRecord

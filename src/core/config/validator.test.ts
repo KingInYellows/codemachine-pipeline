@@ -258,7 +258,7 @@ describe('validateEnvironmentVariables', () => {
 
     expect(result.AGENT_ENDPOINT).toBeDefined();
     expect(result.AGENT_ENDPOINT.present).toBe(true);
-    expect(result.AGENT_ENDPOINT.value).toBe('https://agent.example.com');
+    expect(result.AGENT_ENDPOINT.value).toBe('***REDACTED***');
   });
 
   it('should detect agent endpoint from config', () => {
@@ -270,7 +270,7 @@ describe('validateEnvironmentVariables', () => {
 
     expect(result.AGENT_ENDPOINT).toBeDefined();
     expect(result.AGENT_ENDPOINT.present).toBe(true);
-    expect(result.AGENT_ENDPOINT.value).toBe('https://config-endpoint.example.com');
+    expect(result.AGENT_ENDPOINT.value).toBe('***REDACTED***');
   });
 
   it('should not require credentials for disabled integrations', () => {

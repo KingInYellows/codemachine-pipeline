@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { createModelParser } from './modelParser.js';
 
 /**
  * ArtifactBundle Model
@@ -32,16 +33,6 @@ export const ArtifactBundleSchema = z
 
 export type ArtifactBundle = Readonly<z.infer<typeof ArtifactBundleSchema>>;
 
-export function parseArtifactBundle(json: unknown) {
-  const result = ArtifactBundleSchema.safeParse(json);
-  if (result.success) {
-    return { success: true as const, data: result.data as ArtifactBundle };
-  }
-  return {
-    success: false as const,
-    errors: result.error.issues.map((err) => ({
-      path: err.path.join('.') || 'root',
-      message: err.message,
-    })),
-  };
-}
+const { parse: parseArtifactBundle, serialize: serializeArtifactBundle } =
+  createModelParser<ArtifactBundle>(ArtifactBundleSchema);
+export { parseArtifactBundle, serializeArtifactBundle };

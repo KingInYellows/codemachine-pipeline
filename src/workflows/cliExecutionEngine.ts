@@ -2,41 +2,23 @@ import * as path from 'node:path';
 import * as fs from 'node:fs/promises';
 import { ExecutionTask, canRetry, areDependenciesCompleted } from '../core/models/ExecutionTask.js';
 import { RepoConfig } from '../core/config/RepoConfig.js';
-import { ExecutionStrategy, ExecutionContext } from './executionStrategy.js';
+import {
+  ExecutionStrategy,
+  ExecutionContext,
+  ExecutionStrategyResult,
+} from './executionStrategy.js';
 import { updateTaskInQueue, loadQueue } from './queueStore.js';
 import { validateCliAvailability } from './codeMachineRunner.js';
 import { StructuredLogger } from '../telemetry/logger.js';
 import { ExecutionLogWriter } from '../telemetry/logWriters.js';
 import {
   ExecutionTaskStatus,
-  ExecutionTaskType,
   type CodeMachineExecutionStatus,
 } from '../telemetry/executionMetrics.js';
 import type { ExecutionTelemetry } from '../telemetry/executionTelemetry.js';
 import { getErrorMessage } from '../utils/errors.js';
 import { CODEMACHINE_STRATEGY_NAMES } from './codemachineTypes.js';
-import { DEFAULT_EXECUTION_CONFIG } from '../core/config/RepoConfig.js';
-
-type TaskTypeString = ExecutionTask['task_type'];
-
-const TASK_TYPE_TO_ENUM: Record<string, ExecutionTaskType> = {
-  code_generation: ExecutionTaskType.CODE_GENERATION,
-  testing: ExecutionTaskType.TESTING,
-  pr_creation: ExecutionTaskType.PR_CREATION,
-  deployment: ExecutionTaskType.DEPLOYMENT,
-  review: ExecutionTaskType.REVIEW,
-  refactoring: ExecutionTaskType.REFACTORING,
-  documentation: ExecutionTaskType.DOCUMENTATION,
-  other: ExecutionTaskType.OTHER,
-  validation: ExecutionTaskType.VALIDATION,
-  patch_application: ExecutionTaskType.PATCH_APPLICATION,
-  git_operation: ExecutionTaskType.GIT_OPERATION,
-  custom: ExecutionTaskType.CUSTOM,
-};
-
-function toExecutionTaskType(taskType: TaskTypeString): ExecutionTaskType {
-  return TASK_TYPE_TO_ENUM[taskType] ?? ExecutionTaskType.OTHER;
-}
+import { DEFAULT_EXECUTION_CONFIG, ExecutionConfig } from '../core/config/RepoConfig.js';
 
 const TASK_ID_PATTERN = /^[a-zA-Z0-9_-]+$/;
 
@@ -415,60 +397,24 @@ export class CLIExecutionEngine {
     }
 
     const strategy = this.findStrategy(task);
-
     if (!strategy) {
-      this.logger?.warn('No strategy found for task', {
-        taskId: task.task_id,
-        taskType: task.task_type,
-      });
-      await updateTaskInQueue(this.runDir, task.task_id, {
-        status: 'skipped',
-        last_error: {
-          message: 'No execution strategy available',
-          timestamp: new Date().toISOString(),
-          recoverable: false,
-        },
-      });
-      this.logWriter?.taskSkipped(
-        task.task_id,
-        toExecutionTaskType(task.task_type),
-        'no_strategy',
-        { reason: 'No execution strategy available' }
-      );
-      this.telemetry?.metrics?.recordTaskLifecycle(
-        task.task_id,
-        toExecutionTaskType(task.task_type),
-        ExecutionTaskStatus.SKIPPED
-      );
-      return { success: false, permanentlyFailed: true };
+      return this.handleNoStrategy(task);
     }
 
     await updateTaskInQueue(this.runDir, task.task_id, { status: 'running' });
     this.logger?.info('Executing task', { taskId: task.task_id, strategy: strategy.name });
-    this.logWriter?.taskStarted(task.task_id, toExecutionTaskType(task.task_type), {
+    this.logWriter?.taskStarted(task.task_id, task.task_type, {
       strategy: strategy.name,
     });
     this.telemetry?.metrics?.recordTaskLifecycle(
       task.task_id,
-      toExecutionTaskType(task.task_type),
+      task.task_type,
       ExecutionTaskStatus.STARTED
     );
     const startTime = Date.now();
 
     if (this.dryRun) {
-      this.logger?.info('Dry run - skipping actual execution', { taskId: task.task_id });
-      await updateTaskInQueue(this.runDir, task.task_id, { status: 'completed' });
-      this.logWriter?.taskCompleted(task.task_id, toExecutionTaskType(task.task_type), 0, {
-        strategy: strategy.name,
-        dry_run: true,
-      });
-      this.telemetry?.metrics?.recordTaskLifecycle(
-        task.task_id,
-        toExecutionTaskType(task.task_type),
-        ExecutionTaskStatus.COMPLETED,
-        0
-      );
-      return { success: true, permanentlyFailed: false };
+      return this.handleDryRun(task, strategy.name);
     }
 
     const executionConfig = this.config.execution ?? DEFAULT_EXECUTION_CONFIG;
@@ -485,35 +431,112 @@ export class CLIExecutionEngine {
     const durationMs = strategyResult.durationMs ?? Date.now() - startTime;
 
     if (strategyResult.success) {
-      const artifacts = await captureArtifacts(
-        this.runDir,
+      return this.handleSuccess(
         task,
-        context.workspaceDir,
-        strategyResult.artifacts,
-        this.logger
-      );
-      if (CODEMACHINE_STRATEGY_NAMES.has(strategy.name)) {
-        const engine = executionConfig.default_engine;
-        this.telemetry?.metrics?.recordCodeMachineExecution(engine, 'success', durationMs);
-      }
-      this.logWriter?.taskCompleted(task.task_id, toExecutionTaskType(task.task_type), durationMs, {
-        strategy: strategy.name,
-        summary: strategyResult.summary,
-        artifactsCaptured: artifacts.length,
-      });
-      await updateTaskInQueue(this.runDir, task.task_id, {
-        status: 'completed',
-        metadata: { summary: strategyResult.summary, artifacts },
-      });
-      this.telemetry?.metrics?.recordTaskLifecycle(
-        task.task_id,
-        toExecutionTaskType(task.task_type),
-        ExecutionTaskStatus.COMPLETED,
+        strategy,
+        strategyResult,
+        context,
+        executionConfig,
         durationMs
       );
-      return { success: true, permanentlyFailed: false };
     }
 
+    return this.handleFailure(task, strategy, strategyResult, context, executionConfig, durationMs);
+  }
+
+  private async handleNoStrategy(
+    task: ExecutionTask
+  ): Promise<{ success: boolean; permanentlyFailed: boolean }> {
+    this.logger?.warn('No strategy found for task', {
+      taskId: task.task_id,
+      taskType: task.task_type,
+    });
+    await updateTaskInQueue(this.runDir, task.task_id, {
+      status: 'skipped',
+      last_error: {
+        message: 'No execution strategy available',
+        timestamp: new Date().toISOString(),
+        recoverable: false,
+      },
+    });
+    this.logWriter?.taskSkipped(task.task_id, task.task_type, 'no_strategy', {
+      reason: 'No execution strategy available',
+    });
+    this.telemetry?.metrics?.recordTaskLifecycle(
+      task.task_id,
+      task.task_type,
+      ExecutionTaskStatus.SKIPPED
+    );
+    return { success: false, permanentlyFailed: true };
+  }
+
+  private async handleDryRun(
+    task: ExecutionTask,
+    strategyName: string
+  ): Promise<{ success: boolean; permanentlyFailed: boolean }> {
+    this.logger?.info('Dry run - skipping actual execution', { taskId: task.task_id });
+    await updateTaskInQueue(this.runDir, task.task_id, { status: 'completed' });
+    this.logWriter?.taskCompleted(task.task_id, task.task_type, 0, {
+      strategy: strategyName,
+      dry_run: true,
+    });
+    this.telemetry?.metrics?.recordTaskLifecycle(
+      task.task_id,
+      task.task_type,
+      ExecutionTaskStatus.COMPLETED,
+      0
+    );
+    return { success: true, permanentlyFailed: false };
+  }
+
+  private async handleSuccess(
+    task: ExecutionTask,
+    strategy: ExecutionStrategy,
+    strategyResult: ExecutionStrategyResult,
+    context: ExecutionContext,
+    executionConfig: ExecutionConfig,
+    durationMs: number
+  ): Promise<{ success: boolean; permanentlyFailed: boolean }> {
+    const artifacts = await captureArtifacts(
+      this.runDir,
+      task,
+      context.workspaceDir,
+      strategyResult.artifacts,
+      this.logger
+    );
+    if (CODEMACHINE_STRATEGY_NAMES.has(strategy.name)) {
+      this.telemetry?.metrics?.recordCodeMachineExecution(
+        executionConfig.default_engine,
+        'success',
+        durationMs
+      );
+    }
+    this.logWriter?.taskCompleted(task.task_id, task.task_type, durationMs, {
+      strategy: strategy.name,
+      summary: strategyResult.summary,
+      artifactsCaptured: artifacts.length,
+    });
+    await updateTaskInQueue(this.runDir, task.task_id, {
+      status: 'completed',
+      metadata: { summary: strategyResult.summary, artifacts },
+    });
+    this.telemetry?.metrics?.recordTaskLifecycle(
+      task.task_id,
+      task.task_type,
+      ExecutionTaskStatus.COMPLETED,
+      durationMs
+    );
+    return { success: true, permanentlyFailed: false };
+  }
+
+  private async handleFailure(
+    task: ExecutionTask,
+    strategy: ExecutionStrategy,
+    strategyResult: ExecutionStrategyResult,
+    context: ExecutionContext,
+    executionConfig: ExecutionConfig,
+    durationMs: number
+  ): Promise<{ success: boolean; permanentlyFailed: boolean }> {
     const updatedTask: ExecutionTask = {
       ...task,
       status: 'failed',
@@ -526,18 +549,21 @@ export class CLIExecutionEngine {
     };
 
     const canRetryTask = canRetry(updatedTask);
-    const status: CodeMachineExecutionStatus =
+    const cmStatus: CodeMachineExecutionStatus =
       strategyResult.status === 'timeout' ? 'timeout' : 'failure';
     if (CODEMACHINE_STRATEGY_NAMES.has(strategy.name)) {
-      const engine = executionConfig.default_engine;
-      this.telemetry?.metrics?.recordCodeMachineExecution(engine, status, durationMs);
+      this.telemetry?.metrics?.recordCodeMachineExecution(
+        executionConfig.default_engine,
+        cmStatus,
+        durationMs
+      );
       if (canRetryTask) {
-        this.telemetry?.metrics?.recordCodeMachineRetry(engine);
+        this.telemetry?.metrics?.recordCodeMachineRetry(executionConfig.default_engine);
       }
     }
     this.logWriter?.taskFailed(
       task.task_id,
-      toExecutionTaskType(task.task_type),
+      task.task_type,
       new Error(strategyResult.errorMessage ?? 'Unknown error'),
       durationMs,
       {
@@ -548,7 +574,6 @@ export class CLIExecutionEngine {
       }
     );
 
-    // Capture failure artifacts for debugging
     let failureArtifacts: string[] = [];
     try {
       failureArtifacts = await captureArtifacts(
@@ -571,10 +596,7 @@ export class CLIExecutionEngine {
         status: 'pending',
         retry_count: updatedTask.retry_count,
         last_error: updatedTask.last_error,
-        metadata: {
-          ...task.metadata,
-          failureArtifacts,
-        },
+        metadata: { ...task.metadata, failureArtifacts },
       });
       this.logger?.info('Task failed, will retry', {
         taskId: task.task_id,
@@ -583,7 +605,7 @@ export class CLIExecutionEngine {
       });
       this.telemetry?.metrics?.recordTaskLifecycle(
         task.task_id,
-        toExecutionTaskType(task.task_type),
+        task.task_type,
         ExecutionTaskStatus.FAILED,
         durationMs
       );
@@ -594,18 +616,14 @@ export class CLIExecutionEngine {
       status: 'failed',
       retry_count: updatedTask.retry_count,
       last_error: updatedTask.last_error,
-      metadata: {
-        ...task.metadata,
-        failureArtifacts,
-      },
+      metadata: { ...task.metadata, failureArtifacts },
     });
     this.telemetry?.metrics?.recordTaskLifecycle(
       task.task_id,
-      toExecutionTaskType(task.task_type),
+      task.task_type,
       ExecutionTaskStatus.FAILED,
       durationMs
     );
-
     return { success: false, permanentlyFailed: true };
   }
 

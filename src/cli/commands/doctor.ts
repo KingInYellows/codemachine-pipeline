@@ -2,7 +2,7 @@ import { Command, Flags } from '@oclif/core';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { execSync, spawnSync } from 'node:child_process';
-import { loadRepoConfig } from '../../core/config/repo_config';
+import { loadRepoConfig } from '../../core/config/RepoConfig';
 import { createCliLogger, LogLevel } from '../../telemetry/logger';
 import { createRunMetricsCollector, StandardMetrics } from '../../telemetry/metrics';
 import { createRunTraceManager, SpanStatusCode } from '../../telemetry/traces';
@@ -10,8 +10,9 @@ import type { StructuredLogger } from '../../telemetry/logger';
 import type { MetricsCollector } from '../../telemetry/metrics';
 import type { TraceManager, ActiveSpan } from '../../telemetry/traces';
 import { checkCodeMachineCli } from '../diagnostics';
-
-const CONFIG_RELATIVE_PATH = path.join('.codepipe', 'config.json');
+import { setJsonOutputMode } from '../utils/cliErrors';
+import { CONFIG_RELATIVE_PATH } from '../utils/runDirectory';
+import { flushTelemetryError } from '../utils/telemetryLifecycle';
 
 /**
  * Diagnostic check result
@@ -40,6 +41,39 @@ interface DoctorPayload {
   };
   config_path: string;
   timestamp: string;
+}
+
+/**
+ * Determine exit code and status from diagnostic check results.
+ * Priority: credential failures (30) > environment failures (20) > config failures (10) > generic (1).
+ */
+function determineExitCode(checks: DiagnosticCheck[]): {
+  exitCode: number;
+  status: DoctorPayload['status'];
+} {
+  const failed = checks.filter((c) => c.status === 'fail');
+  const hasWarnings = checks.some((c) => c.status === 'warn');
+
+  if (failed.length === 0) {
+    return { exitCode: 0, status: hasWarnings ? 'issues_detected' : 'healthy' };
+  }
+
+  const hasCredentialFailure = failed.some(
+    (c) => c.name.includes('Token') || c.name.includes('API Key') || c.name.includes('Credential')
+  );
+  const hasEnvironmentFailure = failed.some(
+    (c) =>
+      c.name.includes('Node') ||
+      c.name.includes('Git') ||
+      c.name.includes('Docker') ||
+      c.name.includes('Filesystem')
+  );
+  const hasConfigFailure = failed.some((c) => c.name.includes('Config'));
+
+  if (hasCredentialFailure) return { exitCode: 30, status: 'critical_failures' };
+  if (hasEnvironmentFailure) return { exitCode: 20, status: 'critical_failures' };
+  if (hasConfigFailure) return { exitCode: 10, status: 'critical_failures' };
+  return { exitCode: 1, status: 'critical_failures' };
 }
 
 /**
@@ -79,7 +113,7 @@ export default class Doctor extends Command {
 
     // Set JSON output mode environment variable
     if (flags.json) {
-      process.env.JSON_OUTPUT = '1';
+      setJsonOutputMode();
     }
 
     // Initialize telemetry (logger, metrics, traces)
@@ -156,46 +190,7 @@ export default class Doctor extends Command {
       };
 
       // Determine exit code and status
-      let exitCode = 0;
-      let status: DoctorPayload['status'] = 'healthy';
-
-      if (summary.failed > 0) {
-        // Determine exit code based on failure types
-        const hasCredentialFailure = checks.some(
-          (c) =>
-            c.status === 'fail' &&
-            (c.name.includes('Token') ||
-              c.name.includes('API Key') ||
-              c.name.includes('Credential'))
-        );
-        const hasEnvironmentFailure = checks.some(
-          (c) =>
-            c.status === 'fail' &&
-            (c.name.includes('Node') ||
-              c.name.includes('Git') ||
-              c.name.includes('Docker') ||
-              c.name.includes('Filesystem'))
-        );
-        const hasConfigFailure = checks.some(
-          (c) => c.status === 'fail' && c.name.includes('Config')
-        );
-
-        if (hasCredentialFailure) {
-          exitCode = 30;
-          status = 'critical_failures';
-        } else if (hasEnvironmentFailure) {
-          exitCode = 20;
-          status = 'critical_failures';
-        } else if (hasConfigFailure) {
-          exitCode = 10;
-          status = 'critical_failures';
-        } else {
-          exitCode = 1;
-          status = 'critical_failures';
-        }
-      } else if (summary.warnings > 0) {
-        status = 'issues_detected';
-      }
+      const { exitCode, status } = determineExitCode(checks);
 
       // Build payload
       const payload: DoctorPayload = {
@@ -254,46 +249,10 @@ export default class Doctor extends Command {
         process.exit(exitCode);
       }
     } catch (error) {
-      // Record error metrics
-      if (metrics) {
-        const duration = Date.now() - startTime;
-        metrics.observe(StandardMetrics.COMMAND_EXECUTION_DURATION_MS, duration, {
-          command: 'doctor',
-        });
-        metrics.increment(StandardMetrics.COMMAND_INVOCATIONS_TOTAL, {
-          command: 'doctor',
-          exit_code: '1',
-        });
-        await metrics.flush();
-      }
-
-      if (commandSpan) {
-        commandSpan.setAttribute('exit_code', 1);
-        commandSpan.setAttribute('error', true);
-        if (error instanceof Error) {
-          commandSpan.setAttribute('error.message', error.message);
-          commandSpan.setAttribute('error.name', error.name);
-        }
-        commandSpan.end({
-          code: SpanStatusCode.ERROR,
-          message: error instanceof Error ? error.message : 'unknown error',
-        });
-      }
-
-      if (traceManager) {
-        await traceManager.flush();
-      }
-
-      if (logger) {
-        if (error instanceof Error) {
-          logger.error('Doctor command failed', {
-            error: error.message,
-            stack: error.stack,
-            duration_ms: Date.now() - startTime,
-          });
-        }
-        await logger.flush();
-      }
+      await flushTelemetryError(
+        { commandName: 'doctor', startTime, logger, metrics, traceManager, commandSpan },
+        error
+      );
 
       // Re-throw oclif errors to preserve exit codes
       if (error && typeof error === 'object' && 'oclif' in error) {
@@ -350,112 +309,67 @@ export default class Doctor extends Command {
     }
   }
 
-  /**
-   * Check if git CLI is installed and accessible
-   */
+  private checkToolVersion(options: {
+    name: string;
+    command: string;
+    failStatus: 'fail' | 'warn';
+    failRemediation: string;
+    messageFormatter?: (version: string) => string;
+  }): DiagnosticCheck {
+    const { name, command, failStatus, failRemediation, messageFormatter } = options;
+    try {
+      const result = spawnSync(command, ['--version'], { encoding: 'utf-8', timeout: 5000 });
+      if (result.status === 0) {
+        const version = result.stdout.trim();
+        return {
+          name,
+          status: 'pass',
+          message: messageFormatter ? messageFormatter(version) : version,
+          details: { version },
+        };
+      }
+      return {
+        name,
+        status: failStatus,
+        message: `${name} command failed`,
+        remediation: failRemediation,
+      };
+    } catch {
+      return {
+        name,
+        status: failStatus,
+        message: `${name} not found`,
+        remediation: failRemediation,
+      };
+    }
+  }
+
   private checkGitInstalled(): DiagnosticCheck {
-    try {
-      const result = spawnSync('git', ['--version'], {
-        encoding: 'utf-8',
-        timeout: 5000,
-      });
-
-      if (result.status === 0) {
-        const version = result.stdout.trim();
-        return {
-          name: 'Git CLI',
-          status: 'pass',
-          message: version,
-          details: { version },
-        };
-      } else {
-        return {
-          name: 'Git CLI',
-          status: 'fail',
-          message: 'Git command failed',
-          remediation: 'Install git from https://git-scm.com/',
-        };
-      }
-    } catch {
-      return {
-        name: 'Git CLI',
-        status: 'fail',
-        message: 'Git not found',
-        remediation: 'Install git from https://git-scm.com/',
-      };
-    }
+    return this.checkToolVersion({
+      name: 'Git CLI',
+      command: 'git',
+      failStatus: 'fail',
+      failRemediation: 'Install git from https://git-scm.com/',
+    });
   }
 
-  /**
-   * Check if npm is installed
-   */
   private checkNpmInstalled(): DiagnosticCheck {
-    try {
-      const result = spawnSync('npm', ['--version'], {
-        encoding: 'utf-8',
-        timeout: 5000,
-      });
-
-      if (result.status === 0) {
-        const version = result.stdout.trim();
-        return {
-          name: 'npm',
-          status: 'pass',
-          message: `npm ${version}`,
-          details: { version },
-        };
-      } else {
-        return {
-          name: 'npm',
-          status: 'fail',
-          message: 'npm command failed',
-          remediation: 'npm should be installed with Node.js',
-        };
-      }
-    } catch {
-      return {
-        name: 'npm',
-        status: 'fail',
-        message: 'npm not found',
-        remediation: 'npm should be installed with Node.js',
-      };
-    }
+    return this.checkToolVersion({
+      name: 'npm',
+      command: 'npm',
+      failStatus: 'fail',
+      failRemediation: 'npm should be installed with Node.js',
+      messageFormatter: (v) => `npm ${v}`,
+    });
   }
 
-  /**
-   * Check if Docker is installed and accessible
-   */
   private checkDockerInstalled(): DiagnosticCheck {
-    try {
-      const result = spawnSync('docker', ['--version'], {
-        encoding: 'utf-8',
-        timeout: 5000,
-      });
-
-      if (result.status === 0) {
-        const version = result.stdout.trim();
-        return {
-          name: 'Docker',
-          status: 'pass',
-          message: version,
-          details: { version },
-        };
-      } else {
-        return {
-          name: 'Docker',
-          status: 'warn',
-          message: 'Docker command failed',
-          remediation: 'Install Docker from https://docker.com/ (optional but recommended)',
-        };
-      }
-    } catch {
-      return {
-        name: 'Docker',
-        status: 'warn',
-        message: 'Docker not found',
-        remediation: 'Install Docker from https://docker.com/ (optional but recommended)',
-      };
-    }
+    return this.checkToolVersion({
+      name: 'Docker',
+      command: 'docker',
+      failStatus: 'warn',
+      failRemediation: 'Install Docker from https://docker.com/ (optional but recommended)',
+    });
   }
 
   /**
