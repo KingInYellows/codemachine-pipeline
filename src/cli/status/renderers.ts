@@ -10,7 +10,26 @@ export function renderHumanReadable(
   flags: StatusFlags,
   callbacks: RenderCallbacks
 ): void {
-  const { log, warn } = callbacks;
+  renderHeaderSection(payload, callbacks);
+  renderQueueSection(payload, flags, callbacks);
+  renderApprovalsSection(payload, flags, callbacks);
+  renderContextSection(payload, flags, callbacks);
+  renderPlanSection(payload, flags, callbacks);
+  renderValidationSection(payload, callbacks);
+  renderTraceabilitySection(payload, flags, callbacks);
+
+  if (payload.branch_protection) {
+    renderBranchProtection(payload.branch_protection, flags, callbacks);
+  }
+
+  renderRateLimitsSection(payload, flags, callbacks);
+  renderIntegrationsSection(payload, flags, callbacks);
+  renderResearchSection(payload, callbacks);
+  renderFooterSection(payload, flags, callbacks);
+}
+
+function renderHeaderSection(payload: StatusPayload, callbacks: RenderCallbacks): void {
+  const { log } = callbacks;
 
   log('');
   log(`Feature: ${payload.feature_id ?? '(none detected)'}`);
@@ -31,6 +50,14 @@ export function renderHumanReadable(
   } else {
     log('Last error: none recorded');
   }
+}
+
+function renderQueueSection(
+  payload: StatusPayload,
+  flags: StatusFlags,
+  callbacks: RenderCallbacks
+): void {
+  const { log } = callbacks;
 
   if (payload.queue) {
     log(
@@ -42,236 +69,291 @@ export function renderHumanReadable(
   } else {
     log('Queue: manifest data unavailable');
   }
+}
 
-  if (payload.approvals) {
+function renderApprovalsSection(
+  payload: StatusPayload,
+  flags: StatusFlags,
+  callbacks: RenderCallbacks
+): void {
+  const { log, warn } = callbacks;
+
+  if (!payload.approvals) return;
+
+  log(
+    `Approvals: pending=${payload.approvals.pending.length} completed=${payload.approvals.completed.length}`
+  );
+
+  if (payload.approvals.pending.length > 0) {
+    log('');
+    warn('\u26a0 Pending approvals required:');
+    payload.approvals.pending.forEach((gate) => {
+      warn(
+        `  \u2022 ${gate.toUpperCase()} - Review artifact and run: codepipe approve ${gate} --signer "<your-email>"`
+      );
+    });
+  }
+
+  if (flags.verbose && payload.approvals.completed.length > 0) {
+    log('Completed approvals:');
+    payload.approvals.completed.forEach((gate) => {
+      log(`  \u2022 ${gate.toUpperCase()}`);
+    });
+  }
+}
+
+function renderContextSection(
+  payload: StatusPayload,
+  flags: StatusFlags,
+  callbacks: RenderCallbacks
+): void {
+  const { log, warn } = callbacks;
+
+  if (!payload.context) return;
+
+  if (payload.context.error) {
+    warn(`Context summaries unavailable: ${payload.context.error}`);
+  } else {
     log(
-      `Approvals: pending=${payload.approvals.pending.length} completed=${payload.approvals.completed.length}`
+      `Context: files=${payload.context.files ?? 0} summaries=${payload.context.summaries ?? 0} total_tokens=${payload.context.total_tokens ?? 0}`
     );
+    if (payload.context.budget_warnings && payload.context.budget_warnings.length > 0) {
+      warn(`Context budget warnings: ${payload.context.budget_warnings.join(' | ')}`);
+    }
+    if (payload.context.warnings && payload.context.warnings.length > 0) {
+      warn(`Context summarization warnings: ${payload.context.warnings.join(' | ')}`);
+    }
+    if (
+      flags.verbose &&
+      payload.context.summaries_preview &&
+      payload.context.summaries_preview.length > 0
+    ) {
+      log('Context summary preview:');
+      for (const preview of payload.context.summaries_preview) {
+        log(`  - ${preview.file_path} (${preview.chunk_id}): ${preview.summary}`);
+      }
+    }
+  }
+}
 
-    // Highlight pending approvals with actionable prompts
-    if (payload.approvals.pending.length > 0) {
-      log('');
-      warn('\u26a0 Pending approvals required:');
-      payload.approvals.pending.forEach((gate) => {
+function renderPlanSection(
+  payload: StatusPayload,
+  flags: StatusFlags,
+  callbacks: RenderCallbacks
+): void {
+  const { log } = callbacks;
+
+  if (!payload.plan) return;
+
+  if (payload.plan.plan_exists) {
+    log(
+      `Plan: ${payload.plan.total_tasks} tasks (${payload.plan.entry_tasks} entry, ${payload.plan.blocked_tasks} blocked)`
+    );
+    if (payload.plan.dag_metadata) {
+      log(
+        `DAG: parallel_paths=${payload.plan.dag_metadata.parallel_paths ?? 'N/A'} depth=${payload.plan.dag_metadata.critical_path_depth ?? 'N/A'}`
+      );
+    }
+    if (flags.verbose && payload.plan.task_type_breakdown) {
+      log('Task types:');
+      for (const [taskType, count] of Object.entries(payload.plan.task_type_breakdown)) {
+        log(`  \u2022 ${taskType}: ${count}`);
+      }
+    }
+    if (flags.verbose && payload.plan.checksum) {
+      log(`Plan checksum: ${payload.plan.checksum.substring(0, 16)}...`);
+    }
+  } else {
+    log('Plan: not generated yet');
+  }
+}
+
+function renderValidationSection(payload: StatusPayload, callbacks: RenderCallbacks): void {
+  const { log, warn } = callbacks;
+
+  if (!payload.validation) return;
+
+  const validationParts: string[] = [];
+  if (payload.validation.queue_valid !== undefined) {
+    validationParts.push(`queue=${payload.validation.queue_valid ? '\u2713' : '\u2717'}`);
+  }
+  if (payload.validation.plan_valid !== undefined) {
+    validationParts.push(`plan=${payload.validation.plan_valid ? '\u2713' : '\u2717'}`);
+  }
+  if (validationParts.length > 0) {
+    log(`Validation: ${validationParts.join(' ')}`);
+  }
+  if (payload.validation.integrity_warnings && payload.validation.integrity_warnings.length > 0) {
+    warn('Integrity warnings:');
+    payload.validation.integrity_warnings.forEach((warning) => {
+      warn(`  \u2022 ${warning}`);
+    });
+  }
+}
+
+function renderTraceabilitySection(
+  payload: StatusPayload,
+  flags: StatusFlags,
+  callbacks: RenderCallbacks
+): void {
+  const { log, warn } = callbacks;
+
+  if (!payload.traceability) return;
+
+  log(
+    `Traceability: ${payload.traceability.total_links} links (${payload.traceability.prd_goals_mapped} PRD goals \u2192 ${payload.traceability.spec_requirements_mapped} spec requirements \u2192 ${payload.traceability.execution_tasks_mapped} tasks)`
+  );
+  log(`Last updated: ${payload.traceability.last_updated}`);
+  if (payload.traceability.outstanding_gaps > 0) {
+    warn(`Outstanding gaps: ${payload.traceability.outstanding_gaps}`);
+  } else {
+    log('Outstanding gaps: None');
+  }
+  if (flags.verbose) {
+    log(`Trace file: ${payload.traceability.trace_path}`);
+  }
+}
+
+function renderRateLimitsSection(
+  payload: StatusPayload,
+  flags: StatusFlags,
+  callbacks: RenderCallbacks
+): void {
+  const { log, warn } = callbacks;
+
+  if (!payload.rate_limits) return;
+
+  const rl = payload.rate_limits;
+  log('');
+  log(
+    '\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500'
+  );
+  log('API Ledger (Rate Limits)');
+  log(
+    '\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500'
+  );
+
+  if (Object.keys(rl.providers).length === 0) {
+    log('No rate limit data recorded yet.');
+  } else {
+    for (const [providerName, providerData] of Object.entries(rl.providers)) {
+      log(`\n${providerName}:`);
+      log(`  Remaining: ${providerData.remaining}`);
+      log(`  Reset: ${providerData.reset_at}`);
+      log(`  In Cooldown: ${providerData.in_cooldown ? 'Yes' : 'No'}`);
+
+      if (providerData.manual_ack_required) {
         warn(
-          `  \u2022 ${gate.toUpperCase()} - Review artifact and run: codepipe approve ${gate} --signer "<your-email>"`
-        );
-      });
-    }
-
-    // Show completed approvals in verbose mode
-    if (flags.verbose && payload.approvals.completed.length > 0) {
-      log('Completed approvals:');
-      payload.approvals.completed.forEach((gate) => {
-        log(`  \u2022 ${gate.toUpperCase()}`);
-      });
-    }
-  }
-
-  if (payload.context) {
-    if (payload.context.error) {
-      warn(`Context summaries unavailable: ${payload.context.error}`);
-    } else {
-      log(
-        `Context: files=${payload.context.files ?? 0} summaries=${payload.context.summaries ?? 0} total_tokens=${payload.context.total_tokens ?? 0}`
-      );
-      if (payload.context.budget_warnings && payload.context.budget_warnings.length > 0) {
-        warn(`Context budget warnings: ${payload.context.budget_warnings.join(' | ')}`);
-      }
-      if (payload.context.warnings && payload.context.warnings.length > 0) {
-        warn(`Context summarization warnings: ${payload.context.warnings.join(' | ')}`);
-      }
-      if (
-        flags.verbose &&
-        payload.context.summaries_preview &&
-        payload.context.summaries_preview.length > 0
-      ) {
-        log('Context summary preview:');
-        for (const preview of payload.context.summaries_preview) {
-          log(`  - ${preview.file_path} (${preview.chunk_id}): ${preview.summary}`);
-        }
-      }
-    }
-  }
-
-  if (payload.plan) {
-    if (payload.plan.plan_exists) {
-      log(
-        `Plan: ${payload.plan.total_tasks} tasks (${payload.plan.entry_tasks} entry, ${payload.plan.blocked_tasks} blocked)`
-      );
-      if (payload.plan.dag_metadata) {
-        log(
-          `DAG: parallel_paths=${payload.plan.dag_metadata.parallel_paths ?? 'N/A'} depth=${payload.plan.dag_metadata.critical_path_depth ?? 'N/A'}`
+          `  \u26a0 Manual Acknowledgement Required (${providerData.recent_hit_count} consecutive hits)`
         );
       }
-      if (flags.verbose && payload.plan.task_type_breakdown) {
-        log('Task types:');
-        for (const [taskType, count] of Object.entries(payload.plan.task_type_breakdown)) {
-          log(`  \u2022 ${taskType}: ${count}`);
-        }
-      }
-      if (flags.verbose && payload.plan.checksum) {
-        log(`Plan checksum: ${payload.plan.checksum.substring(0, 16)}...`);
-      }
-    } else {
-      log('Plan: not generated yet');
-    }
-  }
 
-  if (payload.validation) {
-    const validationParts: string[] = [];
-    if (payload.validation.queue_valid !== undefined) {
-      validationParts.push(`queue=${payload.validation.queue_valid ? '\u2713' : '\u2717'}`);
-    }
-    if (payload.validation.plan_valid !== undefined) {
-      validationParts.push(`plan=${payload.validation.plan_valid ? '\u2713' : '\u2717'}`);
-    }
-    if (validationParts.length > 0) {
-      log(`Validation: ${validationParts.join(' ')}`);
-    }
-    if (payload.validation.integrity_warnings && payload.validation.integrity_warnings.length > 0) {
-      warn('Integrity warnings:');
-      payload.validation.integrity_warnings.forEach((warning) => {
-        warn(`  \u2022 ${warning}`);
-      });
-    }
-  }
-
-  if (payload.traceability) {
-    log(
-      `Traceability: ${payload.traceability.total_links} links (${payload.traceability.prd_goals_mapped} PRD goals \u2192 ${payload.traceability.spec_requirements_mapped} spec requirements \u2192 ${payload.traceability.execution_tasks_mapped} tasks)`
-    );
-    log(`Last updated: ${payload.traceability.last_updated}`);
-    if (payload.traceability.outstanding_gaps > 0) {
-      warn(`Outstanding gaps: ${payload.traceability.outstanding_gaps}`);
-    } else {
-      log('Outstanding gaps: None');
-    }
-    if (flags.verbose) {
-      log(`Trace file: ${payload.traceability.trace_path}`);
-    }
-  }
-
-  if (payload.branch_protection) {
-    renderBranchProtection(payload.branch_protection, flags, { log, warn });
-  }
-
-  // Rate limits section (API ledger block per architecture)
-  if (payload.rate_limits) {
-    const rl = payload.rate_limits;
-    log('');
-    log(
-      '\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500'
-    );
-    log('API Ledger (Rate Limits)');
-    log(
-      '\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500'
-    );
-
-    if (Object.keys(rl.providers).length === 0) {
-      log('No rate limit data recorded yet.');
-    } else {
-      for (const [providerName, providerData] of Object.entries(rl.providers)) {
-        log(`\n${providerName}:`);
-        log(`  Remaining: ${providerData.remaining}`);
-        log(`  Reset: ${providerData.reset_at}`);
-        log(`  In Cooldown: ${providerData.in_cooldown ? 'Yes' : 'No'}`);
-
-        if (providerData.manual_ack_required) {
-          warn(
-            `  \u26a0 Manual Acknowledgement Required (${providerData.recent_hit_count} consecutive hits)`
-          );
-        }
-
-        if (flags.verbose) {
-          log(`  Recent Hits: ${providerData.recent_hit_count}`);
-        }
+      if (flags.verbose) {
+        log(`  Recent Hits: ${providerData.recent_hit_count}`);
       }
     }
-
-    if (rl.warnings.length > 0) {
-      log('\nRate Limit Warnings:');
-      rl.warnings.forEach((warning) => {
-        warn(`  \u26a0 ${warning}`);
-      });
-    }
-
-    log(
-      '\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500'
-    );
   }
 
-  // Integrations section
-  if (payload.integrations) {
-    const integrations = payload.integrations;
-    log('');
-    log('Integration Status:');
+  if (rl.warnings.length > 0) {
+    log('\nRate Limit Warnings:');
+    rl.warnings.forEach((warning) => {
+      warn(`  \u26a0 ${warning}`);
+    });
+  }
 
-    const renderIntegration = (
-      name: string,
-      data: {
-        enabled: boolean;
-        rate_limit?: { remaining: number; reset_at: string; in_cooldown: boolean };
-        warnings: string[];
-      },
-      renderStatus: () => void
-    ) => {
-      log(`  ${name}:`);
-      log(`    Enabled: ${data.enabled ? 'Yes' : 'No'}`);
-      if (data.rate_limit) {
-        log(`    Rate Limit: ${data.rate_limit.remaining} remaining`);
-        if (data.rate_limit.in_cooldown) {
-          warn(`    \u26a0 In cooldown until ${data.rate_limit.reset_at}`);
+  log(
+    '\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500'
+  );
+}
+
+function renderIntegrationsSection(
+  payload: StatusPayload,
+  flags: StatusFlags,
+  callbacks: RenderCallbacks
+): void {
+  const { log, warn } = callbacks;
+
+  if (!payload.integrations) return;
+
+  const integrations = payload.integrations;
+  log('');
+  log('Integration Status:');
+
+  const renderIntegration = (
+    name: string,
+    data: {
+      enabled: boolean;
+      rate_limit?: { remaining: number; reset_at: string; in_cooldown: boolean };
+      warnings: string[];
+    },
+    renderStatus: () => void
+  ) => {
+    log(`  ${name}:`);
+    log(`    Enabled: ${data.enabled ? 'Yes' : 'No'}`);
+    if (data.rate_limit) {
+      log(`    Rate Limit: ${data.rate_limit.remaining} remaining`);
+      if (data.rate_limit.in_cooldown) {
+        warn(`    \u26a0 In cooldown until ${data.rate_limit.reset_at}`);
+      }
+    }
+    renderStatus();
+    data.warnings.forEach((warning) => warn(`    \u26a0 ${warning}`));
+  };
+
+  if (integrations.github) {
+    renderIntegration('GitHub', integrations.github, () => {
+      if (integrations.github!.pr_status) {
+        const pr = integrations.github!.pr_status;
+        log(`    PR #${pr.number}: ${pr.state}`);
+        log(`    Mergeable: ${pr.mergeable === null ? 'Unknown' : pr.mergeable ? 'Yes' : 'No'}`);
+        if (flags.verbose && pr.url) {
+          log(`    URL: ${pr.url}`);
         }
       }
-      renderStatus();
-      data.warnings.forEach((warning) => warn(`    \u26a0 ${warning}`));
-    };
-
-    if (integrations.github) {
-      renderIntegration('GitHub', integrations.github, () => {
-        if (integrations.github!.pr_status) {
-          const pr = integrations.github!.pr_status;
-          log(`    PR #${pr.number}: ${pr.state}`);
-          log(`    Mergeable: ${pr.mergeable === null ? 'Unknown' : pr.mergeable ? 'Yes' : 'No'}`);
-          if (flags.verbose && pr.url) {
-            log(`    URL: ${pr.url}`);
-          }
-        }
-      });
-    }
-
-    if (integrations.linear) {
-      renderIntegration('Linear', integrations.linear, () => {
-        if (integrations.linear!.issue_status) {
-          const issue = integrations.linear!.issue_status;
-          log(`    Issue: ${issue.identifier} (${issue.state})`);
-          if (flags.verbose && issue.url) {
-            log(`    URL: ${issue.url}`);
-          }
-        }
-      });
-    }
+    });
   }
 
-  // Research section
-  if (payload.research) {
-    const research = payload.research;
-    log('');
-    log('Research Tasks:');
-    log(`  Total: ${research.total_tasks}`);
-    log(`  Pending: ${research.pending_tasks}, In Progress: ${research.in_progress_tasks}`);
-    log(`  Completed: ${research.completed_tasks}, Failed: ${research.failed_tasks}`);
-    log(`  Cached: ${research.cached_tasks}, Stale: ${research.stale_tasks}`);
-    log(`  Research Directory: ${research.research_dir}`);
-    log(`  Snapshot: ${research.tasks_file}`);
-
-    if (research.warnings.length > 0) {
-      research.warnings.forEach((warning) => {
-        warn(`  \u26a0 ${warning}`);
-      });
-    }
+  if (integrations.linear) {
+    renderIntegration('Linear', integrations.linear, () => {
+      if (integrations.linear!.issue_status) {
+        const issue = integrations.linear!.issue_status;
+        log(`    Issue: ${issue.identifier} (${issue.state})`);
+        if (flags.verbose && issue.url) {
+          log(`    URL: ${issue.url}`);
+        }
+      }
+    });
   }
+}
+
+function renderResearchSection(payload: StatusPayload, callbacks: RenderCallbacks): void {
+  const { log, warn } = callbacks;
+
+  if (!payload.research) return;
+
+  const research = payload.research;
+  log('');
+  log('Research Tasks:');
+  log(`  Total: ${research.total_tasks}`);
+  log(`  Pending: ${research.pending_tasks}, In Progress: ${research.in_progress_tasks}`);
+  log(`  Completed: ${research.completed_tasks}, Failed: ${research.failed_tasks}`);
+  log(`  Cached: ${research.cached_tasks}, Stale: ${research.stale_tasks}`);
+  log(`  Research Directory: ${research.research_dir}`);
+  log(`  Snapshot: ${research.tasks_file}`);
+
+  if (research.warnings.length > 0) {
+    research.warnings.forEach((warning) => {
+      warn(`  \u26a0 ${warning}`);
+    });
+  }
+}
+
+function renderFooterSection(
+  payload: StatusPayload,
+  flags: StatusFlags,
+  callbacks: RenderCallbacks
+): void {
+  const { log, warn } = callbacks;
 
   if (payload.manifest_error) {
     warn(`Manifest read warning: ${payload.manifest_error}`);
