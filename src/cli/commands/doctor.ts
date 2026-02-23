@@ -12,6 +12,7 @@ import type { TraceManager, ActiveSpan } from '../../telemetry/traces';
 import { checkCodeMachineCli } from '../diagnostics';
 import { setJsonOutputMode } from '../utils/cliErrors';
 import { CONFIG_RELATIVE_PATH } from '../utils/runDirectory';
+import { flushTelemetryError } from '../utils/telemetryLifecycle';
 
 /**
  * Diagnostic check result
@@ -40,6 +41,40 @@ interface DoctorPayload {
   };
   config_path: string;
   timestamp: string;
+}
+
+/**
+ * Determine exit code and status from diagnostic check results.
+ * Priority: credential failures (30) > environment failures (20) > config failures (10) > generic (1).
+ */
+function determineExitCode(checks: DiagnosticCheck[]): {
+  exitCode: number;
+  status: DoctorPayload['status'];
+} {
+  const failed = checks.filter((c) => c.status === 'fail');
+  const hasWarnings = checks.some((c) => c.status === 'warn');
+
+  if (failed.length === 0) {
+    return { exitCode: 0, status: hasWarnings ? 'issues_detected' : 'healthy' };
+  }
+
+  const hasCredentialFailure = failed.some(
+    (c) =>
+      c.name.includes('Token') || c.name.includes('API Key') || c.name.includes('Credential')
+  );
+  const hasEnvironmentFailure = failed.some(
+    (c) =>
+      c.name.includes('Node') ||
+      c.name.includes('Git') ||
+      c.name.includes('Docker') ||
+      c.name.includes('Filesystem')
+  );
+  const hasConfigFailure = failed.some((c) => c.name.includes('Config'));
+
+  if (hasCredentialFailure) return { exitCode: 30, status: 'critical_failures' };
+  if (hasEnvironmentFailure) return { exitCode: 20, status: 'critical_failures' };
+  if (hasConfigFailure) return { exitCode: 10, status: 'critical_failures' };
+  return { exitCode: 1, status: 'critical_failures' };
 }
 
 /**
@@ -156,46 +191,7 @@ export default class Doctor extends Command {
       };
 
       // Determine exit code and status
-      let exitCode = 0;
-      let status: DoctorPayload['status'] = 'healthy';
-
-      if (summary.failed > 0) {
-        // Determine exit code based on failure types
-        const hasCredentialFailure = checks.some(
-          (c) =>
-            c.status === 'fail' &&
-            (c.name.includes('Token') ||
-              c.name.includes('API Key') ||
-              c.name.includes('Credential'))
-        );
-        const hasEnvironmentFailure = checks.some(
-          (c) =>
-            c.status === 'fail' &&
-            (c.name.includes('Node') ||
-              c.name.includes('Git') ||
-              c.name.includes('Docker') ||
-              c.name.includes('Filesystem'))
-        );
-        const hasConfigFailure = checks.some(
-          (c) => c.status === 'fail' && c.name.includes('Config')
-        );
-
-        if (hasCredentialFailure) {
-          exitCode = 30;
-          status = 'critical_failures';
-        } else if (hasEnvironmentFailure) {
-          exitCode = 20;
-          status = 'critical_failures';
-        } else if (hasConfigFailure) {
-          exitCode = 10;
-          status = 'critical_failures';
-        } else {
-          exitCode = 1;
-          status = 'critical_failures';
-        }
-      } else if (summary.warnings > 0) {
-        status = 'issues_detected';
-      }
+      const { exitCode, status } = determineExitCode(checks);
 
       // Build payload
       const payload: DoctorPayload = {
@@ -254,46 +250,10 @@ export default class Doctor extends Command {
         process.exit(exitCode);
       }
     } catch (error) {
-      // Record error metrics
-      if (metrics) {
-        const duration = Date.now() - startTime;
-        metrics.observe(StandardMetrics.COMMAND_EXECUTION_DURATION_MS, duration, {
-          command: 'doctor',
-        });
-        metrics.increment(StandardMetrics.COMMAND_INVOCATIONS_TOTAL, {
-          command: 'doctor',
-          exit_code: '1',
-        });
-        await metrics.flush();
-      }
-
-      if (commandSpan) {
-        commandSpan.setAttribute('exit_code', 1);
-        commandSpan.setAttribute('error', true);
-        if (error instanceof Error) {
-          commandSpan.setAttribute('error.message', error.message);
-          commandSpan.setAttribute('error.name', error.name);
-        }
-        commandSpan.end({
-          code: SpanStatusCode.ERROR,
-          message: error instanceof Error ? error.message : 'unknown error',
-        });
-      }
-
-      if (traceManager) {
-        await traceManager.flush();
-      }
-
-      if (logger) {
-        if (error instanceof Error) {
-          logger.error('Doctor command failed', {
-            error: error.message,
-            stack: error.stack,
-            duration_ms: Date.now() - startTime,
-          });
-        }
-        await logger.flush();
-      }
+      await flushTelemetryError(
+        { commandName: 'doctor', startTime, logger, metrics, traceManager, commandSpan },
+        error
+      );
 
       // Re-throw oclif errors to preserve exit codes
       if (error && typeof error === 'object' && 'oclif' in error) {
