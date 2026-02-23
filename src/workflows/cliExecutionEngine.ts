@@ -318,7 +318,6 @@ export class CLIExecutionEngine {
       if (!this.stopped) {
         const done = await this.fillTaskBatch(inFlight, maxParallelTasks, runTask);
         if (done) break;
-        if (inFlight.size === 0) continue;
       } else if (inFlight.size === 0) {
         break;
       }
