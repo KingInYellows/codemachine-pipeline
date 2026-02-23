@@ -8,7 +8,7 @@ import {
   createApprovalRecord,
   parseApprovalRecord,
 } from '../core/models/ApprovalRecord';
-import { withLock, readManifest, writeManifest } from '../persistence/runDirectoryManager';
+import { withLock, readManifest, writeManifest } from '../persistence';
 
 /**
  * Approval Registry Service

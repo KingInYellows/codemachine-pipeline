@@ -24,7 +24,7 @@ import * as path from 'node:path';
 import { z } from 'zod';
 import { validateOrThrow } from '../validation/helpers.js';
 import { computeFileHash } from '../persistence/hashManifest';
-import { withLock, getSubdirectoryPath } from '../persistence/runDirectoryManager';
+import { withLock, getSubdirectoryPath } from '../persistence';
 import type { StructuredLogger } from '../telemetry/logger';
 import type { MetricsCollector } from '../telemetry/metrics';
 import type { ContextDocument } from '../core/models/ContextDocument';

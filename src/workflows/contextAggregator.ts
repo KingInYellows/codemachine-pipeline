@@ -33,7 +33,7 @@ import {
   computeFileHash,
   type HashManifest,
 } from '../persistence/hashManifest';
-import { getSubdirectoryPath, withLock } from '../persistence/runDirectoryManager';
+import { getSubdirectoryPath, withLock } from '../persistence';
 import {
   estimateTokens,
   rankAndBudgetFiles,
