@@ -13,7 +13,7 @@
 
 import type { ExecutionTask } from '../core/models/ExecutionTask';
 import { canRetry } from '../core/models/ExecutionTask';
-import { readManifest, writeManifest, withLock } from '../persistence/runDirectoryManager';
+import { readManifest, writeManifest, withLock } from '../persistence';
 
 // V2 WAL Components
 import {

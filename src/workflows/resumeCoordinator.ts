@@ -5,8 +5,8 @@ import {
   verifyRunDirectoryIntegrity,
   writeManifest,
   type RunManifest,
-} from '../persistence/runDirectoryManager';
-import type { VerificationResult } from '../persistence/hashManifest';
+} from '../persistence';
+import type { VerificationResult } from '../persistence';
 import { validateQueue, type QueueValidationResult } from './queueStore';
 import type { ExecutionTelemetry } from '../telemetry/executionTelemetry';
 export type { QueueSnapshotMetadata } from './resumeQueueRecovery.js';

@@ -25,7 +25,7 @@ import { validateOrThrow } from '../validation/helpers.js';
 import { exec } from 'node:child_process';
 import { promisify } from 'node:util';
 import { wrapError } from '../utils/errors';
-import { withLock, getSubdirectoryPath, updateManifest } from '../persistence/runDirectoryManager';
+import { withLock, getSubdirectoryPath, updateManifest } from '../persistence';
 import type { RepoConfig } from '../core/config/RepoConfig';
 import type { StructuredLogger } from '../telemetry/logger';
 import type { MetricsCollector } from '../telemetry/metrics';

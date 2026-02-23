@@ -8,7 +8,7 @@
 
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
-import { readManifest } from '../persistence/runDirectoryManager';
+import { readManifest } from '../persistence';
 import { loadSnapshot } from './queueSnapshotManager.js';
 import { readOperationsWithStats } from './queueOperationsLog.js';
 import { QUEUE_SNAPSHOT_FILE } from './queueTypes.js';

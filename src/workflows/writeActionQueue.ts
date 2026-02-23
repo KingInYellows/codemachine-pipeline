@@ -15,7 +15,7 @@ import { getErrorMessage } from '../utils/errors.js';
 import { isFileNotFound } from '../utils/safeJson.js';
 import { RateLimitLedger } from '../telemetry/rateLimitLedger';
 import type { MetricsCollector } from '../telemetry/metrics';
-import { withLock } from '../persistence/runDirectoryManager';
+import { withLock } from '../persistence';
 import {
   WriteActionType,
   WriteActionStatus,

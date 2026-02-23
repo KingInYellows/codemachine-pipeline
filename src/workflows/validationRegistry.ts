@@ -10,7 +10,7 @@ import {
   type ValidationCommandType,
 } from '../core/validation/validationCommandConfig';
 import type { StructuredLogger } from '../telemetry/logger';
-import { withLock, readManifest } from '../persistence/runDirectoryManager';
+import { withLock, readManifest } from '../persistence';
 
 export type {
   ValidationCommandType,

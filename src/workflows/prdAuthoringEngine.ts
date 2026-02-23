@@ -20,8 +20,7 @@
 
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
-import { computeFileHash } from '../persistence/hashManifest';
-import { withLock, getSubdirectoryPath } from '../persistence/runDirectoryManager';
+import { computeFileHash, withLock, getSubdirectoryPath } from '../persistence';
 import type { StructuredLogger } from '../telemetry/logger';
 import type { MetricsCollector } from '../telemetry/metrics';
 import type { ContextDocument } from '../core/models/ContextDocument';

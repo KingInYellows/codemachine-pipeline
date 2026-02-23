@@ -10,7 +10,7 @@ import { QueueOperation, isQueueOperation } from './queueTypes';
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 import { createHash } from 'node:crypto';
-import { withLock } from '../persistence/runDirectoryManager';
+import { withLock } from '../persistence';
 import { getErrorMessage } from '../utils/errors.js';
 import { isFileNotFound } from '../utils/safeJson.js';
 

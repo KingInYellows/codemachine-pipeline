@@ -7,7 +7,7 @@
 
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
-import { readManifest } from '../persistence/runDirectoryManager';
+import { readManifest } from '../persistence';
 import {
   type ExecutionTask,
   canRetry,

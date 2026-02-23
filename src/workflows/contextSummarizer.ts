@@ -23,7 +23,7 @@ import type { ContextDocument, ContextSummary } from '../core/models/ContextDocu
 import { estimateTokens } from './contextRanking';
 import { RedactionEngine, type StructuredLogger } from '../telemetry/logger';
 import type { MetricsCollector } from '../telemetry/metrics';
-import { getSubdirectoryPath } from '../persistence/runDirectoryManager';
+import { getSubdirectoryPath } from '../persistence';
 import type { CostTracker } from '../telemetry/costTracker';
 
 // ============================================================================
