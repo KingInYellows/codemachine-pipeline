@@ -155,21 +155,7 @@ export default class Init extends Command {
 
       // Validate-only mode
       if (flags['validate-only']) {
-        if (!flags.json) {
-          this.log('Validating existing configuration...');
-        }
-        const validationPayload = await this.validateExistingConfig(configPath, flags.json);
-        exitCode = validationPayload.exit_code;
-
-        if (flags.json) {
-          this.log(JSON.stringify(validationPayload, null, 2));
-        }
-
-        if (exitCode !== 0) {
-          await this.exitCommand(exitCode, ctx);
-        }
-
-        await this.finalizeTelemetry(exitCode, ctx);
+        await this.handleValidateOnlyMode(configPath, flags, ctx);
         return;
       }
 
@@ -261,34 +247,7 @@ export default class Init extends Command {
       };
 
       // Output results
-      if (flags.json) {
-        this.log(JSON.stringify(resultPayload, null, 2));
-      } else {
-        // Display warnings about missing credentials
-        if (validationResult.warnings && validationResult.warnings.length > 0) {
-          this.log('\n⚠ Configuration created with warnings:');
-          for (const warning of validationResult.warnings) {
-            this.warn(warning);
-          }
-          this.log('');
-        }
-
-        // Success message
-        this.log('');
-        if (flags['dry-run']) {
-          this.log('✓ Dry run completed successfully (no files written)');
-        } else {
-          this.log('✓ codemachine-pipeline initialized successfully!');
-        }
-        this.log('');
-        this.log('Configuration file: ' + configPath);
-        this.log('');
-        this.log('Next steps:');
-        for (const step of resultPayload.next_steps) {
-          this.log(`  • ${step}`);
-        }
-        this.log('');
-      }
+      this.renderInitResult(flags, resultPayload);
 
       await this.finalizeTelemetry(exitCode, ctx);
     } catch (error) {
@@ -318,6 +277,74 @@ export default class Init extends Command {
         this.error('Initialization failed with an unknown error', { exit: errorExitCode });
       }
     }
+  }
+
+  /**
+   * Handle --validate-only mode: validate existing config and exit.
+   */
+  private async handleValidateOnlyMode(
+    configPath: string,
+    flags: { json: boolean; 'validate-only': boolean },
+    ctx: CommandTelemetryContext
+  ): Promise<void> {
+    if (!flags.json) {
+      this.log('Validating existing configuration...');
+    }
+    const validationPayload = await this.validateExistingConfig(configPath, flags.json);
+    const exitCode = validationPayload.exit_code;
+
+    if (flags.json) {
+      this.log(JSON.stringify(validationPayload, null, 2));
+    }
+
+    if (exitCode !== 0) {
+      await this.exitCommand(exitCode, ctx);
+    }
+
+    await this.finalizeTelemetry(exitCode, ctx);
+  }
+
+  /**
+   * Render the final success output for the init command (json or human-readable).
+   */
+  private renderInitResult(
+    flags: { json: boolean; 'dry-run': boolean },
+    resultPayload: {
+      status: string;
+      config_path: string;
+      exit_code: number;
+      warnings: string[];
+      next_steps: string[];
+      config?: RepoConfig | undefined;
+    }
+  ): void {
+    if (flags.json) {
+      this.log(JSON.stringify(resultPayload, null, 2));
+      return;
+    }
+
+    if (resultPayload.warnings.length > 0) {
+      this.log('\n⚠ Configuration created with warnings:');
+      for (const warning of resultPayload.warnings) {
+        this.warn(warning);
+      }
+      this.log('');
+    }
+
+    this.log('');
+    if (flags['dry-run']) {
+      this.log('✓ Dry run completed successfully (no files written)');
+    } else {
+      this.log('✓ codemachine-pipeline initialized successfully!');
+    }
+    this.log('');
+    this.log('Configuration file: ' + resultPayload.config_path);
+    this.log('');
+    this.log('Next steps:');
+    for (const step of resultPayload.next_steps) {
+      this.log(`  • ${step}`);
+    }
+    this.log('');
   }
 
   /**
