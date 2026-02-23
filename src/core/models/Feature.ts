@@ -9,9 +9,7 @@ import { z } from 'zod';
  * Used by CLI commands: init, start, status, resume
  */
 
-// ============================================================================
 // Enums and Status Types
-// ============================================================================
 
 export const FeatureStatusSchema = z.enum([
   'pending',
@@ -23,9 +21,7 @@ export const FeatureStatusSchema = z.enum([
 
 export type FeatureStatus = z.infer<typeof FeatureStatusSchema>;
 
-// ============================================================================
 // Repository Metadata
-// ============================================================================
 
 const RepoMetadataSchema = z.object({
   /** Repository URL (e.g., https://github.com/org/repo.git) */
@@ -36,16 +32,12 @@ const RepoMetadataSchema = z.object({
 
 export type RepoMetadata = z.infer<typeof RepoMetadataSchema>;
 
-// ============================================================================
 // Execution Tracking
-// ============================================================================
 
 const LastErrorSchema = z.object({
   /** Step identifier where error occurred */
   step: z.string(),
-  /** Error message */
   message: z.string(),
-  /** ISO 8601 timestamp when error occurred */
   timestamp: z.string().datetime(),
   /** Whether error is recoverable via resume */
   recoverable: z.boolean().default(true),
@@ -58,36 +50,26 @@ const ExecutionTrackingSchema = z.object({
   last_step: z.string().optional(),
   /** Most recent error encountered during execution */
   last_error: LastErrorSchema.optional(),
-  /** Current step being executed */
   current_step: z.string().optional(),
   /** Total number of steps in execution plan */
   total_steps: z.number().int().nonnegative().optional(),
-  /** Number of steps completed so far */
   completed_steps: z.number().int().nonnegative().default(0),
 });
 
 export type ExecutionTracking = z.infer<typeof ExecutionTrackingSchema>;
 
-// ============================================================================
 // Timestamps
-// ============================================================================
 
 const TimestampsSchema = z.object({
-  /** When feature record was created (ISO 8601) */
   created_at: z.string().datetime(),
-  /** When feature record was last updated (ISO 8601) */
   updated_at: z.string().datetime(),
-  /** When feature execution started (ISO 8601) */
   started_at: z.string().datetime().nullable().optional(),
-  /** When feature execution completed (ISO 8601) */
   completed_at: z.string().datetime().nullable().optional(),
 });
 
 export type Timestamps = z.infer<typeof TimestampsSchema>;
 
-// ============================================================================
 // Approvals
-// ============================================================================
 
 const ApprovalsSchema = z.object({
   /** Path to approvals.json file (relative to run directory) */
@@ -100,9 +82,7 @@ const ApprovalsSchema = z.object({
 
 export type Approvals = z.infer<typeof ApprovalsSchema>;
 
-// ============================================================================
 // Artifact References
-// ============================================================================
 
 const ArtifactReferencesSchema = z.object({
   /** Path to PRD markdown file */
@@ -117,9 +97,7 @@ const ArtifactReferencesSchema = z.object({
 
 export type ArtifactReferences = z.infer<typeof ArtifactReferencesSchema>;
 
-// ============================================================================
 // Telemetry References
-// ============================================================================
 
 const TelemetryReferencesSchema = z.object({
   /** Directory containing log files */
@@ -136,9 +114,7 @@ const TelemetryReferencesSchema = z.object({
 
 export type TelemetryReferences = z.infer<typeof TelemetryReferencesSchema>;
 
-// ============================================================================
 // Rate Limit References
-// ============================================================================
 
 const RateLimitReferencesSchema = z.object({
   /** Path to rate limits tracking JSON file */
@@ -147,9 +123,7 @@ const RateLimitReferencesSchema = z.object({
 
 export type RateLimitReferences = z.infer<typeof RateLimitReferencesSchema>;
 
-// ============================================================================
 // Main Feature Schema
-// ============================================================================
 
 export const FeatureSchema = z
   .object({
@@ -184,9 +158,7 @@ export const FeatureSchema = z
 
 export type Feature = Readonly<z.infer<typeof FeatureSchema>>;
 
-// ============================================================================
 // Serialization Helpers
-// ============================================================================
 
 /**
  * Parse and validate Feature from JSON

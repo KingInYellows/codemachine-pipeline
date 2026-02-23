@@ -12,9 +12,7 @@ import { z } from 'zod';
  * Used by CLI commands: deploy, status
  */
 
-// ============================================================================
 // Deployment Status Enum
-// ============================================================================
 
 export const DeploymentStatusSchema = z.enum([
   'pending',
@@ -27,9 +25,7 @@ export const DeploymentStatusSchema = z.enum([
 
 export type DeploymentStatus = z.infer<typeof DeploymentStatusSchema>;
 
-// ============================================================================
 // Status Check Schema
-// ============================================================================
 
 const StatusCheckSchema = z.object({
   /** Status check name */
@@ -44,9 +40,7 @@ const StatusCheckSchema = z.object({
 
 export type StatusCheck = z.infer<typeof StatusCheckSchema>;
 
-// ============================================================================
 // Review Record Schema
-// ============================================================================
 
 const ReviewRecordSchema = z.object({
   /** Reviewer username or ID */
@@ -59,9 +53,7 @@ const ReviewRecordSchema = z.object({
 
 export type ReviewRecord = z.infer<typeof ReviewRecordSchema>;
 
-// ============================================================================
 // DeploymentRecord Schema
-// ============================================================================
 
 export const DeploymentRecordSchema = z
   .object({
@@ -109,9 +101,7 @@ export const DeploymentRecordSchema = z
 
 export type DeploymentRecord = Readonly<z.infer<typeof DeploymentRecordSchema>>;
 
-// ============================================================================
 // Serialization Helpers
-// ============================================================================
 
 /**
  * Parse and validate DeploymentRecord from JSON

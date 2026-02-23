@@ -9,9 +9,7 @@ import { z } from 'zod';
  * Used by CLI commands: init, start, context
  */
 
-// ============================================================================
 // Context File Record Schema
-// ============================================================================
 
 const ContextFileRecordSchema = z.object({
   /** Relative path to context file (from repository root) */
@@ -28,9 +26,7 @@ const ContextFileRecordSchema = z.object({
 
 export type ContextFileRecord = z.infer<typeof ContextFileRecordSchema>;
 
-// ============================================================================
 // Context Summary Schema
-// ============================================================================
 
 const ContextSummarySchema = z.object({
   /** Chunk identifier (hash-derived) */
@@ -59,9 +55,7 @@ const ContextSummarySchema = z.object({
 
 export type ContextSummary = z.infer<typeof ContextSummarySchema>;
 
-// ============================================================================
 // Provenance Data Schema
-// ============================================================================
 
 const ProvenanceDataSchema = z.object({
   /** Source URL or identifier where context originated */
@@ -81,9 +75,7 @@ const ProvenanceDataSchema = z.object({
 
 export type ProvenanceData = z.infer<typeof ProvenanceDataSchema>;
 
-// ============================================================================
 // ContextDocument Schema
-// ============================================================================
 
 export const ContextDocumentSchema = z
   .object({
@@ -110,9 +102,7 @@ export const ContextDocumentSchema = z
 
 export type ContextDocument = Readonly<z.infer<typeof ContextDocumentSchema>>;
 
-// ============================================================================
 // Serialization Helpers
-// ============================================================================
 
 /**
  * Parse and validate ContextDocument from JSON

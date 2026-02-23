@@ -11,15 +11,11 @@ import type { PRMetadata } from '../core/models/index.js';
 import type { LoggerInterface } from '../telemetry/logger';
 import type { RunManifest } from '../persistence/runDirectoryManager';
 
-// ============================================================================
 // Constants
-// ============================================================================
 
 export const DEPLOYMENT_SCHEMA_VERSION = '1.0.0';
 
-// ============================================================================
 // Schemas & Types
-// ============================================================================
 
 /**
  * Deployment strategy options

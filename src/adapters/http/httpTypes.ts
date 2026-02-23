@@ -11,9 +11,7 @@ import type { RateLimitEnvelope } from '../../telemetry/rateLimitLedger';
 import { ErrorType, Provider } from '../../core/sharedTypes.js';
 export { ErrorType, Provider };
 
-// ============================================================================
 // Interfaces
-// ============================================================================
 
 /**
  * HTTP client configuration
@@ -66,9 +64,7 @@ export interface HttpResponse<T = unknown> {
   rateLimitEnvelope?: RateLimitEnvelope;
 }
 
-// ============================================================================
 // Constants
-// ============================================================================
 
 /** Default request timeout (30 seconds) */
 export const DEFAULT_TIMEOUT = 30000;

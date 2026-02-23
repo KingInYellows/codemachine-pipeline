@@ -14,9 +14,7 @@ import { z } from 'zod';
  * Used by CLI commands: research, start
  */
 
-// ============================================================================
 // Research Status Enum
-// ============================================================================
 
 export const ResearchStatusSchema = z.enum([
   'pending',
@@ -28,9 +26,7 @@ export const ResearchStatusSchema = z.enum([
 
 export type ResearchStatus = z.infer<typeof ResearchStatusSchema>;
 
-// ============================================================================
 // Research Source Schema
-// ============================================================================
 
 const ResearchSourceSchema = z.object({
   /** Source type (e.g., 'codebase', 'web', 'documentation', 'api') */
@@ -43,9 +39,7 @@ const ResearchSourceSchema = z.object({
 
 export type ResearchSource = z.infer<typeof ResearchSourceSchema>;
 
-// ============================================================================
 // Research Result Schema
-// ============================================================================
 
 const ResearchResultSchema = z.object({
   /** Research findings summary */
@@ -64,9 +58,7 @@ const ResearchResultSchema = z.object({
 
 export type ResearchResult = z.infer<typeof ResearchResultSchema>;
 
-// ============================================================================
 // Freshness Requirement Schema
-// ============================================================================
 
 const FreshnessRequirementSchema = z.object({
   /** Maximum age of cached result in hours */
@@ -77,9 +69,7 @@ const FreshnessRequirementSchema = z.object({
 
 export type FreshnessRequirement = z.infer<typeof FreshnessRequirementSchema>;
 
-// ============================================================================
 // ResearchTask Schema
-// ============================================================================
 
 export const ResearchTaskSchema = z
   .object({
@@ -118,9 +108,7 @@ export const ResearchTaskSchema = z
 
 export type ResearchTask = Readonly<z.infer<typeof ResearchTaskSchema>>;
 
-// ============================================================================
 // Serialization Helpers
-// ============================================================================
 
 /**
  * Parse and validate ResearchTask from JSON

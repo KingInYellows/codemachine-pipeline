@@ -7,9 +7,7 @@ import { z } from 'zod';
  * architectural violation where adapters imported from workflows.
  */
 
-// ============================================================================
 // CodeMachine Engine Types
-// ============================================================================
 
 /**
  * Engine types supported by CodeMachine-CLI.
@@ -23,9 +21,7 @@ export const CodeMachineEngineTypeSchema = z.enum(['claude', 'codex']);
 
 export type CodeMachineEngineType = z.infer<typeof CodeMachineEngineTypeSchema>;
 
-// ============================================================================
 // Adapter Result Types
-// ============================================================================
 
 /** Result of a CodeMachine-CLI execution via the adapter. */
 export interface CodeMachineExecutionResult {
@@ -38,16 +34,12 @@ export interface CodeMachineExecutionResult {
   pid?: number | undefined;
 }
 
-// ============================================================================
 // Strategy name constants
-// ============================================================================
 
 /** Strategy names recognized for CodeMachine telemetry tracking. */
 export const CODEMACHINE_STRATEGY_NAMES = new Set(['codemachine', 'codemachine-cli']);
 
-// ============================================================================
 // CLI Path Validation
-// ============================================================================
 
 /**
  * Allowlist regex for safe CLI path characters.

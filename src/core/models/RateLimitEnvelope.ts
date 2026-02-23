@@ -12,9 +12,7 @@ import { z } from 'zod';
  * Used by CLI commands: status, http client
  */
 
-// ============================================================================
 // RateLimitEnvelope Schema
-// ============================================================================
 
 export const RateLimitEnvelopeSchema = z
   .object({
@@ -47,9 +45,7 @@ export const RateLimitEnvelopeSchema = z
 
 export type RateLimitEnvelope = Readonly<z.infer<typeof RateLimitEnvelopeSchema>>;
 
-// ============================================================================
 // Serialization Helpers
-// ============================================================================
 
 /**
  * Parse and validate RateLimitEnvelope from JSON

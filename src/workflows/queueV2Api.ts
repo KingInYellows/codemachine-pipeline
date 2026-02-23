@@ -25,9 +25,7 @@ import type { QueueIndexState, ExecutionTaskData, QueueCounts } from './queueTyp
 // Shared cache and helpers (avoids circular dependency with queueStore)
 import { getV2IndexCache, buildDependencyGraph, toExecutionTask } from './queueCache.js';
 
-// ============================================================================
 // V2 Queue API (Direct Access)
-// ============================================================================
 
 /**
  * Get queue counts using V2 index.

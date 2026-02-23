@@ -37,9 +37,7 @@ async function computeFileChecksum(filePath: string): Promise<string> {
   }
 }
 
-// ============================================================================
 // Queue Validation
-// ============================================================================
 
 /**
  * Validate queue integrity

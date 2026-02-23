@@ -14,9 +14,7 @@ import { z } from 'zod';
  * Used by CLI commands: status, export, verify
  */
 
-// ============================================================================
 // Artifact Type Enum
-// ============================================================================
 
 export const ArtifactTypeSchema = z.enum([
   'prd',
@@ -32,9 +30,7 @@ export const ArtifactTypeSchema = z.enum([
 
 export type ArtifactType = z.infer<typeof ArtifactTypeSchema>;
 
-// ============================================================================
 // Single Artifact Record
-// ============================================================================
 
 const ArtifactRecordSchema = z.object({
   /** Artifact type classification */
@@ -53,9 +49,7 @@ const ArtifactRecordSchema = z.object({
 
 export type ArtifactRecord = z.infer<typeof ArtifactRecordSchema>;
 
-// ============================================================================
 // RunArtifact Collection Schema
-// ============================================================================
 
 export const RunArtifactSchema = z
   .object({
@@ -76,9 +70,7 @@ export const RunArtifactSchema = z
 
 export type RunArtifact = Readonly<z.infer<typeof RunArtifactSchema>>;
 
-// ============================================================================
 // Serialization Helpers
-// ============================================================================
 
 /**
  * Parse and validate RunArtifact from JSON

@@ -13,18 +13,14 @@ import * as path from 'node:path';
 import type { ContextDocument } from '../core/models/ContextDocument';
 import type { RepoConfig } from '../core/config/RepoConfig';
 
-// ============================================================================
 // Types
-// ============================================================================
 
 /**
  * Structured sections extracted from PRD markdown
  */
 export type PRDSections = ReturnType<typeof extractPRDSections>;
 
-// ============================================================================
 // PRD Section Extraction
-// ============================================================================
 
 /**
  * Extract bullet-list items from a named markdown section.
@@ -63,9 +59,7 @@ export function extractPRDSections(prdMarkdown: string): {
   };
 }
 
-// ============================================================================
 // Constraint and File Glob Extraction
-// ============================================================================
 
 /**
  * Extract technical constraints from PRD and context
@@ -167,9 +161,7 @@ export function deriveReferencedFileGlobs(
   return Array.from(globs).slice(0, 20);
 }
 
-// ============================================================================
 // Unknown Detection
-// ============================================================================
 
 /**
  * Detect unknowns in specification content

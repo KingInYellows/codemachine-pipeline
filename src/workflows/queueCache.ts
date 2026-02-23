@@ -17,9 +17,7 @@ import { hydrateIndex } from './queueMemoryIndex.js';
 import type { QueueIndexState, ExecutionTaskData } from './queueTypes.js';
 import type { ExecutionTask } from '../core/models/ExecutionTask';
 
-// ============================================================================
 // V2 Index Cache Management
-// ============================================================================
 
 /** V2 Index cache entry with state and metadata. */
 export interface V2IndexCache {
@@ -125,9 +123,7 @@ export function invalidateV2Cache(runDir: string): void {
   v2IndexCache.delete(runDir);
 }
 
-// ============================================================================
 // Dependency Graph Helpers
-// ============================================================================
 
 /** Build dependency graph from tasks in index state. */
 export function buildDependencyGraph(state: QueueIndexState): Record<string, string[]> {
@@ -142,9 +138,7 @@ export function buildDependencyGraph(state: QueueIndexState): Record<string, str
   return graph;
 }
 
-// ============================================================================
 // Type Converters
-// ============================================================================
 
 /** Convert ExecutionTaskData to ExecutionTask (readonly). */
 export function toExecutionTask(data: ExecutionTaskData): ExecutionTask {

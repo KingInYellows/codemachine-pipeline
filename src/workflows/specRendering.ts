@@ -13,9 +13,7 @@
 import type { Specification } from '../core/models/Specification';
 import type { PRDMetadata } from './prdAuthoringEngine';
 
-// ============================================================================
 // Markdown Generation
-// ============================================================================
 
 /**
  * Generate markdown specification document

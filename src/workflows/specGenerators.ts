@@ -11,9 +11,7 @@
 import type { ResearchTask } from '../core/models/ResearchTask';
 import type { RiskAssessment, TestPlanItem, RolloutPlan } from '../core/models/Specification';
 
-// ============================================================================
 // Specification Content Generation
-// ============================================================================
 
 /**
  * Generate risk assessments from PRD and research

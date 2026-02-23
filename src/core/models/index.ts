@@ -8,9 +8,7 @@
  *   import { Feature, FeatureSchema, parseFeature } from '@/core/models';
  */
 
-// ============================================================================
 // Core Models
-// ============================================================================
 
 export {
   // Feature
@@ -65,9 +63,7 @@ export {
   formatPlanArtifactValidationErrors,
 } from './PlanArtifact';
 
-// ============================================================================
 // Task Models
-// ============================================================================
 
 export {
   // ResearchTask
@@ -126,9 +122,7 @@ export {
   formatExecutionTaskValidationErrors,
 } from './ExecutionTask';
 
-// ============================================================================
 // Supporting Models
-// ============================================================================
 
 export {
   // ContextDocument

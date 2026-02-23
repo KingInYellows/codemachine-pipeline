@@ -31,16 +31,12 @@ import {
   type DeploymentHistory,
 } from './deploymentTriggerTypes';
 
-// ============================================================================
 // Constants
-// ============================================================================
 
 const DEPLOYMENT_FILE = 'deployment.json';
 const APPROVALS_FILE = path.join('approvals', 'approvals.json');
 
-// ============================================================================
 // Data Loading Layer
-// ============================================================================
 
 /**
  * Load deployment context from run directory artifacts
@@ -198,9 +194,7 @@ async function computeApprovalsHash(
   }
 }
 
-// ============================================================================
 // State Persistence
-// ============================================================================
 
 /**
  * Persist deployment outcome to deployment.json
