@@ -140,6 +140,14 @@ export interface PrerequisiteResult {
   warnings: string[];
 }
 
+/** Outcome record produced by a single in-flight task promise. */
+interface TaskOutcome {
+  taskId: string;
+  success: boolean;
+  permanentlyFailed: boolean;
+  task: ExecutionTask;
+}
+
 /**
  * CLI Execution Engine
  *
@@ -280,13 +288,6 @@ export class CLIExecutionEngine {
       maxParallelTasks,
     });
 
-    type TaskOutcome = {
-      taskId: string;
-      success: boolean;
-      permanentlyFailed: boolean;
-      task: ExecutionTask;
-    };
-
     const inFlight = new Map<string, Promise<TaskOutcome>>();
 
     const runTask = async (task: ExecutionTask): Promise<TaskOutcome> => {
@@ -315,53 +316,15 @@ export class CLIExecutionEngine {
 
     while (true) {
       if (!this.stopped) {
-        const capacity = maxParallelTasks - inFlight.size;
-        if (capacity > 0) {
-          const readyTasks = await this.getReadyTasks(new Set(inFlight.keys()), capacity);
-          for (const task of readyTasks) {
-            inFlight.set(task.task_id, runTask(task));
-          }
-
-          if (readyTasks.length === 0 && inFlight.size === 0) {
-            this.logger?.info('No more pending tasks');
-            break;
-          }
-        }
+        const done = await this.fillTaskBatch(inFlight, maxParallelTasks, runTask);
+        if (done) break;
       } else if (inFlight.size === 0) {
         break;
       }
 
-      if (inFlight.size === 0) {
-        continue;
-      }
-
       const completed = await Promise.race(inFlight.values());
       inFlight.delete(completed.taskId);
-
-      if (completed.success) {
-        result.completedTasks++;
-      } else if (completed.permanentlyFailed) {
-        result.permanentlyFailedTasks++;
-        this.logger?.error('Task permanently failed', {
-          taskId: completed.taskId,
-          retryCount: completed.task.retry_count,
-        });
-      } else {
-        result.failedTasks++;
-      }
-
-      // Update queue depth metrics after each task completion
-      const pending =
-        result.totalTasks -
-        result.completedTasks -
-        result.failedTasks -
-        result.permanentlyFailedTasks -
-        result.skippedTasks;
-      this.telemetry?.metrics?.setQueueDepth(
-        pending,
-        result.completedTasks,
-        result.failedTasks + result.permanentlyFailedTasks
-      );
+      this.recordTaskOutcome(result, completed);
     }
 
     this.logger?.info('Execution complete', {
@@ -372,6 +335,62 @@ export class CLIExecutionEngine {
       skippedTasks: result.skippedTasks,
     });
     return result;
+  }
+
+  /**
+   * Fill the in-flight map up to capacity with ready tasks.
+   *
+   * @param inFlight - Mutated in-place; ready tasks are added up to capacity.
+   * @param maxParallelTasks - Upper bound on concurrent tasks.
+   * @param runTask - Factory that starts a task and returns its outcome promise.
+   * @returns `true` when there are no more tasks to schedule and the queue is
+   *   drained (caller should break the execute loop).
+   */
+  private async fillTaskBatch(
+    inFlight: Map<string, Promise<TaskOutcome>>,
+    maxParallelTasks: number,
+    runTask: (task: ExecutionTask) => Promise<TaskOutcome>
+  ): Promise<boolean> {
+    const capacity = maxParallelTasks - inFlight.size;
+    if (capacity <= 0) return false;
+
+    const readyTasks = await this.getReadyTasks(new Set(inFlight.keys()), capacity);
+    for (const task of readyTasks) {
+      inFlight.set(task.task_id, runTask(task));
+    }
+
+    if (readyTasks.length === 0 && inFlight.size === 0) {
+      this.logger?.info('No more pending tasks');
+      return true;
+    }
+    return false;
+  }
+
+  /** Record a completed task outcome and update queue-depth metrics. */
+  private recordTaskOutcome(result: ExecutionResult, completed: TaskOutcome): void {
+    if (completed.success) {
+      result.completedTasks++;
+    } else if (completed.permanentlyFailed) {
+      result.permanentlyFailedTasks++;
+      this.logger?.error('Task permanently failed', {
+        taskId: completed.taskId,
+        retryCount: completed.task.retry_count,
+      });
+    } else {
+      result.failedTasks++;
+    }
+
+    const pending =
+      result.totalTasks -
+      result.completedTasks -
+      result.failedTasks -
+      result.permanentlyFailedTasks -
+      result.skippedTasks;
+    this.telemetry?.metrics?.setQueueDepth(
+      pending,
+      result.completedTasks,
+      result.failedTasks + result.permanentlyFailedTasks
+    );
   }
 
   /**
