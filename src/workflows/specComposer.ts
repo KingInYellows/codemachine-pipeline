@@ -166,7 +166,10 @@ export interface RecordSpecApprovalOptions {
 /**
  * Generate risk assessments from PRD and research
  */
-function generateRiskAssessments(prdRisks: string[], researchTasks: ResearchTask[]): RiskAssessment[] {
+function generateRiskAssessments(
+  prdRisks: string[],
+  researchTasks: ResearchTask[]
+): RiskAssessment[] {
   const risks: RiskAssessment[] = [];
 
   // Process PRD risks
