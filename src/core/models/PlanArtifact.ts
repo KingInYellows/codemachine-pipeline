@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { createModelParser } from './modelParser.js';
 
 /**
  * PlanArtifact Model
@@ -99,51 +100,10 @@ export type PlanArtifact = Readonly<z.infer<typeof PlanArtifactSchema>>;
 
 // ============================================================================
 // Serialization Helpers
-// ============================================================================
 
-/**
- * Parse and validate PlanArtifact from JSON
- *
- * @param json - Raw JSON object or string
- * @returns Parsed PlanArtifact or error details
- */
-export function parsePlanArtifact(json: unknown):
-  | {
-      success: true;
-      data: PlanArtifact;
-    }
-  | {
-      success: false;
-      errors: Array<{ path: string; message: string }>;
-    } {
-  const result = PlanArtifactSchema.safeParse(json);
-
-  if (result.success) {
-    return {
-      success: true,
-      data: result.data as PlanArtifact,
-    };
-  }
-
-  return {
-    success: false,
-    errors: result.error.issues.map((err) => ({
-      path: err.path.join('.') || 'root',
-      message: err.message,
-    })),
-  };
-}
-
-/**
- * Serialize PlanArtifact to JSON string
- *
- * @param planArtifact - PlanArtifact object to serialize
- * @param pretty - Whether to format output with indentation
- * @returns JSON string representation
- */
-export function serializePlanArtifact(planArtifact: PlanArtifact, pretty = true): string {
-  return JSON.stringify(planArtifact, null, pretty ? 2 : 0);
-}
+const { parse: parsePlanArtifact, serialize: serializePlanArtifact } =
+  createModelParser<PlanArtifact>(PlanArtifactSchema);
+export { parsePlanArtifact, serializePlanArtifact };
 
 /**
  * Create a new PlanArtifact

@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { createModelParser } from './modelParser.js';
 
 /**
  * ExecutionTask Model
@@ -118,49 +119,9 @@ export type ExecutionTask = Readonly<z.infer<typeof ExecutionTaskSchema>>;
 
 // Serialization Helpers
 
-/**
- * Parse and validate ExecutionTask from JSON
- *
- * @param json - Raw JSON object or string
- * @returns Parsed ExecutionTask or error details
- */
-export function parseExecutionTask(json: unknown):
-  | {
-      success: true;
-      data: ExecutionTask;
-    }
-  | {
-      success: false;
-      errors: Array<{ path: string; message: string }>;
-    } {
-  const result = ExecutionTaskSchema.safeParse(json);
-
-  if (result.success) {
-    return {
-      success: true,
-      data: result.data as ExecutionTask,
-    };
-  }
-
-  return {
-    success: false,
-    errors: result.error.issues.map((err) => ({
-      path: err.path.join('.') || 'root',
-      message: err.message,
-    })),
-  };
-}
-
-/**
- * Serialize ExecutionTask to JSON string
- *
- * @param executionTask - ExecutionTask object to serialize
- * @param pretty - Whether to format output with indentation
- * @returns JSON string representation
- */
-export function serializeExecutionTask(executionTask: ExecutionTask, pretty = true): string {
-  return JSON.stringify(executionTask, null, pretty ? 2 : 0);
-}
+const { parse: parseExecutionTask, serialize: serializeExecutionTask } =
+  createModelParser<ExecutionTask>(ExecutionTaskSchema);
+export { parseExecutionTask, serializeExecutionTask };
 
 /**
  * Create a new ExecutionTask

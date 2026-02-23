@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { createModelParser } from './modelParser.js';
 
 /**
  * TraceLink Model
@@ -26,16 +27,6 @@ export const TraceLinkSchema = z
 
 export type TraceLink = Readonly<z.infer<typeof TraceLinkSchema>>;
 
-export function parseTraceLink(json: unknown) {
-  const result = TraceLinkSchema.safeParse(json);
-  if (result.success) {
-    return { success: true as const, data: result.data as TraceLink };
-  }
-  return {
-    success: false as const,
-    errors: result.error.issues.map((err) => ({
-      path: err.path.join('.') || 'root',
-      message: err.message,
-    })),
-  };
-}
+const { parse: parseTraceLink, serialize: serializeTraceLink } =
+  createModelParser<TraceLink>(TraceLinkSchema);
+export { parseTraceLink, serializeTraceLink };

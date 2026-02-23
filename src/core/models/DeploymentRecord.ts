@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { createModelParser } from './modelParser.js';
 
 /**
  * DeploymentRecord Model
@@ -103,42 +104,9 @@ export type DeploymentRecord = Readonly<z.infer<typeof DeploymentRecordSchema>>;
 
 // Serialization Helpers
 
-/**
- * Parse and validate DeploymentRecord from JSON
- */
-export function parseDeploymentRecord(json: unknown):
-  | {
-      success: true;
-      data: DeploymentRecord;
-    }
-  | {
-      success: false;
-      errors: Array<{ path: string; message: string }>;
-    } {
-  const result = DeploymentRecordSchema.safeParse(json);
-
-  if (result.success) {
-    return {
-      success: true,
-      data: result.data as DeploymentRecord,
-    };
-  }
-
-  return {
-    success: false,
-    errors: result.error.issues.map((err) => ({
-      path: err.path.join('.') || 'root',
-      message: err.message,
-    })),
-  };
-}
-
-/**
- * Serialize DeploymentRecord to JSON string
- */
-export function serializeDeploymentRecord(record: DeploymentRecord, pretty = true): string {
-  return JSON.stringify(record, null, pretty ? 2 : 0);
-}
+const { parse: parseDeploymentRecord, serialize: serializeDeploymentRecord } =
+  createModelParser<DeploymentRecord>(DeploymentRecordSchema);
+export { parseDeploymentRecord, serializeDeploymentRecord };
 
 /**
  * Create a new DeploymentRecord

@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { createModelParser } from './modelParser.js';
 
 /**
  * RunArtifact Model
@@ -72,49 +73,9 @@ export type RunArtifact = Readonly<z.infer<typeof RunArtifactSchema>>;
 
 // Serialization Helpers
 
-/**
- * Parse and validate RunArtifact from JSON
- *
- * @param json - Raw JSON object or string
- * @returns Parsed RunArtifact or error details
- */
-export function parseRunArtifact(json: unknown):
-  | {
-      success: true;
-      data: RunArtifact;
-    }
-  | {
-      success: false;
-      errors: Array<{ path: string; message: string }>;
-    } {
-  const result = RunArtifactSchema.safeParse(json);
-
-  if (result.success) {
-    return {
-      success: true,
-      data: result.data as RunArtifact,
-    };
-  }
-
-  return {
-    success: false,
-    errors: result.error.issues.map((err) => ({
-      path: err.path.join('.') || 'root',
-      message: err.message,
-    })),
-  };
-}
-
-/**
- * Serialize RunArtifact to JSON string
- *
- * @param runArtifact - RunArtifact object to serialize
- * @param pretty - Whether to format output with indentation
- * @returns JSON string representation
- */
-export function serializeRunArtifact(runArtifact: RunArtifact, pretty = true): string {
-  return JSON.stringify(runArtifact, null, pretty ? 2 : 0);
-}
+const { parse: parseRunArtifact, serialize: serializeRunArtifact } =
+  createModelParser<RunArtifact>(RunArtifactSchema);
+export { parseRunArtifact, serializeRunArtifact };
 
 /**
  * Create a new RunArtifact collection

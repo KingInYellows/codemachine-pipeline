@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { createModelParser } from './modelParser.js';
 
 /**
  * IntegrationCredential Model
@@ -26,16 +27,6 @@ export const IntegrationCredentialSchema = z
 
 export type IntegrationCredential = Readonly<z.infer<typeof IntegrationCredentialSchema>>;
 
-export function parseIntegrationCredential(json: unknown) {
-  const result = IntegrationCredentialSchema.safeParse(json);
-  if (result.success) {
-    return { success: true as const, data: result.data as IntegrationCredential };
-  }
-  return {
-    success: false as const,
-    errors: result.error.issues.map((err) => ({
-      path: err.path.join('.') || 'root',
-      message: err.message,
-    })),
-  };
-}
+const { parse: parseIntegrationCredential, serialize: serializeIntegrationCredential } =
+  createModelParser<IntegrationCredential>(IntegrationCredentialSchema);
+export { parseIntegrationCredential, serializeIntegrationCredential };

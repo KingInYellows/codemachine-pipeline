@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { createModelParser } from './modelParser.js';
 
 /**
  * ContextDocument Model
@@ -104,42 +105,9 @@ export type ContextDocument = Readonly<z.infer<typeof ContextDocumentSchema>>;
 
 // Serialization Helpers
 
-/**
- * Parse and validate ContextDocument from JSON
- */
-export function parseContextDocument(json: unknown):
-  | {
-      success: true;
-      data: ContextDocument;
-    }
-  | {
-      success: false;
-      errors: Array<{ path: string; message: string }>;
-    } {
-  const result = ContextDocumentSchema.safeParse(json);
-
-  if (result.success) {
-    return {
-      success: true,
-      data: result.data as ContextDocument,
-    };
-  }
-
-  return {
-    success: false,
-    errors: result.error.issues.map((err) => ({
-      path: err.path.join('.') || 'root',
-      message: err.message,
-    })),
-  };
-}
-
-/**
- * Serialize ContextDocument to JSON string
- */
-export function serializeContextDocument(contextDocument: ContextDocument, pretty = true): string {
-  return JSON.stringify(contextDocument, null, pretty ? 2 : 0);
-}
+const { parse: parseContextDocument, serialize: serializeContextDocument } =
+  createModelParser<ContextDocument>(ContextDocumentSchema);
+export { parseContextDocument, serializeContextDocument };
 
 /**
  * Create a new ContextDocument

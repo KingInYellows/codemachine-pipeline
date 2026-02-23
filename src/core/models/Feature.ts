@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { createModelParser } from './modelParser.js';
 
 /**
  * Feature Model
@@ -160,49 +161,9 @@ export type Feature = Readonly<z.infer<typeof FeatureSchema>>;
 
 // Serialization Helpers
 
-/**
- * Parse and validate Feature from JSON
- *
- * @param json - Raw JSON object or string
- * @returns Parsed Feature or error details
- */
-export function parseFeature(json: unknown):
-  | {
-      success: true;
-      data: Feature;
-    }
-  | {
-      success: false;
-      errors: Array<{ path: string; message: string }>;
-    } {
-  const result = FeatureSchema.safeParse(json);
-
-  if (result.success) {
-    return {
-      success: true,
-      data: result.data as Feature,
-    };
-  }
-
-  return {
-    success: false,
-    errors: result.error.issues.map((err) => ({
-      path: err.path.join('.') || 'root',
-      message: err.message,
-    })),
-  };
-}
-
-/**
- * Serialize Feature to JSON string
- *
- * @param feature - Feature object to serialize
- * @param pretty - Whether to format output with indentation
- * @returns JSON string representation
- */
-export function serializeFeature(feature: Feature, pretty = true): string {
-  return JSON.stringify(feature, null, pretty ? 2 : 0);
-}
+const { parse: parseFeature, serialize: serializeFeature } =
+  createModelParser<Feature>(FeatureSchema);
+export { parseFeature, serializeFeature };
 
 /**
  * Create a new Feature with default values

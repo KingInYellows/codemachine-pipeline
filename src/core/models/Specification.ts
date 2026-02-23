@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { createModelParser } from './modelParser.js';
 
 /**
  * Specification Model
@@ -171,51 +172,10 @@ export type Specification = Readonly<z.infer<typeof SpecificationSchema>>;
 
 // ============================================================================
 // Serialization Helpers
-// ============================================================================
 
-/**
- * Parse and validate Specification from JSON
- *
- * @param json - Raw JSON object or string
- * @returns Parsed Specification or error details
- */
-export function parseSpecification(json: unknown):
-  | {
-      success: true;
-      data: Specification;
-    }
-  | {
-      success: false;
-      errors: Array<{ path: string; message: string }>;
-    } {
-  const result = SpecificationSchema.safeParse(json);
-
-  if (result.success) {
-    return {
-      success: true,
-      data: result.data as Specification,
-    };
-  }
-
-  return {
-    success: false,
-    errors: result.error.issues.map((err) => ({
-      path: err.path.join('.') || 'root',
-      message: err.message,
-    })),
-  };
-}
-
-/**
- * Serialize Specification to JSON string
- *
- * @param specification - Specification object to serialize
- * @param pretty - Whether to format output with indentation
- * @returns JSON string representation
- */
-export function serializeSpecification(specification: Specification, pretty = true): string {
-  return JSON.stringify(specification, null, pretty ? 2 : 0);
-}
+const { parse: parseSpecification, serialize: serializeSpecification } =
+  createModelParser<Specification>(SpecificationSchema);
+export { parseSpecification, serializeSpecification };
 
 /**
  * Create a new Specification

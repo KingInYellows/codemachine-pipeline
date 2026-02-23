@@ -1,5 +1,6 @@
 import { createHash } from 'node:crypto';
 import { z } from 'zod';
+import { createModelParser } from './modelParser.js';
 
 /**
  * ResearchTask Model
@@ -110,49 +111,9 @@ export type ResearchTask = Readonly<z.infer<typeof ResearchTaskSchema>>;
 
 // Serialization Helpers
 
-/**
- * Parse and validate ResearchTask from JSON
- *
- * @param json - Raw JSON object or string
- * @returns Parsed ResearchTask or error details
- */
-export function parseResearchTask(json: unknown):
-  | {
-      success: true;
-      data: ResearchTask;
-    }
-  | {
-      success: false;
-      errors: Array<{ path: string; message: string }>;
-    } {
-  const result = ResearchTaskSchema.safeParse(json);
-
-  if (result.success) {
-    return {
-      success: true,
-      data: result.data as ResearchTask,
-    };
-  }
-
-  return {
-    success: false,
-    errors: result.error.issues.map((err) => ({
-      path: err.path.join('.') || 'root',
-      message: err.message,
-    })),
-  };
-}
-
-/**
- * Serialize ResearchTask to JSON string
- *
- * @param researchTask - ResearchTask object to serialize
- * @param pretty - Whether to format output with indentation
- * @returns JSON string representation
- */
-export function serializeResearchTask(researchTask: ResearchTask, pretty = true): string {
-  return JSON.stringify(researchTask, null, pretty ? 2 : 0);
-}
+const { parse: parseResearchTask, serialize: serializeResearchTask } =
+  createModelParser<ResearchTask>(ResearchTaskSchema);
+export { parseResearchTask, serializeResearchTask };
 
 /**
  * Create a new ResearchTask

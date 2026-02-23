@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { createModelParser } from './modelParser.js';
 
 /**
  * NotificationEvent Model
@@ -28,16 +29,6 @@ export const NotificationEventSchema = z
 
 export type NotificationEvent = Readonly<z.infer<typeof NotificationEventSchema>>;
 
-export function parseNotificationEvent(json: unknown) {
-  const result = NotificationEventSchema.safeParse(json);
-  if (result.success) {
-    return { success: true as const, data: result.data as NotificationEvent };
-  }
-  return {
-    success: false as const,
-    errors: result.error.issues.map((err) => ({
-      path: err.path.join('.') || 'root',
-      message: err.message,
-    })),
-  };
-}
+const { parse: parseNotificationEvent, serialize: serializeNotificationEvent } =
+  createModelParser<NotificationEvent>(NotificationEventSchema);
+export { parseNotificationEvent, serializeNotificationEvent };
