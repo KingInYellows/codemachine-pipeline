@@ -768,13 +768,18 @@ export default class Start extends Command {
  *
  * Accepts optional overrides for the factory functions to allow injection
  * in unit tests without module-level mocking.
+ *
+ * @param config - Execution config section from RepoConfig.
+ * @param logger - Structured logger instance.
+ * @param factories - Optional factory overrides for testing; defaults to the
+ *   real CLI and legacy strategy constructors.
  */
-async function buildExecutionStrategies(
+export async function buildExecutionStrategies(
   config: ExecutionConfig,
   logger: StructuredLogger,
   factories?: {
-    cli?: typeof createCodeMachineCLIStrategy;
-    legacy?: typeof createCodeMachineStrategy;
+    cli?: typeof createCodeMachineCLIStrategy | undefined;
+    legacy?: typeof createCodeMachineStrategy | undefined;
   }
 ): Promise<ExecutionStrategy[]> {
   const cliFactory = factories?.cli ?? createCodeMachineCLIStrategy;
