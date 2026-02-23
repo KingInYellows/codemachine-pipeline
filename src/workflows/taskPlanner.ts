@@ -6,9 +6,9 @@
  * deterministic resume/replay scenarios.
  */
 
-import * as fs from 'node:fs/promises';
-import * as path from 'node:path';
-import * as crypto from 'node:crypto';
+import { readFile, writeFile, access } from 'node:fs/promises';
+import { join } from 'node:path';
+import { createHash } from 'node:crypto';
 import { withLock, getSubdirectoryPath } from '../persistence';
 import { z } from 'zod';
 import {
@@ -166,11 +166,11 @@ const TraceDocumentSchema = z.object({
  */
 async function extractSpecRequirements(runDir: string): Promise<SpecRequirement[]> {
   const artifactsDir = getSubdirectoryPath(runDir, 'artifacts');
-  const specJsonPath = path.join(artifactsDir, 'spec.json');
+  const specJsonPath = join(artifactsDir, 'spec.json');
 
   let specJson: unknown;
   try {
-    const specContent = await fs.readFile(specJsonPath, 'utf-8');
+    const specContent = await readFile(specJsonPath, 'utf-8');
     specJson = JSON.parse(specContent);
   } catch {
     return [];
@@ -324,7 +324,7 @@ function deriveTaskType(testType?: string): string {
  */
 function computePlanChecksum(plan: PlanArtifact): string {
   const content = JSON.stringify(plan, null, 2);
-  return crypto.createHash('sha256').update(content).digest('hex');
+  return createHash('sha256').update(content).digest('hex');
 }
 
 /**
@@ -336,8 +336,8 @@ async function persistPlan(
   specHash: string,
   iterationId?: string
 ): Promise<{ path: string; planWithChecksum: PlanArtifact }> {
-  const planPath = path.join(runDir, 'plan.json');
-  const metadataPath = path.join(runDir, 'plan_metadata.json');
+  const planPath = join(runDir, 'plan.json');
+  const metadataPath = join(runDir, 'plan_metadata.json');
 
   const planChecksum = computePlanChecksum(plan);
 
@@ -363,8 +363,8 @@ async function persistPlan(
 
   // Write files atomically with lock
   await withLock(runDir, async () => {
-    await fs.writeFile(planPath, JSON.stringify(planWithChecksum, null, 2), 'utf-8');
-    await fs.writeFile(metadataPath, JSON.stringify(metadata, null, 2), 'utf-8');
+    await writeFile(planPath, JSON.stringify(planWithChecksum, null, 2), 'utf-8');
+    await writeFile(metadataPath, JSON.stringify(metadata, null, 2), 'utf-8');
   });
 
   return { path: planPath, planWithChecksum };
@@ -374,11 +374,11 @@ async function persistPlan(
  * Load traceability map for spec requirements → task IDs (if available)
  */
 async function loadTraceabilityTaskIds(runDir: string): Promise<RequirementTaskMap> {
-  const tracePath = path.join(runDir, 'trace.json');
+  const tracePath = join(runDir, 'trace.json');
   const mapping: RequirementTaskMap = new Map();
 
   try {
-    const traceContent = await fs.readFile(tracePath, 'utf-8');
+    const traceContent = await readFile(tracePath, 'utf-8');
     const traceDoc = validateOrThrow(
       TraceDocumentSchema,
       JSON.parse(traceContent),
@@ -420,10 +420,10 @@ async function loadExistingPlanIfPresent(
   if (config.force) return null;
 
   try {
-    await fs.access(planPath);
+    await access(planPath);
     logger.info('plan.json already exists, loading existing plan', { planPath });
 
-    const existingContent = await fs.readFile(planPath, 'utf-8');
+    const existingContent = await readFile(planPath, 'utf-8');
     const existingPlan = validateOrThrow(
       PlanArtifactSchema,
       JSON.parse(existingContent),
@@ -489,7 +489,7 @@ export async function generateExecutionPlan(
     iterationId: config.iterationId,
   });
 
-  const planPath = path.join(config.runDir, 'plan.json');
+  const planPath = join(config.runDir, 'plan.json');
 
   const existing = await loadExistingPlanIfPresent(config, planPath, logger);
   if (existing) return existing;
@@ -646,10 +646,10 @@ export async function generateExecutionPlan(
  * Load plan summary for CLI status output
  */
 export async function loadPlanSummary(runDir: string): Promise<PlanSummary | null> {
-  const planPath = path.join(runDir, 'plan.json');
+  const planPath = join(runDir, 'plan.json');
 
   try {
-    const content = await fs.readFile(planPath, 'utf-8');
+    const content = await readFile(planPath, 'utf-8');
     const plan = validateOrThrow(PlanArtifactSchema, JSON.parse(content), 'plan artifact');
     return createPlanSummary(plan, planPath);
   } catch {
@@ -661,10 +661,10 @@ export async function loadPlanSummary(runDir: string): Promise<PlanSummary | nul
  * Load plan metadata
  */
 export async function loadPlanMetadata(runDir: string): Promise<PlanMetadata | null> {
-  const metadataPath = path.join(runDir, 'plan_metadata.json');
+  const metadataPath = join(runDir, 'plan_metadata.json');
 
   try {
-    const content = await fs.readFile(metadataPath, 'utf-8');
+    const content = await readFile(metadataPath, 'utf-8');
     return validateOrThrow(PlanMetadataSchema, JSON.parse(content), 'plan metadata');
   } catch {
     return null;

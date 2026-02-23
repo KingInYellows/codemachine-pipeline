@@ -12,7 +12,7 @@
 
 import * as path from 'node:path';
 import * as fs from 'node:fs/promises';
-import { readManifest } from '../persistence/runDirectoryManager';
+import { readManifest } from '../persistence';
 import { hydrateIndex } from './queueMemoryIndex.js';
 import type { QueueIndexState, ExecutionTaskData } from './queueTypes.js';
 import type { ExecutionTask } from '../core/models/ExecutionTask';
