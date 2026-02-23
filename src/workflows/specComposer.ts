@@ -31,7 +31,7 @@ import type { ContextDocument } from '../core/models/ContextDocument';
 import type { ResearchTask } from '../core/models/ResearchTask';
 import type { Feature } from '../core/models/Feature';
 import type { RepoConfig } from '../core/config/RepoConfig';
-import type { PRDDocument } from './prdAuthoringEngine';
+import type { PRDDocument, PRDMetadata } from './prdAuthoringEngine';
 import { isPRDApproved, loadPRDMetadata } from './prdAuthoringEngine';
 import { getErrorMessage } from '../utils/errors.js';
 import {
@@ -60,7 +60,6 @@ import {
   deriveReferencedFileGlobs,
   detectUnknowns,
 } from './specParsing';
-import type { PRDMetadata } from './prdAuthoringEngine';
 
 // ============================================================================
 // Types
@@ -572,7 +571,7 @@ export async function getSpecApprovals(runDir: string): Promise<ApprovalRecord[]
 }
 
 // ============================================================================
-// Content Generators (inlined from specGenerators.ts)
+// Content Generators
 // ============================================================================
 
 export function generateRiskAssessments(
@@ -636,6 +635,7 @@ export function generateTestPlan(
 ): TestPlanItem[] {
   const testPlan: TestPlanItem[] = [];
 
+  // Generate unit tests for each constraint
   constraints.forEach((constraint, index) => {
     if (!constraint || constraint.includes('TODO')) {
       return;
@@ -649,6 +649,7 @@ export function generateTestPlan(
     });
   });
 
+  // Generate integration tests for acceptance criteria
   acceptanceCriteria.forEach((criterion, index) => {
     if (!criterion || criterion.includes('TODO')) {
       return;
@@ -662,6 +663,7 @@ export function generateTestPlan(
     });
   });
 
+  // Add end-to-end test placeholder
   if (acceptanceCriteria.length > 0) {
     testPlan.push({
       test_id: 'T-E2E-001',
@@ -735,7 +737,7 @@ export function generateRolloutPlan(risks: RiskAssessment[]): RolloutPlan {
 }
 
 // ============================================================================
-// Markdown Rendering (inlined from specRendering.ts)
+// Markdown Rendering
 // ============================================================================
 
 export function generateSpecMarkdown(
