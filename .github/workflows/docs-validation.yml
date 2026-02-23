@@ -194,7 +194,7 @@ jobs:
           old_dirs=(ops requirements announcements development testing ui)
           found_old=false
           for dir in "${old_dirs[@]}"; do
-            if [ -d "docs/$dir" ] && [ "$(ls -A docs/$dir)" ]; then
+            if [ -d "docs/$dir" ] && [ "$(ls -A "docs/$dir")" ]; then
               echo "⚠️  Old directory still exists with content: docs/$dir"
               found_old=true
             fi
