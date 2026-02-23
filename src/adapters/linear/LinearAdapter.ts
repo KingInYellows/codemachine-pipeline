@@ -29,164 +29,24 @@ import { serializeError, createErrorNormalizer, AdapterError } from '../../utils
 import { createLogger, LogLevel, type LoggerInterface } from '../../telemetry/logger';
 import { isFileNotFound } from '../../utils/safeJson';
 
-// ============================================================================
-// Types & Schemas
-// ============================================================================
-
-/**
- * Linear adapter configuration
- */
-export interface LinearAdapterConfig {
-  /** Linear organization/team identifier */
-  organization?: string;
-  /** Linear API key */
-  apiKey: string;
-  /** Optional MCP endpoint URL */
-  mcpEndpoint?: string;
-  /** Run directory for caching and rate limit ledger */
-  runDir?: string;
-  /** Logger instance */
-  logger?: LoggerInterface;
-  /** HTTP client timeout in milliseconds */
-  timeout?: number;
-  /** Maximum retry attempts */
-  maxRetries?: number;
-  /** Enable developer preview features */
-  enablePreviewFeatures?: boolean;
-}
-
-/**
- * Linear issue snapshot
- */
-export interface LinearIssue {
-  /** Issue ID */
-  id: string;
-  /** Issue identifier (e.g., ENG-123) */
-  identifier: string;
-  /** Issue title */
-  title: string;
-  /** Issue description */
-  description: string | null;
-  /** Issue state (triage, backlog, in_progress, done, canceled) */
-  state: {
-    id: string;
-    name: string;
-    type: string;
-  };
-  /** Issue priority (0-4, where 0 is no priority, 4 is urgent) */
-  priority: number;
-  /** Issue labels */
-  labels: Array<{
-    id: string;
-    name: string;
-    color: string;
-  }>;
-  /** Assignee */
-  assignee: {
-    id: string;
-    name: string;
-    email: string;
-  } | null;
-  /** Team */
-  team: {
-    id: string;
-    name: string;
-    key: string;
-  };
-  /** Project */
-  project: {
-    id: string;
-    name: string;
-  } | null;
-  /** Creation timestamp */
-  createdAt: string;
-  /** Last update timestamp */
-  updatedAt: string;
-  /** URL to issue */
-  url: string;
-}
-
-/**
- * Linear issue comment
- */
-export interface LinearComment {
-  /** Comment ID */
-  id: string;
-  /** Comment body */
-  body: string;
-  /** Author */
-  user: {
-    id: string;
-    name: string;
-    email: string;
-  };
-  /** Creation timestamp */
-  createdAt: string;
-  /** Last update timestamp */
-  updatedAt: string;
-}
-
-/**
- * Cached snapshot metadata
- */
-export interface SnapshotMetadata {
-  /** Issue identifier */
-  issueId: string;
-  /** Timestamp when snapshot was retrieved */
-  retrieved_at: string;
-  /** SHA-256 hash of snapshot content */
-  hash: string;
-  /** TTL in seconds (default: 3600) */
-  ttl?: number;
-  /** Whether this is from a preview API */
-  isPreview?: boolean;
-  /** Last error if snapshot is stale */
-  last_error?: {
-    timestamp: string;
-    message: string;
-    type: ErrorType;
-  };
-}
-
-/**
- * Issue snapshot with metadata
- */
-export interface IssueSnapshot {
-  /** Issue data */
-  issue: LinearIssue;
-  /** Comments on the issue */
-  comments: LinearComment[];
-  /** Snapshot metadata */
-  metadata: SnapshotMetadata;
-}
-
-/**
- * Update issue parameters
- */
-export interface UpdateIssueParams {
-  /** Issue ID */
-  issueId: string;
-  /** New title */
-  title?: string;
-  /** New description */
-  description?: string;
-  /** New state ID */
-  stateId?: string;
-  /** New priority */
-  priority?: number;
-  /** New assignee ID */
-  assigneeId?: string;
-}
-
-/**
- * Post comment parameters
- */
-export interface PostCommentParams {
-  /** Issue ID */
-  issueId: string;
-  /** Comment body */
-  body: string;
-}
+export type {
+  LinearAdapterConfig,
+  LinearIssue,
+  LinearComment,
+  SnapshotMetadata,
+  IssueSnapshot,
+  UpdateIssueParams,
+  PostCommentParams,
+} from './LinearAdapterTypes.js';
+import type {
+  LinearAdapterConfig,
+  LinearIssue,
+  LinearComment,
+  SnapshotMetadata,
+  IssueSnapshot,
+  UpdateIssueParams,
+  PostCommentParams,
+} from './LinearAdapterTypes.js';
 
 // ============================================================================
 // GraphQL Queries
