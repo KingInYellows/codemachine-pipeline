@@ -43,7 +43,13 @@ import { CLIExecutionEngine } from '../../workflows/cliExecutionEngine';
 import { loadQueue } from '../../workflows/queueStore';
 import { createCodeMachineStrategy } from '../../workflows/codeMachineStrategy';
 import { createCodeMachineCLIStrategy } from '../../workflows/codeMachineCLIStrategy';
-import { CliError, CliErrorCode, formatErrorMessage, formatErrorJson, setJsonOutputMode } from '../utils/cliErrors';
+import {
+  CliError,
+  CliErrorCode,
+  formatErrorMessage,
+  formatErrorJson,
+  setJsonOutputMode,
+} from '../utils/cliErrors';
 import { flushTelemetryError } from '../utils/telemetryLifecycle';
 import { DEFAULT_EXECUTION_CONFIG } from '../../core/config/RepoConfig.js';
 
@@ -269,7 +275,14 @@ export default class Start extends Command {
 
       currentStepLabel = EXECUTION_STEPS.Research;
       const researchOptions = this.buildResearchOptions(
-        { repoRoot, runDir, featureId, logger, metrics, contextDocument: contextResult.contextDocument },
+        {
+          repoRoot,
+          runDir,
+          featureId,
+          logger,
+          metrics,
+          contextDocument: contextResult.contextDocument,
+        },
         { promptText: typedFlags.prompt, specText, linearSnapshot }
       );
       const researchTasks = await this.runResearchDetection(researchOptions);
@@ -756,7 +769,6 @@ export default class Start extends Command {
       this.log('');
     }
   }
-
 }
 
 async function updateExecutionProgress(runDir: string, completedSteps: number): Promise<void> {

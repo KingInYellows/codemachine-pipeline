@@ -94,24 +94,28 @@ export const IssueSnapshotSchema = z.object({
     updatedAt: z.string(),
     url: z.string(),
   }),
-  comments: z.array(z.object({
-    id: z.string(),
-    body: z.string(),
-    user: z.object({ id: z.string(), name: z.string(), email: z.string() }),
-    createdAt: z.string(),
-    updatedAt: z.string(),
-  })),
+  comments: z.array(
+    z.object({
+      id: z.string(),
+      body: z.string(),
+      user: z.object({ id: z.string(), name: z.string(), email: z.string() }),
+      createdAt: z.string(),
+      updatedAt: z.string(),
+    })
+  ),
   metadata: z.object({
     issueId: z.string(),
     retrieved_at: z.string(),
     hash: z.string(),
     ttl: z.number().optional(),
     isPreview: z.boolean().optional(),
-    last_error: z.object({
-      timestamp: z.string(),
-      message: z.string(),
-      type: z.string(),
-    }).optional(),
+    last_error: z
+      .object({
+        timestamp: z.string(),
+        message: z.string(),
+        type: z.string(),
+      })
+      .optional(),
   }),
 });
 

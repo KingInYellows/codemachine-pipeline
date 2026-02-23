@@ -42,7 +42,13 @@ import {
   refreshBranchProtectionArtifact,
 } from '../../status/data';
 import { renderHumanReadable } from '../../status/renderers';
-import { CliError, CliErrorCode, formatErrorMessage, formatErrorJson, setJsonOutputMode } from '../../utils/cliErrors';
+import {
+  CliError,
+  CliErrorCode,
+  formatErrorMessage,
+  formatErrorJson,
+  setJsonOutputMode,
+} from '../../utils/cliErrors';
 
 /**
  * Status command - Display current state of a feature pipeline
@@ -216,9 +222,28 @@ export default class Status extends Command {
         });
       }
 
-      await flushTelemetrySuccess({ commandName: 'status', startTime, logger, metrics, traceManager, commandSpan, runDirPath });
+      await flushTelemetrySuccess({
+        commandName: 'status',
+        startTime,
+        logger,
+        metrics,
+        traceManager,
+        commandSpan,
+        runDirPath,
+      });
     } catch (error) {
-      await flushTelemetryError({ commandName: 'status', startTime, logger, metrics, traceManager, commandSpan, runDirPath }, error);
+      await flushTelemetryError(
+        {
+          commandName: 'status',
+          startTime,
+          logger,
+          metrics,
+          traceManager,
+          commandSpan,
+          runDirPath,
+        },
+        error
+      );
 
       // Re-throw oclif errors to preserve exit codes
       if (error && typeof error === 'object' && 'oclif' in error) {

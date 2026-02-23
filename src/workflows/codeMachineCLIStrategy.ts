@@ -116,10 +116,7 @@ export class CodeMachineCLIStrategy implements ExecutionStrategy {
     }
 
     const result = await this.adapter.execute(args, executeOptions);
-    const normalized = normalizeResult(
-      { ...result, taskId: task.task_id },
-      this.logger
-    );
+    const normalized = normalizeResult({ ...result, taskId: task.task_id }, this.logger);
     const durationMs = result.durationMs ?? Date.now() - startTime;
 
     const strategyResult: ExecutionStrategyResult = {

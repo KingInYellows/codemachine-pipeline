@@ -182,7 +182,9 @@ export class LinearAdapter {
   private readonly requestTimestamps: number[] = [];
 
   constructor(config: LinearAdapterConfig) {
-    this.logger = config.logger ?? createLogger({ component: 'linear-adapter', minLevel: LogLevel.DEBUG, mirrorToStderr: true });
+    this.logger =
+      config.logger ??
+      createLogger({ component: 'linear-adapter', minLevel: LogLevel.DEBUG, mirrorToStderr: true });
     this.runDir = config.runDir;
     this.enablePreviewFeatures = config.enablePreviewFeatures ?? false;
 
@@ -319,7 +321,10 @@ export class LinearAdapter {
 
     try {
       const data = await this.executeGraphQL<{ data: { issue: LinearIssue } }>(
-        'fetchIssue', ISSUE_QUERY, { issueId }, { issueId }
+        'fetchIssue',
+        ISSUE_QUERY,
+        { issueId },
+        { issueId }
       );
 
       if (!data.data?.issue) {
@@ -437,7 +442,12 @@ export class LinearAdapter {
     try {
       const data = await this.executeGraphQL<{
         data: { commentCreate: { success: boolean } };
-      }>('postComment', POST_COMMENT_MUTATION, { issueId: params.issueId, body: params.body }, { issueId: params.issueId });
+      }>(
+        'postComment',
+        POST_COMMENT_MUTATION,
+        { issueId: params.issueId, body: params.body },
+        { issueId: params.issueId }
+      );
 
       if (!data.data?.commentCreate?.success) {
         throw new Error('Comment creation failed');
@@ -464,10 +474,17 @@ export class LinearAdapter {
     try {
       const snapshotPath = this.getSnapshotPath(issueId);
       const content = await fs.readFile(snapshotPath, 'utf-8');
-      const snapshot = validateOrThrow(IssueSnapshotSchema, JSON.parse(content), 'issue snapshot') as IssueSnapshot;
+      const snapshot = validateOrThrow(
+        IssueSnapshotSchema,
+        JSON.parse(content),
+        'issue snapshot'
+      ) as IssueSnapshot;
 
       // Verify snapshot integrity
-      const expectedHash = this.computeSnapshotHash({ issue: snapshot.issue, comments: snapshot.comments });
+      const expectedHash = this.computeSnapshotHash({
+        issue: snapshot.issue,
+        comments: snapshot.comments,
+      });
       if (snapshot.metadata.hash !== expectedHash) {
         this.logger.warn('Cached snapshot hash mismatch — discarding', { issueId });
         return null;
@@ -663,7 +680,6 @@ export class LinearAdapter {
       this.requestTimestamps.shift();
     }
   }
-
 }
 
 // ============================================================================

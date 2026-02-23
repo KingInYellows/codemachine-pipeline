@@ -406,7 +406,11 @@ export async function saveHashManifest(manifest: HashManifest, outputPath: strin
 export async function loadHashManifest(manifestPath: string): Promise<HashManifest> {
   try {
     const content = await fs.readFile(manifestPath, 'utf-8');
-    return validateOrThrow(HashManifestSchema, JSON.parse(content), 'hash manifest') as HashManifest;
+    return validateOrThrow(
+      HashManifestSchema,
+      JSON.parse(content),
+      'hash manifest'
+    ) as HashManifest;
   } catch (error) {
     if (error instanceof Error) {
       throw new Error(`Failed to load hash manifest: ${error.message}`, { cause: error });
@@ -447,7 +451,10 @@ export function getManifestTotalSize(manifest: HashManifest): number {
  * @returns Filtered hash manifest
  */
 export function filterManifest(manifest: HashManifest, pattern: RegExp | string): HashManifest {
-  const regex = typeof pattern === 'string' ? new RegExp(pattern.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')) : pattern;
+  const regex =
+    typeof pattern === 'string'
+      ? new RegExp(pattern.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))
+      : pattern;
   const filteredFiles: Record<string, FileHashRecord> = {};
 
   for (const [filePath, record] of Object.entries(manifest.files)) {

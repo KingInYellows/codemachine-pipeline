@@ -96,7 +96,12 @@ export type Project = z.infer<typeof ProjectSchema>;
 // Integration Toggles - GitHub
 // ============================================================================
 
-const ENV_VAR_NAME = z.string().regex(/^[A-Z][A-Z0-9_]*$/, 'Must be a valid env var name (uppercase letters, digits, underscores)');
+const ENV_VAR_NAME = z
+  .string()
+  .regex(
+    /^[A-Z][A-Z0-9_]*$/,
+    'Must be a valid env var name (uppercase letters, digits, underscores)'
+  );
 
 const GitHubSchema = z.object({
   enabled: z.boolean(),
@@ -596,7 +601,6 @@ export function applyEnvironmentOverrides(config: RepoConfig): RepoConfig {
   return overridden;
 }
 
-
 /**
  * Format validation errors for user-friendly display with actionable hints
  * @param errors Array of validation errors
@@ -641,4 +645,3 @@ export function addConfigHistoryEntry(
     ],
   };
 }
-

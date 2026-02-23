@@ -7,10 +7,7 @@ import { createExecutionTelemetry } from '../../telemetry/executionTelemetry';
 import type { StructuredLogger } from '../../telemetry/logger';
 import type { MetricsCollector } from '../../telemetry/metrics';
 import type { TraceManager, ActiveSpan } from '../../telemetry/traces';
-import {
-  resolveRunDirectorySettings,
-  selectFeatureId,
-} from '../utils/runDirectory';
+import { resolveRunDirectorySettings, selectFeatureId } from '../utils/runDirectory';
 import { loadRepoConfig } from '../../core/config/RepoConfig';
 import {
   initializeValidationRegistry,
@@ -236,7 +233,15 @@ export default class Validate extends Command {
         commandSpan.setAttribute('total_attempts', result.totalAttempts);
       }
       await flushTelemetrySuccess(
-        { commandName: 'validate', startTime, logger, metrics, traceManager, commandSpan, runDirPath },
+        {
+          commandName: 'validate',
+          startTime,
+          logger,
+          metrics,
+          traceManager,
+          commandSpan,
+          runDirPath,
+        },
         { success: result.success, total_attempts: result.totalAttempts }
       );
 
@@ -250,7 +255,15 @@ export default class Validate extends Command {
       }
     } catch (error) {
       await flushTelemetryError(
-        { commandName: 'validate', startTime, logger, metrics, traceManager, commandSpan, runDirPath },
+        {
+          commandName: 'validate',
+          startTime,
+          logger,
+          metrics,
+          traceManager,
+          commandSpan,
+          runDirPath,
+        },
         error
       );
 

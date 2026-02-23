@@ -2,7 +2,11 @@ import * as path from 'node:path';
 import * as fs from 'node:fs/promises';
 import { ExecutionTask, canRetry, areDependenciesCompleted } from '../core/models/ExecutionTask.js';
 import { RepoConfig } from '../core/config/RepoConfig.js';
-import { ExecutionStrategy, ExecutionContext, ExecutionStrategyResult } from './executionStrategy.js';
+import {
+  ExecutionStrategy,
+  ExecutionContext,
+  ExecutionStrategyResult,
+} from './executionStrategy.js';
 import { updateTaskInQueue, loadQueue } from './queueStore.js';
 import { validateCliAvailability } from './codeMachineRunner.js';
 import { StructuredLogger } from '../telemetry/logger.js';
@@ -427,7 +431,14 @@ export class CLIExecutionEngine {
     const durationMs = strategyResult.durationMs ?? Date.now() - startTime;
 
     if (strategyResult.success) {
-      return this.handleSuccess(task, strategy, strategyResult, context, executionConfig, durationMs);
+      return this.handleSuccess(
+        task,
+        strategy,
+        strategyResult,
+        context,
+        executionConfig,
+        durationMs
+      );
     }
 
     return this.handleFailure(task, strategy, strategyResult, context, executionConfig, durationMs);
@@ -448,12 +459,9 @@ export class CLIExecutionEngine {
         recoverable: false,
       },
     });
-    this.logWriter?.taskSkipped(
-      task.task_id,
-      task.task_type,
-      'no_strategy',
-      { reason: 'No execution strategy available' }
-    );
+    this.logWriter?.taskSkipped(task.task_id, task.task_type, 'no_strategy', {
+      reason: 'No execution strategy available',
+    });
     this.telemetry?.metrics?.recordTaskLifecycle(
       task.task_id,
       task.task_type,

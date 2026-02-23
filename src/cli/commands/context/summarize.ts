@@ -13,10 +13,7 @@ import {
   type RunDirectorySettings,
 } from '../../utils/runDirectory';
 import { createCliLogger, LogLevel, RedactionEngine } from '../../../telemetry/logger';
-import {
-  createRunMetricsCollector,
-  type MetricsCollector,
-} from '../../../telemetry/metrics';
+import { createRunMetricsCollector, type MetricsCollector } from '../../../telemetry/metrics';
 import {
   createRunTraceManager,
   type TraceManager,
@@ -257,12 +254,28 @@ export default class ContextSummarize extends Command {
       }
 
       await flushTelemetrySuccess(
-        { commandName: 'context:summarize', startTime, logger, metrics, traceManager, commandSpan, runDirPath: runDir },
+        {
+          commandName: 'context:summarize',
+          startTime,
+          logger,
+          metrics,
+          traceManager,
+          commandSpan,
+          runDirPath: runDir,
+        },
         { files: output.files, summaries: output.summaries }
       );
     } catch (error) {
       await flushTelemetryError(
-        { commandName: 'context:summarize', startTime, logger, metrics, traceManager, commandSpan, runDirPath: runDir },
+        {
+          commandName: 'context:summarize',
+          startTime,
+          logger,
+          metrics,
+          traceManager,
+          commandSpan,
+          runDirPath: runDir,
+        },
         error
       );
 

@@ -183,11 +183,7 @@ export async function executeValidationWithAutoFix(
     command_type: commandType,
     auto_fix_enabled: options.enableAutoFix,
   });
-  telemetry?.metrics?.recordTaskLifecycle(
-    taskId,
-    'validation',
-    ExecutionTaskStatus.STARTED
-  );
+  telemetry?.metrics?.recordTaskLifecycle(taskId, 'validation', ExecutionTaskStatus.STARTED);
   const span = startExecutionSpan(telemetry, `validation.${commandType}`, {
     task_id: taskId,
     command_type: commandType,
@@ -570,7 +566,6 @@ async function executeValidationCommand(
 
   return validationResult;
 }
-
 
 /**
  * Save command output to run directory

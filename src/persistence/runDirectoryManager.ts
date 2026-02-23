@@ -140,12 +140,14 @@ const RunManifestSchema = z.object({
   status: z.enum(['pending', 'in_progress', 'paused', 'completed', 'failed']),
   execution: z.object({
     last_step: z.string().optional(),
-    last_error: z.object({
-      step: z.string(),
-      message: z.string(),
-      timestamp: z.string(),
-      recoverable: z.boolean(),
-    }).optional(),
+    last_error: z
+      .object({
+        step: z.string(),
+        message: z.string(),
+        timestamp: z.string(),
+        recoverable: z.boolean(),
+      })
+      .optional(),
     current_step: z.string().optional(),
     total_steps: z.number().int().nonnegative().optional(),
     completed_steps: z.number().int().nonnegative(),
@@ -166,11 +168,13 @@ const RunManifestSchema = z.object({
     pending_count: z.number().int().nonnegative(),
     completed_count: z.number().int().nonnegative(),
     failed_count: z.number().int().nonnegative(),
-    sqlite_index: z.object({
-      database: z.string(),
-      wal: z.string(),
-      shm: z.string(),
-    }).optional(),
+    sqlite_index: z
+      .object({
+        database: z.string(),
+        wal: z.string(),
+        shm: z.string(),
+      })
+      .optional(),
   }),
   artifacts: z.object({
     prd: z.string().optional(),
@@ -184,9 +188,11 @@ const RunManifestSchema = z.object({
     traces_file: z.string().optional(),
     costs_file: z.string().optional(),
   }),
-  rate_limits: z.object({
-    rate_limits_file: z.string().optional(),
-  }).optional(),
+  rate_limits: z
+    .object({
+      rate_limits_file: z.string().optional(),
+    })
+    .optional(),
   metadata: z.record(z.string(), z.unknown()).optional(),
 });
 
@@ -392,7 +398,10 @@ export async function acquireLock(runDir: string, options: LockOptions = {}): Pr
         acquired_at: new Date().toISOString(),
         operation,
       };
-      await fs.writeFile(lockPath, JSON.stringify(lockData, null, 2), { flag: 'wx', encoding: 'utf-8' });
+      await fs.writeFile(lockPath, JSON.stringify(lockData, null, 2), {
+        flag: 'wx',
+        encoding: 'utf-8',
+      });
       return;
     } catch (error: unknown) {
       if (!(error && typeof error === 'object' && 'code' in error && error.code === 'EEXIST')) {
@@ -472,7 +481,12 @@ function isProcessRunning(pid: number): boolean | null {
     process.kill(pid, 0);
     return true;
   } catch (error) {
-    if (error && typeof error === 'object' && 'code' in error && (error as NodeJS.ErrnoException).code === 'ESRCH') {
+    if (
+      error &&
+      typeof error === 'object' &&
+      'code' in error &&
+      (error as NodeJS.ErrnoException).code === 'ESRCH'
+    ) {
       return false;
     }
     throw wrapError(error, `check if lock process ${pid} exists`);

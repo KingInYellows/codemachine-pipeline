@@ -48,7 +48,9 @@ export function buildDependencyGraph(
 ): PlanDiagnostics['blockers'] {
   const blockers: PlanDiagnostics['blockers'] = [];
   const taskIndex = new Map(tasks.map((task) => [task.task_id, task]));
-  const taskDepSets = new Map(tasks.map((t) => [t.task_id, new Set(t.dependencies.map((d) => d.task_id))]));
+  const taskDepSets = new Map(
+    tasks.map((t) => [t.task_id, new Set(t.dependencies.map((d) => d.task_id))])
+  );
 
   for (const req of options.requirements) {
     const taskId = req.requirementId

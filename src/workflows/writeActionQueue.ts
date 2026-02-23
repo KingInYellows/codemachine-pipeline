@@ -27,10 +27,7 @@ import {
   type ActionExecutor,
 } from './writeActionQueueTypes.js';
 
-export {
-  WriteActionType,
-  WriteActionStatus,
-} from './writeActionQueueTypes.js';
+export { WriteActionType, WriteActionStatus } from './writeActionQueueTypes.js';
 export type {
   WriteActionPayload,
   WriteAction,
@@ -129,7 +126,13 @@ export class WriteActionQueue {
     this.queueDir = path.join(this.runDir, QUEUE_SUBDIR);
     this.queuePath = path.join(this.queueDir, QUEUE_FILE);
     this.manifestPath = path.join(this.queueDir, MANIFEST_FILE);
-    this.logger = config.logger ?? createLogger({ component: 'write-action-queue', minLevel: LogLevel.DEBUG, mirrorToStderr: true });
+    this.logger =
+      config.logger ??
+      createLogger({
+        component: 'write-action-queue',
+        minLevel: LogLevel.DEBUG,
+        mirrorToStderr: true,
+      });
     this.metrics = config.metrics;
     this.maxRetries = config.maxRetries ?? DEFAULT_MAX_RETRIES;
     this.concurrencyLimit = config.concurrencyLimit ?? DEFAULT_CONCURRENCY_LIMIT;
@@ -317,12 +320,15 @@ export class WriteActionQueue {
       });
       return {
         success: false,
-        message: 'Queue draining paused: manual acknowledgement required due to repeated rate limits',
+        message:
+          'Queue draining paused: manual acknowledgement required due to repeated rate limits',
         actionsAffected: 0,
       };
     }
 
-    this.logger.warn('Rate limit cooldown active, pausing queue drain', { provider: this.provider });
+    this.logger.warn('Rate limit cooldown active, pausing queue drain', {
+      provider: this.provider,
+    });
     return {
       success: true,
       message: 'Queue draining paused: waiting for rate limit cooldown to expire',

@@ -217,7 +217,9 @@ export class HttpClient {
     const headers = this.buildHeaders(requestId, idempotencyKey, options.headers);
 
     const retryEnabled = options.retry?.enabled !== false;
-    const maxAttempts = retryEnabled ? (options.retry?.maxAttempts ?? this.config.maxRetries) + 1 : 1;
+    const maxAttempts = retryEnabled
+      ? (options.retry?.maxAttempts ?? this.config.maxRetries) + 1
+      : 1;
 
     const baseFetchOptions: Omit<RequestInit, 'signal'> = {
       method,

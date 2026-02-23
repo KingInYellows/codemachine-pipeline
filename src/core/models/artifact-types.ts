@@ -30,14 +30,6 @@ export {
   getTimeUntilReset,
 } from './RateLimitEnvelope';
 
-export {
-  ArtifactBundle,
-  ArtifactBundleSchema,
-  parseArtifactBundle,
-} from './ArtifactBundle';
+export { ArtifactBundle, ArtifactBundleSchema, parseArtifactBundle } from './ArtifactBundle';
 
-export {
-  TraceLink,
-  TraceLinkSchema,
-  parseTraceLink,
-} from './TraceLink';
+export { TraceLink, TraceLinkSchema, parseTraceLink } from './TraceLink';

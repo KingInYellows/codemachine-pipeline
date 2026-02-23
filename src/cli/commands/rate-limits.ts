@@ -7,10 +7,7 @@ import type { StructuredLogger } from '../../telemetry/logger';
 import type { MetricsCollector } from '../../telemetry/metrics';
 import type { TraceManager, ActiveSpan } from '../../telemetry/traces';
 import { flushTelemetrySuccess, flushTelemetryError } from '../utils/telemetryLifecycle';
-import {
-  resolveRunDirectorySettings,
-  selectFeatureId,
-} from '../utils/runDirectory';
+import { resolveRunDirectorySettings, selectFeatureId } from '../utils/runDirectory';
 import {
   generateRateLimitReport,
   exportRateLimitMetrics,
@@ -131,7 +128,15 @@ export default class RateLimits extends Command {
         await this.handleClearCooldown(runDirPath, typedFlags.clear, logger, typedFlags.json);
         commandSpan?.setAttribute('clear_provider', typedFlags.clear);
         await flushTelemetrySuccess(
-          { commandName: 'rate-limits', startTime, logger, metrics, traceManager, commandSpan, runDirPath },
+          {
+            commandName: 'rate-limits',
+            startTime,
+            logger,
+            metrics,
+            traceManager,
+            commandSpan,
+            runDirPath,
+          },
           { operation: 'clear' }
         );
         return;
@@ -163,9 +168,28 @@ export default class RateLimits extends Command {
       }
 
       commandSpan?.setAttribute('provider_count', Object.keys(filteredReport.providers).length);
-      await flushTelemetrySuccess({ commandName: 'rate-limits', startTime, logger, metrics, traceManager, commandSpan, runDirPath });
+      await flushTelemetrySuccess({
+        commandName: 'rate-limits',
+        startTime,
+        logger,
+        metrics,
+        traceManager,
+        commandSpan,
+        runDirPath,
+      });
     } catch (error) {
-      await flushTelemetryError({ commandName: 'rate-limits', startTime, logger, metrics, traceManager, commandSpan, runDirPath }, error);
+      await flushTelemetryError(
+        {
+          commandName: 'rate-limits',
+          startTime,
+          logger,
+          metrics,
+          traceManager,
+          commandSpan,
+          runDirPath,
+        },
+        error
+      );
 
       // Re-throw oclif errors to preserve exit codes
       if (error && typeof error === 'object' && 'oclif' in error) {

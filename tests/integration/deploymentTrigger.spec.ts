@@ -948,7 +948,12 @@ describe('Deployment Trigger Module', () => {
 
       // Execute
       const outcome = await triggerDeployment(
-        { runDirectory, featureId: 'feature-auth-123', config: configWithWorkflow, logger: mockLogger },
+        {
+          runDirectory,
+          featureId: 'feature-auth-123',
+          config: configWithWorkflow,
+          logger: mockLogger,
+        },
         mockGitHubAdapter,
         { workflow_inputs: { environment: 'production', notify: 'true' } }
       );

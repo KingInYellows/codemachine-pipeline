@@ -379,7 +379,11 @@ async function loadTraceabilityTaskIds(runDir: string): Promise<RequirementTaskM
 
   try {
     const traceContent = await fs.readFile(tracePath, 'utf-8');
-    const traceDoc = validateOrThrow(TraceDocumentSchema, JSON.parse(traceContent), 'trace document') as TraceDocument;
+    const traceDoc = validateOrThrow(
+      TraceDocumentSchema,
+      JSON.parse(traceContent),
+      'trace document'
+    ) as TraceDocument;
     if (!traceDoc.links) {
       return mapping;
     }
@@ -420,7 +424,11 @@ async function loadExistingPlanIfPresent(
     logger.info('plan.json already exists, loading existing plan', { planPath });
 
     const existingContent = await fs.readFile(planPath, 'utf-8');
-    const existingPlan = validateOrThrow(PlanArtifactSchema, JSON.parse(existingContent), 'plan artifact');
+    const existingPlan = validateOrThrow(
+      PlanArtifactSchema,
+      JSON.parse(existingContent),
+      'plan artifact'
+    );
     const existingSummary = createPlanSummary(existingPlan, planPath);
 
     return {

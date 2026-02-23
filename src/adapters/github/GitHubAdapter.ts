@@ -99,7 +99,9 @@ export class GitHubAdapter {
   constructor(config: GitHubAdapterConfig) {
     this.owner = config.owner;
     this.repo = config.repo;
-    this.logger = config.logger ?? createLogger({ component: 'github-adapter', minLevel: LogLevel.DEBUG, mirrorToStderr: true });
+    this.logger =
+      config.logger ??
+      createLogger({ component: 'github-adapter', minLevel: LogLevel.DEBUG, mirrorToStderr: true });
 
     const baseUrl = config.baseUrl ?? 'https://api.github.com';
 
@@ -493,10 +495,18 @@ export class GitHubAdapter {
     try {
       const prNodeId = await this.getPRNodeId(pull_number);
 
-      await this.executeGraphQLMutation(ENABLE_AUTO_MERGE_MUTATION, { pullRequestId: prNodeId, mergeMethod: merge_method ?? 'MERGE' }, 'enableAutoMerge', pull_number);
+      await this.executeGraphQLMutation(
+        ENABLE_AUTO_MERGE_MUTATION,
+        { pullRequestId: prNodeId, mergeMethod: merge_method ?? 'MERGE' },
+        'enableAutoMerge',
+        pull_number
+      );
       this.logger.info('Auto-merge enabled successfully', { pull_number });
     } catch (error) {
-      this.logger.error('Failed to enable auto-merge', { pull_number, error: serializeError(error) });
+      this.logger.error('Failed to enable auto-merge', {
+        pull_number,
+        error: serializeError(error),
+      });
       throw this.normalizeError(error, 'enableAutoMerge');
     }
   }
@@ -512,10 +522,18 @@ export class GitHubAdapter {
     try {
       const prNodeId = await this.getPRNodeId(pull_number);
 
-      await this.executeGraphQLMutation(DISABLE_AUTO_MERGE_MUTATION, { pullRequestId: prNodeId }, 'disableAutoMerge', pull_number);
+      await this.executeGraphQLMutation(
+        DISABLE_AUTO_MERGE_MUTATION,
+        { pullRequestId: prNodeId },
+        'disableAutoMerge',
+        pull_number
+      );
       this.logger.info('Auto-merge disabled successfully', { pull_number });
     } catch (error) {
-      this.logger.error('Failed to disable auto-merge', { pull_number, error: serializeError(error) });
+      this.logger.error('Failed to disable auto-merge', {
+        pull_number,
+        error: serializeError(error),
+      });
       throw this.normalizeError(error, 'disableAutoMerge');
     }
   }
@@ -581,7 +599,6 @@ export class GitHubAdapter {
   }
 
   private readonly normalizeError = createErrorNormalizer(GitHubAdapterError, 'GitHub');
-
 }
 
 // ============================================================================

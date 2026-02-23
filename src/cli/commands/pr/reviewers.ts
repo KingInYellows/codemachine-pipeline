@@ -13,10 +13,7 @@ import { Command, Flags } from '@oclif/core';
 import { createRunMetricsCollector } from '../../../telemetry/metrics';
 import { createRunTraceManager, withSpan } from '../../../telemetry/traces';
 import { flushTelemetrySuccess, flushTelemetryError } from '../../utils/telemetryLifecycle';
-import {
-  resolveRunDirectorySettings,
-  selectFeatureId,
-} from '../../utils/runDirectory';
+import { resolveRunDirectorySettings, selectFeatureId } from '../../utils/runDirectory';
 import {
   loadPRContext,
   getPRAdapter,
@@ -198,12 +195,28 @@ export default class PRReviewers extends Command {
         commandSpan.setAttribute('pr_number', prMetadata.pr_number);
         commandSpan.setAttribute('reviewers_added', reviewersToAdd.length);
         await flushTelemetrySuccess(
-          { commandName: 'pr.reviewers', startTime, logger, metrics, traceManager, commandSpan, runDirPath: runDir },
+          {
+            commandName: 'pr.reviewers',
+            startTime,
+            logger,
+            metrics,
+            traceManager,
+            commandSpan,
+            runDirPath: runDir,
+          },
           { pr_number: prMetadata.pr_number, reviewers_added: reviewersToAdd.length }
         );
       } catch (error) {
         await flushTelemetryError(
-          { commandName: 'pr.reviewers', startTime, logger, metrics, traceManager, commandSpan, runDirPath: runDir },
+          {
+            commandName: 'pr.reviewers',
+            startTime,
+            logger,
+            metrics,
+            traceManager,
+            commandSpan,
+            runDirPath: runDir,
+          },
           error
         );
         throw error;

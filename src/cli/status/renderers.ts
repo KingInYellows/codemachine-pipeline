@@ -434,7 +434,9 @@ function renderBranchProtection(
         warn(`    Missing ExecutionTask validations for: ${missing_in_registry.join(', ')}`);
       }
       if (extra_in_registry.length > 0) {
-        log(`    Extra validations not required by branch protection: ${extra_in_registry.join(', ')}`);
+        log(
+          `    Extra validations not required by branch protection: ${extra_in_registry.join(', ')}`
+        );
       }
       if (flags.verbose && recommendations.length > 0) {
         log('    Recommendations:');

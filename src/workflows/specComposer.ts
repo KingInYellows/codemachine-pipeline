@@ -399,7 +399,11 @@ export async function recordSpecApproval(
     let metadata: SpecMetadata;
     try {
       const metadataContent = await fs.readFile(metadataPath, 'utf-8');
-      metadata = validateOrThrow(SpecMetadataSchema, JSON.parse(metadataContent), 'spec metadata') as SpecMetadata;
+      metadata = validateOrThrow(
+        SpecMetadataSchema,
+        JSON.parse(metadataContent),
+        'spec metadata'
+      ) as SpecMetadata;
     } catch (error) {
       throw new Error(
         `Failed to load spec metadata: ${error instanceof Error ? error.message : 'Unknown error'}`,
@@ -517,7 +521,11 @@ export async function loadSpecMetadata(runDir: string): Promise<SpecMetadata | n
 
   try {
     const content = await fs.readFile(metadataPath, 'utf-8');
-    return validateOrThrow(SpecMetadataSchema, JSON.parse(content), 'spec metadata') as SpecMetadata;
+    return validateOrThrow(
+      SpecMetadataSchema,
+      JSON.parse(content),
+      'spec metadata'
+    ) as SpecMetadata;
   } catch {
     return null;
   }

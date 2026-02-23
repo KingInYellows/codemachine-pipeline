@@ -172,9 +172,28 @@ export default class Plan extends Command {
         this.printHumanReadable(payload, typedFlags);
       }
 
-      await flushTelemetrySuccess({ commandName: 'plan', startTime, logger, metrics, traceManager, commandSpan, runDirPath });
+      await flushTelemetrySuccess({
+        commandName: 'plan',
+        startTime,
+        logger,
+        metrics,
+        traceManager,
+        commandSpan,
+        runDirPath,
+      });
     } catch (error) {
-      await flushTelemetryError({ commandName: 'plan', startTime, logger, metrics, traceManager, commandSpan, runDirPath } satisfies TelemetryResources, error);
+      await flushTelemetryError(
+        {
+          commandName: 'plan',
+          startTime,
+          logger,
+          metrics,
+          traceManager,
+          commandSpan,
+          runDirPath,
+        } satisfies TelemetryResources,
+        error
+      );
 
       // Re-throw oclif errors to preserve exit codes
       if (error && typeof error === 'object' && 'oclif' in error) {

@@ -95,11 +95,7 @@ describe('ExecutionMetricsHelper', () => {
         runId: 'test-run-123',
       });
 
-      executionMetrics.recordTaskLifecycle(
-        'I3.T6',
-        'code_generation',
-        ExecutionTaskStatus.STARTED
-      );
+      executionMetrics.recordTaskLifecycle('I3.T6', 'code_generation', ExecutionTaskStatus.STARTED);
 
       await executionMetrics.flush();
 
@@ -147,12 +143,7 @@ describe('ExecutionMetricsHelper', () => {
         runId: 'test-run-123',
       });
 
-      executionMetrics.recordTaskLifecycle(
-        'I3.T7',
-        'validation',
-        ExecutionTaskStatus.FAILED,
-        1234
-      );
+      executionMetrics.recordTaskLifecycle('I3.T7', 'validation', ExecutionTaskStatus.FAILED, 1234);
 
       await executionMetrics.flush();
 
@@ -176,12 +167,7 @@ describe('ExecutionMetricsHelper', () => {
         ExecutionTaskStatus.COMPLETED,
         1000
       );
-      executionMetrics.recordTaskLifecycle(
-        'T2',
-        'validation',
-        ExecutionTaskStatus.COMPLETED,
-        2000
-      );
+      executionMetrics.recordTaskLifecycle('T2', 'validation', ExecutionTaskStatus.COMPLETED, 2000);
       executionMetrics.recordTaskLifecycle(
         'T3',
         'patch_application',
@@ -479,11 +465,7 @@ describe('ExecutionMetricsHelper', () => {
 
       // These calls should never throw
       expect(() => {
-        executionMetrics.recordTaskLifecycle(
-          'T1',
-          'code_generation',
-          ExecutionTaskStatus.STARTED
-        );
+        executionMetrics.recordTaskLifecycle('T1', 'code_generation', ExecutionTaskStatus.STARTED);
         executionMetrics.recordValidationRun({ passed: true, durationMs: 1000 });
         executionMetrics.recordDiffStats({ filesChanged: 1, insertions: 10, deletions: 5 });
         executionMetrics.setQueueDepth(1, 2, 3);

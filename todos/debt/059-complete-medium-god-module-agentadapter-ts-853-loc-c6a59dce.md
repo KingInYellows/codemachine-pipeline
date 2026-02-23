@@ -16,16 +16,21 @@ linear_issue_id: CDMCH-204
 # God module AgentAdapter ts 853 LOC
 
 ## Category
+
 architecture
 
 ## Severity / Effort
+
 medium / medium (confidence: 0.82)
 
 ## Affected Files
+
 - src/adapters/agents/AgentAdapter.ts (lines 1-853)
 
 ## Description
+
 853 lines with 14 exported symbols including Zod schemas, types, error class, mapping function, and main class.
 
 ## Suggested Remediation
+
 Extract types and schemas into AgentAdapterTypes.ts. Move context mapping to agentContextMapping.ts.

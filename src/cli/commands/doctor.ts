@@ -59,8 +59,7 @@ function determineExitCode(checks: DiagnosticCheck[]): {
   }
 
   const hasCredentialFailure = failed.some(
-    (c) =>
-      c.name.includes('Token') || c.name.includes('API Key') || c.name.includes('Credential')
+    (c) => c.name.includes('Token') || c.name.includes('API Key') || c.name.includes('Credential')
   );
   const hasEnvironmentFailure = failed.some(
     (c) =>
@@ -329,9 +328,19 @@ export default class Doctor extends Command {
           details: { version },
         };
       }
-      return { name, status: failStatus, message: `${name} command failed`, remediation: failRemediation };
+      return {
+        name,
+        status: failStatus,
+        message: `${name} command failed`,
+        remediation: failRemediation,
+      };
     } catch {
-      return { name, status: failStatus, message: `${name} not found`, remediation: failRemediation };
+      return {
+        name,
+        status: failStatus,
+        message: `${name} not found`,
+        remediation: failRemediation,
+      };
     }
   }
 

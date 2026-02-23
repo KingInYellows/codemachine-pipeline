@@ -45,7 +45,16 @@ export function buildMetadata(
 export function buildOutcome(
   context: DeploymentContext,
   readiness: MergeReadiness,
-  overrides: Omit<DeploymentOutcome, 'schema_version' | 'feature_id' | 'timestamp' | 'pr_number' | 'head_sha' | 'base_sha' | 'metadata'>
+  overrides: Omit<
+    DeploymentOutcome,
+    | 'schema_version'
+    | 'feature_id'
+    | 'timestamp'
+    | 'pr_number'
+    | 'head_sha'
+    | 'base_sha'
+    | 'metadata'
+  >
 ): DeploymentOutcome {
   const { pr, featureId } = context;
   return {

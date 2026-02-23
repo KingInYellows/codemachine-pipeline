@@ -13,10 +13,7 @@ import { Command, Flags } from '@oclif/core';
 import { createRunMetricsCollector } from '../../../telemetry/metrics';
 import { createRunTraceManager, withSpan } from '../../../telemetry/traces';
 import { flushTelemetrySuccess, flushTelemetryError } from '../../utils/telemetryLifecycle';
-import {
-  resolveRunDirectorySettings,
-  selectFeatureId,
-} from '../../utils/runDirectory';
+import { resolveRunDirectorySettings, selectFeatureId } from '../../utils/runDirectory';
 import {
   loadPRContext,
   getPRAdapter,
@@ -324,12 +321,28 @@ export default class PRCreate extends Command {
 
         commandSpan.setAttribute('pr_number', pr.number);
         await flushTelemetrySuccess(
-          { commandName: 'pr.create', startTime, logger, metrics, traceManager, commandSpan, runDirPath: runDir },
+          {
+            commandName: 'pr.create',
+            startTime,
+            logger,
+            metrics,
+            traceManager,
+            commandSpan,
+            runDirPath: runDir,
+          },
           { pr_number: pr.number }
         );
       } catch (error) {
         await flushTelemetryError(
-          { commandName: 'pr.create', startTime, logger, metrics, traceManager, commandSpan, runDirPath: runDir },
+          {
+            commandName: 'pr.create',
+            startTime,
+            logger,
+            metrics,
+            traceManager,
+            commandSpan,
+            runDirPath: runDir,
+          },
           error
         );
         throw error;

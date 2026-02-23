@@ -605,7 +605,11 @@ export async function updateBranchMetadata(
       let metadata: BranchMetadata;
       try {
         const content = await fs.readFile(metadataPath, 'utf-8');
-        metadata = validateOrThrow(BranchMetadataSchema, JSON.parse(content), 'branch metadata') as BranchMetadata;
+        metadata = validateOrThrow(
+          BranchMetadataSchema,
+          JSON.parse(content),
+          'branch metadata'
+        ) as BranchMetadata;
       } catch {
         // If metadata doesn't exist, create minimal metadata
         metadata = {
@@ -641,7 +645,11 @@ export async function loadBranchMetadata(config: BranchConfig): Promise<BranchMe
 
   try {
     const content = await fs.readFile(metadataPath, 'utf-8');
-    return validateOrThrow(BranchMetadataSchema, JSON.parse(content), 'branch metadata') as BranchMetadata;
+    return validateOrThrow(
+      BranchMetadataSchema,
+      JSON.parse(content),
+      'branch metadata'
+    ) as BranchMetadata;
   } catch {
     return null;
   }

@@ -218,9 +218,7 @@ export function formatLinearContext(snapshot: IssueSnapshot): string {
     parts.push('');
 
     for (const comment of comments) {
-      parts.push(
-        `### ${comment.user.name} - ${new Date(comment.createdAt).toLocaleDateString()}`
-      );
+      parts.push(`### ${comment.user.name} - ${new Date(comment.createdAt).toLocaleDateString()}`);
       parts.push('');
       parts.push(comment.body);
       parts.push('');

@@ -475,16 +475,33 @@ async function checkQueueFiles(
 function generateRecommendations(analysis: ResumeAnalysis): void {
   const fid = analysis.featureId;
   const blockerMessages = new Map<string, (d: ResumeDiagnostic) => string>([
-    ['APPROVALS_PENDING', (d) => `   • Complete pending approvals: ${((d.context?.approvals as string[]) || []).join(', ')}`],
-    ['INTEGRITY_HASH_MISMATCH', () => '   • Artifacts have been modified. Restore from backup or use --force (risky)'],
-    ['NON_RECOVERABLE_ERROR', () => '   • Manual intervention required. See docs/playbooks/resume_playbook.md'],
-    ['QUEUE_CORRUPTED', () => `   • Queue files are corrupted. Run 'codepipe queue validate --feature ${fid}' and rebuild with 'codepipe queue rebuild --feature ${fid} --from-plan'`],
+    [
+      'APPROVALS_PENDING',
+      (d) =>
+        `   • Complete pending approvals: ${((d.context?.approvals as string[]) || []).join(', ')}`,
+    ],
+    [
+      'INTEGRITY_HASH_MISMATCH',
+      () => '   • Artifacts have been modified. Restore from backup or use --force (risky)',
+    ],
+    [
+      'NON_RECOVERABLE_ERROR',
+      () => '   • Manual intervention required. See docs/playbooks/resume_playbook.md',
+    ],
+    [
+      'QUEUE_CORRUPTED',
+      () =>
+        `   • Queue files are corrupted. Run 'codepipe queue validate --feature ${fid}' and rebuild with 'codepipe queue rebuild --feature ${fid} --from-plan'`,
+    ],
   ]);
   const warningMessages = new Map<string, () => string>([
     ['ERROR_RATE_LIMIT', () => '   • Wait for rate limit reset before resuming'],
     ['ERROR_NETWORK', () => '   • Check network connectivity before resuming'],
     ['QUEUE_HAS_FAILURES', () => '   • Review failed tasks in queue before resuming'],
-    ['QUEUE_VALIDATION_WARNINGS', () => `   • Inspect queue warnings with 'codepipe queue validate --feature ${fid} --verbose'`],
+    [
+      'QUEUE_VALIDATION_WARNINGS',
+      () => `   • Inspect queue warnings with 'codepipe queue validate --feature ${fid} --verbose'`,
+    ],
   ]);
 
   const blockers = analysis.diagnostics.filter((d) => d.severity === 'blocker');
@@ -689,4 +706,3 @@ function getSeverityIcon(severity: DiagnosticSeverity): string {
       return 'ℹ️ ';
   }
 }
-

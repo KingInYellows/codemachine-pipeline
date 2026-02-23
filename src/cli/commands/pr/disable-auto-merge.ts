@@ -13,10 +13,7 @@ import { Command, Flags } from '@oclif/core';
 import { createRunMetricsCollector } from '../../../telemetry/metrics';
 import { createRunTraceManager, withSpan } from '../../../telemetry/traces';
 import { flushTelemetrySuccess, flushTelemetryError } from '../../utils/telemetryLifecycle';
-import {
-  resolveRunDirectorySettings,
-  selectFeatureId,
-} from '../../utils/runDirectory';
+import { resolveRunDirectorySettings, selectFeatureId } from '../../utils/runDirectory';
 import {
   loadPRContext,
   getPRAdapter,
@@ -180,12 +177,28 @@ export default class PRDisableAutoMerge extends Command {
 
         commandSpan.setAttribute('pr_number', prMetadata.pr_number);
         await flushTelemetrySuccess(
-          { commandName: 'pr.disable_auto_merge', startTime, logger, metrics, traceManager, commandSpan, runDirPath: runDir },
+          {
+            commandName: 'pr.disable_auto_merge',
+            startTime,
+            logger,
+            metrics,
+            traceManager,
+            commandSpan,
+            runDirPath: runDir,
+          },
           { pr_number: prMetadata.pr_number }
         );
       } catch (error) {
         await flushTelemetryError(
-          { commandName: 'pr.disable_auto_merge', startTime, logger, metrics, traceManager, commandSpan, runDirPath: runDir },
+          {
+            commandName: 'pr.disable_auto_merge',
+            startTime,
+            logger,
+            metrics,
+            traceManager,
+            commandSpan,
+            runDirPath: runDir,
+          },
           error
         );
         throw error;

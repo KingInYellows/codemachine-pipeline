@@ -79,10 +79,7 @@ export async function flushTelemetrySuccess(
  * Records error metrics, ends the command span with ERROR status, flushes
  * traces, and flushes the logger.
  */
-export async function flushTelemetryError(
-  res: TelemetryResources,
-  error: unknown
-): Promise<void> {
+export async function flushTelemetryError(res: TelemetryResources, error: unknown): Promise<void> {
   const { commandName, startTime, logger, metrics, traceManager, commandSpan, runDirPath } = res;
   const duration = Date.now() - startTime;
 

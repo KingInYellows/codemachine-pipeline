@@ -22,21 +22,13 @@
 import * as crypto from 'node:crypto';
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
-import type {
-  ManifestLoader,
-  AgentManifest,
-  ProviderRequirements,
-} from './manifestLoader';
+import type { ManifestLoader, AgentManifest, ProviderRequirements } from './manifestLoader';
 import type { StructuredLogger } from '../../telemetry/logger';
 import type { CostTracker } from '../../telemetry/costTracker';
 import { getErrorMessage } from '../../utils/errors.js';
 
 // Import from companion module for local use
-import {
-  AgentAdapterError,
-  AgentErrorSchema,
-  CONTEXT_REQUIREMENTS,
-} from './AgentAdapterTypes.js';
+import { AgentAdapterError, AgentErrorSchema, CONTEXT_REQUIREMENTS } from './AgentAdapterTypes.js';
 
 // Re-export companion module symbols for backward compatibility
 export type {

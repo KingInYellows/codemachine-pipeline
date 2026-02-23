@@ -3,10 +3,7 @@ import * as path from 'node:path';
 import { execSync } from 'node:child_process';
 import * as os from 'node:os';
 import { createCliLogger, LogLevel, type StructuredLogger } from '../../telemetry/logger';
-import {
-  createRunMetricsCollector,
-  type MetricsCollector,
-} from '../../telemetry/metrics';
+import { createRunMetricsCollector, type MetricsCollector } from '../../telemetry/metrics';
 import { createRunTraceManager } from '../../telemetry/traces';
 import { getRunDirectoryPath, readManifest } from '../../persistence/runDirectoryManager';
 import {
@@ -20,10 +17,7 @@ import {
 } from '../../workflows/approvalRegistry';
 import { ApprovalGateType } from '../../core/models/ApprovalRecord';
 import { updateTraceMapOnSpecChange } from '../../workflows/traceabilityMapper';
-import {
-  resolveRunDirectorySettings,
-  selectFeatureId,
-} from '../utils/runDirectory';
+import { resolveRunDirectorySettings, selectFeatureId } from '../utils/runDirectory';
 import { formatErrorMessage, setJsonOutputMode } from '../utils/cliErrors';
 import { flushTelemetrySuccess, flushTelemetryError } from '../utils/telemetryLifecycle';
 
@@ -309,9 +303,28 @@ export default class Approve extends Command {
 
       this.emitApprovalSummary(payload, typedFlags.json);
 
-      await flushTelemetrySuccess({ commandName: 'approve', startTime, logger, metrics, traceManager, commandSpan, runDirPath: runDir });
+      await flushTelemetrySuccess({
+        commandName: 'approve',
+        startTime,
+        logger,
+        metrics,
+        traceManager,
+        commandSpan,
+        runDirPath: runDir,
+      });
     } catch (error) {
-      await flushTelemetryError({ commandName: 'approve', startTime, logger, metrics, traceManager, commandSpan, runDirPath: runDir }, error);
+      await flushTelemetryError(
+        {
+          commandName: 'approve',
+          startTime,
+          logger,
+          metrics,
+          traceManager,
+          commandSpan,
+          runDirPath: runDir,
+        },
+        error
+      );
 
       // Check for hash mismatch error (exit 30)
       if (error instanceof Error && error.message.includes('hash mismatch')) {
