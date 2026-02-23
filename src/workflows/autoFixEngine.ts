@@ -92,13 +92,6 @@ export interface AutoFixResult {
 
 /**
  * Execute validation command with auto-fix retry loop
- *
- * @param runDir - Run directory path
- * @param commandType - Validation command type
- * @param options - Execution options
- * @param logger - Structured logger instance
- * @param metrics - Metrics collector instance
- * @returns Validation result
  */
 export async function executeValidationWithAutoFix(
   runDir: string,
@@ -273,13 +266,6 @@ export async function executeValidationWithAutoFix(
 
 /**
  * Execute all required validation commands with auto-fix
- *
- * @param runDir - Run directory path
- * @param commandTypes - Command types to execute (defaults to all required)
- * @param options - Execution options
- * @param logger - Structured logger instance
- * @param metrics - Metrics collector instance
- * @returns Auto-fix result summary
  */
 export async function executeAllValidations(
   runDir: string,

@@ -579,17 +579,14 @@ export function createCliLogger(
   runDir?: string,
   overrides?: Partial<Omit<LoggerOptions, 'component'>>
 ): StructuredLogger {
-  const options: LoggerOptions = {
+  return createLogger({
     component: `cli:${component}`,
     minLevel: LogLevel.INFO,
     mirrorToStderr: !process.env.JSON_OUTPUT, // Disable stderr mirroring in JSON mode
+    ...(runId !== undefined && { runId }),
+    ...(runDir !== undefined && { runDir }),
     ...(overrides ?? {}),
-  };
-
-  if (runId) options.runId = runId;
-  if (runDir) options.runDir = runDir;
-
-  return createLogger(options);
+  });
 }
 
 /**
@@ -600,32 +597,26 @@ export function createHttpLogger(
   runId?: string,
   runDir?: string
 ): StructuredLogger {
-  const options: LoggerOptions = {
+  return createLogger({
     component: `http:${provider}`,
     minLevel: LogLevel.DEBUG,
     mirrorToStderr: false,
-  };
-
-  if (runId) options.runId = runId;
-  if (runDir) options.runDir = runDir;
-
-  return createLogger(options);
+    ...(runId !== undefined && { runId }),
+    ...(runDir !== undefined && { runDir }),
+  });
 }
 
 /**
  * Create a logger for queue operations
  */
 export function createQueueLogger(runId?: string, runDir?: string): StructuredLogger {
-  const options: LoggerOptions = {
+  return createLogger({
     component: 'queue',
     minLevel: LogLevel.INFO,
     mirrorToStderr: false,
-  };
-
-  if (runId) options.runId = runId;
-  if (runDir) options.runDir = runDir;
-
-  return createLogger(options);
+    ...(runId !== undefined && { runId }),
+    ...(runDir !== undefined && { runDir }),
+  });
 }
 
 /**
