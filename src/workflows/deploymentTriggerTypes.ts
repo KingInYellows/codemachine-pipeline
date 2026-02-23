@@ -10,6 +10,7 @@ import type { BranchProtectionReport } from './branchProtectionReporter';
 import type { PRMetadata } from '../core/models/index.js';
 import type { LoggerInterface } from '../telemetry/logger';
 import type { RunManifest } from '../persistence/runDirectoryManager';
+import type { RepoConfig } from '../core/config/RepoConfig';
 
 // Constants
 
@@ -217,4 +218,14 @@ export interface DeploymentOptions {
   merge_method?: 'merge' | 'squash' | 'rebase';
   /** Custom workflow dispatch inputs */
   workflow_inputs?: Record<string, string>;
+}
+
+/**
+ * Input parameters for triggerDeployment, bundling scalar inputs together
+ */
+export interface TriggerDeploymentInput {
+  runDirectory: string;
+  featureId: string;
+  config: RepoConfig;
+  logger: LoggerInterface;
 }

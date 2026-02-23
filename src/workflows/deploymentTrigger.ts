@@ -20,8 +20,6 @@
  */
 
 import type { GitHubAdapter } from '../adapters/github/GitHubAdapter';
-import type { RepoConfig } from '../core/config/RepoConfig';
-import type { LoggerInterface } from '../telemetry/logger';
 
 // Import from companion modules (also re-exported for backward compatibility)
 import {
@@ -31,6 +29,7 @@ import {
   type DeploymentOutcome,
   type DeploymentOptions,
   type MergeReadiness,
+  type TriggerDeploymentInput,
 } from './deploymentTriggerTypes';
 
 // Re-export all types for backward compatibility
@@ -44,6 +43,7 @@ export type {
   DeploymentOutcome,
   DeploymentHistory,
   DeploymentOptions,
+  TriggerDeploymentInput,
 } from './deploymentTriggerTypes';
 export {
   DEPLOYMENT_SCHEMA_VERSION,
@@ -167,22 +167,17 @@ export function selectDeploymentStrategy(
  * 4. Execute strategy
  * 5. Persist outcome
  *
- * @param runDirectory Run directory path
- * @param featureId Feature ID
- * @param config Repository configuration
+ * @param input Deployment trigger inputs (runDirectory, featureId, config, logger)
  * @param githubAdapter GitHub adapter instance
- * @param logger Logger instance
  * @param options Deployment options
  * @returns Deployment outcome
  */
 export async function triggerDeployment(
-  runDirectory: string,
-  featureId: string,
-  config: RepoConfig,
+  input: TriggerDeploymentInput,
   githubAdapter: GitHubAdapter,
-  logger: LoggerInterface,
   options?: DeploymentOptions
 ): Promise<DeploymentOutcome> {
+  const { runDirectory, featureId, config, logger } = input;
   logger.info('Triggering deployment', {
     feature_id: featureId,
     dry_run: options?.dry_run ?? false,
