@@ -1,5 +1,6 @@
 import type { RunnerResult } from './codeMachineRunner.js';
 import type { StructuredLogger } from '../telemetry/logger.js';
+import { redactSecrets } from '../utils/redaction.js';
 
 export interface NormalizedResult {
   success: boolean;
@@ -30,44 +31,6 @@ export type ErrorCategory =
   | 'network'
   | 'unknown';
 
-const CREDENTIAL_PATTERNS: ReadonlyArray<{ pattern: RegExp; replacement: string }> = [
-  // Specific token patterns MUST come before generic patterns
-  { pattern: /sk-ant-[a-zA-Z0-9-]{20,}/g, replacement: '[ANTHROPIC_KEY_REDACTED]' },
-  { pattern: /sk-[a-zA-Z0-9]{20,}/g, replacement: '[OPENAI_KEY_REDACTED]' },
-  { pattern: /gh[pousr]_[a-zA-Z0-9]{36,}/g, replacement: '[GITHUB_TOKEN_REDACTED]' },
-  { pattern: /github_pat_[a-zA-Z0-9_]{22,}/g, replacement: '[GITHUB_PAT_REDACTED]' },
-  {
-    pattern: /eyJ[A-Za-z0-9_-]*\.eyJ[A-Za-z0-9_-]*\.[A-Za-z0-9_-]*/g,
-    replacement: '[JWT_REDACTED]',
-  },
-  { pattern: /xox[baprs]-[a-zA-Z0-9-]{10,}/g, replacement: '[SLACK_TOKEN_REDACTED]' },
-  { pattern: /lin_api_[a-zA-Z0-9]{40,}/g, replacement: '[LINEAR_KEY_REDACTED]' },
-  { pattern: /AKIA[A-Z0-9]{16}/g, replacement: '[AWS_ACCESS_KEY_REDACTED]' },
-  {
-    pattern: /(?:aws[_-]?secret|secret[_-]?access)[^=]*=\s*["']?[A-Za-z0-9/+=]{40}/gi,
-    replacement: '[AWS_SECRET_REDACTED]',
-  },
-  {
-    pattern: /-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----[\s\S]*?-----END/g,
-    replacement: '[PRIVATE_KEY_REDACTED]',
-  },
-  {
-    pattern: /(?:postgres|mysql|mongodb|redis):\/\/[^:]+:[^@]+@[^\s]+/gi,
-    replacement: '[CONNECTION_STRING_REDACTED]',
-  },
-  {
-    pattern: /(?:OPENAI_API_KEY|ANTHROPIC_API_KEY|GITHUB_TOKEN|LINEAR_API_KEY)=["']?[^\s"']+/gi,
-    replacement: '[ENV_VAR_REDACTED]',
-  },
-  // Generic patterns MUST come after specific patterns and exclude already-redacted values
-  { pattern: /Bearer\s+[a-zA-Z0-9._-]{20,}/gi, replacement: 'Bearer [TOKEN_REDACTED]' },
-  { pattern: /Authorization:\s*(?!\[)[^\s]+/gi, replacement: 'Authorization: [REDACTED]' },
-  { pattern: /api[_-]?key[=:]\s*(?!\[)[^\s&"']+/gi, replacement: 'api_key=[REDACTED]' },
-  { pattern: /token[=:]\s*(?!\[)[^\s&"']+/gi, replacement: 'token=[REDACTED]' },
-  { pattern: /password[=:]\s*(?!\[)[^\s&"']+/gi, replacement: 'password=[REDACTED]' },
-  { pattern: /secret[=:]\s*(?!\[)[^\s&"']+/gi, replacement: 'secret=[REDACTED]' },
-];
-
 const ERROR_PATTERNS: ReadonlyArray<{ pattern: RegExp; category: ErrorCategory }> = [
   { pattern: /authentication.*failed|unauthorized|401/i, category: 'authentication' },
   { pattern: /rate.*limit|429|too many requests/i, category: 'rate_limit' },
@@ -75,13 +38,7 @@ const ERROR_PATTERNS: ReadonlyArray<{ pattern: RegExp; category: ErrorCategory }
   { pattern: /validation.*error|invalid.*input|schema.*error/i, category: 'validation' },
 ];
 
-export function redactCredentials(text: string): string {
-  let result = text;
-  for (const { pattern, replacement } of CREDENTIAL_PATTERNS) {
-    result = result.replace(pattern, replacement);
-  }
-  return result;
-}
+export { redactSecrets as redactCredentials };
 
 /**
  * Extract summary from stdout (first meaningful line, max 500 chars)
@@ -188,8 +145,8 @@ export function normalizeResult(
     resolvedLogger = stdoutOrLogger as StructuredLogger | undefined;
   }
 
-  const redactedStdout = redactCredentials(result.stdout);
-  const redactedStderr = redactCredentials(result.stderr);
+  const redactedStdout = redactSecrets(result.stdout);
+  const redactedStderr = redactSecrets(result.stderr);
   const errorCategory = categorizeError(result, resolvedLogger);
   const status = deriveStatus(result.timedOut, result.killed, result.exitCode);
   const summary = extractSummary(result.stdout);

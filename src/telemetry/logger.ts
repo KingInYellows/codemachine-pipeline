@@ -1,6 +1,7 @@
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 import { LogContext } from '../core/sharedTypes';
+import { CREDENTIAL_PATTERNS } from '../utils/redaction.js';
 
 /**
  * Structured Logger
@@ -93,61 +94,8 @@ export interface LoggerOptions {
 // Redaction Engine
 // ============================================================================
 
-/**
- * Secret pattern definitions
- */
-const SECRET_PATTERNS: Array<{ name: string; pattern: RegExp; replacement: string }> = [
-  // GitHub tokens (ghp_, gho_, ghs_, ghr_)
-  {
-    name: 'github_token',
-    pattern: /\bgh[psor]_[A-Za-z0-9_]{36,}\b/g,
-    replacement: '[REDACTED_GITHUB_TOKEN]',
-  },
-  // GitHub App installation tokens
-  {
-    name: 'github_app_token',
-    pattern: /\bghs_[A-Za-z0-9_]{36,}\b/g,
-    replacement: '[REDACTED_GITHUB_APP_TOKEN]',
-  },
-  // Linear API keys
-  {
-    name: 'linear_key',
-    pattern: /\blin_api_[A-Za-z0-9]{40}\b/g,
-    replacement: '[REDACTED_LINEAR_KEY]',
-  },
-  // Generic API keys
-  {
-    name: 'api_key',
-    pattern: /\b[Aa][Pp][Ii][-_]?[Kk][Ee][Yy]\s*[:=]\s*['"]?([A-Za-z0-9_-]{20,})['"]?/g,
-    replacement: 'api_key=[REDACTED_API_KEY]',
-  },
-  // JWTs (Bearer tokens)
-  {
-    name: 'jwt',
-    pattern: /\beyJ[A-Za-z0-9_-]+\.eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\b/g,
-    replacement: '[REDACTED_JWT]',
-  },
-  // Authorization headers
-  {
-    name: 'auth_header',
-    pattern: /\b[Aa]uthorization\s*:\s*['"]?Bearer\s+([A-Za-z0-9_.-]+)['"]?/g,
-    replacement: 'Authorization: Bearer [REDACTED_TOKEN]',
-  },
-  // Generic tokens
-  {
-    name: 'token',
-    pattern: /\b[Tt]oken\s*[:=]\s*['"]?([A-Za-z0-9_-]{20,})['"]?/g,
-    replacement: 'token=[REDACTED_TOKEN]',
-  },
-  // AWS credentials
-  { name: 'aws_key', pattern: /\bAKIA[0-9A-Z]{16}\b/g, replacement: '[REDACTED_AWS_KEY]' },
-  // Generic secrets in environment variable format
-  {
-    name: 'env_secret',
-    pattern: /\b([A-Z_]+_SECRET|[A-Z_]+_PASSWORD|[A-Z_]+_KEY)\s*=\s*['"]?([^\s'"]+)['"]?/g,
-    replacement: '$1=[REDACTED]',
-  },
-];
+/** Alias CREDENTIAL_PATTERNS for the RedactionEngine (same shape) */
+const SECRET_PATTERNS = CREDENTIAL_PATTERNS;
 
 /**
  * Redaction engine for removing secrets from strings
@@ -160,12 +108,12 @@ export interface RedactionReport {
 }
 
 export class RedactionEngine {
-  private readonly patterns: Array<{ name: string; pattern: RegExp; replacement: string }>;
+  private readonly patterns: ReadonlyArray<{ name: string; pattern: RegExp; replacement: string }>;
   private readonly enabled: boolean;
 
   constructor(
     enabled = true,
-    customPatterns?: Array<{ name: string; pattern: RegExp; replacement: string }>
+    customPatterns?: ReadonlyArray<{ name: string; pattern: RegExp; replacement: string }>
   ) {
     this.enabled = enabled;
     this.patterns = customPatterns ?? SECRET_PATTERNS;
