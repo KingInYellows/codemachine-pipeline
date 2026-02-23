@@ -616,6 +616,7 @@ export function generateRiskAssessments(
     }
 
     const summary = task.results.summary || '';
+    // Check if research identifies risks
     if (/risk|concern|issue|problem/i.test(summary)) {
       risks.push({
         description: `Research finding: ${summary.substring(0, 200)}`,
