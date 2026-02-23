@@ -21,6 +21,10 @@ export const ExecutionTaskTypeSchema = z.enum([
   'refactoring',
   'documentation',
   'other',
+  'validation',
+  'patch_application',
+  'git_operation',
+  'custom',
 ]);
 
 export type ExecutionTaskType = z.infer<typeof ExecutionTaskTypeSchema>;

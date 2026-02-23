@@ -195,6 +195,10 @@ export function mapTaskTypeToContext(taskType: ExecutionTaskType): ExecutionCont
     pr_creation: 'summarization', // PR descriptions use summarization
     deployment: 'documentation', // Deployment docs use documentation context
     other: 'summarization', // Generic fallback
+    validation: 'code_generation',
+    patch_application: 'code_generation',
+    git_operation: 'code_generation',
+    custom: 'summarization',
   };
 
   return mapping[taskType];

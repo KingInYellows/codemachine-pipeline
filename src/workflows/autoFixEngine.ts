@@ -7,7 +7,6 @@ import type { MetricsCollector } from '../telemetry/metrics';
 import { StandardMetrics } from '../telemetry/metrics';
 import {
   ExecutionTaskStatus,
-  ExecutionTaskType,
   type ValidationResult as ExecutionValidationTelemetry,
 } from '../telemetry/executionMetrics';
 import type { ExecutionTelemetry } from '../telemetry/executionTelemetry';
@@ -111,11 +110,11 @@ function completeValidationSuccess(
   const totalDuration = Date.now() - startTime;
   telemetry?.metrics?.recordTaskLifecycle(
     taskId,
-    ExecutionTaskType.VALIDATION,
+    'validation',
     ExecutionTaskStatus.COMPLETED,
     totalDuration
   );
-  telemetry?.logs?.taskCompleted(taskId, ExecutionTaskType.VALIDATION, totalDuration, {
+  telemetry?.logs?.taskCompleted(taskId, 'validation', totalDuration, {
     command_type: commandType,
     attempt_number: attemptNumber,
     auto_fix_attempt: isAutoFixAttempt,
@@ -155,11 +154,11 @@ function finalizeValidationFailure(
   const totalDuration = Date.now() - startTime;
   telemetry?.metrics?.recordTaskLifecycle(
     taskId,
-    ExecutionTaskType.VALIDATION,
+    'validation',
     ExecutionTaskStatus.FAILED,
     totalDuration
   );
-  telemetry?.logs?.taskFailed(taskId, ExecutionTaskType.VALIDATION, failureError, totalDuration, {
+  telemetry?.logs?.taskFailed(taskId, 'validation', failureError, totalDuration, {
     command_type: commandType,
     attempt_number: attemptNumber,
   });
@@ -182,13 +181,13 @@ export async function executeValidationWithAutoFix(
 ): Promise<ValidationResult> {
   const startTime = Date.now();
   const taskId = `validation:${commandType}`;
-  telemetry?.logs?.taskStarted(taskId, ExecutionTaskType.VALIDATION, {
+  telemetry?.logs?.taskStarted(taskId, 'validation', {
     command_type: commandType,
     auto_fix_enabled: options.enableAutoFix,
   });
   telemetry?.metrics?.recordTaskLifecycle(
     taskId,
-    ExecutionTaskType.VALIDATION,
+    'validation',
     ExecutionTaskStatus.STARTED
   );
   const span = startExecutionSpan(telemetry, `validation.${commandType}`, {

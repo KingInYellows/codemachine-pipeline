@@ -117,6 +117,26 @@ const TASK_TYPE_TO_WORKFLOW: Record<ExecutionTaskType, WorkflowMapping> = {
     command: 'start',
     useNativeEngine: false,
   },
+  validation: {
+    workflow: 'native-autofix',
+    command: 'run',
+    useNativeEngine: true,
+  },
+  patch_application: {
+    workflow: 'native-autofix',
+    command: 'run',
+    useNativeEngine: true,
+  },
+  git_operation: {
+    workflow: 'native-autofix',
+    command: 'run',
+    useNativeEngine: true,
+  },
+  custom: {
+    workflow: 'codemachine start',
+    command: 'start',
+    useNativeEngine: false,
+  },
 };
 
 // Helper to extract agent ID for backward compatibility
@@ -129,6 +149,10 @@ const TASK_TYPE_TO_AGENT: Record<ExecutionTaskType, string> = {
   refactoring: 'refactorer',
   documentation: 'doc-writer',
   other: 'general',
+  validation: 'validator',
+  patch_application: 'patch-applier',
+  git_operation: 'git-operator',
+  custom: 'general',
 };
 
 export function mapTaskToWorkflow(taskType: ExecutionTaskType): WorkflowMapping {

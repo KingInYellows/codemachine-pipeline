@@ -9,34 +9,12 @@ import { StructuredLogger } from '../telemetry/logger.js';
 import { ExecutionLogWriter } from '../telemetry/logWriters.js';
 import {
   ExecutionTaskStatus,
-  ExecutionTaskType,
   type CodeMachineExecutionStatus,
 } from '../telemetry/executionMetrics.js';
 import type { ExecutionTelemetry } from '../telemetry/executionTelemetry.js';
 import { getErrorMessage } from '../utils/errors.js';
 import { CODEMACHINE_STRATEGY_NAMES } from './codemachineTypes.js';
 import { DEFAULT_EXECUTION_CONFIG, ExecutionConfig } from '../core/config/RepoConfig.js';
-
-type TaskTypeString = ExecutionTask['task_type'];
-
-const TASK_TYPE_TO_ENUM: Record<string, ExecutionTaskType> = {
-  code_generation: ExecutionTaskType.CODE_GENERATION,
-  testing: ExecutionTaskType.TESTING,
-  pr_creation: ExecutionTaskType.PR_CREATION,
-  deployment: ExecutionTaskType.DEPLOYMENT,
-  review: ExecutionTaskType.REVIEW,
-  refactoring: ExecutionTaskType.REFACTORING,
-  documentation: ExecutionTaskType.DOCUMENTATION,
-  other: ExecutionTaskType.OTHER,
-  validation: ExecutionTaskType.VALIDATION,
-  patch_application: ExecutionTaskType.PATCH_APPLICATION,
-  git_operation: ExecutionTaskType.GIT_OPERATION,
-  custom: ExecutionTaskType.CUSTOM,
-};
-
-function toExecutionTaskType(taskType: TaskTypeString): ExecutionTaskType {
-  return TASK_TYPE_TO_ENUM[taskType] ?? ExecutionTaskType.OTHER;
-}
 
 const TASK_ID_PATTERN = /^[a-zA-Z0-9_-]+$/;
 
@@ -421,12 +399,12 @@ export class CLIExecutionEngine {
 
     await updateTaskInQueue(this.runDir, task.task_id, { status: 'running' });
     this.logger?.info('Executing task', { taskId: task.task_id, strategy: strategy.name });
-    this.logWriter?.taskStarted(task.task_id, toExecutionTaskType(task.task_type), {
+    this.logWriter?.taskStarted(task.task_id, task.task_type, {
       strategy: strategy.name,
     });
     this.telemetry?.metrics?.recordTaskLifecycle(
       task.task_id,
-      toExecutionTaskType(task.task_type),
+      task.task_type,
       ExecutionTaskStatus.STARTED
     );
     const startTime = Date.now();
@@ -472,13 +450,13 @@ export class CLIExecutionEngine {
     });
     this.logWriter?.taskSkipped(
       task.task_id,
-      toExecutionTaskType(task.task_type),
+      task.task_type,
       'no_strategy',
       { reason: 'No execution strategy available' }
     );
     this.telemetry?.metrics?.recordTaskLifecycle(
       task.task_id,
-      toExecutionTaskType(task.task_type),
+      task.task_type,
       ExecutionTaskStatus.SKIPPED
     );
     return { success: false, permanentlyFailed: true };
@@ -490,13 +468,13 @@ export class CLIExecutionEngine {
   ): Promise<{ success: boolean; permanentlyFailed: boolean }> {
     this.logger?.info('Dry run - skipping actual execution', { taskId: task.task_id });
     await updateTaskInQueue(this.runDir, task.task_id, { status: 'completed' });
-    this.logWriter?.taskCompleted(task.task_id, toExecutionTaskType(task.task_type), 0, {
+    this.logWriter?.taskCompleted(task.task_id, task.task_type, 0, {
       strategy: strategyName,
       dry_run: true,
     });
     this.telemetry?.metrics?.recordTaskLifecycle(
       task.task_id,
-      toExecutionTaskType(task.task_type),
+      task.task_type,
       ExecutionTaskStatus.COMPLETED,
       0
     );
@@ -525,7 +503,7 @@ export class CLIExecutionEngine {
         durationMs
       );
     }
-    this.logWriter?.taskCompleted(task.task_id, toExecutionTaskType(task.task_type), durationMs, {
+    this.logWriter?.taskCompleted(task.task_id, task.task_type, durationMs, {
       strategy: strategy.name,
       summary: strategyResult.summary,
       artifactsCaptured: artifacts.length,
@@ -536,7 +514,7 @@ export class CLIExecutionEngine {
     });
     this.telemetry?.metrics?.recordTaskLifecycle(
       task.task_id,
-      toExecutionTaskType(task.task_type),
+      task.task_type,
       ExecutionTaskStatus.COMPLETED,
       durationMs
     );
@@ -577,7 +555,7 @@ export class CLIExecutionEngine {
     }
     this.logWriter?.taskFailed(
       task.task_id,
-      toExecutionTaskType(task.task_type),
+      task.task_type,
       new Error(strategyResult.errorMessage ?? 'Unknown error'),
       durationMs,
       {
@@ -619,7 +597,7 @@ export class CLIExecutionEngine {
       });
       this.telemetry?.metrics?.recordTaskLifecycle(
         task.task_id,
-        toExecutionTaskType(task.task_type),
+        task.task_type,
         ExecutionTaskStatus.FAILED,
         durationMs
       );
@@ -634,7 +612,7 @@ export class CLIExecutionEngine {
     });
     this.telemetry?.metrics?.recordTaskLifecycle(
       task.task_id,
-      toExecutionTaskType(task.task_type),
+      task.task_type,
       ExecutionTaskStatus.FAILED,
       durationMs
     );
