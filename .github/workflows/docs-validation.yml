@@ -82,9 +82,9 @@ jobs:
 
       - name: Check for phantom engines
         run: |
-          DOCS_SCOPE="docs/guide docs/reference docs/playbooks docs/adr docs/templates README.md"
+          DOCS_SCOPE=(docs/guide docs/reference docs/playbooks docs/adr docs/templates README.md)
           # Verify engines list only contains: claude, codex, openai
-          if grep -rE "executionEngine.*(cursor|auggie|ccr|opencode|gpt-4|claude-3)" $DOCS_SCOPE; then
+          if grep -rE "executionEngine.*(cursor|auggie|ccr|opencode|gpt-4|claude-3)" "${DOCS_SCOPE[@]}"; then
             echo "❌ Found phantom/incorrect execution engine names"
             echo "✅ Valid engines: claude, codex, openai"
             exit 1
@@ -93,9 +93,9 @@ jobs:
 
       - name: Check for incorrect environment variables
         run: |
-          DOCS_SCOPE="docs/guide docs/reference docs/playbooks docs/adr docs/templates README.md"
+          DOCS_SCOPE=(docs/guide docs/reference docs/playbooks docs/adr docs/templates README.md)
           # Verify no references to non-existent variables
-          if grep -rE "CODEMACHINE_CLI_PATH|CODEMACHINE_LOG_LEVEL" $DOCS_SCOPE | grep -vEi "non-existent|doesn.t exist|not .*CODEMACHINE_LOG_LEVEL|no.*CODEMACHINE_LOG_LEVEL|removed"; then
+          if grep -rE "CODEMACHINE_CLI_PATH|CODEMACHINE_LOG_LEVEL" "${DOCS_SCOPE[@]}" | grep -vEi "non-existent|doesn.t exist|not .*CODEMACHINE_LOG_LEVEL|no.*CODEMACHINE_LOG_LEVEL|removed"; then
             echo "❌ Found incorrect environment variable names"
             echo "✅ Correct: CODEMACHINE_BIN_PATH (not CODEMACHINE_CLI_PATH)"
             exit 1
@@ -191,9 +191,9 @@ jobs:
       - name: Check for old directories
         run: |
           # Verify old directories are removed
-          old_dirs="ops requirements announcements development testing ui"
+          old_dirs=(ops requirements announcements development testing ui)
           found_old=false
-          for dir in $old_dirs; do
+          for dir in "${old_dirs[@]}"; do
             if [ -d "docs/$dir" ] && [ "$(ls -A docs/$dir)" ]; then
               echo "⚠️  Old directory still exists with content: docs/$dir"
               found_old=true

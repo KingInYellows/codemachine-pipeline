@@ -22,8 +22,8 @@ Full documentation is in [`docs/README.md`](docs/README.md).
 
 | Resource        | Link                                                       |
 | --------------- | ---------------------------------------------------------- |
-| Getting Started | [Init Playbook](docs/playbooks/init_playbook.md)           |
-| CLI Reference   | [CLI Reference](docs/reference/cli/cli-reference.md)       |
+| Getting Started | [Init Playbook](docs/playbooks/init_playbook.md)          |
+| CLI Reference   | [CLI Reference](docs/reference/cli/cli-reference.md)      |
 | Troubleshooting | [Doctor Reference](docs/reference/cli/doctor_reference.md) |
 
 ## Installation
@@ -222,7 +222,7 @@ The pipeline supports multiple AI execution engines via the CodeMachine CLI adap
 | `codex`  | OpenAI Codex               |
 | `openai` | OpenAI                     |
 
-For configuration and setup, see [CLI Adapter Implementation Guide](docs/research/cli-adapter-implementation-guide.md).
+For configuration and setup, see [CodeMachine Adapter Guide](docs/reference/config/codemachine_adapter_guide.md).
 
 ## Configuration
 
