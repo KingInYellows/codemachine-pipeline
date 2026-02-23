@@ -8,7 +8,7 @@ import {
   serializeExecutionTask,
 } from '../core/models/ExecutionTask';
 import { validateOrThrow } from '../validation/helpers.js';
-import { readManifest, writeManifest, withLock } from '../persistence/runDirectoryManager';
+import { readManifest, writeManifest, withLock } from '../persistence';
 import { createLogger, type StructuredLogger, LogLevel } from '../telemetry/logger';
 import { getErrorMessage } from '../utils/errors.js';
 

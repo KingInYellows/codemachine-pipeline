@@ -26,7 +26,7 @@ import { createDefaultCompactionConfig } from './queueTypes';
 import { getSnapshotMetadata, saveSnapshot } from './queueSnapshotManager';
 import { getOperationsLogStats, truncateOperationsLogToSeq } from './queueOperationsLog';
 import { hydrateIndex, exportIndexState, markClean } from './queueMemoryIndex';
-import { withLock } from '../persistence/runDirectoryManager';
+import { withLock } from '../persistence';
 import type { ExecutionTaskStatus } from '../core/models/ExecutionTask';
 
 // ============================================================================

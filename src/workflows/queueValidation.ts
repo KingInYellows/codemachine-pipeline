@@ -9,7 +9,7 @@ import * as fs from 'node:fs/promises';
 import * as crypto from 'node:crypto';
 import * as path from 'node:path';
 import { parseExecutionTask } from '../core/models/ExecutionTask';
-import { readManifest } from '../persistence/runDirectoryManager';
+import { readManifest } from '../persistence';
 import { isFileNotFound } from '../utils/safeJson.js';
 
 import { QUEUE_FILE, QUEUE_MANIFEST_FILE } from './queueTypes.js';

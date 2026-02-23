@@ -14,7 +14,7 @@
  * Implements FR-6, FR-7, ADR-4 requirements for research discovery.
  */
 
-import { withLock } from '../persistence/runDirectoryManager';
+import { withLock } from '../persistence';
 import type { StructuredLogger } from '../telemetry/logger';
 import type { MetricsCollector } from '../telemetry/metrics';
 import type { ContextDocument } from '../core/models/ContextDocument';

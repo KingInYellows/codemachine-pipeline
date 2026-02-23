@@ -24,7 +24,7 @@ import * as crypto from 'node:crypto';
 import { exec, execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import picomatch from 'picomatch';
-import { withLock, getSubdirectoryPath, updateManifest } from '../persistence/runDirectoryManager';
+import { withLock, getSubdirectoryPath, updateManifest } from '../persistence';
 import type { RepoConfig } from '../core/config/RepoConfig';
 import type { StructuredLogger } from '../telemetry/logger';
 import type { MetricsCollector } from '../telemetry/metrics';
