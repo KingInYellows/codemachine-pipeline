@@ -178,60 +178,7 @@ export default class Init extends Command {
       }
 
       // Step 2: Check if already initialized
-      if (fs.existsSync(configPath) && !flags.force && !flags['dry-run']) {
-        const result = await loadRepoConfig(configPath);
-
-        if (!flags.json) {
-          this.warn(`Configuration already exists at: ${configPath}`);
-          this.warn('Use --force to re-initialize or --validate-only to check configuration');
-        }
-
-        if (!result.success) {
-          exitCode = 10;
-          if (flags.json) {
-            this.log(
-              JSON.stringify(
-                {
-                  status: 'validation_error',
-                  config_path: configPath,
-                  exit_code: exitCode,
-                  errors: result.errors,
-                },
-                null,
-                2
-              )
-            );
-          } else {
-            this.log('\nExisting configuration has validation errors:');
-            this.log(formatValidationErrors(result.errors!));
-          }
-          await this.exitCommand(exitCode, ctx);
-        }
-
-        if (flags.json) {
-          this.log(
-            JSON.stringify(
-              {
-                status: 'already_initialized',
-                config_path: configPath,
-                exit_code: 0,
-                warnings: result.warnings || [],
-                config: result.config,
-              },
-              null,
-              2
-            )
-          );
-        } else {
-          if (result.warnings && result.warnings.length > 0) {
-            this.log('\nWarnings:');
-            for (const warning of result.warnings) {
-              this.warn(warning);
-            }
-          }
-          this.log('\n✓ Configuration is valid');
-        }
-        await this.finalizeTelemetry(exitCode, ctx);
+      if (await this.handleAlreadyInitialized(configPath, flags, ctx)) {
         return;
       }
 
@@ -281,18 +228,13 @@ export default class Init extends Command {
       if (!validationResult.success) {
         exitCode = 10;
         if (flags.json) {
-          this.log(
-            JSON.stringify(
-              {
-                status: 'validation_error',
-                config_path: configPath,
-                exit_code: exitCode,
-                errors: validationResult.errors,
-              },
-              null,
-              2
-            )
-          );
+          const errorPayload: ConfigValidationPayload = {
+            status: 'validation_error',
+            config_path: configPath,
+            exit_code: exitCode,
+            ...(validationResult.errors !== undefined && { errors: validationResult.errors }),
+          };
+          this.log(JSON.stringify(errorPayload, null, 2));
         } else {
           this.log('\n❌ Configuration validation failed after creation:\n');
           this.log(formatValidationErrors(validationResult.errors!));
@@ -448,6 +390,70 @@ export default class Init extends Command {
   ): Promise<never> {
     await this.finalizeTelemetry(exitCode, ctx, error);
     process.exit(exitCode);
+  }
+
+  /**
+   * Handle the case where config already exists (no --force, no --dry-run).
+   * Returns true if the command should return early (already initialized path handled).
+   */
+  private async handleAlreadyInitialized(
+    configPath: string,
+    flags: { json: boolean; force: boolean; 'dry-run': boolean },
+    ctx: CommandTelemetryContext
+  ): Promise<boolean> {
+    if (!fs.existsSync(configPath) || flags.force || flags['dry-run']) {
+      return false;
+    }
+
+    const result = await loadRepoConfig(configPath);
+
+    if (!flags.json) {
+      this.warn(`Configuration already exists at: ${configPath}`);
+      this.warn('Use --force to re-initialize or --validate-only to check configuration');
+    }
+
+    if (!result.success) {
+      const exitCode = 10;
+      if (flags.json) {
+        const errorPayload: ConfigValidationPayload = {
+          status: 'validation_error',
+          config_path: configPath,
+          exit_code: exitCode,
+          ...(result.errors !== undefined && { errors: result.errors }),
+        };
+        this.log(JSON.stringify(errorPayload, null, 2));
+      } else {
+        this.log('\nExisting configuration has validation errors:');
+        this.log(formatValidationErrors(result.errors!));
+      }
+      await this.exitCommand(exitCode, ctx);
+    }
+
+    if (flags.json) {
+      this.log(
+        JSON.stringify(
+          {
+            status: 'already_initialized',
+            config_path: configPath,
+            exit_code: 0,
+            warnings: result.warnings ?? [],
+            config: result.config,
+          },
+          null,
+          2
+        )
+      );
+    } else {
+      if (result.warnings && result.warnings.length > 0) {
+        this.log('\nWarnings:');
+        for (const warning of result.warnings) {
+          this.warn(warning);
+        }
+      }
+      this.log('\n✓ Configuration is valid');
+    }
+    await this.finalizeTelemetry(0, ctx);
+    return true;
   }
 
   /**
