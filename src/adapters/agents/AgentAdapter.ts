@@ -291,6 +291,7 @@ export const SessionTelemetrySchema = z
 export type SessionTelemetry = z.infer<typeof SessionTelemetrySchema>;
 
 const TELEMETRY_FILENAME = 'agent_sessions.jsonl';
+const RATE_LIMIT_WINDOW_MS = 60 * 60 * 1000; // 1 hour sliding window
 
 // ============================================================================
 // Agent Adapter
@@ -314,6 +315,8 @@ export interface AgentAdapterConfig {
   telemetryDir?: string;
   /** Optional custom provider invoker (used for testing/mocking) */
   providerInvoker?: ProviderInvoker;
+  /** Maximum agent requests per hour (client-side sliding window; default 100) */
+  rateLimitPerHour?: number;
 }
 
 /**
@@ -340,6 +343,8 @@ export class AgentAdapter {
   private readonly telemetryDir: string | undefined;
   private readonly sessionHistory: SessionTelemetry[] = [];
   private readonly providerInvoker: ProviderInvoker;
+  private readonly rateLimitPerHour: number;
+  private readonly requestTimestamps: number[] = [];
 
   constructor(config: AgentAdapterConfig) {
     this.manifestLoader = config.manifestLoader;
@@ -348,6 +353,7 @@ export class AgentAdapter {
     this.enableFallback = config.enableFallback ?? true;
     this.maxFallbackAttempts = config.maxFallbackAttempts ?? 2;
     this.telemetryDir = config.telemetryDir;
+    this.rateLimitPerHour = config.rateLimitPerHour ?? 100;
     this.providerInvoker =
       config.providerInvoker ??
       ((manifest, request, sessionId, startTime, fallbackAttempts) =>
@@ -385,6 +391,10 @@ export class AgentAdapter {
     });
 
     try {
+      // 0. Enforce client-side rate limit before any provider work
+      const requestTimestamp = this.assertRateLimitHeadroom(request.context);
+      this.recordRequest(requestTimestamp);
+
       // 1. Map context to capability requirements
       const capabilityReqs = this.getCapabilityRequirements(request.context);
 
@@ -631,6 +641,57 @@ export class AgentAdapter {
       usedFallback: fallbackAttempts > 0,
       fallbackAttempts,
     };
+  }
+
+  /**
+   * Enforce client-side hourly rate limit using a sliding window.
+   * Returns the current timestamp so it can be recorded after the check passes.
+   */
+  private assertRateLimitHeadroom(operation: string): number {
+    const now = Date.now();
+    this.trimRequestWindow(now);
+
+    if (this.requestTimestamps.length >= this.rateLimitPerHour) {
+      const oldestRequest = this.requestTimestamps[0];
+      const retryAt = (oldestRequest ?? now) + RATE_LIMIT_WINDOW_MS;
+      const waitMs = Math.max(0, retryAt - now);
+      const waitMinutes = Math.max(1, Math.ceil(waitMs / 60000));
+
+      this.logger.warn('Agent request blocked to respect hourly budget', {
+        operation,
+        rateLimitPerHour: this.rateLimitPerHour,
+        waitMs,
+      });
+
+      throw this.createError(
+        'transient',
+        `Agent ${operation} blocked to respect the ${this.rateLimitPerHour} requests/hour budget. Try again in approximately ${waitMinutes} minute(s).`,
+        'RATE_LIMIT_EXCEEDED',
+        undefined,
+        undefined,
+        Math.ceil(waitMs / 1000),
+        0
+      );
+    }
+
+    return now;
+  }
+
+  /**
+   * Record request timestamp for sliding window tracking
+   */
+  private recordRequest(timestamp: number): void {
+    this.requestTimestamps.push(timestamp);
+  }
+
+  /**
+   * Remove timestamps that are outside the sliding window
+   */
+  private trimRequestWindow(now: number): void {
+    const windowStart = now - RATE_LIMIT_WINDOW_MS;
+    while (this.requestTimestamps.length > 0 && (this.requestTimestamps[0] ?? 0) < windowStart) {
+      this.requestTimestamps.shift();
+    }
   }
 
   /**
