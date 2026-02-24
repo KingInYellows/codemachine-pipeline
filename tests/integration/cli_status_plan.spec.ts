@@ -179,9 +179,10 @@ describe('CLI Status/Plan/Resume Surfaces', () => {
 
   it('plan --json surfaces DAG summary and detects spec diff changes', async () => {
     // Simulate spec metadata change after plan generation
-    const currentSpecMetadata = JSON.parse(
-      await fs.readFile(specMetadataPath, 'utf-8')
-    ) as Record<string, unknown>;
+    const currentSpecMetadata = JSON.parse(await fs.readFile(specMetadataPath, 'utf-8')) as Record<
+      string,
+      unknown
+    >;
     await fs.writeFile(
       specMetadataPath,
       JSON.stringify(

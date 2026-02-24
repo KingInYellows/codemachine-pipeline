@@ -99,7 +99,6 @@ export async function runProcess(
       cwd: options.cwd,
       env: options.env,
       shell: false,
-      ...(options.timeoutMs && options.timeoutMs > 0 ? { timeout: options.timeoutMs } : {}),
       stdio,
     });
   } catch (error) {
