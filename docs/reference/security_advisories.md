@@ -8,8 +8,8 @@ This document defines requirements for responding to security advisories that af
 **Last Updated:** 2026-01-03
 **Related Documents:**
 
-- [Branch Protection Playbook](branch_protection_playbook.md)
-- [Validation Playbook](validation_playbook.md)
+- [Branch Protection Playbook](../playbooks/branch_protection_playbook.md)
+- [Validation Playbook](../playbooks/validation_playbook.md)
 
 ---
 

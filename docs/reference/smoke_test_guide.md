@@ -687,7 +687,7 @@ If tests slow down significantly, investigate:
 ## Related Documentation
 
 - **Task Specification**: `.codemachine/artifacts/plan/02_Iteration_I3.md` (Task I3.T8)
-- **Validation Playbook**: `docs/requirements/validation_playbook.md`
+- **Validation Playbook**: `docs/playbooks/validation_playbook.md`
 - **Resume Coordinator**: Integration test patterns in `tests/integration/resume_flow.spec.ts`
 - **CLI Surface Tests**: `tests/integration/cli_status_plan.spec.ts`
 - **Architecture**: `.codemachine/artifacts/architecture/04_Operational_Architecture.md`

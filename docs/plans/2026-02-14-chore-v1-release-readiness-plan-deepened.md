@@ -1095,6 +1095,7 @@ src/
 .claude/
 .deps/
 .mcp.json
+claude-flow.config.json
 specification.md
 CLAUDE.md
 ```
@@ -1358,6 +1359,7 @@ ARTIFACTS=(
   ".claude"
   ".deps"
   ".mcp.json"
+  "claude-flow.config.json"
   "specification.md"
 )
 
@@ -1876,6 +1878,9 @@ echo "Last Check: $(tail -1 /var/log/codepipe-health.log)"
 **Implementation via Claude Code:**
 
 ```bash
+# Initialize swarm for Wave 1
+npx @claude-flow/cli@latest swarm init --topology hierarchical --max-agents 8
+
 # Spawn all Wave 1 agents in background (Claude Code Task tool)
 Task({ prompt: "Fix Prettier violations", subagent_type: "coder", run_in_background: true })
 Task({ prompt: "Verify Docker CI step", subagent_type: "tester", run_in_background: true })

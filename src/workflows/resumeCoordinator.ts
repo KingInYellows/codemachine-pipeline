@@ -1,3 +1,5 @@
+import * as fs from 'node:fs/promises';
+import * as path from 'node:path';
 import {
   readManifest,
   getRunState,
@@ -5,12 +7,15 @@ import {
   verifyRunDirectoryIntegrity,
   writeManifest,
   type RunManifest,
-} from '../persistence';
-import type { VerificationResult } from '../persistence';
-import { validateQueue, type QueueValidationResult } from './queueStore';
+} from '../persistence/runDirectoryManager';
+import type { VerificationResult } from '../persistence/hashManifest';
+import {
+  type ExecutionTask,
+  canRetry,
+  areDependenciesCompleted,
+} from '../core/models/ExecutionTask';
+import { validateQueue, loadQueue, type QueueValidationResult } from './queueStore';
 import type { ExecutionTelemetry } from '../telemetry/executionTelemetry';
-export type { QueueSnapshotMetadata } from './resumeQueueRecovery.js';
-export { validateQueueSnapshot, getResumableTasks } from './resumeQueueRecovery.js';
 
 /**
  * Resume Coordinator
@@ -106,6 +111,17 @@ export interface ResumeOptions {
 /**
  * Queue snapshot metadata describing the on-disk queue files we expect to load
  */
+export interface QueueSnapshotMetadata {
+  /** Number of tasks captured in the snapshot */
+  taskCount: number;
+  /** Snapshot checksum for integrity */
+  checksum: string;
+  /** Timestamp when snapshot was taken */
+  timestamp: string;
+  /** Queue file path (relative to queue directory) */
+  queueFile: string;
+}
+
 // ============================================================================
 // Resume Analysis
 // ============================================================================
@@ -473,46 +489,33 @@ async function checkQueueFiles(
  * Generate actionable recommendations based on diagnostics
  */
 function generateRecommendations(analysis: ResumeAnalysis): void {
-  const fid = analysis.featureId;
-  const blockerMessages = new Map<string, (d: ResumeDiagnostic) => string>([
-    [
-      'APPROVALS_PENDING',
-      (d) =>
-        `   • Complete pending approvals: ${((d.context?.approvals as string[]) || []).join(', ')}`,
-    ],
-    [
-      'INTEGRITY_HASH_MISMATCH',
-      () => '   • Artifacts have been modified. Restore from backup or use --force (risky)',
-    ],
-    [
-      'NON_RECOVERABLE_ERROR',
-      () => '   • Manual intervention required. See docs/playbooks/resume_playbook.md',
-    ],
-    [
-      'QUEUE_CORRUPTED',
-      () =>
-        `   • Queue files are corrupted. Run 'codepipe queue validate --feature ${fid}' and rebuild with 'codepipe queue rebuild --feature ${fid} --from-plan'`,
-    ],
-  ]);
-  const warningMessages = new Map<string, () => string>([
-    ['ERROR_RATE_LIMIT', () => '   • Wait for rate limit reset before resuming'],
-    ['ERROR_NETWORK', () => '   • Check network connectivity before resuming'],
-    ['QUEUE_HAS_FAILURES', () => '   • Review failed tasks in queue before resuming'],
-    [
-      'QUEUE_VALIDATION_WARNINGS',
-      () => `   • Inspect queue warnings with 'codepipe queue validate --feature ${fid} --verbose'`,
-    ],
-  ]);
-
   const blockers = analysis.diagnostics.filter((d) => d.severity === 'blocker');
   const errors = analysis.diagnostics.filter((d) => d.severity === 'error');
   const warnings = analysis.diagnostics.filter((d) => d.severity === 'warning');
 
   if (blockers.length > 0) {
     analysis.recommendations.push('🚫 Resume is blocked. Address the following issues:');
+
     for (const blocker of blockers) {
-      const fn = blockerMessages.get(blocker.code ?? '');
-      analysis.recommendations.push(fn ? fn(blocker) : `   • ${blocker.message}`);
+      if (blocker.code === 'APPROVALS_PENDING') {
+        analysis.recommendations.push(
+          `   • Complete pending approvals: ${((blocker.context?.approvals as string[]) || []).join(', ')}`
+        );
+      } else if (blocker.code === 'INTEGRITY_HASH_MISMATCH') {
+        analysis.recommendations.push(
+          '   • Artifacts have been modified. Restore from backup or use --force (risky)'
+        );
+      } else if (blocker.code === 'NON_RECOVERABLE_ERROR') {
+        analysis.recommendations.push(
+          '   • Manual intervention required. See docs/playbooks/resume_playbook.md'
+        );
+      } else if (blocker.code === 'QUEUE_CORRUPTED') {
+        analysis.recommendations.push(
+          `   • Queue files are corrupted. Run 'codepipe queue validate --feature ${analysis.featureId}' and rebuild with 'codepipe queue rebuild --feature ${analysis.featureId} --from-plan'`
+        );
+      } else {
+        analysis.recommendations.push(`   • ${blocker.message}`);
+      }
     }
   }
 
@@ -526,8 +529,17 @@ function generateRecommendations(analysis: ResumeAnalysis): void {
   if (warnings.length > 0 && blockers.length === 0) {
     analysis.recommendations.push('⚠️  Warnings (resume may proceed with caution):');
     for (const warning of warnings) {
-      const fn = warningMessages.get(warning.code ?? '');
-      if (fn) analysis.recommendations.push(fn());
+      if (warning.code === 'ERROR_RATE_LIMIT') {
+        analysis.recommendations.push('   • Wait for rate limit reset before resuming');
+      } else if (warning.code === 'ERROR_NETWORK') {
+        analysis.recommendations.push('   • Check network connectivity before resuming');
+      } else if (warning.code === 'QUEUE_HAS_FAILURES') {
+        analysis.recommendations.push('   • Review failed tasks in queue before resuming');
+      } else if (warning.code === 'QUEUE_VALIDATION_WARNINGS') {
+        analysis.recommendations.push(
+          `   • Inspect queue warnings with 'codepipe queue validate --feature ${analysis.featureId} --verbose'`
+        );
+      }
     }
   }
 
@@ -705,4 +717,100 @@ function getSeverityIcon(severity: DiagnosticSeverity): string {
     case 'info':
       return 'ℹ️ ';
   }
+}
+
+// ============================================================================
+// Queue Integration Helpers
+// ============================================================================
+
+/**
+ * Validate queue snapshot integrity
+ *
+ * @param runDir - Run directory path
+ * @param snapshot - Queue snapshot metadata
+ * @returns True if snapshot is valid
+ */
+export async function validateQueueSnapshot(
+  runDir: string,
+  snapshot: QueueSnapshotMetadata
+): Promise<boolean> {
+  try {
+    const manifest = await readManifest(runDir);
+    const queueDir = path.join(runDir, manifest.queue.queue_dir);
+
+    // Note: Don't check queue file existence here - V2 format may not have queue.jsonl
+    // The snapshot file itself is the source of truth
+
+    // Load raw snapshot file to check format (handles both V1 and V2)
+    const snapshotPath = path.join(queueDir, 'queue_snapshot.json');
+    const content = await fs.readFile(snapshotPath, 'utf-8');
+    const rawSnapshot = JSON.parse(content) as {
+      schemaVersion?: string;
+      schema_version?: string;
+      tasks: { [taskId: string]: unknown };
+      counts?: unknown;
+      dependencyGraph?: Record<string, string[]>;
+      dependency_graph?: Record<string, string[]>;
+      checksum: string;
+      timestamp: string;
+    };
+
+    const taskCount = Object.keys(rawSnapshot.tasks).length;
+    const normalizedStoredTimestamp = new Date(rawSnapshot.timestamp).toISOString();
+    const timestampsMatch = normalizedStoredTimestamp === snapshot.timestamp;
+
+    // Basic validation: task count, checksum, and timestamp must match
+    // This works for both V1 and V2 formats since both have these fields
+    return (
+      taskCount === snapshot.taskCount &&
+      rawSnapshot.checksum === snapshot.checksum &&
+      timestampsMatch
+    );
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Get resumable tasks from queue
+ *
+ * This is a placeholder - actual implementation will use queueStore
+ *
+ * @param runDir - Run directory path
+ * @returns Array of tasks that can be resumed
+ */
+export async function getResumableTasks(runDir: string): Promise<ExecutionTask[]> {
+  const tasks = await loadQueue(runDir);
+  const ready: ExecutionTask[] = [];
+  const seen = new Set<string>();
+
+  const addTask = (task: ExecutionTask): void => {
+    if (!seen.has(task.task_id)) {
+      ready.push(task);
+      seen.add(task.task_id);
+    }
+  };
+
+  // Retry any tasks that were running when the crash occurred
+  for (const [, task] of tasks) {
+    if (task.status === 'running' && areDependenciesCompleted(task, tasks)) {
+      addTask(task);
+    }
+  }
+
+  // Pending tasks are next as long as their dependencies are satisfied
+  for (const [, task] of tasks) {
+    if (task.status === 'pending' && areDependenciesCompleted(task, tasks)) {
+      addTask(task);
+    }
+  }
+
+  // Finally, include retryable failures
+  for (const [, task] of tasks) {
+    if (canRetry(task) && areDependenciesCompleted(task, tasks)) {
+      addTask(task);
+    }
+  }
+
+  return ready;
 }

@@ -264,7 +264,7 @@ If logs are truncated:
 
 ## Related Documentation
 
-- [Execution Telemetry](./execution_telemetry.md)
-- [Rate Limit Reference](./rate_limit_reference.md)
-- [Doctor Reference](./doctor_reference.md)
+- [Execution Telemetry](../../playbooks/execution_telemetry.md)
+- [Rate Limit Reference](../cli/rate_limit_reference.md)
+- [Doctor Reference](../cli/doctor_reference.md)
 - [Architecture: Execution Flow](../architecture/execution_flow.md)

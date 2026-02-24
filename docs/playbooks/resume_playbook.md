@@ -642,7 +642,7 @@ codepipe task retry <feature_id> <task_id>
    ```bash
    cat .codepipe/runs/<feature_id>/run.lock
    ```
-3. If lock is stale (>5 minutes old and process doesn't exist):
+3. If lock is stale (>60 seconds old and process doesn't exist):
    - Lock will auto-clear on next attempt
    - Or manually remove (use with caution):
      ```bash
@@ -809,9 +809,9 @@ cat .codepipe/runs/*/manifest.json | \
 
 ## Related Documentation
 
-- [Run Directory Schema](./run_directory_schema.md)
-- [Data Model Dictionary](./data_model_dictionary.md)
-- [Execution Flow](./execution_flow.md)
+- [Run Directory Schema](../reference/run_directory_schema.md)
+- [Data Model Dictionary](../reference/data_model_dictionary.md)
+- [Execution Flow](../reference/architecture/execution_flow.md)
 - [Validation Playbook](./validation_playbook.md)
 
 ---

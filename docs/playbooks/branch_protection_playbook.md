@@ -585,8 +585,8 @@ Share this documentation with contributors to clarify validation requirements.
 
 - **FR-15**: Status Checks Mandate (functional requirements)
 - **IR-5**: Branch Protection Awareness (integration requirements)
-- **Validation Playbook**: `docs/requirements/validation_playbook.md`
-- **GitHub Branch Protection Guide**: `docs/requirements/github_branch_protection.md`
+- **Validation Playbook**: `docs/playbooks/validation_playbook.md`
+- **GitHub Branch Protection Guide**: `docs/reference/github_branch_protection.md`
 - **Deployment Module**: `.codemachine/artifacts/architecture/01_Blueprint_Foundation.md`
 
 ---

@@ -20,11 +20,11 @@ Autonomous AI-powered feature development pipeline CLI
 
 Full documentation is in [`docs/README.md`](docs/README.md).
 
-| Resource | Link |
-|----------|------|
-| Getting Started | [Init Playbook](docs/ops/init_playbook.md) |
-| CLI Reference | [CLI Reference](docs/ops/cli-reference.md) |
-| Troubleshooting | [Doctor Reference](docs/ops/doctor_reference.md) |
+| Resource        | Link                                                       |
+| --------------- | ---------------------------------------------------------- |
+| Getting Started | [Init Playbook](docs/playbooks/init_playbook.md)           |
+| CLI Reference   | [CLI Reference](docs/reference/cli/cli-reference.md)       |
+| Troubleshooting | [Doctor Reference](docs/reference/cli/doctor_reference.md) |
 
 ## Installation
 
@@ -114,23 +114,23 @@ codepipe start --spec ./specs/new-feature.md
 
 ## Available Commands
 
-| Command | Description |
-|---------|-------------|
-| `codepipe init` | Initialize pipeline in a git repository |
-| `codepipe start` | Start a feature pipeline from prompt, Linear issue, or spec |
-| `codepipe status` | Show pipeline state for a feature |
-| `codepipe doctor` | Run environment diagnostics and readiness checks |
-| `codepipe health` | Quick runtime health check |
-| `codepipe approve <gate>` | Approve or deny pipeline gates (prd, spec, plan, code, pr, deploy) |
-| `codepipe plan` | Display execution plan DAG and dependency graph |
-| `codepipe resume` | Resume a failed or paused pipeline execution |
-| `codepipe validate` | Run validation commands (lint, test, typecheck, build) |
-| `codepipe rate-limits` | Display API rate limit status and telemetry |
-| `codepipe context summarize` | Generate or refresh context summaries |
-| `codepipe research <sub>` | Research task management (create, list) |
-| `codepipe pr <sub>` | PR management (create, status, reviewers, disable-auto-merge) |
+| Command                      | Description                                                        |
+| ---------------------------- | ------------------------------------------------------------------ |
+| `codepipe init`              | Initialize pipeline in a git repository                            |
+| `codepipe start`             | Start a feature pipeline from prompt, Linear issue, or spec        |
+| `codepipe status`            | Show pipeline state for a feature                                  |
+| `codepipe doctor`            | Run environment diagnostics and readiness checks                   |
+| `codepipe health`            | Quick runtime health check                                         |
+| `codepipe approve <gate>`    | Approve or deny pipeline gates (prd, spec, plan, code, pr, deploy) |
+| `codepipe plan`              | Display execution plan DAG and dependency graph                    |
+| `codepipe resume`            | Resume a failed or paused pipeline execution                       |
+| `codepipe validate`          | Run validation commands (lint, test, typecheck, build)             |
+| `codepipe rate-limits`       | Display API rate limit status and telemetry                        |
+| `codepipe context summarize` | Generate or refresh context summaries                              |
+| `codepipe research <sub>`    | Research task management (create, list)                            |
+| `codepipe pr <sub>`          | PR management (create, status, reviewers, disable-auto-merge)      |
 
-All commands support `--json` for machine-readable output. For full options and examples, see the [CLI Reference](docs/ops/cli-reference.md).
+All commands support `--json` for machine-readable output. For full options and examples, see the [CLI Reference](docs/reference/cli/cli-reference.md).
 
 ## Development
 
@@ -172,7 +172,7 @@ npm run smoke:help     # Test --help
 npm run smoke:init     # Test init help
 ```
 
-For fixture updates and integration testing, see [Integration Testing](docs/ops/integration_testing.md).
+For fixture updates and integration testing, see [Integration Testing](docs/reference/integration_testing.md).
 
 ## Project Structure
 
@@ -210,19 +210,19 @@ All checks run on Node v24.x.
 
 The pipeline operates on a state machine model with phases: Initialize, Specify, Plan, Implement, Review, Deploy. Each phase is idempotent and resumable. Artifacts are stored in `.codepipe/runs/<feature-id>/`.
 
-See [Execution Flow](docs/architecture/execution_flow.md) for details.
+See [Execution Flow](docs/reference/architecture/execution_flow.md) for details.
 
 ## Execution Engine
 
 The pipeline supports multiple AI execution engines via the CodeMachine CLI adapter.
 
-| Engine | Description |
-|--------|-------------|
+| Engine   | Description                |
+| -------- | -------------------------- |
 | `claude` | Anthropic Claude (default) |
-| `codex` | OpenAI Codex |
-| `openai` | OpenAI |
+| `codex`  | OpenAI Codex               |
+| `openai` | OpenAI                     |
 
-For configuration and setup, see [CodeMachine Adapter Guide](docs/ops/codemachine_adapter_guide.md).
+For configuration and setup, see [CLI Adapter Implementation Guide](docs/research/cli-adapter-implementation-guide.md).
 
 ## Configuration
 
@@ -236,7 +236,7 @@ export LINEAR_API_KEY=lin_api_xxxxx
 export AGENT_ENDPOINT=https://agent.example.com/v1
 ```
 
-See [RepoConfig Schema](docs/requirements/RepoConfig_schema.md) for details. Full schema: `config/schemas/repo_config.schema.json`. Sample: `examples/sample_repo_config/`.
+See [RepoConfig Schema](docs/reference/config/RepoConfig_schema.md) for details. Full schema: `config/schemas/repo_config.schema.json`. Sample: `examples/sample_repo_config/`.
 
 ## License
 

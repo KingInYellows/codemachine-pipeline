@@ -3,7 +3,7 @@
 **Version:** 1.0.0
 **Last Updated:** 2025-12-17
 **Owners:** Observability Team
-**Related Documents:** [Rate Limit Reference](../ops/rate_limit_reference.md), [Operational Architecture](../../.codemachine/artifacts/architecture/04_Operational_Architecture.md)
+**Related Documents:** [Rate Limit Reference](./cli/rate_limit_reference.md)
 
 ## Overview
 
@@ -183,7 +183,7 @@ Metrics are collected via the `RateLimitReporter.exportMetrics()` method, typica
 
 1. **CLI commands** (`codepipe rate-limits`, `codepipe status`)
 2. **Workflow orchestrator** (periodic snapshots during execution)
-3. **Cron jobs** (`codepipe observe` for multi-run aggregation)
+3. **Periodic refresh** (`codepipe status` for current run metrics)
 
 **Example Integration:**
 
@@ -522,7 +522,7 @@ Warnings:
 
 ### 3. Cross-Run Aggregation
 
-**Recommendation:** Use `codepipe observe` to aggregate rate limit trends across multiple runs.
+**Recommendation:** Periodically run `codepipe rate-limits --json` across feature runs to aggregate rate limit trends.
 
 **Rationale:** Identifies systemic issues (e.g., shared tokens across CI jobs) vs. one-off spikes.
 
@@ -562,8 +562,7 @@ Warnings:
 
 ## References
 
-- **Rate Limit Reference:** [docs/ops/rate_limit_reference.md](../ops/rate_limit_reference.md)
-- **Operational Playbook:** [.codemachine/artifacts/architecture/04_Operational_Architecture.md](../../.codemachine/artifacts/architecture/04_Operational_Architecture.md#3-18-rate-limit-playbook)
+- **Rate Limit Reference:** [docs/reference/cli/rate_limit_reference.md](./cli/rate_limit_reference.md)
 - **Ledger Implementation:** [src/telemetry/rateLimitLedger.ts](../../src/telemetry/rateLimitLedger.ts)
 - **Reporter Implementation:** [src/telemetry/rateLimitReporter.ts](../../src/telemetry/rateLimitReporter.ts)
 - **CLI Command:** [src/cli/commands/rate-limits.ts](../../src/cli/commands/rate-limits.ts)

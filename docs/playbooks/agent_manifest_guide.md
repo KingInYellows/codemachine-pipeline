@@ -45,7 +45,7 @@ Manifests are stored as JSON files under `.codepipe/agents/` and are loaded at p
 ## Manifest Schema Reference
 
 Agent manifests follow JSON Schema Draft 7. The complete schema is available at:
-**`docs/requirements/agent_manifest_schema.json`**
+**`docs/reference/agent_manifest_schema.json`**
 
 ### Required Fields
 
@@ -646,7 +646,7 @@ If `.codepipe/agents/` is empty or all manifests invalid:
   ```
   ERROR: No valid agent manifests found.
   Please add manifests to .codepipe/agents/
-  See docs/ops/agent_manifest_guide.md for instructions.
+  See docs/playbooks/agent_manifest_guide.md for instructions.
   ```
 
 ### 3. Manifest Change During Resume
@@ -880,7 +880,7 @@ git commit -m "feat: add Azure OpenAI provider"
 
 ## Additional Resources
 
-- **JSON Schema Spec:** `docs/requirements/agent_manifest_schema.json`
+- **JSON Schema Spec:** `docs/reference/agent_manifest_schema.json`
 - **Manifest Loader Source:** `src/adapters/agents/manifestLoader.ts`
 - **Cost Tracker Integration:** `src/telemetry/costTracker.ts`
 - **ADR-1 (Agent Execution):** Referenced in planning context

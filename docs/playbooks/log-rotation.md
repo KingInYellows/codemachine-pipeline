@@ -312,15 +312,17 @@ grep "Log rotation" \
 
 **Resolution:**
 
+> **Note:** The `CODEPIPE_LOG_ROTATION_*` environment variable overrides are not yet implemented. Set `log_rotation_keep` and `log_rotation_compress` in `.codepipe/config.json` under `execution` instead.
+
 ```bash
 # Step 1: Identify large log directories
 du -sh .codepipe/runs/*/logs/ | sort -h
 
-# Step 2: Reduce retention
+# Step 2: Reduce retention (set in .codepipe/config.json: execution.log_rotation_keep = 1)
 export CODEPIPE_LOG_ROTATION_KEEP=1
 codepipe resume
 
-# Step 3: Enable compression
+# Step 3: Enable compression (set in .codepipe/config.json: execution.log_rotation_compress = true)
 export CODEPIPE_LOG_ROTATION_COMPRESS=true
 codepipe resume
 
@@ -520,5 +522,5 @@ export CODEPIPE_LOG_ROTATION_COMPRESS=true
 ### Related Documentation
 
 - [Execution Telemetry](./execution_telemetry.md) - Logging and metrics
-- [Doctor Reference](./doctor_reference.md) - Environment validation
+- [Doctor Reference](../reference/cli/doctor_reference.md) - Environment validation
 - [Observability Baseline](./observability_baseline.md) - Monitoring best practices

@@ -34,7 +34,12 @@ jobs:
           cache: 'npm'
 
       - name: Install markdown-link-check
-        run: npm install -g markdown-link-check
+        run: |
+          set -euo pipefail
+          export NPM_CONFIG_PREFIX="$RUNNER_TEMP/npm-global"
+          mkdir -p "$NPM_CONFIG_PREFIX/bin"
+          echo "$NPM_CONFIG_PREFIX/bin" >> "$GITHUB_PATH"
+          npm install -g markdown-link-check
 
       - name: Check Markdown Links
         run: |
@@ -127,7 +132,12 @@ jobs:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.2.2
 
       - name: Install markdown-spellcheck
-        run: npm install -g markdown-spellcheck
+        run: |
+          set -euo pipefail
+          export NPM_CONFIG_PREFIX="$RUNNER_TEMP/npm-global"
+          mkdir -p "$NPM_CONFIG_PREFIX/bin"
+          echo "$NPM_CONFIG_PREFIX/bin" >> "$GITHUB_PATH"
+          npm install -g markdown-spellcheck
 
       - name: Run Spell Check
         run: |

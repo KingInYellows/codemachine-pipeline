@@ -438,5 +438,5 @@ If you encounter issues not covered in this playbook:
 
 1. Check the [Troubleshooting](#troubleshooting) section
 2. Review the [Init Playbook](./init_playbook.md) for context setup issues
-3. Consult the architecture docs in `docs/architecture/`
+3. Consult the architecture docs in `docs/reference/architecture/`
 4. File an issue in the project tracker

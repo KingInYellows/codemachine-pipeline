@@ -106,7 +106,7 @@ This guide provides solutions for common issues encountered when operating the A
    ```bash
    ls -la .codepipe/runs/<feature_id>/run.lock
 
-   # If lock is older than 5 minutes and no process exists:
+   # If lock is older than 60 seconds and no process exists:
    rm .codepipe/runs/<feature_id>/run.lock
    ```
 
@@ -847,11 +847,11 @@ When opening an issue, include:
 
 ### Additional Resources
 
-- [Doctor Reference](./doctor_reference.md) - Environment diagnostics
-- [Rate Limit Reference](./rate_limit_reference.md) - API rate limit handling
-- [Resume Playbook](../requirements/resume_playbook.md) - Crash recovery procedures
-- [Queue V2 Operations](../operations/queue-v2-operations.md) - Queue architecture and maintenance
-- [CLI Surface](../requirements/cli_surface.md) - Command reference
+- [Doctor Reference](../reference/cli/doctor_reference.md) - Environment diagnostics
+- [Rate Limit Reference](../reference/cli/rate_limit_reference.md) - API rate limit handling
+- [Resume Playbook](./resume_playbook.md) - Crash recovery procedures
+- [Queue V2 Operations](../reference/queue-v2-operations.md) - Queue architecture and maintenance
+- [CLI Surface](../reference/cli/cli_surface.md) - Command reference
 
 ---
 

@@ -136,7 +136,7 @@ The GitHub adapter integrates with the `HttpClient` rate limit tracking:
 - **Backoff:** Exponential with jitter (1s → 2s → 4s)
 - **Retry-After:** Respects `retry-after` header when present
 
-See `docs/ops/rate_limit_reference.md` for detailed rate limit behavior.
+See `docs/reference/cli/rate_limit_reference.md` for detailed rate limit behavior.
 
 ## Operations
 
@@ -755,7 +755,7 @@ console.log('Merge blocked:', reasons);
 
 - **Blueprint:** `.codemachine/artifacts/architecture/01_Blueprint_Foundation.md` (Section 2.1: GitHub Adapter)
 - **Behavioral Contracts:** `.codemachine/artifacts/architecture/03_Behavior_and_Communication.md` (GitHub HTTP Contract)
-- **Rate Limit Reference:** `docs/ops/rate_limit_reference.md`
+- **Rate Limit Reference:** `docs/reference/cli/rate_limit_reference.md`
 - **HTTP Client:** `src/adapters/http/client.ts`
 - **OpenAPI Spec:** `api/codepipe.yaml`
 - **GitHub API Docs:** https://docs.github.com/en/rest

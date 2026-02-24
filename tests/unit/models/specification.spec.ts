@@ -365,14 +365,14 @@ describe('Specification model', () => {
       expect(output).toContain('Specification validation failed:');
       expect(output).toContain('title: String must contain at least 1 character(s)');
       expect(output).toContain('schema_version: Invalid semver format');
-      expect(output).toContain('docs/requirements/data_model_dictionary.md');
+      expect(output).toContain('docs/reference/data_model_dictionary.md');
     });
 
     it('should handle an empty error array', () => {
       const output = formatSpecificationValidationErrors([]);
 
       expect(output).toContain('Specification validation failed:');
-      expect(output).toContain('docs/requirements/data_model_dictionary.md');
+      expect(output).toContain('docs/reference/data_model_dictionary.md');
     });
 
     it('should format errors returned from parseSpecification', () => {

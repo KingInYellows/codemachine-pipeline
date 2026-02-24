@@ -458,10 +458,11 @@ Add optional OpenTelemetry Protocol (OTLP) export to observability backends (Jae
 
 ### Structured Log Streaming
 
-Implement real-time log streaming via WebSocket for remote monitoring:
+Implement real-time log streaming via WebSocket for remote monitoring (not yet implemented):
 
 ```bash
-codepipe observe --follow
+# Planned future command (not yet implemented)
+# codepipe observe --follow
 ```
 
 ### Cost Tracking
@@ -498,9 +499,8 @@ Run directories contain complete telemetry bundles (logs, metrics, traces) for p
 
 ## References
 
-- **Run Directory Schema**: `docs/requirements/run_directory_schema.md`
+- **Run Directory Schema**: `docs/reference/run_directory_schema.md`
 - **Logger Implementation**: `src/telemetry/logger.ts`
 - **Metrics Implementation**: `src/telemetry/metrics.ts`
 - **Trace Implementation**: `src/telemetry/traces.ts`
 - **Rate Limit Ledger**: `src/telemetry/rateLimitLedger.ts`
-- **Non-Functional Requirements**: `docs/requirements/non_functional.md` (NFR-6, NFR-9, NFR-10)
