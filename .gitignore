@@ -54,6 +54,7 @@ ISSUE_RESOLUTION_PLAN.md
 .codemachine/
 .serena/
 .claude/
+.claude-flow/
 .mcp.json
 .deps/
 CLAUDE.md

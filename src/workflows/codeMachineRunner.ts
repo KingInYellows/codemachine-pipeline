@@ -330,12 +330,13 @@ export async function runCodeMachine(
         task_id: options.taskId,
         error,
       });
+    } else {
+      options.logger?.info('CodeMachine execution completed', {
+        task_id: options.taskId,
+        exit_code: result.exitCode,
+        duration_ms: result.durationMs,
+      });
     }
-    options.logger?.info('CodeMachine execution finished', {
-      task_id: options.taskId,
-      exit_code: result.exitCode,
-      duration_ms: result.durationMs,
-    });
   }
 
   return {
