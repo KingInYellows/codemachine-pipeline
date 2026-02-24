@@ -63,4 +63,4 @@ jobs:
         run: |
           sleep 5
           PACKAGE_VERSION=$(node -p "require('./package.json').version")
-          npm view @kinginyellows/codemachine-pipeline@$PACKAGE_VERSION version || echo "Package propagation pending"
+          npm view "@kinginyellows/codemachine-pipeline@${PACKAGE_VERSION}" version || echo "Package propagation pending"

@@ -30,6 +30,7 @@ export enum WriteActionStatus {
   PENDING = 'pending',
   IN_PROGRESS = 'in_progress',
   COMPLETED = 'completed',
+  /** Failed after retries */
   FAILED = 'failed',
   /** Skipped due to deduplication */
   SKIPPED = 'skipped',

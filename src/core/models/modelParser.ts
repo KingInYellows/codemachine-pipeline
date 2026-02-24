@@ -29,11 +29,11 @@ export type ModelParseResult<T> = ModelParseSuccess<T> | ModelParseFailure;
  *   createModelParser<Feature>(FeatureSchema);
  */
 export function createModelParser<T>(schema: ZodType<T>): {
-  parse(json: unknown): ModelParseResult<T>;
-  serialize(obj: T, pretty?: boolean): string;
+  parse: (json: unknown) => ModelParseResult<T>;
+  serialize: (obj: T, pretty?: boolean) => string;
 } {
   return {
-    parse(json: unknown): ModelParseResult<T> {
+    parse: (json: unknown): ModelParseResult<T> => {
       const result = schema.safeParse(json);
       if (result.success) {
         return { success: true, data: result.data };
@@ -46,7 +46,7 @@ export function createModelParser<T>(schema: ZodType<T>): {
         })),
       };
     },
-    serialize(obj: T, pretty = true): string {
+    serialize: (obj: T, pretty = true): string => {
       return JSON.stringify(obj, null, pretty ? 2 : 0);
     },
   };

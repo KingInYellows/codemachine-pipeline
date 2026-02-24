@@ -222,7 +222,7 @@ The pipeline supports multiple AI execution engines via the CodeMachine CLI adap
 | `codex`  | OpenAI Codex               |
 | `openai` | OpenAI                     |
 
-For configuration and setup, see [CLI Adapter Implementation Guide](docs/research/cli-adapter-implementation-guide.md).
+For configuration and setup, see [CodeMachine Adapter Guide](docs/reference/config/codemachine_adapter_guide.md).
 
 ## Configuration
 

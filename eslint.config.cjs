@@ -21,6 +21,7 @@ module.exports = [
       'test/**',
       'vitest.config.ts',
       '.codemachine/**',
+      'examples/**/*.ts',
       'docs/research/**',
       'docs/brainstorms/**',
     ],
