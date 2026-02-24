@@ -138,7 +138,11 @@ export async function validateCliAvailability(
 
   return {
     available: false,
-    error: `CLI returned exit code ${result.exitCode}: ${result.stderr || result.stdout}`.trim(),
+    error:
+      result.stderr.startsWith('Execution error:') ||
+      result.stderr.startsWith('Failed to spawn process:')
+        ? `Failed to execute CLI: ${result.stderr}`.trim()
+        : `CLI returned exit code ${result.exitCode}: ${result.stderr || result.stdout}`.trim(),
   };
 }
 
@@ -317,7 +321,17 @@ export async function runCodeMachine(
       killed: result.killed,
     });
   } else {
-    options.logger?.info('CodeMachine execution completed', {
+    if (result.exitCode !== EXIT_CODES.SUCCESS) {
+      const rawError = result.stderr || result.stdout || 'Unknown error';
+      const error = rawError
+        .replace(/^Execution error:\s*/u, '')
+        .replace(/^Failed to spawn process:\s*/u, '');
+      options.logger?.error('CodeMachine execution error', {
+        task_id: options.taskId,
+        error,
+      });
+    }
+    options.logger?.info('CodeMachine execution finished', {
       task_id: options.taskId,
       exit_code: result.exitCode,
       duration_ms: result.durationMs,
@@ -330,7 +344,9 @@ export async function runCodeMachine(
     stdout: result.stdout,
     stderr: result.timedOut
       ? `${result.stderr}\n\nExecution timed out after ${options.timeoutMs}ms`
-      : result.stderr,
+      : result.stderr.startsWith('Failed to spawn process:')
+        ? result.stderr.replace('Failed to spawn process:', 'Failed to spawn CodeMachine CLI:')
+        : result.stderr,
     durationMs: result.durationMs,
     timedOut: result.timedOut,
     killed: result.killed,

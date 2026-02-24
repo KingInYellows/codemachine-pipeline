@@ -207,7 +207,6 @@ describe('CodeMachineRunner', () => {
         ['--version'],
         expect.objectContaining({
           shell: false,
-          timeout: 5000,
         })
       );
     });
@@ -1472,7 +1471,7 @@ describe('CodeMachineRunner', () => {
       await promise;
 
       expect(logger.info).toHaveBeenCalledWith(
-        'CodeMachine execution completed',
+        'CodeMachine execution finished',
         expect.objectContaining({
           task_id: 'test-task',
           exit_code: 0,
