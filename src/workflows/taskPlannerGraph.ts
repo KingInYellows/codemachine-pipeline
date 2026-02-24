@@ -234,6 +234,10 @@ export function createPlanSummary(
   planPath: string,
   diagnostics?: PlanDiagnostics
 ): PlanSummary {
+  const dagMetadata = plan.dag_metadata ?? {
+    generated_at: plan.updated_at ?? plan.created_at ?? new Date().toISOString(),
+  };
+  const lastUpdated = plan.updated_at ?? plan.created_at ?? new Date().toISOString();
   const entryTaskIds = getEntryTasks(plan);
   const blockedDetails = plan.tasks
     .filter((task) => task.dependencies.length > 0)
@@ -250,9 +254,9 @@ export function createPlanSummary(
 
   const summaryDiagnostics = diagnostics?.blockers.length ? diagnostics.blockers : defaultBlockers;
   const dagSummary: PlanSummary['dag'] = {
-    generatedAt: plan.dag_metadata.generated_at,
-    ...(plan.dag_metadata.parallel_paths !== undefined
-      ? { parallelPaths: plan.dag_metadata.parallel_paths }
+    generatedAt: dagMetadata.generated_at,
+    ...(dagMetadata.parallel_paths !== undefined
+      ? { parallelPaths: dagMetadata.parallel_paths }
       : {}),
     ...(typeof plan.metadata?.critical_path_depth === 'number'
       ? { criticalPathDepth: plan.metadata.critical_path_depth }
@@ -272,7 +276,7 @@ export function createPlanSummary(
     },
     dag: dagSummary,
     checksum: plan.checksum,
-    lastUpdated: plan.updated_at,
+    lastUpdated,
     frReferences: ['FR-12', 'FR-13', 'FR-14'],
   };
 }

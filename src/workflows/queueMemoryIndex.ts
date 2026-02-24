@@ -52,7 +52,6 @@ const STATUS_TO_COUNT_FIELD: Record<ExecutionTaskStatus, keyof Omit<QueueCounts,
  * 2. Read WAL operations after snapshot sequence
  * 3. Replay operations to bring index up to date
  *
- * @param queueDir - Path to queue directory containing snapshot and WAL
  * @returns Hydrated index state
  */
 export async function hydrateIndex(queueDir: string): Promise<QueueIndexState> {
@@ -103,8 +102,6 @@ export async function hydrateIndex(queueDir: string): Promise<QueueIndexState> {
  * - update: Modify existing task, adjust counts if status changed
  * - delete: Remove task, decrement appropriate count
  *
- * @param state - Index state to modify
- * @param op - Operation to apply
  */
 export function applyOperation(state: QueueIndexState, op: QueueOperation): void {
   // Skip if operation is older than last applied
@@ -177,8 +174,6 @@ export function applyOperation(state: QueueIndexState, op: QueueOperation): void
 /**
  * Get a task by ID (O(1) lookup).
  *
- * @param state - Index state
- * @param taskId - Task identifier
  * @returns Task data if found, undefined otherwise
  */
 export function getTask(state: QueueIndexState, taskId: string): ExecutionTaskData | undefined {
@@ -189,8 +184,6 @@ export function getTask(state: QueueIndexState, taskId: string): ExecutionTaskDa
  * Get all tasks matching a status filter.
  * O(n) where n is total task count.
  *
- * @param state - Index state
- * @param status - Status to filter by
  * @returns Array of matching tasks
  */
 export function getTasksByStatus(
@@ -211,7 +204,6 @@ export function getTasksByStatus(
 /**
  * Get current counts (O(1)).
  *
- * @param state - Index state
  * @returns Copy of current queue counts
  */
 export function getCounts(state: QueueIndexState): QueueCounts {
@@ -225,9 +217,6 @@ export function getCounts(state: QueueIndexState): QueueCounts {
 /**
  * Check if all dependencies of a task are completed.
  *
- * @param state - Index state
- * @param taskId - Task to check dependencies for
- * @param dependencyGraph - Mapping of taskId to dependency taskIds
  * @returns True if all dependencies are completed
  */
 export function areDependenciesCompleted(
@@ -259,8 +248,6 @@ export function areDependenciesCompleted(
  * Get next ready task (first pending task with completed dependencies).
  * Useful for sequential task execution.
  *
- * @param state - Index state
- * @param dependencyGraph - Mapping of taskId to dependency taskIds
  * @returns First ready task or null if none available
  */
 export function getNextReadyTask(
@@ -282,8 +269,6 @@ export function getNextReadyTask(
  * Get all ready tasks (for parallel execution).
  * Returns all pending tasks whose dependencies are completed.
  *
- * @param state - Index state
- * @param dependencyGraph - Mapping of taskId to dependency taskIds
  * @returns Array of ready tasks
  */
 export function getReadyTasks(
@@ -312,9 +297,6 @@ export function getReadyTasks(
  * This is a direct in-memory update, not persisted to WAL.
  * Caller is responsible for WAL persistence.
  *
- * @param state - Index state to modify
- * @param taskId - Task identifier
- * @param updates - Partial task data to merge
  */
 export function updateTask(
   state: QueueIndexState,
@@ -357,7 +339,6 @@ export function updateTask(
  * Iterates all tasks to compute accurate counts.
  * Useful for detecting count drift or corruption.
  *
- * @param state - Index state
  * @returns Freshly calculated counts
  */
 export function recalculateCounts(state: QueueIndexState): QueueCounts {
@@ -376,7 +357,6 @@ export function recalculateCounts(state: QueueIndexState): QueueCounts {
  * Validate that stored counts match actual task distribution.
  * Returns true if counts are accurate, false if drift detected.
  *
- * @param state - Index state to validate
  * @returns True if counts are valid
  */
 export function validateCounts(state: QueueIndexState): boolean {
@@ -397,7 +377,6 @@ export function validateCounts(state: QueueIndexState): boolean {
  * Repair counts by recalculating from tasks.
  * Use when validation detects drift.
  *
- * @param state - Index state to repair
  */
 export function repairCounts(state: QueueIndexState): void {
   state.counts = recalculateCounts(state);
@@ -411,7 +390,6 @@ export function repairCounts(state: QueueIndexState): void {
 /**
  * Mark index as dirty (needs snapshot).
  *
- * @param state - Index state to mark dirty
  */
 export function markDirty(state: QueueIndexState): void {
   state.dirty = true;
@@ -420,7 +398,6 @@ export function markDirty(state: QueueIndexState): void {
 /**
  * Check if index needs snapshot.
  *
- * @param state - Index state to check
  * @returns True if index has uncommitted changes
  */
 export function isDirty(state: QueueIndexState): boolean {
@@ -430,8 +407,6 @@ export function isDirty(state: QueueIndexState): boolean {
 /**
  * Mark index as clean (after snapshot).
  *
- * @param state - Index state to mark clean
- * @param snapshotSeq - Sequence number of the snapshot
  */
 export function markClean(state: QueueIndexState, snapshotSeq: number): void {
   state.dirty = false;
@@ -446,8 +421,6 @@ export function markClean(state: QueueIndexState, snapshotSeq: number): void {
  * Add a new task to the index.
  * Does not persist to WAL - caller handles persistence.
  *
- * @param state - Index state
- * @param task - Task to add
  */
 export function addTask(state: QueueIndexState, task: ExecutionTaskData): void {
   // Don't add if already exists
@@ -466,8 +439,6 @@ export function addTask(state: QueueIndexState, task: ExecutionTaskData): void {
  * Remove a task from the index.
  * Does not persist to WAL - caller handles persistence.
  *
- * @param state - Index state
- * @param taskId - Task to remove
  */
 export function removeTask(state: QueueIndexState, taskId: string): void {
   const task = state.tasks.get(taskId);
@@ -487,7 +458,6 @@ export function removeTask(state: QueueIndexState, taskId: string): void {
  * Clear all tasks from the index.
  * Resets to empty state.
  *
- * @param state - Index state to clear
  */
 export function clearIndex(state: QueueIndexState): void {
   state.tasks.clear();
@@ -504,7 +474,6 @@ export function clearIndex(state: QueueIndexState): void {
 /**
  * Export index state as plain objects for snapshot creation.
  *
- * @param state - Index state
  * @returns Plain object representation suitable for JSON serialization
  */
 export function exportIndexState(state: QueueIndexState): {
@@ -529,7 +498,6 @@ export function exportIndexState(state: QueueIndexState): {
  * Get the number of operations since last snapshot.
  * Used for compaction threshold checks.
  *
- * @param state - Index state
  * @returns Number of operations since last snapshot
  */
 export function getOperationsSinceSnapshot(state: QueueIndexState): number {
