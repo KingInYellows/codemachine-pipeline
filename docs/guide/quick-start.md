@@ -21,7 +21,7 @@ Before starting, ensure you have:
 Install globally via npm:
 
 ```bash
-npm install -g codemachine-pipeline
+npm install -g @kinginyellows/codemachine-pipeline
 ```
 
 Verify the installation:
@@ -146,7 +146,7 @@ services:
       - .:/app
     command: >
       sh -c "apk add --no-cache git &&
-             npm install -g codemachine-pipeline &&
+             npm install -g @kinginyellows/codemachine-pipeline &&
              codepipe init --yes &&
              codepipe status"
 ```
@@ -239,10 +239,10 @@ export AGENT_ENDPOINT="http://localhost:8080/v1"
 
 ## Next Steps
 
-- [Init Playbook](ops/init_playbook.md) - Detailed initialization options
-- [Doctor Reference](ops/doctor_reference.md) - Environment diagnostics
-- [CLI Reference](ops/cli-reference.md) - Full command reference
-- [RepoConfig Schema](requirements/RepoConfig_schema.md) - Configuration options
+- [Init Playbook](../playbooks/init_playbook.md) - Detailed initialization options
+- [Doctor Reference](../reference/cli/doctor_reference.md) - Environment diagnostics
+- [CLI Reference](../reference/cli/cli-reference.md) - Full command reference
+- [RepoConfig Schema](../reference/config/RepoConfig_schema.md) - Configuration options
 
 ---
 

@@ -407,10 +407,9 @@ Result:
 
 **Sources**:
 
-- `src/core/config/RepoConfig.ts:527-536` - Override logic and credential indirection implementation
+- `src/core/config/RepoConfig.ts:527-536` - Override logic
 - `src/cli/pr/shared.ts:168` - GitHub token loading (shared PR utilities)
-
-**Note**: `src/cli/commands/start.ts:819` directly reads `process.env.LINEAR_API_KEY` (hardcoded env var name) and does not use the `config.linear.api_key_env_var` indirection pattern. This is a separate code path that bypasses the indirection mechanism documented above.
+- `src/cli/commands/start.ts:819` - Linear key loading
 
 **Documentation Impact**: Must explain the override pattern clearly with diagrams
 
@@ -594,8 +593,6 @@ codepipe doctor
 - `docs/archive/announcements/v1.0.0-release.md:126-132` - Release announcement
 - `docs/reference/config/config_migrations.md` - Config migration guide (queue format NOT covered)
 
-**Source Accuracy Note**: `CHANGELOG.md:77` claims "Automatic V1→V2 migration with integrity validation," but the actual implementation (`queueCache.ts:78-121`) throws an error instead of migrating. The CHANGELOG entry is inaccurate and should be corrected in a future PR.
-
 **Documentation Impact**:
 
 - Must clearly warn users: "V1 queues are UNSUPPORTED and will cause errors"
@@ -757,6 +754,14 @@ With all critical questions answered, Phase 2 (Content Audit) can proceed with c
 - Plan content rewrites based on verified architecture
 
 ## References
+
+### Memory Storage
+
+All research findings stored in claude-flow memory system:
+
+- Namespace: `docs-questions`
+- Keys: `q1` through `q15`
+- Retrievable via: `npx @claude-flow/cli@latest memory retrieve --key "q<N>" --namespace "docs-questions"`
 
 ### Source Code References
 

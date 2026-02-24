@@ -388,6 +388,6 @@ export CODEPIPE_QUEUE_SNAPSHOT_KEEP=1
 
 ### Related Documentation
 
-- [Execution Telemetry](./execution_telemetry.md) - Metrics and observability
-- [Resume Playbook](./patch_playbook.md) - Recovery procedures
+- [Execution Telemetry](../playbooks/execution_telemetry.md) - Metrics and observability
+- [Resume Playbook](../playbooks/patch_playbook.md) - Recovery procedures
 - [Integration Testing](./integration_testing.md) - Queue validation tests

@@ -539,7 +539,7 @@ All PR commands use standardized exit codes:
 
 - [PR Automation Sequence Diagram](../diagrams/pr_automation_sequence.mmd) - Visual workflow
 - [GitHub Endpoints Reference](./github_endpoints.md) - API specifications
-- [Approval Playbook](../ops/approval_playbook.md) - Governance workflow
+- [Approval Playbook](../playbooks/approval_playbook.md) - Governance workflow
 - [ADR-3: Integration Layer](../adr/003-integration-layer.md) - Design decisions
 
 ---

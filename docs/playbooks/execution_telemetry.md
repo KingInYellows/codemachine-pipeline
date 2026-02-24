@@ -717,7 +717,7 @@ executionMetrics.recordTaskLifecycle(
 
 ## References
 
-- **Observability Baseline**: [docs/ops/observability_baseline.md](./observability_baseline.md)
+- **Observability Baseline**: [docs/playbooks/observability_baseline.md](./observability_baseline.md)
 - **Structured Logger**: [src/telemetry/logger.ts](../../src/telemetry/logger.ts)
 - **Metrics Collector**: [src/telemetry/metrics.ts](../../src/telemetry/metrics.ts)
 - **Cost Tracker**: [src/telemetry/costTracker.ts](../../src/telemetry/costTracker.ts)

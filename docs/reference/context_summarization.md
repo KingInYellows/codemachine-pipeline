@@ -604,6 +604,6 @@ codepipe context estimate --dry-run
 - **Implementation**: `src/workflows/contextSummarizer.ts`
 - **Cost Tracking**: `src/telemetry/costTracker.ts`
 - **Context Aggregator**: `src/workflows/contextAggregator.ts`
-- **Data Model**: `docs/requirements/data_model_dictionary.md` (ContextDocument)
-- **Observability**: `docs/ops/observability_baseline.md`
+- **Data Model**: `docs/reference/data_model_dictionary.md` (ContextDocument)
+- **Observability**: `docs/playbooks/observability_baseline.md`
 - **Redaction**: `src/telemetry/logger.ts` (RedactionEngine)

@@ -247,8 +247,7 @@ The following scenarios are **not yet covered** and require manual testing or li
 
 For detailed information on rate-limit headers, retry policies, and cooldown logic, see:
 
-- [Rate Limit Reference](./rate_limit_reference.md)
-- [HTTP Client Architecture](../architecture/04_Operational_Architecture.md#3-4-http-clients-and-adapters)
+- [Rate Limit Reference](./cli/rate_limit_reference.md)
 
 ### GitHub Rate Limit Headers
 
@@ -441,9 +440,7 @@ git add tests/fixtures/
 ## Related Documentation
 
 - [Smoke Test Guide](./smoke_test_guide.md)
-- [Rate Limit Reference](./rate_limit_reference.md)
-- [HTTP Client Architecture](../architecture/04_Operational_Architecture.md)
-- [Verification Testing Levels](../../plan/03_Verification_and_Glossary.md#verification-testing-levels)
+- [Rate Limit Reference](./cli/rate_limit_reference.md)
 
 ---
 
@@ -453,5 +450,5 @@ For questions or issues with the integration test suite:
 
 1. Review this guide and the test suite code
 2. Check CI logs for failure details
-3. Consult [rate_limit_reference.md](./rate_limit_reference.md) for rate-limit behavior
+3. Consult [rate_limit_reference.md](./cli/rate_limit_reference.md) for rate-limit behavior
 4. File issues in the project tracker with `testing` label

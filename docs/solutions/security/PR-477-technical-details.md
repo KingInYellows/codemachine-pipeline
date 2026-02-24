@@ -498,11 +498,11 @@ Example: lin_api_YOUR_KEY_HERE
 curl -s https://api.linear.app/graphql/docs | grep -i "api.*key"
 
 # 2. Test the regex pattern
-echo "lin_api_YOUR_KEY_HERE" | \
+echo "lin_api_EXAMPLE_REPLACE_WITH_ACTUAL_KEY_12345678" | \
   grep -E "lin_api_[A-Za-z0-9]{40}"
 
 # 3. Compare length
-echo "lin_api_YOUR_KEY_HERE" | \
+echo "lin_api_EXAMPLE_REPLACE_WITH_ACTUAL_KEY_12345678" | \
   cut -d_ -f3 | wc -c  # Shows actual character count
 ```
 

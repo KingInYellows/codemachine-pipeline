@@ -79,9 +79,9 @@ codepipe research list [options]
 
 **Options:**
 
-- `--status <status>`: Filter by status (`pending`, `in_progress`, `completed`, `failed`, `cached`)
+- `--status <status>`: Filter by status (`pending`, `in_progress`, `completed`, `failed`, `cached`) — repeatable flag
 - `--stale`: Show only tasks with stale cached results
-- `--limit <n>`: Limit output to n tasks
+- `--limit <n>`: Limit output to n tasks (integer)
 - `--json`: Output as JSON for programmatic consumption
 
 **Example:**
@@ -143,54 +143,7 @@ Total: 3 tasks (2 pending, 1 completed)
 }
 ```
 
-### 3.2 Show Task Details
-
-**Command:**
-
-```bash
-codepipe research show <task-id> [options]
-```
-
-**Options:**
-
-- `--json`: Output as JSON
-
-**Example:**
-
-```bash
-codepipe research show RT-123456-xyz
-```
-
-**Output:**
-
-```
-Research Task: RT-123456-xyz
-Title: Verify database schema constraints
-Status: completed
-Feature: feat-abc123
-
-Objectives:
-  1. What are the foreign key constraints on the users table?
-  2. Are there any unique indexes that might conflict?
-
-Sources:
-  - [codebase] db/schema.sql
-  - [codebase] migrations/20231215_add_users.sql
-  - [documentation] docs/database.md
-
-Results:
-  Summary: The users table has FK constraints to organizations(id) and
-           roles(id). Unique index exists on (email, organization_id).
-
-  Confidence: 0.85
-  Sources Consulted: 3
-  Generated: 2025-12-15T10:35:00Z
-
-Cache Key: cache-key-example
-Freshness: max_age_hours=24, force_fresh=false
-```
-
-### 3.3 Create Research Task (Manual)
+### 3.2 Create Research Task (Manual)
 
 **Command:**
 
@@ -228,26 +181,8 @@ Created research task: RT-123456-ghi
   Status: pending
   Cache Key: cache-key-example
 
-Use 'codepipe research show RT-123456-ghi' to view details.
+Use 'codepipe research list' to view all tasks.
 ```
-
-### 3.4 Execute Research Tasks (Background)
-
-Research tasks are typically executed automatically during the `start` workflow, but can be triggered manually:
-
-**Command:**
-
-```bash
-codepipe research execute [options]
-```
-
-**Options:**
-
-- `--task-id <id>`: Execute specific task
-- `--all-pending`: Execute all pending tasks
-- `--parallel <n>`: Number of parallel workers (default: 1)
-
-**Note:** This command is primarily for testing and manual workflows. Production execution is handled by the orchestration core.
 
 ---
 
@@ -385,7 +320,7 @@ When an external service is unreachable:
     Reason: Linear API unreachable (connection timeout)
 
 You can:
-  1. Retry later: codepipe research execute --task-id RT-123456-ghi
+  1. Retry later: run `codepipe resume` to re-queue pending tasks on next run
   2. Skip: codepipe approve prd --skip-research
 ```
 
@@ -566,9 +501,9 @@ All coordinator operations emit structured logs to `logs/logs.ndjson`:
 
 **Resolution:**
 
-1. Check `codepipe research show <task-id>` for metadata
-2. Verify credentials: `codepipe config validate`
-3. Retry manually: `codepipe research execute --task-id <task-id>`
+1. Check `codepipe research list --json` for task metadata
+2. Verify credentials: `codepipe doctor`
+3. Retry by resuming the run: `codepipe resume`
 
 ### 9.2 Cache Not Reusing Results
 
