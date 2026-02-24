@@ -537,13 +537,13 @@ codepipe research create [FLAGS]
 
 | Option          | Short | Type    | Description                                                                    | Default |
 | --------------- | ----- | ------- | ------------------------------------------------------------------------------ | ------- |
-| `--feature`     | `-f`  | string  | Feature ID to attach the research task to (defaults to latest run) |             |
-| `--force-fresh` |       | boolean | Force new research even if cache exists                            |             |
-| `--json`        |       | boolean | Emit machine-readable JSON output                                  |             |
-| `--max-age`     |       | string  | Freshness window in hours for cached results (default 24)          |             |
-| `--objective`   | `-o`  | string  | Research objective/question (repeat for multiples) **(required)**  |             |
+| `--feature`     | `-f`  | string  | Feature ID to attach the research task to (defaults to latest run)             |         |
+| `--force-fresh` |       | boolean | Force new research even if cache exists                                        |         |
+| `--json`        |       | boolean | Emit machine-readable JSON output                                              |         |
+| `--max-age`     |       | string  | Freshness window in hours for cached results (default 24)                      |         |
+| `--objective`   | `-o`  | string  | Research objective/question (repeat for multiples) **(required)**              |         |
 | `--source`      | `-s`  | string  | Source to consult formatted as type:identifier or type:identifier\|description |         |
-| `--title`       | `-t`  | string  | Research task title **(required)**                                 |             |
+| `--title`       | `-t`  | string  | Research task title **(required)**                                             |         |
 
 ##### Examples
 

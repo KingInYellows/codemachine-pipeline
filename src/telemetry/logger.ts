@@ -97,6 +97,12 @@ export interface LoggerOptions {
 /** Alias CREDENTIAL_PATTERNS for the RedactionEngine (same shape) */
 const SECRET_PATTERNS = CREDENTIAL_PATTERNS;
 
+function normalizeRedactionLabels(input: string): string {
+  return input
+    .replaceAll('[GITHUB_TOKEN_REDACTED]', '[REDACTED_GITHUB_TOKEN]')
+    .replaceAll('[JWT_REDACTED]', '[REDACTED_JWT]');
+}
+
 /**
  * Redaction engine for removing secrets from strings
  */
@@ -146,7 +152,7 @@ export class RedactionEngine {
       output = output.replace(pattern, replacement);
     }
 
-    return { text: output, flags: Array.from(flags) };
+    return { text: normalizeRedactionLabels(output), flags: Array.from(flags) };
   }
 
   /**

@@ -15,7 +15,6 @@ import {
   createPlanArtifact,
   validateDAG,
   getEntryTasks,
-  PlanArtifactSchema,
   type PlanArtifact,
   type TaskNode,
 } from '../core/models/PlanArtifact';
@@ -145,6 +144,44 @@ const PlanMetadataSchema = z.object({
   total_tasks: z.number(),
   entry_tasks: z.array(z.string()),
 });
+
+const PlanArtifactReadSchema = z
+  .object({
+    tasks: z.array(
+      z
+        .object({
+          task_id: z.string(),
+          dependencies: z
+            .array(
+              z
+                .object({
+                  task_id: z.string(),
+                  type: z.string().optional(),
+                })
+                .passthrough()
+            )
+            .default([]),
+        })
+        .passthrough()
+    ),
+    dag_metadata: z
+      .object({
+        generated_at: z.string().optional(),
+        parallel_paths: z.number().optional(),
+        critical_path_depth: z.number().optional(),
+      })
+      .passthrough()
+      .default(() => ({ generated_at: new Date().toISOString() })),
+    metadata: z.record(z.string(), z.unknown()).optional(),
+    checksum: z.string().optional(),
+    updated_at: z.string().default(() => new Date().toISOString()),
+  })
+  .passthrough();
+
+function parsePlanArtifactForRead(content: string): PlanArtifact {
+  const parsed: unknown = JSON.parse(content);
+  return validateOrThrow(PlanArtifactReadSchema, parsed, 'plan artifact') as PlanArtifact;
+}
 
 /**
  * Trace document subset for requirement → task mapping
@@ -424,11 +461,7 @@ async function loadExistingPlanIfPresent(
     logger.info('plan.json already exists, loading existing plan', { planPath });
 
     const existingContent = await fs.readFile(planPath, 'utf-8');
-    const existingPlan = validateOrThrow(
-      PlanArtifactSchema,
-      JSON.parse(existingContent),
-      'plan artifact'
-    );
+    const existingPlan = parsePlanArtifactForRead(existingContent);
     const existingSummary = createPlanSummary(existingPlan, planPath);
 
     return {
@@ -650,7 +683,7 @@ export async function loadPlanSummary(runDir: string): Promise<PlanSummary | nul
 
   try {
     const content = await fs.readFile(planPath, 'utf-8');
-    const plan = validateOrThrow(PlanArtifactSchema, JSON.parse(content), 'plan artifact');
+    const plan = parsePlanArtifactForRead(content);
     return createPlanSummary(plan, planPath);
   } catch {
     return null;

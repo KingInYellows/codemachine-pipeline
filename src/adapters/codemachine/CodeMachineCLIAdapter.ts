@@ -185,10 +185,14 @@ export class CodeMachineCLIAdapter {
       killed: result.killed,
     });
 
+    const stderr = result.stderr.startsWith('Failed to write stdin data:')
+      ? result.stderr.replace('Failed to write stdin data:', 'Failed to deliver credentials:')
+      : result.stderr;
+
     return {
       exitCode: result.exitCode,
       stdout: result.stdout,
-      stderr: result.stderr,
+      stderr,
       durationMs: result.durationMs,
       timedOut: result.timedOut,
       killed: result.killed,

@@ -362,14 +362,15 @@ function generateSpecMarkdown(
   referencedFileGlobs: string[]
 ): string {
   const lines: string[] = [];
+  const sanitizeFrontMatter = (value: string): string => value.replace(/[\n\r]/g, ' ');
 
   // Front matter
   lines.push('---');
-  lines.push(`spec_id: ${specification.spec_id}`);
-  lines.push(`feature_id: ${specification.feature_id}`);
-  lines.push(`title: ${specification.title}`);
-  lines.push(`status: ${specification.status}`);
-  lines.push(`created_at: ${specification.created_at}`);
+  lines.push(`spec_id: ${sanitizeFrontMatter(specification.spec_id)}`);
+  lines.push(`feature_id: ${sanitizeFrontMatter(specification.feature_id)}`);
+  lines.push(`title: ${sanitizeFrontMatter(specification.title)}`);
+  lines.push(`status: ${sanitizeFrontMatter(specification.status)}`);
+  lines.push(`created_at: ${sanitizeFrontMatter(specification.created_at)}`);
   lines.push('---');
   lines.push('');
 
