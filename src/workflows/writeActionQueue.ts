@@ -2,9 +2,20 @@
  * Write Action Queue
  *
  * Manages throttled GitHub write operations (PR comments, labels, review requests)
- * to prevent secondary rate limits and abuse detection. Serialized write actions
- * with deduplication via idempotency keys, automatic cooldown on 429 responses,
- * and integration with RateLimitLedger for cooldown state management.
+ * to prevent secondary rate limits and abuse detection.
+ *
+ * Implements:
+ * - IR-6/IR-7: GitHub rate-limit handling with retry-after/backoff
+ * - FR-3: Queue persistence to run directory for resumability
+ * - ADR-2: State persistence with JSONL format and checksums
+ *
+ * Key features:
+ * - Serialized write actions with deduplication via idempotency keys
+ * - Automatic cooldown on secondary limit detection (429 responses)
+ * - Backoff and retry logic with exponential delays
+ * - Integration with RateLimitLedger for cooldown state management
+ * - Telemetry emission for queue depth and action outcomes
+ * - CLI-friendly status reporting
  */
 
 import * as fs from 'node:fs/promises';
@@ -12,29 +23,29 @@ import * as crypto from 'node:crypto';
 import * as path from 'node:path';
 import { createLogger, LogLevel, type LoggerInterface } from '../telemetry/logger';
 import { getErrorMessage } from '../utils/errors.js';
-import { isFileNotFound } from '../utils/safeJson.js';
 import { RateLimitLedger } from '../telemetry/rateLimitLedger';
 import type { MetricsCollector } from '../telemetry/metrics';
 import { withLock } from '../persistence';
 import {
   WriteActionType,
   WriteActionStatus,
-  type WriteActionPayload,
-  type WriteAction,
-  type WriteActionQueueManifest,
-  type WriteActionQueueConfig,
-  type QueueOperationResult,
   type ActionExecutor,
+  type QueueOperationResult,
+  type WriteAction,
+  type WriteActionPayload,
+  type WriteActionQueueConfig,
+  type WriteActionQueueManifest,
 } from './writeActionQueueTypes.js';
 
-export { WriteActionType, WriteActionStatus } from './writeActionQueueTypes.js';
-export type {
-  WriteActionPayload,
-  WriteAction,
-  WriteActionQueueManifest,
-  WriteActionQueueConfig,
-  QueueOperationResult,
-  ActionExecutor,
+export {
+  WriteActionType,
+  WriteActionStatus,
+  type ActionExecutor,
+  type QueueOperationResult,
+  type WriteAction,
+  type WriteActionPayload,
+  type WriteActionQueueConfig,
+  type WriteActionQueueManifest,
 } from './writeActionQueueTypes.js';
 
 // ============================================================================
@@ -97,6 +108,29 @@ async function computeQueueChecksum(queuePath: string): Promise<string> {
   }
 }
 
+/**
+ * Check if error is file not found
+ */
+function isFileNotFound(error: unknown): error is NodeJS.ErrnoException {
+  return Boolean(
+    error &&
+    typeof error === 'object' &&
+    'code' in error &&
+    (error as NodeJS.ErrnoException).code === 'ENOENT'
+  );
+}
+
+/**
+ * Create console logger using StructuredLogger (includes redaction)
+ */
+function createConsoleLogger(): LoggerInterface {
+  return createLogger({
+    component: 'write-action-queue',
+    minLevel: LogLevel.DEBUG,
+    mirrorToStderr: true,
+  });
+}
+
 // ============================================================================
 // Write Action Queue Class
 // ============================================================================
@@ -126,13 +160,7 @@ export class WriteActionQueue {
     this.queueDir = path.join(this.runDir, QUEUE_SUBDIR);
     this.queuePath = path.join(this.queueDir, QUEUE_FILE);
     this.manifestPath = path.join(this.queueDir, MANIFEST_FILE);
-    this.logger =
-      config.logger ??
-      createLogger({
-        component: 'write-action-queue',
-        minLevel: LogLevel.DEBUG,
-        mirrorToStderr: true,
-      });
+    this.logger = config.logger ?? createConsoleLogger();
     this.metrics = config.metrics;
     this.maxRetries = config.maxRetries ?? DEFAULT_MAX_RETRIES;
     this.concurrencyLimit = config.concurrencyLimit ?? DEFAULT_CONCURRENCY_LIMIT;
@@ -267,22 +295,58 @@ export class WriteActionQueue {
     this.logger.info('Draining write action queue');
 
     try {
-      const cooldownResult = await this.checkRateLimitGuard();
-      if (cooldownResult) return cooldownResult;
+      // Check for rate limit cooldown
+      const inCooldown = await this.rateLimitLedger.isInCooldown(this.provider);
+      if (inCooldown) {
+        const requiresAck = await this.rateLimitLedger.requiresManualAcknowledgement(this.provider);
 
+        if (requiresAck) {
+          this.logger.warn('Rate limit cooldown requires manual acknowledgement', {
+            provider: this.provider,
+          });
+
+          return {
+            success: false,
+            message:
+              'Queue draining paused: manual acknowledgement required due to repeated rate limits',
+            actionsAffected: 0,
+          };
+        }
+
+        this.logger.warn('Rate limit cooldown active, pausing queue drain', {
+          provider: this.provider,
+        });
+
+        return {
+          success: true,
+          message: 'Queue draining paused: waiting for rate limit cooldown to expire',
+          actionsAffected: 0,
+        };
+      }
+
+      // Load all actions
       const actions = await this.loadQueue();
+
+      // Get pending actions
       const pendingActions = Array.from(actions.values())
         .filter((a) => a.status === WriteActionStatus.PENDING)
         .sort((a, b) => a.created_at.localeCompare(b.created_at));
 
       if (pendingActions.length === 0) {
         this.logger.info('No pending actions to drain');
-        return { success: true, message: 'No pending actions', actionsAffected: 0 };
+        return {
+          success: true,
+          message: 'No pending actions',
+          actionsAffected: 0,
+        };
       }
 
+      // Get current in-progress count
       const inProgressCount = Array.from(actions.values()).filter(
         (a) => a.status === WriteActionStatus.IN_PROGRESS
       ).length;
+
+      // Calculate how many actions we can execute
       const availableSlots = Math.max(0, this.concurrencyLimit - inProgressCount);
       const actionsToExecute = pendingActions.slice(0, availableSlots);
 
@@ -293,9 +357,38 @@ export class WriteActionQueue {
         to_execute: actionsToExecute.length,
       });
 
-      return await this.executeActionsSequentially(actionsToExecute, executor);
+      let successCount = 0;
+      let failureCount = 0;
+      const errors: string[] = [];
+
+      // Execute actions
+      for (const action of actionsToExecute) {
+        try {
+          await this.executeAction(action, executor);
+          successCount++;
+        } catch (error) {
+          failureCount++;
+          const errorMessage = getErrorMessage(error);
+          errors.push(`${action.action_id}: ${errorMessage}`);
+        }
+      }
+
+      const result: QueueOperationResult = {
+        success: failureCount === 0,
+        message: `Executed ${successCount} action(s), ${failureCount} failed`,
+        actionsAffected: successCount + failureCount,
+      };
+
+      if (errors.length > 0) {
+        result.errors = errors;
+      }
+
+      return result;
     } catch (error) {
-      this.logger.error('Failed to drain queue', { error: getErrorMessage(error) });
+      this.logger.error('Failed to drain queue', {
+        error: getErrorMessage(error),
+      });
+
       return {
         success: false,
         message: getErrorMessage(error),
@@ -303,67 +396,6 @@ export class WriteActionQueue {
         errors: [error instanceof Error && error.stack ? error.stack : getErrorMessage(error)],
       };
     }
-  }
-
-  /**
-   * Guard that checks rate limit cooldown state before draining.
-   * Returns a result to return immediately, or null to proceed.
-   */
-  private async checkRateLimitGuard(): Promise<QueueOperationResult | null> {
-    const inCooldown = await this.rateLimitLedger.isInCooldown(this.provider);
-    if (!inCooldown) return null;
-
-    const requiresAck = await this.rateLimitLedger.requiresManualAcknowledgement(this.provider);
-    if (requiresAck) {
-      this.logger.warn('Rate limit cooldown requires manual acknowledgement', {
-        provider: this.provider,
-      });
-      return {
-        success: false,
-        message:
-          'Queue draining paused: manual acknowledgement required due to repeated rate limits',
-        actionsAffected: 0,
-      };
-    }
-
-    this.logger.warn('Rate limit cooldown active, pausing queue drain', {
-      provider: this.provider,
-    });
-    return {
-      success: true,
-      message: 'Queue draining paused: waiting for rate limit cooldown to expire',
-      actionsAffected: 0,
-    };
-  }
-
-  /**
-   * Execute a batch of actions sequentially, collecting results.
-   */
-  private async executeActionsSequentially(
-    actionsToExecute: WriteAction[],
-    executor: ActionExecutor
-  ): Promise<QueueOperationResult> {
-    let successCount = 0;
-    let failureCount = 0;
-    const errors: string[] = [];
-
-    for (const action of actionsToExecute) {
-      try {
-        await this.executeAction(action, executor);
-        successCount++;
-      } catch (error) {
-        failureCount++;
-        errors.push(`${action.action_id}: ${getErrorMessage(error)}`);
-      }
-    }
-
-    const result: QueueOperationResult = {
-      success: failureCount === 0,
-      message: `Executed ${successCount} action(s), ${failureCount} failed`,
-      actionsAffected: successCount + failureCount,
-    };
-    if (errors.length > 0) result.errors = errors;
-    return result;
   }
 
   /**
@@ -501,15 +533,33 @@ export class WriteActionQueue {
 
     await this.saveQueue(actions);
 
-    // Update manifest counts: +1 for entering a status, -1 for leaving it
-    const delta = (s: WriteActionStatus) => (status === s ? 1 : 0) - (oldStatus === s ? 1 : 0);
+    // Update manifest counts
+    const pendingDelta =
+      status === WriteActionStatus.PENDING ? 1 : oldStatus === WriteActionStatus.PENDING ? -1 : 0;
+    const inProgressDelta =
+      status === WriteActionStatus.IN_PROGRESS
+        ? 1
+        : oldStatus === WriteActionStatus.IN_PROGRESS
+          ? -1
+          : 0;
+    const completedDelta =
+      status === WriteActionStatus.COMPLETED
+        ? 1
+        : oldStatus === WriteActionStatus.COMPLETED
+          ? -1
+          : 0;
+    const failedDelta =
+      status === WriteActionStatus.FAILED ? 1 : oldStatus === WriteActionStatus.FAILED ? -1 : 0;
+    const skippedDelta =
+      status === WriteActionStatus.SKIPPED ? 1 : oldStatus === WriteActionStatus.SKIPPED ? -1 : 0;
+
     await this.updateManifestCounts(
       0,
-      delta(WriteActionStatus.PENDING),
-      delta(WriteActionStatus.IN_PROGRESS),
-      delta(WriteActionStatus.COMPLETED),
-      delta(WriteActionStatus.FAILED),
-      delta(WriteActionStatus.SKIPPED)
+      pendingDelta,
+      inProgressDelta,
+      completedDelta,
+      failedDelta,
+      skippedDelta
     );
   }
 

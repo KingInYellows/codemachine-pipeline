@@ -94,6 +94,13 @@ jobs:
           node-version: '24'
           cache: npm
 
+      - name: Prepare npm directories
+        run: |
+          set -euo pipefail
+          echo "HOME=$RUNNER_TEMP/codemachine-home" >> "$GITHUB_ENV"
+          echo "NPM_CONFIG_CACHE=$RUNNER_TEMP/codemachine-npm-cache" >> "$GITHUB_ENV"
+          mkdir -p "$RUNNER_TEMP/codemachine-home" "$RUNNER_TEMP/codemachine-npm-cache"
+
       - name: Runner preflight checks
         run: |
           set -euo pipefail
@@ -166,16 +173,25 @@ jobs:
           node-version: '24'
 
       - name: Runner preflight checks
+        id: docker_preflight
         run: |
           set -euo pipefail
+          if ! command -v docker >/dev/null 2>&1; then
+            echo "::warning::Docker is not available on this runner; skipping Docker Build job."
+            echo "docker_available=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
           docker version
           node -v
+          echo "docker_available=true" >> "$GITHUB_OUTPUT"
 
       - name: Build Docker image
+        if: steps.docker_preflight.outputs.docker_available == 'true'
         run: |
           docker build -t "$DOCKER_IMAGE" .
 
       - name: Test Docker image
+        if: steps.docker_preflight.outputs.docker_available == 'true'
         run: |
           set -o pipefail
           docker run --rm "$DOCKER_IMAGE" --version || true
@@ -184,6 +200,6 @@ jobs:
           docker run --rm "$DOCKER_IMAGE" doctor --json | node -e "const fs=require('fs');JSON.parse(fs.readFileSync(0,'utf8'))" > /dev/null && echo 'doctor --json: valid JSON' || echo 'doctor check skipped (exit 20 in container)'
 
       - name: Cleanup
-        if: always()
+        if: always() && steps.docker_preflight.outputs.docker_available == 'true'
         run: |
           docker rmi "$DOCKER_IMAGE" || true

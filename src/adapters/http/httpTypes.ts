@@ -7,16 +7,22 @@
 
 import type { RequestInit } from 'undici-types';
 import type { LoggerInterface } from '../../telemetry/logger';
-import type { RateLimitEnvelope } from '../../telemetry/rateLimitLedger';
-import { ErrorType, Provider } from '../../core/sharedTypes.js';
-export { ErrorType, Provider };
+import { Provider } from '../../core/sharedTypes.js';
+export { ErrorType, Provider } from '../../core/sharedTypes.js';
 
+// ============================================================================
+// Enums
+// ============================================================================
+
+// ============================================================================
 // Interfaces
+// ============================================================================
 
 /**
  * HTTP client configuration
  */
 export interface HttpClientConfig {
+  /** Base URL for API requests */
   baseUrl: string;
   /** Provider type for rate limit tracking */
   provider: Provider;
@@ -26,12 +32,15 @@ export interface HttpClientConfig {
   runDir?: string;
   /** Custom headers to inject on every request */
   defaultHeaders?: Record<string, string>;
+  /** Request timeout in milliseconds */
   timeout?: number;
+  /** Maximum retry attempts */
   maxRetries?: number;
   /** Initial backoff delay in milliseconds */
   initialBackoff?: number;
   /** Maximum backoff delay in milliseconds */
   maxBackoff?: number;
+  /** Logger interface for observability */
   logger?: LoggerInterface;
 }
 
@@ -39,6 +48,7 @@ export interface HttpClientConfig {
  * HTTP request options
  */
 export interface HttpRequestOptions extends Omit<RequestInit, 'headers'> {
+  /** Custom headers for this request */
   headers?: Record<string, string>;
   /** Whether to generate an idempotency key */
   idempotent?: boolean;
@@ -55,16 +65,21 @@ export interface HttpRequestOptions extends Omit<RequestInit, 'headers'> {
  * HTTP response wrapper
  */
 export interface HttpResponse<T = unknown> {
+  /** Response status code */
   status: number;
+  /** Response headers */
   headers: Record<string, string>;
   /** Parsed response body */
   data: T;
   /** Request ID for tracing */
   requestId: string;
-  rateLimitEnvelope?: RateLimitEnvelope;
+  /** Rate limit envelope if applicable */
+  rateLimitEnvelope?: import('../../telemetry/rateLimitLedger').RateLimitEnvelope;
 }
 
+// ============================================================================
 // Constants
+// ============================================================================
 
 /** Default request timeout (30 seconds) */
 export const DEFAULT_TIMEOUT = 30000;

@@ -62,6 +62,13 @@ jobs:
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.2.2
 
+      - name: Prepare npm directories
+        run: |
+          set -euo pipefail
+          echo "HOME=$RUNNER_TEMP/codemachine-home" >> "$GITHUB_ENV"
+          echo "NPM_CONFIG_CACHE=$RUNNER_TEMP/codemachine-npm-cache" >> "$GITHUB_ENV"
+          mkdir -p "$RUNNER_TEMP/codemachine-home" "$RUNNER_TEMP/codemachine-npm-cache"
+
       - name: Setup Node.js
         uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.1.0
         with:
@@ -69,7 +76,7 @@ jobs:
           cache: 'npm'
 
       - name: Install dependencies (prepare builds manifest)
-        run: npm ci
+        run: npm ci --no-audit --no-fund
 
       - name: Validate Command Documentation
         run: node scripts/validate-docs-commands.js
@@ -82,9 +89,9 @@ jobs:
 
       - name: Check for phantom engines
         run: |
-          DOCS_SCOPE="docs/guide docs/reference docs/playbooks docs/adr docs/templates README.md"
+          DOCS_SCOPE=(docs/guide docs/reference docs/playbooks docs/adr docs/templates README.md)
           # Verify engines list only contains: claude, codex, openai
-          if grep -rE "executionEngine.*(cursor|auggie|ccr|opencode|gpt-4|claude-3)" $DOCS_SCOPE; then
+          if grep -rE "executionEngine.*(cursor|auggie|ccr|opencode|gpt-4|claude-3)" "${DOCS_SCOPE[@]}"; then
             echo "❌ Found phantom/incorrect execution engine names"
             echo "✅ Valid engines: claude, codex, openai"
             exit 1
@@ -93,9 +100,9 @@ jobs:
 
       - name: Check for incorrect environment variables
         run: |
-          DOCS_SCOPE="docs/guide docs/reference docs/playbooks docs/adr docs/templates README.md"
+          DOCS_SCOPE=(docs/guide docs/reference docs/playbooks docs/adr docs/templates README.md)
           # Verify no references to non-existent variables
-          if grep -rE "CODEMACHINE_CLI_PATH|CODEMACHINE_LOG_LEVEL" $DOCS_SCOPE | grep -vEi "non-existent|doesn.t exist|not .*CODEMACHINE_LOG_LEVEL|no.*CODEMACHINE_LOG_LEVEL|removed"; then
+          if grep -rE "CODEMACHINE_CLI_PATH|CODEMACHINE_LOG_LEVEL" "${DOCS_SCOPE[@]}" | grep -vEi "non-existent|doesn.t exist|not .*CODEMACHINE_LOG_LEVEL|no.*CODEMACHINE_LOG_LEVEL|removed"; then
             echo "❌ Found incorrect environment variable names"
             echo "✅ Correct: CODEMACHINE_BIN_PATH (not CODEMACHINE_CLI_PATH)"
             exit 1
@@ -130,6 +137,11 @@ jobs:
     runs-on: [self-hosted, linux]
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.2.2
+
+      - name: Setup Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.1.0
+        with:
+          node-version: '24'
 
       - name: Install markdown-spellcheck
         run: |
@@ -191,10 +203,10 @@ jobs:
       - name: Check for old directories
         run: |
           # Verify old directories are removed
-          old_dirs="ops requirements announcements development testing ui"
+          old_dirs=(ops requirements announcements development testing ui)
           found_old=false
-          for dir in $old_dirs; do
-            if [ -d "docs/$dir" ] && [ "$(ls -A docs/$dir)" ]; then
+          for dir in "${old_dirs[@]}"; do
+            if [ -d "docs/$dir" ] && [ "$(ls -A "docs/$dir")" ]; then
               echo "⚠️  Old directory still exists with content: docs/$dir"
               found_old=true
             fi
