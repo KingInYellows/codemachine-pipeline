@@ -25,158 +25,28 @@ import { createLogger, LogLevel, type LoggerInterface } from '../telemetry/logge
 import { getErrorMessage } from '../utils/errors.js';
 import { RateLimitLedger } from '../telemetry/rateLimitLedger';
 import type { MetricsCollector } from '../telemetry/metrics';
-import { withLock } from '../persistence/runDirectoryManager';
+import { withLock } from '../persistence';
+import {
+  WriteActionType,
+  WriteActionStatus,
+  type ActionExecutor,
+  type QueueOperationResult,
+  type WriteAction,
+  type WriteActionPayload,
+  type WriteActionQueueConfig,
+  type WriteActionQueueManifest,
+} from './writeActionQueueTypes.js';
 
-// ============================================================================
-// Types & Schemas
-// ============================================================================
-
-/**
- * Write action types supported by the queue
- */
-export enum WriteActionType {
-  PR_COMMENT = 'pr_comment',
-  PR_LABEL = 'pr_label',
-  PR_REVIEW_REQUEST = 'pr_review_request',
-  PR_UPDATE = 'pr_update',
-  ISSUE_COMMENT = 'issue_comment',
-}
-
-/**
- * Write action status
- */
-export enum WriteActionStatus {
-  PENDING = 'pending',
-  IN_PROGRESS = 'in_progress',
-  COMPLETED = 'completed',
-  FAILED = 'failed',
-  SKIPPED = 'skipped',
-}
-
-/**
- * Write action payload structure
- */
-export interface WriteActionPayload {
-  /** PR or issue number */
-  target_number?: number;
-  /** Comment body (for comment actions) */
-  comment_body?: string;
-  /** Labels to add (for label actions) */
-  labels?: string[];
-  /** Reviewer usernames (for review request actions) */
-  reviewers?: string[];
-  /** Team reviewer slugs (for review request actions) */
-  team_reviewers?: string[];
-  /** PR update fields (for update actions) */
-  pr_updates?: {
-    title?: string;
-    body?: string;
-    state?: 'open' | 'closed';
-  };
-}
-
-/**
- * Write action entry
- */
-export interface WriteAction {
-  /** Unique action ID */
-  action_id: string;
-  /** Action type */
-  action_type: WriteActionType;
-  /** GitHub provider identifier */
-  provider: string;
-  /** Repository owner */
-  owner: string;
-  /** Repository name */
-  repo: string;
-  /** Action payload */
-  payload: WriteActionPayload;
-  /** Idempotency key for deduplication */
-  idempotency_key: string;
-  /** Current status */
-  status: WriteActionStatus;
-  /** Number of retry attempts */
-  retry_count: number;
-  /** Maximum retry attempts */
-  max_retries: number;
-  /** Last error message (if failed) */
-  last_error?: string;
-  /** Last retry timestamp */
-  last_retry_at?: string;
-  /** Creation timestamp */
-  created_at: string;
-  /** Last update timestamp */
-  updated_at: string;
-  /** Completion timestamp */
-  completed_at?: string;
-}
-
-/**
- * Queue manifest metadata
- */
-export interface WriteActionQueueManifest {
-  /** Schema version */
-  schema_version: string;
-  /** Feature ID */
-  feature_id: string;
-  /** Total actions in queue */
-  total_actions: number;
-  /** Pending actions */
-  pending_count: number;
-  /** In-progress actions */
-  in_progress_count: number;
-  /** Completed actions */
-  completed_count: number;
-  /** Failed actions */
-  failed_count: number;
-  /** Skipped actions */
-  skipped_count: number;
-  /** SHA-256 checksum of queue.jsonl */
-  queue_checksum: string;
-  /** Last updated timestamp */
-  updated_at: string;
-  /** Concurrency limit (max actions in flight) */
-  concurrency_limit: number;
-}
-
-/**
- * Queue configuration
- */
-export interface WriteActionQueueConfig {
-  /** Run directory path */
-  runDir: string;
-  /** Feature ID */
-  featureId: string;
-  /** GitHub provider name */
-  provider?: string;
-  /** Logger instance */
-  logger?: LoggerInterface;
-  /** Metrics collector */
-  metrics?: MetricsCollector;
-  /** Maximum retry attempts per action */
-  maxRetries?: number;
-  /** Concurrency limit (max actions in flight) */
-  concurrencyLimit?: number;
-  /** Backoff base delay in milliseconds */
-  backoffBaseMs?: number;
-  /** Backoff max delay in milliseconds */
-  backoffMaxMs?: number;
-}
-
-/**
- * Queue operation result
- */
-export interface QueueOperationResult {
-  success: boolean;
-  message: string;
-  actionsAffected?: number;
-  errors?: string[];
-}
-
-/**
- * Action execution function
- */
-export type ActionExecutor = (action: WriteAction) => Promise<void>;
+export {
+  WriteActionType,
+  WriteActionStatus,
+  type ActionExecutor,
+  type QueueOperationResult,
+  type WriteAction,
+  type WriteActionPayload,
+  type WriteActionQueueConfig,
+  type WriteActionQueueManifest,
+} from './writeActionQueueTypes.js';
 
 // ============================================================================
 // Constants

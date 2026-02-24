@@ -7,30 +7,12 @@
 
 import type { RequestInit } from 'undici-types';
 import type { LoggerInterface } from '../../telemetry/logger';
+import { Provider } from '../../core/sharedTypes.js';
+export { ErrorType, Provider } from '../../core/sharedTypes.js';
 
 // ============================================================================
 // Enums
 // ============================================================================
-
-/**
- * Error taxonomy for structured error handling
- */
-export enum ErrorType {
-  TRANSIENT = 'transient',
-  PERMANENT = 'permanent',
-  HUMAN_ACTION_REQUIRED = 'human_action_required',
-}
-
-/**
- * HTTP provider type (GitHub, Linear, etc.)
- */
-export enum Provider {
-  GITHUB = 'github',
-  LINEAR = 'linear',
-  GRAPHITE = 'graphite',
-  CODEMACHINE = 'codemachine',
-  CUSTOM = 'custom',
-}
 
 // ============================================================================
 // Interfaces
