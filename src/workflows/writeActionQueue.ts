@@ -4,11 +4,6 @@
  * Manages throttled GitHub write operations (PR comments, labels, review requests)
  * to prevent secondary rate limits and abuse detection.
  *
- * Implements:
- * - IR-6/IR-7: GitHub rate-limit handling with retry-after/backoff
- * - FR-3: Queue persistence to run directory for resumability
- * - ADR-2: State persistence with JSONL format and checksums
- *
  * Key features:
  * - Serialized write actions with deduplication via idempotency keys
  * - Automatic cooldown on secondary limit detection (429 responses)
@@ -18,9 +13,9 @@
  * - CLI-friendly status reporting
  */
 
-import * as fs from 'node:fs/promises';
-import * as crypto from 'node:crypto';
-import * as path from 'node:path';
+import { appendFile, access, mkdir, readFile, writeFile } from 'node:fs/promises';
+import { createHash, randomBytes } from 'node:crypto';
+import { join } from 'node:path';
 import { createLogger, LogLevel, type LoggerInterface } from '../telemetry/logger';
 import { getErrorMessage } from '../utils/errors.js';
 import { RateLimitLedger } from '../telemetry/rateLimitLedger';
@@ -72,7 +67,7 @@ const DEFAULT_BACKOFF_MAX_MS = 60000; // 60 seconds
  * Generate action ID
  */
 function generateActionId(): string {
-  return `wa_${Date.now()}_${crypto.randomBytes(8).toString('hex')}`;
+  return `wa_${Date.now()}_${randomBytes(8).toString('hex')}`;
 }
 
 /**
@@ -90,7 +85,7 @@ function generateIdempotencyKey(
     repo,
     payload,
   });
-  return crypto.createHash('sha256').update(data).digest('hex');
+  return createHash('sha256').update(data).digest('hex');
 }
 
 /**
@@ -98,11 +93,11 @@ function generateIdempotencyKey(
  */
 async function computeQueueChecksum(queuePath: string): Promise<string> {
   try {
-    const content = await fs.readFile(queuePath, 'utf-8');
-    return crypto.createHash('sha256').update(content).digest('hex');
+    const content = await readFile(queuePath, 'utf-8');
+    return createHash('sha256').update(content).digest('hex');
   } catch (error) {
     if (isFileNotFound(error)) {
-      return crypto.createHash('sha256').update('').digest('hex');
+      return createHash('sha256').update('').digest('hex');
     }
     throw error;
   }
@@ -157,9 +152,9 @@ export class WriteActionQueue {
     this.runDir = config.runDir;
     this.featureId = config.featureId;
     this.provider = config.provider ?? 'github';
-    this.queueDir = path.join(this.runDir, QUEUE_SUBDIR);
-    this.queuePath = path.join(this.queueDir, QUEUE_FILE);
-    this.manifestPath = path.join(this.queueDir, MANIFEST_FILE);
+    this.queueDir = join(this.runDir, QUEUE_SUBDIR);
+    this.queuePath = join(this.queueDir, QUEUE_FILE);
+    this.manifestPath = join(this.queueDir, MANIFEST_FILE);
     this.logger = config.logger ?? createConsoleLogger();
     this.metrics = config.metrics;
     this.maxRetries = config.maxRetries ?? DEFAULT_MAX_RETRIES;
@@ -181,11 +176,11 @@ export class WriteActionQueue {
     });
 
     // Create queue directory
-    await fs.mkdir(this.queueDir, { recursive: true });
+    await mkdir(this.queueDir, { recursive: true });
 
     // Create initial manifest if it doesn't exist
     try {
-      await fs.access(this.manifestPath);
+      await access(this.manifestPath);
     } catch {
       const manifest: WriteActionQueueManifest = {
         schema_version: SCHEMA_VERSION,
@@ -196,7 +191,7 @@ export class WriteActionQueue {
         completed_count: 0,
         failed_count: 0,
         skipped_count: 0,
-        queue_checksum: crypto.createHash('sha256').update('').digest('hex'),
+        queue_checksum: createHash('sha256').update('').digest('hex'),
         updated_at: new Date().toISOString(),
         concurrency_limit: this.concurrencyLimit,
       };
@@ -259,7 +254,7 @@ export class WriteActionQueue {
 
         // Append to queue file
         const line = JSON.stringify(action) + '\n';
-        await fs.appendFile(this.queuePath, line, 'utf-8');
+        await appendFile(this.queuePath, line, 'utf-8');
 
         this.logger.info('Action enqueued', {
           action_id: action.action_id,
@@ -596,7 +591,7 @@ export class WriteActionQueue {
     const actions = new Map<string, WriteAction>();
 
     try {
-      const content = await fs.readFile(this.queuePath, 'utf-8');
+      const content = await readFile(this.queuePath, 'utf-8');
       const lines = content
         .trim()
         .split('\n')
@@ -628,7 +623,7 @@ export class WriteActionQueue {
         .map((action) => JSON.stringify(action))
         .join('\n') + '\n';
 
-    await fs.writeFile(this.queuePath, lines, 'utf-8');
+    await writeFile(this.queuePath, lines, 'utf-8');
 
     // Update checksum in manifest
     const checksum = await computeQueueChecksum(this.queuePath);
@@ -658,7 +653,7 @@ export class WriteActionQueue {
    */
   private async loadManifest(): Promise<WriteActionQueueManifest> {
     try {
-      const content = await fs.readFile(this.manifestPath, 'utf-8');
+      const content = await readFile(this.manifestPath, 'utf-8');
       return JSON.parse(content) as WriteActionQueueManifest;
     } catch (error) {
       if (isFileNotFound(error)) {
@@ -672,7 +667,7 @@ export class WriteActionQueue {
           completed_count: 0,
           failed_count: 0,
           skipped_count: 0,
-          queue_checksum: crypto.createHash('sha256').update('').digest('hex'),
+          queue_checksum: createHash('sha256').update('').digest('hex'),
           updated_at: new Date().toISOString(),
           concurrency_limit: this.concurrencyLimit,
         };
@@ -686,7 +681,7 @@ export class WriteActionQueue {
    */
   private async writeManifest(manifest: WriteActionQueueManifest): Promise<void> {
     const content = JSON.stringify(manifest, null, 2);
-    await fs.writeFile(this.manifestPath, content, 'utf-8');
+    await writeFile(this.manifestPath, content, 'utf-8');
   }
 
   /**
