@@ -20,15 +20,10 @@ Autonomous AI-powered feature development pipeline CLI
 
 Full documentation is in [`docs/README.md`](docs/README.md).
 
-| Resource        | Link                                                       |
-| --------------- | ---------------------------------------------------------- |
-<<<<<<< HEAD
-| Getting Started | [Init Playbook](docs/playbooks/init_playbook.md)          |
-| CLI Reference   | [CLI Reference](docs/reference/cli/cli-reference.md)      |
-=======
-| Getting Started | [Init Playbook](docs/playbooks/init_playbook.md)           |
-| CLI Reference   | [CLI Reference](docs/reference/cli/cli-reference.md)       |
->>>>>>> e673b0a (style: format code with Prettier and Ruff Formatter)
+| Resource | Link |
+| -------- | ---- |
+| Getting Started | [Init Playbook](docs/playbooks/init_playbook.md) |
+| CLI Reference | [CLI Reference](docs/reference/cli/cli-reference.md) |
 | Troubleshooting | [Doctor Reference](docs/reference/cli/doctor_reference.md) |
 
 ## Installation
