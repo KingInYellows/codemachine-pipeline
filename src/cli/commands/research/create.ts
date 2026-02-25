@@ -4,7 +4,7 @@ import { resolveRunDirectorySettings, selectFeatureId } from '../../utils/runDir
 import { createCliLogger } from '../../../telemetry/logger';
 import { createRunMetricsCollector } from '../../../telemetry/metrics';
 import {
-  createResearchCoordinator,
+  createCoordinatorForRun,
   type CreateResearchTaskOptions,
 } from '../../../workflows/researchCoordinator';
 import type { FreshnessRequirement, ResearchSource } from '../../../core/models/ResearchTask';
@@ -102,15 +102,7 @@ export default class ResearchCreate extends Command {
     const runDir = getRunDirectoryPath(settings.baseDir, featureId);
     const logger = createCliLogger('research:create', featureId, runDir);
     const metrics = createRunMetricsCollector(runDir, featureId);
-    const coordinator = createResearchCoordinator(
-      {
-        repoRoot: process.cwd(),
-        runDir,
-        featureId,
-      },
-      logger,
-      metrics
-    );
+    const coordinator = createCoordinatorForRun(runDir, featureId, logger, metrics);
 
     const sources = (typedFlags.source ?? []).map((value) => this.parseSourceFlag(value));
     const freshness = this.buildFreshnessRequirement(

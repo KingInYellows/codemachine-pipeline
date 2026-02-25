@@ -23,7 +23,7 @@ import {
   PRExitCode,
   type PRMetadata,
 } from '../../pr/shared';
-import { setJsonOutputMode } from '../../utils/cliErrors';
+import { setJsonOutputMode, rethrowIfOclifError } from '../../utils/cliErrors';
 
 type DisableAutoMergeFlags = {
   feature?: string;
@@ -204,10 +204,7 @@ export default class PRDisableAutoMerge extends Command {
         throw error;
       }
     } catch (error) {
-      // Re-throw oclif errors to preserve exit codes
-      if (error && typeof error === 'object' && 'oclif' in error) {
-        throw error;
-      }
+      rethrowIfOclifError(error);
 
       if (error instanceof Error) {
         this.error(`PR disable-auto-merge failed: ${error.message}`, {

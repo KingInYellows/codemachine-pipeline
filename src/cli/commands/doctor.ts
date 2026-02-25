@@ -4,15 +4,15 @@ import * as path from 'node:path';
 import { execSync, spawnSync } from 'node:child_process';
 import { loadRepoConfig } from '../../core/config/RepoConfig';
 import { createCliLogger, LogLevel } from '../../telemetry/logger';
-import { createRunMetricsCollector, StandardMetrics } from '../../telemetry/metrics';
-import { createRunTraceManager, SpanStatusCode } from '../../telemetry/traces';
+import { createRunMetricsCollector } from '../../telemetry/metrics';
+import { createRunTraceManager } from '../../telemetry/traces';
 import type { StructuredLogger } from '../../telemetry/logger';
 import type { MetricsCollector } from '../../telemetry/metrics';
 import type { TraceManager, ActiveSpan } from '../../telemetry/traces';
 import { checkCodeMachineCli } from '../diagnostics';
-import { setJsonOutputMode } from '../utils/cliErrors';
+import { setJsonOutputMode, rethrowIfOclifError } from '../utils/cliErrors';
 import { CONFIG_RELATIVE_PATH } from '../utils/runDirectory';
-import { flushTelemetryError } from '../utils/telemetryLifecycle';
+import { flushTelemetryError, flushTelemetrySuccess } from '../utils/telemetryLifecycle';
 
 /**
  * Diagnostic check result
@@ -209,41 +209,22 @@ export default class Doctor extends Command {
         this.printHumanReadable(payload, flags.verbose);
       }
 
-      // Record success metrics
-      if (metrics) {
-        const duration = Date.now() - startTime;
-        metrics.observe(StandardMetrics.COMMAND_EXECUTION_DURATION_MS, duration, {
-          command: 'doctor',
-        });
-        metrics.increment(StandardMetrics.COMMAND_INVOCATIONS_TOTAL, {
-          command: 'doctor',
-          exit_code: String(exitCode),
-        });
-        await metrics.flush();
-      }
-
       if (commandSpan) {
-        commandSpan.setAttribute('exit_code', exitCode);
         commandSpan.setAttribute('checks_total', summary.total);
         commandSpan.setAttribute('checks_passed', summary.passed);
         commandSpan.setAttribute('checks_failed', summary.failed);
-        commandSpan.end({ code: exitCode === 0 ? SpanStatusCode.OK : SpanStatusCode.ERROR });
       }
 
-      if (traceManager) {
-        await traceManager.flush();
-      }
-
-      if (logger) {
-        logger.info('Doctor command completed', {
-          duration_ms: Date.now() - startTime,
+      await flushTelemetrySuccess(
+        { commandName: 'doctor', startTime, logger, metrics, traceManager, commandSpan },
+        {
           exit_code: exitCode,
           checks_total: summary.total,
           checks_passed: summary.passed,
           checks_failed: summary.failed,
-        });
-        await logger.flush();
-      }
+        },
+        exitCode
+      );
 
       if (exitCode !== 0) {
         process.exit(exitCode);
@@ -254,10 +235,7 @@ export default class Doctor extends Command {
         error
       );
 
-      // Re-throw oclif errors to preserve exit codes
-      if (error && typeof error === 'object' && 'oclif' in error) {
-        throw error;
-      }
+      rethrowIfOclifError(error);
 
       if (error instanceof Error) {
         this.error(`Doctor command failed: ${error.message}`, { exit: 1 });

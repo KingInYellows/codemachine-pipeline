@@ -26,7 +26,8 @@ import {
   PRExitCode,
   type PRMetadata,
 } from '../../pr/shared';
-import { setJsonOutputMode } from '../../utils/cliErrors';
+import { setJsonOutputMode, rethrowIfOclifError } from '../../utils/cliErrors';
+import { parseReviewerList } from '../../pr/shared';
 
 type CreateFlags = {
   feature?: string;
@@ -250,10 +251,7 @@ export default class PRCreate extends Command {
             traceManager,
             'pr.create.request_reviewers',
             async (span) => {
-              const reviewersList = typedFlags
-                .reviewers!.split(',')
-                .map((r) => r.trim())
-                .filter((r) => r.length > 0);
+              const reviewersList = parseReviewerList(typedFlags.reviewers!);
 
               span.setAttribute('reviewers_count', reviewersList.length);
 
@@ -348,10 +346,7 @@ export default class PRCreate extends Command {
         throw error;
       }
     } catch (error) {
-      // Re-throw oclif errors to preserve exit codes
-      if (error && typeof error === 'object' && 'oclif' in error) {
-        throw error;
-      }
+      rethrowIfOclifError(error);
 
       if (error instanceof Error) {
         this.error(`PR create failed: ${error.message}`, {

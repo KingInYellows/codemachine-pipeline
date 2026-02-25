@@ -48,6 +48,7 @@ import {
   formatErrorMessage,
   formatErrorJson,
   setJsonOutputMode,
+  ERROR_MESSAGES,
 } from '../utils/cliErrors';
 import { flushTelemetryError } from '../utils/telemetryLifecycle';
 import { DEFAULT_EXECUTION_CONFIG } from '../../core/config/RepoConfig.js';
@@ -187,7 +188,7 @@ export default class Start extends Command {
       const message =
         settings.errors.length > 0
           ? settings.errors.join('\n')
-          : 'Repository not initialized. Run "codepipe init" first.';
+          : ERROR_MESSAGES.REPO_NOT_INITIALIZED;
       const cliErr = new CliError(message, CliErrorCode.CONFIG_NOT_FOUND, {
         remediation: 'Run "codepipe init" to initialize the repository configuration.',
       });

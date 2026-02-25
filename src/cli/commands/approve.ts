@@ -1,6 +1,5 @@
 import { Args, Command, Flags } from '@oclif/core';
 import * as path from 'node:path';
-import { execSync } from 'node:child_process';
 import * as os from 'node:os';
 import { createCliLogger, LogLevel, type StructuredLogger } from '../../telemetry/logger';
 import { createRunMetricsCollector, type MetricsCollector } from '../../telemetry/metrics';
@@ -18,8 +17,9 @@ import {
 import { ApprovalGateType } from '../../core/models/ApprovalRecord';
 import { updateTraceMapOnSpecChange } from '../../workflows/traceabilityMapper';
 import { resolveRunDirectorySettings, selectFeatureId } from '../utils/runDirectory';
-import { formatErrorMessage, setJsonOutputMode } from '../utils/cliErrors';
+import { formatErrorMessage, setJsonOutputMode, ERROR_MESSAGES } from '../utils/cliErrors';
 import { flushTelemetrySuccess, flushTelemetryError } from '../utils/telemetryLifecycle';
+import { getGitUser } from '../startHelpers';
 
 /**
  * Approve Command
@@ -137,9 +137,7 @@ export default class Approve extends Command {
 
     if (settings.errors.length > 0 || !settings.config) {
       const message =
-        settings.errors.length > 0
-          ? settings.errors.join('\n')
-          : 'Repository not initialized. Run "codepipe init" first.';
+        settings.errors.length > 0 ? settings.errors.join('\n') : ERROR_MESSAGES.REPO_NOT_INITIALIZED;
       this.error(message, { exit: 10 });
     }
 
@@ -216,7 +214,7 @@ export default class Approve extends Command {
           signer: typedFlags.signer,
           artifactPath: artifactInfo.relativePath,
           metadata: {
-            git_user: this.getGitUser(),
+            git_user: getGitUser(),
             hostname: os.hostname(),
           },
         };
@@ -268,7 +266,7 @@ export default class Approve extends Command {
           artifactPath: artifactInfo.relativePath,
           reason: typedFlags.comment || 'No reason provided',
           metadata: {
-            git_user: this.getGitUser(),
+            git_user: getGitUser(),
             hostname: os.hostname(),
           },
         };
@@ -421,18 +419,6 @@ export default class Approve extends Command {
         `Update the artifact and re-run the relevant command (e.g., codepipe ${gateType})`,
         'Then request approval using this command again.',
       ];
-    }
-  }
-
-  private getGitUser(): string {
-    try {
-      const email = execSync('git config user.email', {
-        encoding: 'utf-8',
-        stdio: ['pipe', 'pipe', 'pipe'],
-      }).trim();
-      return email || 'unknown';
-    } catch {
-      return 'unknown';
     }
   }
 

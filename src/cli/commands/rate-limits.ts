@@ -15,7 +15,7 @@ import {
   type RateLimitReport,
 } from '../../telemetry/rateLimitReporter';
 import { RateLimitLedger } from '../../telemetry/rateLimitLedger';
-import { setJsonOutputMode } from '../utils/cliErrors';
+import { setJsonOutputMode, rethrowIfOclifError } from '../utils/cliErrors';
 
 type RateLimitsFlags = {
   feature?: string;
@@ -191,10 +191,7 @@ export default class RateLimits extends Command {
         error
       );
 
-      // Re-throw oclif errors to preserve exit codes
-      if (error && typeof error === 'object' && 'oclif' in error) {
-        throw error;
-      }
+      rethrowIfOclifError(error);
 
       if (error instanceof Error) {
         this.error(`Rate-limits command failed: ${error.message}`, { exit: 1 });

@@ -30,7 +30,7 @@ import {
 import { loadPlanSummary } from '../../workflows/taskPlanner';
 import { RateLimitReporter } from '../../telemetry/rateLimitReporter';
 import { loadReport as loadBranchProtectionReport } from '../../workflows/branchProtectionReporter';
-import { setJsonOutputMode } from '../utils/cliErrors';
+import { setJsonOutputMode, rethrowIfOclifError } from '../utils/cliErrors';
 
 type ResumeFlags = {
   feature?: string;
@@ -449,10 +449,7 @@ export default class Resume extends Command {
 
       await this.flush(logger, metrics, traceManager, commandSpan, runDirPath, exitCode);
 
-      // Re-throw oclif errors to preserve exit codes
-      if (error && typeof error === 'object' && 'oclif' in error) {
-        throw error;
-      }
+      rethrowIfOclifError(error);
 
       if (error instanceof Error) {
         this.error(`Resume command failed: ${error.message}`, { exit: exitCode });
@@ -568,30 +565,17 @@ export default class Resume extends Command {
             reset_at: providerData.resetAt,
           });
 
-          // Track integration-specific blockers
-          if (providerName === 'github') {
-            if (!integrationBlockers.github) {
-              integrationBlockers.github = [];
+          // Track integration-specific blockers for known providers
+          if (providerName === 'github' || providerName === 'linear') {
+            const key = providerName as 'github' | 'linear';
+            if (!integrationBlockers[key]) {
+              integrationBlockers[key] = [];
             }
             if (providerData.inCooldown) {
-              integrationBlockers.github.push(`Rate limit cooldown until ${providerData.resetAt}`);
+              integrationBlockers[key]!.push(`Rate limit cooldown until ${providerData.resetAt}`);
             }
             if (providerData.manualAckRequired) {
-              integrationBlockers.github.push(
-                `Manual acknowledgement required (${providerData.recentHitCount} consecutive hits)`
-              );
-            }
-          }
-
-          if (providerName === 'linear') {
-            if (!integrationBlockers.linear) {
-              integrationBlockers.linear = [];
-            }
-            if (providerData.inCooldown) {
-              integrationBlockers.linear.push(`Rate limit cooldown until ${providerData.resetAt}`);
-            }
-            if (providerData.manualAckRequired) {
-              integrationBlockers.linear.push(
+              integrationBlockers[key]!.push(
                 `Manual acknowledgement required (${providerData.recentHitCount} consecutive hits)`
               );
             }
