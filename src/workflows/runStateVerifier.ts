@@ -326,6 +326,19 @@ export function checkQueueState(analysis: ResumeAnalysis, manifest: RunManifest)
 // Recommendations
 // ============================================================================
 
+/** Static message map for blocker diagnostic codes */
+const BLOCKER_RECOMMENDATION_MAP: Record<string, string> = {
+  INTEGRITY_HASH_MISMATCH: '   • Artifacts have been modified. Restore from backup or use --force (risky)',
+  NON_RECOVERABLE_ERROR: '   • Manual intervention required. See docs/playbooks/resume_playbook.md',
+};
+
+/** Static message map for warning diagnostic codes */
+const WARNING_RECOMMENDATION_MAP: Record<string, string> = {
+  ERROR_RATE_LIMIT: '   • Wait for rate limit reset before resuming',
+  ERROR_NETWORK: '   • Check network connectivity before resuming',
+  QUEUE_HAS_FAILURES: '   • Review failed tasks in queue before resuming',
+};
+
 /**
  * Generate actionable recommendations based on diagnostics
  */
@@ -342,20 +355,14 @@ export function generateRecommendations(analysis: ResumeAnalysis): void {
         analysis.recommendations.push(
           `   • Complete pending approvals: ${((blocker.context?.approvals as string[]) || []).join(', ')}`
         );
-      } else if (blocker.code === 'INTEGRITY_HASH_MISMATCH') {
-        analysis.recommendations.push(
-          '   • Artifacts have been modified. Restore from backup or use --force (risky)'
-        );
-      } else if (blocker.code === 'NON_RECOVERABLE_ERROR') {
-        analysis.recommendations.push(
-          '   • Manual intervention required. See docs/playbooks/resume_playbook.md'
-        );
       } else if (blocker.code === 'QUEUE_CORRUPTED') {
         analysis.recommendations.push(
           `   • Queue files are corrupted. Run 'codepipe queue validate --feature ${analysis.featureId}' and rebuild with 'codepipe queue rebuild --feature ${analysis.featureId} --from-plan'`
         );
       } else {
-        analysis.recommendations.push(`   • ${blocker.message}`);
+        analysis.recommendations.push(
+          BLOCKER_RECOMMENDATION_MAP[blocker.code ?? ''] ?? `   • ${blocker.message}`
+        );
       }
     }
   }
@@ -370,16 +377,15 @@ export function generateRecommendations(analysis: ResumeAnalysis): void {
   if (warnings.length > 0 && blockers.length === 0) {
     analysis.recommendations.push('⚠️  Warnings (resume may proceed with caution):');
     for (const warning of warnings) {
-      if (warning.code === 'ERROR_RATE_LIMIT') {
-        analysis.recommendations.push('   • Wait for rate limit reset before resuming');
-      } else if (warning.code === 'ERROR_NETWORK') {
-        analysis.recommendations.push('   • Check network connectivity before resuming');
-      } else if (warning.code === 'QUEUE_HAS_FAILURES') {
-        analysis.recommendations.push('   • Review failed tasks in queue before resuming');
-      } else if (warning.code === 'QUEUE_VALIDATION_WARNINGS') {
+      if (warning.code === 'QUEUE_VALIDATION_WARNINGS') {
         analysis.recommendations.push(
           `   • Inspect queue warnings with 'codepipe queue validate --feature ${analysis.featureId} --verbose'`
         );
+      } else {
+        const mapped = WARNING_RECOMMENDATION_MAP[warning.code ?? ''];
+        if (mapped) {
+          analysis.recommendations.push(mapped);
+        }
       }
     }
   }

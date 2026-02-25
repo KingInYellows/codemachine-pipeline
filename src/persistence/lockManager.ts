@@ -65,43 +65,65 @@ function isLockFilePayload(value: unknown): value is LockFile {
   );
 }
 
-/** Check if a process exists (Unix-like systems only). Returns null on Windows. */
-function isProcessRunning(pid: number): boolean | null {
-  if (process.platform === 'win32') return null;
+/**
+ * Check if a process exists (Unix-like systems only).
+ * Uses POSIX signal 0 as a sentinel — kill(pid, 0) does not send a signal
+ * but checks process existence (POSIX.1-2017, §2.4).
+ *
+ * Returns 'running', 'stopped', or 'unknown' (Windows / permission error).
+ */
+function isProcessRunning(pid: number): 'running' | 'stopped' | 'unknown' {
+  if (process.platform === 'win32') return 'unknown';
   try {
     process.kill(pid, 0);
-    return true;
+    return 'running';
   } catch (error) {
-    if (
-      error &&
-      typeof error === 'object' &&
-      'code' in error &&
-      (error as NodeJS.ErrnoException).code === 'ESRCH'
-    ) {
-      return false;
+    if (error && typeof error === 'object' && 'code' in error) {
+      const code = (error as NodeJS.ErrnoException).code;
+      if (code === 'ESRCH') return 'stopped';
+      if (code === 'EPERM') return 'running'; // process exists but we can't signal it
     }
     throw wrapError(error, `check if lock process ${pid} exists`);
   }
 }
 
-async function isLockStale(lockPath: string): Promise<boolean> {
+/**
+ * Read and validate lock file contents. Returns the typed lock data or null
+ * when the file is missing or has an unexpected format.
+ * Re-throws errors that are not ENOENT (e.g. permission errors).
+ */
+async function readLockFile(lockPath: string): Promise<LockFile | null> {
   try {
     const content = await readFile(lockPath, 'utf-8');
     const parsed: unknown = JSON.parse(content);
+    return isLockFilePayload(parsed) ? parsed : null;
+  } catch (error) {
+    if (isFileNotFound(error)) {
+      return null;
+    }
+    throw error;
+  }
+}
 
-    if (!isLockFilePayload(parsed)) {
+/**
+ * Pure staleness check given already-loaded lock data.
+ */
+function isLockDataStale(lockData: LockFile): boolean {
+  if (Date.now() - new Date(lockData.acquired_at).getTime() > STALE_LOCK_THRESHOLD_MS) {
+    return true;
+  }
+  return isProcessRunning(lockData.pid) === 'stopped';
+}
+
+async function isLockStale(lockPath: string): Promise<boolean> {
+  try {
+    const lockData = await readLockFile(lockPath);
+    if (!lockData) {
       return true;
     }
-
-    const lockData: LockFile = parsed;
-
-    if (Date.now() - new Date(lockData.acquired_at).getTime() > STALE_LOCK_THRESHOLD_MS) {
-      return true;
-    }
-
-    const running = isProcessRunning(lockData.pid);
-    return running === false; // null (Windows) → not stale; false (no process) → stale
+    return isLockDataStale(lockData);
   } catch {
+    // Unexpected error reading lock file — treat as stale so callers can recover
     return true;
   }
 }

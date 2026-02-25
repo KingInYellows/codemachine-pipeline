@@ -7,6 +7,8 @@ import type { RepoConfig } from '../core/config/RepoConfig.js';
 /**
  * Select up to `limit` ready tasks from the queue, excluding any tasks
  * already in-flight. Priority order: running (resumed) > pending > retryable.
+ *
+ * Uses a single-pass bucket approach (O(n)) rather than three separate passes.
  */
 export async function getReadyTasks(
   runDir: string,
@@ -14,42 +16,26 @@ export async function getReadyTasks(
   limit: number
 ): Promise<ExecutionTask[]> {
   const tasks = await loadQueue(runDir);
-  const ready: ExecutionTask[] = [];
-  const seen = new Set<string>();
 
-  const consider = (task: ExecutionTask): void => {
-    if (ready.length >= limit) {
-      return;
-    }
-    if (inFlight.has(task.task_id) || seen.has(task.task_id)) {
-      return;
-    }
-    if (!areDependenciesCompleted(task, tasks)) {
-      return;
-    }
-    ready.push(task);
-    seen.add(task.task_id);
-  };
+  // Single pass: bucket tasks by priority
+  const running: ExecutionTask[] = [];
+  const pending: ExecutionTask[] = [];
+  const retryable: ExecutionTask[] = [];
 
   for (const task of tasks.values()) {
+    if (inFlight.has(task.task_id)) continue;
+    if (!areDependenciesCompleted(task, tasks)) continue;
+
     if (task.status === 'running') {
-      consider(task);
+      running.push(task);
+    } else if (task.status === 'pending') {
+      pending.push(task);
+    } else if (canRetry(task)) {
+      retryable.push(task);
     }
   }
 
-  for (const task of tasks.values()) {
-    if (task.status === 'pending') {
-      consider(task);
-    }
-  }
-
-  for (const task of tasks.values()) {
-    if (canRetry(task)) {
-      consider(task);
-    }
-  }
-
-  return ready;
+  return [...running, ...pending, ...retryable].slice(0, limit);
 }
 
 /**
