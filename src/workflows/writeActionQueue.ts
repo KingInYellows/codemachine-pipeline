@@ -338,11 +338,7 @@ export class WriteActionQueue {
               'Write actions retried after failure'
             );
           } else {
-            await this.updateActionStatus(
-              action.action_id,
-              WriteActionStatus.FAILED,
-              errorMessage
-            );
+            await this.updateActionStatus(action.action_id, WriteActionStatus.FAILED, errorMessage);
 
             this.logger.error('Action failed after max retries', {
               action_id: action.action_id,

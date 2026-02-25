@@ -54,9 +54,9 @@ export function generateIdempotencyKey(
 export function isFileNotFound(error: unknown): error is NodeJS.ErrnoException {
   return Boolean(
     error &&
-      typeof error === 'object' &&
-      'code' in error &&
-      (error as NodeJS.ErrnoException).code === 'ENOENT'
+    typeof error === 'object' &&
+    'code' in error &&
+    (error as NodeJS.ErrnoException).code === 'ENOENT'
   );
 }
 
@@ -170,9 +170,10 @@ export class WriteActionStore {
     const lines =
       Array.from(actions.values())
         .map((action) => JSON.stringify(action))
-        .join('\n') + '\n';
+        .join('\n');
+    const queueContent = `${lines}\n`;
 
-    await writeFile(this.queuePath, lines, 'utf-8');
+    await writeFile(this.queuePath, queueContent, 'utf-8');
 
     const checksum = await computeQueueChecksum(this.queuePath);
     const manifest = await this.loadManifest();
@@ -182,7 +183,7 @@ export class WriteActionStore {
   }
 
   async appendAction(action: WriteAction): Promise<void> {
-    const line = JSON.stringify(action) + '\n';
+    const line = `${JSON.stringify(action)}\n`;
     await appendFile(this.queuePath, line, 'utf-8');
   }
 
@@ -232,10 +233,10 @@ export class WriteActionStore {
   async updateManifestCounts(
     totalDelta: number,
     pendingDelta: number,
-    inProgressDelta: number = 0,
-    completedDelta: number = 0,
-    failedDelta: number = 0,
-    skippedDelta: number = 0
+    inProgressDelta = 0,
+    completedDelta = 0,
+    failedDelta = 0,
+    skippedDelta = 0
   ): Promise<void> {
     const manifest = await this.loadManifest();
 
