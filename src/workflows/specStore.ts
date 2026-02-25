@@ -5,8 +5,8 @@
  * including approval record management and metadata persistence.
  */
 
-import * as fs from 'node:fs/promises';
-import * as path from 'node:path';
+import { mkdir, readFile, writeFile } from 'node:fs/promises';
+import { join } from 'node:path';
 import { z } from 'zod';
 import { validateOrThrow } from '../validation/helpers.js';
 import { computeFileHash, withLock, getSubdirectoryPath } from '../persistence';
@@ -57,14 +57,14 @@ export async function writeSpecFiles(
   specJson: string
 ): Promise<{ specPath: string; specJsonPath: string }> {
   const artifactsDir = getSubdirectoryPath(runDir, 'artifacts');
-  await fs.mkdir(artifactsDir, { recursive: true });
+  await mkdir(artifactsDir, { recursive: true });
 
-  const specPath = path.join(artifactsDir, 'spec.md');
-  const specJsonPath = path.join(artifactsDir, 'spec.json');
+  const specPath = join(artifactsDir, 'spec.md');
+  const specJsonPath = join(artifactsDir, 'spec.json');
 
   await withLock(runDir, async () => {
-    await fs.writeFile(specPath, specMarkdown, 'utf-8');
-    await fs.writeFile(specJsonPath, specJson, 'utf-8');
+    await writeFile(specPath, specMarkdown, 'utf-8');
+    await writeFile(specJsonPath, specJson, 'utf-8');
   });
 
   return { specPath, specJsonPath };
@@ -75,10 +75,10 @@ export async function writeSpecFiles(
  */
 export async function writeSpecMetadata(runDir: string, metadata: SpecMetadata): Promise<string> {
   const artifactsDir = getSubdirectoryPath(runDir, 'artifacts');
-  const metadataPath = path.join(artifactsDir, 'spec_metadata.json');
+  const metadataPath = join(artifactsDir, 'spec_metadata.json');
 
   await withLock(runDir, async () => {
-    await fs.writeFile(metadataPath, JSON.stringify(metadata, null, 2), 'utf-8');
+    await writeFile(metadataPath, JSON.stringify(metadata, null, 2), 'utf-8');
   });
 
   return metadataPath;
@@ -93,10 +93,10 @@ export async function writeSpecMetadata(runDir: string, metadata: SpecMetadata):
  */
 export async function loadSpecMetadata(runDir: string): Promise<SpecMetadata | null> {
   const artifactsDir = getSubdirectoryPath(runDir, 'artifacts');
-  const metadataPath = path.join(artifactsDir, 'spec_metadata.json');
+  const metadataPath = join(artifactsDir, 'spec_metadata.json');
 
   try {
-    const content = await fs.readFile(metadataPath, 'utf-8');
+    const content = await readFile(metadataPath, 'utf-8');
     return validateOrThrow(
       SpecMetadataSchema,
       JSON.parse(content),
@@ -124,14 +124,14 @@ export async function getSpecApprovals(runDir: string): Promise<ApprovalRecord[]
     return [];
   }
 
-  const approvalsDir = path.join(runDir, 'approvals');
+  const approvalsDir = join(runDir, 'approvals');
   const records: ApprovalRecord[] = [];
 
   for (const approvalId of metadata.approvals) {
-    const approvalPath = path.join(approvalsDir, `${approvalId}.json`);
+    const approvalPath = join(approvalsDir, `${approvalId}.json`);
 
     try {
-      const content = await fs.readFile(approvalPath, 'utf-8');
+      const content = await readFile(approvalPath, 'utf-8');
       const parsed = parseApprovalRecord(JSON.parse(content));
 
       if (parsed.success && parsed.data.gate_type === 'spec') {
@@ -168,12 +168,12 @@ export async function recordSpecApproval(
   return withLock(runDir, async () => {
     // Step 1: Load spec metadata
     const artifactsDir = getSubdirectoryPath(runDir, 'artifacts');
-    const metadataPath = path.join(artifactsDir, 'spec_metadata.json');
-    const specPath = path.join(artifactsDir, 'spec.md');
+    const metadataPath = join(artifactsDir, 'spec_metadata.json');
+    const specPath = join(artifactsDir, 'spec.md');
 
     let metadata: SpecMetadata;
     try {
-      const metadataContent = await fs.readFile(metadataPath, 'utf-8');
+      const metadataContent = await readFile(metadataPath, 'utf-8');
       metadata = validateOrThrow(
         SpecMetadataSchema,
         JSON.parse(metadataContent),
@@ -190,9 +190,9 @@ export async function recordSpecApproval(
     const currentHash = await computeFileHash(specPath);
     if (currentHash !== metadata.specHash) {
       throw new Error(
-        `Spec content has changed since metadata was last updated. ` +
+        'Spec content has changed since metadata was last updated. ' +
           `Expected hash: ${metadata.specHash}, Current hash: ${currentHash}. ` +
-          `Please regenerate spec or update metadata.`
+          'Please regenerate spec or update metadata.'
       );
     }
 
@@ -229,11 +229,11 @@ export async function recordSpecApproval(
     );
 
     // Step 4: Save approval record
-    const approvalsDir = path.join(runDir, 'approvals');
-    await fs.mkdir(approvalsDir, { recursive: true });
+    const approvalsDir = join(runDir, 'approvals');
+    await mkdir(approvalsDir, { recursive: true });
 
-    const approvalPath = path.join(approvalsDir, `${approvalId}.json`);
-    await fs.writeFile(approvalPath, serializeApprovalRecord(approvalRecord), 'utf-8');
+    const approvalPath = join(approvalsDir, `${approvalId}.json`);
+    await writeFile(approvalPath, serializeApprovalRecord(approvalRecord), 'utf-8');
 
     // Step 5: Update metadata
     metadata.approvals.push(approvalId);
@@ -245,13 +245,13 @@ export async function recordSpecApproval(
           : 'changes_requested';
     metadata.updatedAt = new Date().toISOString();
 
-    await fs.writeFile(metadataPath, JSON.stringify(metadata, null, 2), 'utf-8');
+    await writeFile(metadataPath, JSON.stringify(metadata, null, 2), 'utf-8');
 
-    const approvalsIndexPath = path.join(runDir, 'approvals.json');
+    const approvalsIndexPath = join(runDir, 'approvals.json');
     let approvalsIndex: { approvals: ApprovalRecord[] } = { approvals: [] };
 
     try {
-      const existingIndex = await fs.readFile(approvalsIndexPath, 'utf-8');
+      const existingIndex = await readFile(approvalsIndexPath, 'utf-8');
       approvalsIndex = validateOrThrow(
         z.object({ approvals: z.array(ApprovalRecordSchema) }),
         JSON.parse(existingIndex),
@@ -269,7 +269,7 @@ export async function recordSpecApproval(
     }
 
     approvalsIndex.approvals.push(approvalRecord);
-    await fs.writeFile(approvalsIndexPath, JSON.stringify(approvalsIndex, null, 2), 'utf-8');
+    await writeFile(approvalsIndexPath, JSON.stringify(approvalsIndex, null, 2), 'utf-8');
 
     logger.info('Spec approval recorded', {
       featureId,

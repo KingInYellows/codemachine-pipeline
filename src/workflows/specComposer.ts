@@ -160,14 +160,22 @@ export async function composeSpecification(
 
   // Step 4: Build specification content
   const specContent = [
-    '## Overview', '',
-    prdSections.problemStatement, '',
-    '## Goals', '',
-    ...prdSections.goals.map((g) => `- ${g}`), '',
-    '## Non-Goals', '',
-    ...prdSections.nonGoals.map((g) => `- ${g}`), '',
-    '## Acceptance Criteria', '',
-    ...prdSections.acceptanceCriteria.map((a) => `- ${a}`), '',
+    '## Overview',
+    '',
+    prdSections.problemStatement,
+    '',
+    '## Goals',
+    '',
+    ...prdSections.goals.map((g) => `- ${g}`),
+    '',
+    '## Non-Goals',
+    '',
+    ...prdSections.nonGoals.map((g) => `- ${g}`),
+    '',
+    '## Acceptance Criteria',
+    '',
+    ...prdSections.acceptanceCriteria.map((a) => `- ${a}`),
+    '',
   ].join('\n');
 
   // Step 5: Create and validate structured specification
@@ -249,9 +257,12 @@ export async function composeSpecification(
   if (testPlan.length === 0) incompleteSections.push('test_plan');
 
   const warnings: string[] = [];
-  if (unknowns.length > 0) warnings.push(`${unknowns.length} unknown(s) detected requiring research`);
+  if (unknowns.length > 0)
+    warnings.push(`${unknowns.length} unknown(s) detected requiring research`);
   if (incompleteSections.length > 0) {
-    warnings.push(`${incompleteSections.length} section(s) incomplete: ${incompleteSections.join(', ')}`);
+    warnings.push(
+      `${incompleteSections.length} section(s) incomplete: ${incompleteSections.join(', ')}`
+    );
   }
 
   logger.info('Specification composition completed', {

@@ -108,15 +108,50 @@ export function generateRolloutPlan(risks: RiskAssessment[]): RolloutPlan {
 
   const phases = hasHighRisks
     ? [
-        { phase_id: 'phase-1', description: 'Canary deployment to 1% of users', percentage: 1, duration: '24 hours' },
-        { phase_id: 'phase-2', description: 'Expand to 10% of users if stable', percentage: 10, duration: '48 hours' },
-        { phase_id: 'phase-3', description: 'Expand to 50% of users', percentage: 50, duration: '72 hours' },
-        { phase_id: 'phase-4', description: 'Full rollout to 100% of users', percentage: 100, duration: 'ongoing' },
+        {
+          phase_id: 'phase-1',
+          description: 'Canary deployment to 1% of users',
+          percentage: 1,
+          duration: '24 hours',
+        },
+        {
+          phase_id: 'phase-2',
+          description: 'Expand to 10% of users if stable',
+          percentage: 10,
+          duration: '48 hours',
+        },
+        {
+          phase_id: 'phase-3',
+          description: 'Expand to 50% of users',
+          percentage: 50,
+          duration: '72 hours',
+        },
+        {
+          phase_id: 'phase-4',
+          description: 'Full rollout to 100% of users',
+          percentage: 100,
+          duration: 'ongoing',
+        },
       ]
     : [
-        { phase_id: 'phase-1', description: 'Initial rollout to 25% of users', percentage: 25, duration: '48 hours' },
-        { phase_id: 'phase-2', description: 'Expand to 75% of users', percentage: 75, duration: '48 hours' },
-        { phase_id: 'phase-3', description: 'Full rollout to 100% of users', percentage: 100, duration: 'ongoing' },
+        {
+          phase_id: 'phase-1',
+          description: 'Initial rollout to 25% of users',
+          percentage: 25,
+          duration: '48 hours',
+        },
+        {
+          phase_id: 'phase-2',
+          description: 'Expand to 75% of users',
+          percentage: 75,
+          duration: '48 hours',
+        },
+        {
+          phase_id: 'phase-3',
+          description: 'Full rollout to 100% of users',
+          percentage: 100,
+          duration: 'ongoing',
+        },
       ];
 
   return {
