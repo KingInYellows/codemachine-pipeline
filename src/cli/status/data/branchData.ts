@@ -3,6 +3,7 @@ import {
   createBranchProtectionAdapter,
   type BranchProtectionConfig,
 } from '../../../adapters/github/branchProtection';
+import { evaluateCompliance } from '../../../workflows/branchComplianceChecker';
 import {
   loadReport as loadBranchProtectionReport,
   generateSummary as generateBranchProtectionSummary,
@@ -134,12 +135,16 @@ export async function refreshBranchProtectionArtifact(
 
     const adapter = createBranchProtectionAdapter(adapterConfig);
 
-    const compliance = await adapter.evaluateCompliance({
-      branch,
-      sha: branch,
-      base_sha: baseBranch,
-      pull_number: prMetadata?.pr_number,
-    });
+    const compliance = await evaluateCompliance(
+      adapter,
+      {
+        branch,
+        sha: branch,
+        base_sha: baseBranch,
+        pull_number: prMetadata?.pr_number,
+      },
+      logger
+    );
 
     const report = buildBranchProtectionReport(featureId, compliance, {
       owner,
