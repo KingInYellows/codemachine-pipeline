@@ -9,8 +9,8 @@
  * RepoConfigSchema.ts and RepoConfigDefaults.ts is an implementation detail.
  */
 
-import * as fs from 'node:fs';
-import * as fsPromises from 'node:fs/promises';
+import { constants } from 'node:fs';
+import { access, readFile } from 'node:fs/promises';
 
 import {
   RepoConfigSchema,
@@ -71,7 +71,7 @@ export async function loadRepoConfig(configPath: string): Promise<ValidationResu
   try {
     // Check if file exists and is readable
     try {
-      await fsPromises.access(configPath, fs.constants.R_OK);
+      await access(configPath, constants.R_OK);
     } catch (error: unknown) {
       const nodeError = error as NodeJS.ErrnoException;
       if (nodeError.code === 'EACCES') {
@@ -99,7 +99,7 @@ export async function loadRepoConfig(configPath: string): Promise<ValidationResu
     }
 
     // Read and parse JSON
-    const rawContent = await fsPromises.readFile(configPath, 'utf-8');
+    const rawContent = await readFile(configPath, 'utf-8');
     let rawConfig: unknown;
 
     try {

@@ -7,9 +7,7 @@
  */
 
 import { z } from 'zod';
-import {
-  ValidationCommandConfigSchema,
-} from '../validation/validationCommandConfig';
+import { ValidationCommandConfigSchema } from '../validation/validationCommandConfig';
 
 // ============================================================================
 // Config History Schema - Tracks schema migrations over time
@@ -307,7 +305,7 @@ export type RepoConfig = z.infer<typeof RepoConfigSchema>;
 export interface ValidationError {
   path: string;
   message: string;
-  suggestion?: string | undefined;
+  suggestion?: string;
 }
 
 export interface ValidationResult {
