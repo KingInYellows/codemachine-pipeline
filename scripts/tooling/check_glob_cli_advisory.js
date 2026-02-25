@@ -47,13 +47,10 @@ function isVulnerableGlob(versionValue) {
   if (!version) {
     return false;
   }
-  if (isVersionInRange(version, { major: 10, minor: 2, patch: 0 }, { major: 10, minor: 5, patch: 0 })) {
-    return true;
-  }
-  if (isVersionInRange(version, { major: 11, minor: 0, patch: 0 }, { major: 11, minor: 1, patch: 0 })) {
-    return true;
-  }
-  return false;
+  return Boolean(
+    isVersionInRange(version, { major: 10, minor: 2, patch: 0 }, { major: 10, minor: 5, patch: 0 }) ||
+    isVersionInRange(version, { major: 11, minor: 0, patch: 0 }, { major: 11, minor: 1, patch: 0 })
+  );
 }
 
 function hasDependency(packageJson, name) {

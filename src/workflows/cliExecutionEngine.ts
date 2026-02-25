@@ -23,13 +23,7 @@ import { DEFAULT_EXECUTION_CONFIG, ExecutionConfig } from '../core/config/RepoCo
 const TASK_ID_PATTERN = /^[a-zA-Z0-9_-]+$/;
 
 function validateTaskId(taskId: string): boolean {
-  if (!TASK_ID_PATTERN.test(taskId)) {
-    return false;
-  }
-  if (taskId.includes('..')) {
-    return false;
-  }
-  return true;
+  return TASK_ID_PATTERN.test(taskId) && !taskId.includes('..');
 }
 
 function isPathContained(basePath: string, targetPath: string): boolean {

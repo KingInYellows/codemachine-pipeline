@@ -113,36 +113,19 @@ export function isSerializedError(value: unknown): value is SerializedError {
   if (candidate.requestId !== undefined && typeof candidate.requestId !== 'string') {
     return false;
   }
-  if (candidate.type !== undefined && typeof candidate.type !== 'string') {
-    return false;
-  }
-  if (candidate.operation !== undefined && typeof candidate.operation !== 'string') {
-    return false;
-  }
-  if (candidate.cause !== undefined && !isSerializedError(candidate.cause)) {
-    return false;
-  }
-  if (candidate.retryable !== undefined && typeof candidate.retryable !== 'boolean') {
-    return false;
-  }
-  if (candidate.headers !== undefined) {
-    if (
-      candidate.headers === null ||
-      typeof candidate.headers !== 'object' ||
-      Array.isArray(candidate.headers)
-    ) {
-      return false;
-    }
-    // Validate all values are strings
-    for (const value of Object.values(candidate.headers)) {
-      if (typeof value !== 'string') return false;
-    }
-  }
-  if (candidate.responseBody !== undefined && typeof candidate.responseBody !== 'string') {
-    return false;
-  }
-
-  return true;
+  return (
+    (candidate.type === undefined || typeof candidate.type === 'string') &&
+    (candidate.operation === undefined || typeof candidate.operation === 'string') &&
+    (candidate.cause === undefined || isSerializedError(candidate.cause)) &&
+    (candidate.retryable === undefined || typeof candidate.retryable === 'boolean') &&
+    (candidate.headers === undefined || (
+      candidate.headers !== null &&
+      typeof candidate.headers === 'object' &&
+      !Array.isArray(candidate.headers) &&
+      Object.values(candidate.headers).every(value => typeof value === 'string')
+    )) &&
+    (candidate.responseBody === undefined || typeof candidate.responseBody === 'string')
+  );
 }
 
 // LogContext Types
