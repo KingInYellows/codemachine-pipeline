@@ -23,7 +23,8 @@ import {
   PRExitCode,
   type PRMetadata,
 } from '../../pr/shared';
-import { setJsonOutputMode } from '../../utils/cliErrors';
+import { setJsonOutputMode, rethrowIfOclifError } from '../../utils/cliErrors';
+import { parseReviewerList } from '../../pr/shared';
 
 type ReviewersFlags = {
   feature?: string;
@@ -115,12 +116,7 @@ export default class PRReviewers extends Command {
         }
 
         // Parse reviewers to add
-        const reviewersToAdd = typedFlags.add
-          ? typedFlags.add
-              .split(',')
-              .map((r) => r.trim())
-              .filter((r) => r.length > 0)
-          : [];
+        const reviewersToAdd = typedFlags.add ? parseReviewerList(typedFlags.add) : [];
 
         if (reviewersToAdd.length === 0) {
           this.error('No reviewers specified. Use --add flag with comma-separated usernames.', {
@@ -222,10 +218,7 @@ export default class PRReviewers extends Command {
         throw error;
       }
     } catch (error) {
-      // Re-throw oclif errors to preserve exit codes
-      if (error && typeof error === 'object' && 'oclif' in error) {
-        throw error;
-      }
+      rethrowIfOclifError(error);
 
       if (error instanceof Error) {
         this.error(`PR reviewers failed: ${error.message}`, {

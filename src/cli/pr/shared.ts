@@ -467,6 +467,21 @@ export async function logDeploymentAction(
   }
 }
 
+/**
+ * Parse a comma-separated reviewer list string into individual usernames.
+ *
+ * Trims whitespace and removes empty entries.
+ *
+ * @param input - Comma-separated string of reviewer usernames
+ * @returns Array of trimmed, non-empty reviewer username strings
+ */
+export function parseReviewerList(input: string): string[] {
+  return input
+    .split(',')
+    .map((r) => r.trim())
+    .filter((r) => r.length > 0);
+}
+
 function isStringOrNumber(value: unknown): value is string | number {
   return typeof value === 'string' || typeof value === 'number';
 }

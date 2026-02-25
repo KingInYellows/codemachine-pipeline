@@ -192,3 +192,25 @@ export function getDocsUrl(code: CliErrorCode): string | undefined {
 export function setJsonOutputMode(): void {
   process.env['JSON_OUTPUT'] = '1';
 }
+
+/**
+ * Shared error message constants used across multiple CLI commands.
+ */
+export const ERROR_MESSAGES = {
+  REPO_NOT_INITIALIZED: 'Repository not initialized. Run "codepipe init" first.',
+} as const;
+
+/**
+ * Re-throw an error if it is an oclif error (i.e. has an `oclif` property).
+ *
+ * Oclif errors carry structured exit codes that must be preserved.  Calling
+ * this at the top of every outer catch block replaces the repeated inline
+ * guard:
+ *
+ *   if (error && typeof error === 'object' && 'oclif' in error) throw error;
+ */
+export function rethrowIfOclifError(error: unknown): void {
+  if (error && typeof error === 'object' && 'oclif' in error) {
+    throw error;
+  }
+}

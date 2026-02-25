@@ -17,10 +17,10 @@ import {
   flushTelemetryError,
   type TelemetryResources,
 } from '../utils/telemetryLifecycle';
-import { loadPlanSummary, type PlanSummary } from '../../workflows/taskPlanner';
+import { loadPlanSummary, buildDagMetadata, type PlanSummary } from '../../workflows/taskPlanner';
 import { loadSpecMetadata } from '../../workflows/specComposer';
 import { comparePlanDiff, type PlanDiff } from '../../workflows/planDiffer';
-import { setJsonOutputMode } from '../utils/cliErrors';
+import { setJsonOutputMode, rethrowIfOclifError } from '../utils/cliErrors';
 
 type PlanFlags = {
   feature?: string;
@@ -195,10 +195,7 @@ export default class Plan extends Command {
         error
       );
 
-      // Re-throw oclif errors to preserve exit codes
-      if (error && typeof error === 'object' && 'oclif' in error) {
-        throw error;
-      }
+      rethrowIfOclifError(error);
 
       if (error instanceof Error) {
         this.error(`Plan command failed: ${error.message}`, { exit: 1 });
@@ -285,16 +282,9 @@ export default class Plan extends Command {
         last_updated: planSummary.lastUpdated,
       };
 
-      if (planSummary.dag) {
-        payload.plan_summary.dag_metadata = {
-          ...(planSummary.dag.parallelPaths !== undefined && {
-            parallel_paths: planSummary.dag.parallelPaths,
-          }),
-          ...(planSummary.dag.criticalPathDepth !== undefined && {
-            critical_path_depth: planSummary.dag.criticalPathDepth,
-          }),
-          generated_at: planSummary.dag.generatedAt,
-        };
+      const dagMetadata = buildDagMetadata(planSummary.dag);
+      if (dagMetadata) {
+        payload.plan_summary.dag_metadata = dagMetadata;
       }
 
       payload.notes.push(

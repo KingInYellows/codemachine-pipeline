@@ -34,7 +34,7 @@ import {
   serializeContextDocument,
   type ContextDocument,
 } from '../../../core/models/ContextDocument';
-import { setJsonOutputMode } from '../../utils/cliErrors';
+import { setJsonOutputMode, rethrowIfOclifError } from '../../utils/cliErrors';
 import { flushTelemetrySuccess, flushTelemetryError } from '../../utils/telemetryLifecycle';
 
 type SummarizeFlags = {
@@ -279,9 +279,7 @@ export default class ContextSummarize extends Command {
         error
       );
 
-      if (error && typeof error === 'object' && 'oclif' in error) {
-        throw error;
-      }
+      rethrowIfOclifError(error);
 
       if (error instanceof Error) {
         this.error(`Context summarization failed: ${error.message}`, { exit: 1 });

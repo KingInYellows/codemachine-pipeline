@@ -94,6 +94,25 @@ export function findGitRoot(): string {
   }
 }
 
+/**
+ * Get the git user email from the local git config.
+ *
+ * Returns 'unknown' if the git config is unavailable.
+ * Previously a private method in approve.ts — extracted here so it can be
+ * reused by any command that needs the current git user identity.
+ */
+export function getGitUser(): string {
+  try {
+    const email = execSync('git config user.email', {
+      encoding: 'utf-8',
+      stdio: ['pipe', 'pipe', 'pipe'],
+    }).trim();
+    return email || 'unknown';
+  } catch {
+    return 'unknown';
+  }
+}
+
 // ============================================================================
 // Config Helpers
 // ============================================================================

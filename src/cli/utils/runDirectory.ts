@@ -7,6 +7,7 @@ import {
   updateManifest,
 } from '../../persistence/runDirectoryManager';
 import { loadRepoConfig, type RepoConfig } from '../../core/config/RepoConfig';
+import { CliError, CliErrorCode, ERROR_MESSAGES } from './cliErrors';
 
 export const CONFIG_RELATIVE_PATH = path.join('.codepipe', 'config.json');
 export const DEFAULT_RUNS_DIR = path.join('.codepipe', 'runs');
@@ -76,6 +77,62 @@ export async function findMostRecentRun(baseDir: string): Promise<string | undef
   }
 
   return mostRecent?.id;
+}
+
+/**
+ * Guard that ensures a feature ID was resolved.
+ *
+ * Throws a {@link CliError} with exit code 10 if:
+ * - No feature run directory was found (featureId is undefined/null)
+ * - An explicit feature ID was requested but the resolved ID does not match it
+ *   (meaning the run directory does not exist for that feature)
+ *
+ * This replaces the identical two-guard block copy-pasted across 9 commands
+ * after every `selectFeatureId` call.
+ *
+ * @param featureId - Resolved feature ID (may be undefined if none was found)
+ * @param requestedFeature - Explicit feature ID requested via flag (optional)
+ * @returns The confirmed feature ID (never undefined after this call)
+ * @throws CliError if no feature directory found or the requested feature is missing
+ */
+export function requireFeatureId(
+  featureId: string | undefined,
+  requestedFeature?: string
+): asserts featureId is string {
+  if (!featureId) {
+    throw new CliError(
+      'No feature run directory found. Run "codepipe start" first.',
+      CliErrorCode.RUN_DIR_NOT_FOUND
+    );
+  }
+  if (requestedFeature && featureId !== requestedFeature) {
+    throw new CliError(
+      `Feature run directory not found: ${requestedFeature}`,
+      CliErrorCode.RUN_DIR_NOT_FOUND
+    );
+  }
+}
+
+/**
+ * Guard that ensures settings are valid and config is present.
+ *
+ * Throws a {@link CliError} with exit code 10 if settings contain errors
+ * or the config was not loaded.  This replaces the identical validation block
+ * in start.ts and approve.ts.
+ *
+ * @param settings - Run directory settings returned by resolveRunDirectorySettings
+ * @returns The validated RepoConfig
+ * @throws CliError if settings have errors or config is missing
+ */
+export function requireConfig(settings: RunDirectorySettings): RepoConfig {
+  if (settings.errors.length > 0 || !settings.config) {
+    const message =
+      settings.errors.length > 0 ? settings.errors.join('\n') : ERROR_MESSAGES.REPO_NOT_INITIALIZED;
+    throw new CliError(message, CliErrorCode.CONFIG_NOT_FOUND, {
+      remediation: 'Run "codepipe init" to initialize the repository configuration.',
+    });
+  }
+  return settings.config;
 }
 
 export async function ensureTelemetryReferences(runDir: string): Promise<void> {

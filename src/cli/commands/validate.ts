@@ -23,7 +23,7 @@ import {
   type AutoFixOptions,
   type AutoFixResult,
 } from '../../workflows/autoFixEngine';
-import { setJsonOutputMode } from '../utils/cliErrors';
+import { setJsonOutputMode, rethrowIfOclifError } from '../utils/cliErrors';
 import { flushTelemetrySuccess, flushTelemetryError } from '../utils/telemetryLifecycle';
 
 /**
@@ -267,10 +267,7 @@ export default class Validate extends Command {
         error
       );
 
-      // Re-throw oclif errors to preserve exit codes
-      if (error && typeof error === 'object' && 'oclif' in error) {
-        throw error;
-      }
+      rethrowIfOclifError(error);
 
       if (error instanceof Error) {
         this.error(`Validate command failed: ${error.message}`, { exit: 1 });

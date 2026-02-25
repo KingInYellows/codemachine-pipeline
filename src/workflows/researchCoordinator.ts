@@ -723,6 +723,25 @@ export function createResearchCoordinator(
 }
 
 /**
+ * Convenience factory that creates a ResearchCoordinator with repoRoot defaulting
+ * to process.cwd().
+ *
+ * Three call sites (research/create.ts, research/list.ts, status/data/researchData.ts)
+ * all construct coordinators with the same shape:
+ *   createResearchCoordinator({ repoRoot: process.cwd(), runDir, featureId }, logger, metrics)
+ *
+ * This helper centralises that pattern.
+ */
+export function createCoordinatorForRun(
+  runDir: string,
+  featureId: string,
+  logger: StructuredLogger,
+  metrics: MetricsCollector
+): ResearchCoordinator {
+  return createResearchCoordinator({ repoRoot: process.cwd(), runDir, featureId }, logger, metrics);
+}
+
+/**
  * Initialize research directory structure for a feature
  */
 export async function initializeResearchDirectory(runDir: string): Promise<void> {

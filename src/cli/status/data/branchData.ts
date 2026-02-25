@@ -18,6 +18,7 @@ import type { TraceManager, ActiveSpan } from '../../../telemetry/traces';
 import type { RunDirectorySettings } from '../../utils/runDirectory';
 import type { RunManifest } from '../../../persistence/runDirectoryManager';
 import type { StatusBranchProtectionPayload } from '../types';
+import { logIfUnexpectedFileError } from './types';
 import type { DataLogger } from './types';
 import { loadPRMetadata } from './integrationsData';
 
@@ -43,14 +44,10 @@ export async function loadBranchProtectionStatus(
       ...(report.validation_mismatch && { validation_mismatch: report.validation_mismatch }),
     };
   } catch (error) {
-    if (error && typeof error === 'object' && 'code' in error && error.code !== 'ENOENT') {
-      logger?.warn('Failed to load branch protection', {
-        error: error instanceof Error ? error.message : 'Unknown error',
-        stack: error instanceof Error ? error.stack : undefined,
-        run_dir: runDir,
-        error_code: 'STATUS_BRANCH_PROTECTION_LOAD_FAILED',
-      });
-    }
+    logIfUnexpectedFileError(error, logger, 'Failed to load branch protection', {
+      run_dir: runDir,
+      error_code: 'STATUS_BRANCH_PROTECTION_LOAD_FAILED',
+    });
     return undefined;
   }
 }
