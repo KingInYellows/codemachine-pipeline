@@ -1,5 +1,5 @@
 import { estimateTokens } from '../contextRanking';
-import type { SummarizerClient, SummaryResponse } from '../contextSummarizer';
+import type { SummarizerClient, SummaryResponse } from './types';
 
 /**
  * LocalSummarizerClient
