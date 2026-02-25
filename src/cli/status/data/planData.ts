@@ -1,4 +1,4 @@
-import * as path from 'node:path';
+import { join } from 'node:path';
 import { getRunDirectoryPath, readManifest } from '../../../persistence/runDirectoryManager';
 import { loadTraceSummary } from '../../../workflows/traceabilityMapper';
 import { loadPlanSummary } from '../../../workflows/taskPlanner';
@@ -17,7 +17,7 @@ export async function loadManifestSnapshot(
   featureId: string
 ): Promise<ManifestLoadResult> {
   const runDir = getRunDirectoryPath(baseDir, featureId);
-  const manifestPath = path.join(runDir, MANIFEST_FILE);
+  const manifestPath = join(runDir, MANIFEST_FILE);
 
   try {
     const manifest = await readManifest(runDir);
@@ -99,7 +99,7 @@ export async function loadPlanStatus(
   logger?: DataLogger
 ): Promise<StatusPlanPayload | undefined> {
   const runDir = getRunDirectoryPath(baseDir, featureId);
-  const planPath = path.join(runDir, 'plan.json');
+  const planPath = join(runDir, 'plan.json');
 
   try {
     const planSummary = await loadPlanSummary(runDir);

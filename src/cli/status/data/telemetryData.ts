@@ -1,5 +1,5 @@
-import * as path from 'node:path';
-import * as fs from 'node:fs/promises';
+import { readFile } from 'node:fs/promises';
+import { join } from 'node:path';
 import { getRunDirectoryPath } from '../../../persistence/runDirectoryManager';
 import { safeJsonParse } from '../../../utils/safeJson';
 import { parseContextDocument } from '../../../core/models/ContextDocument';
@@ -12,10 +12,10 @@ export async function attachSummarizationMetadata(
   contextDir: string,
   logger?: DataLogger
 ): Promise<void> {
-  const metadataPath = path.join(contextDir, 'summarization.json');
+  const metadataPath = join(contextDir, 'summarization.json');
 
   try {
-    const metadataRaw = await fs.readFile(metadataPath, 'utf-8');
+    const metadataRaw = await readFile(metadataPath, 'utf-8');
     const metadata = safeJsonParse<{
       updated_at?: string;
       chunks_generated?: number;
@@ -60,10 +60,10 @@ export async function attachCostTelemetry(
   runDir: string,
   logger?: DataLogger
 ): Promise<void> {
-  const costsPath = path.join(runDir, 'telemetry', 'costs.json');
+  const costsPath = join(runDir, 'telemetry', 'costs.json');
 
   try {
-    const content = await fs.readFile(costsPath, 'utf-8');
+    const content = await readFile(costsPath, 'utf-8');
     const costs = safeJsonParse<{
       totals?: {
         promptTokens?: number;
@@ -118,12 +118,12 @@ export async function loadContextStatus(
   logger?: DataLogger
 ): Promise<StatusContextPayload | undefined> {
   const runDir = getRunDirectoryPath(baseDir, featureId);
-  const contextDir = path.join(runDir, 'context');
-  const summaryPath = path.join(contextDir, 'summary.json');
+  const contextDir = join(runDir, 'context');
+  const summaryPath = join(contextDir, 'summary.json');
 
   let content: string;
   try {
-    content = await fs.readFile(summaryPath, 'utf-8');
+    content = await readFile(summaryPath, 'utf-8');
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
       return undefined;

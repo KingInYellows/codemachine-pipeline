@@ -1,5 +1,5 @@
-import * as path from 'node:path';
-import * as fs from 'node:fs/promises';
+import { access } from 'node:fs/promises';
+import { join } from 'node:path';
 import { getRunDirectoryPath } from '../../../persistence/runDirectoryManager';
 import { createResearchCoordinator } from '../../../workflows/researchCoordinator';
 import type { StructuredLogger } from '../../../telemetry/logger';
@@ -14,12 +14,12 @@ export async function loadResearchStatus(
   metrics?: MetricsCollector
 ): Promise<StatusResearchPayload | undefined> {
   const runDir = getRunDirectoryPath(baseDir, featureId);
-  const researchDir = path.join(runDir, 'research');
-  const tasksFile = path.join(researchDir, 'tasks.jsonl');
+  const researchDir = join(runDir, 'research');
+  const tasksFile = join(researchDir, 'tasks.jsonl');
 
   // Check if research directory exists
   try {
-    await fs.access(researchDir);
+    await access(researchDir);
   } catch (error) {
     if (error && typeof error === 'object' && 'code' in error && error.code !== 'ENOENT') {
       logger?.warn('Failed to access research directory', {

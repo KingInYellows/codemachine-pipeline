@@ -1,5 +1,5 @@
-import * as path from 'node:path';
-import * as fs from 'node:fs/promises';
+import { readFile } from 'node:fs/promises';
+import { join } from 'node:path';
 import { getRunDirectoryPath } from '../../../persistence/runDirectoryManager';
 import { safeJsonParse } from '../../../utils/safeJson';
 import type { RunManifest } from '../../../persistence/runDirectoryManager';
@@ -9,10 +9,13 @@ import type { RunDirectorySettings } from '../../utils/runDirectory';
 import type { StatusIntegrationsPayload, StatusRateLimitsPayload } from '../types';
 import type { DataLogger } from './types';
 
+type GitHubIntegration = NonNullable<StatusIntegrationsPayload['github']>;
+type LinearIntegration = NonNullable<StatusIntegrationsPayload['linear']>;
+
 export async function loadPRMetadata(runDir: string): Promise<PRMetadata | null> {
-  const prPath = path.join(runDir, 'pr.json');
+  const prPath = join(runDir, 'pr.json');
   try {
-    const content = await fs.readFile(prPath, 'utf-8');
+    const content = await readFile(prPath, 'utf-8');
     const parsed = safeJsonParse<PRMetadata>(content);
     return parsed ?? null;
   } catch (error) {
@@ -20,6 +23,153 @@ export async function loadPRMetadata(runDir: string): Promise<PRMetadata | null>
       return null;
     }
     throw error;
+  }
+}
+
+function applyRateLimitWarnings(
+  warnings: string[],
+  providerName: 'GitHub' | 'Linear',
+  provider:
+    | {
+        remaining: number;
+        resetAt: string;
+        inCooldown: boolean;
+        manualAckRequired: boolean;
+        recentHitCount: number;
+      }
+    | undefined
+): GitHubIntegration['rate_limit'] | undefined {
+  if (!provider) {
+    return undefined;
+  }
+
+  if (provider.inCooldown) {
+    warnings.push(`${providerName} API is in cooldown until ${provider.resetAt}`);
+  }
+  if (provider.manualAckRequired) {
+    warnings.push(
+      `${providerName} rate limit requires manual acknowledgement (${provider.recentHitCount} consecutive hits)`
+    );
+  }
+
+  return {
+    remaining: provider.remaining,
+    reset_at: provider.resetAt,
+    in_cooldown: provider.inCooldown,
+  };
+}
+
+async function loadLinearIssueStatus(
+  runDir: string,
+  logger?: DataLogger
+): Promise<LinearIntegration['issue_status']> {
+  const manifestPath = join(runDir, 'manifest.json');
+
+  try {
+    const manifestContent = await readFile(manifestPath, 'utf-8');
+    const manifest = safeJsonParse<RunManifest>(manifestContent);
+
+    if (manifest?.source === 'linear' && manifest.title) {
+      return {
+        identifier: manifest.title.split(':')[0]?.trim() ?? 'unknown',
+        state: 'tracked',
+        url: '',
+      };
+    }
+  } catch (error) {
+    if (error && typeof error === 'object' && 'code' in error && error.code !== 'ENOENT') {
+      logger?.warn('Failed to read manifest for Linear status', {
+        error: error instanceof Error ? error.message : 'Unknown error',
+        stack: error instanceof Error ? error.stack : undefined,
+        manifest_path: manifestPath,
+        error_code: 'STATUS_LINEAR_MANIFEST_READ_FAILED',
+      });
+    }
+  }
+
+  return undefined;
+}
+
+async function loadGitHubIntegration(
+  runDir: string,
+  logger?: DataLogger
+): Promise<GitHubIntegration> {
+  const warnings: string[] = [];
+
+  try {
+    const rateLimitReport = await RateLimitReporter.generateReport(runDir);
+    const github: GitHubIntegration = {
+      enabled: true,
+      warnings,
+    };
+
+    github.rate_limit = applyRateLimitWarnings(
+      warnings,
+      'GitHub',
+      rateLimitReport.providers['github']
+    );
+
+    const prMetadata = await loadPRMetadata(runDir);
+    if (prMetadata?.pr_number) {
+      github.pr_status = {
+        number: prMetadata.pr_number,
+        state: prMetadata.state ?? 'unknown',
+        mergeable: prMetadata.mergeable ?? null,
+        url: prMetadata.url ?? '',
+      };
+    }
+
+    return github;
+  } catch (error) {
+    logger?.warn('Failed to load GitHub integration data', {
+      error: error instanceof Error ? error.message : 'unknown error',
+      stack: error instanceof Error ? error.stack : undefined,
+      run_dir: runDir,
+      error_code: 'STATUS_GITHUB_INTEGRATION_LOAD_FAILED',
+    });
+    return {
+      enabled: true,
+      warnings: [
+        `Failed to load GitHub integration data: ${error instanceof Error ? error.message : 'unknown error'}`,
+      ],
+    };
+  }
+}
+
+async function loadLinearIntegration(
+  runDir: string,
+  logger?: DataLogger
+): Promise<LinearIntegration> {
+  const warnings: string[] = [];
+
+  try {
+    const rateLimitReport = await RateLimitReporter.generateReport(runDir);
+    const linear: LinearIntegration = {
+      enabled: true,
+      warnings,
+    };
+
+    linear.rate_limit = applyRateLimitWarnings(warnings, 'Linear', rateLimitReport.providers['linear']);
+
+    const issueStatus = await loadLinearIssueStatus(runDir, logger);
+    if (issueStatus) {
+      linear.issue_status = issueStatus;
+    }
+
+    return linear;
+  } catch (error) {
+    logger?.warn('Failed to load Linear integration data', {
+      error: error instanceof Error ? error.message : 'unknown error',
+      stack: error instanceof Error ? error.stack : undefined,
+      run_dir: runDir,
+      error_code: 'STATUS_LINEAR_INTEGRATION_LOAD_FAILED',
+    });
+    return {
+      enabled: true,
+      warnings: [
+        `Failed to load Linear integration data: ${error instanceof Error ? error.message : 'unknown error'}`,
+      ],
+    };
   }
 }
 
@@ -31,132 +181,12 @@ export async function loadIntegrationsStatus(
   const runDir = getRunDirectoryPath(settings.baseDir, featureId);
   const integrations: StatusIntegrationsPayload = {};
 
-  // GitHub integration
   if (settings.config?.github.enabled) {
-    const githubWarnings: string[] = [];
-
-    try {
-      const rateLimitReport = await RateLimitReporter.generateReport(runDir);
-      const githubProvider = rateLimitReport.providers['github'];
-
-      const github: StatusIntegrationsPayload['github'] = {
-        enabled: true,
-        warnings: githubWarnings,
-      };
-
-      if (githubProvider) {
-        github.rate_limit = {
-          remaining: githubProvider.remaining,
-          reset_at: githubProvider.resetAt,
-          in_cooldown: githubProvider.inCooldown,
-        };
-
-        if (githubProvider.inCooldown) {
-          githubWarnings.push(`GitHub API is in cooldown until ${githubProvider.resetAt}`);
-        }
-        if (githubProvider.manualAckRequired) {
-          githubWarnings.push(
-            `GitHub rate limit requires manual acknowledgement (${githubProvider.recentHitCount} consecutive hits)`
-          );
-        }
-      }
-
-      // Load PR status
-      const prMetadata = await loadPRMetadata(runDir);
-      if (prMetadata && prMetadata.pr_number) {
-        github.pr_status = {
-          number: prMetadata.pr_number,
-          state: prMetadata.state ?? 'unknown',
-          mergeable: prMetadata.mergeable ?? null,
-          url: prMetadata.url ?? '',
-        };
-      }
-
-      integrations.github = github;
-    } catch (error) {
-      logger?.warn('Failed to load GitHub integration data', {
-        error: error instanceof Error ? error.message : 'unknown error',
-        stack: error instanceof Error ? error.stack : undefined,
-        run_dir: runDir,
-        error_code: 'STATUS_GITHUB_INTEGRATION_LOAD_FAILED',
-      });
-      integrations.github = {
-        enabled: true,
-        warnings: [
-          `Failed to load GitHub integration data: ${error instanceof Error ? error.message : 'unknown error'}`,
-        ],
-      };
-    }
+    integrations.github = await loadGitHubIntegration(runDir, logger);
   }
 
-  // Linear integration
   if (settings.config?.linear?.enabled) {
-    const linearWarnings: string[] = [];
-
-    try {
-      const rateLimitReport = await RateLimitReporter.generateReport(runDir);
-      const linearProvider = rateLimitReport.providers['linear'];
-
-      const linear: StatusIntegrationsPayload['linear'] = {
-        enabled: true,
-        warnings: linearWarnings,
-      };
-
-      if (linearProvider) {
-        linear.rate_limit = {
-          remaining: linearProvider.remaining,
-          reset_at: linearProvider.resetAt,
-          in_cooldown: linearProvider.inCooldown,
-        };
-
-        if (linearProvider.inCooldown) {
-          linearWarnings.push(`Linear API is in cooldown until ${linearProvider.resetAt}`);
-        }
-        if (linearProvider.manualAckRequired) {
-          linearWarnings.push(
-            `Linear rate limit requires manual acknowledgement (${linearProvider.recentHitCount} consecutive hits)`
-          );
-        }
-      }
-
-      // Load Linear issue status from manifest
-      const manifestPath = path.join(runDir, 'manifest.json');
-      try {
-        const manifestContent = await fs.readFile(manifestPath, 'utf-8');
-        const manifest = safeJsonParse<RunManifest>(manifestContent);
-        if (manifest && manifest.source === 'linear' && manifest.title) {
-          linear.issue_status = {
-            identifier: manifest.title.split(':')[0]?.trim() ?? 'unknown',
-            state: 'tracked',
-            url: '',
-          };
-        }
-      } catch (error) {
-        if (error && typeof error === 'object' && 'code' in error && error.code !== 'ENOENT') {
-          logger?.warn('Failed to read manifest for Linear status', {
-            error: error instanceof Error ? error.message : 'Unknown error',
-            stack: error instanceof Error ? error.stack : undefined,
-            manifest_path: manifestPath,
-            error_code: 'STATUS_LINEAR_MANIFEST_READ_FAILED',
-          });
-        }
-      }
-
-      integrations.linear = linear;
-    } catch (error) {
-      logger?.warn('Failed to load Linear integration data', {
-        error: error instanceof Error ? error.message : 'unknown error',
-        stack: error instanceof Error ? error.stack : undefined,
-        run_dir: runDir,
-        error_code: 'STATUS_LINEAR_INTEGRATION_LOAD_FAILED',
-      });
-      integrations.linear = {
-        enabled: true,
-        warnings: [
-          `Failed to load Linear integration data: ${error instanceof Error ? error.message : 'unknown error'}`,
-        ],
-      };
-    }
+    integrations.linear = await loadLinearIntegration(runDir, logger);
   }
 
   return Object.keys(integrations).length > 0 ? integrations : undefined;
