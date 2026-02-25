@@ -5,12 +5,12 @@
  * and manifest checksum consistency.
  */
 
-import * as fs from 'node:fs/promises';
-import * as crypto from 'node:crypto';
-import * as path from 'node:path';
-import { parseExecutionTask } from '../core/models/ExecutionTask';
-import { readManifest } from '../persistence';
-import { isFileNotFound } from '../utils/safeJson.js';
+import { readFile } from 'node:fs/promises';
+import { createHash } from 'node:crypto';
+import { join } from 'node:path';
+import { parseExecutionTask } from '../../core/models/ExecutionTask';
+import { readManifest } from '../../persistence';
+import { isFileNotFound } from '../../utils/safeJson.js';
 
 import { QUEUE_FILE, QUEUE_MANIFEST_FILE } from './queueTypes.js';
 import type { QueueManifest, QueueValidationResult } from './queueTypes.js';
@@ -19,7 +19,7 @@ import type { QueueManifest, QueueValidationResult } from './queueTypes.js';
  * Compute SHA-256 checksum of empty content.
  */
 function computeEmptyQueueChecksum(): string {
-  return crypto.createHash('sha256').update('').digest('hex');
+  return createHash('sha256').update('').digest('hex');
 }
 
 /**
@@ -27,8 +27,8 @@ function computeEmptyQueueChecksum(): string {
  */
 async function computeFileChecksum(filePath: string): Promise<string> {
   try {
-    const content = await fs.readFile(filePath, 'utf-8');
-    return crypto.createHash('sha256').update(content).digest('hex');
+    const content = await readFile(filePath, 'utf-8');
+    return createHash('sha256').update(content).digest('hex');
   } catch (error) {
     if (isFileNotFound(error)) {
       return computeEmptyQueueChecksum();
@@ -47,8 +47,8 @@ async function computeFileChecksum(filePath: string): Promise<string> {
  */
 export async function validateQueue(runDir: string): Promise<QueueValidationResult> {
   const manifest = await readManifest(runDir);
-  const queueDir = path.join(runDir, manifest.queue.queue_dir);
-  const queuePath = path.join(queueDir, QUEUE_FILE);
+  const queueDir = join(runDir, manifest.queue.queue_dir);
+  const queuePath = join(queueDir, QUEUE_FILE);
 
   const result: QueueValidationResult = {
     valid: true,
@@ -59,7 +59,7 @@ export async function validateQueue(runDir: string): Promise<QueueValidationResu
   };
 
   try {
-    const content = await fs.readFile(queuePath, 'utf-8');
+    const content = await readFile(queuePath, 'utf-8');
     const lines = content
       .trim()
       .split('\n')
@@ -102,9 +102,9 @@ export async function validateQueue(runDir: string): Promise<QueueValidationResu
     }
 
     // Verify checksum
-    const queueManifestPath = path.join(queueDir, QUEUE_MANIFEST_FILE);
+    const queueManifestPath = join(queueDir, QUEUE_MANIFEST_FILE);
     try {
-      const queueManifestContent = await fs.readFile(queueManifestPath, 'utf-8');
+      const queueManifestContent = await readFile(queueManifestPath, 'utf-8');
       const queueManifest = JSON.parse(queueManifestContent) as QueueManifest;
 
       const currentChecksum = await computeFileChecksum(queuePath);

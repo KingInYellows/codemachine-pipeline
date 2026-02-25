@@ -27,7 +27,7 @@ import {
   WriteActionSchema,
   WriteActionQueueManifestSchema,
   type ActionExecutor,
-  type QueueOperationResult,
+  type WriteActionOperationResult,
   type WriteAction,
   type WriteActionPayload,
   type WriteActionQueueConfig,
@@ -39,7 +39,7 @@ export {
   WriteActionType,
   WriteActionStatus,
   type ActionExecutor,
-  type QueueOperationResult,
+  type WriteActionOperationResult,
   type WriteAction,
   type WriteActionPayload,
   type WriteActionQueueConfig,
@@ -289,7 +289,7 @@ export class WriteActionQueue {
   /**
    * Dequeue and execute pending actions
    */
-  async drain(executor: ActionExecutor): Promise<QueueOperationResult> {
+  async drain(executor: ActionExecutor): Promise<WriteActionOperationResult> {
     this.logger.info('Draining write action queue');
 
     try {
@@ -371,7 +371,7 @@ export class WriteActionQueue {
         }
       }
 
-      const result: QueueOperationResult = {
+      const result: WriteActionOperationResult = {
         success: failureCount === 0,
         message: `Executed ${successCount} action(s), ${failureCount} failed`,
         actionsAffected: successCount + failureCount,
@@ -780,7 +780,7 @@ export class WriteActionQueue {
   /**
    * Clear completed and failed actions
    */
-  async clearCompleted(): Promise<QueueOperationResult> {
+  async clearCompleted(): Promise<WriteActionOperationResult> {
     return withLock(
       this.runDir,
       async () => {

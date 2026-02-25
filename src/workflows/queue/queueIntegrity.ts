@@ -6,15 +6,15 @@
  * Extracted from queueStore.ts for single-responsibility (CDMCH-69/55).
  */
 
-import * as fs from 'node:fs/promises';
-import * as path from 'node:path';
-import { readManifest } from '../persistence';
+import { access } from 'node:fs/promises';
+import { join } from 'node:path';
+import { readManifest } from '../../persistence';
 import { loadSnapshot } from './queueSnapshotManager.js';
 import { readOperationsWithStats } from './queueOperationsLog.js';
 import { QUEUE_SNAPSHOT_FILE } from './queueTypes.js';
 import type { QueueIntegrityMode } from './queueTypes.js';
 import { QueueIntegrityError } from './queueTypes.js';
-import { getErrorMessage } from '../utils/errors.js';
+import { getErrorMessage } from '../../utils/errors.js';
 
 // Integrity State
 
@@ -82,7 +82,7 @@ export async function verifyQueueIntegrity(
 
   try {
     const manifest = await readManifest(runDir);
-    const queueDir = path.join(runDir, manifest.queue.queue_dir);
+    const queueDir = join(runDir, manifest.queue.queue_dir);
 
     // 1. Verify snapshot (loadSnapshot already validates checksum internally)
     const snapshot = await loadSnapshot(queueDir);
@@ -92,7 +92,7 @@ export async function verifyQueueIntegrity(
       // null means no snapshot exists or it was invalid
       // We can distinguish by checking if the file exists
       try {
-        await fs.access(path.join(queueDir, QUEUE_SNAPSHOT_FILE));
+        await access(join(queueDir, QUEUE_SNAPSHOT_FILE));
         // File exists but loadSnapshot returned null => invalid
         result.snapshotValid = false;
         result.valid = false;
@@ -103,7 +103,7 @@ export async function verifyQueueIntegrity(
           throw new QueueIntegrityError({
             kind: 'snapshot-checksum-mismatch',
             message: errorMsg,
-            location: path.join(queueDir, QUEUE_SNAPSHOT_FILE),
+            location: join(queueDir, QUEUE_SNAPSHOT_FILE),
             recoveryGuidance:
               'Delete the snapshot file and replay from WAL, or restore from backup.',
           });
@@ -135,7 +135,7 @@ export async function verifyQueueIntegrity(
         throw new QueueIntegrityError({
           kind: 'wal-checksum-mismatch',
           message: errorMsg,
-          location: path.join(queueDir, 'queue_operations.log'),
+          location: join(queueDir, 'queue_operations.log'),
           recoveryGuidance: 'Restore WAL from backup or re-snapshot from last known good state.',
         });
       }
@@ -159,7 +159,7 @@ export async function verifyQueueIntegrity(
             throw new QueueIntegrityError({
               kind: 'sequence-gap',
               message: errorMsg,
-              location: path.join(queueDir, 'queue_operations.log'),
+              location: join(queueDir, 'queue_operations.log'),
               sequenceRange: { expected: expectedFirstSeq, actual: firstSeq },
               recoveryGuidance:
                 'Re-snapshot from current state or restore missing WAL entries from backup.',
@@ -184,7 +184,7 @@ export async function verifyQueueIntegrity(
             throw new QueueIntegrityError({
               kind: 'sequence-gap',
               message: errorMsg,
-              location: path.join(queueDir, 'queue_operations.log'),
+              location: join(queueDir, 'queue_operations.log'),
               sequenceRange: { expected: expectedSeq + 1, actual: nextSeq },
               recoveryGuidance:
                 'Investigate missing WAL entries. Restore from backup or re-initialize queue.',
@@ -199,7 +199,7 @@ export async function verifyQueueIntegrity(
             throw new QueueIntegrityError({
               kind: 'sequence-non-monotonic',
               message: errorMsg,
-              location: path.join(queueDir, 'queue_operations.log'),
+              location: join(queueDir, 'queue_operations.log'),
               sequenceRange: { expected: expectedSeq + 1, actual: nextSeq },
               recoveryGuidance:
                 'WAL is severely corrupted. Re-initialize queue from last valid snapshot.',
