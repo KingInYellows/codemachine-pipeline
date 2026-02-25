@@ -118,12 +118,11 @@ export function isSerializedError(value: unknown): value is SerializedError {
     (candidate.operation === undefined || typeof candidate.operation === 'string') &&
     (candidate.cause === undefined || isSerializedError(candidate.cause)) &&
     (candidate.retryable === undefined || typeof candidate.retryable === 'boolean') &&
-    (candidate.headers === undefined || (
-      candidate.headers !== null &&
-      typeof candidate.headers === 'object' &&
-      !Array.isArray(candidate.headers) &&
-      Object.values(candidate.headers).every(value => typeof value === 'string')
-    )) &&
+    (candidate.headers === undefined ||
+      (candidate.headers !== null &&
+        typeof candidate.headers === 'object' &&
+        !Array.isArray(candidate.headers) &&
+        Object.values(candidate.headers).every((value) => typeof value === 'string'))) &&
     (candidate.responseBody === undefined || typeof candidate.responseBody === 'string')
   );
 }

@@ -369,7 +369,10 @@ export class RateLimitLedger {
    * Determine if cooldown should be entered
    */
   private shouldEnterCooldown(envelope: RateLimitEnvelope): boolean {
-    return envelope.statusCode === 429 || (envelope.remaining !== undefined && envelope.remaining <= COOLDOWN_THRESHOLD_REMAINING);
+    return (
+      envelope.statusCode === 429 ||
+      (envelope.remaining !== undefined && envelope.remaining <= COOLDOWN_THRESHOLD_REMAINING)
+    );
   }
 
   /**
