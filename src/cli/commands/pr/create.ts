@@ -246,12 +246,13 @@ export default class PRCreate extends Command {
 
         // Request reviewers if specified
         let reviewersRequested: string[] = [];
-        if (typedFlags.reviewers) {
+        const reviewersFlag = typedFlags.reviewers;
+        if (reviewersFlag) {
           reviewersRequested = await withSpan(
             traceManager,
             'pr.create.request_reviewers',
             async (span) => {
-              const reviewersList = parseReviewerList(typedFlags.reviewers!);
+              const reviewersList = parseReviewerList(reviewersFlag);
 
               span.setAttribute('reviewers_count', reviewersList.length);
 

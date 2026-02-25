@@ -137,7 +137,9 @@ export default class Approve extends Command {
 
     if (settings.errors.length > 0 || !settings.config) {
       const message =
-        settings.errors.length > 0 ? settings.errors.join('\n') : ERROR_MESSAGES.REPO_NOT_INITIALIZED;
+        settings.errors.length > 0
+          ? settings.errors.join('\n')
+          : ERROR_MESSAGES.REPO_NOT_INITIALIZED;
       this.error(message, { exit: 10 });
     }
 
