@@ -154,7 +154,10 @@ export default class ContextSummarize extends Command {
         force: typedFlags.force,
       });
 
-      const repoConfig = settings.config!;
+      const repoConfig = settings.config;
+      if (!repoConfig) {
+        this.error('Repository configuration not found.', { exit: 20 });
+      }
       if (!repoConfig.feature_flags.enable_context_summarization) {
         this.error('Context summarization is disabled in repo configuration.', { exit: 30 });
       }

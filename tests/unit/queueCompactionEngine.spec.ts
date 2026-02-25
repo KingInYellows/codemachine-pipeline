@@ -144,7 +144,10 @@ describe('queueCompactionEngine', () => {
 
       const snapshot = await loadSnapshot(queueDir);
       expect(snapshot).not.toBeNull();
-      expect(Object.keys(snapshot!.tasks)).toHaveLength(2);
+      if (snapshot === null) {
+        throw new Error('Expected snapshot to be non-null');
+      }
+      expect(Object.keys(snapshot.tasks)).toHaveLength(2);
     });
 
     it('should truncate WAL after compaction', async () => {
@@ -372,7 +375,7 @@ describe('queueCompactionEngine', () => {
       const operations = await readOperations(queueDir);
 
       expect(snapshot).not.toBeNull();
-      expect(snapshot!.snapshotSeq).toBe(5);
+      expect(snapshot?.snapshotSeq).toBe(5);
       expect(operations).toHaveLength(0);
     });
 
@@ -424,7 +427,10 @@ describe('queueCompactionEngine', () => {
 
       const snapshot = await loadSnapshot(queueDir);
       expect(snapshot).not.toBeNull();
-      expect(Object.keys(snapshot!.tasks)).toHaveLength(1);
+      if (snapshot === null) {
+        throw new Error('Expected snapshot to be non-null');
+      }
+      expect(Object.keys(snapshot.tasks)).toHaveLength(1);
     });
 
     it('should prune tasks when pruneCompleted is enabled', async () => {

@@ -136,8 +136,11 @@ describe('Specification model', () => {
       expect(spec.test_plan).toHaveLength(1);
       expect(spec.test_plan[0].test_id).toBe('T-001');
       expect(spec.rollout_plan).toBeDefined();
-      expect(spec.rollout_plan!.strategy).toBe('canary');
-      expect(spec.rollout_plan!.phases).toHaveLength(2);
+      const rolloutPlanVal = spec.rollout_plan;
+      if (rolloutPlanVal) {
+        expect(rolloutPlanVal.strategy).toBe('canary');
+        expect(rolloutPlanVal.phases).toHaveLength(2);
+      }
       expect(spec.metadata).toEqual({ priority: 'high' });
     });
   });
@@ -209,7 +212,10 @@ describe('Specification model', () => {
         expect(parsed.data.reviewers).toHaveLength(1);
         expect(parsed.data.risks).toHaveLength(1);
         expect(parsed.data.test_plan).toHaveLength(1);
-        expect(parsed.data.rollout_plan!.strategy).toBe('canary');
+        expect(parsed.data.rollout_plan).toBeDefined();
+        if (parsed.data.rollout_plan) {
+          expect(parsed.data.rollout_plan.strategy).toBe('canary');
+        }
       }
     });
 

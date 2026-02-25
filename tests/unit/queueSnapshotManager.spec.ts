@@ -146,9 +146,9 @@ describe('queueSnapshotManager', () => {
       const result = await loadSnapshot(testDir);
 
       expect(result).not.toBeNull();
-      expect(result!.featureId).toBe('feature-123');
-      expect(result!.snapshotSeq).toBe(10);
-      expect(Object.keys(result!.tasks)).toHaveLength(1);
+      expect(result?.featureId).toBe('feature-123');
+      expect(result?.snapshotSeq).toBe(10);
+      expect(Object.keys(result?.tasks ?? {})).toHaveLength(1);
     });
 
     it('should return null for invalid JSON', async () => {
@@ -278,8 +278,8 @@ describe('queueSnapshotManager', () => {
       // Verify snapshot was persisted correctly
       const loadedSnapshot = await loadSnapshot(testDir);
       expect(loadedSnapshot).not.toBeNull();
-      expect(loadedSnapshot!.snapshotSeq).toBe(savedSnapshot.snapshotSeq);
-      expect(loadedSnapshot!.checksum).toBe(savedSnapshot.checksum);
+      expect(loadedSnapshot?.snapshotSeq).toBe(savedSnapshot.snapshotSeq);
+      expect(loadedSnapshot?.checksum).toBe(savedSnapshot.checksum);
 
       // Verify no temp files remain (atomic write completed)
       const files = await fs.readdir(testDir);
@@ -347,8 +347,11 @@ describe('queueSnapshotManager', () => {
 
       const result = await loadSnapshot(testDir);
       expect(result).not.toBeNull();
-      expect(result!.checksum).toHaveLength(64); // SHA-256 = 64 hex chars
-      expect(verifySnapshotChecksum(result!)).toBe(true);
+      if (result === null) {
+        throw new Error('Expected result to be non-null');
+      }
+      expect(result.checksum).toHaveLength(64); // SHA-256 = 64 hex chars
+      expect(verifySnapshotChecksum(result)).toBe(true);
     });
 
     it('should use SHA-256 algorithm for snapshot checksums', () => {
@@ -435,10 +438,10 @@ describe('queueSnapshotManager', () => {
       const metadata = await getSnapshotMetadata(testDir);
 
       expect(metadata).not.toBeNull();
-      expect(metadata!.exists).toBe(true);
-      expect(metadata!.snapshotSeq).toBe(42);
-      expect(metadata!.taskCount).toBe(2);
-      expect(metadata!.timestamp).toBeDefined();
+      expect(metadata?.exists).toBe(true);
+      expect(metadata?.snapshotSeq).toBe(42);
+      expect(metadata?.taskCount).toBe(2);
+      expect(metadata?.timestamp).toBeDefined();
     });
   });
 });

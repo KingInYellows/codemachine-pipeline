@@ -116,7 +116,12 @@ export default class PRCreate extends Command {
       }
 
       // Load PR context
-      const context = await loadPRContext(settings.baseDir, featureId, settings.config!, false);
+      if (!settings.config) {
+        this.error('No configuration found.', {
+          exit: PRExitCode.VALIDATION_ERROR,
+        });
+      }
+      const context = await loadPRContext(settings.baseDir, featureId, settings.config, false);
 
       const { logger, manifest, runDir, config } = context;
       const metrics = createRunMetricsCollector(runDir, featureId);
@@ -204,7 +209,13 @@ export default class PRCreate extends Command {
         const adapter = getPRAdapter(context);
 
         // Determine PR parameters
-        const branchName = manifest.source || (await this.getCurrentBranch())!;
+        const currentBranch = await this.getCurrentBranch();
+        if (!manifest.source && !currentBranch) {
+          this.error('Unable to determine branch name', {
+            exit: PRExitCode.VALIDATION_ERROR,
+          });
+        }
+        const branchName = manifest.source || currentBranch;
         const baseBranch = typedFlags.base || config.project.default_branch;
         const prTitle = typedFlags.title || manifest.title || `Feature: ${featureId}`;
         const prBody = typedFlags.body || this.generatePRBody(manifest);
@@ -250,8 +261,8 @@ export default class PRCreate extends Command {
             traceManager,
             'pr.create.request_reviewers',
             async (span) => {
-              const reviewersList = typedFlags
-                .reviewers!.split(',')
+              const reviewersList = (typedFlags.reviewers ?? '')
+                .split(',')
                 .map((r) => r.trim())
                 .filter((r) => r.length > 0);
 

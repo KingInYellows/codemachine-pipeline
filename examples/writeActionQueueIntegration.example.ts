@@ -195,10 +195,14 @@ export async function examplePRWorkflow(
   await queue.initialize();
 
   // 2. Initialize GitHub adapter
+  const githubToken = process.env.GITHUB_TOKEN;
+  if (!githubToken) {
+    throw new Error('GITHUB_TOKEN environment variable is required');
+  }
   const adapter = createGitHubAdapter({
     owner,
     repo,
-    token: process.env.GITHUB_TOKEN!,
+    token: githubToken,
     runDir,
     ...(logger ? { logger } : {}),
   });
@@ -288,11 +292,17 @@ export async function exampleResumeDrain(
     in_progress: status.in_progress_count,
   });
 
+  // Ensure GitHub token is available
+  const token = process.env.GITHUB_TOKEN;
+  if (!token) {
+    throw new Error('GITHUB_TOKEN environment variable is not set');
+  }
+
   // Reinitialize adapter and drain
   const adapter = createGitHubAdapter({
     owner,
     repo,
-    token: process.env.GITHUB_TOKEN!,
+    token,
     runDir,
     ...(logger ? { logger } : {}),
   });

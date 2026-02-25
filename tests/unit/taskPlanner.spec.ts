@@ -566,7 +566,10 @@ describe('Task Planner', () => {
         (call) => typeof call[0] === 'string' && call[0].includes('plan.json')
       );
       expect(planJsonCall).toBeDefined();
-      const parsedPlan: unknown = JSON.parse(planJsonCall![1] as string);
+      if (!planJsonCall) {
+        throw new Error('planJsonCall is undefined');
+      }
+      const parsedPlan: unknown = JSON.parse(planJsonCall[1] as string);
       const planContent = parsedPlan as PlanArtifact;
       expect(planContent.checksum).toBeDefined();
       expect(planContent.checksum).toMatch(/^[a-f0-9]{64}$/);
@@ -578,7 +581,10 @@ describe('Task Planner', () => {
         (call) => typeof call[0] === 'string' && call[0].includes('plan_metadata.json')
       );
       expect(metadataCall).toBeDefined();
-      const parsedMetadata: unknown = JSON.parse(metadataCall![1] as string);
+      if (!metadataCall) {
+        throw new Error('metadataCall is undefined');
+      }
+      const parsedMetadata: unknown = JSON.parse(metadataCall[1] as string);
       const metadataContent = parsedMetadata as PersistedPlanMetadata;
       expect(metadataContent.plan_hash).toBeDefined();
       expect(metadataContent.spec_hash).toBe(specMetadata.specHash);

@@ -85,7 +85,9 @@ describe('Smoke Tests: No Credentials Required', () => {
 
       expect(result.success).toBe(true);
       expect(result.checks).toBeDefined();
-      expect(result.checks!.credentials).toBe(false);
+      if (result.checks) {
+        expect(result.checks.credentials).toBe(false);
+      }
     });
 
     it('should validate config with enabled integrations but skip credential checks', async () => {
@@ -152,7 +154,10 @@ describe('Smoke Tests: No Credentials Required', () => {
       });
 
       // Should validate governance structure without needing API calls
-      expect(result.checks!.governance).toBe(true);
+      if (!result.checks) {
+        throw new Error('Expected result.checks to be defined');
+      }
+      expect(result.checks.governance).toBe(true);
       expect(result.success).toBe(true);
     });
 
@@ -171,7 +176,10 @@ describe('Smoke Tests: No Credentials Required', () => {
 
       expect(result.success).toBe(false);
       expect(result.errors).toBeDefined();
-      expect(result.errors!.some((e) => e.path === 'governance')).toBe(true);
+      if (!result.errors) {
+        throw new Error('Expected errors to be defined');
+      }
+      expect(result.errors.some((e) => e.path === 'governance')).toBe(true);
     });
   });
 
@@ -387,9 +395,9 @@ describe('Smoke Tests: No Credentials Required', () => {
       });
 
       expect(config.governance).toBeDefined();
-      expect(config.governance!.approval_workflow).toBeDefined();
-      expect(config.governance!.accountability).toBeDefined();
-      expect(config.governance!.risk_controls).toBeDefined();
+      expect(config.governance?.approval_workflow).toBeDefined();
+      expect(config.governance?.accountability).toBeDefined();
+      expect(config.governance?.risk_controls).toBeDefined();
     });
 
     it('should validate feature flags section', async () => {

@@ -91,7 +91,12 @@ export default class PRReviewers extends Command {
       }
 
       // Load PR context
-      const context = await loadPRContext(settings.baseDir, featureId, settings.config!, false);
+      if (!settings.config) {
+        this.error('Missing configuration for run directory settings.', {
+          exit: PRExitCode.VALIDATION_ERROR,
+        });
+      }
+      const context = await loadPRContext(settings.baseDir, featureId, settings.config, false);
 
       const { logger, runDir, prMetadata } = context;
       const metrics = createRunMetricsCollector(runDir, featureId);

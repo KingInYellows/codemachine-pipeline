@@ -128,7 +128,6 @@ export default class ResearchList extends Command {
       } else {
         this.printHumanReadable(payload);
       }
-
       await flushTelemetrySuccess({ commandName: 'research:list', startTime, metrics });
     } catch (error) {
       await flushTelemetryError({ commandName: 'research:list', startTime, metrics }, error);
@@ -153,7 +152,10 @@ export default class ResearchList extends Command {
       if (!grouped.has(task.status)) {
         grouped.set(task.status, []);
       }
-      grouped.get(task.status)!.push(task);
+      const tasksForStatus = grouped.get(task.status);
+      if (tasksForStatus) {
+        tasksForStatus.push(task);
+      }
     }
 
     const statusOrder: ResearchTask['status'][] = [
@@ -179,6 +181,7 @@ export default class ResearchList extends Command {
         this.log(`  [${task.task_id}] ${task.title}`);
         this.log(
           `    Status: ${task.status} | Objectives: ${objectivesCount} | Sources: ${sourcesCount} | Cache: ${cachePreview}${completedAt}`
+        );
         );
 
         if (task.results?.summary) {

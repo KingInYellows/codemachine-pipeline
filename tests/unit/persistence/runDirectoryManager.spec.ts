@@ -154,7 +154,10 @@ describe('Run Directory Manager', () => {
       expect(manifest.queue.sqlite_index).toBeDefined();
       expect(manifest.metadata?.sqlite_seeded).toBe(true);
 
-      const sqliteIndex = manifest.queue.sqlite_index!;
+      const sqliteIndex = manifest.queue.sqlite_index;
+      if (!sqliteIndex) {
+        throw new Error('Expected manifest.queue.sqlite_index to be defined');
+      }
       expect(sqliteIndex.database).toBe('sqlite/run_queue.db');
       expect(sqliteIndex.wal).toBe('sqlite/run_queue.db-wal');
       expect(sqliteIndex.shm).toBe('sqlite/run_queue.db-shm');

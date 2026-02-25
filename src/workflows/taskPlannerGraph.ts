@@ -65,7 +65,10 @@ export function buildDependencyGraph(
       continue;
     }
 
-    const depSet = taskDepSets.get(taskId)!;
+    const depSet = taskDepSets.get(taskId);
+    if (!depSet) {
+      continue;
+    }
 
     for (const dependencyRequirement of req.dependsOn) {
       const dependencyTaskId = options.requirementTaskMap.get(dependencyRequirement);
@@ -162,7 +165,7 @@ export function computeTopologicalOrder(tasks: TaskNode[]): {
     depths.set(task.task_id, 0);
     for (const dep of task.dependencies) {
       if (!reverseAdj.has(dep.task_id)) reverseAdj.set(dep.task_id, []);
-      reverseAdj.get(dep.task_id)!.push(task.task_id);
+      reverseAdj.get(dep.task_id)?.push(task.task_id);
     }
   }
 
@@ -177,7 +180,10 @@ export function computeTopologicalOrder(tasks: TaskNode[]): {
   }
 
   while (queue.length > 0) {
-    const current = queue.shift()!;
+    const current = queue.shift();
+    if (current === undefined) {
+      continue;
+    }
     order.push(current);
 
     const currentDepth = depths.get(current) ?? 0;

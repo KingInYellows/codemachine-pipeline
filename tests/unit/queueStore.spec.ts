@@ -222,9 +222,11 @@ describe('queueStore - initializeQueueFromPlan', () => {
       expect(task?.updated_at).toBeDefined();
       expect(task?.created_at).toBe(task?.updated_at);
 
-      // Verify timestamps are within reasonable range
-      expect(task!.created_at >= beforeTime).toBe(true);
-      expect(task!.created_at <= afterTime).toBe(true);
+      if (!task) {
+        throw new Error('Task T1 not found');
+      }
+      expect(task.created_at >= beforeTime).toBe(true);
+      expect(task.created_at <= afterTime).toBe(true);
     });
 
     it('should omit config when undefined in PlanTask', async () => {
@@ -344,7 +346,9 @@ describe('queueStore - initializeQueueFromPlan', () => {
       expect(result.success).toBe(false);
       expect(result.message).toBeDefined();
       expect(result.errors).toBeDefined();
-      expect(result.errors!.length).toBeGreaterThan(0);
+      if (result.errors) {
+        expect(result.errors.length).toBeGreaterThan(0);
+      }
     });
 
     it('should return error details with stack trace on failure', async () => {
@@ -358,9 +362,9 @@ describe('queueStore - initializeQueueFromPlan', () => {
 
       expect(result.success).toBe(false);
       expect(result.errors).toBeDefined();
-      expect(result.errors![0]).toBeTruthy();
+      expect(result.errors?.[0]).toBeTruthy();
       // Should contain stack trace or error message
-      expect(typeof result.errors![0]).toBe('string');
+      expect(typeof result.errors?.[0]).toBe('string');
     });
   });
 

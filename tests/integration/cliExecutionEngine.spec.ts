@@ -563,8 +563,11 @@ describe('CLIExecutionEngine Integration', () => {
       await engine.executeTask(tasks[0]);
 
       expect(capturedContext).not.toBeNull();
-      expect(capturedContext!.runDir).toBe(runDir);
-      expect(capturedContext!.logPath).toContain('T1.log');
+      if (!capturedContext) {
+        throw new Error('capturedContext is null');
+      }
+      expect(capturedContext.runDir).toBe(runDir);
+      expect(capturedContext.logPath).toContain('T1.log');
     });
   });
 
@@ -1652,7 +1655,7 @@ describe('CLI Command Integration with CLIExecutionEngine', () => {
         execute: async (task) => {
           firstRunCount++;
           if (task.task_id === 'T2') {
-            firstEngine!.stop();
+            firstEngine?.stop();
             return createFailureResult('Transient error', true);
           }
           return createSuccessResult();

@@ -244,11 +244,15 @@ describe('ResearchCoordinator', () => {
       expect(result1.created).toBe(true);
 
       // Complete the task with results
+      if (!options.sources) {
+        throw new Error('sources is required for test');
+      }
+      const sourcesConsulted = options.sources;
       const results: ResearchResult = {
         summary: 'Test result',
         confidence_score: 0.9,
         timestamp: new Date().toISOString(),
-        sources_consulted: options.sources!,
+        sources_consulted: sourcesConsulted,
       };
       await coordinator.completeTask(result1.task.task_id, results);
 
@@ -287,7 +291,7 @@ describe('ResearchCoordinator', () => {
         summary: 'Old result',
         confidence_score: 0.9,
         timestamp: oldTimestamp,
-        sources_consulted: options.sources!,
+        sources_consulted: options.sources ?? [],
       };
       await coordinator.completeTask(result1.task.task_id, results);
 
@@ -348,11 +352,13 @@ describe('ResearchCoordinator', () => {
       const started = await coordinator.startTask(task.task_id);
 
       expect(started).toBeDefined();
-      expect(started!.status).toBe('in_progress');
-      expect(started!.started_at).toBeDefined();
-      expect(new Date(started!.updated_at).getTime()).toBeGreaterThanOrEqual(
-        new Date(task.updated_at).getTime()
-      );
+      if (started) {
+        expect(started.status).toBe('in_progress');
+        expect(started.started_at).toBeDefined();
+        expect(new Date(started.updated_at).getTime()).toBeGreaterThanOrEqual(
+          new Date(task.updated_at).getTime()
+        );
+      }
     });
 
     it('should return null for non-existent task', async () => {
@@ -372,7 +378,10 @@ describe('ResearchCoordinator', () => {
 
       // Try to start again
       const started2 = await coordinator.startTask(task.task_id);
-      expect(started2!.status).toBe('in_progress');
+      if (!started2) {
+        throw new Error('Expected startTask to return a task object, but got null or undefined');
+      }
+      expect(started2.status).toBe('in_progress');
     });
   });
 
@@ -400,8 +409,8 @@ describe('ResearchCoordinator', () => {
       expect(success).toBe(true);
       expect(completed.status).toBe('completed');
       expect(completed.results).toBeDefined();
-      expect(completed.results!.summary).toBe('Research complete');
-      expect(completed.results!.confidence_score).toBe(0.95);
+      expect(completed.results?.summary).toBe('Research complete');
+      expect(completed.results?.confidence_score).toBe(0.95);
       expect(completed.completed_at).toBeDefined();
     });
 
@@ -432,8 +441,8 @@ describe('ResearchCoordinator', () => {
       const failed = await coordinator.failTask(task.task_id, 'Test error');
 
       expect(failed).toBeDefined();
-      expect(failed!.status).toBe('failed');
-      expect(failed!.metadata?.error).toBe('Test error');
+      expect(failed?.status).toBe('failed');
+      expect(failed?.metadata?.error).toBe('Test error');
     });
 
     it('should return null for non-existent task', async () => {
@@ -543,8 +552,11 @@ describe('ResearchCoordinator', () => {
       const retrieved = await coordinator.getTask(created.task_id);
 
       expect(retrieved).toBeDefined();
-      expect(retrieved!.task_id).toBe(created.task_id);
-      expect(retrieved!.title).toBe('Test Task');
+      if (!retrieved) {
+        throw new Error('Expected retrieved task to be defined');
+      }
+      expect(retrieved.task_id).toBe(created.task_id);
+      expect(retrieved.title).toBe('Test Task');
     });
 
     it('should return null for non-existent task', async () => {

@@ -311,7 +311,7 @@ export function matchesRequirements(
   // Check context window (across all models)
   if (requirements.minContextWindow !== undefined) {
     const hasModelWithSufficientContext = manifest.costConfig.models.some(
-      (model) => (model.contextWindow ?? 0) >= requirements.minContextWindow!
+      (model) => requirements.minContextWindow != null && (model.contextWindow ?? 0) >= requirements.minContextWindow
     );
     if (!hasModelWithSufficientContext) {
       return false;
@@ -421,7 +421,6 @@ export class ManifestLoader {
    */
   async loadManifest(manifestPath: string): Promise<AgentManifest> {
     this.logger.info('Loading agent manifest', { path: manifestPath });
-
     // Read and hash content
     const content = await fs.readFile(manifestPath, 'utf-8');
     const hash = computeManifestHash(content);
@@ -446,8 +445,8 @@ export class ManifestLoader {
     const validationResult = parseAgentManifest(json);
 
     if (!validationResult.success) {
-      const errorMsg = validationResult
-        .errors!.map((err) => `  - ${err.path}: ${err.message}`)
+      const errorMsg = (validationResult.errors ?? [])
+        .map((err) => `  - ${err.path}: ${err.message}`)
         .join('\n');
 
       this.logger.error('Manifest validation failed', {
@@ -462,7 +461,10 @@ export class ManifestLoader {
       );
     }
 
-    const manifest = validationResult.manifest!;
+    const manifest = validationResult.manifest;
+    if (manifest == null) {
+      throw new Error(`Invalid agent manifest at ${manifestPath}: manifest is missing`);
+    }
 
     // Register with cost tracker
     if (this.costTracker) {

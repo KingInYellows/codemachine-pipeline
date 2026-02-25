@@ -94,7 +94,12 @@ export default class PRStatus extends Command {
       }
 
       // Load PR context
-      const context = await loadPRContext(settings.baseDir, featureId, settings.config!, false);
+      if (!settings.config) {
+        this.error('No configuration found. Run "codepipe init" first.', {
+          exit: PRExitCode.VALIDATION_ERROR,
+        });
+      }
+      const context = await loadPRContext(settings.baseDir, featureId, settings.config, false);
 
       const { logger, runDir, prMetadata } = context;
       const metrics = createRunMetricsCollector(runDir, featureId);

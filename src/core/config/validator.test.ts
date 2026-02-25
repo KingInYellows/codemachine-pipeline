@@ -51,8 +51,8 @@ describe('validateRepoConfig', () => {
     const result = await validateRepoConfig(configPath);
 
     expect(result.metadata).toBeDefined();
-    expect(result.metadata!.validation_time_ms).toBeGreaterThanOrEqual(0);
-    expect(result.metadata!.config_file_size_bytes).toBeGreaterThan(0);
+    expect(result.metadata?.validation_time_ms).toBeGreaterThanOrEqual(0);
+    expect(result.metadata?.config_file_size_bytes).toBeGreaterThan(0);
   });
 
   it('should fail when config file missing', async () => {
@@ -73,7 +73,7 @@ describe('validateRepoConfig', () => {
 
     expect(result.success).toBe(false);
     expect(result.errors).toBeDefined();
-    expect(result.errors!.some((e) => e.path.includes('run_directory'))).toBe(true);
+    expect(result.errors?.some((e) => e.path.includes('run_directory'))).toBe(true);
   });
 
   it('should pass directory checks when directory exists', async () => {
@@ -102,7 +102,7 @@ describe('validateRepoConfig', () => {
 
     expect(result.success).toBe(false);
     expect(result.errors).toBeDefined();
-    expect(result.errors!.some((e) => e.path === 'governance')).toBe(true);
+    expect(result.errors?.some((e) => e.path === 'governance')).toBe(true);
   });
 
   it('should pass governance checks with valid governance', async () => {
@@ -125,7 +125,10 @@ describe('validateRepoConfig', () => {
       includeGovernance: true,
     });
     // Disable all approval gates
-    config.governance!.approval_workflow = {
+    if (!config.governance) {
+      throw new Error('Expected governance to be present');
+    }
+    config.governance.approval_workflow = {
       require_approval_for_prd: false,
       require_approval_for_spec: false,
       require_approval_for_plan: false,
@@ -140,7 +143,10 @@ describe('validateRepoConfig', () => {
     });
 
     expect(result.success).toBe(false);
-    expect(result.errors!.some((e) => e.message.includes('All approval gates are disabled'))).toBe(
+    if (!result.errors) {
+      throw new Error('Expected errors to be present');
+    }
+    expect(result.errors.some((e) => e.message.includes('All approval gates are disabled'))).toBe(
       true
     );
   });
@@ -149,9 +155,12 @@ describe('validateRepoConfig', () => {
     const config = createDefaultConfig('https://github.com/org/repo.git', {
       includeGovernance: true,
     });
-    config.governance!.risk_controls.prevent_force_push = false;
-    config.governance!.risk_controls.prevent_auto_merge = false;
-    config.governance!.accountability.record_approver_identity = false;
+    if (!config.governance) {
+      throw new Error('Governance config is required');
+    }
+    config.governance.risk_controls.prevent_force_push = false;
+    config.governance.risk_controls.prevent_auto_merge = false;
+    config.governance.accountability.record_approver_identity = false;
     fs.writeFileSync(configPath, JSON.stringify(config, null, 2));
 
     const result = await validateRepoConfig(configPath, {
@@ -159,7 +168,10 @@ describe('validateRepoConfig', () => {
     });
 
     expect(result.success).toBe(false);
-    expect(result.errors!.length).toBeGreaterThan(0);
+    expect(result.errors).toBeDefined();
+    if (result.errors) {
+      expect(result.errors.length).toBeGreaterThan(0);
+    }
   });
 
   it('should fail in strict mode with warnings', async () => {
@@ -173,7 +185,7 @@ describe('validateRepoConfig', () => {
 
     expect(result.success).toBe(false);
     expect(result.warnings).toBeDefined();
-    expect(result.warnings!.length).toBeGreaterThan(0);
+    expect(result.warnings?.length).toBeGreaterThan(0);
   });
 
   it('should pass in non-strict mode with warnings', async () => {
@@ -596,8 +608,8 @@ describe('Integration Tests', () => {
     expect(result.success).toBe(false);
     expect(result.errors).toBeDefined();
 
-    const dirError = result.errors!.find((e) => e.path.includes('run_directory'));
+    const dirError = result.errors?.find((e) => e.path.includes('run_directory'));
     expect(dirError).toBeDefined();
-    expect(dirError!.suggestion).toContain('mkdir');
+    expect(dirError?.suggestion).toContain('mkdir');
   });
 });

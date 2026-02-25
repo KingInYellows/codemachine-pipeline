@@ -223,7 +223,7 @@ export default class Init extends Command {
           this.log(JSON.stringify(errorPayload, null, 2));
         } else {
           this.log('\n❌ Configuration validation failed after creation:\n');
-          this.log(formatValidationErrors(validationResult.errors!));
+          this.log(formatValidationErrors(validationResult.errors ?? []));
         }
         await this.exitCommand(exitCode, ctx);
       }
@@ -451,7 +451,7 @@ export default class Init extends Command {
         this.log(JSON.stringify(errorPayload, null, 2));
       } else {
         this.log('\nExisting configuration has validation errors:');
-        this.log(formatValidationErrors(result.errors!));
+        this.log(formatValidationErrors(result.errors ?? []));
       }
       await this.exitCommand(exitCode, ctx);
     }
@@ -691,7 +691,7 @@ export default class Init extends Command {
 
       if (!jsonMode) {
         this.log('\n❌ Configuration validation failed:\n');
-        this.log(formatValidationErrors(result.errors!));
+        this.log(formatValidationErrors(result.errors || []));
       }
 
       return payload;

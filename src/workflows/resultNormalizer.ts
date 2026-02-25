@@ -129,14 +129,17 @@ export function normalizeResult(
 
   if (typeof resultOrExitCode === 'number') {
     // 5-parameter overload: (exitCode, stdout, stderr, timedOut, killed, logger?)
+    if (stderr === undefined || timedOut === undefined || killed === undefined) {
+      throw new Error('Missing parameters for synthetic RunnerResult');
+    }
     result = {
       taskId: 'synthetic',
       exitCode: resultOrExitCode,
       stdout: stdoutOrLogger as string,
-      stderr: stderr!,
+      stderr,
       durationMs: 0,
-      timedOut: timedOut!,
-      killed: killed!,
+      timedOut,
+      killed,
     };
     resolvedLogger = logger;
   } else {

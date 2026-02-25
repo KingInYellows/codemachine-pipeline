@@ -575,7 +575,10 @@ export class LinearAdapter {
       throw new Error(`Invalid Linear issue ID: ${JSON.stringify(issueId)}`);
     }
     const sanitized = issueId.replace(/[^a-zA-Z0-9-]/g, '_');
-    return path.join(this.runDir!, SNAPSHOT_DIR, `linear_issue_${sanitized}.json`);
+    if (!this.runDir) {
+      throw new Error('runDir is not set');
+    }
+    return path.join(this.runDir, SNAPSHOT_DIR, `linear_issue_${sanitized}.json`);
   }
 
   private async executeGraphQL<T>(

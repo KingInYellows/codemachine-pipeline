@@ -358,7 +358,7 @@ export default class Resume extends Command {
       }
 
       if (prereqResult.warnings.length > 0) {
-        prereqResult.warnings.forEach((w) => logger!.warn(w));
+        prereqResult.warnings.forEach((w) => logger?.warn(w));
       }
 
       const executionStartTime = Date.now();
