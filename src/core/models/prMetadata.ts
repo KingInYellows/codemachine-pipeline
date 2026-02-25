@@ -4,7 +4,7 @@ export const PRMetadataSchema = z.object({
   pr_number: z.number().int().positive(),
   url: z.string(),
   branch: z.string().min(1),
-  base_branch: z.string(),
+  base_branch: z.string().min(1),
   head_sha: z.string().optional(),
   base_sha: z.string().optional(),
   state: z.string().optional(),

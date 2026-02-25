@@ -549,7 +549,11 @@ export class CostTracker {
 
     try {
       const content = await fs.readFile(costsFilePath, 'utf-8');
-      const state = validateOrThrow(CostTrackerStateSchema, JSON.parse(content), 'cost tracker state') as CostTrackerState;
+      const state = validateOrThrow(
+        CostTrackerStateSchema,
+        JSON.parse(content),
+        'cost tracker state'
+      ) as CostTrackerState;
 
       const tracker = new CostTracker(state.feature_id, runDir, logger, metrics, state.budget);
       tracker.state = state;

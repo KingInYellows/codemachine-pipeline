@@ -121,7 +121,11 @@ export async function generateWriteActionQueueReport(
 
     // Load manifest
     const manifestContent = await fs.readFile(manifestPath, 'utf-8');
-    const manifest = validateOrThrow(WriteActionQueueManifestSchema, JSON.parse(manifestContent), 'write action queue manifest') as WriteActionQueueManifest;
+    const manifest = validateOrThrow(
+      WriteActionQueueManifestSchema,
+      JSON.parse(manifestContent),
+      'write action queue manifest'
+    ) as WriteActionQueueManifest;
 
     // Calculate derived metrics
     const backlog = manifest.pending_count + manifest.in_progress_count;

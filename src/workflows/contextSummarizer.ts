@@ -26,7 +26,8 @@ import { RedactionEngine, type StructuredLogger } from '../telemetry/logger';
 import type { MetricsCollector } from '../telemetry/metrics';
 import { getSubdirectoryPath } from '../persistence';
 import type { CostTracker } from '../telemetry/costTracker';
-import { validateOrThrow } from '../validation/helpers.js';
+import { isFileNotFound } from '../utils/safeJson.js';
+import { validateOrResult, validateOrThrow } from '../validation/helpers.js';
 
 // ============================================================================
 // Types
@@ -373,9 +374,13 @@ async function loadCachedChunk(contextDir: string, chunkId: string): Promise<Chu
 
   try {
     const content = await fs.readFile(chunkPath, 'utf-8');
-    return validateOrThrow(ChunkMetadataSchema, JSON.parse(content), 'chunk metadata');
-  } catch {
-    return null;
+    const result = validateOrResult(ChunkMetadataSchema, JSON.parse(content), 'chunk metadata');
+    return result.success ? result.data : null;
+  } catch (error) {
+    if (isFileNotFound(error)) {
+      return null;
+    }
+    throw error;
   }
 }
 

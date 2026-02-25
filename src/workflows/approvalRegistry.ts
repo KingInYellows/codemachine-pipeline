@@ -427,7 +427,11 @@ async function loadApprovalsFile(runDir: string, featureId: string): Promise<App
 
   try {
     const content = await fs.readFile(approvalsPath, 'utf-8');
-    const parsed = validateOrThrow(ApprovalsFileSchema, JSON.parse(content), 'approvals file') as ApprovalsFile;
+    const parsed = validateOrThrow(
+      ApprovalsFileSchema,
+      JSON.parse(content),
+      'approvals file'
+    ) as ApprovalsFile;
 
     // Validate schema version
     if (parsed.schema_version !== APPROVALS_SCHEMA_VERSION) {

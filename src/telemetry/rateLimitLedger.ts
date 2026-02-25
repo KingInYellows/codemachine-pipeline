@@ -139,7 +139,11 @@ function createEmptyLedgerData(): RateLimitLedgerData {
 async function loadLedgerFile(ledgerPath: string): Promise<RateLimitLedgerData> {
   try {
     const content = await fs.readFile(ledgerPath, 'utf-8');
-    return validateOrThrow(RateLimitLedgerDataSchema, JSON.parse(content), 'rate limit ledger') as RateLimitLedgerData;
+    return validateOrThrow(
+      RateLimitLedgerDataSchema,
+      JSON.parse(content),
+      'rate limit ledger'
+    ) as RateLimitLedgerData;
   } catch (error) {
     if (isFileNotFound(error)) {
       return createEmptyLedgerData();

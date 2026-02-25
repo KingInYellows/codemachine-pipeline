@@ -659,7 +659,11 @@ export class WriteActionQueue {
   private async loadManifest(): Promise<WriteActionQueueManifest> {
     try {
       const content = await readFile(this.manifestPath, 'utf-8');
-      return validateOrThrow(WriteActionQueueManifestSchema, JSON.parse(content), 'write action queue manifest') as WriteActionQueueManifest;
+      return validateOrThrow(
+        WriteActionQueueManifestSchema,
+        JSON.parse(content),
+        'write action queue manifest'
+      ) as WriteActionQueueManifest;
     } catch (error) {
       if (isFileNotFound(error)) {
         // Return default manifest

@@ -18,6 +18,7 @@ import {
 } from '../core/models/ExecutionTask';
 import { validateQueue, loadQueue, type QueueValidationResult } from './queueStore';
 import type { ExecutionTelemetry } from '../telemetry/executionTelemetry';
+import { RawSnapshotSchema } from './resumeSnapshotSchema';
 
 /**
  * Resume Coordinator
@@ -123,17 +124,6 @@ export interface QueueSnapshotMetadata {
   /** Queue file path (relative to queue directory) */
   queueFile: string;
 }
-
-const RawSnapshotSchema = z.object({
-  schemaVersion: z.string().optional(),
-  schema_version: z.string().optional(),
-  tasks: z.record(z.string(), z.unknown()),
-  counts: z.unknown().optional(),
-  dependencyGraph: z.record(z.string(), z.array(z.string())).optional(),
-  dependency_graph: z.record(z.string(), z.array(z.string())).optional(),
-  checksum: z.string().min(1),
-  timestamp: z.string().min(1),
-});
 
 // ============================================================================
 // Resume Analysis
