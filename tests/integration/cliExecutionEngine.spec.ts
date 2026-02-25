@@ -15,7 +15,6 @@ import { RepoConfig } from '../../src/core/config/RepoConfig';
 import { CodeMachineStrategy } from '../../src/workflows/codeMachineStrategy';
 import { validateCliAvailability } from '../../src/workflows/codeMachineRunner';
 import { ExecutionLogWriter } from '../../src/telemetry/logWriters';
-import { ExecutionTaskType } from '../../src/telemetry/executionMetrics';
 import { vi } from 'vitest';
 
 const FIXTURE_REPO = path.resolve(__dirname, '../fixtures/sample_repo');
@@ -1155,14 +1154,14 @@ describe('CLIExecutionEngine E2E with Mock CLI', () => {
       // Verify taskStarted was called
       expect(taskStartedSpy).toHaveBeenCalledWith(
         'T1',
-        ExecutionTaskType.CODE_GENERATION,
+        'code_generation',
         expect.objectContaining({ strategy: 'codemachine' })
       );
 
       // Verify taskCompleted was called
       expect(taskCompletedSpy).toHaveBeenCalledWith(
         'T1',
-        ExecutionTaskType.CODE_GENERATION,
+        'code_generation',
         expect.any(Number), // durationMs
         expect.objectContaining({
           strategy: 'codemachine',
@@ -1202,7 +1201,7 @@ describe('CLIExecutionEngine E2E with Mock CLI', () => {
 
       expect(taskFailedSpy).toHaveBeenCalledWith(
         'T1',
-        ExecutionTaskType.CODE_GENERATION,
+        'code_generation',
         expect.any(Error),
         expect.any(Number),
         expect.objectContaining({
