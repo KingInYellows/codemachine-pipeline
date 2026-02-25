@@ -15,6 +15,10 @@ export async function getReadyTasks(
   inFlight: Set<string>,
   limit: number
 ): Promise<ExecutionTask[]> {
+  if (limit <= 0) {
+    return [];
+  }
+
   const tasks = await loadQueue(runDir);
 
   // Single pass: bucket tasks by priority
@@ -23,7 +27,19 @@ export async function getReadyTasks(
   const retryable: ExecutionTask[] = [];
 
   for (const task of tasks.values()) {
+    if (running.length >= limit) break;
     if (inFlight.has(task.task_id)) continue;
+
+    // Once running+pending already fill the requested limit, retryable tasks
+    // cannot be selected, so skip dependency scans for non-priority statuses.
+    if (
+      running.length + pending.length >= limit &&
+      task.status !== 'running' &&
+      task.status !== 'pending'
+    ) {
+      continue;
+    }
+
     if (!areDependenciesCompleted(task, tasks)) continue;
 
     if (task.status === 'running') {

@@ -328,7 +328,8 @@ export function checkQueueState(analysis: ResumeAnalysis, manifest: RunManifest)
 
 /** Static message map for blocker diagnostic codes */
 const BLOCKER_RECOMMENDATION_MAP: Record<string, string> = {
-  INTEGRITY_HASH_MISMATCH: '   • Artifacts have been modified. Restore from backup or use --force (risky)',
+  INTEGRITY_HASH_MISMATCH:
+    '   • Artifacts have been modified. Restore from backup or use --force (risky)',
   NON_RECOVERABLE_ERROR: '   • Manual intervention required. See docs/playbooks/resume_playbook.md',
 };
 

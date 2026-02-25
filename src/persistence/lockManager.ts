@@ -70,7 +70,10 @@ function isLockFilePayload(value: unknown): value is LockFile {
  * Uses POSIX signal 0 as a sentinel — kill(pid, 0) does not send a signal
  * but checks process existence (POSIX.1-2017, §2.4).
  *
- * Returns 'running', 'stopped', or 'unknown' (Windows / permission error).
+ * Returns:
+ * - 'running' if the process exists (kill succeeds or fails with EPERM).
+ * - 'stopped' if the process does not exist (ESRCH).
+ * - 'unknown' on Windows, where process existence cannot be checked this way.
  */
 function isProcessRunning(pid: number): 'running' | 'stopped' | 'unknown' {
   if (process.platform === 'win32') return 'unknown';
