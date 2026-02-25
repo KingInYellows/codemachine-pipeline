@@ -11,11 +11,13 @@
  */
 
 import { serializeError } from '../utils/errors';
-import { ErrorType } from '../adapters/http/client';
+import { ErrorType } from '../core/sharedTypes';
 import { BranchProtectionError } from '../adapters/github/branchProtection';
 import type {
   BranchProtectionCompliance,
   BranchProtectionRules,
+  CheckRun,
+  CommitStatus,
   PullRequestReview,
 } from '../adapters/github/branchProtection';
 
@@ -29,8 +31,8 @@ import type {
  */
 export interface BranchProtectionDataSource {
   getBranchProtection(branch: string): Promise<BranchProtectionRules | null>;
-  getCommitStatuses(sha: string): Promise<import('../adapters/github/branchProtection').CommitStatus[]>;
-  getCheckRuns(sha: string): Promise<import('../adapters/github/branchProtection').CheckRun[]>;
+  getCommitStatuses(sha: string): Promise<CommitStatus[]>;
+  getCheckRuns(sha: string): Promise<CheckRun[]>;
   getPullRequestReviews(pull_number: number): Promise<PullRequestReview[]>;
   getPullRequest(pull_number: number): Promise<{
     number: number;
