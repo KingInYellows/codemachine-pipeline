@@ -21,11 +21,7 @@ export class ExecutionTelemetryRecorder {
   private readonly logWriter: ExecutionLogWriter | undefined;
   private readonly config: RepoConfig;
 
-  constructor(
-    config: RepoConfig,
-    telemetry?: ExecutionTelemetry,
-    logWriter?: ExecutionLogWriter
-  ) {
+  constructor(config: RepoConfig, telemetry?: ExecutionTelemetry, logWriter?: ExecutionLogWriter) {
     this.config = config;
     this.telemetry = telemetry;
     this.logWriter = logWriter;
@@ -133,11 +129,7 @@ export class ExecutionTelemetryRecorder {
     );
   }
 
-  recordQueueDepth(
-    pending: number,
-    completed: number,
-    failed: number
-  ): void {
+  recordQueueDepth(pending: number, completed: number, failed: number): void {
     this.telemetry?.metrics?.setQueueDepth(pending, completed, failed);
   }
 }
