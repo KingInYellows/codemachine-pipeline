@@ -1,6 +1,6 @@
-import * as fs from 'node:fs/promises';
-import * as fsSync from 'node:fs';
-import * as path from 'node:path';
+import { existsSync } from 'node:fs';
+import { mkdir, readdir, stat, writeFile } from 'node:fs/promises';
+import { isAbsolute, join, posix, resolve } from 'node:path';
 import { Buffer } from 'node:buffer';
 import { wrapError } from '../utils/errors.js';
 import { isFileNotFound } from '../utils/safeJson';
@@ -10,8 +10,13 @@ import {
   saveHashManifest,
   loadHashManifest,
   type VerificationResult,
-} from './hashManifest';
-import { writeManifest, updateManifest, readManifest, type RunManifest } from './manifestManager.js';
+} from './hashManifest.js';
+import {
+  writeManifest,
+  updateManifest,
+  readManifest,
+  type RunManifest,
+} from './manifestManager.js';
 
 // ============================================================================
 // Types
@@ -92,7 +97,7 @@ const STANDARD_SUBDIRS = [
  */
 function validateFeatureId(featureId: string): void {
   // Reject absolute paths
-  if (path.isAbsolute(featureId)) {
+  if (isAbsolute(featureId)) {
     throw new Error(
       `Invalid feature ID "${featureId}": must be a relative identifier, not an absolute path`
     );
@@ -126,7 +131,7 @@ function validateFeatureId(featureId: string): void {
  */
 export function getRunDirectoryPath(baseDir: string, featureId: string): string {
   validateFeatureId(featureId);
-  return path.resolve(baseDir, featureId);
+  return resolve(baseDir, featureId);
 }
 
 /**
@@ -140,7 +145,7 @@ export function getSubdirectoryPath(
   runDir: string,
   subdir: (typeof STANDARD_SUBDIRS)[number]
 ): string {
-  return path.join(runDir, subdir);
+  return join(runDir, subdir);
 }
 
 // ============================================================================
@@ -209,21 +214,21 @@ type SqliteIndexReference = NonNullable<RunManifest['queue']['sqlite_index']>;
  * @returns Relative paths to seeded SQLite artifacts
  */
 async function seedSqliteIndexes(runDir: string): Promise<SqliteIndexReference> {
-  const sqliteDir = path.join(runDir, SQLITE_DIR_NAME);
-  await fs.mkdir(sqliteDir, { recursive: true });
+  const sqliteDir = join(runDir, SQLITE_DIR_NAME);
+  await mkdir(sqliteDir, { recursive: true });
 
-  const dbAbsolutePath = path.join(sqliteDir, SQLITE_DB_NAME);
+  const dbAbsolutePath = join(sqliteDir, SQLITE_DB_NAME);
   const walAbsolutePath = `${dbAbsolutePath}-wal`;
   const shmAbsolutePath = `${dbAbsolutePath}-shm`;
 
   const headerBuffer = Buffer.alloc(100);
   headerBuffer.write('SQLite format 3\u0000', 'utf-8');
 
-  await fs.writeFile(dbAbsolutePath, headerBuffer);
-  await fs.writeFile(walAbsolutePath, Buffer.alloc(0));
-  await fs.writeFile(shmAbsolutePath, Buffer.alloc(0));
+  await writeFile(dbAbsolutePath, headerBuffer);
+  await writeFile(walAbsolutePath, Buffer.alloc(0));
+  await writeFile(shmAbsolutePath, Buffer.alloc(0));
 
-  const database = path.posix.join(SQLITE_DIR_NAME, SQLITE_DB_NAME);
+  const database = posix.join(SQLITE_DIR_NAME, SQLITE_DB_NAME);
 
   return {
     database,
@@ -242,14 +247,14 @@ async function collectArtifactPaths(runDir: string): Promise<string[]> {
   const subdirsToScan = [...STANDARD_SUBDIRS, SQLITE_DIR_NAME];
 
   for (const subdir of subdirsToScan) {
-    const subdirPath = path.join(runDir, subdir);
+    const subdirPath = join(runDir, subdir);
 
     try {
-      const entries = await fs.readdir(subdirPath, { withFileTypes: true });
+      const entries = await readdir(subdirPath, { withFileTypes: true });
 
       for (const entry of entries) {
         if (entry.isFile()) {
-          paths.push(path.join(subdirPath, entry.name));
+          paths.push(join(subdirPath, entry.name));
         }
       }
     } catch {
@@ -258,8 +263,8 @@ async function collectArtifactPaths(runDir: string): Promise<string[]> {
   }
 
   // Add manifest itself
-  const manifestPath = path.join(runDir, MANIFEST_FILE_NAME);
-  if (fsSync.existsSync(manifestPath)) {
+  const manifestPath = join(runDir, MANIFEST_FILE_NAME);
+  if (existsSync(manifestPath)) {
     paths.push(manifestPath);
   }
 
@@ -286,7 +291,7 @@ export async function createRunDirectory(
   const runDir = getRunDirectoryPath(baseDir, featureId);
 
   // Create main directory
-  await fs.mkdir(runDir, { recursive: true });
+  await mkdir(runDir, { recursive: true });
 
   // Create standard subdirectories
   await ensureSubdirectories(runDir);
@@ -317,8 +322,8 @@ export async function createRunDirectory(
  */
 export async function ensureSubdirectories(runDir: string): Promise<void> {
   for (const subdir of STANDARD_SUBDIRS) {
-    const subdirPath = path.join(runDir, subdir);
-    await fs.mkdir(subdirPath, { recursive: true });
+    const subdirPath = join(runDir, subdir);
+    await mkdir(subdirPath, { recursive: true });
   }
 }
 
@@ -333,7 +338,7 @@ export async function runDirectoryExists(baseDir: string, featureId: string): Pr
   const runDir = getRunDirectoryPath(baseDir, featureId);
 
   try {
-    const stats = await fs.stat(runDir);
+    const stats = await stat(runDir);
     return stats.isDirectory();
   } catch {
     return false;
@@ -348,7 +353,7 @@ export async function runDirectoryExists(baseDir: string, featureId: string): Pr
  */
 export async function listRunDirectories(baseDir: string): Promise<string[]> {
   try {
-    const entries = await fs.readdir(baseDir, { withFileTypes: true });
+    const entries = await readdir(baseDir, { withFileTypes: true });
     return entries.filter((entry) => entry.isDirectory()).map((entry) => entry.name);
   } catch (error) {
     if (isFileNotFound(error)) {
@@ -370,11 +375,11 @@ export async function listRunDirectories(baseDir: string): Promise<string[]> {
  */
 export async function generateHashManifest(runDir: string, filePaths?: string[]): Promise<void> {
   const absolutePaths = filePaths
-    ? filePaths.map((p) => path.resolve(runDir, p))
+    ? filePaths.map((p) => resolve(runDir, p))
     : await collectArtifactPaths(runDir);
 
   const { manifest: hashManifest } = await createHashManifest(absolutePaths);
-  const hashManifestPath = path.join(runDir, HASH_MANIFEST_FILE_NAME);
+  const hashManifestPath = join(runDir, HASH_MANIFEST_FILE_NAME);
 
   await saveHashManifest(hashManifest, hashManifestPath);
 
@@ -394,7 +399,7 @@ export async function generateHashManifest(runDir: string, filePaths?: string[])
  * @returns Verification result
  */
 export async function verifyRunDirectoryIntegrity(runDir: string): Promise<VerificationResult> {
-  const hashManifestPath = path.join(runDir, HASH_MANIFEST_FILE_NAME);
+  const hashManifestPath = join(runDir, HASH_MANIFEST_FILE_NAME);
   const hashManifest = await loadHashManifest(hashManifestPath);
 
   return verifyHashManifest(hashManifest, runDir);

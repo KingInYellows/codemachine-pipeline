@@ -1,6 +1,6 @@
-import * as fs from 'node:fs/promises';
-import * as path from 'node:path';
-import * as crypto from 'node:crypto';
+import { open, readFile, rename, unlink } from 'node:fs/promises';
+import { join } from 'node:path';
+import { randomBytes } from 'node:crypto';
 import { z } from 'zod';
 import { wrapError, getErrorMessage } from '../utils/errors.js';
 import { validateOrThrow } from '../validation/helpers';
@@ -218,13 +218,13 @@ function validateRunDirectory(runDir: string): void {
  */
 export async function writeManifest(runDir: string, manifest: RunManifest): Promise<void> {
   validateRunDirectory(runDir);
-  const manifestPath = path.join(runDir, MANIFEST_FILE_NAME);
-  const tempPath = `${manifestPath}.tmp.${crypto.randomBytes(8).toString('hex')}`;
+  const manifestPath = join(runDir, MANIFEST_FILE_NAME);
+  const tempPath = `${manifestPath}.tmp.${randomBytes(8).toString('hex')}`;
 
   try {
     // Write to temp file with fsync for durability
     const content = JSON.stringify(manifest, null, 2);
-    const handle = await fs.open(tempPath, 'w');
+    const handle = await open(tempPath, 'w');
     try {
       await handle.writeFile(content, 'utf-8');
       await handle.sync(); // Ensure data is on disk before rename
@@ -233,11 +233,11 @@ export async function writeManifest(runDir: string, manifest: RunManifest): Prom
     }
 
     // Atomic rename
-    await fs.rename(tempPath, manifestPath);
+    await rename(tempPath, manifestPath);
   } catch (error) {
     // Clean up temp file on error
     try {
-      await fs.unlink(tempPath);
+      await unlink(tempPath);
     } catch (cleanupError) {
       // Log cleanup failure but don't mask the original error
       console.warn(
@@ -256,10 +256,10 @@ export async function writeManifest(runDir: string, manifest: RunManifest): Prom
  * @throws Error if manifest cannot be read or is invalid
  */
 export async function readManifest(runDir: string): Promise<RunManifest> {
-  const manifestPath = path.join(runDir, MANIFEST_FILE_NAME);
+  const manifestPath = join(runDir, MANIFEST_FILE_NAME);
 
   try {
-    const content = await fs.readFile(manifestPath, 'utf-8');
+    const content = await readFile(manifestPath, 'utf-8');
     const parsed: unknown = JSON.parse(content);
     return validateOrThrow(RunManifestSchema, parsed, 'run manifest') as RunManifest;
   } catch (error) {

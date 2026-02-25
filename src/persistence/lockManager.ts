@@ -1,6 +1,6 @@
-import * as fs from 'node:fs/promises';
-import * as path from 'node:path';
-import * as os from 'node:os';
+import { access, readFile, unlink, writeFile } from 'node:fs/promises';
+import { join } from 'node:path';
+import { hostname } from 'node:os';
 import { wrapError } from '../utils/errors.js';
 import { isFileNotFound } from '../utils/safeJson';
 
@@ -86,7 +86,7 @@ function isProcessRunning(pid: number): boolean | null {
 
 async function isLockStale(lockPath: string): Promise<boolean> {
   try {
-    const content = await fs.readFile(lockPath, 'utf-8');
+    const content = await readFile(lockPath, 'utf-8');
     const parsed: unknown = JSON.parse(content);
 
     if (!isLockFilePayload(parsed)) {
@@ -111,7 +111,7 @@ async function isLockStale(lockPath: string): Promise<boolean> {
  */
 async function removeStaleLock(lockPath: string): Promise<void> {
   try {
-    await fs.unlink(lockPath);
+    await unlink(lockPath);
   } catch (error) {
     if (!isFileNotFound(error)) {
       throw wrapError(error, 'remove stale lock');
@@ -145,18 +145,18 @@ export async function acquireLock(runDir: string, options: LockOptions = {}): Pr
     operation = 'unknown',
   } = options;
 
-  const lockPath = path.join(runDir, LOCK_FILE_NAME);
+  const lockPath = join(runDir, LOCK_FILE_NAME);
   const startTime = Date.now();
 
   while (Date.now() - startTime < timeout) {
     try {
       const lockData: LockFile = {
         pid: process.pid,
-        hostname: os.hostname(),
+        hostname: hostname(),
         acquired_at: new Date().toISOString(),
         operation,
       };
-      await fs.writeFile(lockPath, JSON.stringify(lockData, null, 2), {
+      await writeFile(lockPath, JSON.stringify(lockData, null, 2), {
         flag: 'wx',
         encoding: 'utf-8',
       });
@@ -176,8 +176,7 @@ export async function acquireLock(runDir: string, options: LockOptions = {}): Pr
   }
 
   throw new Error(
-    `Failed to acquire lock for ${runDir} within ${timeout}ms. ` +
-      `Another process may be modifying this run directory.`
+    `Failed to acquire lock for ${runDir} within ${timeout}ms. Another process may be modifying this run directory.`
   );
 }
 
@@ -187,10 +186,10 @@ export async function acquireLock(runDir: string, options: LockOptions = {}): Pr
  * @param runDir - Run directory path
  */
 export async function releaseLock(runDir: string): Promise<void> {
-  const lockPath = path.join(runDir, LOCK_FILE_NAME);
+  const lockPath = join(runDir, LOCK_FILE_NAME);
 
   try {
-    await fs.unlink(lockPath);
+    await unlink(lockPath);
   } catch (error) {
     // Ignore errors if lock file doesn't exist
     if (isFileNotFound(error)) {
@@ -207,10 +206,10 @@ export async function releaseLock(runDir: string): Promise<void> {
  * @returns True if locked, false otherwise
  */
 export async function isLocked(runDir: string): Promise<boolean> {
-  const lockPath = path.join(runDir, LOCK_FILE_NAME);
+  const lockPath = join(runDir, LOCK_FILE_NAME);
 
   try {
-    await fs.access(lockPath);
+    await access(lockPath);
     const isStale = await isLockStale(lockPath);
     return !isStale;
   } catch (error) {
