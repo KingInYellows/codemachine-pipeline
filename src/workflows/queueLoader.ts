@@ -10,10 +10,7 @@
 
 import type { ExecutionTask } from '../core/models/ExecutionTask';
 import { createLogger, type StructuredLogger, LogLevel } from '../telemetry/logger';
-import {
-  integrityVerifiedDirs,
-  verifyQueueIntegrity,
-} from './queueIntegrity.js';
+import { integrityVerifiedDirs, verifyQueueIntegrity } from './queueIntegrity.js';
 import { getV2IndexCache, toExecutionTask } from './queueCache.js';
 
 const logger: StructuredLogger = createLogger({
