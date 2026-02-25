@@ -19,10 +19,6 @@ import { validateOrThrow } from '../validation/helpers.js';
  * Implements Rate Limit Discipline from the Rulebook.
  */
 
-// ============================================================================
-// Types & Schemas
-// ============================================================================
-
 /**
  * Rate limit envelope captured from HTTP response headers
  */
@@ -105,10 +101,6 @@ const RateLimitLedgerDataSchema = z
   })
   .passthrough();
 
-// ============================================================================
-// Constants
-// ============================================================================
-
 const LEDGER_FILENAME = 'rate_limits.json';
 const LEDGER_SCHEMA_VERSION = '1.0.0';
 const MAX_RECENT_ENVELOPES = 10;
@@ -116,10 +108,6 @@ const MAX_RECENT_ENVELOPES = 10;
 // Cooldown thresholds
 const COOLDOWN_THRESHOLD_REMAINING = 10; // Enter cooldown when less than 10 requests remain
 const SECONDARY_LIMIT_RETRY_COUNT = 3; // Number of consecutive 429s before requiring manual ack
-
-// ============================================================================
-// Helpers
-// ============================================================================
 
 function getLedgerPath(runDir: string): string {
   return path.join(runDir, LEDGER_FILENAME);
@@ -158,10 +146,6 @@ async function saveLedgerFile(ledgerPath: string, ledger: RateLimitLedgerData): 
   const content = JSON.stringify(ledger, null, 2);
   await fs.writeFile(ledgerPath, content, 'utf-8');
 }
-
-// ============================================================================
-// Rate Limit Ledger Class
-// ============================================================================
 
 /**
  * Rate limit ledger writer and reader
@@ -421,10 +405,6 @@ export class RateLimitLedger {
   }
 }
 
-// ============================================================================
-// File helpers
-// ============================================================================
-
 export async function readRateLimitLedger(runDir: string): Promise<RateLimitLedgerData> {
   const ledgerPath = getLedgerPath(runDir);
   return loadLedgerFile(ledgerPath);
@@ -437,10 +417,6 @@ export async function writeRateLimitLedger(
   const ledgerPath = getLedgerPath(runDir);
   await saveLedgerFile(ledgerPath, ledger);
 }
-
-// ============================================================================
-// Utility Functions
-// ============================================================================
 
 /**
  * Export helper to create a ledger instance

@@ -18,10 +18,6 @@ import {
   type RunManifest,
 } from './manifestManager.js';
 
-// ============================================================================
-// Types
-// ============================================================================
-
 /**
  * Run directory creation options
  */
@@ -64,10 +60,6 @@ export interface CleanupHook {
   };
 }
 
-// ============================================================================
-// Constants
-// ============================================================================
-
 const MANIFEST_FILE_NAME = 'manifest.json';
 const HASH_MANIFEST_FILE_NAME = 'hash_manifest.json';
 const SQLITE_DIR_NAME = 'sqlite';
@@ -83,16 +75,11 @@ const STANDARD_SUBDIRS = [
   'context',
 ] as const;
 
-// ============================================================================
-// Path resolution
-// ============================================================================
-
 /**
  * Validate that a feature ID is safe for use in file paths.
  * Prevents path traversal attacks by ensuring the ID contains no directory separators
  * and is not "." or "..".
  *
- * @param featureId - Feature identifier to validate
  * @throws Error if feature ID contains unsafe characters
  */
 function validateFeatureId(featureId: string): void {
@@ -124,9 +111,6 @@ function validateFeatureId(featureId: string): void {
 /**
  * Get the absolute path to a run directory
  *
- * @param baseDir - Base pipeline directory (.codepipe/runs)
- * @param featureId - Feature identifier
- * @returns Absolute path to run directory
  * @throws Error if featureId contains path traversal sequences
  */
 export function getRunDirectoryPath(baseDir: string, featureId: string): string {
@@ -137,9 +121,6 @@ export function getRunDirectoryPath(baseDir: string, featureId: string): string 
 /**
  * Get path to a subdirectory within a run directory
  *
- * @param runDir - Run directory path
- * @param subdir - Subdirectory name
- * @returns Absolute path to subdirectory
  */
 export function getSubdirectoryPath(
   runDir: string,
@@ -147,10 +128,6 @@ export function getSubdirectoryPath(
 ): string {
   return join(runDir, subdir);
 }
-
-// ============================================================================
-// Internal helpers
-// ============================================================================
 
 /**
  * Create initial run manifest
@@ -210,8 +187,6 @@ type SqliteIndexReference = NonNullable<RunManifest['queue']['sqlite_index']>;
 /**
  * Seed SQLite WAL indexes used by queue observers
  *
- * @param runDir - Run directory path
- * @returns Relative paths to seeded SQLite artifacts
  */
 async function seedSqliteIndexes(runDir: string): Promise<SqliteIndexReference> {
   const sqliteDir = join(runDir, SQLITE_DIR_NAME);
@@ -277,17 +252,9 @@ async function collectArtifactPaths(runDir: string): Promise<string[]> {
   return paths;
 }
 
-// ============================================================================
-// Public API — Directory lifecycle
-// ============================================================================
-
 /**
  * Create a new run directory with standard structure
  *
- * @param baseDir - Base pipeline directory
- * @param featureId - Feature identifier (ULID/UUIDv7)
- * @param options - Creation options
- * @returns Path to created run directory
  */
 export async function createRunDirectory(
   baseDir: string,
@@ -324,7 +291,6 @@ export async function createRunDirectory(
 /**
  * Ensure all standard subdirectories exist
  *
- * @param runDir - Run directory path
  */
 export async function ensureSubdirectories(runDir: string): Promise<void> {
   for (const subdir of STANDARD_SUBDIRS) {
@@ -336,9 +302,6 @@ export async function ensureSubdirectories(runDir: string): Promise<void> {
 /**
  * Check if a run directory exists
  *
- * @param baseDir - Base pipeline directory
- * @param featureId - Feature identifier
- * @returns True if directory exists
  */
 export async function runDirectoryExists(baseDir: string, featureId: string): Promise<boolean> {
   const runDir = getRunDirectoryPath(baseDir, featureId);
@@ -354,8 +317,6 @@ export async function runDirectoryExists(baseDir: string, featureId: string): Pr
 /**
  * List all run directories
  *
- * @param baseDir - Base pipeline directory
- * @returns Array of feature IDs
  */
 export async function listRunDirectories(baseDir: string): Promise<string[]> {
   try {
@@ -369,15 +330,9 @@ export async function listRunDirectories(baseDir: string): Promise<string[]> {
   }
 }
 
-// ============================================================================
-// Public API — Hash manifest integration
-// ============================================================================
-
 /**
  * Generate and save hash manifest for run directory artifacts
  *
- * @param runDir - Run directory path
- * @param filePaths - Specific files to include (relative to runDir)
  */
 export async function generateHashManifest(runDir: string, filePaths?: string[]): Promise<void> {
   const absolutePaths = filePaths
@@ -401,8 +356,6 @@ export async function generateHashManifest(runDir: string, filePaths?: string[])
 /**
  * Verify integrity of run directory using hash manifest
  *
- * @param runDir - Run directory path
- * @returns Verification result
  */
 export async function verifyRunDirectoryIntegrity(runDir: string): Promise<VerificationResult> {
   const hashManifestPath = join(runDir, HASH_MANIFEST_FILE_NAME);
@@ -411,15 +364,9 @@ export async function verifyRunDirectoryIntegrity(runDir: string): Promise<Verif
   return verifyHashManifest(hashManifest, runDir);
 }
 
-// ============================================================================
-// Public API — Cleanup hooks
-// ============================================================================
-
 /**
  * Register cleanup hook for a run directory
  *
- * @param runDir - Run directory path
- * @param hook - Cleanup hook configuration
  */
 export async function registerCleanupHook(runDir: string, hook: CleanupHook): Promise<void> {
   await updateManifest(runDir, (manifest) => ({
@@ -433,8 +380,6 @@ export async function registerCleanupHook(runDir: string, hook: CleanupHook): Pr
 /**
  * Check if a run directory is eligible for cleanup
  *
- * @param runDir - Run directory path
- * @returns True if eligible for cleanup
  */
 export async function isEligibleForCleanup(runDir: string): Promise<boolean> {
   const manifest = await readManifest(runDir);

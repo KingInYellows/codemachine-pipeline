@@ -10,9 +10,6 @@
  * - Change detection and recommendations
  * - CLI-friendly diff summaries
  *
- * Implements:
- * - FR-14: Plan Persistence and Resume
- * - Section 4 Directive: Deterministic Artifacts
  */
 
 import * as fs from 'node:fs/promises';

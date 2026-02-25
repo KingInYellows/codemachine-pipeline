@@ -131,7 +131,6 @@ export async function composeSpecification(
     researchTasks: config.researchTasks.length,
   });
 
-  // Step 1: Verify PRD is approved
   const prdApproved = await isPRDApproved(config.runDir);
   if (!prdApproved) {
     throw new Error(
@@ -140,7 +139,6 @@ export async function composeSpecification(
     );
   }
 
-  // Step 2: Load PRD metadata and document
   const prdMetadata = await loadPRDMetadata(config.runDir);
   if (!prdMetadata) {
     throw new Error('PRD metadata not found. Generate PRD first using `codepipe start`.');
@@ -150,7 +148,6 @@ export async function composeSpecification(
   const prdPath = path.join(artifactsDir, 'prd.md');
   const prdMarkdown = await fs.readFile(prdPath, 'utf-8');
 
-  // Step 3: Extract PRD sections and derive components
   const prdSections = extractPRDSections(prdMarkdown);
   const constraints = extractConstraints(prdSections, config.contextDocument, config.repoConfig);
   const risks = generateRiskAssessments(prdSections.risks, config.researchTasks);
@@ -158,7 +155,6 @@ export async function composeSpecification(
   const rolloutPlan = generateRolloutPlan(risks);
   const referencedFileGlobs = deriveReferencedFileGlobs(config.contextDocument, config.repoConfig);
 
-  // Step 4: Build specification content
   const specContent = [
     '## Overview',
     '',
@@ -178,7 +174,6 @@ export async function composeSpecification(
     '',
   ].join('\n');
 
-  // Step 5: Create and validate structured specification
   const now = new Date().toISOString();
   const specId = `SPEC-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
 
@@ -212,7 +207,6 @@ export async function composeSpecification(
   }
   specification = validation.data;
 
-  // Step 6: Generate markdown and persist to disk
   const referencedFiles = Object.keys(config.contextDocument.files).slice(0, 20);
   const specMarkdown = generateSpecMarkdown(
     specification,
@@ -228,7 +222,6 @@ export async function composeSpecification(
     serializeSpecification(specification)
   );
 
-  // Step 7: Compute hash and save metadata
   const specHash = await computeFileHash(specPath);
 
   const metadata: SpecMetadata = {
@@ -249,7 +242,6 @@ export async function composeSpecification(
 
   const metadataPath = await writeSpecMetadata(config.runDir, metadata);
 
-  // Step 8: Detect unknowns and build diagnostics
   const unknowns = detectUnknowns(specMarkdown, prdSections, prdMarkdown);
   const incompleteSections: string[] = [];
   if (specContent.includes('TODO')) incompleteSections.push('content');

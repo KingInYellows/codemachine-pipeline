@@ -2,6 +2,7 @@ import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 import * as crypto from 'node:crypto';
 import { randomUUID } from 'node:crypto';
+import { atomicWriteFile } from '../utils/atomicWrite.js';
 import { z } from 'zod';
 import {
   type ApprovalRecord,
@@ -188,7 +189,6 @@ export async function grantApproval(
     const manifest = await readManifest(runDir);
     const featureId = manifest.feature_id;
 
-    // Validate artifact hash matches current artifact
     const approvalsData = await loadApprovalsFile(runDir, featureId);
     const existingRecord = findLatestApprovalForGate(approvalsData.approvals, gateType);
 
@@ -199,7 +199,6 @@ export async function grantApproval(
       );
     }
 
-    // Create new approval record
     const approvalId = `${gateType}-${randomUUID().split('-')[0]}`;
     const recordOptions: Parameters<typeof createApprovalRecord>[5] = {
       artifactHash,
@@ -237,7 +236,6 @@ export async function grantApproval(
       recordOptions
     );
 
-    // Append approval record
     await appendApprovalRecord(runDir, featureId, record);
 
     // Update manifest inline (move from pending to completed, avoiding nested withLock deadlock)
@@ -281,7 +279,6 @@ export async function denyApproval(
     const manifest = await readManifest(runDir);
     const featureId = manifest.feature_id;
 
-    // Create rejection record
     const approvalId = `${gateType}-${randomUUID().split('-')[0]}`;
     const recordOptions: Parameters<typeof createApprovalRecord>[5] = {
       rationale: options.reason,
@@ -305,7 +302,6 @@ export async function denyApproval(
       recordOptions
     );
 
-    // Append rejection record
     await appendApprovalRecord(runDir, featureId, record);
 
     // Keep in pending state (rejection doesn't complete approval)
@@ -445,7 +441,6 @@ async function loadApprovalsFile(runDir: string, featureId: string): Promise<App
     return parsed;
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
-      // File doesn't exist, create empty structure
       return {
         schema_version: APPROVALS_SCHEMA_VERSION,
         feature_id: featureId,
@@ -462,27 +457,10 @@ async function loadApprovalsFile(runDir: string, featureId: string): Promise<App
 async function saveApprovalsFile(runDir: string, data: ApprovalsFile): Promise<void> {
   const approvalsDir = path.join(runDir, 'approvals');
   const approvalsPath = path.join(approvalsDir, APPROVALS_FILE_NAME);
-  const tempPath = `${approvalsPath}.tmp.${crypto.randomBytes(8).toString('hex')}`;
 
-  try {
-    // Ensure approvals directory exists
-    await fs.mkdir(approvalsDir, { recursive: true });
-
-    // Write to temp file
-    const content = JSON.stringify(data, null, 2);
-    await fs.writeFile(tempPath, content, 'utf-8');
-
-    // Atomic rename
-    await fs.rename(tempPath, approvalsPath);
-  } catch (error) {
-    // Clean up temp file on error
-    try {
-      await fs.unlink(tempPath);
-    } catch {
-      // Ignore cleanup errors
-    }
-    throw error;
-  }
+  await fs.mkdir(approvalsDir, { recursive: true });
+  const content = JSON.stringify(data, null, 2);
+  await atomicWriteFile(approvalsPath, content);
 }
 
 /**

@@ -498,7 +498,6 @@ export async function generateExecutionPlan(
   const existing = await loadExistingPlanIfPresent(config, planPath, logger);
   if (existing) return existing;
 
-  // Step 1: Verify spec approval
   const specMetadata = await loadSpecMetadata(config.runDir);
   if (!specMetadata) {
     throw new Error('Spec metadata not found. Generate spec first.');
@@ -512,7 +511,6 @@ export async function generateExecutionPlan(
     specHash: specMetadata.specHash,
   });
 
-  // Step 2: Extract spec requirements
   const requirements = await extractSpecRequirements(config.runDir);
   const warnings: string[] = [];
   if (requirements.length === 0) {
@@ -525,7 +523,6 @@ export async function generateExecutionPlan(
     count: requirements.length,
   });
 
-  // Step 3: Generate task nodes
   const traceabilityTaskIds = await loadTraceabilityTaskIds(config.runDir);
   const { tasks, requirementTaskMap } = generateTaskNodes(
     requirements,
@@ -537,16 +534,13 @@ export async function generateExecutionPlan(
     count: tasks.length,
   });
 
-  // Step 4: Build dependency graph
   const dependencyBlockers = buildDependencyGraph(tasks, { requirements, requirementTaskMap });
 
   logger.debug('Built dependency graph');
 
-  // Step 5: Compute topological order (for deterministic CLI summaries)
   const { order, depths, maxDepth } = computeTopologicalOrder(tasks);
   const parallelPaths = calculateParallelPaths(depths);
 
-  // Step 6: Create plan artifact
   const plan = createPlanArtifact(config.featureId, tasks, {
     generatedBy: 'task-planner:v1.0.0',
     metadata: {
@@ -574,7 +568,6 @@ export async function generateExecutionPlan(
     parallelPaths,
   });
 
-  // Step 7: Validate DAG
   const validation = validateDAG(planWithDag);
   if (!validation.valid) {
     throw new Error(`Plan validation failed:\n${validation.errors.join('\n')}`);
@@ -582,7 +575,6 @@ export async function generateExecutionPlan(
 
   logger.info('DAG validation passed');
 
-  // Step 8: Identify entry tasks
   const entryTaskIds = getEntryTasks(planWithDag);
 
   logger.info('Identified entry tasks', {
@@ -590,10 +582,8 @@ export async function generateExecutionPlan(
     tasks: entryTaskIds,
   });
 
-  // Step 9: Identify blockers
   const blockers = collectMissingDepBlockers(tasks, dependencyBlockers);
 
-  // Step 10: Persist plan
   const { path: persistedPath, planWithChecksum } = await persistPlan(
     config.runDir,
     planWithDag,

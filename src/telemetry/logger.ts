@@ -262,7 +262,6 @@ export class StructuredLogger implements LoggerInterface {
       return;
     }
 
-    // Ensure logs directory exists
     const logsDir = path.dirname(this.logFilePath);
     try {
       await fs.mkdir(logsDir, { recursive: true });

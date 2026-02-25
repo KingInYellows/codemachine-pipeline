@@ -337,7 +337,6 @@ export async function createBranch(
   };
 
   try {
-    // Step 1: Generate and validate branch name
     const branchName = generateBranchName(config.featureId, options);
     const validation = validateBranchName(branchName);
 
@@ -347,7 +346,6 @@ export async function createBranch(
       return result;
     }
 
-    // Step 2: Check if branch already exists
     const exists = await branchExists(branchName, config.workingDir);
     if (exists) {
       result.error = `Branch "${branchName}" already exists`;
@@ -355,21 +353,17 @@ export async function createBranch(
       return result;
     }
 
-    // Step 3: Determine base branch
     const baseBranch = options.baseBranch || config.repoConfig.project.default_branch;
 
-    // Step 4: Ensure we're on the base branch and it's up to date
     const currentBranch = await getCurrentBranch(config.workingDir);
     if (currentBranch !== baseBranch) {
       logger.info('Switching to base branch', { baseBranch });
       await execFileAsync('git', ['checkout', baseBranch], { cwd: config.workingDir });
     }
 
-    // Step 5: Get base commit SHA
     const baseSha = await getCommitSha(baseBranch, config.workingDir);
     result.baseSha = baseSha;
 
-    // Step 6: Create the branch
     logger.info('Creating branch', { branchName, baseBranch, baseSha });
     await execFileAsync('git', ['checkout', '-b', branchName], { cwd: config.workingDir });
 
@@ -378,7 +372,6 @@ export async function createBranch(
 
     logger.info('Branch created successfully', { branchName, baseBranch });
 
-    // Step 7: Create branch metadata
     const metadataPath = await saveBranchMetadata(
       config,
       {
@@ -396,7 +389,6 @@ export async function createBranch(
 
     result.metadataPath = metadataPath;
 
-    // Step 8: Push to remote if requested
     if (options.pushToRemote) {
       const remoteName = options.remoteName || 'origin';
       const pushResult = await pushBranch(config, branchName, remoteName, logger, metrics);
@@ -447,14 +439,12 @@ export async function pushBranch(
   };
 
   try {
-    // Step 1: Validate branch is not protected
     if (isProtectedBranch(branchName, config.repoConfig)) {
       result.error = `Cannot push protected branch: ${branchName}`;
       logger.error('Attempted to push protected branch', { branchName });
       return result;
     }
 
-    // Step 2: Check if remote exists
     const remoteUrl = await getRemoteUrl(remoteName, config.workingDir);
     if (!remoteUrl) {
       result.error = `Remote "${remoteName}" does not exist`;
@@ -464,7 +454,6 @@ export async function pushBranch(
 
     result.remoteUrl = remoteUrl;
 
-    // Step 3: Push with upstream tracking
     logger.info('Pushing branch to remote', { branchName, remoteName, remoteUrl });
     await execFileAsync('git', ['push', '-u', remoteName, branchName], { cwd: config.workingDir });
 
@@ -476,7 +465,6 @@ export async function pushBranch(
       trackingBranch: result.trackingBranch,
     });
 
-    // Step 4: Update branch metadata
     await updateBranchMetadata(
       config,
       {
