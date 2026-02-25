@@ -351,7 +351,13 @@ export class CLIExecutionEngine {
       strategyResult.artifacts,
       this.logger
     );
-    this.telemetryRecorder.recordSuccess(task, strategy, strategyResult, durationMs, artifacts.length);
+    this.telemetryRecorder.recordSuccess(
+      task,
+      strategy,
+      strategyResult,
+      durationMs,
+      artifacts.length
+    );
     await updateTaskInQueue(this.runDir, task.task_id, {
       status: 'completed',
       metadata: { summary: strategyResult.summary, artifacts },
