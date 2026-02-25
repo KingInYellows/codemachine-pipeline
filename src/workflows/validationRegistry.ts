@@ -1,4 +1,4 @@
-import * as crypto from 'node:crypto';
+import { createHash, randomBytes } from 'node:crypto';
 import type { RepoConfig } from '../core/config/RepoConfig';
 import {
   DEFAULT_VALIDATION_COMMANDS,
@@ -176,7 +176,7 @@ export async function getValidationSummary(runDir: string): Promise<ValidationLe
 
 export function generateAttemptId(): string {
   const timestamp = Date.now().toString(36);
-  const random = crypto.randomBytes(6).toString('hex');
+  const random = randomBytes(6).toString('hex');
   return `${timestamp}-${random}`;
 }
 
@@ -229,7 +229,7 @@ function loadCommandsFromConfig(config: RepoConfig): ValidationCommandConfig[] {
 
 function computeCommandsHash(commands: ValidationCommandConfig[]): string {
   const normalized = JSON.stringify(commands, Object.keys(commands).sort());
-  return crypto.createHash('sha256').update(normalized, 'utf-8').digest('hex');
+  return createHash('sha256').update(normalized, 'utf-8').digest('hex');
 }
 
 function mergeCommandDefinition(

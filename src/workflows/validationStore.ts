@@ -5,13 +5,11 @@
  * (commands registry and attempt ledger). Extracted from validationRegistry.ts.
  */
 
-import * as fs from 'node:fs/promises';
-import * as path from 'node:path';
-import * as crypto from 'node:crypto';
+import { mkdir, readFile, rename, unlink, writeFile } from 'node:fs/promises';
+import { join } from 'node:path';
+import { randomBytes } from 'node:crypto';
 import { z } from 'zod';
-import {
-  ValidationCommandConfigSchema,
-} from '../core/validation/validationCommandConfig';
+import { ValidationCommandConfigSchema } from '../core/validation/validationCommandConfig';
 import { readManifest } from '../persistence';
 
 // ============================================================================
@@ -99,10 +97,10 @@ export const LEDGER_SCHEMA_VERSION = '1.0.0';
 export async function loadValidationRegistry(
   runDir: string
 ): Promise<ValidationRegistry | undefined> {
-  const registryPath = path.join(runDir, VALIDATION_DIR_NAME, REGISTRY_FILE_NAME);
+  const registryPath = join(runDir, VALIDATION_DIR_NAME, REGISTRY_FILE_NAME);
 
   try {
-    const content = await fs.readFile(registryPath, 'utf-8');
+    const content = await readFile(registryPath, 'utf-8');
     const parsed: unknown = JSON.parse(content);
     const result = ValidationRegistrySchema.safeParse(parsed);
 
@@ -125,17 +123,17 @@ export async function saveValidationRegistry(
   runDir: string,
   registry: ValidationRegistry
 ): Promise<void> {
-  const validationDir = path.join(runDir, VALIDATION_DIR_NAME);
-  const registryPath = path.join(validationDir, REGISTRY_FILE_NAME);
-  const tempPath = `${registryPath}.tmp.${crypto.randomBytes(8).toString('hex')}`;
+  const validationDir = join(runDir, VALIDATION_DIR_NAME);
+  const registryPath = join(validationDir, REGISTRY_FILE_NAME);
+  const tempPath = `${registryPath}.tmp.${randomBytes(8).toString('hex')}`;
 
   try {
-    await fs.mkdir(validationDir, { recursive: true });
-    await fs.writeFile(tempPath, JSON.stringify(registry, null, 2), 'utf-8');
-    await fs.rename(tempPath, registryPath);
+    await mkdir(validationDir, { recursive: true });
+    await writeFile(tempPath, JSON.stringify(registry, null, 2), 'utf-8');
+    await rename(tempPath, registryPath);
   } catch (error) {
     try {
-      await fs.unlink(tempPath);
+      await unlink(tempPath);
     } catch {
       // Ignore cleanup errors
     }
@@ -144,10 +142,10 @@ export async function saveValidationRegistry(
 }
 
 export async function loadValidationLedger(runDir: string): Promise<ValidationLedger> {
-  const ledgerPath = path.join(runDir, VALIDATION_DIR_NAME, LEDGER_FILE_NAME);
+  const ledgerPath = join(runDir, VALIDATION_DIR_NAME, LEDGER_FILE_NAME);
 
   try {
-    const content = await fs.readFile(ledgerPath, 'utf-8');
+    const content = await readFile(ledgerPath, 'utf-8');
     const parsed: unknown = JSON.parse(content);
     const result = ValidationLedgerSchema.safeParse(parsed);
 
@@ -182,17 +180,17 @@ export async function saveValidationLedger(
   runDir: string,
   ledger: ValidationLedger
 ): Promise<void> {
-  const validationDir = path.join(runDir, VALIDATION_DIR_NAME);
-  const ledgerPath = path.join(validationDir, LEDGER_FILE_NAME);
-  const tempPath = `${ledgerPath}.tmp.${crypto.randomBytes(8).toString('hex')}`;
+  const validationDir = join(runDir, VALIDATION_DIR_NAME);
+  const ledgerPath = join(validationDir, LEDGER_FILE_NAME);
+  const tempPath = `${ledgerPath}.tmp.${randomBytes(8).toString('hex')}`;
 
   try {
-    await fs.mkdir(validationDir, { recursive: true });
-    await fs.writeFile(tempPath, JSON.stringify(ledger, null, 2), 'utf-8');
-    await fs.rename(tempPath, ledgerPath);
+    await mkdir(validationDir, { recursive: true });
+    await writeFile(tempPath, JSON.stringify(ledger, null, 2), 'utf-8');
+    await rename(tempPath, ledgerPath);
   } catch (error) {
     try {
-      await fs.unlink(tempPath);
+      await unlink(tempPath);
     } catch {
       // Ignore cleanup errors
     }
