@@ -5,8 +5,10 @@
  * Handles metadata loading, approval recording, and approval status checks.
  */
 
-import * as fs from 'node:fs/promises';
-import * as path from 'node:path';
+import { mkdir, readFile, writeFile } from 'node:fs/promises';
+import { join } from 'node:path';
+import { z } from 'zod';
+import { validateOrThrow } from '../validation/helpers.js';
 import { computeFileHash, withLock, getSubdirectoryPath } from '../persistence';
 import type { StructuredLogger } from '../telemetry/logger';
 import type { MetricsCollector } from '../telemetry/metrics';
@@ -14,9 +16,12 @@ import {
   createApprovalRecord,
   serializeApprovalRecord,
   parseApprovalRecord,
+  ApprovalRecordSchema,
   type ApprovalRecord,
   type ApprovalVerdict,
 } from '../core/models/ApprovalRecord';
+import { isFileNotFound } from '../utils/safeJson';
+import { getErrorMessage } from '../utils/errors.js';
 
 // ============================================================================
 // Types
@@ -44,6 +49,17 @@ export interface PRDMetadata {
   traceId?: string;
 }
 
+const PRDMetadataSchema = z.object({
+  featureId: z.string(),
+  prdHash: z.string(),
+  createdAt: z.string(),
+  updatedAt: z.string(),
+  approvalStatus: z.enum(['pending', 'approved', 'rejected', 'changes_requested']),
+  approvals: z.array(z.string()),
+  version: z.string(),
+  traceId: z.string().optional(),
+});
+
 /**
  * Approval recording options
  */
@@ -69,12 +85,11 @@ export interface RecordApprovalOptions {
  */
 export async function loadPRDMetadata(runDir: string): Promise<PRDMetadata | null> {
   const artifactsDir = getSubdirectoryPath(runDir, 'artifacts');
-  const metadataPath = path.join(artifactsDir, 'prd_metadata.json');
+  const metadataPath = join(artifactsDir, 'prd_metadata.json');
 
   try {
-    const content = await fs.readFile(metadataPath, 'utf-8');
-    const parsedMetadata = JSON.parse(content) as unknown;
-    return parsedMetadata as PRDMetadata;
+    const content = await readFile(metadataPath, 'utf-8');
+    return validateOrThrow(PRDMetadataSchema, JSON.parse(content), 'prd metadata') as PRDMetadata;
   } catch {
     return null;
   }
@@ -97,14 +112,14 @@ export async function getPRDApprovals(runDir: string): Promise<ApprovalRecord[]>
     return [];
   }
 
-  const approvalsDir = path.join(runDir, 'approvals');
+  const approvalsDir = join(runDir, 'approvals');
   const records: ApprovalRecord[] = [];
 
   for (const approvalId of metadata.approvals) {
-    const approvalPath = path.join(approvalsDir, `${approvalId}.json`);
+    const approvalPath = join(approvalsDir, `${approvalId}.json`);
 
     try {
-      const content = await fs.readFile(approvalPath, 'utf-8');
+      const content = await readFile(approvalPath, 'utf-8');
       const parsed = parseApprovalRecord(JSON.parse(content));
 
       if (parsed.success && parsed.data.gate_type === 'prd') {
@@ -121,7 +136,7 @@ export async function getPRDApprovals(runDir: string): Promise<ApprovalRecord[]>
 /**
  * Record PRD approval
  */
-export async function recordPRDApproval(
+export function recordPRDApproval(
   runDir: string,
   featureId: string,
   options: RecordApprovalOptions,
@@ -137,14 +152,17 @@ export async function recordPRDApproval(
   return withLock(runDir, async () => {
     // Step 1: Load PRD metadata
     const artifactsDir = getSubdirectoryPath(runDir, 'artifacts');
-    const metadataPath = path.join(artifactsDir, 'prd_metadata.json');
-    const prdPath = path.join(artifactsDir, 'prd.md');
+    const metadataPath = join(artifactsDir, 'prd_metadata.json');
+    const prdPath = join(artifactsDir, 'prd.md');
 
     let metadata: PRDMetadata;
     try {
-      const metadataContent = await fs.readFile(metadataPath, 'utf-8');
-      const parsedMetadata = JSON.parse(metadataContent) as unknown;
-      metadata = parsedMetadata as PRDMetadata;
+      const metadataContent = await readFile(metadataPath, 'utf-8');
+      metadata = validateOrThrow(
+        PRDMetadataSchema,
+        JSON.parse(metadataContent),
+        'prd metadata'
+      ) as PRDMetadata;
     } catch (error) {
       throw new Error(
         `Failed to load PRD metadata: ${error instanceof Error ? error.message : 'Unknown error'}`,
@@ -156,9 +174,9 @@ export async function recordPRDApproval(
     const currentHash = await computeFileHash(prdPath);
     if (currentHash !== metadata.prdHash) {
       throw new Error(
-        `PRD content has changed since metadata was last updated. ` +
+        'PRD content has changed since metadata was last updated. ' +
           `Expected hash: ${metadata.prdHash}, Current hash: ${currentHash}. ` +
-          `Please regenerate PRD or update metadata.`
+          'Please regenerate PRD or update metadata.'
       );
     }
 
@@ -172,7 +190,7 @@ export async function recordPRDApproval(
       metadata?: Record<string, unknown>;
     } = {
       artifactHash: currentHash,
-      artifactPath: 'docs/prd.md',
+      artifactPath: 'artifacts/prd.md',
     };
 
     if (options.signerName) {
@@ -195,11 +213,11 @@ export async function recordPRDApproval(
     );
 
     // Step 4: Save approval record
-    const approvalsDir = path.join(runDir, 'approvals');
-    await fs.mkdir(approvalsDir, { recursive: true });
+    const approvalsDir = join(runDir, 'approvals');
+    await mkdir(approvalsDir, { recursive: true });
 
-    const approvalPath = path.join(approvalsDir, `${approvalId}.json`);
-    await fs.writeFile(approvalPath, serializeApprovalRecord(approvalRecord), 'utf-8');
+    const approvalPath = join(approvalsDir, `${approvalId}.json`);
+    await writeFile(approvalPath, serializeApprovalRecord(approvalRecord), 'utf-8');
 
     // Step 5: Update metadata
     metadata.approvals.push(approvalId);
@@ -211,22 +229,40 @@ export async function recordPRDApproval(
           : 'changes_requested';
     metadata.updatedAt = new Date().toISOString();
 
-    await fs.writeFile(metadataPath, JSON.stringify(metadata, null, 2), 'utf-8');
+    await writeFile(metadataPath, JSON.stringify(metadata, null, 2), 'utf-8');
 
     // Step 6: Update approvals.json in run root (if exists)
-    const approvalsIndexPath = path.join(runDir, 'approvals.json');
+    const approvalsIndexPath = join(runDir, 'approvals.json');
     let approvalsIndex: { approvals: ApprovalRecord[] } = { approvals: [] };
+    let shouldWriteApprovalsIndex = true;
 
     try {
-      const existingContent = await fs.readFile(approvalsIndexPath, 'utf-8');
-      const parsedIndex = JSON.parse(existingContent) as unknown;
-      approvalsIndex = parsedIndex as { approvals: ApprovalRecord[] };
-    } catch {
-      // File doesn't exist yet, use empty array
+      const existingContent = await readFile(approvalsIndexPath, 'utf-8');
+      approvalsIndex = validateOrThrow(
+        z.object({ approvals: z.array(ApprovalRecordSchema) }),
+        JSON.parse(existingContent),
+        'approvals index'
+      );
+    } catch (error) {
+      const missingApprovalsIndex =
+        isFileNotFound(error) || (error instanceof Error && error.message.includes('ENOENT'));
+
+      if (missingApprovalsIndex) {
+        approvalsIndex = { approvals: [] };
+      } else {
+        // Preserve existing file if it cannot be parsed to avoid destructive overwrite.
+        shouldWriteApprovalsIndex = false;
+        logger.warn('Failed to parse existing approvals.json; leaving file unchanged', {
+          featureId,
+          error: getErrorMessage(error),
+        });
+      }
     }
 
-    approvalsIndex.approvals.push(approvalRecord);
-    await fs.writeFile(approvalsIndexPath, JSON.stringify(approvalsIndex, null, 2), 'utf-8');
+    if (shouldWriteApprovalsIndex) {
+      approvalsIndex.approvals.push(approvalRecord);
+      await writeFile(approvalsIndexPath, JSON.stringify(approvalsIndex, null, 2), 'utf-8');
+    }
 
     logger.info('PRD approval recorded', {
       featureId,
