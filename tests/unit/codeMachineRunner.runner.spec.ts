@@ -1471,7 +1471,7 @@ describe('CodeMachineRunner', () => {
       await promise;
 
       expect(logger.info).toHaveBeenCalledWith(
-        'CodeMachine execution finished',
+        'CodeMachine execution completed',
         expect.objectContaining({
           task_id: 'test-task',
           exit_code: 0,

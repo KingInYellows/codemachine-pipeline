@@ -179,13 +179,17 @@ describe('CLI Status/Plan/Resume Surfaces', () => {
 
   it('plan --json surfaces DAG summary and detects spec diff changes', async () => {
     // Simulate spec metadata change after plan generation
+    const currentSpecMetadata = JSON.parse(await fs.readFile(specMetadataPath, 'utf-8')) as Record<
+      string,
+      unknown
+    >;
     await fs.writeFile(
       specMetadataPath,
       JSON.stringify(
         {
+          ...currentSpecMetadata,
           specHash: 'spec-hash-updated',
-          approvalStatus: 'approved',
-          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
         },
         null,
         2
@@ -282,7 +286,6 @@ describe('CLI Status/Plan/Resume Surfaces', () => {
         current_step: 'task-2',
         completed_steps: 1,
         total_steps: tasks.length,
-        last_error: null,
       },
     });
     await markApprovalRequired(runDir, 'code');
@@ -378,9 +381,15 @@ async function seedPlanArtifacts(runDir: string, featureId: string): Promise<str
     specMetadataPath,
     JSON.stringify(
       {
+        featureId,
+        specId: `${featureId}-spec`,
         specHash: 'spec-hash-initial',
+        prdHash: 'prd-hash-initial',
         approvalStatus: 'approved',
         createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        approvals: [],
+        version: '1.0.0',
       },
       null,
       2
