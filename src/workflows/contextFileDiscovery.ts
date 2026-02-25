@@ -5,16 +5,12 @@
  * incremental hashing, and file metadata collection for context aggregation.
  */
 
-import * as fs from 'node:fs/promises';
-import * as path from 'node:path';
+import { readdir, realpath, stat } from 'node:fs/promises';
+import { isAbsolute, join, relative, resolve } from 'node:path';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import picomatch from 'picomatch';
-import {
-  loadHashManifest,
-  computeFileHash,
-  type HashManifest,
-} from '../persistence';
+import { loadHashManifest, computeFileHash, type HashManifest } from '../persistence';
 import { estimateTokens, type FileMetadata } from './contextRanking';
 
 const execFileAsync = promisify(execFile);
@@ -113,6 +109,7 @@ export async function discoverFiles(
   patterns: string[],
   exclusions: string[] = DEFAULT_EXCLUSIONS
 ): Promise<string[]> {
+  const resolvedRepoRoot = await realpath(repoRoot).catch(() => resolve(repoRoot));
   const discovered = new Set<string>();
   const visitedDirectories = new Set<string>();
   const inclusionMatchers = createGlobMatchers(patterns);
@@ -121,7 +118,7 @@ export async function discoverFiles(
   // Helper to recursively scan directories
   async function scanDirectory(dir: string): Promise<void> {
     try {
-      const resolvedDir = await fs.realpath(dir);
+      const resolvedDir = await realpath(dir);
       if (visitedDirectories.has(resolvedDir)) {
         return;
       }
@@ -134,11 +131,11 @@ export async function discoverFiles(
     }
 
     try {
-      const entries = await fs.readdir(dir, { withFileTypes: true });
+      const entries = await readdir(dir, { withFileTypes: true });
 
       for (const entry of entries) {
-        const fullPath = path.join(dir, entry.name);
-        const relativePath = path.relative(repoRoot, fullPath);
+        const fullPath = join(dir, entry.name);
+        const relativePath = relative(resolvedRepoRoot, fullPath);
         const normalizedRelativePath = relativePath.replace(/\\/g, '/');
 
         // Skip excluded paths
@@ -152,13 +149,18 @@ export async function discoverFiles(
         // - rely on visitedDirectories to avoid recursive cycles
         if (entry.isSymbolicLink()) {
           try {
-            const realPath = await fs.realpath(fullPath);
-            const rel = path.relative(repoRoot, realPath);
-            if (!rel.startsWith('..')) {
-              const stat = await fs.stat(realPath);
-              if (stat.isDirectory()) {
+            const realPath = await realpath(fullPath);
+            const rel = relative(resolvedRepoRoot, realPath);
+            const normalizedResolvedRelativePath = rel.replace(/\\/g, '/');
+            if (
+              !rel.startsWith('..') &&
+              !isAbsolute(rel) &&
+              !shouldExclude(normalizedResolvedRelativePath, exclusionMatchers)
+            ) {
+              const stats = await stat(realPath);
+              if (stats.isDirectory()) {
                 await scanDirectory(realPath);
-              } else if (stat.isFile()) {
+              } else if (stats.isFile()) {
                 discovered.add(realPath);
               }
             }
@@ -178,12 +180,12 @@ export async function discoverFiles(
   }
 
   // Scan directory and collect matching files
-  await scanDirectory(repoRoot);
+  await scanDirectory(resolvedRepoRoot);
 
   // Filter discovered files by pattern matchers
   const matchedFiles = new Set<string>();
   for (const fullPath of discovered) {
-    const relativePath = path.relative(repoRoot, fullPath).replace(/\\/g, '/');
+    const relativePath = relative(resolvedRepoRoot, fullPath).replace(/\\/g, '/');
     const matches = inclusionMatchers.some((matcher) => matcher(relativePath));
     if (matches) {
       matchedFiles.add(fullPath);
@@ -252,7 +254,7 @@ export async function getGitMetadata(repoRoot: string): Promise<GitMetadata> {
         currentTimestamp = new Date(parseInt(trimmed, 10) * 1000);
       } else if (currentTimestamp) {
         // Line is a file path
-        const fullPath = path.resolve(repoRoot, trimmed);
+        const fullPath = resolve(repoRoot, trimmed);
 
         // Only record if we haven't seen this file yet (most recent)
         if (!metadata.fileCommitDates.has(fullPath)) {
@@ -279,7 +281,7 @@ export async function getGitMetadata(repoRoot: string): Promise<GitMetadata> {
  * @returns Previous hash manifest or null if not found
  */
 export async function loadPreviousHashes(contextDir: string): Promise<HashManifest | null> {
-  const hashManifestPath = path.join(contextDir, 'file_hashes.json');
+  const hashManifestPath = join(contextDir, 'file_hashes.json');
 
   try {
     return await loadHashManifest(hashManifestPath);
@@ -315,10 +317,10 @@ export async function hashDiscoveredFiles(
     ])
   );
 
-  // Hash files with concurrency control
+  // Hash files in parallel
   const hashPromises = files.map(async (filePath) => {
     try {
-      const hash = await computeFileHash(filePath);
+      const [hash, stats] = await Promise.all([computeFileHash(filePath), stat(filePath)]);
       const previousHash = previousHashes.get(filePath);
 
       if (previousHash === undefined) {
@@ -329,7 +331,7 @@ export async function hashDiscoveredFiles(
         changed.push(filePath);
       }
 
-      return { filePath, hash };
+      return { filePath, hash, size: stats.size };
     } catch (error) {
       console.warn(`Failed to hash ${filePath}: ${formatError(error)}`);
       return null;
@@ -344,11 +346,10 @@ export async function hashDiscoveredFiles(
 
   for (const result of results) {
     if (result) {
-      const stats = await fs.stat(result.filePath);
       manifestFiles[result.filePath] = {
         path: result.filePath,
         hash: result.hash,
-        size: stats.size,
+        size: result.size,
         timestamp: now,
       };
     }
@@ -385,9 +386,9 @@ export async function collectFileMetadata(
 
   for (const filePath of files) {
     try {
-      const stats = await fs.stat(filePath);
+      const stats = await stat(filePath);
       const hash = await computeFileHash(filePath);
-      const relativePath = path.relative(repoRoot, filePath);
+      const relativePath = relative(repoRoot, filePath);
       const gitLastModified = gitMetadata.fileCommitDates.get(filePath);
 
       const fileMetadata: Omit<FileMetadata, 'score'> = {
