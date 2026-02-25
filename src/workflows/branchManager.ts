@@ -173,14 +173,24 @@ export function isProtectedBranch(branchName: string, repoConfig: RepoConfig): b
  * Validate branch name follows conventions
  */
 export function validateBranchName(branchName: string): { valid: boolean; error?: string } {
-  // Git branch name rules
+  // Allowlist approach: only permit characters valid in git branch names
+  // Rejects shell metacharacters (", `, $, (, ), etc.) as defense-in-depth
+  const allowlistPattern = /^[a-zA-Z0-9._\/-]+$/;
+
+  if (!allowlistPattern.test(branchName)) {
+    return {
+      valid: false,
+      error: `Branch name "${branchName}" contains invalid characters (only alphanumeric, dot, underscore, slash, and hyphen are allowed)`,
+    };
+  }
+
+  // Additional git-specific structural rules
   const invalidPatterns: RegExp[] = [
     /\.\./, // No double dots
     /\/\//, // No double slashes
     /^[./]/, // Cannot start with . or /
     /[/.]$/, // Cannot end with / or .
     /\.lock$/, // Cannot end with .lock
-    new RegExp('[@{}\\[\\]\\\\^~:?*\\s]'), // No special characters
   ];
 
   for (const pattern of invalidPatterns) {

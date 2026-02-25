@@ -600,20 +600,24 @@ export class WriteActionQueue {
         .split('\n')
         .filter((line) => line.length > 0);
 
-      for (const line of lines) {
+      for (let i = 0; i < lines.length; i++) {
+        const line = lines[i];
+        if (!line) continue;
         try {
           const result = validateOrResult(WriteActionSchema, JSON.parse(line), 'write action');
           if (result.success) {
             actions.set(result.data.action_id, result.data as WriteAction);
           } else {
             this.logger.warn('Skipping queue entry that failed validation', {
-              error: result.error,
+              line_number: i + 1,
+              error: result.error.message,
               line_preview: line.substring(0, 100),
             });
           }
         } catch (error) {
           // Skip corrupted lines (malformed JSON)
           this.logger.warn('Skipping corrupted queue line', {
+            line_number: i + 1,
             error: error instanceof Error ? error.message : 'Unknown error',
             line_preview: line.substring(0, 100),
           });

@@ -6,6 +6,7 @@
  */
 
 import type { RequestInit } from 'undici-types';
+import type { ZodSchema } from 'zod';
 import type { LoggerInterface } from '../../telemetry/logger';
 import { Provider } from '../../core/sharedTypes.js';
 export { ErrorType, Provider } from '../../core/sharedTypes.js';
@@ -59,6 +60,8 @@ export interface HttpRequestOptions extends Omit<RequestInit, 'headers'> {
   };
   /** Intentional: request metadata for logging — varies per caller */
   metadata?: Record<string, unknown>;
+  /** Optional Zod schema to validate the parsed response body */
+  schema?: ZodSchema<unknown>;
 }
 
 /**

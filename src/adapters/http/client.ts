@@ -11,6 +11,8 @@ import {
   ACCEPT_HEADER,
   GITHUB_API_VERSION,
 } from './httpTypes.js';
+import type { ZodSchema } from 'zod';
+import { validateOrThrow } from '../../validation/helpers.js';
 import type { HttpClientConfig, HttpRequestOptions, HttpResponse } from './httpTypes.js';
 import type { LoggerInterface } from '../../telemetry/logger';
 import { createConsoleLogger, LogLevel } from '../../telemetry/logger';
@@ -239,7 +241,8 @@ export class HttpClient {
         requestId,
         attempt + 1,
         maxAttempts,
-        options.metadata
+        options.metadata,
+        options.schema
       );
 
       if (outcome.ok) return outcome.result;
@@ -294,7 +297,8 @@ export class HttpClient {
     requestId: string,
     attemptNumber: number,
     maxAttempts: number,
-    metadata?: Record<string, unknown>
+    metadata?: Record<string, unknown>,
+    schema?: ZodSchema<unknown>
   ): Promise<AttemptResult<T>> {
     this.logger.debug('HTTP request', {
       method,
@@ -323,7 +327,7 @@ export class HttpClient {
         return { ok: false, error, rateLimitEnvelope };
       }
 
-      const data = await this.parseResponseBody<T>(response);
+      const data = await this.parseResponseBody<T>(response, schema);
       this.logger.debug('HTTP response', {
         requestId,
         status: response.status,
@@ -618,32 +622,41 @@ export class HttpClient {
   /**
    * Parse response body as JSON
    */
-  private async parseResponseBody<T>(response: Response): Promise<T> {
+  private async parseResponseBody<T>(
+    response: Response,
+    schema?: ZodSchema<unknown>
+  ): Promise<T> {
     const contentType = response.headers.get('content-type') ?? '';
 
+    let parsed: unknown;
     if (contentType.includes('application/json')) {
-      return (await response.json()) as T;
+      parsed = await response.json();
+    } else {
+      // No content-type or non-JSON: try JSON parsing first (many APIs omit the header),
+      // fall back to text. Avoids the unsafe `as unknown as T` silent cast.
+      const text = await this.safeReadText(response);
+      if (!text) {
+        return undefined as unknown as T;
+      }
+      try {
+        parsed = JSON.parse(text);
+      } catch {
+        throw new HttpError(
+          `Non-JSON response with content type: ${contentType || '(none)'}`,
+          ErrorType.PERMANENT,
+          response.status,
+          extractHeaders(response.headers),
+          text,
+          undefined,
+          false
+        );
+      }
     }
 
-    // No content-type or non-JSON: try JSON parsing first (many APIs omit the header),
-    // fall back to text. Avoids the unsafe `as unknown as T` silent cast.
-    const text = await this.safeReadText(response);
-    if (!text) {
-      return undefined as unknown as T;
+    if (schema) {
+      return validateOrThrow(schema, parsed, 'http response') as T;
     }
-    try {
-      return JSON.parse(text) as T;
-    } catch {
-      throw new HttpError(
-        `Non-JSON response with content type: ${contentType || '(none)'}`,
-        ErrorType.PERMANENT,
-        response.status,
-        extractHeaders(response.headers),
-        text,
-        undefined,
-        false
-      );
-    }
+    return parsed as T;
   }
 
   /**
