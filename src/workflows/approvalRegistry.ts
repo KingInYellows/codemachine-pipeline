@@ -2,13 +2,16 @@ import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 import * as crypto from 'node:crypto';
 import { randomUUID } from 'node:crypto';
+import { z } from 'zod';
 import {
   type ApprovalRecord,
   type ApprovalGateType,
+  ApprovalRecordSchema,
   createApprovalRecord,
   parseApprovalRecord,
 } from '../core/models/ApprovalRecord';
 import { withLock, readManifest, writeManifest } from '../persistence';
+import { validateOrThrow } from '../validation/helpers.js';
 
 /**
  * Approval Registry Service
@@ -82,6 +85,13 @@ export interface ApprovalsFile {
   /** Intentional: approvals-file metadata is consumer-defined */
   metadata?: Record<string, unknown>;
 }
+
+const ApprovalsFileSchema = z.object({
+  schema_version: z.string(),
+  feature_id: z.string(),
+  approvals: z.array(ApprovalRecordSchema),
+  metadata: z.record(z.string(), z.unknown()).optional(),
+});
 
 // ============================================================================
 // Constants
@@ -417,7 +427,7 @@ async function loadApprovalsFile(runDir: string, featureId: string): Promise<App
 
   try {
     const content = await fs.readFile(approvalsPath, 'utf-8');
-    const parsed = JSON.parse(content) as ApprovalsFile;
+    const parsed = validateOrThrow(ApprovalsFileSchema, JSON.parse(content), 'approvals file') as ApprovalsFile;
 
     // Validate schema version
     if (parsed.schema_version !== APPROVALS_SCHEMA_VERSION) {

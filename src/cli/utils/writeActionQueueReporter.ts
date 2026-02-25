@@ -8,7 +8,9 @@
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 import type { WriteActionQueueManifest } from '../../workflows/writeActionQueue';
+import { WriteActionQueueManifestSchema } from '../../workflows/writeActionQueueTypes.js';
 import { isFileNotFound } from '../../utils/safeJson.js';
+import { validateOrThrow } from '../../validation/helpers.js';
 
 // ============================================================================
 // Types
@@ -119,7 +121,7 @@ export async function generateWriteActionQueueReport(
 
     // Load manifest
     const manifestContent = await fs.readFile(manifestPath, 'utf-8');
-    const manifest = JSON.parse(manifestContent) as WriteActionQueueManifest;
+    const manifest = validateOrThrow(WriteActionQueueManifestSchema, JSON.parse(manifestContent), 'write action queue manifest') as WriteActionQueueManifest;
 
     // Calculate derived metrics
     const backlog = manifest.pending_count + manifest.in_progress_count;

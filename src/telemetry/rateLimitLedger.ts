@@ -1,8 +1,10 @@
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
+import { z } from 'zod';
 import type { Provider } from '../core/sharedTypes';
 import type { LoggerInterface } from './logger';
 import { isFileNotFound } from '../utils/safeJson.js';
+import { validateOrThrow } from '../validation/helpers.js';
 
 /**
  * Rate Limit Ledger
@@ -91,6 +93,16 @@ export interface RateLimitLedgerData {
   };
 }
 
+const RateLimitLedgerDataSchema = z.object({
+  schema_version: z.string(),
+  feature_id: z.string().optional(),
+  providers: z.record(z.string(), z.unknown()),
+  metadata: z.object({
+    created_at: z.string(),
+    updated_at: z.string(),
+  }),
+});
+
 // ============================================================================
 // Constants
 // ============================================================================
@@ -127,7 +139,7 @@ function createEmptyLedgerData(): RateLimitLedgerData {
 async function loadLedgerFile(ledgerPath: string): Promise<RateLimitLedgerData> {
   try {
     const content = await fs.readFile(ledgerPath, 'utf-8');
-    return JSON.parse(content) as RateLimitLedgerData;
+    return validateOrThrow(RateLimitLedgerDataSchema, JSON.parse(content), 'rate limit ledger') as RateLimitLedgerData;
   } catch (error) {
     if (isFileNotFound(error)) {
       return createEmptyLedgerData();

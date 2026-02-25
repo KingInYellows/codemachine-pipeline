@@ -13,6 +13,8 @@ import type { BranchProtectionReport } from '../branchProtectionReporter';
 import { loadReport as loadBranchProtectionReport } from '../branchProtectionReporter';
 import type { RepoConfig } from '../../core/config/RepoConfig';
 import type { PRMetadata } from '../../core/models/index.js';
+import { PRMetadataSchema } from '../../core/models/prMetadata.js';
+import { validateOrThrow } from '../../validation/helpers.js';
 import type { LoggerInterface } from '../../telemetry/logger';
 import { readManifest, withLock, type RunManifest } from '../../persistence/runDirectoryManager';
 import { computeContentHash } from '../approvalRegistry';
@@ -84,7 +86,7 @@ export async function loadDeploymentContext(
   let pr: PRMetadata;
   try {
     const prContent = await fs.readFile(prJsonPath, 'utf-8');
-    pr = JSON.parse(prContent) as PRMetadata;
+    pr = validateOrThrow(PRMetadataSchema, JSON.parse(prContent), 'pr metadata') as PRMetadata;
     logger.debug('Loaded PR metadata', { pr_number: pr.pr_number, branch: pr.branch });
   } catch (error) {
     logger.error('Failed to load pr.json', {

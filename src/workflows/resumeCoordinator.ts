@@ -1,5 +1,7 @@
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
+import { z } from 'zod';
+import { validateOrThrow } from '../validation/helpers.js';
 import {
   readManifest,
   getRunState,
@@ -121,6 +123,17 @@ export interface QueueSnapshotMetadata {
   /** Queue file path (relative to queue directory) */
   queueFile: string;
 }
+
+const RawSnapshotSchema = z.object({
+  schemaVersion: z.string().optional(),
+  schema_version: z.string().optional(),
+  tasks: z.record(z.string(), z.unknown()),
+  counts: z.unknown().optional(),
+  dependencyGraph: z.record(z.string(), z.array(z.string())).optional(),
+  dependency_graph: z.record(z.string(), z.array(z.string())).optional(),
+  checksum: z.string().min(1),
+  timestamp: z.string().min(1),
+});
 
 // ============================================================================
 // Resume Analysis
@@ -744,16 +757,7 @@ export async function validateQueueSnapshot(
     // Load raw snapshot file to check format (handles both V1 and V2)
     const snapshotPath = path.join(queueDir, 'queue_snapshot.json');
     const content = await fs.readFile(snapshotPath, 'utf-8');
-    const rawSnapshot = JSON.parse(content) as {
-      schemaVersion?: string;
-      schema_version?: string;
-      tasks: { [taskId: string]: unknown };
-      counts?: unknown;
-      dependencyGraph?: Record<string, string[]>;
-      dependency_graph?: Record<string, string[]>;
-      checksum: string;
-      timestamp: string;
-    };
+    const rawSnapshot = validateOrThrow(RawSnapshotSchema, JSON.parse(content), 'queue snapshot');
 
     const taskCount = Object.keys(rawSnapshot.tasks).length;
     const normalizedStoredTimestamp = new Date(rawSnapshot.timestamp).toISOString();

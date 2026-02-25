@@ -1,3 +1,31 @@
+import { z } from 'zod';
+
+export const PRMetadataSchema = z.object({
+  pr_number: z.number().int().positive(),
+  url: z.string(),
+  branch: z.string().min(1),
+  base_branch: z.string(),
+  head_sha: z.string().optional(),
+  base_sha: z.string().optional(),
+  state: z.string().optional(),
+  mergeable: z.boolean().nullable().optional(),
+  created_at: z.string(),
+  reviewers_requested: z.array(z.string()),
+  auto_merge_enabled: z.boolean(),
+  status_checks: z
+    .array(
+      z.object({
+        context: z.string(),
+        state: z.string(),
+        conclusion: z.string().nullable(),
+      })
+    )
+    .optional(),
+  merge_ready: z.boolean().optional(),
+  blockers: z.array(z.string()).optional(),
+  last_updated: z.string(),
+});
+
 /**
  * Pull request metadata (persisted to pr.json)
  */

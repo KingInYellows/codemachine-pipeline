@@ -17,9 +17,11 @@
 
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
+import { z } from 'zod';
 import type { MetricsCollector } from './metrics';
 import type { StructuredLogger } from './logger';
 import { ExecutionMetricsHelper } from './executionMetrics';
+import { validateOrThrow } from '../validation/helpers.js';
 
 // ============================================================================
 // Types
@@ -136,6 +138,23 @@ export interface BudgetWarning {
   /** Warning message */
   message: string;
 }
+
+const CostTrackerStateSchema = z.object({
+  schema_version: z.string(),
+  feature_id: z.string(),
+  created_at: z.string(),
+  updated_at: z.string(),
+  providers: z.record(z.string(), z.unknown()),
+  totals: z.object({
+    promptTokens: z.number().nonnegative(),
+    completionTokens: z.number().nonnegative(),
+    totalTokens: z.number().nonnegative(),
+    totalCostUsd: z.number().nonnegative(),
+    operationCount: z.number().nonnegative(),
+  }),
+  budget: z.unknown().optional(),
+  warnings: z.array(z.string()),
+});
 
 // ============================================================================
 // Cost Tracker Implementation
@@ -530,7 +549,7 @@ export class CostTracker {
 
     try {
       const content = await fs.readFile(costsFilePath, 'utf-8');
-      const state = JSON.parse(content) as CostTrackerState;
+      const state = validateOrThrow(CostTrackerStateSchema, JSON.parse(content), 'cost tracker state') as CostTrackerState;
 
       const tracker = new CostTracker(state.feature_id, runDir, logger, metrics, state.budget);
       tracker.state = state;
