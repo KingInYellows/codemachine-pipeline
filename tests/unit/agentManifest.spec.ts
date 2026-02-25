@@ -200,7 +200,7 @@ describe('parseAgentManifest - Schema Validation', () => {
     const result = parseAgentManifest(invalid);
     expect(result.success).toBe(false);
     expect(result.errors).toBeDefined();
-    expect((result.errors?.some((e) => e.path === 'schema_version')) ?? false).toBe(true);
+    expect(result.errors?.some((e) => e.path === 'schema_version') ?? false).toBe(true);
   });
 
   it('should reject manifest missing providerId', () => {

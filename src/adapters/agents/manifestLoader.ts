@@ -311,7 +311,9 @@ export function matchesRequirements(
   // Check context window (across all models)
   if (requirements.minContextWindow !== undefined) {
     const hasModelWithSufficientContext = manifest.costConfig.models.some(
-      (model) => requirements.minContextWindow != null && (model.contextWindow ?? 0) >= requirements.minContextWindow
+      (model) =>
+        requirements.minContextWindow != null &&
+        (model.contextWindow ?? 0) >= requirements.minContextWindow
     );
     if (!hasModelWithSufficientContext) {
       return false;
