@@ -25,15 +25,11 @@ import type { ContextDocument } from '../core/models/ContextDocument';
 import type { ResearchTask } from '../core/models/ResearchTask';
 import type { Feature } from '../core/models/Feature';
 import type { RepoConfig } from '../core/config/RepoConfig';
+import type { PRDMetadata } from './prdStore';
 
 // Re-export persistence types and functions for backward compatibility
 export type { PRDMetadata, RecordApprovalOptions } from './prdStore';
-export {
-  loadPRDMetadata,
-  isPRDApproved,
-  getPRDApprovals,
-  recordPRDApproval,
-} from './prdStore';
+export { loadPRDMetadata, isPRDApproved, getPRDApprovals, recordPRDApproval } from './prdStore';
 
 // ============================================================================
 // Types
@@ -398,13 +394,13 @@ export async function draftPRD(
   const prdHash = await computeFileHash(prdPath);
 
   // Step 5: Save metadata
-  const metadata = {
+  const metadata: PRDMetadata = {
     featureId: config.feature.feature_id,
     prdHash,
     createdAt: now,
     updatedAt: now,
-    approvalStatus: 'pending' as const,
-    approvals: [] as string[],
+    approvalStatus: 'pending',
+    approvals: [],
     version: '1.0.0',
     traceId,
   };
