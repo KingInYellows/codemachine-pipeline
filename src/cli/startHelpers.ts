@@ -10,7 +10,8 @@ import { execSync } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
 import type { StructuredLogger } from '../telemetry/logger';
 import type { RepoConfig } from '../core/config/RepoConfig';
-import { createLinearAdapter, type IssueSnapshot } from '../adapters/linear/LinearAdapter';
+import type { IssueSnapshot } from '../adapters/linear/LinearAdapter';
+import { loadLinearIssue } from '../workflows/linearIssueLoader.js';
 import { CliError, CliErrorCode, formatErrorMessage } from './utils/cliErrors';
 import { getErrorMessage } from '../utils/errors.js';
 
@@ -131,22 +132,14 @@ export async function fetchLinearIssue(
     );
   }
 
-  const adapter = createLinearAdapter({
-    apiKey,
-    runDir,
-    logger,
-    enablePreviewFeatures: process.env.LINEAR_ENABLE_PREVIEW === 'true',
-  });
-
   try {
-    const snapshot = await adapter.fetchIssueSnapshot(issueId);
-    logger.info('Linear issue snapshot loaded', {
-      issueId: snapshot.issue.identifier,
-      title: snapshot.issue.title,
-      commentsCount: snapshot.comments.length,
-      cached: snapshot.metadata.last_error !== undefined,
-    });
-    return snapshot;
+    return await loadLinearIssue(
+      issueId,
+      runDir,
+      logger,
+      apiKey,
+      process.env.LINEAR_ENABLE_PREVIEW === 'true'
+    );
   } catch (error) {
     logger.error('Failed to fetch Linear issue', {
       issueId,

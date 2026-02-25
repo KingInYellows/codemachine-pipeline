@@ -9,7 +9,7 @@ import {
 import { getRunDirectoryPath } from '../../persistence/runDirectoryManager';
 import type { QueueValidationResult } from '../../workflows/queueStore';
 import { CLIExecutionEngine } from '../../workflows/cliExecutionEngine';
-import { buildExecutionStrategies } from './start';
+import { buildExecutionStrategies } from '../../workflows/executionStrategyBuilder.js';
 import {
   loadRepoConfig,
   type RepoConfig,
