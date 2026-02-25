@@ -5,8 +5,8 @@
  * the resulting artifacts to the run directory.
  */
 
-import * as fs from 'node:fs/promises';
-import * as path from 'node:path';
+import { mkdir, writeFile } from 'node:fs/promises';
+import { extname, join, relative } from 'node:path';
 import {
   createContextDocument,
   type ContextDocument,
@@ -54,8 +54,8 @@ export function buildContextDocument(
   // Add file records
   const fileRecords: Record<string, ContextFileRecord> = {};
   for (const file of files) {
-    const relativePath = path.relative(repoRoot, file.path);
-    const ext = path.extname(relativePath);
+    const relativePath = relative(repoRoot, file.path);
+    const ext = extname(relativePath);
 
     fileRecords[relativePath] = {
       path: relativePath,
@@ -96,15 +96,15 @@ export async function persistContextArtifacts(
 ): Promise<void> {
   await withLock(runDir, async () => {
     // Ensure context directory exists
-    await fs.mkdir(contextDir, { recursive: true });
+    await mkdir(contextDir, { recursive: true });
 
     // Write summary.json
-    const summaryPath = path.join(contextDir, 'summary.json');
+    const summaryPath = join(contextDir, 'summary.json');
     const summaryContent = serializeContextDocument(contextDocument);
-    await fs.writeFile(summaryPath, summaryContent, 'utf-8');
+    await writeFile(summaryPath, summaryContent, 'utf-8');
 
     // Write file_hashes.json
-    const hashManifestPath = path.join(contextDir, 'file_hashes.json');
+    const hashManifestPath = join(contextDir, 'file_hashes.json');
     await saveHashManifest(hashManifest, hashManifestPath);
   });
 }
