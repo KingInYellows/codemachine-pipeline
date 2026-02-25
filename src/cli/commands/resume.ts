@@ -358,7 +358,7 @@ export default class Resume extends Command {
       }
 
       if (prereqResult.warnings.length > 0) {
-        prereqResult.warnings.forEach((w) => logger!.warn(w));
+        prereqResult.warnings.forEach((w) => logger?.warn(w));
       }
 
       const executionStartTime = Date.now();
@@ -567,15 +567,15 @@ export default class Resume extends Command {
 
           // Track integration-specific blockers for known providers
           if (providerName === 'github' || providerName === 'linear') {
-            const key = providerName as 'github' | 'linear';
+            const key: 'github' | 'linear' = providerName;
             if (!integrationBlockers[key]) {
               integrationBlockers[key] = [];
             }
             if (providerData.inCooldown) {
-              integrationBlockers[key]!.push(`Rate limit cooldown until ${providerData.resetAt}`);
+              integrationBlockers[key]?.push(`Rate limit cooldown until ${providerData.resetAt}`);
             }
             if (providerData.manualAckRequired) {
-              integrationBlockers[key]!.push(
+              integrationBlockers[key]?.push(
                 `Manual acknowledgement required (${providerData.recentHitCount} consecutive hits)`
               );
             }
