@@ -22,7 +22,7 @@ import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 import { z } from 'zod';
 import { validateOrThrow } from '../validation/helpers.js';
-import { exec } from 'node:child_process';
+import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import { wrapError } from '../utils/errors';
 import { withLock, getSubdirectoryPath, updateManifest } from '../persistence';
@@ -30,7 +30,7 @@ import type { RepoConfig } from '../core/config/RepoConfig';
 import type { StructuredLogger } from '../telemetry/logger';
 import type { MetricsCollector } from '../telemetry/metrics';
 
-const execAsync = promisify(exec);
+const execFileAsync = promisify(execFile);
 
 // ============================================================================
 // Types
@@ -204,7 +204,7 @@ export function validateBranchName(branchName: string): { valid: boolean; error?
  */
 export async function getCurrentBranch(workingDir: string): Promise<string> {
   try {
-    const { stdout } = await execAsync('git rev-parse --abbrev-ref HEAD', { cwd: workingDir });
+    const { stdout } = await execFileAsync('git', ['rev-parse', '--abbrev-ref', 'HEAD'], { cwd: workingDir });
     return stdout.trim();
   } catch (error) {
     throw wrapError(error, 'get current branch');
@@ -216,7 +216,7 @@ export async function getCurrentBranch(workingDir: string): Promise<string> {
  */
 export async function branchExists(branchName: string, workingDir: string): Promise<boolean> {
   try {
-    await execAsync(`git rev-parse --verify "${branchName}"`, { cwd: workingDir });
+    await execFileAsync('git', ['rev-parse', '--verify', branchName], { cwd: workingDir });
     return true;
   } catch {
     return false;
@@ -228,7 +228,7 @@ export async function branchExists(branchName: string, workingDir: string): Prom
  */
 export async function getCommitSha(ref: string, workingDir: string): Promise<string> {
   try {
-    const { stdout } = await execAsync(`git rev-parse "${ref}"`, { cwd: workingDir });
+    const { stdout } = await execFileAsync('git', ['rev-parse', ref], { cwd: workingDir });
     return stdout.trim();
   } catch (error) {
     throw wrapError(error, `get commit SHA for ${ref}`);
@@ -240,7 +240,7 @@ export async function getCommitSha(ref: string, workingDir: string): Promise<str
  */
 export async function getRemoteUrl(remoteName: string, workingDir: string): Promise<string | null> {
   try {
-    const { stdout } = await execAsync(`git remote get-url "${remoteName}"`, { cwd: workingDir });
+    const { stdout } = await execFileAsync('git', ['remote', 'get-url', remoteName], { cwd: workingDir });
     return stdout.trim();
   } catch {
     return null;
@@ -252,9 +252,11 @@ export async function getRemoteUrl(remoteName: string, workingDir: string): Prom
  */
 export async function getTrackingBranch(workingDir: string): Promise<string | null> {
   try {
-    const { stdout } = await execAsync('git rev-parse --abbrev-ref --symbolic-full-name @{u}', {
-      cwd: workingDir,
-    });
+    const { stdout } = await execFileAsync(
+      'git',
+      ['rev-parse', '--abbrev-ref', '--symbolic-full-name', '@{u}'],
+      { cwd: workingDir }
+    );
     return stdout.trim();
   } catch {
     return null;
@@ -268,9 +270,11 @@ export async function getAheadBehindCounts(
   workingDir: string
 ): Promise<{ ahead: number; behind: number }> {
   try {
-    const { stdout } = await execAsync('git rev-list --left-right --count @{u}...HEAD', {
-      cwd: workingDir,
-    });
+    const { stdout } = await execFileAsync(
+      'git',
+      ['rev-list', '--left-right', '--count', '@{u}...HEAD'],
+      { cwd: workingDir }
+    );
     const parts = stdout.trim().split(/\s+/);
     return {
       behind: parseInt(parts[0] || '0', 10),
@@ -344,7 +348,7 @@ export async function createBranch(
     const currentBranch = await getCurrentBranch(config.workingDir);
     if (currentBranch !== baseBranch) {
       logger.info('Switching to base branch', { baseBranch });
-      await execAsync(`git checkout "${baseBranch}"`, { cwd: config.workingDir });
+      await execFileAsync('git', ['checkout', baseBranch], { cwd: config.workingDir });
     }
 
     // Step 5: Get base commit SHA
@@ -353,7 +357,7 @@ export async function createBranch(
 
     // Step 6: Create the branch
     logger.info('Creating branch', { branchName, baseBranch, baseSha });
-    await execAsync(`git checkout -b "${branchName}"`, { cwd: config.workingDir });
+    await execFileAsync('git', ['checkout', '-b', branchName], { cwd: config.workingDir });
 
     result.branchName = branchName;
     result.success = true;
@@ -448,7 +452,7 @@ export async function pushBranch(
 
     // Step 3: Push with upstream tracking
     logger.info('Pushing branch to remote', { branchName, remoteName, remoteUrl });
-    await execAsync(`git push -u "${remoteName}" "${branchName}"`, { cwd: config.workingDir });
+    await execFileAsync('git', ['push', '-u', remoteName, branchName], { cwd: config.workingDir });
 
     result.trackingBranch = `${remoteName}/${branchName}`;
     result.success = true;
@@ -687,7 +691,7 @@ export async function createSafeCommit(
     // Create commit with metadata tags
     const commitMessage = `${message}\n\n[task_id: ${taskId}]\n[feature_id: ${config.featureId}]`;
 
-    await execAsync(`git commit -m "${commitMessage.replace(/"/g, '\\"')}"`, {
+    await execFileAsync('git', ['commit', '-m', commitMessage], {
       cwd: config.workingDir,
     });
 
