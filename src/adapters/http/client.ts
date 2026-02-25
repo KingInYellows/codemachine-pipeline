@@ -622,10 +622,7 @@ export class HttpClient {
   /**
    * Parse response body as JSON
    */
-  private async parseResponseBody<T>(
-    response: Response,
-    schema?: ZodSchema<unknown>
-  ): Promise<T> {
+  private async parseResponseBody<T>(response: Response, schema?: ZodSchema<unknown>): Promise<T> {
     const contentType = response.headers.get('content-type') ?? '';
 
     let parsed: unknown;

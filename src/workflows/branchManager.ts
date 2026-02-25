@@ -175,7 +175,7 @@ export function isProtectedBranch(branchName: string, repoConfig: RepoConfig): b
 export function validateBranchName(branchName: string): { valid: boolean; error?: string } {
   // Allowlist approach: only permit characters valid in git branch names
   // Rejects shell metacharacters (", `, $, (, ), etc.) as defense-in-depth
-  const allowlistPattern = /^[a-zA-Z0-9._\/-]+$/;
+  const allowlistPattern = /^[a-zA-Z0-9._/-]+$/;
 
   if (!allowlistPattern.test(branchName)) {
     return {

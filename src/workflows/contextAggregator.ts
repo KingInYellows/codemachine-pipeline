@@ -235,11 +235,26 @@ async function discoverFiles(
   exclusions: string[] = DEFAULT_EXCLUSIONS
 ): Promise<string[]> {
   const discovered = new Set<string>();
+  const visitedDirectories = new Set<string>();
   const inclusionMatchers = createGlobMatchers(patterns);
   const exclusionMatchers = createGlobMatchers(exclusions);
 
   // Helper to recursively scan directories
   async function scanDirectory(dir: string): Promise<void> {
+    try {
+      const resolvedDir = await fs.realpath(dir);
+      if (visitedDirectories.has(resolvedDir)) {
+        return;
+      }
+      visitedDirectories.add(resolvedDir);
+    } catch {
+      // Fall back to direct traversal if realpath fails
+      if (visitedDirectories.has(dir)) {
+        return;
+      }
+      visitedDirectories.add(dir);
+    }
+
     try {
       const entries = await fs.readdir(dir, { withFileTypes: true });
 
@@ -253,16 +268,20 @@ async function discoverFiles(
           continue;
         }
 
-        // Skip symlinks that point outside the repository root
+        // Resolve symlinks safely:
+        // - ignore targets outside repoRoot
+        // - use stat(realPath) for type checks
+        // - rely on visitedDirectories to avoid recursive cycles
         if (entry.isSymbolicLink()) {
           try {
             const realPath = await fs.realpath(fullPath);
             const rel = path.relative(repoRoot, realPath);
             if (!rel.startsWith('..')) {
-              if (entry.isDirectory()) {
-                await scanDirectory(fullPath);
-              } else {
-                discovered.add(fullPath);
+              const stat = await fs.stat(realPath);
+              if (stat.isDirectory()) {
+                await scanDirectory(realPath);
+              } else if (stat.isFile()) {
+                discovered.add(realPath);
               }
             }
           } catch {

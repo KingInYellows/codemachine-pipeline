@@ -21,7 +21,7 @@
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 import * as crypto from 'node:crypto';
-import * as os from 'node:os';
+import { tmpdir } from 'node:os';
 import { exec, execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import picomatch from 'picomatch';
@@ -427,7 +427,7 @@ export async function validatePatchDryRun(
   }
 
   // Step 4: Test patch application with git apply --check
-  const tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'codepipe-patch-'));
+  const tmpDir = await fs.mkdtemp(path.join(tmpdir(), 'codepipe-patch-'));
   const patchFile = path.join(tmpDir, `patch-${patch.patchId}.diff`);
   try {
     await fs.writeFile(patchFile, patch.content, { encoding: 'utf-8', mode: 0o600 });
@@ -645,7 +645,7 @@ export async function applyPatch(
         result.snapshotPath = snapshotPath;
 
         // Step 3: Apply the patch
-        const patchTmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'codepipe-patch-'));
+        const patchTmpDir = await fs.mkdtemp(path.join(tmpdir(), 'codepipe-patch-'));
         const patchFile = path.join(patchTmpDir, `patch-${patch.patchId}.diff`);
         try {
           await fs.writeFile(patchFile, patch.content, { encoding: 'utf-8', mode: 0o600 });
