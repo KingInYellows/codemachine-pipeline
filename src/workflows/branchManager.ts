@@ -204,7 +204,9 @@ export function validateBranchName(branchName: string): { valid: boolean; error?
  */
 export async function getCurrentBranch(workingDir: string): Promise<string> {
   try {
-    const { stdout } = await execFileAsync('git', ['rev-parse', '--abbrev-ref', 'HEAD'], { cwd: workingDir });
+    const { stdout } = await execFileAsync('git', ['rev-parse', '--abbrev-ref', 'HEAD'], {
+      cwd: workingDir,
+    });
     return stdout.trim();
   } catch (error) {
     throw wrapError(error, 'get current branch');
@@ -240,7 +242,9 @@ export async function getCommitSha(ref: string, workingDir: string): Promise<str
  */
 export async function getRemoteUrl(remoteName: string, workingDir: string): Promise<string | null> {
   try {
-    const { stdout } = await execFileAsync('git', ['remote', 'get-url', remoteName], { cwd: workingDir });
+    const { stdout } = await execFileAsync('git', ['remote', 'get-url', remoteName], {
+      cwd: workingDir,
+    });
     return stdout.trim();
   } catch {
     return null;
