@@ -7,6 +7,16 @@ import type { MetricsCollector } from '../../../telemetry/metrics';
 import type { StatusResearchPayload } from '../types';
 import type { DataLogger } from './types';
 
+function isStructuredLogger(logger: DataLogger | undefined): logger is StructuredLogger {
+  return (
+    logger !== undefined &&
+    typeof logger.debug === 'function' &&
+    typeof logger.info === 'function' &&
+    typeof logger.warn === 'function' &&
+    typeof (logger as { error?: unknown }).error === 'function'
+  );
+}
+
 export async function loadResearchStatus(
   baseDir: string,
   featureId: string,
@@ -33,7 +43,7 @@ export async function loadResearchStatus(
   }
 
   try {
-    if (!logger || !metrics) {
+    if (!isStructuredLogger(logger) || !metrics) {
       return {
         total_tasks: 0,
         pending_tasks: 0,
@@ -54,7 +64,7 @@ export async function loadResearchStatus(
         runDir,
         featureId,
       },
-      logger as StructuredLogger,
+      logger,
       metrics
     );
 

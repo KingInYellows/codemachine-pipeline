@@ -103,11 +103,14 @@ async function loadGitHubIntegration(
       warnings,
     };
 
-    github.rate_limit = applyRateLimitWarnings(
+    const githubRateLimit = applyRateLimitWarnings(
       warnings,
       'GitHub',
       rateLimitReport.providers['github']
     );
+    if (githubRateLimit !== undefined) {
+      github.rate_limit = githubRateLimit;
+    }
 
     const prMetadata = await loadPRMetadata(runDir);
     if (prMetadata?.pr_number) {
@@ -149,7 +152,14 @@ async function loadLinearIntegration(
       warnings,
     };
 
-    linear.rate_limit = applyRateLimitWarnings(warnings, 'Linear', rateLimitReport.providers['linear']);
+    const linearRateLimit = applyRateLimitWarnings(
+      warnings,
+      'Linear',
+      rateLimitReport.providers['linear']
+    );
+    if (linearRateLimit !== undefined) {
+      linear.rate_limit = linearRateLimit;
+    }
 
     const issueStatus = await loadLinearIssueStatus(runDir, logger);
     if (issueStatus) {
