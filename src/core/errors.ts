@@ -52,7 +52,7 @@ export class HttpError extends Error {
     public readonly headers?: Record<string, string>,
     responseBody?: string,
     public readonly requestId?: string,
-    public readonly retryable: boolean = false
+    public readonly retryable = false
   ) {
     super(message);
     this.name = 'HttpError';
