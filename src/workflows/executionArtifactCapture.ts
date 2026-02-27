@@ -1,4 +1,4 @@
-import { copyFile, mkdir, stat } from 'node:fs/promises';
+import { copyFile, mkdir, realpath, stat } from 'node:fs/promises';
 import { basename, isAbsolute, join, resolve, sep } from 'node:path';
 import { ExecutionTask } from '../core/models/ExecutionTask.js';
 import { StructuredLogger } from '../telemetry/logger.js';
@@ -14,6 +14,14 @@ export function isPathContained(basePath: string, targetPath: string): boolean {
   const resolvedBase = resolve(basePath);
   const resolvedTarget = resolve(targetPath);
   return resolvedTarget.startsWith(resolvedBase + sep) || resolvedTarget === resolvedBase;
+}
+
+async function resolveRealPathSafe(candidatePath: string): Promise<string> {
+  try {
+    return await realpath(candidatePath);
+  } catch {
+    return resolve(candidatePath);
+  }
 }
 
 /**
@@ -33,6 +41,7 @@ export async function captureArtifacts(
   }
 
   const artifactDir = join(runDir, 'artifacts', task.task_id);
+  const realWorkspaceDir = await resolveRealPathSafe(workspaceDir);
 
   if (!isPathContained(runDir, artifactDir)) {
     logger?.error('Artifact directory escapes run directory', { artifactDir, runDir });
@@ -49,33 +58,50 @@ export async function captureArtifacts(
     return [];
   }
 
+  const realRunDir = await resolveRealPathSafe(runDir);
+  const realArtifactDir = await resolveRealPathSafe(artifactDir);
+  if (!isPathContained(realRunDir, realArtifactDir)) {
+    logger?.error('Artifact directory escapes run directory via symlink', {
+      artifactDir,
+      runDir,
+      realArtifactDir,
+      realRunDir,
+    });
+    return [];
+  }
+
   const artifacts: string[] = [];
 
   for (const artifactPath of strategyArtifacts) {
     try {
-      const sourcePath = isAbsolute(artifactPath)
-        ? artifactPath
-        : join(workspaceDir, artifactPath);
-
-      if (!isPathContained(workspaceDir, sourcePath)) {
-        logger?.warn('Artifact path escapes workspace', { artifactPath, workspaceDir });
-        continue;
-      }
+      const sourcePath = isAbsolute(artifactPath) ? artifactPath : join(workspaceDir, artifactPath);
 
       const stats = await stat(sourcePath).catch(() => null);
       if (!stats) {
         continue;
       }
 
-      const artifactName = basename(artifactPath);
-      const destPath = join(artifactDir, artifactName);
+      const realSourcePath = await resolveRealPathSafe(sourcePath);
+      if (!isPathContained(realWorkspaceDir, realSourcePath)) {
+        logger?.warn('Artifact path escapes workspace', {
+          artifactPath,
+          workspaceDir,
+          sourcePath,
+          realSourcePath,
+          realWorkspaceDir,
+        });
+        continue;
+      }
 
-      if (!isPathContained(artifactDir, destPath)) {
+      const artifactName = basename(artifactPath);
+      const destPath = join(realArtifactDir, artifactName);
+
+      if (!isPathContained(realArtifactDir, destPath)) {
         logger?.warn('Artifact destination escapes artifact directory', { destPath, artifactDir });
         continue;
       }
 
-      await copyFile(sourcePath, destPath);
+      await copyFile(realSourcePath, destPath);
       artifacts.push(artifactName);
     } catch (err) {
       logger?.warn('Artifact capture failed', {
