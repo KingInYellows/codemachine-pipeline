@@ -48,7 +48,7 @@ export interface PlanSummary {
     criticalPathDepth?: number;
   };
   /** Plan checksum */
-  checksum?: string;
+  checksum?: string | undefined;
   /** Last updated timestamp */
   lastUpdated: string;
   /** Feature requirement references (FR-12..FR-14) */
