@@ -221,7 +221,7 @@ export async function appendOperation(
  * @param op - Operation without seq/checksum
  * @returns Complete operation with assigned seq and checksum
  */
-export async function appendOperationLocked(
+export function appendOperationLocked(
   runDir: string,
   queueDir: string,
   op: Omit<QueueOperation, 'seq' | 'checksum'>
@@ -382,7 +382,7 @@ export async function truncateOperationsLogToSeq(
  * @param runDir - Run directory path (for lock coordination)
  * @param queueDir - Queue directory path
  */
-export async function truncateOperationsLogLocked(runDir: string, queueDir: string): Promise<void> {
+export function truncateOperationsLogLocked(runDir: string, queueDir: string): Promise<void> {
   return withLock(runDir, async () => truncateOperationsLog(queueDir), {
     operation: 'wal_truncate',
   });
@@ -523,7 +523,7 @@ export async function appendOperationsBatch(
  * @param ops - Array of operations without seq/checksum
  * @returns Array of complete operations
  */
-export async function appendOperationsBatchLocked(
+export function appendOperationsBatchLocked(
   runDir: string,
   queueDir: string,
   ops: Array<Omit<QueueOperation, 'seq' | 'checksum'>>
@@ -532,3 +532,4 @@ export async function appendOperationsBatchLocked(
     operation: 'wal_append_batch',
   });
 }
+

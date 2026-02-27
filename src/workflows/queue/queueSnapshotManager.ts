@@ -223,7 +223,7 @@ export async function saveSnapshot(
  * @param dependencyGraph - Task dependency graph
  * @returns The created snapshot
  */
-export async function saveSnapshotLocked(
+export function saveSnapshotLocked(
   runDir: string,
   queueDir: string,
   featureId: string,
