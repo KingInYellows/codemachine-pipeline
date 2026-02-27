@@ -79,7 +79,7 @@ export async function processSingleChunk(
     result.promptTokens = response.promptTokens;
     result.completionTokens = response.completionTokens;
     await costTracker?.recordUsage(
-      metadata.generatedBy,
+      client.getProviderId(),
       'summarize',
       response.promptTokens,
       response.completionTokens,
@@ -160,7 +160,7 @@ export async function processMultipleChunks(
       result.promptTokens += response.promptTokens;
       result.completionTokens += response.completionTokens;
       await costTracker?.recordUsage(
-        metadata.generatedBy,
+        client.getProviderId(),
         'summarize',
         response.promptTokens,
         response.completionTokens,

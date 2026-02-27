@@ -17,10 +17,7 @@ import type { CostTracker } from '../telemetry/costTracker';
 import { chunkFile, generateChunkId } from './contextBudget';
 import { processSingleChunk, processMultipleChunks } from './summaryOrchestration';
 import {
-  type FileChunk,
-  type SummaryResponse,
   type SummarizerClient,
-  type ChunkMetadata,
   type SummarizerConfig,
   type SummarizationResult,
   type BatchSummarizationResult,
@@ -35,7 +32,7 @@ export type {
   SummarizerConfig,
   SummarizationResult,
   BatchSummarizationResult,
-};
+} from './summarizerClients/types';
 export { chunkFile, generateChunkId };
 
 // ============================================================================

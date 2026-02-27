@@ -37,11 +37,7 @@ function chunkByFixedWidth(content: string, maxChars: number): FileChunk[] {
   return chunks;
 }
 
-export function chunkFile(
-  content: string,
-  maxTokens = 4000,
-  overlapPercent = 10
-): FileChunk[] {
+export function chunkFile(content: string, maxTokens = 4000, overlapPercent = 10): FileChunk[] {
   if (!content || content.trim().length === 0) {
     return [];
   }
