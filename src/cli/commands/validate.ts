@@ -7,7 +7,7 @@ import { createExecutionTelemetry } from '../../telemetry/executionTelemetry';
 import type { StructuredLogger } from '../../telemetry/logger';
 import type { MetricsCollector } from '../../telemetry/metrics';
 import type { TraceManager, ActiveSpan } from '../../telemetry/traces';
-import { resolveRunDirectorySettings, selectFeatureId } from '../utils/runDirectory';
+import { resolveRunDirectorySettings, selectFeatureId, requireFeatureId } from '../utils/runDirectory';
 import { loadRepoConfig } from '../../core/config/RepoConfig';
 import {
   initializeValidationRegistry,
@@ -110,13 +110,7 @@ export default class Validate extends Command {
     try {
       const settings = await resolveRunDirectorySettings();
       const featureId = await selectFeatureId(settings.baseDir, flags.feature);
-
-      if (!featureId) {
-        this.error(
-          'No feature run directory found. Run "codepipe start" to create a feature, or specify --feature <feature-id>',
-          { exit: 1 }
-        );
-      }
+      requireFeatureId(featureId, flags.feature);
 
       runDirPath = getRunDirectoryPath(settings.baseDir, featureId);
 

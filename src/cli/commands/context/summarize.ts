@@ -10,6 +10,8 @@ import { safeJsonParse } from '../../../utils/safeJson';
 import {
   resolveRunDirectorySettings,
   selectFeatureId,
+  requireFeatureId,
+  requireConfig,
   type RunDirectorySettings,
 } from '../../utils/runDirectory';
 import { createCliLogger, LogLevel, RedactionEngine } from '../../../telemetry/logger';
@@ -127,14 +129,10 @@ export default class ContextSummarize extends Command {
 
     try {
       const settings = await resolveRunDirectorySettings();
-      this.ensureConfigReady(settings);
+      requireConfig(settings);
 
       const featureId = await selectFeatureId(settings.baseDir, typedFlags.feature);
-      if (!featureId) {
-        this.error('Feature run directory not found. Use --feature to select a specific run.', {
-          exit: 10,
-        });
-      }
+      requireFeatureId(featureId, typedFlags.feature);
 
       runDir = getRunDirectoryPath(settings.baseDir, featureId);
       logger = createCliLogger('context:summarize', featureId, runDir, {
@@ -286,16 +284,6 @@ export default class ContextSummarize extends Command {
       } else {
         this.error('Context summarization failed with an unknown error', { exit: 1 });
       }
-    }
-  }
-
-  private ensureConfigReady(settings: RunDirectorySettings): void {
-    if (settings.errors.length > 0 || !settings.config) {
-      const errorMessage =
-        settings.errors.length > 0
-          ? settings.errors.join('; ')
-          : 'Repository configuration missing.';
-      this.error(`Invalid repo configuration: ${errorMessage}`, { exit: 10 });
     }
   }
 
