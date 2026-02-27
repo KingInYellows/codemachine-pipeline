@@ -93,10 +93,19 @@ export async function loadDeploymentContext(
       path: prJsonPath,
       error: getErrorMessage(error),
     });
-    throw new Error(
-      `PR metadata not found. Ensure PR has been created first (run directory: ${runDirectory})`,
-      { cause: error }
-    );
+    // Check if file exists to give a better error message
+    const errorCode = (error as NodeJS.ErrnoException).code;
+    if (errorCode === 'ENOENT') {
+      throw new Error(
+        `PR metadata not found. Ensure PR has been created first (run directory: ${runDirectory})`,
+        { cause: error }
+      );
+    } else {
+      throw new Error(
+        `PR metadata is invalid or corrupted. ${getErrorMessage(error)} (run directory: ${runDirectory})`,
+        { cause: error }
+      );
+    }
   }
 
   // Load branch protection report (optional - may not exist for unprotected branches)

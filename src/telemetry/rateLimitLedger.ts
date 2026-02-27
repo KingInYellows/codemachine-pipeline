@@ -93,15 +93,17 @@ export interface RateLimitLedgerData {
   };
 }
 
-const RateLimitLedgerDataSchema = z.object({
-  schema_version: z.string(),
-  feature_id: z.string().optional(),
-  providers: z.record(z.string(), z.unknown()),
-  metadata: z.object({
-    created_at: z.string(),
-    updated_at: z.string(),
-  }),
-});
+const RateLimitLedgerDataSchema = z
+  .object({
+    schema_version: z.string(),
+    feature_id: z.string().optional(),
+    providers: z.record(z.string(), z.unknown()),
+    metadata: z.object({
+      created_at: z.string(),
+      updated_at: z.string(),
+    }),
+  })
+  .passthrough();
 
 // ============================================================================
 // Constants

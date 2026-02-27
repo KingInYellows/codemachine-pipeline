@@ -1,6 +1,5 @@
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
-import { z } from 'zod';
 import { validateOrThrow } from '../validation/helpers.js';
 import {
   readManifest,

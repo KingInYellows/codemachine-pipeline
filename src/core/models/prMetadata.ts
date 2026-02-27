@@ -9,7 +9,7 @@ export const PRMetadataSchema = z.object({
   base_sha: z.string().optional(),
   state: z.string().optional(),
   mergeable: z.boolean().nullable().optional(),
-  created_at: z.string(),
+  created_at: z.string().datetime(),
   reviewers_requested: z.array(z.string()),
   auto_merge_enabled: z.boolean(),
   status_checks: z
@@ -23,7 +23,7 @@ export const PRMetadataSchema = z.object({
     .optional(),
   merge_ready: z.boolean().optional(),
   blockers: z.array(z.string()).optional(),
-  last_updated: z.string(),
+  last_updated: z.string().datetime(),
 });
 
 /**

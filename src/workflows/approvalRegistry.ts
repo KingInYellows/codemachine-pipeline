@@ -86,12 +86,14 @@ export interface ApprovalsFile {
   metadata?: Record<string, unknown>;
 }
 
-const ApprovalsFileSchema = z.object({
-  schema_version: z.string(),
-  feature_id: z.string(),
-  approvals: z.array(ApprovalRecordSchema),
-  metadata: z.record(z.string(), z.unknown()).optional(),
-});
+const ApprovalsFileSchema = z
+  .object({
+    schema_version: z.string(),
+    feature_id: z.string(),
+    approvals: z.array(ApprovalRecordSchema),
+    metadata: z.record(z.string(), z.unknown()).optional(),
+  })
+  .passthrough();
 
 // ============================================================================
 // Constants

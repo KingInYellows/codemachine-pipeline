@@ -8,5 +8,6 @@ export const RawSnapshotSchema = z.object({
   dependencyGraph: z.record(z.string(), z.array(z.string())).optional(),
   dependency_graph: z.record(z.string(), z.array(z.string())).optional(),
   checksum: z.string().min(1),
-  timestamp: z.string().min(1),
+  timestamp: z.string().datetime(),
 });
+

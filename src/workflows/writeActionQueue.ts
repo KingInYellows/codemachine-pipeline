@@ -605,9 +605,18 @@ export class WriteActionQueue {
           const result = validateOrResult(WriteActionSchema, JSON.parse(line), 'write action');
           if (result.success) {
             actions.set(result.data.action_id, result.data as WriteAction);
+          } else {
+            this.logger.warn('Skipping queue entry that failed validation', {
+              error: result.error,
+              line_preview: line.substring(0, 100),
+            });
           }
-        } catch {
-          // Skip corrupted lines
+        } catch (error) {
+          // Skip corrupted lines (malformed JSON)
+          this.logger.warn('Skipping corrupted queue line', {
+            error: error instanceof Error ? error.message : 'Unknown error',
+            line_preview: line.substring(0, 100),
+          });
         }
       }
     } catch (error) {

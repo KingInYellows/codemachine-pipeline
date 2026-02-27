@@ -139,22 +139,24 @@ export interface BudgetWarning {
   message: string;
 }
 
-const CostTrackerStateSchema = z.object({
-  schema_version: z.string(),
-  feature_id: z.string(),
-  created_at: z.string(),
-  updated_at: z.string(),
-  providers: z.record(z.string(), z.unknown()),
-  totals: z.object({
-    promptTokens: z.number().nonnegative(),
-    completionTokens: z.number().nonnegative(),
-    totalTokens: z.number().nonnegative(),
-    totalCostUsd: z.number().nonnegative(),
-    operationCount: z.number().nonnegative(),
-  }),
-  budget: z.unknown().optional(),
-  warnings: z.array(z.string()),
-});
+const CostTrackerStateSchema = z
+  .object({
+    schema_version: z.string(),
+    feature_id: z.string(),
+    created_at: z.string(),
+    updated_at: z.string(),
+    providers: z.record(z.string(), z.unknown()),
+    totals: z.object({
+      promptTokens: z.number().nonnegative(),
+      completionTokens: z.number().nonnegative(),
+      totalTokens: z.number().nonnegative(),
+      totalCostUsd: z.number().nonnegative(),
+      operationCount: z.number().nonnegative(),
+    }),
+    budget: z.unknown().optional(),
+    warnings: z.array(z.string()),
+  })
+  .passthrough();
 
 // ============================================================================
 // Cost Tracker Implementation
