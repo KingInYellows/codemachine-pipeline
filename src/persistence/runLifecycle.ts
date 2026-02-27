@@ -3,7 +3,7 @@ import { mkdir, readdir, stat, writeFile } from 'node:fs/promises';
 import { isAbsolute, join, posix, resolve } from 'node:path';
 import { Buffer } from 'node:buffer';
 import { wrapError } from '../utils/errors.js';
-import { isFileNotFound } from '../utils/safeJson';
+import { isFileNotFound } from '../utils/safeJson.js';
 import {
   createHashManifest,
   verifyHashManifest,

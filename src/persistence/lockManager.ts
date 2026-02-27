@@ -2,7 +2,7 @@ import { access, readFile, unlink, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { hostname } from 'node:os';
 import { wrapError } from '../utils/errors.js';
-import { isFileNotFound } from '../utils/safeJson';
+import { isFileNotFound } from '../utils/safeJson.js';
 
 // ============================================================================
 // Types

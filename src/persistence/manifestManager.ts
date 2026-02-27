@@ -3,7 +3,7 @@ import { join } from 'node:path';
 import { randomBytes } from 'node:crypto';
 import { z } from 'zod';
 import { wrapError, getErrorMessage } from '../utils/errors.js';
-import { validateOrThrow } from '../validation/helpers';
+import { validateOrThrow } from '../validation/helpers.js';
 import { withLock } from './lockManager.js';
 
 // ============================================================================
@@ -273,7 +273,7 @@ export async function readManifest(runDir: string): Promise<RunManifest> {
  * @param runDir - Run directory path
  * @param updates - Partial manifest updates
  */
-export async function updateManifest(runDir: string, updates: ManifestUpdate): Promise<void> {
+export function updateManifest(runDir: string, updates: ManifestUpdate): Promise<void> {
   return withLock(runDir, async () => {
     const manifest = await readManifest(runDir);
     const patchCandidate = typeof updates === 'function' ? updates(manifest) : updates;
