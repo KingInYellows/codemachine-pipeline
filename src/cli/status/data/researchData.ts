@@ -2,10 +2,21 @@ import { access } from 'node:fs/promises';
 import { join } from 'node:path';
 import { getRunDirectoryPath } from '../../../persistence/runDirectoryManager';
 import { createResearchCoordinator } from '../../../workflows/researchCoordinator';
+import { isCachedResultFresh } from '../../../core/models/ResearchTask';
 import type { StructuredLogger } from '../../../telemetry/logger';
 import type { MetricsCollector } from '../../../telemetry/metrics';
 import type { StatusResearchPayload } from '../types';
 import type { DataLogger } from './types';
+
+function isStructuredLogger(logger: DataLogger | undefined): logger is StructuredLogger {
+  return (
+    logger !== undefined &&
+    typeof logger.debug === 'function' &&
+    typeof logger.info === 'function' &&
+    typeof logger.warn === 'function' &&
+    typeof (logger as { error?: unknown }).error === 'function'
+  );
+}
 
 export async function loadResearchStatus(
   baseDir: string,
@@ -33,7 +44,7 @@ export async function loadResearchStatus(
   }
 
   try {
-    if (!logger || !metrics) {
+    if (!isStructuredLogger(logger) || !metrics) {
       return {
         total_tasks: 0,
         pending_tasks: 0,
@@ -54,7 +65,7 @@ export async function loadResearchStatus(
         runDir,
         featureId,
       },
-      logger as StructuredLogger,
+      logger,
       metrics
     );
 
@@ -67,7 +78,6 @@ export async function loadResearchStatus(
 
     // Count stale tasks
     const allTasks = await coordinator.listTasks({});
-    const { isCachedResultFresh } = await import('../../../core/models/ResearchTask.js');
     const staleTasks = allTasks.filter((task) => {
       if (task.status !== 'completed' || !task.results) return false;
       const freshnessReq = task.freshness_requirements ?? {

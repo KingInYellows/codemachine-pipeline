@@ -7,7 +7,8 @@ export {
 } from './planData';
 export { loadValidationStatus } from './validationData';
 export { loadBranchProtectionStatus, refreshBranchProtectionArtifact } from './branchData';
-export { loadPRMetadata, loadIntegrationsStatus, loadRateLimitsStatus } from './integrationsData';
+export { loadIntegrationsStatus, loadRateLimitsStatus } from './integrationsData';
+export { loadPRMetadata } from './prMetadataData';
 export { loadResearchStatus } from './researchData';
 export {
   attachSummarizationMetadata,

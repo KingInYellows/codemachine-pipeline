@@ -30,7 +30,7 @@ export async function loadManifestSnapshot(
   }
 }
 
-export async function loadManifestWithTracing(
+export function loadManifestWithTracing(
   traceManager: TraceManager | undefined,
   parentSpan: ActiveSpan | undefined,
   baseDir: string,

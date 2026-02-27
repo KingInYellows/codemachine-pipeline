@@ -18,7 +18,7 @@ import type { RunDirectorySettings } from '../../utils/runDirectory';
 import type { RunManifest } from '../../../persistence/runDirectoryManager';
 import type { StatusBranchProtectionPayload } from '../types';
 import type { DataLogger } from './types';
-import { loadPRMetadata } from './integrationsData';
+import { loadPRMetadata } from './prMetadataData';
 
 export async function loadBranchProtectionStatus(
   baseDir: string,

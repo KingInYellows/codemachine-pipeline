@@ -93,7 +93,8 @@ export async function loadValidationStatus(
     readPlanValidation(planValidationPath, logger),
   ]);
 
-  const hasValidationData = queueValidation.valid !== undefined || planValidation.valid !== undefined;
+  const hasValidationData =
+    queueValidation.valid !== undefined || planValidation.valid !== undefined;
 
   if (!hasValidationData) {
     return undefined;

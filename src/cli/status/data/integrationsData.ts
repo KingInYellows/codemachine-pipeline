@@ -3,28 +3,14 @@ import { join } from 'node:path';
 import { getRunDirectoryPath } from '../../../persistence/runDirectoryManager';
 import { safeJsonParse } from '../../../utils/safeJson';
 import type { RunManifest } from '../../../persistence/runDirectoryManager';
-import type { PRMetadata } from '../../pr/shared';
 import { RateLimitReporter } from '../../../telemetry/rateLimitReporter';
 import type { RunDirectorySettings } from '../../utils/runDirectory';
 import type { StatusIntegrationsPayload, StatusRateLimitsPayload } from '../types';
 import type { DataLogger } from './types';
+import { loadPRMetadata } from './prMetadataData';
 
 type GitHubIntegration = NonNullable<StatusIntegrationsPayload['github']>;
 type LinearIntegration = NonNullable<StatusIntegrationsPayload['linear']>;
-
-export async function loadPRMetadata(runDir: string): Promise<PRMetadata | null> {
-  const prPath = join(runDir, 'pr.json');
-  try {
-    const content = await readFile(prPath, 'utf-8');
-    const parsed = safeJsonParse<PRMetadata>(content);
-    return parsed ?? null;
-  } catch (error) {
-    if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
-      return null;
-    }
-    throw error;
-  }
-}
 
 function applyRateLimitWarnings(
   warnings: string[],
@@ -103,11 +89,14 @@ async function loadGitHubIntegration(
       warnings,
     };
 
-    github.rate_limit = applyRateLimitWarnings(
+    const githubRateLimit = applyRateLimitWarnings(
       warnings,
       'GitHub',
       rateLimitReport.providers['github']
     );
+    if (githubRateLimit !== undefined) {
+      github.rate_limit = githubRateLimit;
+    }
 
     const prMetadata = await loadPRMetadata(runDir);
     if (prMetadata?.pr_number) {
@@ -149,7 +138,14 @@ async function loadLinearIntegration(
       warnings,
     };
 
-    linear.rate_limit = applyRateLimitWarnings(warnings, 'Linear', rateLimitReport.providers['linear']);
+    const linearRateLimit = applyRateLimitWarnings(
+      warnings,
+      'Linear',
+      rateLimitReport.providers['linear']
+    );
+    if (linearRateLimit !== undefined) {
+      linear.rate_limit = linearRateLimit;
+    }
 
     const issueStatus = await loadLinearIssueStatus(runDir, logger);
     if (issueStatus) {
@@ -181,11 +177,16 @@ export async function loadIntegrationsStatus(
   const runDir = getRunDirectoryPath(settings.baseDir, featureId);
   const integrations: StatusIntegrationsPayload = {};
 
-  if (settings.config?.github.enabled) {
+  if (settings.config?.github.enabled && settings.config?.linear?.enabled) {
+    const [github, linear] = await Promise.all([
+      loadGitHubIntegration(runDir, logger),
+      loadLinearIntegration(runDir, logger),
+    ]);
+    integrations.github = github;
+    integrations.linear = linear;
+  } else if (settings.config?.github.enabled) {
     integrations.github = await loadGitHubIntegration(runDir, logger);
-  }
-
-  if (settings.config?.linear?.enabled) {
+  } else if (settings.config?.linear?.enabled) {
     integrations.linear = await loadLinearIntegration(runDir, logger);
   }
 
