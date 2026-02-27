@@ -167,10 +167,9 @@ export class WriteActionStore {
   }
 
   async saveQueue(actions: Map<string, WriteAction>): Promise<void> {
-    const lines =
-      Array.from(actions.values())
-        .map((action) => JSON.stringify(action))
-        .join('\n');
+    const lines = Array.from(actions.values())
+      .map((action) => JSON.stringify(action))
+      .join('\n');
     const queueContent = `${lines}\n`;
 
     await writeFile(this.queuePath, queueContent, 'utf-8');
