@@ -14,7 +14,7 @@
 
 ## Description
 
-LinearAdapter contains JSDoc on private helper methods that do 1-3 lines of work: '/** Format error message */', '/** Record request timestamp for sliding window tracking */'. Private methods called only from within the class do not benefit from JSDoc — they are implementation details. The method names already describe what they do.
+LinearAdapter contains JSDoc on private helper methods that do 1-3 lines of work: '/** Format error message \*/', '/** Record request timestamp for sliding window tracking \*/'. Private methods called only from within the class do not benefit from JSDoc — they are implementation details. The method names already describe what they do.
 
 ## Suggested Remediation
 

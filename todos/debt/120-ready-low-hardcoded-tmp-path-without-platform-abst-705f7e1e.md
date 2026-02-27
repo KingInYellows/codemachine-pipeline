@@ -19,4 +19,4 @@ The path /tmp is hardcoded in two locations. On Windows (which is a supported pl
 
 ## Suggested Remediation
 
-Replace path.join('/tmp', ...) with path.join(os.tmpdir(), ...) and add import * as os from 'node:os' at the top of patchManager.ts. This is already the pattern used in the test files.
+Replace path.join('/tmp', ...) with path.join(os.tmpdir(), ...) and add import \* as os from 'node:os' at the top of patchManager.ts. This is already the pattern used in the test files.
