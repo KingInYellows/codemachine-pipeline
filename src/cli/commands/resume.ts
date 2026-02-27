@@ -26,6 +26,7 @@ import {
   ensureTelemetryReferences,
   resolveRunDirectorySettings,
   selectFeatureId,
+  requireFeatureId,
 } from '../utils/runDirectory';
 import { loadPlanSummary } from '../../workflows/taskPlanner';
 import { RateLimitReporter } from '../../telemetry/rateLimitReporter';
@@ -200,13 +201,7 @@ export default class Resume extends Command {
     try {
       const settings = await resolveRunDirectorySettings();
       const featureId = await selectFeatureId(settings.baseDir, typedFlags.feature);
-
-      if (!featureId) {
-        this.error(
-          'No feature run directory found. Specify with --feature or ensure a run directory exists.',
-          { exit: 1 }
-        );
-      }
+      requireFeatureId(featureId, typedFlags.feature);
 
       runDirPath = getRunDirectoryPath(settings.baseDir, featureId);
 

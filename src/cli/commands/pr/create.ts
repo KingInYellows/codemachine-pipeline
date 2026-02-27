@@ -13,7 +13,7 @@ import { Command, Flags } from '@oclif/core';
 import { createRunMetricsCollector } from '../../../telemetry/metrics';
 import { createRunTraceManager, withSpan } from '../../../telemetry/traces';
 import { flushTelemetrySuccess, flushTelemetryError } from '../../utils/telemetryLifecycle';
-import { resolveRunDirectorySettings, selectFeatureId } from '../../utils/runDirectory';
+import { resolveRunDirectorySettings, selectFeatureId, requireFeatureId } from '../../utils/runDirectory';
 import {
   loadPRContext,
   getPRAdapter,
@@ -103,18 +103,7 @@ export default class PRCreate extends Command {
     try {
       const settings = await resolveRunDirectorySettings();
       const featureId = await selectFeatureId(settings.baseDir, typedFlags.feature);
-
-      if (!featureId) {
-        this.error('No feature run directory found. Run "codepipe start" first.', {
-          exit: PRExitCode.VALIDATION_ERROR,
-        });
-      }
-
-      if (typedFlags.feature && featureId !== typedFlags.feature) {
-        this.error(`Feature run directory not found: ${typedFlags.feature}`, {
-          exit: PRExitCode.VALIDATION_ERROR,
-        });
-      }
+      requireFeatureId(featureId, typedFlags.feature);
 
       // Load PR context
       const context = await loadPRContext(settings.baseDir, featureId, settings.config!, false);

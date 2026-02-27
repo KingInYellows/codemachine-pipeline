@@ -28,7 +28,7 @@ import {
   markApprovalRequired,
   updateManifest,
 } from '../../persistence/runDirectoryManager';
-import { resolveRunDirectorySettings, ensureTelemetryReferences } from '../utils/runDirectory';
+import { resolveRunDirectorySettings, ensureTelemetryReferences, requireConfig } from '../utils/runDirectory';
 import type { RepoConfig } from '../../core/config/RepoConfig';
 import { createFeature } from '../../core/models/Feature';
 import { aggregateContext, type AggregatorConfig } from '../../workflows/contextAggregator';
@@ -48,7 +48,6 @@ import {
   formatErrorMessage,
   formatErrorJson,
   setJsonOutputMode,
-  ERROR_MESSAGES,
 } from '../utils/cliErrors';
 import { flushTelemetryError } from '../utils/telemetryLifecycle';
 import { DEFAULT_EXECUTION_CONFIG } from '../../core/config/RepoConfig.js';
@@ -183,21 +182,7 @@ export default class Start extends Command {
     }
 
     const settings = await resolveRunDirectorySettings();
-
-    if (settings.errors.length > 0 || !settings.config) {
-      const message =
-        settings.errors.length > 0
-          ? settings.errors.join('\n')
-          : ERROR_MESSAGES.REPO_NOT_INITIALIZED;
-      const cliErr = new CliError(message, CliErrorCode.CONFIG_NOT_FOUND, {
-        remediation: 'Run "codepipe init" to initialize the repository configuration.',
-      });
-      if (typedFlags.json) {
-        this.log(JSON.stringify(formatErrorJson(cliErr), null, 2));
-        this.exit(cliErr.exitCode);
-      }
-      this.error(cliErr.message, { exit: cliErr.exitCode });
-    }
+    requireConfig(settings);
 
     const startTime = Date.now();
     let currentStepLabel: string | undefined;

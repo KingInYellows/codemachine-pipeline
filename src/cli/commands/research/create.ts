@@ -1,6 +1,6 @@
 import { Command, Flags } from '@oclif/core';
 import { getRunDirectoryPath } from '../../../persistence/runDirectoryManager';
-import { resolveRunDirectorySettings, selectFeatureId } from '../../utils/runDirectory';
+import { resolveRunDirectorySettings, selectFeatureId, requireFeatureId } from '../../utils/runDirectory';
 import { createCliLogger } from '../../../telemetry/logger';
 import { createRunMetricsCollector } from '../../../telemetry/metrics';
 import {
@@ -90,14 +90,7 @@ export default class ResearchCreate extends Command {
 
     const settings = await resolveRunDirectorySettings();
     const featureId = await selectFeatureId(settings.baseDir, typedFlags.feature);
-
-    if (!featureId) {
-      this.error('No feature run directory found. Use `codepipe start` first.', { exit: 10 });
-    }
-
-    if (typedFlags.feature && featureId !== typedFlags.feature) {
-      this.error(`Feature run directory not found: ${typedFlags.feature}`, { exit: 10 });
-    }
+    requireFeatureId(featureId, typedFlags.feature);
 
     const runDir = getRunDirectoryPath(settings.baseDir, featureId);
     const logger = createCliLogger('research:create', featureId, runDir);

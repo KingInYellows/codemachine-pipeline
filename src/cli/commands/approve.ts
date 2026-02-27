@@ -139,25 +139,10 @@ export default class Approve extends Command {
 
     const startTime = Date.now();
     const settings = await resolveRunDirectorySettings();
-
-    if (settings.errors.length > 0 || !settings.config) {
-      const message =
-        settings.errors.length > 0
-          ? settings.errors.join('\n')
-          : ERROR_MESSAGES.REPO_NOT_INITIALIZED;
-      this.error(message, { exit: 10 });
-    }
+    requireConfig(settings);
 
     const featureId = await selectFeatureId(settings.baseDir, typedFlags.feature);
-
-    if (!featureId) {
-      this.error(
-        typedFlags.feature
-          ? `Feature run directory not found: ${typedFlags.feature}`
-          : 'No feature runs found. Run "codepipe start" to create a feature.',
-        { exit: 10 }
-      );
-    }
+    requireFeatureId(featureId, typedFlags.feature);
 
     const runDir = getRunDirectoryPath(settings.baseDir, featureId);
 

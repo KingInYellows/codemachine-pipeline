@@ -7,7 +7,7 @@ import type { StructuredLogger } from '../../telemetry/logger';
 import type { MetricsCollector } from '../../telemetry/metrics';
 import type { TraceManager, ActiveSpan } from '../../telemetry/traces';
 import { flushTelemetrySuccess, flushTelemetryError } from '../utils/telemetryLifecycle';
-import { resolveRunDirectorySettings, selectFeatureId } from '../utils/runDirectory';
+import { resolveRunDirectorySettings, selectFeatureId, requireFeatureId } from '../utils/runDirectory';
 import {
   generateRateLimitReport,
   exportRateLimitMetrics,
@@ -90,17 +90,7 @@ export default class RateLimits extends Command {
     try {
       const settings = await resolveRunDirectorySettings();
       const featureId = await selectFeatureId(settings.baseDir, typedFlags.feature);
-
-      // Require feature ID
-      if (!featureId) {
-        this.error('No feature run directory found. Use --feature to specify a feature ID.', {
-          exit: 10,
-        });
-      }
-
-      if (typedFlags.feature && featureId !== typedFlags.feature) {
-        this.error(`Feature run directory not found: ${typedFlags.feature}`, { exit: 10 });
-      }
+      requireFeatureId(featureId, typedFlags.feature);
 
       // Initialize telemetry
       runDirPath = getRunDirectoryPath(settings.baseDir, featureId);
