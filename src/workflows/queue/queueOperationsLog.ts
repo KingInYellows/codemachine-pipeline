@@ -532,4 +532,3 @@ export function appendOperationsBatchLocked(
     operation: 'wal_append_batch',
   });
 }
-
