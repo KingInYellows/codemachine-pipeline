@@ -276,7 +276,10 @@ async function discoverFiles(
           try {
             const realPath = await fs.realpath(fullPath);
             const rel = path.relative(repoRoot, realPath);
-            if (!rel.startsWith('..')) {
+            // Check if symlink target is within repo boundary
+            // !rel.startsWith('..') catches most cases, but on Windows cross-drive paths
+            // return absolute paths, so we also check !path.isAbsolute(rel)
+            if (!rel.startsWith('..') && !path.isAbsolute(rel)) {
               const stat = await fs.stat(realPath);
               if (stat.isDirectory()) {
                 await scanDirectory(realPath);

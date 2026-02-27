@@ -633,25 +633,40 @@ export class HttpClient {
       // fall back to text. Avoids the unsafe `as unknown as T` silent cast.
       const text = await this.safeReadText(response);
       if (!text) {
-        return undefined as unknown as T;
-      }
-      try {
-        parsed = JSON.parse(text);
-      } catch {
-        throw new HttpError(
-          `Non-JSON response with content type: ${contentType || '(none)'}`,
-          ErrorType.PERMANENT,
-          response.status,
-          extractHeaders(response.headers),
-          text,
-          undefined,
-          false
-        );
+        parsed = undefined;
+      } else {
+        try {
+          parsed = JSON.parse(text);
+        } catch {
+          throw new HttpError(
+            `Non-JSON response with content type: ${contentType || '(none)'}`,
+            ErrorType.PERMANENT,
+            response.status,
+            extractHeaders(response.headers),
+            text,
+            undefined,
+            false
+          );
+        }
       }
     }
 
     if (schema) {
       return validateOrThrow(schema, parsed, 'http response') as T;
+    }
+    return parsed as T;
+  }
+        const message = error instanceof Error ? error.message : 'Schema validation failed';
+        throw new HttpError(
+          `Response schema validation failed: ${message}`,
+          ErrorType.PERMANENT,
+          response.status,
+          extractHeaders(response.headers),
+          JSON.stringify(parsed),
+          undefined,
+          false
+        );
+      }
     }
     return parsed as T;
   }

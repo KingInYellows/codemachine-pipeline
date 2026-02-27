@@ -595,7 +595,7 @@ describe('Patch Manager', () => {
   describe('createRollbackSnapshot', () => {
     it('should create snapshot with git metadata', async () => {
       mockExecDefault();
-      vi.mocked(fs.mkdir).mockResolvedValue(undefined);
+      vi.mocked(fs.mkdir).mockResolvedValue();
       let snapshotPayload: Parameters<typeof fs.writeFile>[1] | undefined;
       vi.mocked(fs.writeFile).mockImplementation((_path, data) => {
         snapshotPayload = data;
@@ -632,7 +632,7 @@ describe('Patch Manager', () => {
 
   describe('generateDiffSummary', () => {
     it('should generate diff summary with patch metadata', async () => {
-      vi.mocked(fs.mkdir).mockResolvedValue(undefined);
+      vi.mocked(fs.mkdir).mockResolvedValue();
       let summaryPayload: Parameters<typeof fs.writeFile>[1] | undefined;
       vi.mocked(fs.writeFile).mockImplementation((_path, data) => {
         summaryPayload = data;
@@ -668,7 +668,7 @@ describe('Patch Manager', () => {
       vi.mocked(fs.mkdtemp).mockResolvedValue('/tmp/codepipe-patch-test');
       vi.mocked(fs.writeFile).mockResolvedValue();
       vi.mocked(fs.rm).mockResolvedValue();
-      vi.mocked(fs.mkdir).mockResolvedValue(undefined);
+      vi.mocked(fs.mkdir).mockResolvedValue();
 
       const patch = createMockPatch();
       const config = createMockPatchConfig();
@@ -742,7 +742,7 @@ describe('Patch Manager', () => {
       vi.mocked(fs.mkdtemp).mockResolvedValue('/tmp/codepipe-patch-test');
       vi.mocked(fs.writeFile).mockResolvedValue();
       vi.mocked(fs.rm).mockResolvedValue();
-      vi.mocked(fs.mkdir).mockResolvedValue(undefined);
+      vi.mocked(fs.mkdir).mockResolvedValue();
 
       const patch = createMockPatch();
       const config = createMockPatchConfig();
@@ -795,7 +795,7 @@ describe('Patch Manager', () => {
       vi.mocked(fs.mkdtemp).mockResolvedValue('/tmp/codepipe-patch-test');
       vi.mocked(fs.writeFile).mockResolvedValue();
       vi.mocked(fs.rm).mockResolvedValue();
-      vi.mocked(fs.mkdir).mockResolvedValue(undefined);
+      vi.mocked(fs.mkdir).mockResolvedValue();
 
       vi.mocked(updateManifest).mockClear();
 
