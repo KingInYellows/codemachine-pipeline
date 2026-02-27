@@ -10,4 +10,3 @@ export const RawSnapshotSchema = z.object({
   checksum: z.string().min(1),
   timestamp: z.string().datetime(),
 });
-
