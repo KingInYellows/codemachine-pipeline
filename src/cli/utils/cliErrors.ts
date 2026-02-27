@@ -211,6 +211,6 @@ export const ERROR_MESSAGES = {
  */
 export function rethrowIfOclifError(error: unknown): void {
   if (error && typeof error === 'object' && 'oclif' in error) {
-    throw error;
+    throw error as unknown as Error;
   }
 }

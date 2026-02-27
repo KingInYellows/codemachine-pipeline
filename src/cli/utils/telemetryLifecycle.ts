@@ -58,7 +58,8 @@ export async function flushTelemetrySuccess(
 
   if (commandSpan) {
     commandSpan.setAttribute('exit_code', exitCode);
-    commandSpan.end({ code: SpanStatusCode.OK });
+    const statusCode = exitCode === 0 ? SpanStatusCode.OK : SpanStatusCode.ERROR;
+    commandSpan.end({ code: statusCode });
   }
 
   if (traceManager) {

@@ -12,7 +12,6 @@ import {
   selectFeatureId,
   requireFeatureId,
   requireConfig,
-  type RunDirectorySettings,
 } from '../../utils/runDirectory';
 import { createCliLogger, LogLevel, RedactionEngine } from '../../../telemetry/logger';
 import { createRunMetricsCollector, type MetricsCollector } from '../../../telemetry/metrics';
@@ -36,7 +35,12 @@ import {
   serializeContextDocument,
   type ContextDocument,
 } from '../../../core/models/ContextDocument';
-import { setJsonOutputMode, rethrowIfOclifError } from '../../utils/cliErrors';
+import {
+  CliError,
+  CliErrorCode,
+  setJsonOutputMode,
+  rethrowIfOclifError,
+} from '../../utils/cliErrors';
 import { flushTelemetrySuccess, flushTelemetryError } from '../../utils/telemetryLifecycle';
 
 type SummarizeFlags = {
@@ -129,7 +133,7 @@ export default class ContextSummarize extends Command {
 
     try {
       const settings = await resolveRunDirectorySettings();
-      requireConfig(settings);
+      const repoConfig = requireConfig(settings);
 
       const featureId = await selectFeatureId(settings.baseDir, typedFlags.feature);
       requireFeatureId(featureId, typedFlags.feature);
@@ -152,7 +156,6 @@ export default class ContextSummarize extends Command {
         force: typedFlags.force,
       });
 
-      const repoConfig = settings.config!;
       if (!repoConfig.feature_flags.enable_context_summarization) {
         this.error('Context summarization is disabled in repo configuration.', { exit: 30 });
       }
@@ -278,6 +281,11 @@ export default class ContextSummarize extends Command {
       );
 
       rethrowIfOclifError(error);
+
+      if (error instanceof CliError) {
+        const exitCode = error.code === CliErrorCode.RUN_DIR_NOT_FOUND ? 10 : error.exitCode;
+        this.error(error.message, { exit: exitCode });
+      }
 
       if (error instanceof Error) {
         this.error(`Context summarization failed: ${error.message}`, { exit: 1 });

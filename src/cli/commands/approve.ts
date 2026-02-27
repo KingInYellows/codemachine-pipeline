@@ -22,7 +22,7 @@ import {
   requireFeatureId,
   requireConfig,
 } from '../utils/runDirectory';
-import { formatErrorMessage, setJsonOutputMode } from '../utils/cliErrors';
+import { CliError, CliErrorCode, formatErrorMessage, setJsonOutputMode } from '../utils/cliErrors';
 import { flushTelemetrySuccess, flushTelemetryError } from '../utils/telemetryLifecycle';
 import { getGitUser } from '../startHelpers';
 
@@ -139,10 +139,17 @@ export default class Approve extends Command {
 
     const startTime = Date.now();
     const settings = await resolveRunDirectorySettings();
-    requireConfig(settings);
-
     const featureId = await selectFeatureId(settings.baseDir, typedFlags.feature);
-    requireFeatureId(featureId, typedFlags.feature);
+    try {
+      requireConfig(settings);
+      requireFeatureId(featureId, typedFlags.feature);
+    } catch (error) {
+      if (error instanceof CliError) {
+        const exitCode = error.code === CliErrorCode.RUN_DIR_NOT_FOUND ? 10 : error.exitCode;
+        this.error(error.message, { exit: exitCode });
+      }
+      throw error;
+    }
 
     const runDir = getRunDirectoryPath(settings.baseDir, featureId);
 
@@ -324,6 +331,11 @@ export default class Approve extends Command {
             `Please review the updated artifact and request approval again.`,
           { exit: 30 }
         );
+      }
+
+      if (error instanceof CliError) {
+        const exitCode = error.code === CliErrorCode.RUN_DIR_NOT_FOUND ? 10 : error.exitCode;
+        this.error(error.message, { exit: exitCode });
       }
 
       this.error(`Approve command failed: ${formatErrorMessage(error)}`, { exit: 1 });

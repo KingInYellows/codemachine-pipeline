@@ -7,7 +7,11 @@ import type { StructuredLogger } from '../../telemetry/logger';
 import type { MetricsCollector } from '../../telemetry/metrics';
 import type { TraceManager, ActiveSpan } from '../../telemetry/traces';
 import { flushTelemetrySuccess, flushTelemetryError } from '../utils/telemetryLifecycle';
-import { resolveRunDirectorySettings, selectFeatureId, requireFeatureId } from '../utils/runDirectory';
+import {
+  resolveRunDirectorySettings,
+  selectFeatureId,
+  requireFeatureId,
+} from '../utils/runDirectory';
 import {
   generateRateLimitReport,
   exportRateLimitMetrics,
@@ -15,7 +19,7 @@ import {
   type RateLimitReport,
 } from '../../telemetry/rateLimitReporter';
 import { RateLimitLedger } from '../../telemetry/rateLimitLedger';
-import { setJsonOutputMode, rethrowIfOclifError } from '../utils/cliErrors';
+import { CliError, CliErrorCode, setJsonOutputMode, rethrowIfOclifError } from '../utils/cliErrors';
 
 type RateLimitsFlags = {
   feature?: string;
@@ -182,6 +186,11 @@ export default class RateLimits extends Command {
       );
 
       rethrowIfOclifError(error);
+
+      if (error instanceof CliError) {
+        const exitCode = error.code === CliErrorCode.RUN_DIR_NOT_FOUND ? 10 : error.exitCode;
+        this.error(error.message, { exit: exitCode });
+      }
 
       if (error instanceof Error) {
         this.error(`Rate-limits command failed: ${error.message}`, { exit: 1 });
