@@ -28,7 +28,11 @@ import {
   markApprovalRequired,
   updateManifest,
 } from '../../persistence/runDirectoryManager';
-import { resolveRunDirectorySettings, ensureTelemetryReferences, requireConfig } from '../utils/runDirectory';
+import {
+  resolveRunDirectorySettings,
+  ensureTelemetryReferences,
+  requireConfig,
+} from '../utils/runDirectory';
 import type { RepoConfig } from '../../core/config/RepoConfig';
 import { createFeature } from '../../core/models/Feature';
 import { aggregateContext, type AggregatorConfig } from '../../workflows/contextAggregator';
@@ -182,12 +186,23 @@ export default class Start extends Command {
     }
 
     const settings = await resolveRunDirectorySettings();
-    requireConfig(settings);
+    let repoConfig: RepoConfig;
+    try {
+      repoConfig = requireConfig(settings);
+    } catch (error) {
+      if (error instanceof CliError) {
+        if (typedFlags.json) {
+          this.log(JSON.stringify(formatErrorJson(error), null, 2));
+          this.exit(error.exitCode);
+        }
+        this.error(error.message, { exit: error.exitCode });
+      }
+      throw error;
+    }
 
     const startTime = Date.now();
     let currentStepLabel: string | undefined;
 
-    const repoConfig = settings.config;
     const repoRoot = findGitRoot();
     await fs.mkdir(settings.baseDir, { recursive: true });
 

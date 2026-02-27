@@ -1,6 +1,10 @@
 import { Command, Flags } from '@oclif/core';
 import { getRunDirectoryPath } from '../../../persistence/runDirectoryManager';
-import { resolveRunDirectorySettings, selectFeatureId, requireFeatureId } from '../../utils/runDirectory';
+import {
+  resolveRunDirectorySettings,
+  selectFeatureId,
+  requireFeatureId,
+} from '../../utils/runDirectory';
 import { createCliLogger } from '../../../telemetry/logger';
 import { createRunMetricsCollector } from '../../../telemetry/metrics';
 import {
@@ -8,7 +12,7 @@ import {
   type CreateResearchTaskOptions,
 } from '../../../workflows/researchCoordinator';
 import type { FreshnessRequirement, ResearchSource } from '../../../core/models/ResearchTask';
-import { setJsonOutputMode } from '../../utils/cliErrors';
+import { CliError, CliErrorCode, setJsonOutputMode } from '../../utils/cliErrors';
 import { flushTelemetrySuccess, flushTelemetryError } from '../../utils/telemetryLifecycle';
 
 type CreateFlags = {
@@ -90,7 +94,15 @@ export default class ResearchCreate extends Command {
 
     const settings = await resolveRunDirectorySettings();
     const featureId = await selectFeatureId(settings.baseDir, typedFlags.feature);
-    requireFeatureId(featureId, typedFlags.feature);
+    try {
+      requireFeatureId(featureId, typedFlags.feature);
+    } catch (error) {
+      if (error instanceof CliError) {
+        const exitCode = error.code === CliErrorCode.RUN_DIR_NOT_FOUND ? 10 : error.exitCode;
+        this.error(error.message, { exit: exitCode });
+      }
+      throw error;
+    }
 
     const runDir = getRunDirectoryPath(settings.baseDir, featureId);
     const logger = createCliLogger('research:create', featureId, runDir);
@@ -140,6 +152,11 @@ export default class ResearchCreate extends Command {
       await flushTelemetrySuccess({ commandName: 'research:create', startTime, metrics });
     } catch (error) {
       await flushTelemetryError({ commandName: 'research:create', startTime, metrics }, error);
+
+      if (error instanceof CliError) {
+        const exitCode = error.code === CliErrorCode.RUN_DIR_NOT_FOUND ? 10 : error.exitCode;
+        this.error(error.message, { exit: exitCode });
+      }
 
       logger.error('Failed to create research task', {
         error: error instanceof Error ? error.message : 'unknown error',

@@ -7,7 +7,11 @@ import { createExecutionTelemetry } from '../../telemetry/executionTelemetry';
 import type { StructuredLogger } from '../../telemetry/logger';
 import type { MetricsCollector } from '../../telemetry/metrics';
 import type { TraceManager, ActiveSpan } from '../../telemetry/traces';
-import { resolveRunDirectorySettings, selectFeatureId, requireFeatureId } from '../utils/runDirectory';
+import {
+  resolveRunDirectorySettings,
+  selectFeatureId,
+  requireFeatureId,
+} from '../utils/runDirectory';
 import { loadRepoConfig } from '../../core/config/RepoConfig';
 import {
   initializeValidationRegistry,

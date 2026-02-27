@@ -82,12 +82,11 @@ export async function findMostRecentRun(baseDir: string): Promise<string | undef
 /**
  * Guard that ensures a feature ID was resolved.
  *
- * Throws a {@link CliError} with exit code 10 if:
+ * Throws a {@link CliError} with exit code 20 if:
  * - No feature run directory was found (featureId is undefined/null)
- * - An explicit feature ID was requested but the resolved ID does not match it
- *   (meaning the run directory does not exist for that feature)
+ * - An explicit feature ID was requested but that run directory does not exist
  *
- * This replaces the identical two-guard block copy-pasted across 9 commands
+ * This replaces the identical guard block copy-pasted across 9 commands
  * after every `selectFeatureId` call.
  *
  * @param featureId - Resolved feature ID (may be undefined if none was found)
@@ -100,14 +99,12 @@ export function requireFeatureId(
   requestedFeature?: string
 ): asserts featureId is string {
   if (!featureId) {
+    const message = requestedFeature
+      ? `Feature run directory not found: ${requestedFeature}`
+      : 'No feature run directory found. Run "codepipe start" first.';
+
     throw new CliError(
-      'No feature run directory found. Run "codepipe start" first.',
-      CliErrorCode.RUN_DIR_NOT_FOUND
-    );
-  }
-  if (requestedFeature && featureId !== requestedFeature) {
-    throw new CliError(
-      `Feature run directory not found: ${requestedFeature}`,
+      message,
       CliErrorCode.RUN_DIR_NOT_FOUND
     );
   }

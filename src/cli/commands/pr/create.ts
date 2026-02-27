@@ -13,7 +13,12 @@ import { Command, Flags } from '@oclif/core';
 import { createRunMetricsCollector } from '../../../telemetry/metrics';
 import { createRunTraceManager, withSpan } from '../../../telemetry/traces';
 import { flushTelemetrySuccess, flushTelemetryError } from '../../utils/telemetryLifecycle';
-import { resolveRunDirectorySettings, selectFeatureId, requireFeatureId } from '../../utils/runDirectory';
+import {
+  resolveRunDirectorySettings,
+  selectFeatureId,
+  requireFeatureId,
+  requireConfig,
+} from '../../utils/runDirectory';
 import {
   loadPRContext,
   getPRAdapter,
@@ -26,7 +31,12 @@ import {
   PRExitCode,
   type PRMetadata,
 } from '../../pr/shared';
-import { setJsonOutputMode, rethrowIfOclifError } from '../../utils/cliErrors';
+import {
+  CliError,
+  CliErrorCode,
+  setJsonOutputMode,
+  rethrowIfOclifError,
+} from '../../utils/cliErrors';
 import { parseReviewerList } from '../../pr/shared';
 
 type CreateFlags = {
@@ -104,9 +114,10 @@ export default class PRCreate extends Command {
       const settings = await resolveRunDirectorySettings();
       const featureId = await selectFeatureId(settings.baseDir, typedFlags.feature);
       requireFeatureId(featureId, typedFlags.feature);
+      const repoConfig = requireConfig(settings);
 
       // Load PR context
-      const context = await loadPRContext(settings.baseDir, featureId, settings.config!, false);
+      const context = await loadPRContext(settings.baseDir, featureId, repoConfig, false);
 
       const { logger, manifest, runDir, config } = context;
       const metrics = createRunMetricsCollector(runDir, featureId);
@@ -337,6 +348,14 @@ export default class PRCreate extends Command {
       }
     } catch (error) {
       rethrowIfOclifError(error);
+
+      if (error instanceof CliError) {
+        const exitCode =
+          error.code === CliErrorCode.RUN_DIR_NOT_FOUND
+            ? PRExitCode.VALIDATION_ERROR
+            : error.exitCode;
+        this.error(error.message, { exit: exitCode });
+      }
 
       if (error instanceof Error) {
         this.error(`PR create failed: ${error.message}`, {
