@@ -26,7 +26,7 @@ export async function loadCachedChunk(
     const result = validateOrResult(ChunkMetadataSchema, JSON.parse(content), 'chunk metadata');
     return result.success ? result.data : null;
   } catch (error) {
-    if (isFileNotFound(error)) {
+    if (isFileNotFound(error) || error instanceof SyntaxError) {
       return null;
     }
     throw error;
