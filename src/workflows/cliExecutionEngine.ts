@@ -271,6 +271,15 @@ export class CLIExecutionEngine {
   ): Promise<{ success: boolean; permanentlyFailed: boolean }> {
     if (!validateTaskId(task.task_id)) {
       this.logger?.warn('Invalid task ID format, rejecting task', { taskId: task.task_id });
+      await updateTaskInQueue(this.runDir, task.task_id, {
+        status: 'failed',
+        retry_count: task.retry_count + 1,
+        last_error: {
+          message: 'Invalid task ID format',
+          timestamp: new Date().toISOString(),
+          recoverable: false,
+        },
+      });
       return { success: false, permanentlyFailed: true };
     }
 

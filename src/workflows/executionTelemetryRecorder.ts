@@ -1,6 +1,5 @@
-import { ExecutionTask } from '../core/models/ExecutionTask.js';
-import { ExecutionStrategy } from './executionStrategy.js';
-import { ExecutionStrategyResult } from './executionStrategy.js';
+import type { ExecutionTask } from '../core/models/ExecutionTask.js';
+import type { ExecutionStrategy, ExecutionStrategyResult } from './executionStrategy.js';
 import { ExecutionLogWriter } from '../telemetry/logWriters.js';
 import {
   ExecutionTaskStatus,
