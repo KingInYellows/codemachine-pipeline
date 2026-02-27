@@ -152,7 +152,7 @@ export async function getSpecApprovals(runDir: string): Promise<ApprovalRecord[]
 /**
  * Record specification approval
  */
-export async function recordSpecApproval(
+export function recordSpecApproval(
   runDir: string,
   featureId: string,
   options: RecordSpecApprovalOptions,
