@@ -622,6 +622,7 @@ export class HttpClient {
   /**
    * Parse response body as JSON
    */
+
   private async parseResponseBody<T>(response: Response, schema?: ZodSchema<unknown>): Promise<T> {
     const contentType = response.headers.get('content-type') ?? '';
 
@@ -652,10 +653,9 @@ export class HttpClient {
     }
 
     if (schema) {
-      return validateOrThrow(schema, parsed, 'http response') as T;
-    }
-    return parsed as T;
-  }
+      try {
+        return validateOrThrow(schema, parsed, 'http response') as T;
+      } catch (error) {
         const message = error instanceof Error ? error.message : 'Schema validation failed';
         throw new HttpError(
           `Response schema validation failed: ${message}`,
