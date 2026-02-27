@@ -16,7 +16,12 @@ import {
 } from '../../workflows/approvalRegistry';
 import { ApprovalGateType } from '../../core/models/ApprovalRecord';
 import { updateTraceMapOnSpecChange } from '../../workflows/traceabilityMapper';
-import { resolveRunDirectorySettings, selectFeatureId, requireFeatureId, requireConfig } from '../utils/runDirectory';
+import {
+  resolveRunDirectorySettings,
+  selectFeatureId,
+  requireFeatureId,
+  requireConfig,
+} from '../utils/runDirectory';
 import { formatErrorMessage, setJsonOutputMode } from '../utils/cliErrors';
 import { flushTelemetrySuccess, flushTelemetryError } from '../utils/telemetryLifecycle';
 import { getGitUser } from '../startHelpers';
