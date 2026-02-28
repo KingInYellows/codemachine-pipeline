@@ -20,6 +20,17 @@ export { ErrorType, Provider } from '../../core/sharedTypes.js';
 // ============================================================================
 
 /**
+ * Minimal interface for recording rate-limit envelopes.
+ * Allows HttpClient to accept an injected recorder instead of directly
+ * instantiating RateLimitLedger, decoupling the transport layer from telemetry.
+ */
+export interface RateLimitRecorder {
+  recordEnvelope(
+    envelope: import('../../telemetry/rateLimitLedger').RateLimitEnvelope
+  ): Promise<void>;
+}
+
+/**
  * HTTP client configuration
  */
 export interface HttpClientConfig {
@@ -43,6 +54,8 @@ export interface HttpClientConfig {
   maxBackoff?: number;
   /** Logger interface for observability */
   logger?: LoggerInterface;
+  /** Optional rate-limit recorder; if omitted a RateLimitLedger is created from runDir */
+  rateLimitRecorder?: RateLimitRecorder;
 }
 
 /**

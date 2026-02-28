@@ -103,3 +103,102 @@ export function redactSecrets(text: string): string {
   }
   return result;
 }
+
+function normalizeRedactionLabels(input: string): string {
+  return input
+    .replaceAll('[GITHUB_TOKEN_REDACTED]', '[REDACTED_GITHUB_TOKEN]')
+    .replaceAll('[JWT_REDACTED]', '[REDACTED_JWT]');
+}
+
+export interface RedactionReport {
+  /** Redacted text */
+  text: string;
+  /** Flags representing patterns matched during redaction */
+  flags: string[];
+}
+
+export class RedactionEngine {
+  private readonly patterns: ReadonlyArray<{ name: string; pattern: RegExp; replacement: string }>;
+  private readonly enabled: boolean;
+
+  constructor(
+    enabled = true,
+    customPatterns?: ReadonlyArray<{ name: string; pattern: RegExp; replacement: string }>
+  ) {
+    this.enabled = enabled;
+    this.patterns = customPatterns ?? CREDENTIAL_PATTERNS;
+  }
+
+  redact(input: string): string {
+    return this.redactWithReport(input).text;
+  }
+
+  redactWithReport(input: string): RedactionReport {
+    if (!this.enabled) {
+      return { text: input, flags: [] };
+    }
+
+    let output = input;
+    const flags = new Set<string>();
+
+    for (const { pattern, replacement, name } of this.patterns) {
+      pattern.lastIndex = 0;
+      if (pattern.test(output)) {
+        flags.add(name);
+      }
+      pattern.lastIndex = 0;
+      output = output.replace(pattern, replacement);
+    }
+
+    return { text: normalizeRedactionLabels(output), flags: Array.from(flags) };
+  }
+
+  redactObject(obj: unknown): unknown {
+    if (!this.enabled) {
+      return obj;
+    }
+
+    if (typeof obj === 'string') {
+      return this.redact(obj);
+    }
+
+    if (Array.isArray(obj)) {
+      return obj.map((item) => this.redactObject(item));
+    }
+
+    if (obj && typeof obj === 'object') {
+      // eslint-disable-next-line @typescript-eslint/no-restricted-types -- intentional: redaction output preserves arbitrary input keys
+      const redacted: Record<string, unknown> = {};
+
+      for (const [key, value] of Object.entries(obj)) {
+        if (RedactionEngine.isSensitiveFieldName(key)) {
+          redacted[key] = '[REDACTED]';
+        } else {
+          redacted[key] = this.redactObject(value);
+        }
+      }
+
+      return redacted;
+    }
+
+    return obj;
+  }
+
+  private static isSensitiveFieldName(name: string): boolean {
+    const lowerName = name.toLowerCase();
+    const sensitiveNames = [
+      'password',
+      'secret',
+      'token',
+      'api_key',
+      'apikey',
+      'auth',
+      'authorization',
+      'credential',
+      'private_key',
+      'privatekey',
+    ];
+
+    return sensitiveNames.some((pattern) => lowerName.includes(pattern));
+  }
+}

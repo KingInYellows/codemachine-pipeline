@@ -1,5 +1,7 @@
 import type { RequestInit, Response, HeadersInit } from 'undici-types';
-import { RateLimitLedger, RateLimitEnvelope } from '../../telemetry/rateLimitLedger';
+import { RateLimitLedger, type RateLimitEnvelope } from '../../telemetry/rateLimitLedger';
+import type { RateLimitRecorder } from './httpTypes.js';
+export type { RateLimitRecorder } from './httpTypes.js';
 import {
   ErrorType,
   Provider,
@@ -21,8 +23,6 @@ import {
   generateIdempotencyKey,
   extractHeaders,
   sanitizeUrl,
-  sanitizeHeaders,
-  truncate,
   sleep,
 } from './httpUtils.js';
 
@@ -54,54 +54,8 @@ export {
   SENSITIVE_KEYWORDS,
 } from './httpUtils.js';
 
-/**
- * Structured HTTP error with metadata
- */
-const MAX_RESPONSE_BODY_SIZE = 2048;
-
-export class HttpError extends Error {
-  constructor(
-    message: string,
-    public readonly type: ErrorType,
-    public readonly statusCode?: number,
-    public readonly headers?: Record<string, string>,
-    responseBody?: string,
-    public readonly requestId?: string,
-    public readonly retryable: boolean = false
-  ) {
-    super(message);
-    this.name = 'HttpError';
-    this.responseBody = responseBody ? truncate(responseBody, MAX_RESPONSE_BODY_SIZE) : undefined;
-    Object.setPrototypeOf(this, HttpError.prototype);
-  }
-
-  public readonly responseBody: string | undefined;
-
-  /**
-   * Convert to JSON-serializable object for logging
-   */
-  toJSON(): {
-    name: string;
-    message: string;
-    type: ErrorType;
-    statusCode?: number | undefined;
-    requestId?: string | undefined;
-    retryable: boolean;
-    headers?: Record<string, string> | undefined;
-    responseBody?: string | undefined;
-  } {
-    return {
-      name: this.name,
-      message: this.message,
-      type: this.type,
-      statusCode: this.statusCode,
-      requestId: this.requestId,
-      retryable: this.retryable,
-      headers: this.headers ? sanitizeHeaders(this.headers) : undefined,
-      responseBody: this.responseBody ? truncate(this.responseBody, 500) : undefined,
-    };
-  }
-}
+import { HttpError } from '../../core/errors.js';
+export { HttpError } from '../../core/errors.js';
 
 // ============================================================================
 // HTTP Client
@@ -115,8 +69,8 @@ type AttemptResult<T> =
  * Unified HTTP client with rate limiting, retries, and structured errors
  */
 export class HttpClient {
-  private readonly config: Required<HttpClientConfig>;
-  private readonly rateLimitLedger?: RateLimitLedger;
+  private readonly config: Required<Omit<HttpClientConfig, 'rateLimitRecorder'>>;
+  private readonly rateLimitRecorder?: RateLimitRecorder;
   private readonly logger: LoggerInterface;
 
   constructor(config: HttpClientConfig) {
@@ -135,9 +89,10 @@ export class HttpClient {
 
     this.logger = this.config.logger;
 
-    // Initialize rate limit ledger if run directory is provided
-    if (this.config.runDir) {
-      this.rateLimitLedger = new RateLimitLedger(
+    if (config.rateLimitRecorder) {
+      this.rateLimitRecorder = config.rateLimitRecorder;
+    } else if (this.config.runDir) {
+      this.rateLimitRecorder = new RateLimitLedger(
         this.config.runDir,
         this.config.provider,
         this.logger
@@ -318,8 +273,8 @@ export class HttpClient {
       const response = await fetch(url, fetchOptions);
 
       const rateLimitEnvelope = this.extractRateLimitEnvelope(response, requestId);
-      if (rateLimitEnvelope && this.rateLimitLedger) {
-        await this.rateLimitLedger.recordEnvelope(rateLimitEnvelope);
+      if (rateLimitEnvelope && this.rateLimitRecorder) {
+        await this.rateLimitRecorder.recordEnvelope(rateLimitEnvelope);
       }
 
       if (!response.ok) {

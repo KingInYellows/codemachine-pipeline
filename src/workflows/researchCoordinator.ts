@@ -46,7 +46,7 @@ import {
   listTaskIds,
   findCachedTask,
   isCachedTaskFresh,
-} from './researchPersistence';
+} from '../persistence/researchStore.js';
 
 // ============================================================================
 // Types
