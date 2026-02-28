@@ -1,8 +1,8 @@
 /**
  * Resume Queue Recovery
  *
- * Extracted from resumeCoordinator.ts: queue snapshot validation
- * and task recovery for execution resumption.
+ * Extracted from resumeCoordinator.ts: queue snapshot validation,
+ * queue file integrity checks, and task recovery for execution resumption.
  */
 
 import * as fs from 'node:fs/promises';
@@ -13,9 +13,10 @@ import {
   canRetry,
   areDependenciesCompleted,
 } from '../core/models/ExecutionTask';
-import { loadQueue } from './queueStore';
+import { validateQueue, loadQueue } from './queueStore';
 import { RawSnapshotSchema } from './resumeSnapshotSchema';
 import { validateOrThrow } from '../validation/helpers.js';
+import type { ResumeAnalysis, ResumeOptions } from './runStateVerifier';
 
 // ============================================================================
 // Types
@@ -76,9 +77,53 @@ export async function validateQueueSnapshot(
 }
 
 /**
+ * Validate queue files for corruption or schema mismatches
+ */
+export async function checkQueueFiles(
+  analysis: ResumeAnalysis,
+  runDir: string,
+  options: ResumeOptions
+): Promise<void> {
+  const shouldValidateQueue = options.validateQueue !== false;
+  if (!shouldValidateQueue) {
+    return;
+  }
+
+  const validation = await validateQueue(runDir);
+  analysis.queueValidation = validation;
+
+  if (!validation.valid) {
+    analysis.diagnostics.push({
+      severity: 'blocker',
+      message: `Queue validation failed (${validation.corruptedTasks}/${validation.totalTasks} corrupted entr${validation.corruptedTasks === 1 ? 'y' : 'ies'})`,
+      code: 'QUEUE_CORRUPTED',
+      context: {
+        errors: validation.errors,
+      },
+    });
+    return;
+  }
+
+  analysis.diagnostics.push({
+    severity: 'info',
+    message: `Queue validation succeeded (${validation.totalTasks} task${validation.totalTasks === 1 ? '' : 's'})`,
+    code: 'QUEUE_VALIDATED',
+  });
+
+  if (validation.warnings.length > 0) {
+    analysis.diagnostics.push({
+      severity: 'warning',
+      message: `${validation.warnings.length} queue warning${validation.warnings.length === 1 ? '' : 's'} detected`,
+      code: 'QUEUE_VALIDATION_WARNINGS',
+      context: {
+        warnings: validation.warnings,
+      },
+    });
+  }
+}
+
+/**
  * Get resumable tasks from queue
- *
- * This is a placeholder - actual implementation will use queueStore
  *
  * @param runDir - Run directory path
  * @returns Array of tasks that can be resumed
