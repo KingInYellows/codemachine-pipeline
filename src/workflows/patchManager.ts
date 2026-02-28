@@ -331,13 +331,18 @@ export async function isWorkingTreeClean(workingDir: string): Promise<boolean> {
  */
 export async function getCurrentGitRef(workingDir: string): Promise<{ ref: string; sha: string }> {
   try {
-    const { stdout: ref } = normalizeExecResult(
-      await execAsync('git symbolic-ref -q HEAD || git rev-parse HEAD', {
+    let ref: string;
+    try {
+      const result = await execFileAsync('git', ['symbolic-ref', '-q', 'HEAD'], {
         cwd: workingDir,
-      })
-    );
+      });
+      ref = normalizeExecResult(result).stdout;
+    } catch {
+      const result = await execFileAsync('git', ['rev-parse', 'HEAD'], { cwd: workingDir });
+      ref = normalizeExecResult(result).stdout;
+    }
     const { stdout: sha } = normalizeExecResult(
-      await execAsync('git rev-parse HEAD', { cwd: workingDir })
+      await execFileAsync('git', ['rev-parse', 'HEAD'], { cwd: workingDir })
     );
 
     return {
