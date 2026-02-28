@@ -1,7 +1,8 @@
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 import { LogContext } from '../core/sharedTypes';
-import { CREDENTIAL_PATTERNS } from '../utils/redaction.js';
+import { RedactionEngine } from '../utils/redaction.js';
+export { RedactionEngine, type RedactionReport } from '../utils/redaction.js';
 
 /**
  * Structured Logger
@@ -88,128 +89,6 @@ export interface LoggerOptions {
   enableRedaction?: boolean;
   /** Base context attached to all log entries */
   baseContext?: LogContext;
-}
-
-// ============================================================================
-// Redaction Engine
-// ============================================================================
-
-/** Alias CREDENTIAL_PATTERNS for the RedactionEngine (same shape) */
-const SECRET_PATTERNS = CREDENTIAL_PATTERNS;
-
-function normalizeRedactionLabels(input: string): string {
-  return input
-    .replaceAll('[GITHUB_TOKEN_REDACTED]', '[REDACTED_GITHUB_TOKEN]')
-    .replaceAll('[JWT_REDACTED]', '[REDACTED_JWT]');
-}
-
-/**
- * Redaction engine for removing secrets from strings
- */
-export interface RedactionReport {
-  /** Redacted text */
-  text: string;
-  /** Flags representing patterns matched during redaction */
-  flags: string[];
-}
-
-export class RedactionEngine {
-  private readonly patterns: ReadonlyArray<{ name: string; pattern: RegExp; replacement: string }>;
-  private readonly enabled: boolean;
-
-  constructor(
-    enabled = true,
-    customPatterns?: ReadonlyArray<{ name: string; pattern: RegExp; replacement: string }>
-  ) {
-    this.enabled = enabled;
-    this.patterns = customPatterns ?? SECRET_PATTERNS;
-  }
-
-  /**
-   * Redact secrets from a string
-   */
-  redact(input: string): string {
-    return this.redactWithReport(input).text;
-  }
-
-  /**
-   * Redact secrets from a string and capture flags for matched patterns
-   */
-  redactWithReport(input: string): RedactionReport {
-    if (!this.enabled) {
-      return { text: input, flags: [] };
-    }
-
-    let output = input;
-    const flags = new Set<string>();
-
-    for (const { pattern, replacement, name } of this.patterns) {
-      pattern.lastIndex = 0;
-      if (pattern.test(output)) {
-        flags.add(name);
-      }
-      pattern.lastIndex = 0;
-      output = output.replace(pattern, replacement);
-    }
-
-    return { text: normalizeRedactionLabels(output), flags: Array.from(flags) };
-  }
-
-  /**
-   * Redact secrets from structured data (deep traversal)
-   */
-  redactObject(obj: unknown): unknown {
-    if (!this.enabled) {
-      return obj;
-    }
-
-    if (typeof obj === 'string') {
-      return this.redact(obj);
-    }
-
-    if (Array.isArray(obj)) {
-      return obj.map((item) => this.redactObject(item));
-    }
-
-    if (obj && typeof obj === 'object') {
-      // eslint-disable-next-line @typescript-eslint/no-restricted-types -- intentional: redaction output preserves arbitrary input keys
-      const redacted: Record<string, unknown> = {};
-
-      for (const [key, value] of Object.entries(obj)) {
-        // Redact common secret field names
-        if (this.isSensitiveFieldName(key)) {
-          redacted[key] = '[REDACTED]';
-        } else {
-          redacted[key] = this.redactObject(value);
-        }
-      }
-
-      return redacted;
-    }
-
-    return obj;
-  }
-
-  /**
-   * Check if field name suggests sensitive data
-   */
-  private isSensitiveFieldName(name: string): boolean {
-    const lowerName = name.toLowerCase();
-    const sensitiveNames = [
-      'password',
-      'secret',
-      'token',
-      'api_key',
-      'apikey',
-      'auth',
-      'authorization',
-      'credential',
-      'private_key',
-      'privatekey',
-    ];
-
-    return sensitiveNames.some((pattern) => lowerName.includes(pattern));
-  }
 }
 
 // ============================================================================

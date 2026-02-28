@@ -1,4 +1,4 @@
-import { HttpError } from '../adapters/http/client';
+import { HttpError } from '../core/errors.js';
 import { ErrorType, SerializedError } from '../core/sharedTypes';
 
 /**
