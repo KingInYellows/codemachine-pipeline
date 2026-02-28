@@ -280,6 +280,12 @@ async function discoverFiles(
             // !rel.startsWith('..') catches most cases, but on Windows cross-drive paths
             // return absolute paths, so we also check !path.isAbsolute(rel)
             if (!rel.startsWith('..') && !path.isAbsolute(rel)) {
+              // Check exclusion patterns against the resolved real path
+              const realRel = rel.replace(/\\/g, '/');
+              if (shouldExclude(realRel, exclusionMatchers)) {
+                continue;
+              }
+              
               const stat = await fs.stat(realPath);
               if (stat.isDirectory()) {
                 await scanDirectory(realPath);
@@ -558,12 +564,20 @@ export async function aggregateContext(config: AggregatorConfig): Promise<Aggreg
   const errors: string[] = [];
 
   // Resolve repoRoot from git to ensure we stay within the repository boundary
+  // Only use git root if it's the same as or a child of the configured root (monorepo safety)
   let repoRoot = config.repoRoot;
   try {
     const { stdout } = await execFileAsync('git', ['rev-parse', '--show-toplevel'], {
       cwd: config.repoRoot,
     });
-    repoRoot = stdout.trim();
+    const gitRoot = stdout.trim();
+    const relativeToGit = path.relative(gitRoot, config.repoRoot);
+    
+    // Only use git root if configured root is within it (not a parent directory)
+    // If relativeToGit starts with '..', config.repoRoot is outside/above gitRoot
+    if (!relativeToGit.startsWith('..') && !path.isAbsolute(relativeToGit)) {
+      repoRoot = gitRoot;
+    }
   } catch {
     // Fall back to the configured value if git is unavailable
   }
