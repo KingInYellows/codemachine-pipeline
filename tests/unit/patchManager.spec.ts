@@ -501,8 +501,9 @@ describe('Patch Manager', () => {
   describe('validatePatchDryRun', () => {
     it('should pass dry-run for valid patch with allowed files', async () => {
       mockExecDefault();
+      vi.mocked(fs.mkdtemp).mockResolvedValue('/tmp/codepipe-patch-test');
       vi.mocked(fs.writeFile).mockResolvedValue();
-      vi.mocked(fs.unlink).mockResolvedValue();
+      vi.mocked(fs.rm).mockResolvedValue();
 
       const patch = createMockPatch();
       const repoConfig = createMockRepoConfig();
@@ -573,8 +574,9 @@ describe('Patch Manager', () => {
         }
         return false;
       });
+      vi.mocked(fs.mkdtemp).mockResolvedValue('/tmp/codepipe-patch-test');
       vi.mocked(fs.writeFile).mockResolvedValue();
-      vi.mocked(fs.unlink).mockResolvedValue();
+      vi.mocked(fs.rm).mockResolvedValue();
 
       const patch = createMockPatch();
       const repoConfig = createMockRepoConfig();
@@ -593,7 +595,7 @@ describe('Patch Manager', () => {
   describe('createRollbackSnapshot', () => {
     it('should create snapshot with git metadata', async () => {
       mockExecDefault();
-      vi.mocked(fs.mkdir).mockResolvedValue(undefined);
+      vi.mocked(fs.mkdir).mockResolvedValue();
       let snapshotPayload: Parameters<typeof fs.writeFile>[1] | undefined;
       vi.mocked(fs.writeFile).mockImplementation((_path, data) => {
         snapshotPayload = data;
@@ -630,7 +632,7 @@ describe('Patch Manager', () => {
 
   describe('generateDiffSummary', () => {
     it('should generate diff summary with patch metadata', async () => {
-      vi.mocked(fs.mkdir).mockResolvedValue(undefined);
+      vi.mocked(fs.mkdir).mockResolvedValue();
       let summaryPayload: Parameters<typeof fs.writeFile>[1] | undefined;
       vi.mocked(fs.writeFile).mockImplementation((_path, data) => {
         summaryPayload = data;
@@ -663,9 +665,10 @@ describe('Patch Manager', () => {
   describe('applyPatch', () => {
     it('should apply patch successfully with snapshots and summaries', async () => {
       mockExecDefault();
+      vi.mocked(fs.mkdtemp).mockResolvedValue('/tmp/codepipe-patch-test');
       vi.mocked(fs.writeFile).mockResolvedValue();
-      vi.mocked(fs.unlink).mockResolvedValue();
-      vi.mocked(fs.mkdir).mockResolvedValue(undefined);
+      vi.mocked(fs.rm).mockResolvedValue();
+      vi.mocked(fs.mkdir).mockResolvedValue();
 
       const patch = createMockPatch();
       const config = createMockPatchConfig();
@@ -736,9 +739,10 @@ describe('Patch Manager', () => {
         }
         return false;
       });
+      vi.mocked(fs.mkdtemp).mockResolvedValue('/tmp/codepipe-patch-test');
       vi.mocked(fs.writeFile).mockResolvedValue();
-      vi.mocked(fs.unlink).mockResolvedValue();
-      vi.mocked(fs.mkdir).mockResolvedValue(undefined);
+      vi.mocked(fs.rm).mockResolvedValue();
+      vi.mocked(fs.mkdir).mockResolvedValue();
 
       const patch = createMockPatch();
       const config = createMockPatchConfig();
@@ -764,8 +768,9 @@ describe('Patch Manager', () => {
         }
         return false;
       });
+      vi.mocked(fs.mkdtemp).mockResolvedValue('/tmp/codepipe-patch-test');
       vi.mocked(fs.writeFile).mockResolvedValue();
-      vi.mocked(fs.unlink).mockResolvedValue();
+      vi.mocked(fs.rm).mockResolvedValue();
       vi.mocked(fs.mkdir).mockResolvedValue(undefined);
 
       const patch = createMockPatch();
@@ -787,9 +792,10 @@ describe('Patch Manager', () => {
 
     it('should not update manifest when patch succeeds', async () => {
       mockExecDefault();
+      vi.mocked(fs.mkdtemp).mockResolvedValue('/tmp/codepipe-patch-test');
       vi.mocked(fs.writeFile).mockResolvedValue();
-      vi.mocked(fs.unlink).mockResolvedValue();
-      vi.mocked(fs.mkdir).mockResolvedValue(undefined);
+      vi.mocked(fs.rm).mockResolvedValue();
+      vi.mocked(fs.mkdir).mockResolvedValue();
 
       vi.mocked(updateManifest).mockClear();
 

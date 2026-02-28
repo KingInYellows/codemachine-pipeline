@@ -21,6 +21,7 @@
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 import * as crypto from 'node:crypto';
+import { tmpdir } from 'node:os';
 import { exec, execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import picomatch from 'picomatch';
@@ -426,9 +427,10 @@ export async function validatePatchDryRun(
   }
 
   // Step 4: Test patch application with git apply --check
-  const patchFile = path.join('/tmp', `patch-${patch.patchId}-${Date.now()}.diff`);
+  const tmpDir = await fs.mkdtemp(path.join(tmpdir(), 'codepipe-patch-'));
+  const patchFile = path.join(tmpDir, `patch-${patch.patchId}.diff`);
   try {
-    await fs.writeFile(patchFile, patch.content, 'utf-8');
+    await fs.writeFile(patchFile, patch.content, { encoding: 'utf-8', mode: 0o600 });
 
     await execFileAsync('git', ['apply', '--check', patchFile], { cwd: workingDir });
 
@@ -446,9 +448,9 @@ export async function validatePatchDryRun(
       error: error instanceof Error ? error.message : 'Unknown error',
     });
   } finally {
-    // Clean up temporary patch file
+    // Clean up private temporary directory
     try {
-      await fs.unlink(patchFile);
+      await fs.rm(tmpDir, { recursive: true, force: true });
     } catch {
       // Ignore cleanup errors
     }
@@ -643,9 +645,10 @@ export async function applyPatch(
         result.snapshotPath = snapshotPath;
 
         // Step 3: Apply the patch
-        const patchFile = path.join('/tmp', `patch-${patch.patchId}-${Date.now()}.diff`);
+        const patchTmpDir = await fs.mkdtemp(path.join(tmpdir(), 'codepipe-patch-'));
+        const patchFile = path.join(patchTmpDir, `patch-${patch.patchId}.diff`);
         try {
-          await fs.writeFile(patchFile, patch.content, 'utf-8');
+          await fs.writeFile(patchFile, patch.content, { encoding: 'utf-8', mode: 0o600 });
 
           logger.debug('Applying patch with git apply');
           await execFileAsync('git', ['apply', patchFile], { cwd: config.workingDir });
@@ -717,9 +720,9 @@ export async function applyPatch(
             reason: 'git_apply_failed',
           });
         } finally {
-          // Clean up temporary patch file
+          // Clean up private temporary directory
           try {
-            await fs.unlink(patchFile);
+            await fs.rm(patchTmpDir, { recursive: true, force: true });
           } catch {
             // Ignore cleanup errors
           }
