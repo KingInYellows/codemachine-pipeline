@@ -285,7 +285,7 @@ async function discoverFiles(
               if (shouldExclude(realRel, exclusionMatchers)) {
                 continue;
               }
-              
+
               const stat = await fs.stat(realPath);
               if (stat.isDirectory()) {
                 await scanDirectory(realPath);
@@ -572,7 +572,7 @@ export async function aggregateContext(config: AggregatorConfig): Promise<Aggreg
     });
     const gitRoot = stdout.trim();
     const relativeToGit = path.relative(gitRoot, config.repoRoot);
-    
+
     // Only use git root if configured root is within it (not a parent directory)
     // If relativeToGit starts with '..', config.repoRoot is outside/above gitRoot
     if (!relativeToGit.startsWith('..') && !path.isAbsolute(relativeToGit)) {
