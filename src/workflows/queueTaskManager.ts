@@ -30,8 +30,7 @@ import type { QueueOperation, ExecutionTaskData, QueueOperationResult } from './
 // Shared cache and helpers (avoids circular dependency with queueStore)
 import { getV2IndexCache, buildDependencyGraph, toExecutionTask } from './queueCache.js';
 
-// loadQueue helper - still from queueStore for now (only used in filter functions)
-import { loadQueue } from './queueStore.js';
+import { loadQueue } from './queueLoader.js';
 
 // ============================================================================
 // Queue Task Management
