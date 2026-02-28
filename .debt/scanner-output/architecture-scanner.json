@@ -1,0 +1,365 @@
+{
+  "schema_version": "1.0",
+  "scanner": "architecture-scanner",
+  "status": "success",
+  "timestamp": "2026-02-25T02:01:04Z",
+  "findings": [
+    {
+      "category": "architecture",
+      "severity": "critical",
+      "effort": "medium",
+      "title": "Circular Dependency: taskPlanner <-> taskPlannerGraph",
+      "description": "workflows/taskPlanner.ts imports from workflows/taskPlannerGraph.ts (buildDependencyGraph, computeTopologicalOrder, etc.) and taskPlannerGraph.ts imports the PlanSummary type from workflows/taskPlanner.ts, creating a confirmed circular dependency detected by madge. taskPlannerGraph was extracted from taskPlanner to reduce size, but the type import back into taskPlannerGraph re-closes the cycle. The PlanSummary type should be moved to a shared types file (e.g., workflows/taskPlannerTypes.ts) so taskPlannerGraph can import it without depending on taskPlanner.\n\n--- code begin (reference only) ---\n// taskPlannerGraph.ts line 10\nimport type { PlanSummary } from './taskPlanner';\n--- code end ---",
+      "affected_files": [
+        { "path": "src/workflows/taskPlanner.ts", "lines": "34-34" },
+        { "path": "src/workflows/taskPlannerGraph.ts", "lines": "10-10" }
+      ],
+      "suggested_remediation": "Extract PlanSummary (and any other shared types) from taskPlanner.ts into a new src/workflows/taskPlannerTypes.ts file. Update both taskPlanner.ts and taskPlannerGraph.ts to import from that shared file. Run `npm run deps:check` to confirm the cycle is resolved.",
+      "confidence": 1.0
+    },
+    {
+      "category": "architecture",
+      "severity": "critical",
+      "effort": "medium",
+      "title": "Circular Dependency: queueStore <-> queueTaskManager",
+      "description": "workflows/queueStore.ts imports updateTaskInQueue and related functions from queueTaskManager.ts (line 447), while queueTaskManager.ts imports loadQueue from queueStore.ts (line 34). madge confirms this cycle. The comment in queueTaskManager acknowledges the issue ('still from queueStore for now'). loadQueue is used as a helper within filter functions in queueTaskManager, suggesting it should be extracted to a lower-level shared cache module that neither file imports from.\n\n--- code begin (reference only) ---\n// queueTaskManager.ts line 33-34\n// loadQueue helper - still from queueStore for now (only used in filter functions)\nimport { loadQueue } from './queueStore.js';\n--- code end ---",
+      "affected_files": [
+        { "path": "src/workflows/queueStore.ts", "lines": "447-447" },
+        { "path": "src/workflows/queueTaskManager.ts", "lines": "34-34" }
+      ],
+      "suggested_remediation": "Move the loadQueue logic that queueTaskManager depends on into queueCache.ts or a new queueLoader.ts module. Both queueStore and queueTaskManager can then import from that shared module without creating a cycle. Alternatively, pass loadQueue as an injected dependency to the filter functions in queueTaskManager.",
+      "confidence": 1.0
+    },
+    {
+      "category": "architecture",
+      "severity": "high",
+      "effort": "medium",
+      "title": "God Module: persistence/runDirectoryManager.ts (1144 lines, 30 exports)",
+      "description": "runDirectoryManager.ts is 1144 lines with 30 exported functions and interfaces, well above both the 500-line and 20-export thresholds. It conflates at least four responsibilities: directory lifecycle (createRunDirectory, listRunDirectories, runDirectoryExists), manifest I/O (readManifest, writeManifest, updateManifest), lock management (acquireLock, releaseLock, withLock, isLocked), and step/state tracking (setCurrentStep, setLastStep, setLastError, markApprovalRequired). The hashManifest.ts file was already extracted, but more decomposition is needed.",
+      "affected_files": [
+        { "path": "src/persistence/runDirectoryManager.ts", "lines": "1-1144" }
+      ],
+      "suggested_remediation": "Split into at minimum three modules: (1) src/persistence/lockManager.ts for lock acquire/release/withLock, (2) src/persistence/manifestManager.ts for read/write/update manifest operations, (3) src/persistence/runLifecycle.ts for create/list/exists/cleanup directory operations. Keep runDirectoryManager.ts as a thin barrel re-exporting for backward compatibility.",
+      "confidence": 0.95
+    },
+    {
+      "category": "architecture",
+      "severity": "high",
+      "effort": "medium",
+      "title": "God Module: cli/status/data.ts (934 lines, 15 exports)",
+      "description": "cli/status/data.ts contains 934 lines across 15 exported async functions, each loading a distinct status domain: manifest, traceability, plan, validation, branch protection, integrations, rate limits, research, summarization metadata, cost telemetry, and PR metadata. This single file is the entire data-access layer for the status command and imports from workflows, persistence, telemetry, adapters, and core simultaneously, making it a cross-layer aggregation point with high fan-in coupling.",
+      "affected_files": [
+        { "path": "src/cli/status/data.ts", "lines": "1-934" }
+      ],
+      "suggested_remediation": "Group the load functions by domain into focused modules: src/cli/status/data/planData.ts, src/cli/status/data/researchData.ts, src/cli/status/data/telemetryData.ts, src/cli/status/data/branchData.ts, etc. Expose a single re-export barrel at src/cli/status/data/index.ts. Each module stays under 200 lines and has a clear single responsibility.",
+      "confidence": 0.9
+    },
+    {
+      "category": "architecture",
+      "severity": "high",
+      "effort": "small",
+      "title": "Boundary Violation: utils/errors.ts Imports from adapters/http/client",
+      "description": "src/utils/errors.ts imports HttpError directly from src/adapters/http/client.ts. The utils layer is a foundational layer that all other layers depend on; if utils imports from adapters, it creates a transitive dependency cycle risk and violates the principle that utilities should have no knowledge of higher-level infrastructure. HttpError is a cross-cutting concern that belongs in a shared errors module or in core/sharedTypes.ts, not defined inside the HTTP adapter.\n\n--- code begin (reference only) ---\n// src/utils/errors.ts line 1\nimport { HttpError } from '../adapters/http/client';\n--- code end ---",
+      "affected_files": [
+        { "path": "src/utils/errors.ts", "lines": "1-1" },
+        { "path": "src/adapters/http/client.ts", "lines": "60-113" }
+      ],
+      "suggested_remediation": "Move the HttpError class definition to src/core/sharedTypes.ts or a new src/core/errors.ts file. Update adapters/http/client.ts and utils/errors.ts to import from that shared location. This makes the error type accessible to all layers without requiring utils to reach up into adapters.",
+      "confidence": 0.95
+    },
+    {
+      "category": "architecture",
+      "severity": "high",
+      "effort": "small",
+      "title": "Boundary Violation: cli/commands/resume.ts Imports Business Logic from cli/commands/start.ts",
+      "description": "resume.ts imports the exported function buildExecutionStrategies from start.ts (line 12). Commands should not import implementation logic from sibling commands; this creates tight coupling between two CLI entry points and means start.ts is both a command definition and a library of shared logic. If start.ts is refactored, resume.ts breaks. The function belongs in the workflows layer where it can be shared without violating command isolation.\n\n--- code begin (reference only) ---\n// src/cli/commands/resume.ts line 12\nimport { buildExecutionStrategies } from './start';\n--- code end ---",
+      "affected_files": [
+        { "path": "src/cli/commands/resume.ts", "lines": "12-12" },
+        { "path": "src/cli/commands/start.ts", "lines": "782-797" }
+      ],
+      "suggested_remediation": "Move buildExecutionStrategies to src/workflows/executionStrategyBuilder.ts (or into src/workflows/executionStrategy.ts). Both start.ts and resume.ts import from the workflow layer, keeping command files as thin orchestration shells with no cross-command imports.",
+      "confidence": 0.95
+    },
+    {
+      "category": "architecture",
+      "severity": "high",
+      "effort": "large",
+      "title": "Missing Subdirectory Abstraction: 11 Queue Files Scattered in workflows/ Root",
+      "description": "The queue subsystem consists of 11 separate files (queueCache.ts, queueCompactionEngine.ts, queueIntegrity.ts, queueMemoryIndex.ts, queueOperationsLog.ts, queueSnapshotManager.ts, queueStore.ts, queueTaskManager.ts, queueTypes.ts, queueV2Api.ts, queueValidation.ts) totalling 3410 lines, all living at the root of src/workflows/. The deployment subsystem already received the same treatment and was correctly placed in src/workflows/deployment/. The queue files have no namespace separation from the 30+ other workflow files, making the directory hard to navigate and increasing the likelihood of inappropriate cross-queue-subsystem coupling.",
+      "affected_files": [
+        { "path": "src/workflows/queueStore.ts", "lines": "1-455" },
+        { "path": "src/workflows/queueTaskManager.ts", "lines": "1-304" },
+        { "path": "src/workflows/queueTypes.ts", "lines": "1-347" },
+        { "path": "src/workflows/queueCache.ts", "lines": "1-151" },
+        { "path": "src/workflows/queueCompactionEngine.ts", "lines": "1-334" },
+        { "path": "src/workflows/queueIntegrity.ts", "lines": "1-220" },
+        { "path": "src/workflows/queueMemoryIndex.ts", "lines": "1-505" },
+        { "path": "src/workflows/queueOperationsLog.ts", "lines": "1-534" },
+        { "path": "src/workflows/queueSnapshotManager.ts", "lines": "1-319" },
+        { "path": "src/workflows/queueV2Api.ts", "lines": "1-103" },
+        { "path": "src/workflows/queueValidation.ts", "lines": "1-138" }
+      ],
+      "suggested_remediation": "Create src/workflows/queue/ subdirectory and move all 11 queue files into it, following the same pattern as src/workflows/deployment/. Add a src/workflows/queue/index.ts barrel that re-exports the public API. Create a backward-compat re-export at src/workflows/queueStore.ts pointing to the new location. This also resolves the circular dependency between queueStore and queueTaskManager more naturally since internal imports within the subdirectory are clearly internal.",
+      "confidence": 0.92
+    },
+    {
+      "category": "architecture",
+      "severity": "high",
+      "effort": "small",
+      "title": "God Module: core/config/RepoConfig.ts (805 lines, 23 exports)",
+      "description": "RepoConfig.ts is 805 lines with 23 exports. It contains Zod schema definitions, inferred TypeScript types, default value constants, and validation logic all in a single file. Beyond the god-module size threshold (500 LOC / 20 exports), mixing schema definitions with runtime defaults (RepoConfigDefaults.ts already exists as a separate file, suggesting an incomplete extraction) makes the config layer harder to test and navigate.",
+      "affected_files": [
+        { "path": "src/core/config/RepoConfig.ts", "lines": "1-805" }
+      ],
+      "suggested_remediation": "Separate schema definitions (Zod schemas) from TypeScript type exports into src/core/config/RepoConfigSchema.ts, keep defaults in the already-existing RepoConfigDefaults.ts, and create a thin src/core/config/RepoConfig.ts that re-exports all public types. Target each split file at under 300 lines.",
+      "confidence": 0.85
+    },
+    {
+      "category": "architecture",
+      "severity": "high",
+      "effort": "medium",
+      "title": "God Module: workflows/specComposer.ts (921 lines, 9 exports)",
+      "description": "specComposer.ts is 921 lines. While the export count is modest, the file handles specification authoring, parsing, metadata loading, file I/O with locks, hash computation, and PRD integration. At 921 lines it significantly exceeds the 500-line threshold for god modules. Given that specParsing.ts was already extracted as a sibling, the pattern of incremental extraction is established but incomplete.",
+      "affected_files": [
+        { "path": "src/workflows/specComposer.ts", "lines": "1-921" }
+      ],
+      "suggested_remediation": "Extract spec file I/O operations (read/write with locking) to src/workflows/specStore.ts and spec metadata loading to src/workflows/specMetadata.ts. Keep specComposer.ts focused on the composition/authoring orchestration logic, targeting under 300 lines.",
+      "confidence": 0.85
+    },
+    {
+      "category": "architecture",
+      "severity": "high",
+      "effort": "medium",
+      "title": "God Module: workflows/resumeCoordinator.ts (816 lines, 10 exports)",
+      "description": "resumeCoordinator.ts is 816 lines. It orchestrates queue validation, run state restoration, hash manifest verification, and the full resume decision logic. The module crosses persistence, telemetry, and queue subsystem boundaries while also containing the core resume algorithm. Its high line count and multi-concern responsibility make it a god module that is difficult to unit-test in isolation.",
+      "affected_files": [
+        { "path": "src/workflows/resumeCoordinator.ts", "lines": "1-816" }
+      ],
+      "suggested_remediation": "Extract queue validation coordination to src/workflows/resumeQueueRecovery.ts (resumeQueueRecovery.ts already exists — verify it is fully used), and run-state verification (hash manifest checks) to src/workflows/runStateVerifier.ts. Keep resumeCoordinator.ts as a thin orchestrator under 200 lines that delegates to these focused modules.",
+      "confidence": 0.82
+    },
+    {
+      "category": "architecture",
+      "severity": "high",
+      "effort": "medium",
+      "title": "God Module: workflows/writeActionQueue.ts (813 lines)",
+      "description": "writeActionQueue.ts is 813 lines, handling write action queuing, file persistence with locking, rate-limit integration, action execution, and compaction. The parallel writeActionQueueTypes.ts exists but holds only type definitions; all logic remains in the main file. This is well above the 500-line threshold and mixes infrastructure concerns (file I/O, locking) with domain concerns (rate limit enforcement, action sequencing).",
+      "affected_files": [
+        { "path": "src/workflows/writeActionQueue.ts", "lines": "1-813" },
+        { "path": "src/workflows/writeActionQueueTypes.ts", "lines": "1-166" }
+      ],
+      "suggested_remediation": "Extract the persistence layer (file read/write with lock) to src/workflows/writeActionStore.ts and the rate-limit enforcement logic to src/workflows/writeActionRateLimiter.ts. Keep writeActionQueue.ts as the orchestration layer that coordinates between store, rate limiter, and action executor.",
+      "confidence": 0.82
+    },
+    {
+      "category": "architecture",
+      "severity": "high",
+      "effort": "medium",
+      "title": "God Module: workflows/validationRegistry.ts (570 lines, 19 exports)",
+      "description": "validationRegistry.ts is 570 lines with 19 exports. It manages validation command registration, execution, result storage, auto-fix eligibility checks, and manifest updates — well above both thresholds (500 LOC, 20 exports borderline). The autoFixEngine.ts already exists as a sibling suggesting a prior split, but validation execution and registry management remain coupled.",
+      "affected_files": [
+        { "path": "src/workflows/validationRegistry.ts", "lines": "1-570" }
+      ],
+      "suggested_remediation": "Extract validation result persistence (read/write of validation artifacts) to src/workflows/validationStore.ts, keeping validationRegistry.ts focused on command registration and orchestration. Aim for under 300 lines per file.",
+      "confidence": 0.82
+    },
+    {
+      "category": "architecture",
+      "severity": "medium",
+      "effort": "small",
+      "title": "Duplicated QueueOperationResult Interface Across Two Files",
+      "description": "The interface QueueOperationResult is defined independently in two files: queueTypes.ts (lines 45-50) with field tasksAffected and writeActionQueueTypes.ts (lines 156-161) with field actionsAffected. Both have identical success, message, and errors fields. This near-duplicate leads to confusion about which type to use and makes future changes require updates in two places.\n\n--- code begin (reference only) ---\n// queueTypes.ts\nexport interface QueueOperationResult {\n  success: boolean;\n  message: string;\n  tasksAffected?: number;\n  errors?: string[];\n}\n// writeActionQueueTypes.ts\nexport interface QueueOperationResult {\n  success: boolean;\n  message: string;\n  actionsAffected?: number;\n  errors?: string[];\n}\n--- code end ---",
+      "affected_files": [
+        { "path": "src/workflows/queueTypes.ts", "lines": "45-50" },
+        { "path": "src/workflows/writeActionQueueTypes.ts", "lines": "156-161" }
+      ],
+      "suggested_remediation": "Define a single shared base interface (e.g., OperationResult) in a common types file and have each queue type extend or alias it with its specific optional count field (tasksAffected vs actionsAffected). Alternatively, rename the writeActionQueueTypes version to WriteActionOperationResult to avoid the naming collision.",
+      "confidence": 0.95
+    },
+    {
+      "category": "architecture",
+      "severity": "medium",
+      "effort": "small",
+      "title": "Backward-Compat Re-export Shim Left Indefinitely: deploymentTrigger.ts",
+      "description": "src/workflows/deploymentTrigger.ts, deploymentTriggerContext.ts, deploymentTriggerExecution.ts, and deploymentTriggerTypes.ts are four shim files at the workflows root that exist solely to re-export from the src/workflows/deployment/ subdirectory for backward compatibility. The comment explicitly states 'New code should import directly from ./deployment'. Without a migration plan or deprecation deadline, these shims will persist indefinitely, confusing developers about where canonical imports should come from.",
+      "affected_files": [
+        { "path": "src/workflows/deploymentTrigger.ts", "lines": "1-30" },
+        { "path": "src/workflows/deploymentTriggerContext.ts", "lines": "1-1" },
+        { "path": "src/workflows/deploymentTriggerExecution.ts", "lines": "1-1" },
+        { "path": "src/workflows/deploymentTriggerTypes.ts", "lines": "1-1" }
+      ],
+      "suggested_remediation": "Audit all importers of the four shim files using grep. Update them to import from src/workflows/deployment/ directly. Once all importers are updated, delete the four shim files. Add a lint rule or CI check that blocks re-introducing imports from the deprecated paths.",
+      "confidence": 0.9
+    },
+    {
+      "category": "architecture",
+      "severity": "medium",
+      "effort": "small",
+      "title": "Inappropriate Coupling: adapters/http/client.ts Directly Instantiates telemetry/rateLimitLedger",
+      "description": "The HTTP client (src/adapters/http/client.ts line 2) imports and directly instantiates RateLimitLedger from telemetry/rateLimitLedger. This couples the generic HTTP transport layer to a project-specific telemetry system, making the HttpClient class non-portable and harder to test in isolation. The RateLimitLedger is a stateful side-effect concern that should be injected via the HttpClientConfig rather than constructed internally.\n\n--- code begin (reference only) ---\n// adapters/http/client.ts line 2\nimport { RateLimitLedger, RateLimitEnvelope } from '../../telemetry/rateLimitLedger';\n// line 138\nthis.rateLimitLedger = new RateLimitLedger(...);\n--- code end ---",
+      "affected_files": [
+        { "path": "src/adapters/http/client.ts", "lines": "2-2" },
+        { "path": "src/adapters/http/client.ts", "lines": "117-145" }
+      ],
+      "suggested_remediation": "Define a RateLimitRecorder interface in src/adapters/http/httpTypes.ts that HttpClient accepts via config. The concrete RateLimitLedger implementation from telemetry/ is then injected at construction time in the calling adapter (GitHubAdapter, LinearAdapter) or in a factory function. This makes HttpClient testable without the telemetry dependency.",
+      "confidence": 0.88
+    },
+    {
+      "category": "architecture",
+      "severity": "medium",
+      "effort": "small",
+      "title": "Misplaced Concern: RedactionEngine Exported from telemetry/logger.ts",
+      "description": "RedactionEngine is defined and exported from src/telemetry/logger.ts (line 116). It is imported by src/workflows/contextSummarizer.ts and src/cli/commands/context/summarize.ts. Redaction is a security/data-handling concern orthogonal to structured logging; embedding it in the logger file causes the logger module to have two distinct responsibilities. It is also imported directly by the workflow layer, creating a workflow-to-telemetry coupling for a non-telemetry purpose.",
+      "affected_files": [
+        { "path": "src/telemetry/logger.ts", "lines": "97-222" },
+        { "path": "src/workflows/contextSummarizer.ts", "lines": "24-24" },
+        { "path": "src/cli/commands/context/summarize.ts", "lines": "15-15" }
+      ],
+      "suggested_remediation": "Move RedactionEngine to src/utils/redaction.ts (a redaction.ts already exists in src/utils/ — verify it is distinct from the logger one). Update the two importers to use the utils path. Keep the logger focused on log formatting and emission.",
+      "confidence": 0.85
+    },
+    {
+      "category": "architecture",
+      "severity": "medium",
+      "effort": "small",
+      "title": "Inconsistent Pattern: researchPersistence.ts in workflows/ Instead of persistence/",
+      "description": "src/workflows/researchPersistence.ts is a pure persistence module (file I/O for research task artifacts: save, load, list, cache lookup). Its 162 lines contain no workflow orchestration logic — only filesystem operations. All other persistence modules live in src/persistence/. Placing this file in workflows/ violates the established layer convention and makes it non-discoverable from the persistence barrel.",
+      "affected_files": [
+        { "path": "src/workflows/researchPersistence.ts", "lines": "1-162" }
+      ],
+      "suggested_remediation": "Move src/workflows/researchPersistence.ts to src/persistence/researchStore.ts. Update all importers (researchCoordinator.ts is the primary consumer). Add a re-export from src/persistence/index.ts. The persistence barrel then becomes the single authoritative index for all storage-layer code.",
+      "confidence": 0.88
+    },
+    {
+      "category": "architecture",
+      "severity": "medium",
+      "effort": "small",
+      "title": "Inconsistent Pattern: branchProtectionReporter.ts Mixed Between Adapter and Workflow Concerns",
+      "description": "src/workflows/branchProtectionReporter.ts imports from src/adapters/github/branchProtection.ts (type BranchProtectionCompliance) and contains both report generation logic and filesystem persistence. This creates a file that spans the adapter and persistence layers while living in workflows/. In contrast, the deployment module correctly separates execution (adapter calls) from persistence (context.ts) within its own subdirectory.",
+      "affected_files": [
+        { "path": "src/workflows/branchProtectionReporter.ts", "lines": "1-406" },
+        { "path": "src/adapters/github/branchProtection.ts", "lines": "1-769" }
+      ],
+      "suggested_remediation": "Split branchProtectionReporter.ts into (1) report generation logic that remains in workflows/ and (2) a persistence helper for reading/writing branch protection artifacts that moves to persistence/. Consider whether the GitHub adapter should own the BranchProtectionCompliance type rather than having the workflows layer import a concrete adapter type.",
+      "confidence": 0.80
+    },
+    {
+      "category": "architecture",
+      "severity": "medium",
+      "effort": "small",
+      "title": "Feature Envy: cli/startHelpers.ts Directly Calls Linear Adapter",
+      "description": "src/cli/startHelpers.ts imports and calls createLinearAdapter directly (line 13-134), including the fetchLinearIssue function that constructs the adapter, calls it, and formats the response. This means the CLI helper layer is directly coupled to a concrete adapter rather than going through the workflow layer. Contrast this with how the PR commands in cli/pr/shared.ts accept the adapter as an injected factory, which is the preferred pattern.",
+      "affected_files": [
+        { "path": "src/cli/startHelpers.ts", "lines": "13-13" },
+        { "path": "src/cli/startHelpers.ts", "lines": "111-168" }
+      ],
+      "suggested_remediation": "Move fetchLinearIssue to src/workflows/linearIssueLoader.ts (or into the existing researchCoordinator if it fits). The start.ts command should receive a linearIssueLoader dependency that can be overridden in tests, consistent with how the PR commands handle the GitHub adapter factory pattern.",
+      "confidence": 0.82
+    },
+    {
+      "category": "architecture",
+      "severity": "medium",
+      "effort": "small",
+      "title": "God Module: workflows/cliExecutionEngine.ts (731 lines, 4 exports)",
+      "description": "cliExecutionEngine.ts is 731 lines — 46% over the 500-line threshold — handling task dispatch, retry logic, dependency checking, telemetry recording, queue updates, and execution lifecycle management. The low export count (4) suggests it is internally cohesive, but the sheer size makes it hard to read, test, and maintain. The file mixes infrastructure concerns (queue I/O, telemetry) with the core execution loop algorithm.",
+      "affected_files": [
+        { "path": "src/workflows/cliExecutionEngine.ts", "lines": "1-731" }
+      ],
+      "suggested_remediation": "Extract the retry/dependency-checking logic to src/workflows/executionDependencyResolver.ts and the telemetry-recording helper functions to src/workflows/executionTelemetryRecorder.ts. Keep cliExecutionEngine.ts as the main execution loop under 300 lines.",
+      "confidence": 0.78
+    },
+    {
+      "category": "architecture",
+      "severity": "medium",
+      "effort": "small",
+      "title": "God Module: workflows/contextSummarizer.ts (765 lines, 12 exports)",
+      "description": "contextSummarizer.ts is 765 lines with 12 exports, handling token estimation, summarization client orchestration, cost tracking integration, persistence (getSubdirectoryPath), and redaction via RedactionEngine imported from telemetry. The summarizerClients/ subdirectory was partially extracted but only contains one file (localSummarizerClient.ts), leaving the bulk of summarization logic in the main file.",
+      "affected_files": [
+        { "path": "src/workflows/contextSummarizer.ts", "lines": "1-765" }
+      ],
+      "suggested_remediation": "Extract the context truncation and token budget logic to src/workflows/contextBudget.ts, and the persistence read/write logic to src/workflows/summaryStore.ts. The SummarizerClient interface and related types should move to src/workflows/summarizerClients/types.ts. Target contextSummarizer.ts at under 300 lines.",
+      "confidence": 0.78
+    },
+    {
+      "category": "architecture",
+      "severity": "medium",
+      "effort": "small",
+      "title": "God Module: workflows/contextAggregator.ts (678 lines, 6 exports)",
+      "description": "contextAggregator.ts is 678 lines handling file discovery, git history integration, context document assembly, exclusion filtering, and token budgeting. It imports from persistence, telemetry, and core models, making it a cross-cutting aggregation module that has grown beyond the 500-line threshold. contextRanking.ts was already extracted as a sibling, but the aggregator itself remains oversized.",
+      "affected_files": [
+        { "path": "src/workflows/contextAggregator.ts", "lines": "1-678" }
+      ],
+      "suggested_remediation": "Extract the file discovery and git-history walking logic to src/workflows/contextFileDiscovery.ts and the context document assembly logic to src/workflows/contextDocumentBuilder.ts. Keep contextAggregator.ts as the thin orchestrator that calls discovery, ranking (already separate), and assembly.",
+      "confidence": 0.75
+    },
+    {
+      "category": "architecture",
+      "severity": "medium",
+      "effort": "small",
+      "title": "Inconsistent Layer Usage: workflows/codeMachineRunner.ts Imports Concrete Adapter Utility",
+      "description": "src/workflows/codeMachineRunner.ts imports validateCliPath directly from src/adapters/codemachine/types.ts (a value import, not type-only). Workflows depending on concrete adapter utilities (not just their interfaces) creates tight coupling to the adapter implementation. For comparison, codeMachineCLIStrategy.ts imports the entire CodeMachineCLIAdapter class from adapters/, which is an accepted pattern for strategy implementations, but the validator function from types.ts should be either duplicated or moved to a shared utilities location.",
+      "affected_files": [
+        { "path": "src/workflows/codeMachineRunner.ts", "lines": "9-9" },
+        { "path": "src/adapters/codemachine/types.ts", "lines": "1-1" }
+      ],
+      "suggested_remediation": "Move validateCliPath to src/utils/ or src/validation/ so it is a shared utility accessible without coupling workflows to the codemachine adapter's types file. Alternatively, if it is truly adapter-internal, stop exporting it and inline the validation in the adapter itself.",
+      "confidence": 0.75
+    },
+    {
+      "category": "architecture",
+      "severity": "medium",
+      "effort": "medium",
+      "title": "God Module: workflows/prdAuthoringEngine.ts (681 lines, 12 exports)",
+      "description": "prdAuthoringEngine.ts is 681 lines with 12 exports, covering PRD document drafting, metadata persistence, approval state checks, research task integration, and file I/O with locking. It conflates the authoring algorithm (draftPRD) with persistence (loadPRDMetadata, isPRDApproved) and approval state management. specComposer.ts imports from prdAuthoringEngine.ts creating a cross-workflow dependency chain.",
+      "affected_files": [
+        { "path": "src/workflows/prdAuthoringEngine.ts", "lines": "1-681" }
+      ],
+      "suggested_remediation": "Extract PRD persistence and approval state (loadPRDMetadata, isPRDApproved) to src/workflows/prdStore.ts. Keep prdAuthoringEngine.ts focused on the AI-driven drafting algorithm (draftPRD) targeting under 300 lines. This also reduces the coupling into specComposer.ts.",
+      "confidence": 0.75
+    },
+    {
+      "category": "architecture",
+      "severity": "medium",
+      "effort": "small",
+      "title": "God Module: adapters/github/branchProtection.ts (769 lines, 12 exports)",
+      "description": "branchProtection.ts is 769 lines with 12 exports. It handles branch protection rule fetching, compliance checking, merge readiness assessment, error formatting, and status check aggregation — all within a single adapter file. The GitHubAdapter.ts itself is 633 lines, meaning the GitHub adapter layer has over 1400 combined lines. The branchProtection module has grown into a domain-specific policy engine rather than remaining a pure adapter.",
+      "affected_files": [
+        { "path": "src/adapters/github/branchProtection.ts", "lines": "1-769" }
+      ],
+      "suggested_remediation": "Extract compliance checking and merge readiness assessment logic to src/workflows/branchComplianceChecker.ts (pure domain logic, no HTTP). Keep branchProtection.ts as a thin adapter that fetches raw data from the GitHub API and returns typed structures. This reduces the adapter to under 300 lines and moves the policy logic to the correct layer.",
+      "confidence": 0.78
+    },
+    {
+      "category": "architecture",
+      "severity": "low",
+      "effort": "quick",
+      "title": "Incomplete Deployment Shim Migration: deploymentTriggerContext.ts and Siblings Are Empty Files",
+      "description": "The three sibling shims (deploymentTriggerContext.ts, deploymentTriggerExecution.ts, deploymentTriggerTypes.ts) appear to be nearly empty re-export stubs created during the deployment/ subdirectory migration. Unlike deploymentTrigger.ts which has explicit re-export content, the siblings may be stub files from an incomplete migration, adding noise to the workflows directory.",
+      "affected_files": [
+        { "path": "src/workflows/deploymentTriggerContext.ts", "lines": "1-1" },
+        { "path": "src/workflows/deploymentTriggerExecution.ts", "lines": "1-1" },
+        { "path": "src/workflows/deploymentTriggerTypes.ts", "lines": "1-1" }
+      ],
+      "suggested_remediation": "Inspect the three files for content. If they are empty or only contain a single comment, delete them. If they re-export specific symbols, audit importers and migrate those imports to the canonical deployment/ paths before deleting the stubs.",
+      "confidence": 0.80
+    },
+    {
+      "category": "architecture",
+      "severity": "low",
+      "effort": "quick",
+      "title": "Inconsistent Error Hierarchy: ErrorType and Provider Enums in core/sharedTypes.ts vs adapters/http/httpTypes.ts",
+      "description": "ErrorType and Provider enums are defined in src/adapters/http/httpTypes.ts and re-exported via adapters/http/client.ts, but they are also referenced in src/core/sharedTypes.ts. Callers of sharedTypes get the enums from core, while HTTP adapter callers get them from adapters/http/client — two paths to what should be the same canonical types. This creates a confusing import landscape where the same concept appears to have two homes.",
+      "affected_files": [
+        { "path": "src/adapters/http/httpTypes.ts", "lines": "1-1" },
+        { "path": "src/core/sharedTypes.ts", "lines": "53-79" }
+      ],
+      "suggested_remediation": "Consolidate ErrorType and Provider into src/core/sharedTypes.ts as the single canonical definition. Remove the duplicate definitions from adapters/http/httpTypes.ts and have the adapter re-export from core. This establishes core as the authoritative source for cross-layer enum types.",
+      "confidence": 0.72
+    }
+  ],
+  "stats": {
+    "files_scanned": 150,
+    "duration_seconds": 180,
+    "findings_count": 25
+  }
+}
