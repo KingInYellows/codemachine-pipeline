@@ -5,6 +5,7 @@
  * for queue data types, configuration, and operation results.
  */
 
+import { z } from 'zod';
 import type { LoggerInterface } from '../telemetry/logger';
 import type { MetricsCollector } from '../telemetry/metrics';
 
@@ -35,6 +36,46 @@ export enum WriteActionStatus {
   /** Skipped due to deduplication */
   SKIPPED = 'skipped',
 }
+
+// ============================================================================
+// Zod Schemas
+// ============================================================================
+
+export const WriteActionSchema = z
+  .object({
+    action_id: z.string().min(1),
+    action_type: z.nativeEnum(WriteActionType),
+    provider: z.string(),
+    owner: z.string(),
+    repo: z.string(),
+    payload: z.record(z.string(), z.unknown()),
+    idempotency_key: z.string(),
+    status: z.nativeEnum(WriteActionStatus),
+    retry_count: z.number().nonnegative(),
+    max_retries: z.number().nonnegative(),
+    last_error: z.string().optional(),
+    last_retry_at: z.string().datetime().optional(),
+    created_at: z.string().datetime(),
+    updated_at: z.string().datetime(),
+    completed_at: z.string().datetime().optional(),
+  })
+  .passthrough();
+
+export const WriteActionQueueManifestSchema = z
+  .object({
+    schema_version: z.string(),
+    feature_id: z.string(),
+    total_actions: z.number().nonnegative(),
+    pending_count: z.number().nonnegative(),
+    in_progress_count: z.number().nonnegative(),
+    completed_count: z.number().nonnegative(),
+    failed_count: z.number().nonnegative(),
+    skipped_count: z.number().nonnegative(),
+    queue_checksum: z.string(),
+    updated_at: z.string().datetime(),
+    concurrency_limit: z.number().nonnegative(),
+  })
+  .passthrough();
 
 // ============================================================================
 // Interfaces

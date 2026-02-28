@@ -14,6 +14,7 @@ import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 import { z } from 'zod';
 import type { BranchProtectionCompliance } from '../adapters/github/branchProtection';
+import { validateOrThrow } from '../validation/helpers.js';
 
 // ============================================================================
 // Schemas & Types
@@ -99,6 +100,19 @@ export interface ValidationMismatch {
   /** Recommended actions */
   recommendations: string[];
 }
+
+const CommandsDataSchema = z.object({
+  commands: z
+    .array(
+      z.object({
+        type: z
+          .string()
+          .regex(/^[a-zA-Z0-9_-]+$/, 'Command type must contain only safe characters'),
+        description: z.string().optional(),
+      })
+    )
+    .optional(),
+});
 
 // ============================================================================
 // Constants
@@ -238,9 +252,11 @@ export async function detectValidationMismatch(
 
   try {
     const commandsContent = await fs.readFile(validationCommandsPath, 'utf-8');
-    const commandsData = JSON.parse(commandsContent) as {
-      commands?: Array<{ type: string; description?: string }>;
-    };
+    const commandsData = validateOrThrow(
+      CommandsDataSchema,
+      JSON.parse(commandsContent),
+      'validation commands'
+    );
 
     // Map validation command types to GitHub check contexts
     // Convention: validation type maps to "validation/{type}" context

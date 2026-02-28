@@ -24,6 +24,8 @@ import { withLock } from '../persistence';
 import {
   WriteActionType,
   WriteActionStatus,
+  WriteActionSchema,
+  WriteActionQueueManifestSchema,
   type ActionExecutor,
   type QueueOperationResult,
   type WriteAction,
@@ -31,6 +33,7 @@ import {
   type WriteActionQueueConfig,
   type WriteActionQueueManifest,
 } from './writeActionQueueTypes.js';
+import { validateOrThrow, validateOrResult } from '../validation/helpers.js';
 
 export {
   WriteActionType,
@@ -599,10 +602,21 @@ export class WriteActionQueue {
 
       for (const line of lines) {
         try {
-          const action = JSON.parse(line) as WriteAction;
-          actions.set(action.action_id, action);
-        } catch {
-          // Skip corrupted lines
+          const result = validateOrResult(WriteActionSchema, JSON.parse(line), 'write action');
+          if (result.success) {
+            actions.set(result.data.action_id, result.data as WriteAction);
+          } else {
+            this.logger.warn('Skipping queue entry that failed validation', {
+              error: result.error,
+              line_preview: line.substring(0, 100),
+            });
+          }
+        } catch (error) {
+          // Skip corrupted lines (malformed JSON)
+          this.logger.warn('Skipping corrupted queue line', {
+            error: error instanceof Error ? error.message : 'Unknown error',
+            line_preview: line.substring(0, 100),
+          });
         }
       }
     } catch (error) {
@@ -654,7 +668,11 @@ export class WriteActionQueue {
   private async loadManifest(): Promise<WriteActionQueueManifest> {
     try {
       const content = await readFile(this.manifestPath, 'utf-8');
-      return JSON.parse(content) as WriteActionQueueManifest;
+      return validateOrThrow(
+        WriteActionQueueManifestSchema,
+        JSON.parse(content),
+        'write action queue manifest'
+      ) as WriteActionQueueManifest;
     } catch (error) {
       if (isFileNotFound(error)) {
         // Return default manifest

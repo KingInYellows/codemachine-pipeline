@@ -14,6 +14,8 @@ import {
   areDependenciesCompleted,
 } from '../core/models/ExecutionTask';
 import { loadQueue } from './queueStore';
+import { RawSnapshotSchema } from './resumeSnapshotSchema';
+import { validateOrThrow } from '../validation/helpers.js';
 
 // ============================================================================
 // Types
@@ -55,16 +57,7 @@ export async function validateQueueSnapshot(
     // Load raw snapshot file to check format (handles both V1 and V2)
     const snapshotPath = path.join(queueDir, 'queue_snapshot.json');
     const content = await fs.readFile(snapshotPath, 'utf-8');
-    const rawSnapshot = JSON.parse(content) as {
-      schemaVersion?: string;
-      schema_version?: string;
-      tasks: { [taskId: string]: unknown };
-      counts?: unknown;
-      dependencyGraph?: Record<string, string[]>;
-      dependency_graph?: Record<string, string[]>;
-      checksum: string;
-      timestamp: string;
-    };
+    const rawSnapshot = validateOrThrow(RawSnapshotSchema, JSON.parse(content), 'queue snapshot');
 
     const taskCount = Object.keys(rawSnapshot.tasks).length;
     const normalizedStoredTimestamp = new Date(rawSnapshot.timestamp).toISOString();

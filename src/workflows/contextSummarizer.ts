@@ -19,12 +19,15 @@
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 import * as crypto from 'node:crypto';
+import { z } from 'zod';
 import type { ContextDocument, ContextSummary } from '../core/models/ContextDocument';
 import { estimateTokens } from './contextRanking';
 import { RedactionEngine, type StructuredLogger } from '../telemetry/logger';
 import type { MetricsCollector } from '../telemetry/metrics';
 import { getSubdirectoryPath } from '../persistence';
 import type { CostTracker } from '../telemetry/costTracker';
+import { isFileNotFound } from '../utils/safeJson.js';
+import { validateOrResult } from '../validation/helpers.js';
 
 // ============================================================================
 // Types
@@ -114,6 +117,23 @@ export interface ChunkMetadata {
   /** Redaction flags */
   redactionFlags: string[];
 }
+
+const ChunkMetadataSchema = z.object({
+  chunkId: z.string(),
+  path: z.string(),
+  fileSha: z.string(),
+  chunkIndex: z.number().nonnegative(),
+  chunkTotal: z.number().positive(),
+  summary: z.string(),
+  tokenCount: z.object({
+    prompt: z.number().nonnegative(),
+    completion: z.number().nonnegative(),
+  }),
+  generatedAt: z.string(),
+  generatedBy: z.string(),
+  summarizationMethod: z.string(),
+  redactionFlags: z.array(z.string()),
+});
 
 /**
  * Convert chunk metadata to ContextSummary entry
@@ -354,9 +374,13 @@ async function loadCachedChunk(contextDir: string, chunkId: string): Promise<Chu
 
   try {
     const content = await fs.readFile(chunkPath, 'utf-8');
-    return JSON.parse(content) as ChunkMetadata;
-  } catch {
-    return null;
+    const result = validateOrResult(ChunkMetadataSchema, JSON.parse(content), 'chunk metadata');
+    return result.success ? result.data : null;
+  } catch (error) {
+    if (isFileNotFound(error) || error instanceof SyntaxError) {
+      return null;
+    }
+    throw error;
   }
 }
 
