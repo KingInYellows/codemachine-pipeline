@@ -9,7 +9,7 @@ import {
   DEFAULT_VALIDATION_COMMANDS,
   type ValidationCommandConfig,
 } from '../validation/validationCommandConfig';
-import type { RepoConfig, ExecutionConfig } from './RepoConfig';
+import type { RepoConfig, ExecutionConfig } from './RepoConfigSchema';
 
 // ============================================================================
 // Helpers

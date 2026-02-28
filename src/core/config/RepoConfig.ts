@@ -1,329 +1,62 @@
-import { z } from 'zod';
-import * as fs from 'node:fs';
-import * as fsPromises from 'node:fs/promises';
-import {
-  DEFAULT_VALIDATION_COMMANDS,
-  ValidationCommandConfigSchema,
-  type ValidationCommandConfig,
-} from '../validation/validationCommandConfig';
-
 /**
- * Enhanced RepoConfig schema with governance and history tracking
- * Implements ADR-2 (State Persistence) and ADR-5 (Approval Workflow)
+ * RepoConfig — public surface and validation logic
  *
- * This module provides:
- * - Zod-based schema validation for repository configuration
- * - Governance controls for approval workflows and accountability
- * - Config history tracking for deterministic migrations
- * - Environment variable override support
- * - Type-safe configuration loading and validation
+ * This module re-exports all types and schemas from RepoConfigSchema.ts and
+ * all defaults/factory functions from RepoConfigDefaults.ts, then adds the
+ * runtime loading and validation functions that tie them together.
+ *
+ * Consumers should continue to import from this file; the internal split into
+ * RepoConfigSchema.ts and RepoConfigDefaults.ts is an implementation detail.
  */
 
-// ============================================================================
-// Config History Schema - Tracks schema migrations over time
-// ============================================================================
+import { constants } from 'node:fs';
+import { access, readFile } from 'node:fs/promises';
 
-const ConfigHistoryEntrySchema = z.object({
-  timestamp: z.string().datetime({ message: 'Must be ISO 8601 datetime' }),
-  schema_version: z.string().regex(/^[0-9]+\.[0-9]+\.[0-9]+$/, 'Invalid semver format'),
-  changed_by: z.string().min(1, 'Changed by identifier required'),
-  change_description: z.string().min(1, 'Change description required'),
-  migration_applied: z.boolean().default(false),
-  backup_path: z.string().optional(),
-});
+import {
+  RepoConfigSchema,
+  ExecutionEngineType,
+  type RepoConfig,
+  type ValidationError,
+  type ValidationResult,
+  type ConfigHistoryEntry,
+} from './RepoConfigSchema';
 
-export type ConfigHistoryEntry = z.infer<typeof ConfigHistoryEntrySchema>;
+// Re-export everything from schema module
+export type {
+  ConfigHistoryEntry,
+  Governance,
+  Project,
+  GitHub,
+  Linear,
+  Runtime,
+  Safety,
+  FeatureFlags,
+  ValidationSettings,
+  Constraints,
+  ExecutionConfig,
+  RepoConfig,
+  ValidationError,
+  ValidationResult,
+} from './RepoConfigSchema';
 
-// ============================================================================
-// Governance Schema - Human-in-the-loop controls and accountability
-// ============================================================================
+export {
+  ConfigHistoryEntrySchema,
+  GovernanceSchema,
+  ProjectSchema,
+  GitHubSchema,
+  LinearSchema,
+  RuntimeSchema,
+  SafetySchema,
+  FeatureFlagsSchema,
+  ValidationSettingsSchema,
+  ConstraintsSchema,
+  ExecutionEngineType,
+  ExecutionConfigSchema,
+  RepoConfigSchema,
+} from './RepoConfigSchema';
 
-const GovernanceSchema = z.object({
-  // Approval workflow configuration (ADR-5)
-  approval_workflow: z
-    .object({
-      require_approval_for_prd: z.boolean().default(true),
-      require_approval_for_spec: z.boolean().default(true),
-      require_approval_for_plan: z.boolean().default(true),
-      require_approval_for_code: z.boolean().default(true),
-      require_approval_for_pr: z.boolean().default(true),
-      require_approval_for_deploy: z.boolean().default(true),
-    })
-    .describe('Gate-by-gate approval requirements per ADR-5'),
-
-  // Accountability tracking
-  accountability: z
-    .object({
-      record_approver_identity: z.boolean().default(true),
-      require_approval_reason: z.boolean().default(false),
-      audit_log_retention_days: z.number().int().min(1).max(3650).default(365),
-    })
-    .describe('Accountability settings for approval tracking'),
-
-  // Risk containment settings
-  risk_controls: z
-    .object({
-      prevent_auto_merge: z.boolean().default(true),
-      prevent_force_push: z.boolean().default(true),
-      require_branch_protection: z.boolean().default(true),
-      max_files_per_pr: z.number().int().min(1).max(1000).default(100),
-      max_lines_changed_per_pr: z.number().int().min(1).max(50000).default(5000),
-    })
-    .describe('Risk containment controls to limit blast radius'),
-
-  // Compliance and notes
-  compliance_tags: z
-    .array(z.string())
-    .default([])
-    .describe('Tags for compliance tracking (e.g., SOC2, GDPR)'),
-  governance_notes: z.string().optional().describe('Free-form governance documentation'),
-});
-
-export type Governance = z.infer<typeof GovernanceSchema>;
-
-// ============================================================================
-// Project Metadata Schema
-// ============================================================================
-
-const ProjectSchema = z.object({
-  id: z.string().min(1, 'Project ID is required'),
-  repo_url: z.string().regex(/^(https?:\/\/|git@)/, 'Invalid repository URL format'),
-  default_branch: z.string().default('main'),
-  context_paths: z.array(z.string()).default(['src/', 'docs/', 'README.md']),
-  project_leads: z.array(z.string()).default([]),
-});
-
-export type Project = z.infer<typeof ProjectSchema>;
-
-// ============================================================================
-// Integration Toggles - GitHub
-// ============================================================================
-
-const GitHubSchema = z.object({
-  enabled: z.boolean(),
-  token_env_var: z.string().default('GITHUB_TOKEN'),
-  api_base_url: z.string().url().default('https://api.github.com'),
-  required_scopes: z
-    .array(z.enum(['repo', 'workflow', 'read:org', 'write:org']))
-    .default(['repo', 'workflow']),
-  default_reviewers: z.array(z.string()).default([]),
-  branch_protection: z
-    .object({
-      respect_required_reviews: z.boolean().default(true),
-      respect_status_checks: z.boolean().default(true),
-    })
-    .optional(),
-});
-
-export type GitHub = z.infer<typeof GitHubSchema>;
-
-// ============================================================================
-// Integration Toggles - Linear
-// ============================================================================
-
-const LinearSchema = z.object({
-  enabled: z.boolean(),
-  api_key_env_var: z.string().default('LINEAR_API_KEY'),
-  team_id: z.string().optional(),
-  project_id: z.string().optional(),
-  auto_link_issues: z.boolean().default(true),
-});
-
-export type Linear = z.infer<typeof LinearSchema>;
-
-// ============================================================================
-// Runtime Execution Settings
-// ============================================================================
-
-const RuntimeSchema = z.object({
-  agent_endpoint: z.string().url().optional(),
-  agent_endpoint_env_var: z.string().default('AGENT_ENDPOINT'),
-  max_concurrent_tasks: z.number().int().min(1).max(10).default(3),
-  timeout_minutes: z.number().int().min(5).max(120).default(30),
-  context_token_budget: z.number().int().min(1000).max(100000).default(32000),
-  context_cost_budget_usd: z
-    .number()
-    .nonnegative()
-    .default(5)
-    .describe('Maximum USD spend for context summarization'),
-  logs_format: z.enum(['ndjson', 'json', 'text']).default('ndjson'),
-  run_directory: z.string().default('.codepipe/runs'),
-});
-
-export type Runtime = z.infer<typeof RuntimeSchema>;
-
-// ============================================================================
-// Runtime Safety Defaults
-// ============================================================================
-
-const SafetySchema = z.object({
-  redact_secrets: z.boolean().default(true),
-  require_approval_for_prd: z
-    .boolean()
-    .default(true)
-    .describe('DEPRECATED: Use governance.approval_workflow instead'),
-  require_approval_for_plan: z
-    .boolean()
-    .default(true)
-    .describe('DEPRECATED: Use governance.approval_workflow instead'),
-  require_approval_for_pr: z
-    .boolean()
-    .default(true)
-    .describe('DEPRECATED: Use governance.approval_workflow instead'),
-  prevent_force_push: z
-    .boolean()
-    .default(true)
-    .describe('DEPRECATED: Use governance.risk_controls instead'),
-  allowed_file_patterns: z
-    .array(z.string())
-    .default(['**/*.ts', '**/*.js', '**/*.md', '**/*.json']),
-  blocked_file_patterns: z
-    .array(z.string())
-    .default(['.env', '**/*.key', '**/*.pem', '**/credentials.*']),
-});
-
-export type Safety = z.infer<typeof SafetySchema>;
-
-// ============================================================================
-// Feature Flags
-// ============================================================================
-
-const FeatureFlagsSchema = z.object({
-  enable_auto_merge: z.boolean().default(false),
-  enable_deployment_triggers: z.boolean().default(false),
-  enable_linear_sync: z.boolean().default(false),
-  enable_context_summarization: z.boolean().default(true),
-  enable_resumability: z.boolean().default(true),
-  enable_developer_preview: z.boolean().default(false),
-});
-
-export type FeatureFlags = z.infer<typeof FeatureFlagsSchema>;
-
-// ============================================================================
-// Validation Settings
-// ============================================================================
-
-const ValidationSettingsSchema = z.object({
-  commands: z.array(ValidationCommandConfigSchema).min(1),
-  template_context: z.record(z.string(), z.string()).optional(),
-});
-
-export type ValidationSettings = z.infer<typeof ValidationSettingsSchema>;
-
-// ============================================================================
-// Resource Constraints
-// ============================================================================
-
-const ConstraintsSchema = z.object({
-  max_file_size_kb: z.number().int().min(100).max(10000).default(1000),
-  max_context_files: z.number().int().min(10).max(1000).default(100),
-  rate_limits: z
-    .object({
-      github_requests_per_hour: z.number().int().default(5000),
-      linear_requests_per_minute: z.number().int().default(60),
-      agent_requests_per_hour: z.number().int().default(100),
-    })
-    .optional(),
-});
-
-export type Constraints = z.infer<typeof ConstraintsSchema>;
-
-// ============================================================================
-// Execution Config Schema - CodeMachine CLI integration
-// ============================================================================
-
-export const ExecutionEngineType = z.enum(['claude', 'codex', 'openai']);
-
-export type ExecutionEngineType = z.infer<typeof ExecutionEngineType>;
-
-const ExecutionConfigSchema = z.object({
-  codemachine_cli_path: z.string().default('codemachine'),
-  default_engine: ExecutionEngineType.default('claude'),
-  workspace_dir: z.string().optional(),
-  spec_path: z.string().optional(),
-  task_timeout_ms: z.number().int().min(60000).max(7200000).default(1800000), // 30 min, max 2h
-  max_parallel_tasks: z.number().int().min(1).max(10).default(1),
-  max_log_buffer_size: z
-    .number()
-    .int()
-    .min(1024)
-    .max(100 * 1024 * 1024)
-    .default(10 * 1024 * 1024),
-  env_allowlist: z.array(z.string()).default([]),
-  max_retries: z.number().int().min(0).max(10).default(3),
-  retry_backoff_ms: z.number().int().min(1000).default(5000),
-  log_rotation_mb: z.number().int().min(1).max(10240).default(100),
-  log_rotation_keep: z.number().int().min(1).max(20).default(3),
-  log_rotation_compress: z.boolean().default(false),
-  codemachine_cli_version: z
-    .string()
-    .optional()
-    .describe('Minimum required CodeMachine-CLI version (semver)'),
-  codemachine_workflow_dir: z
-    .string()
-    .optional()
-    .describe('Path to workflow template overrides directory'),
-  env_credential_keys: z
-    .array(z.string())
-    .default([])
-    .describe('Env var names to pipe to CodeMachine-CLI via stdin'),
-});
-
-export type ExecutionConfig = z.infer<typeof ExecutionConfigSchema>;
-
-// ============================================================================
-// Main RepoConfig Schema
-// ============================================================================
-
-export const RepoConfigSchema = z.object({
-  schema_version: z
-    .string()
-    .regex(/^[0-9]+\.[0-9]+\.[0-9]+$/, 'Invalid schema version format (must be semver)'),
-  project: ProjectSchema,
-  github: GitHubSchema,
-  linear: LinearSchema,
-  runtime: RuntimeSchema,
-  safety: SafetySchema,
-  feature_flags: FeatureFlagsSchema,
-  validation: ValidationSettingsSchema.optional(),
-  constraints: ConstraintsSchema.optional(),
-  execution: ExecutionConfigSchema.optional().describe('CodeMachine CLI execution configuration'),
-
-  governance: GovernanceSchema.optional().describe(
-    'Governance controls for approval workflows and accountability'
-  ),
-
-  // Config history tracking for deterministic migrations
-  config_history: z
-    .array(ConfigHistoryEntrySchema)
-    .default([])
-    .describe('Migration history for schema version tracking'),
-
-  // Deprecated: kept for backward compatibility
-  governance_notes: z
-    .string()
-    .optional()
-    .describe('DEPRECATED: Use governance.governance_notes instead'),
-});
-
-export type RepoConfig = z.infer<typeof RepoConfigSchema>;
-
-// ============================================================================
-// Validation Result Types
-// ============================================================================
-
-export interface ValidationError {
-  path: string;
-  message: string;
-  suggestion?: string | undefined;
-}
-
-export interface ValidationResult {
-  success: boolean;
-  config?: RepoConfig;
-  errors?: ValidationError[];
-  warnings?: string[];
-}
+// Re-export everything from defaults module
+export { createDefaultConfig, DEFAULT_EXECUTION_CONFIG } from './RepoConfigDefaults';
 
 // ============================================================================
 // Configuration Loading and Validation
@@ -338,7 +71,7 @@ export async function loadRepoConfig(configPath: string): Promise<ValidationResu
   try {
     // Check if file exists and is readable
     try {
-      await fsPromises.access(configPath, fs.constants.R_OK);
+      await access(configPath, constants.R_OK);
     } catch (error: unknown) {
       const nodeError = error as NodeJS.ErrnoException;
       if (nodeError.code === 'EACCES') {
@@ -366,7 +99,7 @@ export async function loadRepoConfig(configPath: string): Promise<ValidationResu
     }
 
     // Read and parse JSON
-    const rawContent = await fsPromises.readFile(configPath, 'utf-8');
+    const rawContent = await readFile(configPath, 'utf-8');
     let rawConfig: unknown;
 
     try {
@@ -598,149 +331,6 @@ export function applyEnvironmentOverrides(config: RepoConfig): RepoConfig {
 }
 
 /**
- * Create a default RepoConfig template with governance and history tracking
- * @param repoUrl Repository URL
- * @param options Optional creation settings
- * @returns Default config object
- */
-function cloneDefaultValidationCommands(): ValidationCommandConfig[] {
-  return DEFAULT_VALIDATION_COMMANDS.map((command) => ({
-    ...command,
-    env: command.env ? { ...command.env } : undefined,
-    template_context: command.template_context ? { ...command.template_context } : undefined,
-  }));
-}
-
-export function createDefaultConfig(
-  repoUrl: string,
-  options?: { includeGovernance?: boolean; changedBy?: string }
-): RepoConfig {
-  const { includeGovernance = true, changedBy = 'codepipe init' } = options || {};
-
-  // Extract project ID from repo URL
-  const projectId = repoUrl.split('/').pop()?.replace('.git', '') || 'unknown-project';
-
-  const config: RepoConfig = {
-    schema_version: '1.0.0',
-    project: {
-      id: projectId,
-      repo_url: repoUrl,
-      default_branch: 'main',
-      context_paths: ['src/', 'docs/', 'README.md'],
-      project_leads: [],
-    },
-    github: {
-      enabled: false,
-      token_env_var: 'GITHUB_TOKEN',
-      api_base_url: 'https://api.github.com',
-      required_scopes: ['repo', 'workflow'],
-      default_reviewers: [],
-      branch_protection: {
-        respect_required_reviews: true,
-        respect_status_checks: true,
-      },
-    },
-    linear: {
-      enabled: false,
-      api_key_env_var: 'LINEAR_API_KEY',
-      auto_link_issues: true,
-    },
-    runtime: {
-      agent_endpoint_env_var: 'AGENT_ENDPOINT',
-      max_concurrent_tasks: 3,
-      timeout_minutes: 30,
-      context_token_budget: 32000,
-      context_cost_budget_usd: 5,
-      logs_format: 'ndjson',
-      run_directory: '.codepipe/runs',
-    },
-    safety: {
-      redact_secrets: true,
-      require_approval_for_prd: true,
-      require_approval_for_plan: true,
-      require_approval_for_pr: true,
-      prevent_force_push: true,
-      allowed_file_patterns: ['**/*.ts', '**/*.js', '**/*.md', '**/*.json'],
-      blocked_file_patterns: ['.env', '**/*.key', '**/*.pem', '**/credentials.*'],
-    },
-    feature_flags: {
-      enable_auto_merge: false,
-      enable_deployment_triggers: false,
-      enable_linear_sync: false,
-      enable_context_summarization: true,
-      enable_resumability: true,
-      enable_developer_preview: false,
-    },
-    validation: {
-      commands: cloneDefaultValidationCommands(),
-    },
-    constraints: {
-      max_file_size_kb: 1000,
-      max_context_files: 100,
-      rate_limits: {
-        github_requests_per_hour: 5000,
-        linear_requests_per_minute: 60,
-        agent_requests_per_hour: 100,
-      },
-    },
-    execution: {
-      codemachine_cli_path: 'codemachine',
-      default_engine: 'claude',
-      task_timeout_ms: 1800000,
-      max_parallel_tasks: 1,
-      max_log_buffer_size: 10 * 1024 * 1024,
-      env_allowlist: [],
-      max_retries: 3,
-      retry_backoff_ms: 5000,
-      log_rotation_mb: 100,
-      log_rotation_keep: 3,
-      log_rotation_compress: false,
-      env_credential_keys: [],
-    },
-    config_history: [
-      {
-        timestamp: new Date().toISOString(),
-        schema_version: '1.0.0',
-        changed_by: changedBy,
-        change_description: 'Initial configuration created',
-        migration_applied: false,
-      },
-    ],
-  };
-
-  // Add governance structure if requested
-  if (includeGovernance) {
-    config.governance = {
-      approval_workflow: {
-        require_approval_for_prd: true,
-        require_approval_for_spec: true,
-        require_approval_for_plan: true,
-        require_approval_for_code: true,
-        require_approval_for_pr: true,
-        require_approval_for_deploy: true,
-      },
-      accountability: {
-        record_approver_identity: true,
-        require_approval_reason: false,
-        audit_log_retention_days: 365,
-      },
-      risk_controls: {
-        prevent_auto_merge: true,
-        prevent_force_push: true,
-        require_branch_protection: true,
-        max_files_per_pr: 100,
-        max_lines_changed_per_pr: 5000,
-      },
-      compliance_tags: [],
-      governance_notes:
-        'Configure integrations and adjust governance settings according to your organization requirements. See docs/reference/config/RepoConfig_schema.md for details.',
-    };
-  }
-
-  return config;
-}
-
-/**
  * Format validation errors for user-friendly display with actionable hints
  * @param errors Array of validation errors
  * @returns Formatted error message
@@ -784,22 +374,3 @@ export function addConfigHistoryEntry(
     ],
   };
 }
-
-/**
- * Default execution configuration values.
- * Used as fallback when repo config does not specify execution settings.
- */
-export const DEFAULT_EXECUTION_CONFIG: ExecutionConfig = {
-  task_timeout_ms: 1800000,
-  max_parallel_tasks: 1,
-  max_retries: 3,
-  retry_backoff_ms: 5000,
-  codemachine_cli_path: 'codemachine',
-  default_engine: 'claude',
-  max_log_buffer_size: 10 * 1024 * 1024,
-  env_allowlist: [],
-  log_rotation_mb: 100,
-  log_rotation_keep: 3,
-  log_rotation_compress: false,
-  env_credential_keys: [],
-};
