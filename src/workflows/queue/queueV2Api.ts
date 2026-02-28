@@ -11,7 +11,7 @@
  * - FR-3 (Resumability): Fast state queries via in-memory index
  */
 
-import type { ExecutionTask } from '../core/models/ExecutionTask';
+import type { ExecutionTask } from '../../core/models/ExecutionTask';
 
 // V2 WAL Components
 import {

@@ -6,7 +6,7 @@ import {
   type MergeReadiness,
   type DeploymentOptions,
   type DeploymentConfig,
-} from '../../src/workflows/deploymentTrigger';
+} from '../../src/workflows/deployment/trigger';
 import type { StructuredLogger } from '../../src/telemetry/logger';
 import type { BranchProtectionReport } from '../../src/workflows/branchProtectionReporter';
 
@@ -263,10 +263,10 @@ describe('deploymentTrigger', () => {
   // ==========================================================================
 
   describe('deployment function exports', () => {
-    let mod: typeof import('../../src/workflows/deploymentTrigger');
+    let mod: typeof import('../../src/workflows/deployment/trigger');
 
     beforeAll(async () => {
-      mod = await import('../../src/workflows/deploymentTrigger');
+      mod = await import('../../src/workflows/deployment/trigger');
     });
 
     it('should export loadDeploymentContext', () => {

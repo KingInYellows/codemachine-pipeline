@@ -10,12 +10,12 @@
  * - Type converters (ExecutionTask ↔ ExecutionTaskData)
  */
 
-import * as path from 'node:path';
-import * as fs from 'node:fs/promises';
-import { readManifest } from '../persistence';
+import { access } from 'node:fs/promises';
+import { join } from 'node:path';
+import { readManifest } from '../../persistence';
 import { hydrateIndex } from './queueMemoryIndex.js';
 import type { QueueIndexState, ExecutionTaskData } from './queueTypes.js';
-import type { ExecutionTask } from '../core/models/ExecutionTask';
+import type { ExecutionTask } from '../../core/models/ExecutionTask';
 
 // V2 Index Cache Management
 
@@ -41,7 +41,7 @@ const v2IndexCache = new Map<string, V2IndexCache>();
  */
 export async function getV2IndexCache(runDir: string): Promise<V2IndexCache> {
   const manifest = await readManifest(runDir);
-  const queueDir = path.join(runDir, manifest.queue.queue_dir);
+  const queueDir = join(runDir, manifest.queue.queue_dir);
   const featureId = manifest.feature_id;
 
   const existing = v2IndexCache.get(runDir);
@@ -74,28 +74,28 @@ export async function getV2IndexCache(runDir: string): Promise<V2IndexCache> {
  * @throws Error if legacy V1 queue format is detected
  */
 async function detectLegacyV1Queue(queueDir: string): Promise<void> {
-  const v1QueueFile = path.join(queueDir, 'queue.jsonl');
-  const v1UpdatesFile = path.join(queueDir, 'queue_updates.jsonl');
-  const v2OperationsLog = path.join(queueDir, 'queue_operations.log');
-  const v2Snapshot = path.join(queueDir, 'queue_snapshot.json');
+  const v1QueueFile = join(queueDir, 'queue.jsonl');
+  const v1UpdatesFile = join(queueDir, 'queue_updates.jsonl');
+  const v2OperationsLog = join(queueDir, 'queue_operations.log');
+  const v2Snapshot = join(queueDir, 'queue_snapshot.json');
 
   try {
     // Check if V1 files exist
     const [v1QueueExists, v1UpdatesExists, v2OperationsExists, v2SnapshotExists] =
       await Promise.all([
-        fs.access(v1QueueFile).then(
+        access(v1QueueFile).then(
           () => true,
           () => false
         ),
-        fs.access(v1UpdatesFile).then(
+        access(v1UpdatesFile).then(
           () => true,
           () => false
         ),
-        fs.access(v2OperationsLog).then(
+        access(v2OperationsLog).then(
           () => true,
           () => false
         ),
-        fs.access(v2Snapshot).then(
+        access(v2Snapshot).then(
           () => true,
           () => false
         ),
