@@ -13,6 +13,8 @@ import type { BranchProtectionReport } from '../branchProtectionReporter';
 import { loadReport as loadBranchProtectionReport } from '../branchProtectionReporter';
 import type { RepoConfig } from '../../core/config/RepoConfig';
 import type { PRMetadata } from '../../core/models/index.js';
+import { PRMetadataSchema } from '../../core/models/prMetadata.js';
+import { validateOrThrow } from '../../validation/helpers.js';
 import type { LoggerInterface } from '../../telemetry/logger';
 import { readManifest, withLock, type RunManifest } from '../../persistence/runDirectoryManager';
 import { computeContentHash } from '../approvalRegistry';
@@ -84,17 +86,26 @@ export async function loadDeploymentContext(
   let pr: PRMetadata;
   try {
     const prContent = await fs.readFile(prJsonPath, 'utf-8');
-    pr = JSON.parse(prContent) as PRMetadata;
+    pr = validateOrThrow(PRMetadataSchema, JSON.parse(prContent), 'pr metadata') as PRMetadata;
     logger.debug('Loaded PR metadata', { pr_number: pr.pr_number, branch: pr.branch });
   } catch (error) {
     logger.error('Failed to load pr.json', {
       path: prJsonPath,
       error: getErrorMessage(error),
     });
-    throw new Error(
-      `PR metadata not found. Ensure PR has been created first (run directory: ${runDirectory})`,
-      { cause: error }
-    );
+    // Check if file exists to give a better error message
+    const errorCode = (error as NodeJS.ErrnoException).code;
+    if (errorCode === 'ENOENT') {
+      throw new Error(
+        `PR metadata not found. Ensure PR has been created first (run directory: ${runDirectory})`,
+        { cause: error }
+      );
+    } else {
+      throw new Error(
+        `PR metadata is invalid or corrupted. ${getErrorMessage(error)} (run directory: ${runDirectory})`,
+        { cause: error }
+      );
+    }
   }
 
   // Load branch protection report (optional - may not exist for unprotected branches)
