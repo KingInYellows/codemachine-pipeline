@@ -11,9 +11,9 @@
  * - FR-3 (Resumability): Crash-safe task updates via WAL
  */
 
-import type { ExecutionTask } from '../core/models/ExecutionTask';
-import { canRetry } from '../core/models/ExecutionTask';
-import { readManifest, writeManifest, withLock } from '../persistence';
+import type { ExecutionTask } from '../../core/models/ExecutionTask';
+import { canRetry } from '../../core/models/ExecutionTask';
+import { readManifest, writeManifest, withLock } from '../../persistence';
 
 // V2 WAL Components
 import {

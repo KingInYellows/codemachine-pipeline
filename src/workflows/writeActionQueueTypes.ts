@@ -192,9 +192,10 @@ export interface WriteActionQueueConfig {
 }
 
 /**
- * Queue operation result
+ * Write action queue operation result (distinct from queue/QueueOperationResult
+ * which counts tasksAffected; this one counts actionsAffected).
  */
-export interface QueueOperationResult {
+export interface WriteActionOperationResult {
   success: boolean;
   message: string;
   actionsAffected?: number;
