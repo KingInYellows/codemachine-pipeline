@@ -22,7 +22,7 @@ import { loadSpecMetadata } from './specComposer';
 import type { StructuredLogger } from '../telemetry/logger';
 import type { MetricsCollector } from '../telemetry/metrics';
 import type { TraceLink } from '../core/models/TraceLink';
-import { validateOrThrow } from '../validation/helpers.js';
+import { validateOrThrow, validateOrResult } from '../validation/helpers.js';
 import {
   buildDependencyGraph,
   computeTopologicalOrder,
@@ -213,20 +213,30 @@ async function extractSpecRequirements(runDir: string): Promise<SpecRequirement[
     return [];
   }
 
+  const SpecTestPlanSchema = z.object({
+    test_plan: z
+      .array(
+        z.object({
+          test_id: z.string().min(1),
+          description: z.string().min(1),
+          test_type: z.string().optional(),
+          priority: z.string().optional(),
+          depends_on: z.array(z.string()).optional(),
+          dependencies: z.array(z.string()).optional(),
+        })
+      )
+      .optional(),
+  });
+
+  const parseResult = validateOrResult(SpecTestPlanSchema, specJson, 'spec.json test plan');
+  if (!parseResult.success) {
+    return [];
+  }
+
   const requirements: SpecRequirement[] = [];
+  const spec = parseResult.data;
 
-  const spec = specJson as {
-    test_plan?: Array<{
-      test_id: string;
-      description: string;
-      test_type?: string;
-      priority?: string;
-      depends_on?: string[];
-      dependencies?: string[];
-    }>;
-  };
-
-  if (spec.test_plan && Array.isArray(spec.test_plan)) {
+  if (spec.test_plan) {
     spec.test_plan.forEach((test) => {
       const dependsOn = Array.isArray(test.depends_on)
         ? test.depends_on

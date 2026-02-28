@@ -235,11 +235,26 @@ async function discoverFiles(
   exclusions: string[] = DEFAULT_EXCLUSIONS
 ): Promise<string[]> {
   const discovered = new Set<string>();
+  const visitedDirectories = new Set<string>();
   const inclusionMatchers = createGlobMatchers(patterns);
   const exclusionMatchers = createGlobMatchers(exclusions);
 
   // Helper to recursively scan directories
   async function scanDirectory(dir: string): Promise<void> {
+    try {
+      const resolvedDir = await fs.realpath(dir);
+      if (visitedDirectories.has(resolvedDir)) {
+        return;
+      }
+      visitedDirectories.add(resolvedDir);
+    } catch {
+      // Fall back to direct traversal if realpath fails
+      if (visitedDirectories.has(dir)) {
+        return;
+      }
+      visitedDirectories.add(dir);
+    }
+
     try {
       const entries = await fs.readdir(dir, { withFileTypes: true });
 
@@ -253,7 +268,35 @@ async function discoverFiles(
           continue;
         }
 
-        if (entry.isDirectory()) {
+        // Resolve symlinks safely:
+        // - ignore targets outside repoRoot
+        // - use stat(realPath) for type checks
+        // - rely on visitedDirectories to avoid recursive cycles
+        if (entry.isSymbolicLink()) {
+          try {
+            const realPath = await fs.realpath(fullPath);
+            const rel = path.relative(repoRoot, realPath);
+            // Check if symlink target is within repo boundary
+            // !rel.startsWith('..') catches most cases, but on Windows cross-drive paths
+            // return absolute paths, so we also check !path.isAbsolute(rel)
+            if (!rel.startsWith('..') && !path.isAbsolute(rel)) {
+              // Check exclusion patterns against the resolved real path
+              const realRel = rel.replace(/\\/g, '/');
+              if (shouldExclude(realRel, exclusionMatchers)) {
+                continue;
+              }
+
+              const stat = await fs.stat(realPath);
+              if (stat.isDirectory()) {
+                await scanDirectory(realPath);
+              } else if (stat.isFile()) {
+                discovered.add(realPath);
+              }
+            }
+          } catch {
+            // Skip unresolvable symlinks
+          }
+        } else if (entry.isDirectory()) {
           await scanDirectory(fullPath);
         } else if (entry.isFile()) {
           discovered.add(fullPath);
@@ -520,18 +563,42 @@ export async function aggregateContext(config: AggregatorConfig): Promise<Aggreg
   const warnings: string[] = [];
   const errors: string[] = [];
 
+  // Resolve repoRoot from git to ensure we stay within the repository boundary
+  // Only use git root if it's the same as or a child of the configured root (monorepo safety)
+  let repoRoot = config.repoRoot;
+  try {
+    const { stdout } = await execFileAsync('git', ['rev-parse', '--show-toplevel'], {
+      cwd: config.repoRoot,
+    });
+    const gitRoot = stdout.trim();
+    const relativeToGit = path.relative(gitRoot, config.repoRoot);
+
+    // Only use git root if configured root is within it (not a parent directory)
+    // If relativeToGit starts with '..', config.repoRoot is outside/above gitRoot
+    if (!relativeToGit.startsWith('..') && !path.isAbsolute(relativeToGit)) {
+      repoRoot = gitRoot;
+    }
+  } catch {
+    // Fall back to the configured value if git is unavailable
+  }
+  const resolvedConfig = { ...config, repoRoot };
+
   // Step 1: Get context directory
-  const contextDir = getSubdirectoryPath(config.runDir, 'context');
+  const contextDir = getSubdirectoryPath(resolvedConfig.runDir, 'context');
 
   // Step 2: Extract git metadata
-  const gitMetadata = await getGitMetadata(config.repoRoot);
+  const gitMetadata = await getGitMetadata(resolvedConfig.repoRoot);
 
   // Step 3: Discover files
-  const exclusions = [...DEFAULT_EXCLUSIONS, ...(config.excludeOverrides || [])];
+  const exclusions = [...DEFAULT_EXCLUSIONS, ...(resolvedConfig.excludeOverrides || [])];
 
   let discoveredFiles: string[];
   try {
-    discoveredFiles = await discoverFiles(config.repoRoot, config.contextPaths, exclusions);
+    discoveredFiles = await discoverFiles(
+      resolvedConfig.repoRoot,
+      resolvedConfig.contextPaths,
+      exclusions
+    );
   } catch (error) {
     errors.push(`File discovery failed: ${formatError(error)}`);
     discoveredFiles = [];
@@ -548,7 +615,11 @@ export async function aggregateContext(config: AggregatorConfig): Promise<Aggreg
   const hashResult = await hashDiscoveredFiles(discoveredFiles, previousManifest);
 
   // Step 6: Collect metadata
-  const fileMetadata = await collectFileMetadata(discoveredFiles, config.repoRoot, gitMetadata);
+  const fileMetadata = await collectFileMetadata(
+    discoveredFiles,
+    resolvedConfig.repoRoot,
+    gitMetadata
+  );
 
   // Step 7: Rank and budget files
   const rankingOptions: {
@@ -557,25 +628,30 @@ export async function aggregateContext(config: AggregatorConfig): Promise<Aggreg
     now?: Date;
   } = {};
 
-  if (config.maxFiles !== undefined) {
-    rankingOptions.maxFiles = config.maxFiles;
+  if (resolvedConfig.maxFiles !== undefined) {
+    rankingOptions.maxFiles = resolvedConfig.maxFiles;
   }
-  if (config.weights !== undefined) {
-    rankingOptions.weights = config.weights;
+  if (resolvedConfig.weights !== undefined) {
+    rankingOptions.weights = resolvedConfig.weights;
   }
 
-  const ranking = rankAndBudgetFiles(fileMetadata, config.tokenBudget, rankingOptions);
+  const ranking = rankAndBudgetFiles(fileMetadata, resolvedConfig.tokenBudget, rankingOptions);
 
   // Step 8: Build context document
   const contextDocument = buildContextDocument(
-    config.featureId,
+    resolvedConfig.featureId,
     ranking.included,
     gitMetadata,
-    config.repoRoot
+    resolvedConfig.repoRoot
   );
 
   // Step 9: Persist artifacts
-  await persistContextArtifacts(contextDir, config.runDir, contextDocument, hashResult.manifest);
+  await persistContextArtifacts(
+    contextDir,
+    resolvedConfig.runDir,
+    contextDocument,
+    hashResult.manifest
+  );
 
   // Build diagnostics
   const diagnostics = {
