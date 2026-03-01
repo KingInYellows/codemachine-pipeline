@@ -124,12 +124,16 @@ export async function loadRepoConfig(configPath: string): Promise<ValidationResu
       const errors: ValidationError[] = parseResult.error.issues.map((err) => {
         const path = err.path.join('.');
         const suggestion = generateSuggestion(path, err.message);
-
-        return {
+        const errorEntry: ValidationError = {
           path: path || 'root',
           message: err.message,
-          suggestion,
         };
+
+        if (suggestion !== undefined) {
+          errorEntry.suggestion = suggestion;
+        }
+
+        return errorEntry;
       });
 
       return {
@@ -302,7 +306,6 @@ export function applyEnvironmentOverrides(config: RepoConfig): RepoConfig {
     ) {
       overridden.execution = { ...overridden.execution, codemachine_cli_path: codemachineCliPath };
     } else {
-      // eslint-disable-next-line no-console -- Warning for misconfigured env var
       console.warn(
         `[codemachine] CODEPIPE_EXECUTION_CLI_PATH rejected: path failed security validation`
       );
