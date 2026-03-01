@@ -22,7 +22,13 @@ import {
   requireFeatureId,
   requireConfig,
 } from '../utils/runDirectory';
-import { CliError, CliErrorCode, formatErrorMessage, setJsonOutputMode } from '../utils/cliErrors';
+import {
+  CliError,
+  CliErrorCode,
+  formatErrorMessage,
+  rethrowIfOclifError,
+  setJsonOutputMode,
+} from '../utils/cliErrors';
 import { flushTelemetrySuccess, flushTelemetryError } from '../utils/telemetryLifecycle';
 import { getGitUser } from '../startHelpers';
 
@@ -337,6 +343,8 @@ export default class Approve extends Command {
         const exitCode = error.code === CliErrorCode.RUN_DIR_NOT_FOUND ? 10 : error.exitCode;
         this.error(error.message, { exit: exitCode });
       }
+
+      rethrowIfOclifError(error);
 
       this.error(`Approve command failed: ${formatErrorMessage(error)}`, { exit: 1 });
     }
