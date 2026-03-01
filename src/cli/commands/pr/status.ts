@@ -10,12 +10,14 @@
  */
 
 import { Command, Flags } from '@oclif/core';
-import { createRunMetricsCollector, StandardMetrics } from '../../../telemetry/metrics';
-import { createRunTraceManager, SpanStatusCode, withSpan } from '../../../telemetry/traces';
+import { createRunMetricsCollector } from '../../../telemetry/metrics';
+import { createRunTraceManager, withSpan } from '../../../telemetry/traces';
+import { flushTelemetrySuccess, flushTelemetryError } from '../../utils/telemetryLifecycle';
 import {
-  ensureTelemetryReferences,
   resolveRunDirectorySettings,
   selectFeatureId,
+  requireFeatureId,
+  requireConfig,
 } from '../../utils/runDirectory';
 import {
   loadPRContext,
@@ -26,7 +28,12 @@ import {
   type PRMetadata,
 } from '../../pr/shared';
 import type { StatusCheck } from '../../../adapters/github/GitHubAdapter';
-import { setJsonOutputMode } from '../../utils/cliErrors';
+import {
+  CliError,
+  CliErrorCode,
+  setJsonOutputMode,
+  rethrowIfOclifError,
+} from '../../utils/cliErrors';
 
 type StatusFlags = {
   feature?: string;
@@ -80,21 +87,11 @@ export default class PRStatus extends Command {
     try {
       const settings = await resolveRunDirectorySettings();
       const featureId = await selectFeatureId(settings.baseDir, typedFlags.feature);
-
-      if (!featureId) {
-        this.error('No feature run directory found. Run "codepipe start" first.', {
-          exit: PRExitCode.VALIDATION_ERROR,
-        });
-      }
-
-      if (typedFlags.feature && featureId !== typedFlags.feature) {
-        this.error(`Feature run directory not found: ${typedFlags.feature}`, {
-          exit: PRExitCode.VALIDATION_ERROR,
-        });
-      }
+      requireFeatureId(featureId, typedFlags.feature);
+      const config = requireConfig(settings);
 
       // Load PR context
-      const context = await loadPRContext(settings.baseDir, featureId, settings.config!, false);
+      const context = await loadPRContext(settings.baseDir, featureId, config, false);
 
       const { logger, runDir, prMetadata } = context;
       const metrics = createRunMetricsCollector(runDir, featureId);
@@ -222,77 +219,50 @@ export default class PRStatus extends Command {
           exitCode = PRExitCode.ERROR;
         }
 
-        // Record success metrics
-        const duration = Date.now() - startTime;
-        metrics.observe(StandardMetrics.COMMAND_EXECUTION_DURATION_MS, duration, {
-          command: 'pr.status',
-        });
-        metrics.increment(StandardMetrics.COMMAND_INVOCATIONS_TOTAL, {
-          command: 'pr.status',
-          exit_code: String(exitCode),
-        });
-        await metrics.flush();
-
-        commandSpan.setAttribute('exit_code', exitCode);
         commandSpan.setAttribute('pr_number', pr.number);
         commandSpan.setAttribute('merge_ready', mergeReadiness.ready);
-        commandSpan.end({ code: SpanStatusCode.OK });
-
-        await traceManager.flush();
-        await ensureTelemetryReferences(runDir);
-
-        logger.info('PR status command completed', {
-          duration_ms: duration,
-          pr_number: pr.number,
-          merge_ready: mergeReadiness.ready,
-        });
-        await logger.flush();
+        await flushTelemetrySuccess(
+          {
+            commandName: 'pr.status',
+            startTime,
+            logger,
+            metrics,
+            traceManager,
+            commandSpan,
+            runDirPath: runDir,
+          },
+          { pr_number: pr.number, merge_ready: mergeReadiness.ready },
+          0
+        );
 
         // Exit with appropriate code
         if (exitCode !== PRExitCode.SUCCESS) {
           this.exit(exitCode);
         }
       } catch (error) {
-        // Record error metrics
-        const duration = Date.now() - startTime;
-        metrics.observe(StandardMetrics.COMMAND_EXECUTION_DURATION_MS, duration, {
-          command: 'pr.status',
-        });
-        metrics.increment(StandardMetrics.COMMAND_INVOCATIONS_TOTAL, {
-          command: 'pr.status',
-          exit_code: '1',
-        });
-        await metrics.flush();
-
-        commandSpan.setAttribute('exit_code', 1);
-        commandSpan.setAttribute('error', true);
-        if (error instanceof Error) {
-          commandSpan.setAttribute('error.message', error.message);
-          commandSpan.setAttribute('error.name', error.name);
-        }
-        commandSpan.end({
-          code: SpanStatusCode.ERROR,
-          message: error instanceof Error ? error.message : 'unknown error',
-        });
-
-        await traceManager.flush();
-        await ensureTelemetryReferences(runDir);
-
-        if (error instanceof Error) {
-          logger.error('PR status command failed', {
-            error: error.message,
-            stack: error.stack,
-            duration_ms: duration,
-          });
-        }
-        await logger.flush();
-
+        await flushTelemetryError(
+          {
+            commandName: 'pr.status',
+            startTime,
+            logger,
+            metrics,
+            traceManager,
+            commandSpan,
+            runDirPath: runDir,
+          },
+          error
+        );
         throw error;
       }
     } catch (error) {
-      // Re-throw oclif errors to preserve exit codes
-      if (error && typeof error === 'object' && 'oclif' in error) {
-        throw error;
+      rethrowIfOclifError(error);
+
+      if (error instanceof CliError) {
+        const exitCode =
+          error.code === CliErrorCode.RUN_DIR_NOT_FOUND
+            ? PRExitCode.VALIDATION_ERROR
+            : error.exitCode;
+        this.error(error.message, { exit: exitCode });
       }
 
       if (error instanceof Error) {

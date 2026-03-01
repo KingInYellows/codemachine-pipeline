@@ -48,6 +48,7 @@ import {
   formatErrorMessage,
   formatErrorJson,
   setJsonOutputMode,
+  rethrowIfOclifError,
 } from '../../utils/cliErrors';
 
 /**
@@ -245,10 +246,7 @@ export default class Status extends Command {
         error
       );
 
-      // Re-throw oclif errors to preserve exit codes
-      if (error && typeof error === 'object' && 'oclif' in error) {
-        throw error;
-      }
+      rethrowIfOclifError(error);
 
       const cliErr =
         error instanceof CliError

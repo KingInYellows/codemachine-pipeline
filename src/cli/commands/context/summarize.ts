@@ -10,7 +10,8 @@ import { safeJsonParse } from '../../../utils/safeJson';
 import {
   resolveRunDirectorySettings,
   selectFeatureId,
-  type RunDirectorySettings,
+  requireFeatureId,
+  requireConfig,
 } from '../../utils/runDirectory';
 import { createCliLogger, LogLevel, RedactionEngine } from '../../../telemetry/logger';
 import { createRunMetricsCollector, type MetricsCollector } from '../../../telemetry/metrics';
@@ -34,7 +35,12 @@ import {
   serializeContextDocument,
   type ContextDocument,
 } from '../../../core/models/ContextDocument';
-import { setJsonOutputMode } from '../../utils/cliErrors';
+import {
+  CliError,
+  CliErrorCode,
+  setJsonOutputMode,
+  rethrowIfOclifError,
+} from '../../utils/cliErrors';
 import { flushTelemetrySuccess, flushTelemetryError } from '../../utils/telemetryLifecycle';
 
 type SummarizeFlags = {
@@ -127,14 +133,10 @@ export default class ContextSummarize extends Command {
 
     try {
       const settings = await resolveRunDirectorySettings();
-      this.ensureConfigReady(settings);
+      const repoConfig = requireConfig(settings);
 
       const featureId = await selectFeatureId(settings.baseDir, typedFlags.feature);
-      if (!featureId) {
-        this.error('Feature run directory not found. Use --feature to select a specific run.', {
-          exit: 10,
-        });
-      }
+      requireFeatureId(featureId, typedFlags.feature);
 
       runDir = getRunDirectoryPath(settings.baseDir, featureId);
       logger = createCliLogger('context:summarize', featureId, runDir, {
@@ -154,7 +156,6 @@ export default class ContextSummarize extends Command {
         force: typedFlags.force,
       });
 
-      const repoConfig = settings.config!;
       if (!repoConfig.feature_flags.enable_context_summarization) {
         this.error('Context summarization is disabled in repo configuration.', { exit: 30 });
       }
@@ -279,8 +280,11 @@ export default class ContextSummarize extends Command {
         error
       );
 
-      if (error && typeof error === 'object' && 'oclif' in error) {
-        throw error;
+      rethrowIfOclifError(error);
+
+      if (error instanceof CliError) {
+        const exitCode = error.code === CliErrorCode.RUN_DIR_NOT_FOUND ? 10 : error.exitCode;
+        this.error(error.message, { exit: exitCode });
       }
 
       if (error instanceof Error) {
@@ -288,16 +292,6 @@ export default class ContextSummarize extends Command {
       } else {
         this.error('Context summarization failed with an unknown error', { exit: 1 });
       }
-    }
-  }
-
-  private ensureConfigReady(settings: RunDirectorySettings): void {
-    if (settings.errors.length > 0 || !settings.config) {
-      const errorMessage =
-        settings.errors.length > 0
-          ? settings.errors.join('; ')
-          : 'Repository configuration missing.';
-      this.error(`Invalid repo configuration: ${errorMessage}`, { exit: 10 });
     }
   }
 
