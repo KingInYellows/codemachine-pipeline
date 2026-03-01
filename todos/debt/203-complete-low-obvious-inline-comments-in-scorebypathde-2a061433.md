@@ -1,7 +1,7 @@
 # Obvious Inline Comments in scoreByPathDepth and scoreBySize in contextRanking
 
 **ID:** 203
-**Status:** pending
+**Status:** complete
 **Severity:** low
 **Category:** ai-patterns
 **Effort:** quick
