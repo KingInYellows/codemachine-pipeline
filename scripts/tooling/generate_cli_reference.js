@@ -68,6 +68,10 @@ function resolveExampleForCommand(example, cmd) {
   return example.replace(/<%= config\.bin %>/g, BIN_NAME).replace(/<%= command\.id %>/g, displayId);
 }
 
+function escapeTableCell(value) {
+  return String(value).replace(/\|/g, '\\|').replace(/\r?\n/g, '<br/>');
+}
+
 function renderFlagsTable(flags) {
   const entries = Object.values(flags).sort((a, b) => a.name.localeCompare(b.name));
   if (entries.length === 0) return '';
@@ -80,8 +84,8 @@ function renderFlagsTable(flags) {
     const name = `\`--${flag.name}\``;
     const short = flag.char ? `\`-${flag.char}\`` : '';
     const type = flag.type === 'boolean' ? 'boolean' : 'string';
-    const desc = flag.description || '_No description_';
-    const def = flag.default !== undefined ? `\`${flag.default}\`` : '';
+    const desc = escapeTableCell(flag.description || '_No description_');
+    const def = flag.default !== undefined ? `\`${escapeTableCell(flag.default)}\`` : '';
     const required = flag.required ? ' **(required)**' : '';
     lines.push(`| ${name} | ${short} | ${type} | ${desc}${required} | ${def} |`);
   }
@@ -99,9 +103,11 @@ function renderArgsTable(args) {
 
   for (const arg of entries) {
     const name = `\`${arg.name}\``;
-    const desc = arg.description || '_No description_';
+    const desc = escapeTableCell(arg.description || '_No description_');
     const required = arg.required ? 'Yes' : 'No';
-    const options = arg.options ? arg.options.map((o) => `\`${o}\``).join(', ') : '';
+    const options = arg.options
+      ? arg.options.map((o) => `\`${escapeTableCell(o)}\``).join(', ')
+      : '';
     lines.push(`| ${name} | ${desc} | ${required} | ${options} |`);
   }
 

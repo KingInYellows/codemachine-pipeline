@@ -94,6 +94,10 @@ export const LEDGER_SCHEMA_VERSION = '1.0.0';
 // I/O Helpers
 // ============================================================================
 
+function isErrnoError(error: unknown): error is NodeJS.ErrnoException {
+  return typeof error === 'object' && error !== null && 'code' in error;
+}
+
 export async function loadValidationRegistry(
   runDir: string
 ): Promise<ValidationRegistry | undefined> {
@@ -112,7 +116,7 @@ export async function loadValidationRegistry(
 
     return result.data;
   } catch (error) {
-    if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+    if (isErrnoError(error) && error.code === 'ENOENT') {
       return undefined;
     }
     throw error;
@@ -157,7 +161,7 @@ export async function loadValidationLedger(runDir: string): Promise<ValidationLe
 
     return result.data;
   } catch (error) {
-    if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+    if (isErrnoError(error) && error.code === 'ENOENT') {
       const manifest = await readManifest(runDir);
       return {
         schema_version: LEDGER_SCHEMA_VERSION,
