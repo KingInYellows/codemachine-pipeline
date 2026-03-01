@@ -21,7 +21,7 @@ import type { ResearchTask } from '../core/models/ResearchTask';
 import type { Feature } from '../core/models/Feature';
 import type { RepoConfig } from '../core/config/RepoConfig';
 import type { PRDDocument } from './prdAuthoringEngine';
-import { isPRDApproved, loadPRDMetadata } from './prdAuthoringEngine';
+import { isPRDApproved, loadPRDMetadata } from './prdStore';
 import {
   createSpecification,
   addChangeLogEntry,
