@@ -471,12 +471,9 @@ export default class Start extends Command {
     const linearContext = input.linearSnapshot
       ? formatLinearContext(input.linearSnapshot)
       : undefined;
-    if (input.specText && linearContext) {
-      options.specText = `${input.specText}\n\n${linearContext}`;
-    } else if (input.specText) {
-      options.specText = input.specText;
-    } else if (linearContext) {
-      options.specText = linearContext;
+    const specParts = [input.specText, linearContext].filter(Boolean);
+    if (specParts.length > 0) {
+      options.specText = specParts.join('\n\n');
     }
     return options;
   }

@@ -65,6 +65,10 @@ import type {
 const TELEMETRY_FILENAME = 'agent_sessions.jsonl';
 const RATE_LIMIT_WINDOW_MS = 60 * 60 * 1000; // 1 hour sliding window
 
+// Error classification patterns — module-level constants prevent repeated recompilation
+const TRANSIENT_PATTERNS = /timeout|rate limit|503|429|network|connection/i;
+const HUMAN_ACTION_PATTERNS = /ambiguous|policy violation|requires clarification|human review/i;
+
 // ============================================================================
 // Agent Adapter
 // ============================================================================
@@ -492,25 +496,11 @@ export class AgentAdapter {
     if (error instanceof Error) {
       const message = error.message.toLowerCase();
 
-      // Transient errors (retry automatically)
-      if (
-        message.includes('timeout') ||
-        message.includes('rate limit') ||
-        message.includes('503') ||
-        message.includes('429') ||
-        message.includes('network') ||
-        message.includes('connection')
-      ) {
+      if (TRANSIENT_PATTERNS.test(message)) {
         return 'transient';
       }
 
-      // Human action required
-      if (
-        message.includes('ambiguous') ||
-        message.includes('policy violation') ||
-        message.includes('requires clarification') ||
-        message.includes('human review')
-      ) {
+      if (HUMAN_ACTION_PATTERNS.test(message)) {
         return 'humanAction';
       }
 

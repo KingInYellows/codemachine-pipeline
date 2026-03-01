@@ -238,7 +238,9 @@ async function seedSqliteIndexes(runDir: string): Promise<SqliteIndexReference> 
 }
 
 /**
- * Collect all artifact file paths in a run directory
+ * Collect all artifact file paths in a run directory.
+ * Uses Promise.allSettled to scan all subdirectories in parallel,
+ * surfacing only ENOENT (missing dir) silently; other errors are re-thrown.
  */
 async function collectArtifactPaths(runDir: string): Promise<string[]> {
   const paths: string[] = [];
@@ -246,20 +248,24 @@ async function collectArtifactPaths(runDir: string): Promise<string[]> {
   // Collect from standard subdirectories (plus optional sqlite indexes)
   const subdirsToScan = [...STANDARD_SUBDIRS, SQLITE_DIR_NAME];
 
-  for (const subdir of subdirsToScan) {
-    const subdirPath = join(runDir, subdir);
-
-    try {
+  const results = await Promise.allSettled(
+    subdirsToScan.map(async (subdir) => {
+      const subdirPath = join(runDir, subdir);
       const entries = await readdir(subdirPath, { withFileTypes: true });
+      return entries.filter((entry) => entry.isFile()).map((entry) => join(subdirPath, entry.name));
+    })
+  );
 
-      for (const entry of entries) {
-        if (entry.isFile()) {
-          paths.push(join(subdirPath, entry.name));
-        }
-      }
-    } catch {
-      // Skip missing subdirectories
+  for (const result of results) {
+    if (result.status === 'fulfilled') {
+      paths.push(...result.value);
+      continue;
     }
+    if (!isFileNotFound(result.reason)) {
+      // Re-throw non-ENOENT errors (e.g. permission denied) so callers are aware
+      throw result.reason;
+    }
+    // ENOENT: subdirectory does not exist yet, skip silently.
   }
 
   // Add manifest itself
