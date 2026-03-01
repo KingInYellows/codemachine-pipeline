@@ -7,7 +7,11 @@ import type { StructuredLogger } from '../../telemetry/logger';
 import type { MetricsCollector } from '../../telemetry/metrics';
 import type { TraceManager, ActiveSpan } from '../../telemetry/traces';
 import { flushTelemetrySuccess, flushTelemetryError } from '../utils/telemetryLifecycle';
-import { resolveRunDirectorySettings, selectFeatureId } from '../utils/runDirectory';
+import {
+  resolveRunDirectorySettings,
+  selectFeatureId,
+  requireFeatureId,
+} from '../utils/runDirectory';
 import {
   generateRateLimitReport,
   exportRateLimitMetrics,
@@ -15,7 +19,7 @@ import {
   type RateLimitReport,
 } from '../../telemetry/rateLimitReporter';
 import { RateLimitLedger } from '../../telemetry/rateLimitLedger';
-import { setJsonOutputMode } from '../utils/cliErrors';
+import { CliError, CliErrorCode, setJsonOutputMode, rethrowIfOclifError } from '../utils/cliErrors';
 
 type RateLimitsFlags = {
   feature?: string;
@@ -90,17 +94,7 @@ export default class RateLimits extends Command {
     try {
       const settings = await resolveRunDirectorySettings();
       const featureId = await selectFeatureId(settings.baseDir, typedFlags.feature);
-
-      // Require feature ID
-      if (!featureId) {
-        this.error('No feature run directory found. Use --feature to specify a feature ID.', {
-          exit: 10,
-        });
-      }
-
-      if (typedFlags.feature && featureId !== typedFlags.feature) {
-        this.error(`Feature run directory not found: ${typedFlags.feature}`, { exit: 10 });
-      }
+      requireFeatureId(featureId, typedFlags.feature);
 
       // Initialize telemetry
       runDirPath = getRunDirectoryPath(settings.baseDir, featureId);
@@ -191,9 +185,11 @@ export default class RateLimits extends Command {
         error
       );
 
-      // Re-throw oclif errors to preserve exit codes
-      if (error && typeof error === 'object' && 'oclif' in error) {
-        throw error;
+      rethrowIfOclifError(error);
+
+      if (error instanceof CliError) {
+        const exitCode = error.code === CliErrorCode.RUN_DIR_NOT_FOUND ? 10 : error.exitCode;
+        this.error(error.message, { exit: exitCode });
       }
 
       if (error instanceof Error) {

@@ -1,7 +1,7 @@
 import { join } from 'node:path';
 import { getRunDirectoryPath, readManifest } from '../../../persistence/runDirectoryManager';
 import { loadTraceSummary } from '../../../workflows/traceabilityMapper';
-import { loadPlanSummary } from '../../../workflows/taskPlanner';
+import { loadPlanSummary, buildDagMetadata } from '../../../workflows/taskPlanner';
 import { withSpan } from '../../../telemetry/traces';
 import type { TraceManager, ActiveSpan } from '../../../telemetry/traces';
 import {
@@ -10,6 +10,7 @@ import {
   type StatusTraceabilityPayload,
   type StatusPlanPayload,
 } from '../types';
+import { logIfUnexpectedFileError } from './types';
 import type { DataLogger } from './types';
 
 export async function loadManifestSnapshot(
@@ -81,14 +82,10 @@ export async function loadTraceabilityStatus(
       outstanding_gaps: traceSummary.outstandingGaps,
     };
   } catch (error) {
-    if (error && typeof error === 'object' && 'code' in error && error.code !== 'ENOENT') {
-      logger?.warn('Failed to load traceability', {
-        error: error instanceof Error ? error.message : 'Unknown error',
-        stack: error instanceof Error ? error.stack : undefined,
-        run_dir: runDir,
-        error_code: 'STATUS_TRACEABILITY_LOAD_FAILED',
-      });
-    }
+    logIfUnexpectedFileError(error, logger, 'Failed to load traceability', {
+      run_dir: runDir,
+      error_code: 'STATUS_TRACEABILITY_LOAD_FAILED',
+    });
     return undefined;
   }
 }
@@ -121,28 +118,17 @@ export async function loadPlanStatus(
       ...(planSummary.lastUpdated && { last_updated: planSummary.lastUpdated }),
     };
 
-    if (planSummary.dag) {
-      result.dag_metadata = {
-        ...(planSummary.dag.parallelPaths !== undefined && {
-          parallel_paths: planSummary.dag.parallelPaths,
-        }),
-        ...(planSummary.dag.criticalPathDepth !== undefined && {
-          critical_path_depth: planSummary.dag.criticalPathDepth,
-        }),
-        generated_at: planSummary.dag.generatedAt,
-      };
+    const dagMetadata = buildDagMetadata(planSummary.dag);
+    if (dagMetadata) {
+      result.dag_metadata = dagMetadata;
     }
 
     return result;
   } catch (error) {
-    if (error && typeof error === 'object' && 'code' in error && error.code !== 'ENOENT') {
-      logger?.warn('Failed to load plan', {
-        error: error instanceof Error ? error.message : 'Unknown error',
-        stack: error instanceof Error ? error.stack : undefined,
-        plan_path: planPath,
-        error_code: 'STATUS_PLAN_LOAD_FAILED',
-      });
-    }
+    logIfUnexpectedFileError(error, logger, 'Failed to load plan', {
+      plan_path: planPath,
+      error_code: 'STATUS_PLAN_LOAD_FAILED',
+    });
     return {
       plan_path: planPath,
       plan_exists: false,

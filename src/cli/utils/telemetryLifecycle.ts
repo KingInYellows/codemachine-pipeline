@@ -32,10 +32,15 @@ export interface TelemetryResources {
  *
  * Any extra span attributes (e.g., pr_number) must be set on commandSpan
  * BEFORE calling this function.
+ *
+ * @param exitCode Optional exit code to record in metrics (defaults to 0).
+ *   Commands that succeed with a non-zero exit code (e.g. doctor) pass this
+ *   explicitly so metrics accurately reflect the actual exit code.
  */
 export async function flushTelemetrySuccess(
   res: TelemetryResources,
-  extraLogFields?: Record<string, unknown>
+  extraLogFields?: Record<string, unknown>,
+  exitCode = 0
 ): Promise<void> {
   const { commandName, startTime, logger, metrics, traceManager, commandSpan, runDirPath } = res;
   const duration = Date.now() - startTime;
@@ -46,14 +51,15 @@ export async function flushTelemetrySuccess(
     });
     metrics.increment(StandardMetrics.COMMAND_INVOCATIONS_TOTAL, {
       command: commandName,
-      exit_code: '0',
+      exit_code: String(exitCode),
     });
     await metrics.flush();
   }
 
   if (commandSpan) {
-    commandSpan.setAttribute('exit_code', 0);
-    commandSpan.end({ code: SpanStatusCode.OK });
+    commandSpan.setAttribute('exit_code', exitCode);
+    const statusCode = exitCode === 0 ? SpanStatusCode.OK : SpanStatusCode.ERROR;
+    commandSpan.end({ code: statusCode });
   }
 
   if (traceManager) {

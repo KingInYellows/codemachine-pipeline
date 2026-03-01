@@ -7,7 +7,11 @@ import { createExecutionTelemetry } from '../../telemetry/executionTelemetry';
 import type { StructuredLogger } from '../../telemetry/logger';
 import type { MetricsCollector } from '../../telemetry/metrics';
 import type { TraceManager, ActiveSpan } from '../../telemetry/traces';
-import { resolveRunDirectorySettings, selectFeatureId } from '../utils/runDirectory';
+import {
+  resolveRunDirectorySettings,
+  selectFeatureId,
+  requireFeatureId,
+} from '../utils/runDirectory';
 import { loadRepoConfig } from '../../core/config/RepoConfig';
 import {
   initializeValidationRegistry,
@@ -23,7 +27,7 @@ import {
   type AutoFixOptions,
   type AutoFixResult,
 } from '../../workflows/autoFixEngine';
-import { setJsonOutputMode } from '../utils/cliErrors';
+import { CliError, CliErrorCode, setJsonOutputMode, rethrowIfOclifError } from '../utils/cliErrors';
 import { flushTelemetrySuccess, flushTelemetryError } from '../utils/telemetryLifecycle';
 
 /**
@@ -110,13 +114,7 @@ export default class Validate extends Command {
     try {
       const settings = await resolveRunDirectorySettings();
       const featureId = await selectFeatureId(settings.baseDir, flags.feature);
-
-      if (!featureId) {
-        this.error(
-          'No feature run directory found. Run "codepipe start" to create a feature, or specify --feature <feature-id>',
-          { exit: 1 }
-        );
-      }
+      requireFeatureId(featureId, flags.feature);
 
       runDirPath = getRunDirectoryPath(settings.baseDir, featureId);
 
@@ -267,9 +265,11 @@ export default class Validate extends Command {
         error
       );
 
-      // Re-throw oclif errors to preserve exit codes
-      if (error && typeof error === 'object' && 'oclif' in error) {
-        throw error;
+      rethrowIfOclifError(error);
+
+      if (error instanceof CliError) {
+        const exitCode = error.code === CliErrorCode.RUN_DIR_NOT_FOUND ? 10 : error.exitCode;
+        this.error(error.message, { exit: exitCode });
       }
 
       if (error instanceof Error) {

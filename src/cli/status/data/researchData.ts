@@ -1,11 +1,12 @@
 import { access } from 'node:fs/promises';
 import { join } from 'node:path';
 import { getRunDirectoryPath } from '../../../persistence/runDirectoryManager';
-import { createResearchCoordinator } from '../../../workflows/researchCoordinator';
+import { createCoordinatorForRun } from '../../../workflows/researchCoordinator';
 import { isCachedResultFresh } from '../../../core/models/ResearchTask';
 import type { StructuredLogger } from '../../../telemetry/logger';
 import type { MetricsCollector } from '../../../telemetry/metrics';
 import type { StatusResearchPayload } from '../types';
+import { logIfUnexpectedFileError } from './types';
 import type { DataLogger } from './types';
 
 function isStructuredLogger(logger: DataLogger | undefined): logger is StructuredLogger {
@@ -32,14 +33,10 @@ export async function loadResearchStatus(
   try {
     await access(researchDir);
   } catch (error) {
-    if (error && typeof error === 'object' && 'code' in error && error.code !== 'ENOENT') {
-      logger?.warn('Failed to access research directory', {
-        error: error instanceof Error ? error.message : 'Unknown error',
-        stack: error instanceof Error ? error.stack : undefined,
-        research_dir: researchDir,
-        error_code: 'STATUS_RESEARCH_DIR_ACCESS_FAILED',
-      });
-    }
+    logIfUnexpectedFileError(error, logger, 'Failed to access research directory', {
+      research_dir: researchDir,
+      error_code: 'STATUS_RESEARCH_DIR_ACCESS_FAILED',
+    });
     return undefined;
   }
 
@@ -59,15 +56,7 @@ export async function loadResearchStatus(
       };
     }
 
-    const coordinator = createResearchCoordinator(
-      {
-        repoRoot: process.cwd(),
-        runDir,
-        featureId,
-      },
-      logger,
-      metrics
-    );
+    const coordinator = createCoordinatorForRun(runDir, featureId, logger, metrics);
 
     const diagnostics = await coordinator.getDiagnostics();
     const warnings: string[] = [...diagnostics.warnings];

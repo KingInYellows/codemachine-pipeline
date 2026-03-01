@@ -662,6 +662,30 @@ export async function loadPlanSummary(runDir: string): Promise<PlanSummary | nul
 }
 
 /**
+ * Build dag_metadata payload from a PlanSummary dag object.
+ *
+ * Both plan.ts and status/data/planData.ts construct the same spread object
+ * from planSummary.dag.  This helper centralises that construction so changes
+ * to the DAG shape only need to be made once.
+ *
+ * @param dag - The dag field from a PlanSummary (may be undefined)
+ * @returns A dag_metadata object ready for embedding in a payload, or
+ *   undefined if dag is not present
+ */
+export function buildDagMetadata(
+  dag: PlanSummary['dag']
+): { parallel_paths?: number; critical_path_depth?: number; generated_at: string } | undefined {
+  if (!dag) {
+    return undefined;
+  }
+  return {
+    ...(dag.parallelPaths !== undefined && { parallel_paths: dag.parallelPaths }),
+    ...(dag.criticalPathDepth !== undefined && { critical_path_depth: dag.criticalPathDepth }),
+    generated_at: dag.generatedAt,
+  };
+}
+
+/**
  * Load plan metadata
  */
 export async function loadPlanMetadata(runDir: string): Promise<PlanMetadata | null> {

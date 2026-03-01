@@ -1,6 +1,5 @@
 import { Args, Command, Flags } from '@oclif/core';
 import * as path from 'node:path';
-import { execSync } from 'node:child_process';
 import * as os from 'node:os';
 import { createCliLogger, LogLevel, type StructuredLogger } from '../../telemetry/logger';
 import { createRunMetricsCollector, type MetricsCollector } from '../../telemetry/metrics';
@@ -17,9 +16,21 @@ import {
 } from '../../workflows/approvalRegistry';
 import { ApprovalGateType } from '../../core/models/ApprovalRecord';
 import { updateTraceMapOnSpecChange } from '../../workflows/traceabilityMapper';
-import { resolveRunDirectorySettings, selectFeatureId } from '../utils/runDirectory';
-import { formatErrorMessage, setJsonOutputMode } from '../utils/cliErrors';
+import {
+  resolveRunDirectorySettings,
+  selectFeatureId,
+  requireFeatureId,
+  requireConfig,
+} from '../utils/runDirectory';
+import {
+  CliError,
+  CliErrorCode,
+  formatErrorMessage,
+  rethrowIfOclifError,
+  setJsonOutputMode,
+} from '../utils/cliErrors';
 import { flushTelemetrySuccess, flushTelemetryError } from '../utils/telemetryLifecycle';
+import { getGitUser } from '../startHelpers';
 
 /**
  * Approve Command
@@ -134,24 +145,16 @@ export default class Approve extends Command {
 
     const startTime = Date.now();
     const settings = await resolveRunDirectorySettings();
-
-    if (settings.errors.length > 0 || !settings.config) {
-      const message =
-        settings.errors.length > 0
-          ? settings.errors.join('\n')
-          : 'Repository not initialized. Run "codepipe init" first.';
-      this.error(message, { exit: 10 });
-    }
-
     const featureId = await selectFeatureId(settings.baseDir, typedFlags.feature);
-
-    if (!featureId) {
-      this.error(
-        typedFlags.feature
-          ? `Feature run directory not found: ${typedFlags.feature}`
-          : 'No feature runs found. Run "codepipe start" to create a feature.',
-        { exit: 10 }
-      );
+    try {
+      requireConfig(settings);
+      requireFeatureId(featureId, typedFlags.feature);
+    } catch (error) {
+      if (error instanceof CliError) {
+        const exitCode = error.code === CliErrorCode.RUN_DIR_NOT_FOUND ? 10 : error.exitCode;
+        this.error(error.message, { exit: exitCode });
+      }
+      throw error;
     }
 
     const runDir = getRunDirectoryPath(settings.baseDir, featureId);
@@ -216,7 +219,7 @@ export default class Approve extends Command {
           signer: typedFlags.signer,
           artifactPath: artifactInfo.relativePath,
           metadata: {
-            git_user: this.getGitUser(),
+            git_user: getGitUser(),
             hostname: os.hostname(),
           },
         };
@@ -268,7 +271,7 @@ export default class Approve extends Command {
           artifactPath: artifactInfo.relativePath,
           reason: typedFlags.comment || 'No reason provided',
           metadata: {
-            git_user: this.getGitUser(),
+            git_user: getGitUser(),
             hostname: os.hostname(),
           },
         };
@@ -335,6 +338,13 @@ export default class Approve extends Command {
           { exit: 30 }
         );
       }
+
+      if (error instanceof CliError) {
+        const exitCode = error.code === CliErrorCode.RUN_DIR_NOT_FOUND ? 10 : error.exitCode;
+        this.error(error.message, { exit: exitCode });
+      }
+
+      rethrowIfOclifError(error);
 
       this.error(`Approve command failed: ${formatErrorMessage(error)}`, { exit: 1 });
     }
@@ -421,18 +431,6 @@ export default class Approve extends Command {
         `Update the artifact and re-run the relevant command (e.g., codepipe ${gateType})`,
         'Then request approval using this command again.',
       ];
-    }
-  }
-
-  private getGitUser(): string {
-    try {
-      const email = execSync('git config user.email', {
-        encoding: 'utf-8',
-        stdio: ['pipe', 'pipe', 'pipe'],
-      }).trim();
-      return email || 'unknown';
-    } catch {
-      return 'unknown';
     }
   }
 

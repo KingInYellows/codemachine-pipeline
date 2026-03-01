@@ -13,7 +13,12 @@ import { Command, Flags } from '@oclif/core';
 import { createRunMetricsCollector } from '../../../telemetry/metrics';
 import { createRunTraceManager, withSpan } from '../../../telemetry/traces';
 import { flushTelemetrySuccess, flushTelemetryError } from '../../utils/telemetryLifecycle';
-import { resolveRunDirectorySettings, selectFeatureId } from '../../utils/runDirectory';
+import {
+  resolveRunDirectorySettings,
+  selectFeatureId,
+  requireFeatureId,
+  requireConfig,
+} from '../../utils/runDirectory';
 import {
   loadPRContext,
   getPRAdapter,
@@ -26,7 +31,13 @@ import {
   PRExitCode,
   type PRMetadata,
 } from '../../pr/shared';
-import { setJsonOutputMode } from '../../utils/cliErrors';
+import {
+  CliError,
+  CliErrorCode,
+  setJsonOutputMode,
+  rethrowIfOclifError,
+} from '../../utils/cliErrors';
+import { parseReviewerList } from '../../pr/shared';
 
 type CreateFlags = {
   feature?: string;
@@ -102,21 +113,11 @@ export default class PRCreate extends Command {
     try {
       const settings = await resolveRunDirectorySettings();
       const featureId = await selectFeatureId(settings.baseDir, typedFlags.feature);
-
-      if (!featureId) {
-        this.error('No feature run directory found. Run "codepipe start" first.', {
-          exit: PRExitCode.VALIDATION_ERROR,
-        });
-      }
-
-      if (typedFlags.feature && featureId !== typedFlags.feature) {
-        this.error(`Feature run directory not found: ${typedFlags.feature}`, {
-          exit: PRExitCode.VALIDATION_ERROR,
-        });
-      }
+      requireFeatureId(featureId, typedFlags.feature);
+      const repoConfig = requireConfig(settings);
 
       // Load PR context
-      const context = await loadPRContext(settings.baseDir, featureId, settings.config!, false);
+      const context = await loadPRContext(settings.baseDir, featureId, repoConfig, false);
 
       const { logger, manifest, runDir, config } = context;
       const metrics = createRunMetricsCollector(runDir, featureId);
@@ -245,15 +246,13 @@ export default class PRCreate extends Command {
 
         // Request reviewers if specified
         let reviewersRequested: string[] = [];
-        if (typedFlags.reviewers) {
+        const reviewersFlag = typedFlags.reviewers;
+        if (reviewersFlag) {
           reviewersRequested = await withSpan(
             traceManager,
             'pr.create.request_reviewers',
             async (span) => {
-              const reviewersList = typedFlags
-                .reviewers!.split(',')
-                .map((r) => r.trim())
-                .filter((r) => r.length > 0);
+              const reviewersList = parseReviewerList(reviewersFlag);
 
               span.setAttribute('reviewers_count', reviewersList.length);
 
@@ -348,9 +347,14 @@ export default class PRCreate extends Command {
         throw error;
       }
     } catch (error) {
-      // Re-throw oclif errors to preserve exit codes
-      if (error && typeof error === 'object' && 'oclif' in error) {
-        throw error;
+      rethrowIfOclifError(error);
+
+      if (error instanceof CliError) {
+        const exitCode =
+          error.code === CliErrorCode.RUN_DIR_NOT_FOUND
+            ? PRExitCode.VALIDATION_ERROR
+            : error.exitCode;
+        this.error(error.message, { exit: exitCode });
       }
 
       if (error instanceof Error) {
