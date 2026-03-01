@@ -1,6 +1,6 @@
 import * as path from 'node:path';
 import * as fs from 'node:fs/promises';
-import { ExecutionTask, canRetry, areDependenciesCompleted } from '../core/models/ExecutionTask.js';
+import { ExecutionTask, canRetry } from '../core/models/ExecutionTask.js';
 import { RepoConfig } from '../core/config/RepoConfig.js';
 import {
   ExecutionStrategy,
@@ -11,101 +11,12 @@ import { updateTaskInQueue, loadQueue } from './queueStore.js';
 import { validateCliAvailability } from './codeMachineRunner.js';
 import { StructuredLogger } from '../telemetry/logger.js';
 import { ExecutionLogWriter } from '../telemetry/logWriters.js';
-import {
-  ExecutionTaskStatus,
-  type CodeMachineExecutionStatus,
-} from '../telemetry/executionMetrics.js';
 import type { ExecutionTelemetry } from '../telemetry/executionTelemetry.js';
 import { getErrorMessage } from '../utils/errors.js';
-import { CODEMACHINE_STRATEGY_NAMES } from './codemachineTypes.js';
-import { DEFAULT_EXECUTION_CONFIG, ExecutionConfig } from '../core/config/RepoConfig.js';
-
-const TASK_ID_PATTERN = /^[a-zA-Z0-9_-]+$/;
-
-function validateTaskId(taskId: string): boolean {
-  if (!TASK_ID_PATTERN.test(taskId)) {
-    return false;
-  }
-  if (taskId.includes('..')) {
-    return false;
-  }
-  return true;
-}
-
-function isPathContained(basePath: string, targetPath: string): boolean {
-  const resolvedBase = path.resolve(basePath);
-  const resolvedTarget = path.resolve(targetPath);
-  return resolvedTarget.startsWith(resolvedBase + path.sep) || resolvedTarget === resolvedBase;
-}
-
-async function captureArtifacts(
-  runDir: string,
-  task: ExecutionTask,
-  workspaceDir: string,
-  strategyArtifacts: string[],
-  logger?: StructuredLogger
-): Promise<string[]> {
-  if (!validateTaskId(task.task_id)) {
-    logger?.warn('Invalid task ID format, skipping artifact capture', { taskId: task.task_id });
-    return [];
-  }
-
-  const artifactDir = path.join(runDir, 'artifacts', task.task_id);
-
-  if (!isPathContained(runDir, artifactDir)) {
-    logger?.error('Artifact directory escapes run directory', { artifactDir, runDir });
-    return [];
-  }
-
-  try {
-    await fs.mkdir(artifactDir, { recursive: true, mode: 0o700 });
-  } catch (err) {
-    logger?.warn('Failed to create artifact directory', {
-      error: getErrorMessage(err),
-      taskId: task.task_id,
-    });
-    return [];
-  }
-
-  const artifacts: string[] = [];
-
-  for (const artifactPath of strategyArtifacts) {
-    try {
-      const sourcePath = path.isAbsolute(artifactPath)
-        ? artifactPath
-        : path.join(workspaceDir, artifactPath);
-
-      if (!isPathContained(workspaceDir, sourcePath)) {
-        logger?.warn('Artifact path escapes workspace', { artifactPath, workspaceDir });
-        continue;
-      }
-
-      const stats = await fs.stat(sourcePath).catch(() => null);
-      if (!stats) {
-        continue;
-      }
-
-      const artifactName = path.basename(artifactPath);
-      const destPath = path.join(artifactDir, artifactName);
-
-      if (!isPathContained(artifactDir, destPath)) {
-        logger?.warn('Artifact destination escapes artifact directory', { destPath, artifactDir });
-        continue;
-      }
-
-      await fs.copyFile(sourcePath, destPath);
-      artifacts.push(artifactName);
-    } catch (err) {
-      logger?.warn('Artifact capture failed', {
-        error: getErrorMessage(err),
-        artifactPath,
-        taskId: task.task_id,
-      });
-    }
-  }
-
-  return artifacts;
-}
+import { DEFAULT_EXECUTION_CONFIG } from '../core/config/RepoConfig.js';
+import { getReadyTasks, applyRetryBackoff } from './executionDependencyResolver.js';
+import { ExecutionTelemetryRecorder } from './executionTelemetryRecorder.js';
+import { validateTaskId, captureArtifacts } from './executionArtifactCapture.js';
 
 /**
  * Configuration options for constructing a {@link CLIExecutionEngine}.
@@ -172,32 +83,25 @@ export class CLIExecutionEngine {
   private readonly dryRun: boolean;
   private readonly logger: StructuredLogger | undefined;
   private readonly logWriter: ExecutionLogWriter | undefined;
-  private readonly telemetry: ExecutionTelemetry | undefined;
+  private readonly telemetryRecorder: ExecutionTelemetryRecorder;
   private stopped = false;
 
-  /**
-   * Create a new CLIExecutionEngine.
-   *
-   * @param options - Engine configuration including runDir, RepoConfig, strategies, and optional logger/telemetry
-   */
   constructor(options: ExecutionEngineOptions) {
     this.runDir = options.runDir;
     this.config = options.config;
     this.strategies = options.strategies;
     this.dryRun = options.dryRun ?? false;
     this.logger = options.logger;
-    this.telemetry = options.telemetry;
     this.logWriter = options.logWriter ?? options.telemetry?.logs;
+    this.telemetryRecorder = new ExecutionTelemetryRecorder(
+      options.config,
+      options.telemetry,
+      this.logWriter
+    );
   }
 
   /**
    * Validate that all prerequisites for execution are met.
-   *
-   * Checks CLI availability, workspace directory existence, strategy
-   * registration, and queue loadability. Errors are fatal blockers;
-   * warnings are informational (e.g., empty queue or no strategies).
-   *
-   * @returns A {@link PrerequisiteResult} with `valid`, `errors`, and `warnings`
    */
   async validatePrerequisites(): Promise<PrerequisiteResult> {
     const errors: string[] = [];
@@ -207,8 +111,6 @@ export class CLIExecutionEngine {
     const cliPath = executionConfig.codemachine_cli_path;
     const cliCheck = await validateCliAvailability(cliPath);
     if (!cliCheck.available) {
-      // When the codemachine-cli strategy resolved a binary via binaryResolver
-      // (e.g. optionalDep), the legacy CLI path is not required for execution.
       const cliStrategyAvailable = this.strategies.some(
         (s) =>
           s.name === 'codemachine-cli' &&
@@ -246,22 +148,11 @@ export class CLIExecutionEngine {
       errors.push('Failed to load execution queue');
     }
 
-    return {
-      valid: errors.length === 0,
-      errors,
-      warnings,
-    };
+    return { valid: errors.length === 0, errors, warnings };
   }
 
   /**
    * Execute all pending tasks in the queue with bounded parallelism.
-   *
-   * Tasks are selected in priority order: running (resumed) > pending > retryable.
-   * Up to `max_parallel_tasks` run concurrently via `Promise.race`. Each completed
-   * task updates the result counters and queue depth metrics. The loop exits when
-   * no tasks remain or {@link stop} has been called and in-flight tasks drain.
-   *
-   * @returns An {@link ExecutionResult} summarizing task outcomes
    */
   async execute(): Promise<ExecutionResult> {
     const result: ExecutionResult = {
@@ -283,10 +174,7 @@ export class CLIExecutionEngine {
     const executionConfig = this.config.execution ?? DEFAULT_EXECUTION_CONFIG;
     const maxParallelTasks = Math.max(1, executionConfig.max_parallel_tasks ?? 1);
 
-    this.logger?.info('Starting execution', {
-      totalTasks: result.totalTasks,
-      maxParallelTasks,
-    });
+    this.logger?.info('Starting execution', { totalTasks: result.totalTasks, maxParallelTasks });
 
     const inFlight = new Map<string, Promise<TaskOutcome>>();
 
@@ -305,12 +193,7 @@ export class CLIExecutionEngine {
           taskId: task.task_id,
           error: getErrorMessage(error),
         });
-        return {
-          taskId: task.task_id,
-          success: false,
-          permanentlyFailed: false,
-          task,
-        };
+        return { taskId: task.task_id, success: false, permanentlyFailed: false, task };
       }
     };
 
@@ -337,15 +220,6 @@ export class CLIExecutionEngine {
     return result;
   }
 
-  /**
-   * Fill the in-flight map up to capacity with ready tasks.
-   *
-   * @param inFlight - Mutated in-place; ready tasks are added up to capacity.
-   * @param maxParallelTasks - Upper bound on concurrent tasks.
-   * @param runTask - Factory that starts a task and returns its outcome promise.
-   * @returns `true` when there are no more tasks to schedule and the queue is
-   *   drained (caller should break the execute loop).
-   */
   private async fillTaskBatch(
     inFlight: Map<string, Promise<TaskOutcome>>,
     maxParallelTasks: number,
@@ -354,7 +228,7 @@ export class CLIExecutionEngine {
     const capacity = maxParallelTasks - inFlight.size;
     if (capacity <= 0) return false;
 
-    const readyTasks = await this.getReadyTasks(new Set(inFlight.keys()), capacity);
+    const readyTasks = await getReadyTasks(this.runDir, new Set(inFlight.keys()), capacity);
     for (const task of readyTasks) {
       inFlight.set(task.task_id, runTask(task));
     }
@@ -366,7 +240,6 @@ export class CLIExecutionEngine {
     return false;
   }
 
-  /** Record a completed task outcome and update queue-depth metrics. */
   private recordTaskOutcome(result: ExecutionResult, completed: TaskOutcome): void {
     if (completed.success) {
       result.completedTasks++;
@@ -386,32 +259,27 @@ export class CLIExecutionEngine {
       result.failedTasks -
       result.permanentlyFailedTasks -
       result.skippedTasks;
-    this.telemetry?.metrics?.setQueueDepth(
+    this.telemetryRecorder.recordQueueDepth(
       pending,
       result.completedTasks,
       result.failedTasks + result.permanentlyFailedTasks
     );
   }
 
-  /**
-   * Execute a single task using the first matching strategy.
-   *
-   * Algorithm:
-   * 1. Find a strategy that can handle the task type
-   * 2. If no strategy matches, mark the task as skipped (permanently failed)
-   * 3. In dry-run mode, mark the task as completed without actual execution
-   * 4. Otherwise, delegate to the strategy and process the result
-   * 5. On failure, apply retry backoff and re-enqueue if retries remain
-   * 6. Capture artifacts (success or failure) with path-traversal protection
-   *
-   * @param task - The execution task to run
-   * @returns An object with `success` and `permanentlyFailed` flags
-   */
   async executeTask(
     task: ExecutionTask
   ): Promise<{ success: boolean; permanentlyFailed: boolean }> {
     if (!validateTaskId(task.task_id)) {
       this.logger?.warn('Invalid task ID format, rejecting task', { taskId: task.task_id });
+      await updateTaskInQueue(this.runDir, task.task_id, {
+        status: 'failed',
+        retry_count: task.retry_count + 1,
+        last_error: {
+          message: 'Invalid task ID format',
+          timestamp: new Date().toISOString(),
+          recoverable: false,
+        },
+      });
       return { success: false, permanentlyFailed: true };
     }
 
@@ -422,14 +290,7 @@ export class CLIExecutionEngine {
 
     await updateTaskInQueue(this.runDir, task.task_id, { status: 'running' });
     this.logger?.info('Executing task', { taskId: task.task_id, strategy: strategy.name });
-    this.logWriter?.taskStarted(task.task_id, task.task_type, {
-      strategy: strategy.name,
-    });
-    this.telemetry?.metrics?.recordTaskLifecycle(
-      task.task_id,
-      task.task_type,
-      ExecutionTaskStatus.STARTED
-    );
+    this.telemetryRecorder.recordTaskStarted(task, strategy.name);
     const startTime = Date.now();
 
     if (this.dryRun) {
@@ -450,17 +311,10 @@ export class CLIExecutionEngine {
     const durationMs = strategyResult.durationMs ?? Date.now() - startTime;
 
     if (strategyResult.success) {
-      return this.handleSuccess(
-        task,
-        strategy,
-        strategyResult,
-        context,
-        executionConfig,
-        durationMs
-      );
+      return this.handleSuccess(task, strategy, strategyResult, context, durationMs);
     }
 
-    return this.handleFailure(task, strategy, strategyResult, context, executionConfig, durationMs);
+    return this.handleFailure(task, strategy, strategyResult, context, durationMs);
   }
 
   private async handleNoStrategy(
@@ -478,14 +332,7 @@ export class CLIExecutionEngine {
         recoverable: false,
       },
     });
-    this.logWriter?.taskSkipped(task.task_id, task.task_type, 'no_strategy', {
-      reason: 'No execution strategy available',
-    });
-    this.telemetry?.metrics?.recordTaskLifecycle(
-      task.task_id,
-      task.task_type,
-      ExecutionTaskStatus.SKIPPED
-    );
+    this.telemetryRecorder.recordNoStrategy(task);
     return { success: false, permanentlyFailed: true };
   }
 
@@ -495,16 +342,7 @@ export class CLIExecutionEngine {
   ): Promise<{ success: boolean; permanentlyFailed: boolean }> {
     this.logger?.info('Dry run - skipping actual execution', { taskId: task.task_id });
     await updateTaskInQueue(this.runDir, task.task_id, { status: 'completed' });
-    this.logWriter?.taskCompleted(task.task_id, task.task_type, 0, {
-      strategy: strategyName,
-      dry_run: true,
-    });
-    this.telemetry?.metrics?.recordTaskLifecycle(
-      task.task_id,
-      task.task_type,
-      ExecutionTaskStatus.COMPLETED,
-      0
-    );
+    this.telemetryRecorder.recordDryRun(task, strategyName);
     return { success: true, permanentlyFailed: false };
   }
 
@@ -513,7 +351,6 @@ export class CLIExecutionEngine {
     strategy: ExecutionStrategy,
     strategyResult: ExecutionStrategyResult,
     context: ExecutionContext,
-    executionConfig: ExecutionConfig,
     durationMs: number
   ): Promise<{ success: boolean; permanentlyFailed: boolean }> {
     const artifacts = await captureArtifacts(
@@ -523,28 +360,17 @@ export class CLIExecutionEngine {
       strategyResult.artifacts,
       this.logger
     );
-    if (CODEMACHINE_STRATEGY_NAMES.has(strategy.name)) {
-      this.telemetry?.metrics?.recordCodeMachineExecution(
-        executionConfig.default_engine,
-        'success',
-        durationMs
-      );
-    }
-    this.logWriter?.taskCompleted(task.task_id, task.task_type, durationMs, {
-      strategy: strategy.name,
-      summary: strategyResult.summary,
-      artifactsCaptured: artifacts.length,
-    });
+    this.telemetryRecorder.recordSuccess(
+      task,
+      strategy,
+      strategyResult,
+      durationMs,
+      artifacts.length
+    );
     await updateTaskInQueue(this.runDir, task.task_id, {
       status: 'completed',
       metadata: { summary: strategyResult.summary, artifacts },
     });
-    this.telemetry?.metrics?.recordTaskLifecycle(
-      task.task_id,
-      task.task_type,
-      ExecutionTaskStatus.COMPLETED,
-      durationMs
-    );
     return { success: true, permanentlyFailed: false };
   }
 
@@ -553,7 +379,6 @@ export class CLIExecutionEngine {
     strategy: ExecutionStrategy,
     strategyResult: ExecutionStrategyResult,
     context: ExecutionContext,
-    executionConfig: ExecutionConfig,
     durationMs: number
   ): Promise<{ success: boolean; permanentlyFailed: boolean }> {
     const updatedTask: ExecutionTask = {
@@ -568,29 +393,13 @@ export class CLIExecutionEngine {
     };
 
     const canRetryTask = canRetry(updatedTask);
-    const cmStatus: CodeMachineExecutionStatus =
-      strategyResult.status === 'timeout' ? 'timeout' : 'failure';
-    if (CODEMACHINE_STRATEGY_NAMES.has(strategy.name)) {
-      this.telemetry?.metrics?.recordCodeMachineExecution(
-        executionConfig.default_engine,
-        cmStatus,
-        durationMs
-      );
-      if (canRetryTask) {
-        this.telemetry?.metrics?.recordCodeMachineRetry(executionConfig.default_engine);
-      }
-    }
-    this.logWriter?.taskFailed(
-      task.task_id,
-      task.task_type,
-      new Error(strategyResult.errorMessage ?? 'Unknown error'),
+    this.telemetryRecorder.recordFailure(
+      task,
+      strategy,
+      strategyResult,
       durationMs,
-      {
-        strategy: strategy.name,
-        recoverable: strategyResult.recoverable,
-        retryCount: updatedTask.retry_count,
-        willRetry: canRetryTask,
-      }
+      updatedTask.retry_count,
+      canRetryTask
     );
 
     let failureArtifacts: string[] = [];
@@ -610,7 +419,7 @@ export class CLIExecutionEngine {
     }
 
     if (canRetryTask) {
-      await this.applyRetryBackoff(updatedTask.retry_count);
+      await applyRetryBackoff(updatedTask.retry_count, this.config, this.logger);
       await updateTaskInQueue(this.runDir, task.task_id, {
         status: 'pending',
         retry_count: updatedTask.retry_count,
@@ -622,12 +431,6 @@ export class CLIExecutionEngine {
         retryCount: updatedTask.retry_count,
         artifactsCaptured: failureArtifacts.length,
       });
-      this.telemetry?.metrics?.recordTaskLifecycle(
-        task.task_id,
-        task.task_type,
-        ExecutionTaskStatus.FAILED,
-        durationMs
-      );
       return { success: false, permanentlyFailed: false };
     }
 
@@ -637,78 +440,16 @@ export class CLIExecutionEngine {
       last_error: updatedTask.last_error,
       metadata: { ...task.metadata, failureArtifacts },
     });
-    this.telemetry?.metrics?.recordTaskLifecycle(
-      task.task_id,
-      task.task_type,
-      ExecutionTaskStatus.FAILED,
-      durationMs
-    );
     return { success: false, permanentlyFailed: true };
   }
 
-  /**
-   * Request a graceful stop of the execution loop.
-   *
-   * In-flight tasks will be allowed to complete, but no new tasks will be
-   * dispatched. The {@link execute} method will return once all in-flight
-   * tasks have finished.
-   */
   stop(): void {
     this.stopped = true;
     this.logger?.info('Execution stop requested');
   }
 
-  private async getReadyTasks(inFlight: Set<string>, limit: number): Promise<ExecutionTask[]> {
-    const tasks = await loadQueue(this.runDir);
-    const ready: ExecutionTask[] = [];
-    const seen = new Set<string>();
-
-    const consider = (task: ExecutionTask): void => {
-      if (ready.length >= limit) {
-        return;
-      }
-      if (inFlight.has(task.task_id) || seen.has(task.task_id)) {
-        return;
-      }
-      if (!areDependenciesCompleted(task, tasks)) {
-        return;
-      }
-      ready.push(task);
-      seen.add(task.task_id);
-    };
-
-    for (const task of tasks.values()) {
-      if (task.status === 'running') {
-        consider(task);
-      }
-    }
-
-    for (const task of tasks.values()) {
-      if (task.status === 'pending') {
-        consider(task);
-      }
-    }
-
-    for (const task of tasks.values()) {
-      if (canRetry(task)) {
-        consider(task);
-      }
-    }
-
-    return ready;
-  }
-
   private findStrategy(task: ExecutionTask): ExecutionStrategy | undefined {
     return this.strategies.find((s) => s.canHandle(task));
-  }
-
-  private async applyRetryBackoff(retryCount: number): Promise<void> {
-    const executionConfig = this.config.execution ?? DEFAULT_EXECUTION_CONFIG;
-    const baseBackoffMs = executionConfig.retry_backoff_ms;
-    const backoffMs = Math.min(baseBackoffMs * Math.pow(2, retryCount - 1), 60000);
-
-    this.logger?.debug('Applying retry backoff', { retryCount, backoffMs });
-    await sleep(backoffMs);
   }
 
   private async handleTaskError(task: ExecutionTask, error: unknown): Promise<void> {
@@ -724,8 +465,4 @@ export class CLIExecutionEngine {
       },
     });
   }
-}
-
-function sleep(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
 }
