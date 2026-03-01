@@ -1,7 +1,7 @@
 # isLockStale Reads File Parses JSON Validates Shape and Checks Process in One Function
 
 **ID:** 169
-**Status:** pending
+**Status:** complete
 **Severity:** medium
 **Category:** complexity
 **Effort:** small

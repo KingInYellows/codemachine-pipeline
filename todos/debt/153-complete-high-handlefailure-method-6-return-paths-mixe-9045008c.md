@@ -1,7 +1,7 @@
 # handleFailure Method 6 Return Paths Mixed Retry Artifact Metric Concerns
 
 **ID:** 153
-**Status:** pending
+**Status:** complete
 **Severity:** high
 **Category:** complexity
 **Effort:** medium

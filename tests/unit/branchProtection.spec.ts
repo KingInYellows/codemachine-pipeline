@@ -9,10 +9,9 @@ import {
   type CheckRun,
   type PullRequestReview,
 } from '../../src/adapters/github/branchProtection';
+import { persistReport, loadReport } from '../../src/persistence/branchProtectionStore';
 import {
   generateReport,
-  persistReport,
-  loadReport,
   generateSummary,
   formatSummary,
   detectValidationMismatch,

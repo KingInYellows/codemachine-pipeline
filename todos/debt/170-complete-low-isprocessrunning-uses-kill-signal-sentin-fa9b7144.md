@@ -1,7 +1,7 @@
 # isProcessRunning Uses Kill Signal Sentinel with Tri-State Boolean Null Return
 
 **ID:** 170
-**Status:** pending
+**Status:** complete
 **Severity:** low
 **Category:** complexity
 **Effort:** quick
