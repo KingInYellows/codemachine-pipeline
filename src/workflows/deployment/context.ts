@@ -258,10 +258,8 @@ export async function persistDeploymentOutcome(
         await handle.close();
       }
 
-      // Atomic rename
       await fs.rename(tempPath, deploymentPath);
     } catch (error) {
-      // Clean up temp file on error
       try {
         await fs.unlink(tempPath);
       } catch {

@@ -4,10 +4,6 @@ import { hostname } from 'node:os';
 import { wrapError } from '../utils/errors.js';
 import { isFileNotFound } from '../utils/safeJson.js';
 
-// ============================================================================
-// Types
-// ============================================================================
-
 /**
  * Lock file metadata
  */
@@ -34,20 +30,12 @@ export interface LockOptions {
   operation?: string;
 }
 
-// ============================================================================
-// Constants
-// ============================================================================
-
 const LOCK_FILE_NAME = 'run.lock';
 const DEFAULT_LOCK_TIMEOUT = 30000; // 30 seconds
 const DEFAULT_POLL_INTERVAL = 100; // 100ms
 
 // Export for testing (CDMCH-71)
 export const STALE_LOCK_THRESHOLD_MS = 300000; // 5 minutes - sufficient for long operations while still recovering from crashes
-
-// ============================================================================
-// Internal helpers
-// ============================================================================
 
 /**
  * Type guard ensuring value matches LockFile shape
@@ -149,18 +137,12 @@ function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-// ============================================================================
-// Public API
-// ============================================================================
-
 /**
  * Acquire an exclusive lock on a run directory
  *
  * Uses file-based locking with stale lock detection.
  * Lock file contains process metadata for debugging.
  *
- * @param runDir - Run directory path
- * @param options - Lock acquisition options
  * @throws Error if lock cannot be acquired within timeout
  */
 export async function acquireLock(runDir: string, options: LockOptions = {}): Promise<void> {
@@ -208,7 +190,6 @@ export async function acquireLock(runDir: string, options: LockOptions = {}): Pr
 /**
  * Release a lock on a run directory
  *
- * @param runDir - Run directory path
  */
 export async function releaseLock(runDir: string): Promise<void> {
   const lockPath = join(runDir, LOCK_FILE_NAME);
@@ -227,8 +208,6 @@ export async function releaseLock(runDir: string): Promise<void> {
 /**
  * Check if a run directory is currently locked
  *
- * @param runDir - Run directory path
- * @returns True if locked, false otherwise
  */
 export async function isLocked(runDir: string): Promise<boolean> {
   const lockPath = join(runDir, LOCK_FILE_NAME);
@@ -249,10 +228,6 @@ export async function isLocked(runDir: string): Promise<boolean> {
 /**
  * Execute a function while holding a lock
  *
- * @param runDir - Run directory path
- * @param fn - Function to execute
- * @param options - Lock options
- * @returns Result of function execution
  */
 export async function withLock<T>(
   runDir: string,

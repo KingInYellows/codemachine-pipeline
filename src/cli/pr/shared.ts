@@ -201,7 +201,6 @@ export async function persistPRData(context: PRContext, prMetadata: PRMetadata):
   });
 
   try {
-    // Write to temp file first (atomic write)
     await fs.writeFile(prJsonTempPath, JSON.stringify(prMetadata, null, 2), 'utf-8');
     await fs.rename(prJsonTempPath, prJsonPath);
 

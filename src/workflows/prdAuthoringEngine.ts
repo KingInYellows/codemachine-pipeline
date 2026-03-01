@@ -353,7 +353,6 @@ export async function draftPRD(
   const now = new Date().toISOString();
   const traceId = `TRACE-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
 
-  // Step 1: Create structured PRD document
   const sections = createDefaultSections();
 
   const prdDocument: PRDDocument = {
@@ -372,7 +371,6 @@ export async function draftPRD(
     },
   };
 
-  // Step 2: Load and render template
   const template = await loadTemplate(config.templatePath);
   const variables = buildTemplateVariables(
     prdDocument,
@@ -381,7 +379,6 @@ export async function draftPRD(
   );
   const renderedMarkdown = substituteVariables(template, variables);
 
-  // Step 3: Persist PRD to run directory
   const artifactsDir = getSubdirectoryPath(config.runDir, 'artifacts');
   await fs.mkdir(artifactsDir, { recursive: true });
 
@@ -390,10 +387,8 @@ export async function draftPRD(
     await fs.writeFile(prdPath, renderedMarkdown, 'utf-8');
   });
 
-  // Step 4: Compute hash
   const prdHash = await computeFileHash(prdPath);
 
-  // Step 5: Save metadata
   const metadata: PRDMetadata = {
     featureId: config.feature.feature_id,
     prdHash,
@@ -410,7 +405,6 @@ export async function draftPRD(
     await fs.writeFile(metadataPath, JSON.stringify(metadata, null, 2), 'utf-8');
   });
 
-  // Step 6: Detect incomplete sections
   const incompleteSections: PRDSectionType[] = [];
   for (const [key, section] of Object.entries(sections)) {
     if (section.content.includes('_TODO:')) {
@@ -418,7 +412,6 @@ export async function draftPRD(
     }
   }
 
-  // Step 7: Count citations
   const totalCitations =
     Object.keys(config.contextDocument.files).length + config.researchTasks.length;
 

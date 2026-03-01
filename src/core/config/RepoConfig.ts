@@ -58,10 +58,6 @@ export {
 // Re-export everything from defaults module
 export { createDefaultConfig, DEFAULT_EXECUTION_CONFIG } from './RepoConfigDefaults';
 
-// ============================================================================
-// Configuration Loading and Validation
-// ============================================================================
-
 /**
  * Load and validate RepoConfig from file
  * @param configPath Path to config.json file

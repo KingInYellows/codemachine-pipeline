@@ -11,10 +11,6 @@ export const QUEUE_FILE = 'queue.jsonl';
 export const QUEUE_MANIFEST_FILE = 'queue_manifest.json';
 export const QUEUE_SNAPSHOT_FILE = 'queue_snapshot.json';
 
-// ============================================================================
-// Queue Store Types (shared across companion modules)
-// ============================================================================
-
 /** Queue manifest metadata */
 export interface QueueManifest {
   schema_version: string;
@@ -58,10 +54,6 @@ export interface QueueValidationResult {
   corruptedTasks: number;
 }
 
-// ============================================================================
-// Core Data Type (Task without readonly)
-// ============================================================================
-
 /**
  * Mutable version of ExecutionTask for storage operations.
  * ExecutionTask is Readonly<>, but we need mutable data for patches.
@@ -69,10 +61,6 @@ export interface QueueValidationResult {
 export type ExecutionTaskData = {
   -readonly [K in keyof ExecutionTask]: ExecutionTask[K];
 };
-
-// ============================================================================
-// Queue Operation Types (WAL Entries)
-// ============================================================================
 
 /** WAL operation type discriminator */
 export type QueueOperationType = 'create' | 'update' | 'delete';
@@ -98,10 +86,6 @@ export interface QueueOperation {
   checksum: string;
 }
 
-// ============================================================================
-// Queue Counts
-// ============================================================================
-
 /**
  * Task count breakdown by status.
  * Used for quick status queries without full queue scan.
@@ -122,10 +106,6 @@ export interface QueueCounts {
   /** Tasks cancelled by user or system */
   cancelled: number;
 }
-
-// ============================================================================
-// Queue Snapshot V2 (Enhanced Format)
-// ============================================================================
 
 /**
  * Enhanced queue snapshot with WAL integration.
@@ -150,10 +130,6 @@ export interface QueueSnapshotV2 {
   checksum: string;
 }
 
-// ============================================================================
-// In-Memory Index State
-// ============================================================================
-
 /**
  * In-memory queue state for fast operations.
  * Rebuilt from snapshot + WAL replay on load.
@@ -171,10 +147,6 @@ export interface QueueIndexState {
   dirty: boolean;
 }
 
-// ============================================================================
-// Compaction Configuration
-// ============================================================================
-
 /**
  * WAL compaction settings.
  * Controls when WAL is merged into snapshot.
@@ -187,10 +159,6 @@ export interface CompactionConfig {
   /** Remove completed tasks older than retention period during compaction */
   pruneCompleted: boolean;
 }
-
-// ============================================================================
-// Type Guards
-// ============================================================================
 
 /**
  * Type guard for QueueOperation.
@@ -258,10 +226,6 @@ export function isQueueSnapshotV2(value: unknown): value is QueueSnapshotV2 {
   );
 }
 
-// ============================================================================
-// Utility Functions
-// ============================================================================
-
 /**
  * Create empty QueueCounts object.
  * @returns Zero-initialized counts
@@ -303,10 +267,6 @@ export function createEmptyIndexState(): QueueIndexState {
     dirty: false,
   };
 }
-
-// ============================================================================
-// Queue Integrity Types (CDMCH-69)
-// ============================================================================
 
 /** Integrity check mode: fail-fast throws on corruption, warn-only logs and continues. */
 export type QueueIntegrityMode = 'fail-fast' | 'warn-only';

@@ -29,10 +29,6 @@ import { hydrateIndex, exportIndexState, markClean } from './queueMemoryIndex';
 import { withLock } from '../../persistence';
 import type { ExecutionTaskStatus } from '../../core/models/ExecutionTask';
 
-// ============================================================================
-// Status to Count Field Mapping
-// ============================================================================
-
 /**
  * Maps task status to the corresponding count field.
  * Used for maintaining accurate counts during pruning.
@@ -45,10 +41,6 @@ const STATUS_TO_COUNT_FIELD: Record<ExecutionTaskStatus, keyof Omit<QueueCounts,
   skipped: 'skipped',
   cancelled: 'cancelled',
 };
-
-// ============================================================================
-// Threshold Checking
-// ============================================================================
 
 /**
  * Check if compaction is needed based on WAL thresholds.
@@ -96,10 +88,6 @@ export async function shouldCompact(
     stats,
   };
 }
-
-// ============================================================================
-// Task Pruning
-// ============================================================================
 
 /**
  * Prune completed tasks from snapshot that have no remaining dependents.
@@ -178,10 +166,6 @@ export function pruneCompletedTasks(
 
   return toPrune.length;
 }
-
-// ============================================================================
-// Core Compaction
-// ============================================================================
 
 /**
  * Perform compaction with existing state (for use during execution).

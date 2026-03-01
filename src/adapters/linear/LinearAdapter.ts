@@ -12,11 +12,6 @@
  * - Error taxonomy (transient, permanent, human action required)
  * - Logging with structured telemetry
  *
- * Implements:
- * - Section 2.1: Key Components - Linear Adapter
- * - IR-8..IR-11: Linear integration requirements
- * - ADR-6: Linear integration architecture
- * - FR-16: Issue snapshot caching
  */
 
 import * as fs from 'node:fs/promises';
@@ -596,9 +591,6 @@ export class LinearAdapter {
 
   private readonly normalizeError = createErrorNormalizer(LinearAdapterError, 'Linear');
 
-  /**
-   * Format error message
-   */
   private formatError(error: unknown): string {
     if (error instanceof Error) {
       return error.message;
@@ -606,9 +598,6 @@ export class LinearAdapter {
     return String(error);
   }
 
-  /**
-   * Ensure outgoing request stays within Linear's sliding window budget
-   */
   private async assertRateLimitHeadroom(operation: string): Promise<number> {
     const now = Date.now();
     this.trimRequestWindow(now);
@@ -664,16 +653,10 @@ export class LinearAdapter {
     return now;
   }
 
-  /**
-   * Record request timestamp for sliding window tracking
-   */
   private recordRequest(timestamp: number): void {
     this.requestTimestamps.push(timestamp);
   }
 
-  /**
-   * Remove timestamps that are outside the sliding window
-   */
   private trimRequestWindow(now: number): void {
     const windowStart = now - RATE_LIMIT_WINDOW_MS;
     while (this.requestTimestamps.length > 0 && this.requestTimestamps[0] < windowStart) {
@@ -681,12 +664,6 @@ export class LinearAdapter {
     }
   }
 }
-
-// ============================================================================
-// Error Classes
-// ============================================================================
-// Factory Functions
-// ============================================================================
 
 /**
  * Create Linear adapter instance
