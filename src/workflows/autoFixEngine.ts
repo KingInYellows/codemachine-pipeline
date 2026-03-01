@@ -175,34 +175,13 @@ export async function executeValidationWithAutoFix(
 
     // Check if validation passed
     if (result.success) {
-      logger?.info('Validation passed', {
-        command_type: commandType,
-        attempt_number: attemptNumber,
-        duration_ms: Date.now() - startTime,
-        auto_fix_used: isAutoFixAttempt,
-      });
-
-      metrics?.increment(StandardMetrics.COMMAND_INVOCATIONS_TOTAL, {
-        command: `validation.${commandType}`,
-        result: 'success',
-        auto_fix: isAutoFixAttempt.toString(),
-      });
-
-      const totalDuration = Date.now() - startTime;
-      telemetry?.metrics?.recordTaskLifecycle(
-        taskId,
-        'validation',
-        ExecutionTaskStatus.COMPLETED,
-        totalDuration
+      recordValidationSuccess(
+        { commandType, attemptNumber, isAutoFixAttempt, startTime, taskId },
+        logger,
+        metrics,
+        telemetry,
+        span
       );
-      telemetry?.logs?.taskCompleted(taskId, 'validation', totalDuration, {
-        command_type: commandType,
-        attempt_number: attemptNumber,
-        auto_fix_attempt: isAutoFixAttempt,
-      });
-      span?.setAttribute('validation.attempts', attemptNumber);
-      span?.setAttribute('validation.success', true);
-      endExecutionSpan(span, true);
       return result;
     }
 
@@ -221,35 +200,13 @@ export async function executeValidationWithAutoFix(
   }
 
   // All attempts exhausted
-  logger?.error('Validation failed after all attempts', {
-    command_type: commandType,
-    total_attempts: attemptNumber,
-    duration_ms: Date.now() - startTime,
-  });
-
-  metrics?.increment(StandardMetrics.COMMAND_INVOCATIONS_TOTAL, {
-    command: `validation.${commandType}`,
-    result: 'failure',
-    attempts: attemptNumber.toString(),
-  });
-
-  const failureError = new Error(
-    lastResult?.errorSummary ?? `Validation command "${commandType}" failed`
+  recordValidationFailure(
+    { commandType, attemptNumber, startTime, taskId, errorSummary: lastResult?.errorSummary },
+    logger,
+    metrics,
+    telemetry,
+    span
   );
-  const totalDuration = Date.now() - startTime;
-  telemetry?.metrics?.recordTaskLifecycle(
-    taskId,
-    'validation',
-    ExecutionTaskStatus.FAILED,
-    totalDuration
-  );
-  telemetry?.logs?.taskFailed(taskId, 'validation', failureError, totalDuration, {
-    command_type: commandType,
-    attempt_number: attemptNumber,
-  });
-  span?.setAttribute('validation.attempts', attemptNumber);
-  span?.setAttribute('validation.success', false);
-  endExecutionSpan(span, false, failureError.message);
 
   if (lastResult === undefined) {
     throw new Error(`Validation command "${commandType}" failed with no recorded attempt`);
@@ -357,6 +314,100 @@ export async function executeAllValidations(
     exceededRetryLimits,
     summary,
   };
+}
+
+/** Shared shape for validation telemetry context. */
+interface ValidationTelemetryContext {
+  commandType: ValidationCommandType;
+  attemptNumber: number;
+  startTime: number;
+  taskId: string;
+}
+
+/**
+ * Record metrics, telemetry, and span attributes for a successful validation.
+ */
+function recordValidationSuccess(
+  ctx: ValidationTelemetryContext & { isAutoFixAttempt: boolean },
+  logger: StructuredLogger | undefined,
+  metrics: MetricsCollector | undefined,
+  telemetry: ExecutionTelemetry | undefined,
+  span: ReturnType<typeof startExecutionSpan>
+): void {
+  const totalDuration = Date.now() - ctx.startTime;
+
+  logger?.info('Validation passed', {
+    command_type: ctx.commandType,
+    attempt_number: ctx.attemptNumber,
+    duration_ms: totalDuration,
+    auto_fix_used: ctx.isAutoFixAttempt,
+  });
+
+  metrics?.increment(StandardMetrics.COMMAND_INVOCATIONS_TOTAL, {
+    command: `validation.${ctx.commandType}`,
+    result: 'success',
+    auto_fix: ctx.isAutoFixAttempt.toString(),
+  });
+
+  telemetry?.metrics?.recordTaskLifecycle(
+    ctx.taskId,
+    'validation',
+    ExecutionTaskStatus.COMPLETED,
+    totalDuration
+  );
+  telemetry?.logs?.taskCompleted(ctx.taskId, 'validation', totalDuration, {
+    command_type: ctx.commandType,
+    attempt_number: ctx.attemptNumber,
+    auto_fix_attempt: ctx.isAutoFixAttempt,
+  });
+
+  span?.setAttribute('validation.attempts', ctx.attemptNumber);
+  span?.setAttribute('validation.success', true);
+  endExecutionSpan(span, true);
+}
+
+/**
+ * Record metrics, telemetry, and span attributes for an exhausted validation.
+ */
+function recordValidationFailure(
+  ctx: ValidationTelemetryContext & { errorSummary: string | undefined },
+  logger: StructuredLogger | undefined,
+  metrics: MetricsCollector | undefined,
+  telemetry: ExecutionTelemetry | undefined,
+  span: ReturnType<typeof startExecutionSpan>
+): void {
+  const totalDuration = Date.now() - ctx.startTime;
+
+  logger?.error('Validation failed after all attempts', {
+    command_type: ctx.commandType,
+    total_attempts: ctx.attemptNumber,
+    duration_ms: totalDuration,
+  });
+
+  metrics?.increment(StandardMetrics.COMMAND_INVOCATIONS_TOTAL, {
+    command: `validation.${ctx.commandType}`,
+    result: 'failure',
+    attempts: ctx.attemptNumber.toString(),
+  });
+
+  const failureError = new Error(
+    ctx.errorSummary ?? `Validation command "${ctx.commandType}" failed`
+  );
+
+  telemetry?.metrics?.recordTaskLifecycle(
+    ctx.taskId,
+    'validation',
+    ExecutionTaskStatus.FAILED,
+    totalDuration
+  );
+  telemetry?.logs?.taskFailed(ctx.taskId, 'validation', failureError, totalDuration, {
+    command_type: ctx.commandType,
+    attempt_number: ctx.attemptNumber,
+  });
+
+  span?.setAttribute('validation.attempts', ctx.attemptNumber);
+  span?.setAttribute('validation.success', false);
+  endExecutionSpan(span, false, failureError.message);
 }
 
 /**

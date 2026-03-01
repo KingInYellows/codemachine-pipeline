@@ -13,6 +13,22 @@ import type {
   RolloutPlan,
 } from '../core/models/Specification';
 
+const SEVERITY_KEYWORDS: Record<string, string[]> = {
+  critical: ['critical', 'severe', 'blocker'],
+  high: ['high', 'major'],
+  low: ['low', 'minor'],
+};
+
+function classifySeverity(text: string): 'low' | 'medium' | 'high' | 'critical' {
+  const lower = text.toLowerCase();
+  for (const [severity, keywords] of Object.entries(SEVERITY_KEYWORDS)) {
+    if (keywords.some((kw) => lower.includes(kw))) {
+      return severity as 'low' | 'medium' | 'high' | 'critical';
+    }
+  }
+  return 'medium';
+}
+
 /**
  * Generate risk assessments from PRD risks and completed research tasks
  */
@@ -25,10 +41,7 @@ export function generateRiskAssessments(
   for (const riskText of prdRisks) {
     if (!riskText || riskText.includes('TODO')) continue;
 
-    let severity: 'low' | 'medium' | 'high' | 'critical' = 'medium';
-    if (/critical|severe|blocker/i.test(riskText)) severity = 'critical';
-    else if (/high|major/i.test(riskText)) severity = 'high';
-    else if (/low|minor/i.test(riskText)) severity = 'low';
+    const severity = classifySeverity(riskText);
 
     const mitigationMatch = riskText.match(/mitigation:?\s*(.+)/i);
     const mitigation = mitigationMatch ? mitigationMatch[1].trim() : undefined;
