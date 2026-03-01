@@ -27,7 +27,7 @@ import {
   type AutoFixOptions,
   type AutoFixResult,
 } from '../../workflows/autoFixEngine';
-import { setJsonOutputMode, rethrowIfOclifError } from '../utils/cliErrors';
+import { CliError, CliErrorCode, setJsonOutputMode, rethrowIfOclifError } from '../utils/cliErrors';
 import { flushTelemetrySuccess, flushTelemetryError } from '../utils/telemetryLifecycle';
 
 /**
@@ -266,6 +266,11 @@ export default class Validate extends Command {
       );
 
       rethrowIfOclifError(error);
+
+      if (error instanceof CliError) {
+        const exitCode = error.code === CliErrorCode.RUN_DIR_NOT_FOUND ? 10 : error.exitCode;
+        this.error(error.message, { exit: exitCode });
+      }
 
       if (error instanceof Error) {
         this.error(`Validate command failed: ${error.message}`, { exit: 1 });

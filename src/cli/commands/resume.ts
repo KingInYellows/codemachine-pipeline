@@ -31,7 +31,7 @@ import {
 import { loadPlanSummary } from '../../workflows/taskPlanner';
 import { RateLimitReporter } from '../../telemetry/rateLimitReporter';
 import { loadReport as loadBranchProtectionReport } from '../../workflows/branchProtectionReporter';
-import { setJsonOutputMode, rethrowIfOclifError } from '../utils/cliErrors';
+import { CliError, CliErrorCode, setJsonOutputMode, rethrowIfOclifError } from '../utils/cliErrors';
 
 type ResumeFlags = {
   feature?: string;
@@ -445,6 +445,11 @@ export default class Resume extends Command {
       await this.flush(logger, metrics, traceManager, commandSpan, runDirPath, exitCode);
 
       rethrowIfOclifError(error);
+
+      if (error instanceof CliError) {
+        const exitCode = error.code === CliErrorCode.RUN_DIR_NOT_FOUND ? 10 : error.exitCode;
+        this.error(error.message, { exit: exitCode });
+      }
 
       if (error instanceof Error) {
         this.error(`Resume command failed: ${error.message}`, { exit: exitCode });
