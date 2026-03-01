@@ -1,6 +1,6 @@
 import { getRunDirectoryPath } from '../../../persistence/runDirectoryManager';
 import {
-  createBranchProtectionAdapter,
+  BranchProtectionAdapter,
   type BranchProtectionConfig,
 } from '../../../adapters/github/branchProtection';
 import { evaluateCompliance } from '../../../workflows/branchComplianceChecker';
@@ -130,7 +130,7 @@ export async function refreshBranchProtectionArtifact(
       adapterConfig.logger = logger;
     }
 
-    const adapter = createBranchProtectionAdapter(adapterConfig);
+    const adapter = new BranchProtectionAdapter(adapterConfig);
 
     const compliance = await evaluateCompliance(
       adapter,

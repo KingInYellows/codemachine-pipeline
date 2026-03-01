@@ -51,10 +51,8 @@ export class LinearAdapter {
   }
 }
 
-// Factory function for testability
-export function createLinearAdapter(config: LinearAdapterConfig): LinearAdapter {
-  return new LinearAdapter(config);
-}
+// Direct instantiation
+const adapter = new LinearAdapter(config);
 ```
 
 **Key patterns:**

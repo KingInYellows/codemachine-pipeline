@@ -7,17 +7,8 @@ import { createModelParser } from './modelParser.js';
  * Structured technical specification with reviewer info, status,
  * change log, risks, test plan, and rollout plan.
  *
- * Implements:
- * - FR-2 (Run Directory): Spec artifact persistence
- * - ADR-5 (Approval Workflow): Reviewer tracking
- * - ADR-7 (Validation Policy): Zod-based validation
- *
  * Used by CLI commands: start, approve, status
  */
-
-// ============================================================================
-// Specification Status Enum
-// ============================================================================
 
 export const SpecificationStatusSchema = z.enum([
   'draft',
@@ -28,10 +19,6 @@ export const SpecificationStatusSchema = z.enum([
 ]);
 
 export type SpecificationStatus = z.infer<typeof SpecificationStatusSchema>;
-
-// ============================================================================
-// Reviewer Info Schema
-// ============================================================================
 
 const ReviewerInfoSchema = z.object({
   /** Reviewer identifier (username, email, or ID) */
@@ -50,10 +37,6 @@ const ReviewerInfoSchema = z.object({
 
 export type ReviewerInfo = z.infer<typeof ReviewerInfoSchema>;
 
-// ============================================================================
-// Change Log Entry Schema
-// ============================================================================
-
 const ChangeLogEntrySchema = z.object({
   /** ISO 8601 timestamp of the change */
   timestamp: z.string().datetime(),
@@ -66,10 +49,6 @@ const ChangeLogEntrySchema = z.object({
 });
 
 export type ChangeLogEntry = z.infer<typeof ChangeLogEntrySchema>;
-
-// ============================================================================
-// Risk Assessment Schema
-// ============================================================================
 
 const RiskAssessmentSchema = z.object({
   /** Risk description */
@@ -84,10 +63,6 @@ const RiskAssessmentSchema = z.object({
 
 export type RiskAssessment = z.infer<typeof RiskAssessmentSchema>;
 
-// ============================================================================
-// Test Plan Item Schema
-// ============================================================================
-
 const TestPlanItemSchema = z.object({
   /** Test case identifier */
   test_id: z.string().min(1),
@@ -100,10 +75,6 @@ const TestPlanItemSchema = z.object({
 });
 
 export type TestPlanItem = z.infer<typeof TestPlanItemSchema>;
-
-// ============================================================================
-// Rollout Plan Schema
-// ============================================================================
 
 const RolloutPlanSchema = z.object({
   /** Rollout strategy (all_at_once, gradual, canary, blue_green) */
@@ -128,10 +99,6 @@ const RolloutPlanSchema = z.object({
 });
 
 export type RolloutPlan = z.infer<typeof RolloutPlanSchema>;
-
-// ============================================================================
-// Specification Schema
-// ============================================================================
 
 export const SpecificationSchema = z
   .object({
@@ -169,9 +136,6 @@ export const SpecificationSchema = z
   .strict();
 
 export type Specification = Readonly<z.infer<typeof SpecificationSchema>>;
-
-// ============================================================================
-// Serialization Helpers
 
 const { parse: parseSpecification, serialize: serializeSpecification } =
   createModelParser<Specification>(SpecificationSchema);

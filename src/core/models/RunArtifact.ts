@@ -7,11 +7,6 @@ import { createModelParser } from './modelParser.js';
  * Tracks paths and integrity hashes for artifacts generated during
  * feature execution (prd.md, spec.md, plan.json, logs, bundles).
  *
- * Implements:
- * - FR-2 (Run Directory): Artifact file tracking
- * - ADR-2 (State Persistence): Hash manifest integration
- * - ADR-7 (Validation Policy): Zod-based validation
- *
  * Used by CLI commands: status, export, verify
  */
 

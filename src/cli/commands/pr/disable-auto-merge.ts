@@ -2,11 +2,6 @@
  * PR Disable Auto-Merge Command
  *
  * Disables auto-merge for a pull request
- *
- * Implements:
- * - FR-15: PR automation
- * - Section 2: Communication Patterns (auto-merge management)
- * - Section 3.10.4: `codepipe pr disable-auto-merge` command flow
  */
 
 import { Command, Flags } from '@oclif/core';

@@ -5,10 +5,6 @@
  * here to break the circular dependency between those two modules.
  */
 
-// ============================================================================
-// Shared Types
-// ============================================================================
-
 export interface PlanDiagnostics {
   warnings: string[];
   blockers: Array<{

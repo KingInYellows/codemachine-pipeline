@@ -2,11 +2,6 @@
  * PR Reviewers Command
  *
  * Request reviewers for a pull request
- *
- * Implements:
- * - FR-15: PR automation
- * - Section 2: Communication Patterns (PR orchestration, reviewer assignment)
- * - Section 3.10.4: `codepipe pr reviewers` command flow
  */
 
 import { Command, Flags } from '@oclif/core';

@@ -6,7 +6,6 @@ import { createModelParser } from './modelParser.js';
  *
  * Metadata about tokens/app credentials (provider, auth method, scopes, expiry, redaction tokens).
  *
- * Implements ADR-7 (Validation Policy): Zod-based validation
  * Used by CLI commands: init, validate-config
  */
 

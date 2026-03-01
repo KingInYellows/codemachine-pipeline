@@ -6,9 +6,6 @@
  *
  * Extracted from queueStore.ts for maintainability.
  *
- * Implements:
- * - Issue #45: Queue WAL Optimization Layer 1
- * - FR-3 (Resumability): Fast state queries via in-memory index
  */
 
 import type { ExecutionTask } from '../../core/models/ExecutionTask';

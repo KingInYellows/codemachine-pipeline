@@ -533,9 +533,9 @@ try {
 ### Example 1: Fetch Protection and Evaluate Compliance
 
 ```typescript
-import { createBranchProtectionAdapter } from './adapters/github/branchProtection';
+import { BranchProtectionAdapter } from './adapters/github/branchProtection';
 
-const adapter = createBranchProtectionAdapter({
+const adapter = new BranchProtectionAdapter({
   owner: 'acme-corp',
   repo: 'api-service',
   token: process.env.GITHUB_TOKEN!,

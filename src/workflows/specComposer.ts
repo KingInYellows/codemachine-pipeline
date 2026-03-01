@@ -5,10 +5,6 @@
  * covering constraints, rollout plan, test plan, and risks. Supports CLI editing
  * loops, highlights unknowns requiring more research, and stores change logs.
  *
- * Implements:
- * - FR-10 (Specification Authoring): Spec generation and review
- * - FR-9 (Traceability): PRD → Spec → Plan mapping
- * - ADR-5 (Approval Workflow): Human-in-the-loop gates
  */
 
 import * as fs from 'node:fs/promises';
@@ -54,10 +50,6 @@ export {
   recordSpecApproval,
   type RecordSpecApprovalOptions,
 } from './specStore';
-
-// ============================================================================
-// Types
-// ============================================================================
 
 /**
  * Specification composer configuration
@@ -113,10 +105,6 @@ export interface SpecComposerResult {
     warnings: string[];
   };
 }
-
-// ============================================================================
-// Main Composer Function
-// ============================================================================
 
 /**
  * Compose engineering specification from approved PRD and research

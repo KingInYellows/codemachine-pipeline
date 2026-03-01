@@ -9,10 +9,6 @@ import { z } from 'zod';
  * Used by CLI commands: start, resume, status
  */
 
-// ============================================================================
-// Execution Task Type Enum
-// ============================================================================
-
 export const ExecutionTaskTypeSchema = z.enum([
   'code_generation',
   'testing',
@@ -30,10 +26,6 @@ export const ExecutionTaskTypeSchema = z.enum([
 
 export type ExecutionTaskType = z.infer<typeof ExecutionTaskTypeSchema>;
 
-// ============================================================================
-// Execution Task Status Enum
-// ============================================================================
-
 export const ExecutionTaskStatusSchema = z.enum([
   'pending',
   'running',
@@ -44,10 +36,6 @@ export const ExecutionTaskStatusSchema = z.enum([
 ]);
 
 export type ExecutionTaskStatus = z.infer<typeof ExecutionTaskStatusSchema>;
-
-// ============================================================================
-// Task Error Schema
-// ============================================================================
 
 const TaskErrorSchema = z.object({
   /** Error message */
@@ -64,10 +52,6 @@ const TaskErrorSchema = z.object({
 
 export type TaskError = z.infer<typeof TaskErrorSchema>;
 
-// ============================================================================
-// Cost Tracking Schema
-// ============================================================================
-
 const CostTrackingSchema = z.object({
   /** Total cost in USD */
   total_usd: z.number().nonnegative().default(0),
@@ -80,10 +64,6 @@ const CostTrackingSchema = z.object({
 });
 
 export type CostTracking = z.infer<typeof CostTrackingSchema>;
-
-// ============================================================================
-// Rate Limit Budget Schema
-// ============================================================================
 
 const RateLimitBudgetSchema = z.object({
   /** Provider identifier (e.g., 'openai', 'anthropic', 'github') */
@@ -99,10 +79,6 @@ const RateLimitBudgetSchema = z.object({
 });
 
 export type RateLimitBudget = z.infer<typeof RateLimitBudgetSchema>;
-
-// ============================================================================
-// ExecutionTask Schema
-// ============================================================================
 
 export const ExecutionTaskSchema = z
   .object({
@@ -152,10 +128,6 @@ export const ExecutionTaskSchema = z
   .strict();
 
 export type ExecutionTask = Readonly<z.infer<typeof ExecutionTaskSchema>>;
-
-// ============================================================================
-// Serialization Helpers
-// ============================================================================
 
 /**
  * Parse and validate ExecutionTask from JSON

@@ -21,10 +21,6 @@ export interface SpecRequirement {
 
 export type RequirementTaskMap = Map<string, string>;
 
-// ============================================================================
-// Graph Algorithms
-// ============================================================================
-
 /**
  * Build dependency graph based on task types and logical ordering
  */

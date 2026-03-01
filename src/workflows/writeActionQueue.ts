@@ -49,10 +49,6 @@ export {
   type WriteActionQueueManifest,
 } from './writeActionQueueTypes.js';
 
-// ============================================================================
-// Helpers
-// ============================================================================
-
 function createConsoleLogger(): LoggerInterface {
   return createLogger({
     component: 'write-action-queue',
@@ -60,10 +56,6 @@ function createConsoleLogger(): LoggerInterface {
     mirrorToStderr: true,
   });
 }
-
-// ============================================================================
-// Write Action Queue Class
-// ============================================================================
 
 /**
  * Write action queue for throttled GitHub write operations
@@ -517,10 +509,6 @@ export class WriteActionQueue {
     );
   }
 }
-
-// ============================================================================
-// Factory Functions
-// ============================================================================
 
 /**
  * Create write action queue instance

@@ -6,14 +6,10 @@
  *
  */
 
-import { HttpClient, Provider, HttpError, ErrorType } from '../http/client';
+import { HttpClient, Provider, HttpError } from '../http/client';
 import type { HttpClientConfig } from '../http/client';
 import { serializeError, createErrorNormalizer, AdapterError } from '../../utils/errors';
 import { createLogger, LogLevel, type LoggerInterface } from '../../telemetry/logger';
-
-// ============================================================================
-// Types & Schemas
-// ============================================================================
 
 /**
  * Branch protection configuration
@@ -152,10 +148,6 @@ export interface BranchProtectionCompliance {
   evaluated_at: string;
 }
 
-// ============================================================================
-// Branch Protection Adapter
-// ============================================================================
-
 /**
  * GitHub branch protection intelligence adapter
  */
@@ -207,12 +199,6 @@ export class BranchProtectionAdapter {
    * Get branch protection rules for a specific branch
    */
   async getBranchProtection(branch: string): Promise<BranchProtectionRules | null> {
-    this.logger.info('Fetching branch protection rules', {
-      owner: this.owner,
-      repo: this.repo,
-      branch,
-    });
-
     try {
       const response = await this.client.get<{
         required_status_checks: RequiredStatusChecks | null;
@@ -277,14 +263,6 @@ export class BranchProtectionAdapter {
         }),
       };
 
-      this.logger.debug('Branch protection rules fetched', {
-        branch,
-        protected: true,
-        required_checks: protection.required_status_checks?.contexts.length ?? 0,
-        required_reviews:
-          protection.required_pull_request_reviews?.required_approving_review_count ?? 0,
-      });
-
       return protection;
     } catch (error) {
       // 404 means branch is not protected
@@ -305,8 +283,6 @@ export class BranchProtectionAdapter {
    * Get commit statuses for a specific commit
    */
   async getCommitStatuses(sha: string): Promise<CommitStatus[]> {
-    this.logger.debug('Fetching commit statuses', { sha });
-
     try {
       const encodedSha = encodeURIComponent(sha);
       const response = await this.client.get<CommitStatus[]>(
@@ -315,11 +291,6 @@ export class BranchProtectionAdapter {
           metadata: { operation: 'getCommitStatuses', sha },
         }
       );
-
-      this.logger.debug('Commit statuses fetched', {
-        sha,
-        count: response.data.length,
-      });
 
       return response.data;
     } catch (error) {
@@ -335,8 +306,6 @@ export class BranchProtectionAdapter {
    * Get check runs for a specific commit
    */
   async getCheckRuns(sha: string): Promise<CheckRun[]> {
-    this.logger.debug('Fetching check runs', { sha });
-
     try {
       const encodedSha = encodeURIComponent(sha);
       const response = await this.client.get<{
@@ -344,11 +313,6 @@ export class BranchProtectionAdapter {
         check_runs: CheckRun[];
       }>(`/repos/${this.owner}/${this.repo}/commits/${encodedSha}/check-runs`, {
         metadata: { operation: 'getCheckRuns', sha },
-      });
-
-      this.logger.debug('Check runs fetched', {
-        sha,
-        count: response.data.total_count,
       });
 
       return response.data.check_runs;
@@ -365,8 +329,6 @@ export class BranchProtectionAdapter {
    * Get pull request reviews
    */
   async getPullRequestReviews(pull_number: number): Promise<PullRequestReview[]> {
-    this.logger.debug('Fetching pull request reviews', { pull_number });
-
     try {
       const response = await this.client.get<PullRequestReview[]>(
         `/repos/${this.owner}/${this.repo}/pulls/${pull_number}/reviews`,
@@ -374,11 +336,6 @@ export class BranchProtectionAdapter {
           metadata: { operation: 'getPullRequestReviews', pull_number },
         }
       );
-
-      this.logger.debug('Pull request reviews fetched', {
-        pull_number,
-        count: response.data.length,
-      });
 
       return response.data;
     } catch (error) {
@@ -401,8 +358,6 @@ export class BranchProtectionAdapter {
     mergeable: boolean | null;
     mergeable_state: string | null;
   }> {
-    this.logger.debug('Fetching pull request details', { pull_number });
-
     try {
       const response = await this.client.get<{
         number: number;
@@ -436,8 +391,6 @@ export class BranchProtectionAdapter {
     behind_by: number;
     status: string;
   }> {
-    this.logger.debug('Comparing commits', { base, head });
-
     try {
       const encodedBase = encodeURIComponent(base);
       const encodedHead = encodeURIComponent(head);
@@ -447,14 +400,6 @@ export class BranchProtectionAdapter {
         status: string;
       }>(`/repos/${this.owner}/${this.repo}/compare/${encodedBase}...${encodedHead}`, {
         metadata: { operation: 'compareCommits', base, head },
-      });
-
-      this.logger.debug('Commits compared', {
-        base,
-        head,
-        ahead_by: response.data.ahead_by,
-        behind_by: response.data.behind_by,
-        status: response.data.status,
       });
 
       return response.data;
@@ -474,35 +419,7 @@ export class BranchProtectionAdapter {
   );
 }
 
-// ============================================================================
-// Error Classes
-// ============================================================================
-
 /**
  * Branch protection error with error taxonomy
  */
-export class BranchProtectionError extends AdapterError {
-  constructor(
-    message: string,
-    errorType: ErrorType,
-    statusCode?: number,
-    requestId?: string,
-    operation?: string
-  ) {
-    super(message, errorType, statusCode, requestId, operation);
-    this.name = 'BranchProtectionError';
-  }
-}
-
-// ============================================================================
-// Factory Functions
-// ============================================================================
-
-/**
- * Create branch protection adapter instance
- */
-export function createBranchProtectionAdapter(
-  config: BranchProtectionConfig
-): BranchProtectionAdapter {
-  return new BranchProtectionAdapter(config);
-}
+export class BranchProtectionError extends AdapterError {}

@@ -14,7 +14,7 @@
  *
  */
 
-import { HttpClient, Provider, ErrorType } from '../http/client';
+import { HttpClient, Provider } from '../http/client';
 import type { HttpClientConfig } from '../http/client';
 import { serializeError, createErrorNormalizer, AdapterError } from '../../utils/errors';
 import { createLogger, LogLevel, type LoggerInterface } from '../../telemetry/logger';
@@ -47,10 +47,6 @@ export type {
   CreateBranchParams,
 } from './GitHubAdapterTypes.js';
 
-// ============================================================================
-// GraphQL Mutations
-// ============================================================================
-
 const ENABLE_AUTO_MERGE_MUTATION = `
   mutation EnableAutoMerge($pullRequestId: ID!, $mergeMethod: PullRequestMergeMethod!) {
     enablePullRequestAutoMerge(input: {
@@ -78,10 +74,6 @@ const DISABLE_AUTO_MERGE_MUTATION = `
     }
   }
 ` as const;
-
-// ============================================================================
-// GitHub Adapter
-// ============================================================================
 
 /**
  * GitHub adapter for repository operations
@@ -130,19 +122,9 @@ export class GitHubAdapter {
    * Get repository metadata
    */
   async getRepository(): Promise<RepositoryInfo> {
-    this.logger.info('Fetching repository metadata', {
-      owner: this.owner,
-      repo: this.repo,
-    });
-
     try {
       const response = await this.client.get<RepositoryInfo>(`/repos/${this.owner}/${this.repo}`, {
         metadata: { operation: 'getRepository' },
-      });
-
-      this.logger.debug('Repository metadata fetched', {
-        repo: response.data.full_name,
-        default_branch: response.data.default_branch,
       });
 
       return response.data;
@@ -158,11 +140,6 @@ export class GitHubAdapter {
    * Create a new branch from a specific commit
    */
   async createBranch(params: CreateBranchParams): Promise<GitReference> {
-    this.logger.info('Creating branch', {
-      branch: params.branch,
-      sha: params.sha,
-    });
-
     try {
       const response = await this.client.post<GitReference>(
         `/repos/${this.owner}/${this.repo}/git/refs`,
@@ -174,11 +151,6 @@ export class GitHubAdapter {
           metadata: { operation: 'createBranch', branch: params.branch },
         }
       );
-
-      this.logger.info('Branch created successfully', {
-        branch: params.branch,
-        ref: response.data.ref,
-      });
 
       return response.data;
     } catch (error) {
@@ -194,8 +166,6 @@ export class GitHubAdapter {
    * Get a specific branch reference
    */
   async getBranch(branch: string): Promise<GitReference> {
-    this.logger.debug('Fetching branch reference', { branch });
-
     try {
       const response = await this.client.get<GitReference>(
         `/repos/${this.owner}/${this.repo}/git/ref/heads/${branch.split('/').map(encodeURIComponent).join('/')}`,
@@ -218,13 +188,6 @@ export class GitHubAdapter {
    * Create a pull request
    */
   async createPullRequest(params: CreatePullRequestParams): Promise<PullRequest> {
-    this.logger.info('Creating pull request', {
-      title: params.title,
-      head: params.head,
-      base: params.base,
-      draft: params.draft,
-    });
-
     try {
       const response = await this.client.post<PullRequest>(
         `/repos/${this.owner}/${this.repo}/pulls`,
@@ -245,11 +208,6 @@ export class GitHubAdapter {
         }
       );
 
-      this.logger.info('Pull request created successfully', {
-        pr_number: response.data.number,
-        html_url: response.data.html_url,
-      });
-
       return response.data;
     } catch (error) {
       this.logger.error('Failed to create pull request', {
@@ -264,8 +222,6 @@ export class GitHubAdapter {
    * Get pull request details
    */
   async getPullRequest(pull_number: number): Promise<PullRequest> {
-    this.logger.debug('Fetching pull request', { pull_number });
-
     try {
       const response = await this.client.get<PullRequest>(
         `/repos/${this.owner}/${this.repo}/pulls/${pull_number}`,
@@ -288,12 +244,6 @@ export class GitHubAdapter {
    * Request reviewers for a pull request
    */
   async requestReviewers(params: RequestReviewersParams): Promise<PullRequest> {
-    this.logger.info('Requesting reviewers', {
-      pull_number: params.pull_number,
-      reviewers: params.reviewers,
-      team_reviewers: params.team_reviewers,
-    });
-
     try {
       const payload: { reviewers?: string[]; team_reviewers?: string[] } = {};
       if (params.reviewers && params.reviewers.length > 0) {
@@ -314,10 +264,6 @@ export class GitHubAdapter {
         }
       );
 
-      this.logger.info('Reviewers requested successfully', {
-        pull_number: params.pull_number,
-      });
-
       return response.data;
     } catch (error) {
       this.logger.error('Failed to request reviewers', {
@@ -332,8 +278,6 @@ export class GitHubAdapter {
    * Get status checks for a commit
    */
   async getStatusChecks(sha: string): Promise<StatusCheck[]> {
-    this.logger.debug('Fetching status checks', { sha });
-
     try {
       // GitHub REST API v3 uses check-suites endpoint
       const response = await this.client.get<{ check_suites: StatusCheck[] }>(
@@ -342,11 +286,6 @@ export class GitHubAdapter {
           metadata: { operation: 'getStatusChecks', sha },
         }
       );
-
-      this.logger.debug('Status checks fetched', {
-        sha,
-        count: response.data.check_suites?.length ?? 0,
-      });
 
       return response.data.check_suites ?? [];
     } catch (error) {
@@ -370,8 +309,6 @@ export class GitHubAdapter {
     ready: boolean;
     reasons: string[];
   }> {
-    this.logger.debug('Checking merge readiness', { pull_number });
-
     try {
       const pr = await this.getPullRequest(pull_number);
       const reasons: string[] = [];
@@ -424,11 +361,6 @@ export class GitHubAdapter {
    * Merge a pull request
    */
   async mergePullRequest(params: MergePullRequestParams): Promise<MergeResult> {
-    this.logger.info('Merging pull request', {
-      pull_number: params.pull_number,
-      merge_method: params.merge_method,
-    });
-
     try {
       const payload: {
         merge_method: string;
@@ -462,11 +394,6 @@ export class GitHubAdapter {
         }
       );
 
-      this.logger.info('Pull request merged successfully', {
-        pull_number: params.pull_number,
-        sha: response.data.sha,
-      });
-
       return response.data;
     } catch (error) {
       this.logger.error('Failed to merge pull request', {
@@ -486,8 +413,6 @@ export class GitHubAdapter {
     pull_number: number,
     merge_method?: 'MERGE' | 'SQUASH' | 'REBASE'
   ): Promise<void> {
-    this.logger.info('Enabling auto-merge', { pull_number, merge_method });
-
     try {
       const prNodeId = await this.getPRNodeId(pull_number);
 
@@ -497,7 +422,6 @@ export class GitHubAdapter {
         'enableAutoMerge',
         pull_number
       );
-      this.logger.info('Auto-merge enabled successfully', { pull_number });
     } catch (error) {
       this.logger.error('Failed to enable auto-merge', {
         pull_number,
@@ -513,8 +437,6 @@ export class GitHubAdapter {
    * Note: This uses the GraphQL API wrapped in REST-like envelope
    */
   async disableAutoMerge(pull_number: number): Promise<void> {
-    this.logger.info('Disabling auto-merge', { pull_number });
-
     try {
       const prNodeId = await this.getPRNodeId(pull_number);
 
@@ -560,11 +482,6 @@ export class GitHubAdapter {
    * Trigger a workflow dispatch
    */
   async triggerWorkflow(params: WorkflowDispatchParams): Promise<void> {
-    this.logger.info('Triggering workflow dispatch', {
-      workflow_id: params.workflow_id,
-      ref: params.ref,
-    });
-
     try {
       await this.client.post(
         `/repos/${this.owner}/${this.repo}/actions/workflows/${encodeURIComponent(params.workflow_id)}/dispatches`,
@@ -581,10 +498,6 @@ export class GitHubAdapter {
         }
       );
 
-      this.logger.info('Workflow dispatch triggered successfully', {
-        workflow_id: params.workflow_id,
-        ref: params.ref,
-      });
     } catch (error) {
       this.logger.error('Failed to trigger workflow dispatch', {
         workflow_id: params.workflow_id,
@@ -597,33 +510,8 @@ export class GitHubAdapter {
   private readonly normalizeError = createErrorNormalizer(GitHubAdapterError, 'GitHub');
 }
 
-// ============================================================================
-// Error Classes
-// ============================================================================
-
 /**
  * GitHub adapter error with error taxonomy
  */
-export class GitHubAdapterError extends AdapterError {
-  constructor(
-    message: string,
-    errorType: ErrorType,
-    statusCode?: number,
-    requestId?: string,
-    operation?: string
-  ) {
-    super(message, errorType, statusCode, requestId, operation);
-    this.name = 'GitHubAdapterError';
-  }
-}
+export class GitHubAdapterError extends AdapterError {}
 
-// ============================================================================
-// Factory Functions
-// ============================================================================
-
-/**
- * Create GitHub adapter instance
- */
-export function createGitHubAdapter(config: GitHubAdapterConfig): GitHubAdapter {
-  return new GitHubAdapter(config);
-}

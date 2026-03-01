@@ -34,10 +34,6 @@ import {
   type RequirementTaskMap,
 } from './taskPlannerGraph.js';
 
-// ============================================================================
-// Types
-// ============================================================================
-
 /**
  * Task planner configuration
  */
@@ -155,10 +151,6 @@ const TraceDocumentSchema = z.object({
   links: z.array(z.unknown()).optional(),
 });
 
-// ============================================================================
-// Spec Loading
-// ============================================================================
-
 /**
  * Extract requirements from spec.json test plan
  */
@@ -222,10 +214,6 @@ async function extractSpecRequirements(runDir: string): Promise<SpecRequirement[
 
   return requirements;
 }
-
-// ============================================================================
-// Task Generation
-// ============================================================================
 
 /**
  * Generate ExecutionTask nodes from spec requirements
@@ -323,10 +311,6 @@ function deriveTaskType(testType?: string): string {
   return testingIndicators.has(type) ? 'testing' : 'code_generation';
 }
 
-// ============================================================================
-// Plan Persistence
-// ============================================================================
-
 /**
  * Compute plan checksum for integrity verification
  */
@@ -411,10 +395,6 @@ async function loadTraceabilityTaskIds(runDir: string): Promise<RequirementTaskM
 
   return mapping;
 }
-
-// ============================================================================
-// Main Planner Function
-// ============================================================================
 
 /**
  * Load an existing plan.json if present and force-regeneration is not requested.
@@ -631,10 +611,6 @@ export async function generateExecutionPlan(
     diagnostics,
   };
 }
-
-// ============================================================================
-// Plan Loading & Summary
-// ============================================================================
 
 /**
  * Load plan summary for CLI status output

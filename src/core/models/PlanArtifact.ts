@@ -7,17 +7,8 @@ import { createModelParser } from './modelParser.js';
  * Defines the execution plan DAG with task dependencies, metadata,
  * and checksum for idempotence verification.
  *
- * Implements:
- * - FR-2 (Run Directory): Plan persistence in plan.json
- * - FR-3 (Resumability): Dependency graph for step ordering
- * - ADR-7 (Validation Policy): Zod-based validation
- *
  * Used by CLI commands: start, resume, status
  */
-
-// ============================================================================
-// Task Dependency Schema
-// ============================================================================
 
 const TaskDependencySchema = z.object({
   /** Dependent task ID */
@@ -27,10 +18,6 @@ const TaskDependencySchema = z.object({
 });
 
 export type TaskDependency = z.infer<typeof TaskDependencySchema>;
-
-// ============================================================================
-// Task Node Schema
-// ============================================================================
 
 const TaskNodeSchema = z.object({
   /** Unique task identifier */
@@ -49,10 +36,6 @@ const TaskNodeSchema = z.object({
 
 export type TaskNode = z.infer<typeof TaskNodeSchema>;
 
-// ============================================================================
-// DAG Metadata Schema
-// ============================================================================
-
 const DAGMetadataSchema = z.object({
   /** Total number of tasks in the plan */
   total_tasks: z.number().int().nonnegative(),
@@ -67,10 +50,6 @@ const DAGMetadataSchema = z.object({
 });
 
 export type DAGMetadata = z.infer<typeof DAGMetadataSchema>;
-
-// ============================================================================
-// PlanArtifact Schema
-// ============================================================================
 
 export const PlanArtifactSchema = z
   .object({
@@ -97,9 +76,6 @@ export const PlanArtifactSchema = z
   .strict();
 
 export type PlanArtifact = Readonly<z.infer<typeof PlanArtifactSchema>>;
-
-// ============================================================================
-// Serialization Helpers
 
 const { parse: parsePlanArtifact, serialize: serializePlanArtifact } =
   createModelParser<PlanArtifact>(PlanArtifactSchema);

@@ -1,10 +1,5 @@
 /**
  * Shared utilities for PR automation commands
- *
- * Implements:
- * - FR-15: PR automation
- * - Section 2: Communication Patterns (PR orchestration)
- * - ADR-3: Integration Layer design
  */
 
 import * as path from 'node:path';
@@ -16,7 +11,6 @@ import {
 } from '../../persistence/runDirectoryManager';
 import { safeJsonParse } from '../../utils/safeJson';
 import {
-  createGitHubAdapter,
   GitHubAdapter,
   type GitHubAdapterConfig,
 } from '../../adapters/github/GitHubAdapter';
@@ -147,7 +141,7 @@ export async function loadPRContext(
  */
 export function getPRAdapter(
   context: PRContext,
-  adapterFactory: (config: GitHubAdapterConfig) => GitHubAdapter = createGitHubAdapter
+  adapterFactory: (config: GitHubAdapterConfig) => GitHubAdapter = (config: GitHubAdapterConfig) => new GitHubAdapter(config)
 ): GitHubAdapter {
   const { config, runDir, logger } = context;
 

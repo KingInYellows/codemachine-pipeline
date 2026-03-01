@@ -12,10 +12,6 @@ import { isFileNotFound } from '../utils/safeJson';
  * Supports manifest generation, validation, incremental updates, and verification.
  */
 
-// ============================================================================
-// Types
-// ============================================================================
-
 /**
  * Represents a single file's hash record
  */
@@ -102,10 +98,6 @@ export type FileHashResult =
   | { success: true; matches: boolean }
   | { success: false; error: 'ENOENT' | 'EACCES' | 'EIO' | 'UNKNOWN'; message: string };
 
-// ============================================================================
-// Hash Computation
-// ============================================================================
-
 /**
  * Compute SHA-256 hash of a file's contents
  *
@@ -160,10 +152,6 @@ export async function createFileHashRecord(
 
   return record;
 }
-
-// ============================================================================
-// Manifest Creation
-// ============================================================================
 
 /**
  * Create a hash manifest for multiple files
@@ -267,10 +255,6 @@ export function removeFromHashManifest(
     files: updatedFiles,
   };
 }
-
-// ============================================================================
-// Verification
-// ============================================================================
 
 /**
  * Verify integrity of files against a hash manifest
@@ -378,10 +362,6 @@ export async function verifyFileHash(
   }
 }
 
-// ============================================================================
-// Persistence
-// ============================================================================
-
 /**
  * Save hash manifest to a JSON file
  *
@@ -418,10 +398,6 @@ export async function loadHashManifest(manifestPath: string): Promise<HashManife
     throw new Error('Failed to load hash manifest: Unknown error', { cause: error });
   }
 }
-
-// ============================================================================
-// Utility Functions
-// ============================================================================
 
 /**
  * Get all file paths from a hash manifest

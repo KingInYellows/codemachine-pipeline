@@ -8,10 +8,6 @@ import { createModelParser } from './modelParser.js';
  * Represents investigation units with objectives, sources, cache keys,
  * freshness requirements, and confidence-scored results.
  *
- * Implements:
- * - FR-1 (Initialize): Context discovery and research
- * - ADR-7 (Validation Policy): Zod-based validation
- *
  * Used by CLI commands: research, start
  */
 

@@ -2,11 +2,6 @@
  * PR Status Command
  *
  * Shows pull request status including merge readiness and blockers
- *
- * Implements:
- * - FR-15: PR automation
- * - Section 2: Communication Patterns (PR orchestration)
- * - Section 3.10.4: `codepipe pr status` command flow
  */
 
 import { Command, Flags } from '@oclif/core';

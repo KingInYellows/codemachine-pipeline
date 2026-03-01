@@ -17,10 +17,6 @@ import { saveHashManifest, withLock, type HashManifest } from '../persistence';
 import { type FileMetadata } from './contextRanking';
 import { type GitMetadata } from './contextFileDiscovery';
 
-// ============================================================================
-// Context Document Assembly
-// ============================================================================
-
 /**
  * Build context document from ranked files
  *
@@ -76,10 +72,6 @@ export function buildContextDocument(
   };
 }
 
-// ============================================================================
-// Artifact Persistence
-// ============================================================================
-
 /**
  * Persist context artifacts to run directory
  *
@@ -95,7 +87,6 @@ export async function persistContextArtifacts(
   hashManifest: HashManifest
 ): Promise<void> {
   await withLock(runDir, async () => {
-    // Ensure context directory exists
     await mkdir(contextDir, { recursive: true });
 
     // Write summary.json

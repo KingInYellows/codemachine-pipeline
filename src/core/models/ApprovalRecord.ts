@@ -6,10 +6,6 @@ import { createModelParser } from './modelParser.js';
  *
  * Gate approvals referencing artifacts, signers, timestamps, and rationale.
  *
- * Implements:
- * - ADR-5 (Approval Workflow): Human-in-the-loop gates
- * - ADR-7 (Validation Policy): Zod-based validation
- *
  * Used by CLI commands: approve, status
  */
 

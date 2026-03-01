@@ -17,10 +17,6 @@ import { atomicWriteFile } from '../utils/atomicWrite.js';
  * Implements Observability Rulebook metrics requirements.
  */
 
-// ============================================================================
-// Types & Interfaces
-// ============================================================================
-
 /**
  * Metric types supported by Prometheus
  */
@@ -88,10 +84,6 @@ export interface MetricsCollectorOptions {
   defaultLabels?: Labels;
 }
 
-// ============================================================================
-// Standard Metrics Definitions
-// ============================================================================
-
 /**
  * Standard metric names used across the CLI
  */
@@ -133,10 +125,6 @@ export const StandardMetrics = {
  * Standard histogram buckets for latency measurements (milliseconds)
  */
 export const LATENCY_BUCKETS = [10, 25, 50, 100, 250, 500, 1000, 2500, 5000, 10000];
-
-// ============================================================================
-// Metrics Buffer & Collector
-// ============================================================================
 
 /**
  * In-memory metric storage with aggregation support
@@ -338,10 +326,6 @@ class MetricsBuffer {
     return { name, labels };
   }
 }
-
-// ============================================================================
-// Metrics Collector
-// ============================================================================
 
 /**
  * Metrics collector with Prometheus textfile export
@@ -615,17 +599,6 @@ export class MetricsCollector {
   }
 }
 
-// ============================================================================
-// Factory Functions
-// ============================================================================
-
-/**
- * Create a metrics collector instance
- */
-export function createMetricsCollector(options: MetricsCollectorOptions = {}): MetricsCollector {
-  return new MetricsCollector(options);
-}
-
 /**
  * Create a metrics collector for a run directory
  */
@@ -636,7 +609,7 @@ export function createRunMetricsCollector(runDir: string, runId?: string): Metri
     defaultLabels.run_id = runId;
   }
 
-  return createMetricsCollector({
+  return new MetricsCollector({
     runDir,
     defaultLabels,
   });

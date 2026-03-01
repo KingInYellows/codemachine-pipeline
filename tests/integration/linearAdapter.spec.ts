@@ -4,7 +4,6 @@ import * as path from 'node:path';
 import * as os from 'node:os';
 import {
   LinearAdapter,
-  createLinearAdapter,
   LinearAdapterError,
   type LinearIssue,
   type LinearComment,
@@ -799,7 +798,7 @@ describe('LinearAdapter Integration Tests', () => {
 
   describe('Factory Function', () => {
     it('should create adapter using factory function', () => {
-      const adapter = createLinearAdapter({
+      const adapter = new LinearAdapter({
         apiKey: 'lin_api_test_key',
         runDir,
       });

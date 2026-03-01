@@ -3,9 +3,7 @@
  *
  * Thin orchestrator that coordinates file discovery, ranking, and context
  * document assembly to collect repository context while respecting token
- * budgets defined in ADR-4.
- *
- * Implements FR-7/FR-8 requirements for context gathering.
+ * budgets.
  */
 
 import * as path from 'node:path';
@@ -31,10 +29,6 @@ export type { GitMetadata };
 export { getGitMetadata };
 
 const execFileAsync = promisify(execFile);
-
-// ============================================================================
-// Types
-// ============================================================================
 
 /**
  * Configuration for context aggregation
@@ -83,10 +77,6 @@ export interface AggregationResult {
   };
 }
 
-// ============================================================================
-// Configuration Resolution
-// ============================================================================
-
 /**
  * Resolve aggregator configuration from RepoConfig and CLI overrides
  *
@@ -130,10 +120,6 @@ export function resolveAggregatorConfig(
 
   return config;
 }
-
-// ============================================================================
-// Main Aggregation Orchestrator
-// ============================================================================
 
 /**
  * Aggregate repository context

@@ -6,10 +6,6 @@ import { wrapError, getErrorMessage } from '../utils/errors.js';
 import { validateOrThrow } from '../validation/helpers.js';
 import { withLock } from './lockManager.js';
 
-// ============================================================================
-// Types
-// ============================================================================
-
 /**
  * Run manifest schema
  */
@@ -178,15 +174,7 @@ export type ManifestUpdate =
   | Partial<RunManifest>
   | ((manifest: RunManifest) => Partial<RunManifest> | null | undefined);
 
-// ============================================================================
-// Constants
-// ============================================================================
-
 const MANIFEST_FILE_NAME = 'manifest.json';
-
-// ============================================================================
-// Internal helpers
-// ============================================================================
 
 /**
  * Validate that a run directory path is safe.
@@ -203,10 +191,6 @@ function validateRunDirectory(runDir: string): void {
     throw new Error(`Unsafe run directory path: ${runDir}`);
   }
 }
-
-// ============================================================================
-// Public API
-// ============================================================================
 
 /**
  * Write manifest to disk atomically
@@ -232,10 +216,8 @@ export async function writeManifest(runDir: string, manifest: RunManifest): Prom
       await handle.close();
     }
 
-    // Atomic rename
     await rename(tempPath, manifestPath);
   } catch (error) {
-    // Clean up temp file on error
     try {
       await unlink(tempPath);
     } catch (cleanupError) {
@@ -297,10 +279,6 @@ export function updateManifest(runDir: string, updates: ManifestUpdate): Promise
     await writeManifest(runDir, updated);
   });
 }
-
-// ============================================================================
-// State Tracking Helpers
-// ============================================================================
 
 /**
  * Update last_step in manifest

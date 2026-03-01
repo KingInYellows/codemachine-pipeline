@@ -13,10 +13,6 @@ import type {
   RolloutPlan,
 } from '../core/models/Specification';
 
-// ============================================================================
-// Specification Content Generation
-// ============================================================================
-
 /**
  * Generate risk assessments from PRD risks and completed research tasks
  */
@@ -160,10 +156,6 @@ export function generateRolloutPlan(risks: RiskAssessment[]): RolloutPlan {
     rollback_plan: 'Feature flag toggle or revert deployment; monitor metrics for anomalies',
   };
 }
-
-// ============================================================================
-// Markdown Generation
-// ============================================================================
 
 /**
  * Generate full markdown specification document from a structured specification

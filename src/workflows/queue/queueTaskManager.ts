@@ -6,9 +6,6 @@
  *
  * Extracted from queueStore.ts for maintainability.
  *
- * Implements:
- * - FR-2 (Run Directory): Queue task management in `queue/` subdirectory
- * - FR-3 (Resumability): Crash-safe task updates via WAL
  */
 
 import type { ExecutionTask } from '../../core/models/ExecutionTask';
@@ -31,10 +28,6 @@ import type { QueueOperation, ExecutionTaskData, QueueOperationResult } from './
 import { getV2IndexCache, buildDependencyGraph, toExecutionTask } from './queueCache.js';
 
 import { loadQueue } from './queueLoader.js';
-
-// ============================================================================
-// Queue Task Management
-// ============================================================================
 
 /**
  * Get next executable task from queue

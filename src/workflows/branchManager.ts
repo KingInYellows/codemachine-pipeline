@@ -12,10 +12,6 @@
  * - Git safety validations (prevent force push, protect main branches)
  * - Status introspection (local/remote sync state)
  *
- * Implements:
- * - FR-12: Branch Lifecycle Management
- * - FR-13: Git Safety Rails
- * - ADR-3: Git Integration Patterns
  */
 
 import * as fs from 'node:fs/promises';
@@ -31,10 +27,6 @@ import type { StructuredLogger } from '../telemetry/logger';
 import type { MetricsCollector } from '../telemetry/metrics';
 
 const execFileAsync = promisify(execFile);
-
-// ============================================================================
-// Types
-// ============================================================================
 
 /**
  * Branch manager configuration
@@ -147,10 +139,6 @@ export interface BranchSyncStatus {
   lastCommitSha: string;
 }
 
-// ============================================================================
-// Branch Validation
-// ============================================================================
-
 /**
  * Check if a branch name is protected (e.g., main, master, develop)
  */
@@ -204,10 +192,6 @@ export function validateBranchName(branchName: string): { valid: boolean; error?
 
   return { valid: true };
 }
-
-// ============================================================================
-// Git Operations
-// ============================================================================
 
 /**
  * Get current branch name
@@ -298,10 +282,6 @@ export async function getAheadBehindCounts(
     return { ahead: 0, behind: 0 };
   }
 }
-
-// ============================================================================
-// Branch Creation
-// ============================================================================
 
 /**
  * Generate branch name from feature ID
@@ -420,10 +400,6 @@ export async function createBranch(
   return result;
 }
 
-// ============================================================================
-// Branch Push
-// ============================================================================
-
 /**
  * Push branch to remote with upstream tracking
  */
@@ -494,10 +470,6 @@ export async function pushBranch(
   return result;
 }
 
-// ============================================================================
-// Branch Status
-// ============================================================================
-
 /**
  * Get current branch sync status
  */
@@ -545,10 +517,6 @@ export async function getBranchSyncStatus(
 
   return status;
 }
-
-// ============================================================================
-// Metadata Persistence
-// ============================================================================
 
 /**
  * Get path to branch metadata file
@@ -660,10 +628,6 @@ export async function loadBranchMetadata(config: BranchConfig): Promise<BranchMe
     return null;
   }
 }
-
-// ============================================================================
-// Safe Commit Operations
-// ============================================================================
 
 /**
  * Create a safe commit with automatic metadata tagging
