@@ -69,7 +69,7 @@ function resolveExampleForCommand(example, cmd) {
 }
 
 function escapeTableCell(value) {
-  return String(value).replace(/\|/g, '\\|').replace(/\r?\n/g, '<br/>');
+  return String(value).replace(/\|/g, '\\|').replace(/\r?\n/g, '<br/>').replace(/\t/g, '  ');
 }
 
 function renderFlagsTable(flags) {
