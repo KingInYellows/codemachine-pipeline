@@ -232,7 +232,7 @@ export default class PRStatus extends Command {
             runDirPath: runDir,
           },
           { pr_number: pr.number, merge_ready: mergeReadiness.ready },
-          exitCode
+          0
         );
 
         // Exit with appropriate code
