@@ -103,10 +103,7 @@ export function requireFeatureId(
       ? `Feature run directory not found: ${requestedFeature}`
       : 'No feature run directory found. Run "codepipe start" first.';
 
-    throw new CliError(
-      message,
-      CliErrorCode.RUN_DIR_NOT_FOUND
-    );
+    throw new CliError(message, CliErrorCode.RUN_DIR_NOT_FOUND);
   }
 }
 
