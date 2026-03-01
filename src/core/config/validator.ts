@@ -253,8 +253,7 @@ function validateGovernance(config: RepoConfig): ValidationError[] {
   if (!anyApprovalEnabled) {
     errors.push({
       path: 'governance.approval_workflow',
-      message:
-        'All approval gates are disabled - this violates human-in-the-loop requirements',
+      message: 'All approval gates are disabled - this violates human-in-the-loop requirements',
       suggestion: 'Enable at least one approval gate (recommended: require_approval_for_pr)',
     });
   }

@@ -372,7 +372,6 @@ export class LinearAdapter {
       if (!data.data?.issueUpdate?.success) {
         throw new Error('Issue update failed');
       }
-
     } catch (error) {
       this.logger.error('Failed to update issue', {
         issueId: params.issueId,
@@ -409,7 +408,6 @@ export class LinearAdapter {
       if (!data.data?.commentCreate?.success) {
         throw new Error('Comment creation failed');
       }
-
     } catch (error) {
       this.logger.error('Failed to post comment', {
         issueId: params.issueId,

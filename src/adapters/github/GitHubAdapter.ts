@@ -497,7 +497,6 @@ export class GitHubAdapter {
           },
         }
       );
-
     } catch (error) {
       this.logger.error('Failed to trigger workflow dispatch', {
         workflow_id: params.workflow_id,
@@ -514,4 +513,3 @@ export class GitHubAdapter {
  * GitHub adapter error with error taxonomy
  */
 export class GitHubAdapterError extends AdapterError {}
-

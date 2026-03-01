@@ -10,10 +10,7 @@ import {
   type RunManifest,
 } from '../../persistence/runDirectoryManager';
 import { safeJsonParse } from '../../utils/safeJson';
-import {
-  GitHubAdapter,
-  type GitHubAdapterConfig,
-} from '../../adapters/github/GitHubAdapter';
+import { GitHubAdapter, type GitHubAdapterConfig } from '../../adapters/github/GitHubAdapter';
 import { createCliLogger, LogLevel, type StructuredLogger } from '../../telemetry/logger';
 import type { RepoConfig } from '../../core/config/RepoConfig';
 import { getErrorMessage } from '../../utils/errors.js';
@@ -141,7 +138,8 @@ export async function loadPRContext(
  */
 export function getPRAdapter(
   context: PRContext,
-  adapterFactory: (config: GitHubAdapterConfig) => GitHubAdapter = (config: GitHubAdapterConfig) => new GitHubAdapter(config)
+  adapterFactory: (config: GitHubAdapterConfig) => GitHubAdapter = (config: GitHubAdapterConfig) =>
+    new GitHubAdapter(config)
 ): GitHubAdapter {
   const { config, runDir, logger } = context;
 
