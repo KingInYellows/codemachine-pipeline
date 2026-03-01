@@ -208,7 +208,7 @@ export default class Resume extends Command {
       requireFeatureId(featureId, typedFlags.feature);
 
       const runDirPath = getRunDirectoryPath(settings.baseDir, featureId);
-      telemetry = this.setupTelemetry(typedFlags, featureId, runDirPath, startTime);
+      telemetry = Resume.setupTelemetry(typedFlags, featureId, runDirPath, startTime);
 
       telemetry.logger.info('Resume command invoked', {
         feature_id: featureId,
@@ -227,7 +227,7 @@ export default class Resume extends Command {
       // Dry run - stop here
       if (typedFlags['dry-run']) {
         telemetry.logger.info('Dry run completed', { can_resume: analysis.canResume });
-        await flushTelemetrySuccess(telemetry.resources);
+        await flushTelemetrySuccess(telemetry.resources, { exit_code: 0, dry_run: true }, 0);
         return;
       }
 
@@ -237,29 +237,29 @@ export default class Resume extends Command {
         telemetry.logger.error('Resume blocked', {
           blockers: analysis.diagnostics.filter((d) => d.severity === 'blocker').map((d) => d.code),
         });
-        await flushTelemetrySuccess(telemetry.resources, undefined, exitCode);
+        await flushTelemetrySuccess(telemetry.resources, { exit_code: exitCode }, exitCode);
         this.error(`Resume is blocked. See diagnostics above.`, { exit: exitCode });
       }
 
       // Execute resume
-      await this.buildAndRunExecutionEngine(
-        featureId,
-        runDirPath,
-        typedFlags,
-        payload,
-        telemetry
-      );
+      await this.buildAndRunExecutionEngine(featureId, runDirPath, typedFlags, payload, telemetry);
 
-      await flushTelemetrySuccess(telemetry.resources);
+      await flushTelemetrySuccess(telemetry.resources, { exit_code: 0 }, 0);
     } catch (error) {
+      const exitCode =
+        error instanceof CliError
+          ? error.code === CliErrorCode.RUN_DIR_NOT_FOUND
+            ? 10
+            : error.exitCode
+          : 1;
+
       if (telemetry) {
-        await flushTelemetryError(telemetry.resources, error);
+        await flushTelemetryError(telemetry.resources, error, exitCode);
       }
 
       rethrowIfOclifError(error);
 
       if (error instanceof CliError) {
-        const exitCode = error.code === CliErrorCode.RUN_DIR_NOT_FOUND ? 10 : error.exitCode;
         this.error(error.message, { exit: exitCode });
       }
 
@@ -271,7 +271,7 @@ export default class Resume extends Command {
     }
   }
 
-  private setupTelemetry(
+  private static setupTelemetry(
     flags: ResumeFlags,
     featureId: string,
     runDirPath: string,
@@ -288,10 +288,6 @@ export default class Resume extends Command {
     commandSpan.setAttribute('dry_run', flags['dry-run']);
     commandSpan.setAttribute('force', flags.force);
     commandSpan.setAttribute('skip_hash_verification', flags['skip-hash-verification']);
-
-    if (!metrics || !logger) {
-      throw new Error('Telemetry initialization failed for resume command');
-    }
 
     const executionTelemetry = createExecutionTelemetry({
       logger,
@@ -312,7 +308,15 @@ export default class Resume extends Command {
       runDirPath,
     };
 
-    return { logger, metrics, traceManager, commandSpan, executionTelemetry, runDirPath, resources };
+    return {
+      logger,
+      metrics,
+      traceManager,
+      commandSpan,
+      executionTelemetry,
+      runDirPath,
+      resources,
+    };
   }
 
   private async analyzeAndDisplayResumeState(
@@ -330,7 +334,11 @@ export default class Resume extends Command {
       validateQueue: flags['validate-queue'],
     };
 
-    const analysis = await analyzeResumeState(runDirPath, resumeOptions, telemetry.executionTelemetry);
+    const analysis = await analyzeResumeState(
+      runDirPath,
+      resumeOptions,
+      telemetry.executionTelemetry
+    );
     const planSummary = await loadPlanSummary(runDirPath);
 
     const queueValidation = analysis.queueValidation;
@@ -458,8 +466,8 @@ export default class Resume extends Command {
       this.log(`  Duration: ${(executionDuration / 1000).toFixed(2)}s`);
       this.log('');
       this.log('Next steps:');
-      this.log('  • Monitor progress with: codepipe status --feature ' + featureId);
-      this.log('  • View logs in: ' + path.join(runDirPath, 'logs', 'logs.ndjson'));
+      this.log(`  • Monitor progress with: codepipe status --feature ${featureId}`);
+      this.log(`  • View logs in: ${path.join(runDirPath, 'logs', 'logs.ndjson')}`);
       this.log('');
 
       if (executionResults.failedTasks > 0) {
@@ -766,5 +774,4 @@ export default class Resume extends Command {
     // General blocker
     return 10;
   }
-
 }

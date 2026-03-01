@@ -59,6 +59,7 @@ interface RefreshContext {
   token: string;
   owner: string;
   repo: string;
+  config: NonNullable<RunDirectorySettings['config']>;
   runDir: string;
   branch: string;
   baseBranch: string;
@@ -132,7 +133,16 @@ async function validateRefreshContext(
     return null;
   }
 
-  return { token, owner, repo, runDir, branch, baseBranch, prNumber: prMetadata.pr_number };
+  return {
+    token,
+    owner,
+    repo,
+    config,
+    runDir,
+    branch,
+    baseBranch,
+    prNumber: prMetadata.pr_number,
+  };
 }
 
 /**
@@ -219,8 +229,7 @@ export async function refreshBranchProtectionArtifact(
     return;
   }
 
-  // config is guaranteed non-null when ctx is non-null
-  const config = settings.config!;
+  const { config } = ctx;
 
   const doRefresh = (): Promise<void> =>
     executeBranchProtectionRefresh(ctx, featureId, config, logger);
@@ -234,7 +243,7 @@ export async function refreshBranchProtectionArtifact(
           span.setAttribute('feature_id', featureId);
           span.setAttribute('branch', ctx.branch);
           span.setAttribute('base_branch', ctx.baseBranch);
-          if (ctx.prNumber) {
+          if (ctx.prNumber !== undefined) {
             span.setAttribute('pr_number', ctx.prNumber);
           }
           await doRefresh();

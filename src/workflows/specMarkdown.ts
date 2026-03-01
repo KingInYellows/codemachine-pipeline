@@ -13,17 +13,22 @@ import type {
   RolloutPlan,
 } from '../core/models/Specification';
 
-const SEVERITY_KEYWORDS: Record<string, string[]> = {
+type Severity = 'low' | 'medium' | 'high' | 'critical';
+type NonMediumSeverity = Exclude<Severity, 'medium'>;
+
+const SEVERITY_KEYWORDS: Record<NonMediumSeverity, readonly string[]> = {
   critical: ['critical', 'severe', 'blocker'],
   high: ['high', 'major'],
   low: ['low', 'minor'],
 };
+const SEVERITY_ORDER: readonly NonMediumSeverity[] = ['critical', 'high', 'low'];
 
-function classifySeverity(text: string): 'low' | 'medium' | 'high' | 'critical' {
+function classifySeverity(text: string): Severity {
   const lower = text.toLowerCase();
-  for (const [severity, keywords] of Object.entries(SEVERITY_KEYWORDS)) {
+  for (const severity of SEVERITY_ORDER) {
+    const keywords = SEVERITY_KEYWORDS[severity];
     if (keywords.some((kw) => lower.includes(kw))) {
-      return severity as 'low' | 'medium' | 'high' | 'critical';
+      return severity;
     }
   }
   return 'medium';
