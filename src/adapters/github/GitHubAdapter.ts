@@ -12,10 +12,6 @@
  * - Logging with structured telemetry
  * - OpenAPI spec generation for future remote endpoints
  *
- * Implements:
- * - Section 2.1: Key Components - GitHub Adapter
- * - IR-1..IR-7: Integration requirements
- * - FR-15: PR automation
  */
 
 import { HttpClient, Provider, ErrorType } from '../http/client';

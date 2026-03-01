@@ -494,7 +494,6 @@ export class CostTracker {
    */
   private async appendCostLog(entry: CostEntry): Promise<void> {
     try {
-      // Ensure telemetry directory exists
       const telemetryDir = path.dirname(this.costsLogPath);
       await fs.mkdir(telemetryDir, { recursive: true });
 
@@ -514,7 +513,6 @@ export class CostTracker {
    */
   async flush(): Promise<void> {
     try {
-      // Ensure telemetry directory exists
       const telemetryDir = path.dirname(this.costsFilePath);
       await fs.mkdir(telemetryDir, { recursive: true });
 

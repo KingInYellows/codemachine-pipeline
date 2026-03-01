@@ -22,10 +22,6 @@ import { loadSnapshot } from './queueSnapshotManager';
 import { readOperations } from './queueOperationsLog';
 import type { ExecutionTaskStatus } from '../../core/models/ExecutionTask';
 
-// ============================================================================
-// Status to Count Field Mapping
-// ============================================================================
-
 /**
  * Maps task status to the corresponding count field.
  * Used for maintaining accurate counts on status changes.
@@ -38,10 +34,6 @@ const STATUS_TO_COUNT_FIELD: Record<ExecutionTaskStatus, keyof Omit<QueueCounts,
   skipped: 'skipped',
   cancelled: 'cancelled',
 };
-
-// ============================================================================
-// Index Hydration
-// ============================================================================
 
 /**
  * Create a new index state from snapshot and WAL.
@@ -88,10 +80,6 @@ export async function hydrateIndex(queueDir: string): Promise<QueueIndexState> {
 
   return state;
 }
-
-// ============================================================================
-// Operation Application
-// ============================================================================
 
 /**
  * Apply a single operation to the index.
@@ -170,10 +158,6 @@ export function applyOperation(state: QueueIndexState, op: QueueOperation): void
   state.dirty = true;
 }
 
-// ============================================================================
-// Task Queries (O(1) Operations)
-// ============================================================================
-
 /**
  * Get a task by ID (O(1) lookup).
  *
@@ -212,10 +196,6 @@ export function getTasksByStatus(
 export function getCounts(state: QueueIndexState): QueueCounts {
   return { ...state.counts };
 }
-
-// ============================================================================
-// Dependency Resolution
-// ============================================================================
 
 /**
  * Check if all dependencies of a task are completed.
@@ -291,10 +271,6 @@ export function getReadyTasks(
   return readyTasks;
 }
 
-// ============================================================================
-// Task Updates
-// ============================================================================
-
 /**
  * Update task in index and adjust counts.
  * This is a direct in-memory update, not persisted to WAL.
@@ -332,10 +308,6 @@ export function updateTask(
 
   state.dirty = true;
 }
-
-// ============================================================================
-// Count Validation
-// ============================================================================
 
 /**
  * Recalculate counts from tasks (for validation).
@@ -386,10 +358,6 @@ export function repairCounts(state: QueueIndexState): void {
   state.dirty = true;
 }
 
-// ============================================================================
-// Dirty State Management
-// ============================================================================
-
 /**
  * Mark index as dirty (needs snapshot).
  *
@@ -415,10 +383,6 @@ export function markClean(state: QueueIndexState, snapshotSeq: number): void {
   state.dirty = false;
   state.snapshotSeq = snapshotSeq;
 }
-
-// ============================================================================
-// Bulk Operations
-// ============================================================================
 
 /**
  * Add a new task to the index.
@@ -469,10 +433,6 @@ export function clearIndex(state: QueueIndexState): void {
   state.snapshotSeq = 0;
   state.dirty = true;
 }
-
-// ============================================================================
-// Export Index State
-// ============================================================================
 
 /**
  * Export index state as plain objects for snapshot creation.

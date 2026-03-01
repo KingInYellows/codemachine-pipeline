@@ -4,10 +4,6 @@
  * Provides branch protection intelligence for deployment readiness checks.
  * Fetches required status checks, review requirements, dismissal rules, and auto-merge eligibility.
  *
- * Implements:
- * - FR-15: Status checks mandate
- * - IR-5: Branch protection awareness
- * - Section 2.1: Integration discipline (branch protection detection)
  */
 
 import { HttpClient, Provider, HttpError, ErrorType } from '../http/client';
@@ -23,21 +19,13 @@ import { createLogger, LogLevel, type LoggerInterface } from '../../telemetry/lo
  * Branch protection configuration
  */
 export interface BranchProtectionConfig {
-  /** Repository owner (org or user) */
   owner: string;
-  /** Repository name */
   repo: string;
-  /** GitHub API token (PAT or App token) */
   token: string;
-  /** Optional base URL for GitHub Enterprise */
   baseUrl?: string;
-  /** Run directory for rate limit ledger */
   runDir?: string;
-  /** Logger instance */
   logger?: LoggerInterface;
-  /** HTTP client timeout in milliseconds */
   timeout?: number;
-  /** Maximum retry attempts */
   maxRetries?: number;
 }
 
@@ -45,17 +33,11 @@ export interface BranchProtectionConfig {
  * Required status checks configuration
  */
 export interface RequiredStatusChecks {
-  /** Whether status checks are enabled */
   enabled: boolean;
-  /** Whether to require branches to be up to date before merging */
   strict: boolean;
-  /** List of required status check contexts */
   contexts: string[];
-  /** List of required status check apps (app_id:check_name) */
   checks?: Array<{
-    /** App ID */
     app_id: number;
-    /** Check name */
     context: string;
   }>;
 }
@@ -64,17 +46,11 @@ export interface RequiredStatusChecks {
  * Required pull request review configuration
  */
 export interface RequiredPullRequestReviews {
-  /** Whether reviews are enabled */
   enabled: boolean;
-  /** Whether to dismiss stale reviews when new commits are pushed */
   dismiss_stale_reviews: boolean;
-  /** Whether to require code owner reviews */
   require_code_owner_reviews: boolean;
-  /** Number of required approving reviews */
   required_approving_review_count: number;
-  /** Whether to require review from code owners */
   require_last_push_approval?: boolean;
-  /** Teams/users who can dismiss reviews */
   dismissal_restrictions?: {
     users?: string[];
     teams?: string[];
@@ -85,13 +61,9 @@ export interface RequiredPullRequestReviews {
  * Branch protection restrictions
  */
 export interface BranchProtectionRestrictions {
-  /** Whether push restrictions are enabled */
   enabled: boolean;
-  /** Users who can push */
   users?: string[];
-  /** Teams who can push */
   teams?: string[];
-  /** Apps that can push */
   apps?: string[];
 }
 
@@ -99,27 +71,16 @@ export interface BranchProtectionRestrictions {
  * Branch protection rules
  */
 export interface BranchProtectionRules {
-  /** Branch name or pattern */
   branch: string;
-  /** Whether branch protection is enabled */
   enabled: boolean;
-  /** Required status checks configuration */
   required_status_checks: RequiredStatusChecks | null;
-  /** Required pull request reviews configuration */
   required_pull_request_reviews: RequiredPullRequestReviews | null;
-  /** Whether to enforce for administrators */
   enforce_admins: boolean;
-  /** Push restrictions */
   restrictions: BranchProtectionRestrictions | null;
-  /** Whether force pushes are allowed */
   allow_force_pushes: boolean;
-  /** Whether deletions are allowed */
   allow_deletions: boolean;
-  /** Whether the branch is locked (read-only) */
   lock_branch?: boolean;
-  /** Whether linear history is required */
   required_linear_history?: boolean;
-  /** Whether conversations must be resolved before merging */
   required_conversation_resolution?: boolean;
 }
 
@@ -127,17 +88,11 @@ export interface BranchProtectionRules {
  * Commit status state
  */
 export interface CommitStatus {
-  /** Status context (e.g., "ci/build", "security/scan") */
   context: string;
-  /** Status state (pending, success, failure, error) */
   state: 'pending' | 'success' | 'failure' | 'error';
-  /** Status description */
   description: string | null;
-  /** Target URL */
   target_url: string | null;
-  /** Creation timestamp */
   created_at: string;
-  /** Last update timestamp */
   updated_at: string;
 }
 
@@ -145,21 +100,13 @@ export interface CommitStatus {
  * Check run status
  */
 export interface CheckRun {
-  /** Check run ID */
   id: number;
-  /** Check run name */
   name: string;
-  /** Check run status (queued, in_progress, completed) */
   status: string;
-  /** Check run conclusion (success, failure, cancelled, etc.) */
   conclusion: string | null;
-  /** Started at timestamp */
   started_at: string | null;
-  /** Completed at timestamp */
   completed_at: string | null;
-  /** Details URL */
   details_url: string | null;
-  /** App that created the check */
   app?: {
     id: number;
     name: string;
@@ -170,18 +117,13 @@ export interface CheckRun {
  * Pull request review state
  */
 export interface PullRequestReview {
-  /** Review ID */
   id: number;
-  /** Reviewer user */
   user: {
     login: string;
     id: number;
   };
-  /** Review state (APPROVED, CHANGES_REQUESTED, COMMENTED, DISMISSED) */
   state: string;
-  /** Submitted at timestamp */
   submitted_at: string;
-  /** Commit ID that was reviewed */
   commit_id: string;
 }
 
@@ -189,43 +131,24 @@ export interface PullRequestReview {
  * Branch protection compliance result
  */
 export interface BranchProtectionCompliance {
-  /** Branch name */
   branch: string;
-  /** Commit SHA being evaluated */
   sha: string;
-  /** Protection rules for the branch */
   protection: BranchProtectionRules | null;
-  /** Whether protection rules exist */
   protected: boolean;
-  /** Required status checks (from protection rules) */
   required_checks: string[];
-  /** Actual status checks for the commit */
   actual_checks: CommitStatus[];
-  /** Check runs for the commit */
   check_runs: CheckRun[];
-  /** Whether all required checks are passing */
   checks_passing: boolean;
-  /** Missing or failing checks */
   failing_checks: string[];
-  /** Reviews required count */
   reviews_required: number;
-  /** Actual reviews on the PR */
   reviews: PullRequestReview[];
-  /** Whether review requirements are met */
   reviews_satisfied: boolean;
-  /** Whether branch is up-to-date with base */
   up_to_date: boolean;
-  /** Whether commit is stale (older than base) */
   stale_commit: boolean;
-  /** Whether auto-merge is allowed */
   allows_auto_merge: boolean;
-  /** Whether force push is allowed */
   allows_force_push: boolean;
-  /** Overall compliance result */
   compliant: boolean;
-  /** Reasons for non-compliance */
   blockers: string[];
-  /** Last evaluation timestamp */
   evaluated_at: string;
 }
 

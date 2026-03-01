@@ -115,7 +115,6 @@ export default class Init extends Command {
     const ctx: CommandTelemetryContext = { startTime };
 
     try {
-      // Step 1: Detect git repository root
       const gitRoot = this.findGitRoot();
       const pipelineDir = path.join(gitRoot, '.codepipe');
       const configPath = path.join(pipelineDir, 'config.json');
@@ -163,7 +162,6 @@ export default class Init extends Command {
         this.log(`✓ Git repository detected at: ${gitRoot}`);
       }
 
-      // Step 2: Check if already initialized
       if (await this.handleAlreadyInitialized(configPath, flags, ctx)) {
         return;
       }
@@ -190,23 +188,18 @@ export default class Init extends Command {
         }
       }
 
-      // Step 3: Create directory structure (skip in dry-run)
       if (!flags['dry-run']) {
         this.createDirectoryStructure(pipelineDir, flags.json);
       }
 
-      // Step 4: Get repository URL for config
       const repoUrl = this.getRepositoryUrl(gitRoot);
 
-      // Step 5: Create schema-backed configuration
       const config = createDefaultConfig(repoUrl);
 
-      // Step 6: Write configuration (skip in dry-run)
       if (!flags['dry-run']) {
         this.writeConfiguration(configPath, config, flags.force, flags.json);
       }
 
-      // Step 7: Validate the created/computed configuration
       const validationResult = flags['dry-run']
         ? this.validateInMemoryConfig(config)
         : await loadRepoConfig(configPath);

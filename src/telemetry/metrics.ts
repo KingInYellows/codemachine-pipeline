@@ -1,6 +1,6 @@
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
-import * as crypto from 'node:crypto';
+import { atomicWriteFile } from '../utils/atomicWrite.js';
 
 /**
  * Prometheus Metrics Writer
@@ -517,25 +517,10 @@ export class MetricsCollector {
     const samples = this.buffer.getAllSamples();
     const content = this.formatPrometheusText(samples);
 
-    // Ensure metrics directory exists
     const metricsDir = path.dirname(this.metricsFilePath);
     await fs.mkdir(metricsDir, { recursive: true });
 
-    // Atomic write using temp file
-    const tempPath = `${this.metricsFilePath}.tmp.${crypto.randomBytes(8).toString('hex')}`;
-
-    try {
-      await fs.writeFile(tempPath, content, 'utf-8');
-      await fs.rename(tempPath, this.metricsFilePath);
-    } catch (error) {
-      // Clean up temp file on error
-      try {
-        await fs.unlink(tempPath);
-      } catch {
-        // Ignore cleanup errors
-      }
-      throw error;
-    }
+    await atomicWriteFile(this.metricsFilePath, content);
   }
 
   /**

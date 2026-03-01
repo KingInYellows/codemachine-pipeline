@@ -4,10 +4,6 @@
  * Workflow helper that evaluates branch protection compliance and generates
  * deterministic JSON artifacts for CLI status/deploy commands.
  *
- * Implements:
- * - FR-15: Status checks mandate
- * - Section 2.1: Deployment trigger module responsibilities
- * - Task I4.T5: Branch protection intelligence integration
  */
 
 import * as fs from 'node:fs/promises';
@@ -183,7 +179,6 @@ export async function persistReport(
 ): Promise<string> {
   const reportPath = path.join(runDir, 'status', BRANCH_PROTECTION_FILE);
 
-  // Ensure status directory exists
   await fs.mkdir(path.dirname(reportPath), { recursive: true });
 
   // Validate report schema
@@ -264,7 +259,6 @@ export async function detectValidationMismatch(
       registryContexts = commandsData.commands.map((cmd) => `validation/${cmd.type}`);
     }
   } catch (error) {
-    // Validation registry not found or not readable
     if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
       throw error;
     }

@@ -11,14 +11,6 @@ import type { LoggerInterface } from '../../telemetry/logger';
 import { Provider } from '../../core/sharedTypes.js';
 export { ErrorType, Provider } from '../../core/sharedTypes.js';
 
-// ============================================================================
-// Enums
-// ============================================================================
-
-// ============================================================================
-// Interfaces
-// ============================================================================
-
 /**
  * Minimal interface for recording rate-limit envelopes.
  * Allows HttpClient to accept an injected recorder instead of directly
@@ -34,25 +26,15 @@ export interface RateLimitRecorder {
  * HTTP client configuration
  */
 export interface HttpClientConfig {
-  /** Base URL for API requests */
   baseUrl: string;
-  /** Provider type for rate limit tracking */
   provider: Provider;
-  /** Authorization token (will be injected as Bearer token) */
   token?: string;
-  /** Run directory path for ledger persistence */
   runDir?: string;
-  /** Custom headers to inject on every request */
   defaultHeaders?: Record<string, string>;
-  /** Request timeout in milliseconds */
   timeout?: number;
-  /** Maximum retry attempts */
   maxRetries?: number;
-  /** Initial backoff delay in milliseconds */
   initialBackoff?: number;
-  /** Maximum backoff delay in milliseconds */
   maxBackoff?: number;
-  /** Logger interface for observability */
   logger?: LoggerInterface;
   /** Optional rate-limit recorder; if omitted a RateLimitLedger is created from runDir */
   rateLimitRecorder?: RateLimitRecorder;
@@ -62,11 +44,8 @@ export interface HttpClientConfig {
  * HTTP request options
  */
 export interface HttpRequestOptions extends Omit<RequestInit, 'headers'> {
-  /** Custom headers for this request */
   headers?: Record<string, string>;
-  /** Whether to generate an idempotency key */
   idempotent?: boolean;
-  /** Override retry behavior for this request */
   retry?: {
     enabled: boolean;
     maxAttempts?: number;
@@ -81,21 +60,13 @@ export interface HttpRequestOptions extends Omit<RequestInit, 'headers'> {
  * HTTP response wrapper
  */
 export interface HttpResponse<T = unknown> {
-  /** Response status code */
   status: number;
-  /** Response headers */
   headers: Record<string, string>;
-  /** Parsed response body */
   data: T;
-  /** Request ID for tracing */
   requestId: string;
   /** Rate limit envelope if applicable */
   rateLimitEnvelope?: import('../../telemetry/rateLimitLedger').RateLimitEnvelope;
 }
-
-// ============================================================================
-// Constants
-// ============================================================================
 
 /** Default request timeout (30 seconds) */
 export const DEFAULT_TIMEOUT = 30000;

@@ -174,13 +174,10 @@ export async function aggregateContext(config: AggregatorConfig): Promise<Aggreg
   }
   const resolvedConfig = { ...config, repoRoot };
 
-  // Step 1: Get context directory
   const contextDir = getSubdirectoryPath(resolvedConfig.runDir, 'context');
 
-  // Step 2: Extract git metadata
   const gitMetadata = await getGitMetadata(resolvedConfig.repoRoot);
 
-  // Step 3: Discover files
   const exclusions = [...DEFAULT_EXCLUSIONS, ...(resolvedConfig.excludeOverrides || [])];
 
   let discoveredFiles: string[];
@@ -199,20 +196,16 @@ export async function aggregateContext(config: AggregatorConfig): Promise<Aggreg
     warnings.push('No files discovered matching configured patterns');
   }
 
-  // Step 4: Load previous hashes for incremental processing
   const previousManifest = await loadPreviousHashes(contextDir);
 
-  // Step 5: Hash files and detect changes
   const hashResult = await hashDiscoveredFiles(discoveredFiles, previousManifest);
 
-  // Step 6: Collect metadata
   const fileMetadata = await collectFileMetadata(
     discoveredFiles,
     resolvedConfig.repoRoot,
     gitMetadata
   );
 
-  // Step 7: Rank and budget files
   const rankingOptions: {
     maxFiles?: number;
     weights?: Partial<ScoringWeights>;
@@ -228,7 +221,6 @@ export async function aggregateContext(config: AggregatorConfig): Promise<Aggreg
 
   const ranking = rankAndBudgetFiles(fileMetadata, resolvedConfig.tokenBudget, rankingOptions);
 
-  // Step 8: Build context document
   const contextDocument = buildContextDocument(
     resolvedConfig.featureId,
     ranking.included,
@@ -236,7 +228,6 @@ export async function aggregateContext(config: AggregatorConfig): Promise<Aggreg
     resolvedConfig.repoRoot
   );
 
-  // Step 9: Persist artifacts
   await persistContextArtifacts(
     contextDir,
     resolvedConfig.runDir,
