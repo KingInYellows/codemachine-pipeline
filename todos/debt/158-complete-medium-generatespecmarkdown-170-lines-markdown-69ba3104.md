@@ -1,7 +1,7 @@
 # generateSpecMarkdown 170 Lines Markdown Builder Mixed Formatting and Data Concerns
 
 **ID:** 158
-**Status:** pending
+**Status:** complete
 **Severity:** medium
 **Category:** complexity
 **Effort:** small

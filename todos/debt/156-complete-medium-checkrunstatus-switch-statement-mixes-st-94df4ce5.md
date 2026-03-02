@@ -1,7 +1,7 @@
 # checkRunStatus Switch Statement Mixes State Machine Logic with Inline Diagnostic Mutation
 
 **ID:** 156
-**Status:** pending
+**Status:** complete
 **Severity:** medium
 **Category:** complexity
 **Effort:** small

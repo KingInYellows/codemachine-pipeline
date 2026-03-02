@@ -1,7 +1,7 @@
 # evaluateCompliance Cyclomatic Complexity 18 Multi-Level Nested Conditionals
 
 **ID:** 151
-**Status:** pending
+**Status:** complete
 **Severity:** high
 **Category:** complexity
 **Effort:** medium

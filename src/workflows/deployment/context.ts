@@ -10,7 +10,7 @@ import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 import * as crypto from 'node:crypto';
 import type { BranchProtectionReport } from '../branchProtectionReporter';
-import { loadReport as loadBranchProtectionReport } from '../branchProtectionReporter';
+import { loadReport as loadBranchProtectionReport } from '../../persistence/branchProtectionStore';
 import type { RepoConfig } from '../../core/config/RepoConfig';
 import type { PRMetadata } from '../../core/models/index.js';
 import { PRMetadataSchema } from '../../core/models/prMetadata.js';

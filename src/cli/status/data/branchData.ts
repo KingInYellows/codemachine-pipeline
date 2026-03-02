@@ -5,12 +5,14 @@ import {
 } from '../../../adapters/github/branchProtection';
 import { evaluateCompliance } from '../../../workflows/branchComplianceChecker';
 import {
-  loadReport as loadBranchProtectionReport,
   generateSummary as generateBranchProtectionSummary,
   generateReport as buildBranchProtectionReport,
-  persistReport as persistBranchProtectionReport,
   detectValidationMismatch,
 } from '../../../workflows/branchProtectionReporter';
+import {
+  loadReport as loadBranchProtectionReport,
+  persistReport as persistBranchProtectionReport,
+} from '../../../persistence/branchProtectionStore';
 import type { PRMetadata } from '../../pr/shared';
 import { withSpan } from '../../../telemetry/traces';
 import type { StructuredLogger } from '../../../telemetry/logger';

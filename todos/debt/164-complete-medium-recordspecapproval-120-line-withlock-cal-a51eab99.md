@@ -1,7 +1,7 @@
 # recordSpecApproval 120-Line withLock Callback with 5 IO Operations
 
 **ID:** 164
-**Status:** pending
+**Status:** complete
 **Severity:** medium
 **Category:** complexity
 **Effort:** small
