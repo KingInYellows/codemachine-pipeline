@@ -4,13 +4,6 @@
  * Controls merge readiness, status-check polling, auto-merge toggles, and workflow dispatch.
  * Orchestrates the final deployment phase of the AI feature pipeline.
  *
- * Implements:
- * - FR-15: PR automation
- * - FR-16: Deployment automation
- * - ADR-3: Integration layer design
- * - Section 2.1: Deployment & resume state management
- * - Task I5.T1: Deployment trigger module
- *
  * Key Features:
  * - Branch protection compliance validation
  * - Merge readiness assessment with blocker detection
@@ -63,10 +56,6 @@ import { loadDeploymentContext, persistDeploymentOutcome } from './context';
 import { getErrorMessage } from '../../utils/errors.js';
 
 export { loadDeploymentContext, persistDeploymentOutcome } from './context';
-
-// ============================================================================
-// Strategy Selection
-// ============================================================================
 
 /**
  * Select deployment strategy based on configuration and readiness
@@ -153,10 +142,6 @@ export function selectDeploymentStrategy(
   return DeploymentStrategy.AUTO_MERGE;
 }
 
-// ============================================================================
-// Main Orchestrator
-// ============================================================================
-
 /**
  * Trigger deployment for a feature PR
  *
@@ -185,10 +170,8 @@ export async function triggerDeployment(
   });
 
   try {
-    // Step 1: Load deployment context
     const context = await loadDeploymentContext(runDirectory, featureId, config, logger);
 
-    // Step 2: Assess merge readiness
     const readiness = await assessMergeReadiness(context, githubAdapter);
 
     logger.info('Merge readiness assessed', {
@@ -196,7 +179,6 @@ export async function triggerDeployment(
       blockers_count: readiness.blockers.length,
     });
 
-    // Step 3: Select deployment strategy
     const strategy = selectDeploymentStrategy(context, readiness, options);
 
     logger.info('Deployment strategy selected', { strategy });
@@ -212,7 +194,6 @@ export async function triggerDeployment(
       });
     }
 
-    // Step 4: Execute strategy
     let outcome: DeploymentOutcome;
 
     switch (strategy) {
@@ -239,7 +220,6 @@ export async function triggerDeployment(
       }
     }
 
-    // Step 5: Persist outcome
     await persistDeploymentOutcome(outcome, runDirectory);
 
     logger.info('Deployment outcome persisted', {

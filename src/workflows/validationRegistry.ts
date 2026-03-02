@@ -41,19 +41,13 @@ export {
  * Manages validation commands (lint, test, typecheck, build) for feature pipelines.
  * Delegates file I/O to validationStore.ts, focusing on orchestration.
  *
- * Implements:
- * - ADR-7: Validation auto-fix loop with bounded retries
- * - FR-14: Deterministic validation execution and logging
+ * Features:
  * - Configuration-driven command templates
  * - Retry/backoff policy enforcement
  * - Error summarization and audit trails
  *
  * Used by: AutoFixEngine, validate CLI command, execution engine
  */
-
-// ============================================================================
-// Registry Operations
-// ============================================================================
 
 export async function initializeValidationRegistry(
   runDir: string,
@@ -170,10 +164,6 @@ export async function getValidationSummary(runDir: string): Promise<ValidationLe
   return ledger.summary;
 }
 
-// ============================================================================
-// Utility Exports
-// ============================================================================
-
 export function generateAttemptId(): string {
   const timestamp = Date.now().toString(36);
   const random = randomBytes(6).toString('hex');
@@ -204,10 +194,6 @@ export function summarizeError(stderr: string, maxLines = 20): string {
     `... (${relevantLines.length - maxLines + 1} more lines)`,
   ].join('\n');
 }
-
-// ============================================================================
-// Private Helpers
-// ============================================================================
 
 function loadCommandsFromConfig(config: RepoConfig): ValidationCommandConfig[] {
   const configured = config.validation?.commands ?? [];

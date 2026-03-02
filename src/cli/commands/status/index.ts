@@ -53,7 +53,6 @@ import {
 
 /**
  * Status command - Display current state of a feature pipeline
- * Implements FR-9: Status reporting and progress tracking
  *
  * Exit codes:
  * - 0: Success

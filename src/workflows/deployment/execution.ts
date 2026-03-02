@@ -21,10 +21,6 @@ import {
 } from './types';
 import { getErrorMessage } from '../../utils/errors.js';
 
-// ============================================================================
-// Execution Handlers
-// ============================================================================
-
 export function buildMetadata(
   context: DeploymentContext,
   readiness: MergeReadiness
@@ -275,10 +271,6 @@ export async function executeWorkflowDispatch(
     });
   }
 }
-
-// ============================================================================
-// Readiness Assessment
-// ============================================================================
 
 /**
  * Assess merge readiness based on PR state and branch protection requirements

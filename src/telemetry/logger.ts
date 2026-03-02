@@ -14,12 +14,8 @@ export { RedactionEngine, type RedactionReport } from '../utils/redaction.js';
  * - NDJSON file persistence + optional stderr mirroring
  * - Integration with run directory structure
  *
- * Implements Observability Rulebook and NFR-6 (secret protection).
+ * Includes automatic secret redaction for tokens and API keys.
  */
-
-// ============================================================================
-// Types & Interfaces
-// ============================================================================
 
 /**
  * Log severity levels
@@ -90,10 +86,6 @@ export interface LoggerOptions {
   /** Base context attached to all log entries */
   baseContext?: LogContext;
 }
-
-// ============================================================================
-// Structured Logger Implementation
-// ============================================================================
 
 /**
  * Structured logger with NDJSON file output and optional stderr mirroring
@@ -390,10 +382,6 @@ export class StructuredLogger implements LoggerInterface {
     }
   }
 }
-
-// ============================================================================
-// Factory Functions
-// ============================================================================
 
 /**
  * Create a logger instance for a run directory

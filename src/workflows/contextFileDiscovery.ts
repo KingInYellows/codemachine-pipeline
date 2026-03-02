@@ -15,10 +15,6 @@ import { estimateTokens, type FileMetadata } from './contextRanking';
 
 const execFileAsync = promisify(execFile);
 
-// ============================================================================
-// Types
-// ============================================================================
-
 /**
  * Git metadata for provenance
  */
@@ -49,10 +45,6 @@ export function formatError(error: unknown): string {
     return String(error);
   }
 }
-
-// ============================================================================
-// File Discovery
-// ============================================================================
 
 /**
  * Default exclusion patterns
@@ -197,10 +189,6 @@ export async function discoverFiles(
   return Array.from(matchedFiles);
 }
 
-// ============================================================================
-// Git Metadata Extraction
-// ============================================================================
-
 /**
  * Extract git metadata for the repository
  *
@@ -271,10 +259,6 @@ export async function getGitMetadata(repoRoot: string): Promise<GitMetadata> {
 
   return metadata;
 }
-
-// ============================================================================
-// Incremental Hashing
-// ============================================================================
 
 /**
  * Load previous hash manifest if it exists
@@ -366,10 +350,6 @@ export async function hashDiscoveredFiles(
 
   return { manifest, unchanged, changed, new: newFiles };
 }
-
-// ============================================================================
-// File Metadata Collection
-// ============================================================================
 
 /**
  * Collect metadata for discovered files

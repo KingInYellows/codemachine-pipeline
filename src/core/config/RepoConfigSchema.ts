@@ -9,10 +9,6 @@
 import { z } from 'zod';
 import { ValidationCommandConfigSchema } from '../validation/validationCommandConfig';
 
-// ============================================================================
-// Config History Schema - Tracks schema migrations over time
-// ============================================================================
-
 export const ConfigHistoryEntrySchema = z.object({
   timestamp: z.string().datetime({ message: 'Must be ISO 8601 datetime' }),
   schema_version: z.string().regex(/^[0-9]+\.[0-9]+\.[0-9]+$/, 'Invalid semver format'),
@@ -24,12 +20,8 @@ export const ConfigHistoryEntrySchema = z.object({
 
 export type ConfigHistoryEntry = z.infer<typeof ConfigHistoryEntrySchema>;
 
-// ============================================================================
-// Governance Schema - Human-in-the-loop controls and accountability
-// ============================================================================
-
 export const GovernanceSchema = z.object({
-  // Approval workflow configuration (ADR-5)
+  // Approval workflow configuration
   approval_workflow: z
     .object({
       require_approval_for_prd: z.boolean().default(true),
@@ -39,7 +31,7 @@ export const GovernanceSchema = z.object({
       require_approval_for_pr: z.boolean().default(true),
       require_approval_for_deploy: z.boolean().default(true),
     })
-    .describe('Gate-by-gate approval requirements per ADR-5'),
+    .describe('Gate-by-gate approval requirements'),
 
   // Accountability tracking
   accountability: z
@@ -71,10 +63,6 @@ export const GovernanceSchema = z.object({
 
 export type Governance = z.infer<typeof GovernanceSchema>;
 
-// ============================================================================
-// Project Metadata Schema
-// ============================================================================
-
 export const ProjectSchema = z.object({
   id: z.string().min(1, 'Project ID is required'),
   repo_url: z.string().regex(/^(https?:\/\/|git@)/, 'Invalid repository URL format'),
@@ -84,10 +72,6 @@ export const ProjectSchema = z.object({
 });
 
 export type Project = z.infer<typeof ProjectSchema>;
-
-// ============================================================================
-// Integration Toggles - GitHub
-// ============================================================================
 
 export const GitHubSchema = z.object({
   enabled: z.boolean(),
@@ -107,10 +91,6 @@ export const GitHubSchema = z.object({
 
 export type GitHub = z.infer<typeof GitHubSchema>;
 
-// ============================================================================
-// Integration Toggles - Linear
-// ============================================================================
-
 export const LinearSchema = z.object({
   enabled: z.boolean(),
   api_key_env_var: z.string().default('LINEAR_API_KEY'),
@@ -120,10 +100,6 @@ export const LinearSchema = z.object({
 });
 
 export type Linear = z.infer<typeof LinearSchema>;
-
-// ============================================================================
-// Runtime Execution Settings
-// ============================================================================
 
 export const RuntimeSchema = z.object({
   agent_endpoint: z.string().url().optional(),
@@ -141,10 +117,6 @@ export const RuntimeSchema = z.object({
 });
 
 export type Runtime = z.infer<typeof RuntimeSchema>;
-
-// ============================================================================
-// Runtime Safety Defaults
-// ============================================================================
 
 export const SafetySchema = z.object({
   redact_secrets: z.boolean().default(true),
@@ -174,10 +146,6 @@ export const SafetySchema = z.object({
 
 export type Safety = z.infer<typeof SafetySchema>;
 
-// ============================================================================
-// Feature Flags
-// ============================================================================
-
 export const FeatureFlagsSchema = z.object({
   enable_auto_merge: z.boolean().default(false),
   enable_deployment_triggers: z.boolean().default(false),
@@ -189,20 +157,12 @@ export const FeatureFlagsSchema = z.object({
 
 export type FeatureFlags = z.infer<typeof FeatureFlagsSchema>;
 
-// ============================================================================
-// Validation Settings
-// ============================================================================
-
 export const ValidationSettingsSchema = z.object({
   commands: z.array(ValidationCommandConfigSchema).min(1),
   template_context: z.record(z.string(), z.string()).optional(),
 });
 
 export type ValidationSettings = z.infer<typeof ValidationSettingsSchema>;
-
-// ============================================================================
-// Resource Constraints
-// ============================================================================
 
 export const ConstraintsSchema = z.object({
   max_file_size_kb: z.number().int().min(100).max(10000).default(1000),
@@ -217,10 +177,6 @@ export const ConstraintsSchema = z.object({
 });
 
 export type Constraints = z.infer<typeof ConstraintsSchema>;
-
-// ============================================================================
-// Execution Config Schema - CodeMachine CLI integration
-// ============================================================================
 
 export const ExecutionEngineType = z.enum(['claude', 'codex', 'openai']);
 
@@ -261,10 +217,6 @@ export const ExecutionConfigSchema = z.object({
 
 export type ExecutionConfig = z.infer<typeof ExecutionConfigSchema>;
 
-// ============================================================================
-// Main RepoConfig Schema
-// ============================================================================
-
 export const RepoConfigSchema = z.object({
   schema_version: z
     .string()
@@ -297,10 +249,6 @@ export const RepoConfigSchema = z.object({
 });
 
 export type RepoConfig = z.infer<typeof RepoConfigSchema>;
-
-// ============================================================================
-// Validation Result Types
-// ============================================================================
 
 export interface ValidationError {
   path: string;

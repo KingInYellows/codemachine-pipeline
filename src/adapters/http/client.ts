@@ -57,10 +57,6 @@ export {
 import { HttpError } from '../../core/errors.js';
 export { HttpError } from '../../core/errors.js';
 
-// ============================================================================
-// HTTP Client
-// ============================================================================
-
 type AttemptResult<T> =
   | { ok: true; result: HttpResponse<T> }
   | { ok: false; error: HttpError; rateLimitEnvelope: RateLimitEnvelope | undefined };

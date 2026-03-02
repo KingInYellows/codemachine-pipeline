@@ -13,10 +13,6 @@
  * - Session telemetry for audit trails and cost tracking
  * - Deterministic prompt packaging with context hashing
  *
- * Implements ADR-1 (Agent Execution Model), ADR-4 (Context/Token Budget),
- * ADR-7 (Validation Policy), and BYO-agent provider requirements.
- *
- * Section 2.1 artifact: Agent adapter contract for execution task routing
  */
 
 import * as crypto from 'node:crypto';
@@ -68,10 +64,6 @@ const RATE_LIMIT_WINDOW_MS = 60 * 60 * 1000; // 1 hour sliding window
 // Error classification patterns — module-level constants prevent repeated recompilation
 const TRANSIENT_PATTERNS = /timeout|rate limit|503|429|network|connection/i;
 const HUMAN_ACTION_PATTERNS = /ambiguous|policy violation|requires clarification|human review/i;
-
-// ============================================================================
-// Agent Adapter
-// ============================================================================
 
 /**
  * Agent Adapter - Provider session orchestration with capability routing
@@ -641,10 +633,6 @@ export class AgentAdapter {
     };
   }
 }
-
-// ============================================================================
-// Factory Functions
-// ============================================================================
 
 /**
  * Create AgentAdapter instance

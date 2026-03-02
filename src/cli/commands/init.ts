@@ -52,8 +52,6 @@ interface ConfigValidationPayload {
 
 /**
  * Init command - Initialize codemachine-pipeline in the current repository
- * Implements FR-1: Initialize RepoConfig with git detection and directory setup
- * Implements FR-17: Schema-backed configuration with credentials validation
  *
  * Exit codes:
  * - 0: Success
@@ -166,7 +164,6 @@ export default class Init extends Command {
         return;
       }
 
-      // Step 2b: Confirm initialization when interactive
       if (
         !flags['dry-run'] &&
         !flags.yes &&

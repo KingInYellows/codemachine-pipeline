@@ -18,10 +18,6 @@ import { RawSnapshotSchema } from './resumeSnapshotSchema';
 import { validateOrThrow } from '../validation/helpers.js';
 import type { ResumeAnalysis, ResumeOptions } from './runStateVerifier';
 
-// ============================================================================
-// Types
-// ============================================================================
-
 export interface QueueSnapshotMetadata {
   /** Number of tasks captured in the snapshot */
   taskCount: number;
@@ -32,10 +28,6 @@ export interface QueueSnapshotMetadata {
   /** Queue file path (relative to queue directory) */
   queueFile: string;
 }
-
-// ============================================================================
-// Queue Recovery Functions
-// ============================================================================
 
 /**
  * Validate queue snapshot integrity

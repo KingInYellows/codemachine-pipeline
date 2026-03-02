@@ -10,8 +10,6 @@
  * - Freshness-aware result reuse (configurable TTL)
  * - CLI integration for task listing and management
  * - Storage under run directory with JSONL append logs
- *
- * Implements FR-6, FR-7, ADR-4 requirements for research discovery.
  */
 
 import { withLock } from '../persistence';
@@ -47,10 +45,6 @@ import {
   findCachedTask,
   isCachedTaskFresh,
 } from '../persistence/researchStore.js';
-
-// ============================================================================
-// Types
-// ============================================================================
 
 /**
  * Research coordinator configuration
@@ -155,10 +149,6 @@ export interface UnknownDetectionOptions {
   /** Maximum number of context files to scan for TODO/TBD markers */
   maxContextFiles?: number;
 }
-
-// ============================================================================
-// Research Coordinator Class
-// ============================================================================
 
 /**
  * Research coordinator service
@@ -706,10 +696,6 @@ export class ResearchCoordinator {
     return tasks;
   }
 }
-
-// ============================================================================
-// Factory Functions
-// ============================================================================
 
 /**
  * Create a research coordinator instance

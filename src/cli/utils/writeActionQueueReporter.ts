@@ -12,10 +12,6 @@ import { WriteActionQueueManifestSchema } from '../../workflows/writeActionQueue
 import { isFileNotFound } from '../../utils/safeJson.js';
 import { validateOrThrow } from '../../validation/helpers.js';
 
-// ============================================================================
-// Types
-// ============================================================================
-
 /**
  * Queue status report for CLI output
  */
@@ -89,10 +85,6 @@ export interface WriteActionQueueCLIOutputOptions {
   showWarnings?: boolean;
 }
 
-// ============================================================================
-// Constants
-// ============================================================================
-
 const QUEUE_SUBDIR = 'write_actions';
 const MANIFEST_FILE = 'manifest.json';
 
@@ -101,10 +93,6 @@ const BACKLOG_WARNING_THRESHOLD = 50;
 const BACKLOG_CRITICAL_THRESHOLD = 200;
 const FAILURE_WARNING_THRESHOLD = 5;
 const FAILURE_CRITICAL_THRESHOLD = 20;
-
-// ============================================================================
-// Reporter Functions
-// ============================================================================
 
 /**
  * Generate write action queue report
@@ -373,10 +361,6 @@ export function formatWriteActionQueueJSON(
     recommendations: generateRecommendations(report),
   };
 }
-
-// ============================================================================
-// Standalone Helper Functions
-// ============================================================================
 
 /**
  * Export helper for status command integration

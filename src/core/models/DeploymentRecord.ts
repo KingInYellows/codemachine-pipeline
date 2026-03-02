@@ -7,9 +7,6 @@ import { createModelParser } from './modelParser.js';
  * Captures PR numbers, merge SHAs, status checks, required reviews,
  * auto-merge state, and deployment job links.
  *
- * Implements:
- * - ADR-7 (Validation Policy): Zod-based validation
- *
  * Used by CLI commands: deploy, status
  */
 

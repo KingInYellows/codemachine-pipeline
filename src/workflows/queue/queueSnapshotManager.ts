@@ -16,16 +16,8 @@ import { createHash, randomBytes } from 'node:crypto';
 import { getErrorMessage } from '../../utils/errors.js';
 import { isFileNotFound } from '../../utils/safeJson.js';
 
-// ============================================================================
-// Constants
-// ============================================================================
-
 const SNAPSHOT_FILENAME = 'queue_snapshot.json';
 const TEMP_SNAPSHOT_SUFFIX = '.tmp';
-
-// ============================================================================
-// Checksum Functions
-// ============================================================================
 
 /**
  * Compute SHA-256 checksum for snapshot integrity.
@@ -66,10 +58,6 @@ export function verifySnapshotChecksum(snapshot: QueueSnapshotV2): boolean {
 
   return snapshot.checksum === expectedChecksum;
 }
-
-// ============================================================================
-// Snapshot Loading
-// ============================================================================
 
 /**
  * Load snapshot from disk.
@@ -114,10 +102,6 @@ export async function loadSnapshot(queueDir: string): Promise<QueueSnapshotV2 | 
     return null;
   }
 }
-
-// ============================================================================
-// Snapshot Saving
-// ============================================================================
 
 /**
  * Validate that a queue directory path is safe and doesn't escape its parent.
@@ -191,12 +175,10 @@ export async function saveSnapshot(
       await handle.close();
     }
 
-    // Atomic rename
     await rename(tempPath, snapshotPath);
 
     return snapshot;
   } catch (error) {
-    // Clean up temp file on error
     try {
       await unlink(tempPath);
     } catch (cleanupError) {
@@ -238,10 +220,6 @@ export function saveSnapshotLocked(
     { operation: 'save_queue_snapshot' }
   );
 }
-
-// ============================================================================
-// Snapshot Management
-// ============================================================================
 
 /**
  * Delete snapshot file.

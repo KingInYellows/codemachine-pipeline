@@ -6,7 +6,6 @@ import { createModelParser } from './modelParser.js';
  *
  * Manifest entries describing models, max tokens, tool support, rate guidance, cost estimates.
  *
- * Implements ADR-7 (Validation Policy): Zod-based validation
  * Used by CLI commands: agent selection, cost estimation
  */
 

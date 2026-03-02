@@ -4,7 +4,6 @@ import * as path from 'node:path';
 import * as os from 'node:os';
 import {
   LinearAdapter,
-  createLinearAdapter,
   LinearAdapterError,
   type LinearIssue,
   type LinearComment,
@@ -223,10 +222,6 @@ describe('LinearAdapter Integration Tests', () => {
         operation: 'fetchIssue',
         issueId: MOCK_LINEAR_ISSUE.id,
       });
-      expect(mockLogger.debug).toHaveBeenCalledWith(
-        'Fetching issue from API',
-        expect.objectContaining({ issueId: MOCK_LINEAR_ISSUE.id })
-      );
     });
 
     it('should fetch comments with correct GraphQL query', async () => {
@@ -797,9 +792,9 @@ describe('LinearAdapter Integration Tests', () => {
     });
   });
 
-  describe('Factory Function', () => {
-    it('should create adapter using factory function', () => {
-      const adapter = createLinearAdapter({
+  describe('Adapter Construction', () => {
+    it('should create adapter via direct instantiation', () => {
+      const adapter = new LinearAdapter({
         apiKey: 'lin_api_test_key',
         runDir,
       });

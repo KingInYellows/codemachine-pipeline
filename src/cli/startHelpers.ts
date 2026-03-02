@@ -15,10 +15,6 @@ import { loadLinearIssue } from '../workflows/linearIssueLoader.js';
 import { CliError, CliErrorCode, formatErrorMessage } from './utils/cliErrors';
 import { getErrorMessage } from '../utils/errors.js';
 
-// ============================================================================
-// Types
-// ============================================================================
-
 export type StartFlags = {
   prompt?: string;
   linear?: string;
@@ -28,10 +24,6 @@ export type StartFlags = {
   'max-parallel'?: number;
   'skip-execution': boolean;
 };
-
-// ============================================================================
-// Feature Identity Helpers
-// ============================================================================
 
 export function resolveFeatureTitle(flags: StartFlags): string {
   if (flags.prompt) {
@@ -65,10 +57,6 @@ export function resolveSourceDescriptor(flags: StartFlags): string {
 export function generateFeatureId(): string {
   return `FEAT-${randomUUID().split('-')[0]}`;
 }
-
-// ============================================================================
-// Git Helpers
-// ============================================================================
 
 export function findGitRoot(): string {
   try {
@@ -113,20 +101,12 @@ export function getGitUser(): string {
   }
 }
 
-// ============================================================================
-// Config Helpers
-// ============================================================================
-
 export function prdApprovalRequired(config: RepoConfig): boolean {
   if (config.governance?.approval_workflow) {
     return config.governance.approval_workflow.require_approval_for_prd;
   }
   return config.safety.require_approval_for_prd;
 }
-
-// ============================================================================
-// Linear Integration Helpers
-// ============================================================================
 
 export async function fetchLinearIssue(
   issueId: string,

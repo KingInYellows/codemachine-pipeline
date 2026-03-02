@@ -10,19 +10,11 @@ import { promisify } from 'node:util';
 import type { StructuredLogger } from '../telemetry/logger';
 import { getErrorMessage } from '../utils/errors.js';
 
-// ============================================================================
-// Security Constants
-// ============================================================================
-
 /**
  * Shell metacharacters that indicate shell interpretation is required.
  * These characters can enable command injection if user input contains them.
  */
 export const SHELL_METACHARACTERS = /[|&;`$<>(){}[\]!*?~#]/;
-
-// ============================================================================
-// Command Parsing
-// ============================================================================
 
 /**
  * Parse command string into executable and arguments array.
@@ -86,10 +78,6 @@ export function parseCommandString(command: string): [string, string[]] {
 
   return [parts[0], parts.slice(1)];
 }
-
-// ============================================================================
-// Command Execution
-// ============================================================================
 
 /**
  * Execute shell command with timeout.

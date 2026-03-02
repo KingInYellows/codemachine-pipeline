@@ -12,10 +12,6 @@
  * - Conflict detection and human-action-required state management
  * - Atomic patch application with file locking
  *
- * Implements:
- * - FR-12: Safe Patch Application
- * - FR-13: Git Constraints Enforcement
- * - ADR-3: Git Safety Rails
  */
 
 import * as fs from 'node:fs/promises';
@@ -66,10 +62,6 @@ function validatePatchId(patchId: string): void {
     );
   }
 }
-
-// ============================================================================
-// Types
-// ============================================================================
 
 /**
  * Patch application configuration
@@ -167,10 +159,6 @@ interface SnapshotMetadata {
   stashed_changes?: boolean;
 }
 
-// ============================================================================
-// Constraint Validation
-// ============================================================================
-
 /**
  * Validate that affected files comply with RepoConfig constraints.
  *
@@ -236,10 +224,6 @@ export function validateFileConstraints(
   return { valid: violations.length === 0, violations };
 }
 
-// ============================================================================
-// Patch Parsing
-// ============================================================================
-
 /**
  * Extract affected files from a unified diff patch.
  *
@@ -295,10 +279,6 @@ function summarizeLineChanges(patchContent: string): { insertions: number; delet
 
   return { insertions, deletions };
 }
-
-// ============================================================================
-// Git Operations
-// ============================================================================
 
 /**
  * Check if the git working tree is clean (no uncommitted changes).
@@ -459,10 +439,6 @@ export async function validatePatchDryRun(
   return result;
 }
 
-// ============================================================================
-// Snapshot Management
-// ============================================================================
-
 /**
  * Create a rollback snapshot before applying a patch.
  *
@@ -560,10 +536,6 @@ export async function generateDiffSummary(
 
   return summaryPath;
 }
-
-// ============================================================================
-// Patch Application
-// ============================================================================
 
 /**
  * Apply a patch to the working directory with full safety rails.

@@ -13,8 +13,6 @@
  * - Resume workflow support via manifest hash persistence
  * - CLI-level validation with actionable error messages
  *
- * Implements ADR-1 (Agent Execution Model), ADR-4 (Context/Token Budget),
- * ADR-7 (Validation Policy), and BYO-agent provider requirements.
  */
 
 import * as fs from 'node:fs/promises';
@@ -24,10 +22,6 @@ import { z } from 'zod';
 import type { CostTracker, ProviderCostConfig } from '../../telemetry/costTracker';
 import type { StructuredLogger } from '../../telemetry/logger';
 import { getErrorMessage } from '../../utils/errors.js';
-
-// ============================================================================
-// Zod Schema Definitions
-// ============================================================================
 
 /**
  * Rate limit configuration schema
@@ -83,9 +77,7 @@ const ToolsSchema = z
   .strict()
   .optional();
 
-/**
- * Pipeline feature capability flags schema (ADR-1 capability set)
- */
+/** Pipeline feature capability flags schema */
 const FeaturesSchema = z
   .object({
     prdGeneration: z.boolean().default(true),
@@ -207,10 +199,6 @@ export type ErrorTaxonomy = z.infer<typeof ErrorTaxonomySchema>;
 export type ExecutionContextConfig = z.infer<typeof ContextConfigSchema>;
 export type ExecutionContextOverrides = z.infer<typeof ExecutionContextsSchema>;
 
-// ============================================================================
-// Manifest Loading & Validation
-// ============================================================================
-
 /**
  * Validation result for manifest parsing
  */
@@ -269,10 +257,6 @@ export async function loadManifestFromFile(
 export function computeManifestHash(content: string): string {
   return crypto.createHash('sha256').update(content).digest('hex');
 }
-
-// ============================================================================
-// Provider Selection & Capability Matching
-// ============================================================================
 
 /**
  * Provider capability requirements for selection filtering
@@ -377,10 +361,6 @@ export function rankByPrice(manifests: AgentManifest[]): AgentManifest[] {
     return avgCostA - avgCostB;
   });
 }
-
-// ============================================================================
-// Manifest Registry
-// ============================================================================
 
 /**
  * Cached manifest entry with metadata
@@ -673,10 +653,6 @@ export class ManifestLoader {
     this.logger.debug('Manifest registry cleared');
   }
 }
-
-// ============================================================================
-// Factory Functions
-// ============================================================================
 
 /**
  * Create manifest loader instance

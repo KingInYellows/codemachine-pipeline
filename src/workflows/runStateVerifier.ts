@@ -11,10 +11,6 @@ import type { RunManifest } from '../persistence/runDirectoryManager';
 import type { VerificationResult } from '../persistence/hashManifest';
 import type { QueueValidationResult } from './queueStore';
 
-// ============================================================================
-// Types
-// ============================================================================
-
 /**
  * Resume analysis result
  */
@@ -83,10 +79,6 @@ export interface ResumeOptions {
   /** Validate queue files before resuming */
   validateQueue?: boolean;
 }
-
-// ============================================================================
-// Run Status Checks
-// ============================================================================
 
 /**
  * Check run status and add diagnostics
@@ -321,10 +313,6 @@ export function checkQueueState(analysis: ResumeAnalysis, manifest: RunManifest)
     });
   }
 }
-
-// ============================================================================
-// Recommendations
-// ============================================================================
 
 /** Static message map for blocker diagnostic codes */
 const BLOCKER_RECOMMENDATION_MAP: Record<string, string> = {

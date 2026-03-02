@@ -12,10 +12,6 @@ import {
   type SummarizerConfig,
 } from './summarizerClients/types';
 
-// ============================================================================
-// Internal chunk processing helpers
-// ============================================================================
-
 export interface ChunkProcessResult {
   summaries: ContextSummary[];
   chunksGenerated: number;

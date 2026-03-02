@@ -9,20 +9,12 @@
 import { RateLimitLedger } from '../telemetry/rateLimitLedger';
 import type { LoggerInterface } from '../telemetry/logger';
 
-// ============================================================================
-// Types
-// ============================================================================
-
 export interface CooldownStatus {
   /** Whether the provider is currently in a rate-limit cooldown */
   inCooldown: boolean;
   /** Whether the cooldown requires manual operator acknowledgement */
   requiresManualAck: boolean;
 }
-
-// ============================================================================
-// Write Action Rate Limiter
-// ============================================================================
 
 /**
  * Checks rate-limit cooldown state for a given provider before executing

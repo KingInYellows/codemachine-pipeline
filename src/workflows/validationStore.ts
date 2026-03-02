@@ -12,10 +12,6 @@ import { z } from 'zod';
 import { ValidationCommandConfigSchema } from '../core/validation/validationCommandConfig';
 import { readManifest } from '../persistence';
 
-// ============================================================================
-// Schemas & Types
-// ============================================================================
-
 export const ValidationRegistrySchema = z.object({
   schema_version: z.string().regex(/^[0-9]+\.[0-9]+\.[0-9]+$/),
   feature_id: z.string(),
@@ -80,19 +76,11 @@ export interface ValidationResult {
   attempt: ValidationAttempt;
 }
 
-// ============================================================================
-// Constants
-// ============================================================================
-
 export const REGISTRY_FILE_NAME = 'commands.json';
 export const LEDGER_FILE_NAME = 'ledger.json';
 export const VALIDATION_DIR_NAME = 'validation';
 export const REGISTRY_SCHEMA_VERSION = '1.0.0';
 export const LEDGER_SCHEMA_VERSION = '1.0.0';
-
-// ============================================================================
-// I/O Helpers
-// ============================================================================
 
 function isErrnoError(error: unknown): error is NodeJS.ErrnoException {
   return typeof error === 'object' && error !== null && 'code' in error;

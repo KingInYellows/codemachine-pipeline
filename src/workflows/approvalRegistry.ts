@@ -20,17 +20,11 @@ import { validateOrThrow } from '../validation/helpers.js';
  * Manages approval records for feature pipeline gates.
  * Provides atomic operations for requesting, granting, denying, and validating approvals.
  *
- * Implements:
- * - ADR-5 (Approval Workflow): Gate enforcement and signature capture
- * - Human-in-the-loop governance with artifact hash validation
+ * Provides human-in-the-loop governance with artifact hash validation.
  * - Atomic file operations with locking
  *
  * Used by: CLI approve command, status command, resume command
  */
-
-// ============================================================================
-// Types
-// ============================================================================
 
 export interface RequestApprovalOptions {
   /** Path to artifact requiring approval (relative to run directory) */
@@ -96,16 +90,8 @@ const ApprovalsFileSchema = z
   })
   .passthrough();
 
-// ============================================================================
-// Constants
-// ============================================================================
-
 const APPROVALS_FILE_NAME = 'approvals.json';
 const APPROVALS_SCHEMA_VERSION = '1.0.0';
-
-// ============================================================================
-// Approval Registry Operations
-// ============================================================================
 
 /**
  * Request approval for an artifact
@@ -388,10 +374,6 @@ export async function validateApprovalForTransition(
   }
 }
 
-// ============================================================================
-// Artifact Hash Utilities
-// ============================================================================
-
 /**
  * Compute SHA-256 hash of a file
  *
@@ -412,10 +394,6 @@ export async function computeArtifactHash(filePath: string): Promise<string> {
 export function computeContentHash(content: string): string {
   return crypto.createHash('sha256').update(content, 'utf-8').digest('hex');
 }
-
-// ============================================================================
-// Internal Helpers
-// ============================================================================
 
 /**
  * Load approvals file from run directory

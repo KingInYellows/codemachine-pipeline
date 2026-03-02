@@ -46,10 +46,6 @@ import type {
   PostCommentParams,
 } from './LinearAdapterTypes.js';
 
-// ============================================================================
-// GraphQL Queries
-// ============================================================================
-
 const ISSUE_QUERY = `
   query GetIssue($issueId: String!) {
     issue(id: $issueId) {
@@ -150,20 +146,12 @@ const POST_COMMENT_MUTATION = `
   }
 `;
 
-// ============================================================================
-// Constants
-// ============================================================================
-
 const LINEAR_API_URL = 'https://api.linear.app';
 const GRAPHQL_ENDPOINT = '/graphql';
 const RATE_LIMIT_PER_HOUR = 1500;
 const DEFAULT_CACHE_TTL = 3600; // 1 hour in seconds
 const RATE_LIMIT_WINDOW_MS = 60 * 60 * 1000; // 1 hour sliding window
 const SNAPSHOT_DIR = 'inputs';
-
-// ============================================================================
-// Linear Adapter
-// ============================================================================
 
 /**
  * Linear adapter for issue operations via MCP
@@ -227,12 +215,6 @@ export class LinearAdapter {
       noCache?: boolean;
     }
   ): Promise<IssueSnapshot> {
-    this.logger.info('Fetching issue snapshot', {
-      issueId,
-      forceRefresh: options?.forceRefresh,
-      noCache: options?.noCache,
-    });
-
     // Check cache first unless noCache or forceRefresh
     if (this.runDir && !options?.noCache && !options?.forceRefresh) {
       const cachedSnapshot = await this.loadCachedSnapshot(issueId);
@@ -266,11 +248,6 @@ export class LinearAdapter {
       if (this.runDir) {
         await this.saveSnapshot(snapshot);
       }
-
-      this.logger.info('Issue snapshot fetched successfully', {
-        issueId: issue.identifier,
-        commentsCount: comments.length,
-      });
 
       return snapshot;
     } catch (error) {
@@ -312,8 +289,6 @@ export class LinearAdapter {
    * Fetch issue details from Linear API
    */
   async fetchIssue(issueId: string): Promise<LinearIssue> {
-    this.logger.debug('Fetching issue from API', { issueId });
-
     try {
       const data = await this.executeGraphQL<{ data: { issue: LinearIssue } }>(
         'fetchIssue',
@@ -346,8 +321,6 @@ export class LinearAdapter {
    * Fetch comments for an issue
    */
   async fetchComments(issueId: string): Promise<LinearComment[]> {
-    this.logger.debug('Fetching comments from API', { issueId });
-
     try {
       const data = await this.executeGraphQL<{
         data: { issue: { comments: { nodes: LinearComment[] } } };
@@ -377,11 +350,6 @@ export class LinearAdapter {
       );
     }
 
-    this.logger.info('Updating issue', {
-      issueId: params.issueId,
-      updates: Object.keys(params).filter((k) => k !== 'issueId'),
-    });
-
     try {
       const variables: {
         issueId: string;
@@ -404,8 +372,6 @@ export class LinearAdapter {
       if (!data.data?.issueUpdate?.success) {
         throw new Error('Issue update failed');
       }
-
-      this.logger.info('Issue updated successfully', { issueId: params.issueId });
     } catch (error) {
       this.logger.error('Failed to update issue', {
         issueId: params.issueId,
@@ -429,11 +395,6 @@ export class LinearAdapter {
       );
     }
 
-    this.logger.info('Posting comment', {
-      issueId: params.issueId,
-      bodyLength: params.body.length,
-    });
-
     try {
       const data = await this.executeGraphQL<{
         data: { commentCreate: { success: boolean } };
@@ -447,8 +408,6 @@ export class LinearAdapter {
       if (!data.data?.commentCreate?.success) {
         throw new Error('Comment creation failed');
       }
-
-      this.logger.info('Comment posted successfully', { issueId: params.issueId });
     } catch (error) {
       this.logger.error('Failed to post comment', {
         issueId: params.issueId,
@@ -458,9 +417,6 @@ export class LinearAdapter {
     }
   }
 
-  /**
-   * Load cached snapshot from run directory
-   */
   private async loadCachedSnapshot(issueId: string): Promise<IssueSnapshot | null> {
     if (!this.runDir) {
       return null;
@@ -505,9 +461,6 @@ export class LinearAdapter {
     }
   }
 
-  /**
-   * Save snapshot to run directory
-   */
   private async saveSnapshot(snapshot: IssueSnapshot): Promise<void> {
     if (!this.runDir) {
       return;
@@ -533,9 +486,6 @@ export class LinearAdapter {
     }
   }
 
-  /**
-   * Check if snapshot is still valid based on TTL
-   */
   private isSnapshotValid(metadata: SnapshotMetadata): boolean {
     const ttl = metadata.ttl ?? DEFAULT_CACHE_TTL;
     const retrievedAt = new Date(metadata.retrieved_at).getTime();
@@ -545,26 +495,17 @@ export class LinearAdapter {
     return age < ttl;
   }
 
-  /**
-   * Get snapshot age in seconds
-   */
   private getSnapshotAge(metadata: SnapshotMetadata): number {
     const retrievedAt = new Date(metadata.retrieved_at).getTime();
     const now = Date.now();
     return Math.floor((now - retrievedAt) / 1000);
   }
 
-  /**
-   * Compute SHA-256 hash of snapshot content
-   */
   private computeSnapshotHash(data: { issue: LinearIssue; comments: LinearComment[] }): string {
     const content = JSON.stringify(data);
     return crypto.createHash('sha256').update(content).digest('hex');
   }
 
-  /**
-   * Get snapshot file path
-   */
   private getSnapshotPath(issueId: string): string {
     if (!issueId || issueId.length > 100 || !/^[A-Z][A-Z0-9]*-\d+$/.test(issueId)) {
       throw new Error(`Invalid Linear issue ID: ${JSON.stringify(issueId)}`);
@@ -663,11 +604,4 @@ export class LinearAdapter {
       this.requestTimestamps.shift();
     }
   }
-}
-
-/**
- * Create Linear adapter instance
- */
-export function createLinearAdapter(config: LinearAdapterConfig): LinearAdapter {
-  return new LinearAdapter(config);
 }

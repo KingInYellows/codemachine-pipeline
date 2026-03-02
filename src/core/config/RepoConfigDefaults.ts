@@ -11,10 +11,6 @@ import {
 } from '../validation/validationCommandConfig';
 import type { RepoConfig, ExecutionConfig } from './RepoConfigSchema';
 
-// ============================================================================
-// Helpers
-// ============================================================================
-
 /**
  * Clone default validation commands to avoid shared mutable state
  */
@@ -25,10 +21,6 @@ function cloneDefaultValidationCommands(): ValidationCommandConfig[] {
     template_context: command.template_context ? { ...command.template_context } : undefined,
   }));
 }
-
-// ============================================================================
-// Default Config Factory
-// ============================================================================
 
 /**
  * Create a default RepoConfig template with governance and history tracking
@@ -164,10 +156,6 @@ export function createDefaultConfig(
 
   return config;
 }
-
-// ============================================================================
-// Default Constants
-// ============================================================================
 
 /**
  * Default execution configuration values.

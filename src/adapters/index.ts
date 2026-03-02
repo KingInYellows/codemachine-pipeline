@@ -24,7 +24,6 @@ export {
 
 export {
   BranchProtectionAdapter,
-  createBranchProtectionAdapter,
   BranchProtectionError,
   type BranchProtectionConfig,
   type BranchProtectionRules,
@@ -40,7 +39,6 @@ export {
 // Linear exports
 export {
   LinearAdapter,
-  createLinearAdapter,
   LinearAdapterError,
   type LinearAdapterConfig,
   type IssueSnapshot,

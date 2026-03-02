@@ -35,10 +35,6 @@ export type {
 } from './summarizerClients/types';
 export { chunkFile, generateChunkId };
 
-// ============================================================================
-// Summarization Orchestrator
-// ============================================================================
-
 /**
  * Summarize a single document with chunking and caching
  */

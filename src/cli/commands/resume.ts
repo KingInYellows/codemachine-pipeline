@@ -120,10 +120,6 @@ interface ResumePayload {
 /**
  * Resume command - Resume failed or paused feature pipeline execution
  *
- * Implements:
- * - FR-3 (Resumability): Deterministic crash recovery
- * - ADR-2 (State Persistence): Hash verification and queue restoration
- *
  * Exit codes:
  * - 0: Resume successful or dry-run completed
  * - 1: General error

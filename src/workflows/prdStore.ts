@@ -23,10 +23,6 @@ import {
 import { isFileNotFound } from '../utils/safeJson';
 import { getErrorMessage } from '../utils/errors.js';
 
-// ============================================================================
-// Types
-// ============================================================================
-
 /**
  * PRD metadata persisted alongside markdown
  */
@@ -75,10 +71,6 @@ export interface RecordApprovalOptions {
   /** Intentional: approval metadata varies by workflow */
   metadata?: Record<string, unknown>;
 }
-
-// ============================================================================
-// Persistence Functions
-// ============================================================================
 
 /**
  * Load PRD metadata from run directory

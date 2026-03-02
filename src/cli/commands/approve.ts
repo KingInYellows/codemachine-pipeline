@@ -37,8 +37,7 @@ import { getGitUser } from '../startHelpers';
  *
  * Grant or deny approval for feature pipeline gates (PRD, Spec, Code, PR, Deploy).
  *
- * Implements:
- * - ADR-5 (Approval Workflow): Human-in-the-loop governance
+ * Features:
  * - Artifact hash validation
  * - Signer identity capture
  * - Interactive and automation-friendly modes

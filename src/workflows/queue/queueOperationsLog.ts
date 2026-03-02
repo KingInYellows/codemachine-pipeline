@@ -14,19 +14,11 @@ import { withLock } from '../../persistence';
 import { getErrorMessage } from '../../utils/errors.js';
 import { isFileNotFound } from '../../utils/safeJson.js';
 
-// ============================================================================
-// Constants
-// ============================================================================
-
 /** WAL file name within queue directory */
 const OPERATIONS_LOG_FILENAME = 'queue_operations.log';
 
 /** Sequence counter file for fast sequence lookup */
 const SEQUENCE_COUNTER_FILENAME = 'queue_sequence.txt';
-
-// ============================================================================
-// Checksum Computation
-// ============================================================================
 
 /**
  * Compute CRC32-like checksum for operation validation.
@@ -62,10 +54,6 @@ export function verifyOperationChecksum(op: QueueOperation): boolean {
   return computed === checksum;
 }
 
-// ============================================================================
-// File Path Helpers
-// ============================================================================
-
 /**
  * Get the full path to the WAL file.
  */
@@ -79,10 +67,6 @@ function getOperationsLogPath(queueDir: string): string {
 function getSequenceCounterPath(queueDir: string): string {
   return join(queueDir, SEQUENCE_COUNTER_FILENAME);
 }
-
-// ============================================================================
-// Sequence Number Management
-// ============================================================================
 
 /**
  * Read the current sequence number from the counter file.
@@ -165,10 +149,6 @@ async function scanLastSequence(queueDir: string): Promise<number> {
     throw error;
   }
 }
-
-// ============================================================================
-// Core WAL Operations
-// ============================================================================
 
 /**
  * Append a single operation to the WAL (O(1)).
@@ -427,10 +407,6 @@ export async function getOperationsLogStats(queueDir: string): Promise<{
   }
 }
 
-// ============================================================================
-// WAL Initialization
-// ============================================================================
-
 /**
  * Initialize WAL files if they don't exist.
  *
@@ -441,8 +417,6 @@ export async function getOperationsLogStats(queueDir: string): Promise<{
 export async function initializeOperationsLog(queueDir: string): Promise<void> {
   const logPath = getOperationsLogPath(queueDir);
   const counterPath = getSequenceCounterPath(queueDir);
-
-  // Ensure queue directory exists
   await mkdir(queueDir, { recursive: true });
 
   // Create WAL file if it doesn't exist
@@ -459,10 +433,6 @@ export async function initializeOperationsLog(queueDir: string): Promise<void> {
     await writeFile(counterPath, '0', 'utf-8');
   }
 }
-
-// ============================================================================
-// Batch Operations
-// ============================================================================
 
 /**
  * Append multiple operations atomically.
