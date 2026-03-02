@@ -1,7 +1,7 @@
 # loadIntegrationsStatus Duplicates Rate-Limit Loading Logic for GitHub and Linear
 
 **ID:** 152
-**Status:** pending
+**Status:** complete
 **Severity:** high
 **Category:** complexity
 **Effort:** medium

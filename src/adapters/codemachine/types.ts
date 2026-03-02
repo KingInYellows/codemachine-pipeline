@@ -39,34 +39,5 @@ export interface CodeMachineExecutionResult {
 /** Strategy names recognized for CodeMachine telemetry tracking. */
 export const CODEMACHINE_STRATEGY_NAMES = new Set(['codemachine', 'codemachine-cli']);
 
-// CLI Path Validation
-
-/**
- * Allowlist regex for safe CLI path characters.
- * Uses an allowlist instead of a blocklist to prevent bypass
- * via `$()`, backticks, or Unicode homoglyphs.
- */
-const SAFE_CLI_PATH_PATTERN = /^[a-zA-Z0-9_\-./:\\]+$/;
-
-export function validateCliPath(cliPath: string): { valid: boolean; error?: string } {
-  if (cliPath.length === 0) {
-    return { valid: false, error: 'CLI path is empty' };
-  }
-  if (cliPath.trim() !== cliPath) {
-    return { valid: false, error: 'CLI path contains leading or trailing whitespace' };
-  }
-  if (!SAFE_CLI_PATH_PATTERN.test(cliPath)) {
-    // Provide specific error messages for common attack vectors
-    if (/[\n\r]/.test(cliPath)) {
-      return { valid: false, error: 'CLI path contains newline characters' };
-    }
-    if (/[;|&`$(){}]/.test(cliPath)) {
-      return { valid: false, error: 'CLI path contains shell metacharacters' };
-    }
-    return { valid: false, error: 'CLI path contains invalid characters' };
-  }
-  if (cliPath.split(/[\\/]/).includes('..')) {
-    return { valid: false, error: 'CLI path contains path traversal segments (..)' };
-  }
-  return { valid: true };
-}
+// Re-export CLI path validation from shared utility
+export { validateCliPath } from '../../validation/cliPath.js';

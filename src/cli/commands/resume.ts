@@ -30,7 +30,7 @@ import {
 } from '../utils/runDirectory';
 import { loadPlanSummary } from '../../workflows/taskPlanner';
 import { RateLimitReporter } from '../../telemetry/rateLimitReporter';
-import { loadReport as loadBranchProtectionReport } from '../../workflows/branchProtectionReporter';
+import { loadReport as loadBranchProtectionReport } from '../../persistence/branchProtectionStore';
 import { CliError, CliErrorCode, setJsonOutputMode, rethrowIfOclifError } from '../utils/cliErrors';
 
 type ResumeFlags = {

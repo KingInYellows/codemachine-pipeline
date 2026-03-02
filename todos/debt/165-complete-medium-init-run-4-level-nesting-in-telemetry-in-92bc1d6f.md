@@ -1,7 +1,7 @@
 # Init run 4-Level Nesting in Telemetry Initialization Conditional Branch
 
 **ID:** 165
-**Status:** pending
+**Status:** complete
 **Severity:** medium
 **Category:** complexity
 **Effort:** small

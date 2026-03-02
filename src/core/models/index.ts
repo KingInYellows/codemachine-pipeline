@@ -177,6 +177,12 @@ export {
 } from './DeploymentRecord';
 
 export {
+  // BranchProtectionReport
+  BranchProtectionReport,
+  BranchProtectionReportSchema,
+} from './BranchProtectionReport';
+
+export {
   // IntegrationCredential
   IntegrationCredential,
   IntegrationCredentialSchema,

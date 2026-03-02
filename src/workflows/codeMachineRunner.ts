@@ -6,7 +6,7 @@ import type { ExecutionConfig, ExecutionEngineType } from '../core/config/RepoCo
 import type { StructuredLogger } from '../telemetry/logger.js';
 import { getErrorMessage } from '../utils/errors.js';
 import { filterEnvironment as filterEnv } from '../utils/envFilter.js';
-import { validateCliPath } from '../adapters/codemachine/types.js';
+import { validateCliPath } from '../validation/cliPath.js';
 import { runProcess } from '../utils/processRunner.js';
 export { validateCliPath };
 
