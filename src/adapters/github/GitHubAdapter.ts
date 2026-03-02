@@ -510,6 +510,13 @@ export class GitHubAdapter {
 }
 
 /**
+ * Backwards-compatible factory helper retained for external/example callers.
+ */
+export function createGitHubAdapter(config: GitHubAdapterConfig): GitHubAdapter {
+  return new GitHubAdapter(config);
+}
+
+/**
  * GitHub adapter error with error taxonomy
  */
 export class GitHubAdapterError extends AdapterError {}

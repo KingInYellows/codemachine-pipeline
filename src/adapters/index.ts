@@ -7,6 +7,7 @@
 // GitHub exports
 export {
   GitHubAdapter,
+  createGitHubAdapter,
   GitHubAdapterError,
   type GitHubAdapterConfig,
   type RepositoryInfo,

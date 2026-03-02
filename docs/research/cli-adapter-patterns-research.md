@@ -60,7 +60,8 @@ const adapter = new LinearAdapter(config);
 - Config object with optional fields (default injection)
 - Logger injection (testability)
 - Internal client initialization in constructor
-- Factory function for ease of testing and dependency injection
+- Direct class instantiation as the default construction pattern
+- Optional factory wrappers only for backwards compatibility at integration boundaries
 
 ### 1.2 Proposed CodeMachineCLIAdapter Pattern
 
