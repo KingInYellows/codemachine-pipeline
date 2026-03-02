@@ -108,6 +108,19 @@ export class CLIExecutionEngine {
     const warnings: string[] = [];
     const executionConfig = this.config.execution ?? DEFAULT_EXECUTION_CONFIG;
 
+    await this.validateCliAvailability(errors, warnings, executionConfig);
+    await this.validateWorkspace(errors, executionConfig);
+    this.validateStrategies(warnings);
+    await this.validateQueueState(errors, warnings);
+
+    return { valid: errors.length === 0, errors, warnings };
+  }
+
+  private async validateCliAvailability(
+    errors: string[],
+    warnings: string[],
+    executionConfig: RepoConfig['execution']
+  ): Promise<void> {
     const cliPath = executionConfig.codemachine_cli_path;
     const cliCheck = await validateCliAvailability(cliPath);
     if (!cliCheck.available) {
@@ -124,7 +137,12 @@ export class CLIExecutionEngine {
         );
       }
     }
+  }
 
+  private async validateWorkspace(
+    errors: string[],
+    executionConfig: RepoConfig['execution']
+  ): Promise<void> {
     const workspaceDir = executionConfig.workspace_dir || this.runDir;
     try {
       const stats = await fs.stat(workspaceDir);
@@ -134,11 +152,15 @@ export class CLIExecutionEngine {
     } catch {
       errors.push(`Workspace directory does not exist: ${workspaceDir}`);
     }
+  }
 
+  private validateStrategies(warnings: string[]): void {
     if (this.strategies.length === 0) {
       warnings.push('No execution strategies registered');
     }
+  }
 
+  private async validateQueueState(errors: string[], warnings: string[]): Promise<void> {
     try {
       const queue = await loadQueue(this.runDir);
       if (queue.size === 0) {
@@ -147,8 +169,6 @@ export class CLIExecutionEngine {
     } catch {
       errors.push('Failed to load execution queue');
     }
-
-    return { valid: errors.length === 0, errors, warnings };
   }
 
   /**

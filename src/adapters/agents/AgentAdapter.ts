@@ -253,59 +253,16 @@ export class AgentAdapter {
           attempt: fallbackAttempts,
         });
 
-        if (agentError.category !== 'transient' || !this.enableFallback) {
-          throw agentError;
-        }
-
-        if (fallbackAttempts >= this.maxFallbackAttempts) {
-          this.logger.warn('Max fallback attempts reached', {
-            sessionId,
-            maxFallbackAttempts: this.maxFallbackAttempts,
-          });
-          throw agentError;
-        }
-
-        const fallbackProviderId = currentManifest.fallbackProvider;
-        if (!fallbackProviderId) {
-          this.logger.error('No fallback provider configured', {
-            sessionId,
-            providerId: currentManifest.providerId,
-          });
-          throw agentError;
-        }
-
-        const fallbackManifest = this.manifestLoader.getManifest(fallbackProviderId);
-        if (!fallbackManifest) {
-          this.logger.error('Fallback provider not found', {
-            sessionId,
-            fallbackProviderId,
-          });
-          throw agentError;
-        }
-
-        if (attemptedProviders.has(fallbackManifest.providerId)) {
-          this.logger.error('Detected fallback cycle', {
-            sessionId,
-            fallbackProviderId,
-          });
-          throw agentError;
-        }
-
-        if (agentError.retryAfterSeconds) {
-          this.logger.info('Waiting before fallback retry', {
-            sessionId,
-            retryAfterSeconds: agentError.retryAfterSeconds,
-          });
-          await this.sleep(agentError.retryAfterSeconds * 1000);
-        }
+        const nextManifest = await this.resolveFallbackManifest(
+          agentError,
+          currentManifest,
+          fallbackAttempts,
+          attemptedProviders,
+          sessionId
+        );
 
         fallbackAttempts += 1;
-        this.logger.info('Attempting fallback provider', {
-          sessionId,
-          fallbackProviderId,
-          attempt: fallbackAttempts,
-        });
-        currentManifest = fallbackManifest;
+        currentManifest = nextManifest;
       }
     }
 
@@ -321,6 +278,73 @@ export class AgentAdapter {
         fallbackAttempts
       )
     );
+  }
+
+  /**
+   * Resolve the next fallback manifest after a transient error, or re-throw
+   * when fallback is not possible (non-transient error, fallback disabled,
+   * max attempts reached, no fallback configured, provider not found, or cycle detected).
+   */
+  private async resolveFallbackManifest(
+    agentError: AgentAdapterError,
+    currentManifest: AgentManifest,
+    fallbackAttempts: number,
+    attemptedProviders: Set<string>,
+    sessionId: string
+  ): Promise<AgentManifest> {
+    if (agentError.category !== 'transient' || !this.enableFallback) {
+      throw agentError;
+    }
+
+    if (fallbackAttempts >= this.maxFallbackAttempts) {
+      this.logger.warn('Max fallback attempts reached', {
+        sessionId,
+        maxFallbackAttempts: this.maxFallbackAttempts,
+      });
+      throw agentError;
+    }
+
+    const fallbackProviderId = currentManifest.fallbackProvider;
+    if (!fallbackProviderId) {
+      this.logger.error('No fallback provider configured', {
+        sessionId,
+        providerId: currentManifest.providerId,
+      });
+      throw agentError;
+    }
+
+    const fallbackManifest = this.manifestLoader.getManifest(fallbackProviderId);
+    if (!fallbackManifest) {
+      this.logger.error('Fallback provider not found', {
+        sessionId,
+        fallbackProviderId,
+      });
+      throw agentError;
+    }
+
+    if (attemptedProviders.has(fallbackManifest.providerId)) {
+      this.logger.error('Detected fallback cycle', {
+        sessionId,
+        fallbackProviderId,
+      });
+      throw agentError;
+    }
+
+    if (agentError.retryAfterSeconds) {
+      this.logger.info('Waiting before fallback retry', {
+        sessionId,
+        retryAfterSeconds: agentError.retryAfterSeconds,
+      });
+      await this.sleep(agentError.retryAfterSeconds * 1000);
+    }
+
+    this.logger.info('Attempting fallback provider', {
+      sessionId,
+      fallbackProviderId,
+      attempt: fallbackAttempts + 1,
+    });
+
+    return fallbackManifest;
   }
 
   /**

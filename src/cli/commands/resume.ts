@@ -16,14 +16,13 @@ import {
   DEFAULT_EXECUTION_CONFIG,
 } from '../../core/config/RepoConfig';
 import { createCliLogger, LogLevel } from '../../telemetry/logger';
-import { createRunMetricsCollector, StandardMetrics } from '../../telemetry/metrics';
-import { createRunTraceManager, SpanStatusCode } from '../../telemetry/traces';
+import { createRunMetricsCollector } from '../../telemetry/metrics';
+import { createRunTraceManager } from '../../telemetry/traces';
 import { createExecutionTelemetry } from '../../telemetry/executionTelemetry';
 import type { StructuredLogger } from '../../telemetry/logger';
 import type { MetricsCollector } from '../../telemetry/metrics';
 import type { TraceManager, ActiveSpan } from '../../telemetry/traces';
 import {
-  ensureTelemetryReferences,
   resolveRunDirectorySettings,
   selectFeatureId,
   requireFeatureId,
@@ -32,6 +31,11 @@ import { loadPlanSummary } from '../../workflows/taskPlanner';
 import { RateLimitReporter } from '../../telemetry/rateLimitReporter';
 import { loadReport as loadBranchProtectionReport } from '../../persistence/branchProtectionStore';
 import { CliError, CliErrorCode, setJsonOutputMode, rethrowIfOclifError } from '../utils/cliErrors';
+import {
+  flushTelemetrySuccess,
+  flushTelemetryError,
+  type TelemetryResources,
+} from '../utils/telemetryLifecycle';
 
 type ResumeFlags = {
   feature?: string;
@@ -43,6 +47,16 @@ type ResumeFlags = {
   verbose: boolean;
   'max-parallel'?: number;
 };
+
+interface TelemetryContext {
+  logger: StructuredLogger;
+  metrics: MetricsCollector;
+  traceManager: TraceManager;
+  commandSpan: ActiveSpan;
+  executionTelemetry: ReturnType<typeof createExecutionTelemetry>;
+  runDirPath: string;
+  resources: TelemetryResources;
+}
 
 interface ResumePayload {
   feature_id: string;
@@ -185,272 +199,281 @@ export default class Resume extends Command {
       setJsonOutputMode();
     }
 
-    // Initialize telemetry
-    let logger: StructuredLogger | undefined;
-    let metrics: MetricsCollector | undefined;
-    let traceManager: TraceManager | undefined;
-    let commandSpan: ActiveSpan | undefined;
-    let executionTelemetry: ReturnType<typeof createExecutionTelemetry> | undefined;
-    let runDirPath: string | undefined;
     const startTime = Date.now();
+    let telemetry: TelemetryContext | undefined;
 
     try {
       const settings = await resolveRunDirectorySettings();
       const featureId = await selectFeatureId(settings.baseDir, typedFlags.feature);
       requireFeatureId(featureId, typedFlags.feature);
 
-      runDirPath = getRunDirectoryPath(settings.baseDir, featureId);
+      const runDirPath = getRunDirectoryPath(settings.baseDir, featureId);
+      telemetry = Resume.setupTelemetry(typedFlags, featureId, runDirPath, startTime);
 
-      // Initialize telemetry
-      logger = createCliLogger('resume', featureId, runDirPath, {
-        minLevel: typedFlags.verbose ? LogLevel.DEBUG : LogLevel.INFO,
-        mirrorToStderr: !typedFlags.json,
-      });
-      metrics = createRunMetricsCollector(runDirPath, featureId);
-      traceManager = createRunTraceManager(runDirPath, featureId, logger);
-      commandSpan = traceManager.startSpan('cli.resume');
-      commandSpan.setAttribute('feature_id', featureId);
-      commandSpan.setAttribute('dry_run', typedFlags['dry-run']);
-      commandSpan.setAttribute('force', typedFlags.force);
-      commandSpan.setAttribute('skip_hash_verification', typedFlags['skip-hash-verification']);
-      if (!metrics || !logger) {
-        throw new Error('Telemetry initialization failed for resume command');
-      }
-      executionTelemetry = createExecutionTelemetry({
-        logger,
-        metrics,
-        runDir: runDirPath,
-        runId: featureId,
-        traceManager,
-        component: 'execution_queue',
-      });
-
-      logger.info('Resume command invoked', {
+      telemetry.logger.info('Resume command invoked', {
         feature_id: featureId,
         dry_run: typedFlags['dry-run'],
         force: typedFlags.force,
         skip_hash_verification: typedFlags['skip-hash-verification'],
       });
 
-      // Build resume options
-      const resumeOptions: ResumeOptions = {
-        force: typedFlags.force,
-        skipHashVerification: typedFlags['skip-hash-verification'],
-        validateQueue: typedFlags['validate-queue'],
-      };
-
-      // Analyze resume state
-      const analysis = await analyzeResumeState(runDirPath, resumeOptions, executionTelemetry);
-
-      // Load plan summary for context
-      const planSummary = await loadPlanSummary(runDirPath);
-
-      const queueValidation = analysis.queueValidation;
-      if (queueValidation && !queueValidation.valid && !typedFlags.force) {
-        logger.error('Queue validation failed', {
-          corrupted_tasks: queueValidation.corruptedTasks,
-          total_errors: queueValidation.errors.length,
-        });
-      }
-
-      // Build output payload
-      const payload = await this.buildResumePayload(
-        analysis,
-        queueValidation,
-        planSummary,
-        typedFlags['dry-run'],
-        runDirPath
+      const { analysis, payload } = await this.analyzeAndDisplayResumeState(
+        featureId,
+        runDirPath,
+        typedFlags,
+        telemetry
       );
-
-      if (typedFlags.json) {
-        this.log(JSON.stringify(payload, null, 2));
-      } else {
-        this.printHumanReadable(analysis, queueValidation, typedFlags, payload);
-      }
 
       // Dry run - stop here
       if (typedFlags['dry-run']) {
-        logger.info('Dry run completed', { can_resume: analysis.canResume });
-        metrics.increment(StandardMetrics.COMMAND_INVOCATIONS_TOTAL, {
-          command: 'resume',
-          exit_code: '0',
-          dry_run: 'true',
-        });
-        await this.flush(logger, metrics, traceManager, commandSpan, runDirPath, 0);
+        telemetry.logger.info('Dry run completed', { can_resume: analysis.canResume });
+        await flushTelemetrySuccess(telemetry.resources, { exit_code: 0, dry_run: true }, 0);
         return;
       }
 
       // Check if resume is blocked
       if (!analysis.canResume) {
         const exitCode = this.determineExitCode(analysis);
-        logger.error('Resume blocked', {
+        telemetry.logger.error('Resume blocked', {
           blockers: analysis.diagnostics.filter((d) => d.severity === 'blocker').map((d) => d.code),
         });
-
-        metrics.increment(StandardMetrics.COMMAND_INVOCATIONS_TOTAL, {
-          command: 'resume',
-          exit_code: exitCode.toString(),
-        });
-
-        await this.flush(logger, metrics, traceManager, commandSpan, runDirPath, exitCode);
+        await flushTelemetrySuccess(telemetry.resources, { exit_code: exitCode }, exitCode);
         this.error(`Resume is blocked. See diagnostics above.`, { exit: exitCode });
       }
 
       // Execute resume
-      logger.info('Preparing resume', { feature_id: featureId });
+      await this.buildAndRunExecutionEngine(featureId, runDirPath, typedFlags, payload, telemetry);
 
-      await prepareResume(runDirPath, resumeOptions, executionTelemetry);
-
-      logger.info('Resume preparation completed', { feature_id: featureId });
-
-      // Load repo config
-      const repoConfigPath = path.join(process.cwd(), '.codepipe', 'config.json');
-      const repoConfigResult = await loadRepoConfig(repoConfigPath);
-      if (!repoConfigResult.success || !repoConfigResult.config) {
-        const errorMessages =
-          repoConfigResult.errors?.map((e) => e.message).join(', ') ?? 'unknown error';
-        throw new Error(`Invalid repository configuration: ${errorMessages}`);
-      }
-      const repoConfig = repoConfigResult.config;
-
-      // Execute tasks via CLIExecutionEngine
-      logger.info('Starting task execution via CLIExecutionEngine', { feature_id: featureId });
-
-      const executionConfig = repoConfig.execution ?? DEFAULT_EXECUTION_CONFIG;
-
-      const mergedConfig: RepoConfig = {
-        ...repoConfig,
-        execution: {
-          ...executionConfig,
-          max_parallel_tasks: typedFlags['max-parallel'] ?? executionConfig.max_parallel_tasks,
-        },
-      };
-
-      // Create strategies — CLI strategy takes priority when binary is available
-      if (!mergedConfig.execution) {
-        throw new Error(
-          'Execution config is required. Ensure your .codepipe/config.json includes an "execution" section.'
-        );
-      }
-      const strategies = await buildExecutionStrategies(mergedConfig.execution, logger);
-
-      const executionEngine = new CLIExecutionEngine({
-        runDir: runDirPath,
-        config: mergedConfig,
-        strategies,
-        dryRun: false,
-        logger,
-        telemetry: executionTelemetry,
-      });
-
-      const prereqResult = await executionEngine.validatePrerequisites();
-      if (!prereqResult.valid) {
-        throw new Error(`Execution prerequisites failed: ${prereqResult.errors.join(', ')}`);
-      }
-
-      if (prereqResult.warnings.length > 0) {
-        prereqResult.warnings.forEach((w) => logger?.warn(w));
-      }
-
-      const executionStartTime = Date.now();
-      const executionResults = await executionEngine.execute();
-      const executionDuration = Date.now() - executionStartTime;
-
-      logger.info('Resume execution completed', {
-        feature_id: featureId,
-        totalTasks: executionResults.totalTasks,
-        completed: executionResults.completedTasks,
-        failed: executionResults.failedTasks,
-        duration_ms: executionDuration,
-      });
-
-      // Update payload with execution results
-      payload.execution = {
-        total_tasks: executionResults.totalTasks,
-        completed: executionResults.completedTasks,
-        failed: executionResults.failedTasks,
-        permanently_failed: executionResults.permanentlyFailedTasks,
-        skipped: executionResults.skippedTasks,
-        duration_ms: executionDuration,
-      };
-
-      if (!typedFlags.json) {
-        this.log('');
-        this.log('✅ Resume execution successful');
-        this.log('');
-        this.log('Execution results:');
-        this.log(`  Total tasks: ${executionResults.totalTasks}`);
-        this.log(`  Completed: ${executionResults.completedTasks}`);
-        this.log(`  Failed: ${executionResults.failedTasks}`);
-        this.log(`  Permanently failed: ${executionResults.permanentlyFailedTasks}`);
-        this.log(`  Skipped: ${executionResults.skippedTasks}`);
-        this.log(`  Duration: ${(executionDuration / 1000).toFixed(2)}s`);
-        this.log('');
-        this.log('Next steps:');
-        this.log('  • Monitor progress with: codepipe status --feature ' + featureId);
-        this.log('  • View logs in: ' + path.join(runDirPath, 'logs', 'logs.ndjson'));
-        this.log('');
-
-        if (executionResults.failedTasks > 0) {
-          this.warn(
-            `Warning: ${executionResults.failedTasks} task(s) failed. Run 'codepipe resume' to retry.`
-          );
-        }
-      }
-
-      metrics.increment(StandardMetrics.COMMAND_INVOCATIONS_TOTAL, {
-        command: 'resume',
-        exit_code: '0',
-      });
-
-      await this.flush(logger, metrics, traceManager, commandSpan, runDirPath, 0);
+      await flushTelemetrySuccess(telemetry.resources, { exit_code: 0 }, 0);
     } catch (error) {
-      const exitCode = 1;
+      const exitCode =
+        error instanceof CliError
+          ? error.code === CliErrorCode.RUN_DIR_NOT_FOUND
+            ? 10
+            : error.exitCode
+          : 1;
 
-      if (metrics) {
-        const duration = Date.now() - startTime;
-        metrics.observe(StandardMetrics.COMMAND_EXECUTION_DURATION_MS, duration, {
-          command: 'resume',
-        });
-        metrics.increment(StandardMetrics.COMMAND_INVOCATIONS_TOTAL, {
-          command: 'resume',
-          exit_code: '1',
-        });
+      if (telemetry) {
+        await flushTelemetryError(telemetry.resources, error, exitCode);
       }
-
-      if (commandSpan) {
-        commandSpan.setAttribute('exit_code', exitCode);
-        commandSpan.setAttribute('error', true);
-        if (error instanceof Error) {
-          commandSpan.setAttribute('error.message', error.message);
-          commandSpan.setAttribute('error.name', error.name);
-        }
-        commandSpan.end({
-          code: SpanStatusCode.ERROR,
-          message: error instanceof Error ? error.message : 'unknown error',
-        });
-      }
-
-      if (logger) {
-        logger.error('Resume command failed', {
-          error: error instanceof Error ? error.message : 'unknown',
-          stack: error instanceof Error ? error.stack : undefined,
-        });
-      }
-
-      await this.flush(logger, metrics, traceManager, commandSpan, runDirPath, exitCode);
 
       rethrowIfOclifError(error);
 
       if (error instanceof CliError) {
-        const exitCode = error.code === CliErrorCode.RUN_DIR_NOT_FOUND ? 10 : error.exitCode;
         this.error(error.message, { exit: exitCode });
       }
 
       if (error instanceof Error) {
-        this.error(`Resume command failed: ${error.message}`, { exit: exitCode });
+        this.error(`Resume command failed: ${error.message}`, { exit: 1 });
       } else {
-        this.error('Resume command failed with an unknown error', { exit: exitCode });
+        this.error('Resume command failed with an unknown error', { exit: 1 });
+      }
+    }
+  }
+
+  private static setupTelemetry(
+    flags: ResumeFlags,
+    featureId: string,
+    runDirPath: string,
+    startTime: number
+  ): TelemetryContext {
+    const logger = createCliLogger('resume', featureId, runDirPath, {
+      minLevel: flags.verbose ? LogLevel.DEBUG : LogLevel.INFO,
+      mirrorToStderr: !flags.json,
+    });
+    const metrics = createRunMetricsCollector(runDirPath, featureId);
+    const traceManager = createRunTraceManager(runDirPath, featureId, logger);
+    const commandSpan = traceManager.startSpan('cli.resume');
+    commandSpan.setAttribute('feature_id', featureId);
+    commandSpan.setAttribute('dry_run', flags['dry-run']);
+    commandSpan.setAttribute('force', flags.force);
+    commandSpan.setAttribute('skip_hash_verification', flags['skip-hash-verification']);
+
+    const executionTelemetry = createExecutionTelemetry({
+      logger,
+      metrics,
+      runDir: runDirPath,
+      runId: featureId,
+      traceManager,
+      component: 'execution_queue',
+    });
+
+    const resources: TelemetryResources = {
+      commandName: 'resume',
+      startTime,
+      logger,
+      metrics,
+      traceManager,
+      commandSpan,
+      runDirPath,
+    };
+
+    return {
+      logger,
+      metrics,
+      traceManager,
+      commandSpan,
+      executionTelemetry,
+      runDirPath,
+      resources,
+    };
+  }
+
+  private async analyzeAndDisplayResumeState(
+    _featureId: string,
+    runDirPath: string,
+    flags: ResumeFlags,
+    telemetry: TelemetryContext
+  ): Promise<{
+    analysis: Awaited<ReturnType<typeof analyzeResumeState>>;
+    payload: ResumePayload;
+  }> {
+    const resumeOptions: ResumeOptions = {
+      force: flags.force,
+      skipHashVerification: flags['skip-hash-verification'],
+      validateQueue: flags['validate-queue'],
+    };
+
+    const analysis = await analyzeResumeState(
+      runDirPath,
+      resumeOptions,
+      telemetry.executionTelemetry
+    );
+    const planSummary = await loadPlanSummary(runDirPath);
+
+    const queueValidation = analysis.queueValidation;
+    if (queueValidation && !queueValidation.valid && !flags.force) {
+      telemetry.logger.error('Queue validation failed', {
+        corrupted_tasks: queueValidation.corruptedTasks,
+        total_errors: queueValidation.errors.length,
+      });
+    }
+
+    const payload = await this.buildResumePayload(
+      analysis,
+      queueValidation,
+      planSummary,
+      flags['dry-run'],
+      runDirPath
+    );
+
+    if (flags.json) {
+      this.log(JSON.stringify(payload, null, 2));
+    } else {
+      this.printHumanReadable(analysis, queueValidation, flags, payload);
+    }
+
+    return { analysis, payload };
+  }
+
+  private async buildAndRunExecutionEngine(
+    featureId: string,
+    runDirPath: string,
+    flags: ResumeFlags,
+    payload: ResumePayload,
+    telemetry: TelemetryContext
+  ): Promise<void> {
+    const { logger, executionTelemetry } = telemetry;
+
+    const resumeOptions: ResumeOptions = {
+      force: flags.force,
+      skipHashVerification: flags['skip-hash-verification'],
+      validateQueue: flags['validate-queue'],
+    };
+
+    logger.info('Preparing resume', { feature_id: featureId });
+    await prepareResume(runDirPath, resumeOptions, executionTelemetry);
+    logger.info('Resume preparation completed', { feature_id: featureId });
+
+    // Load repo config
+    const repoConfigPath = path.join(process.cwd(), '.codepipe', 'config.json');
+    const repoConfigResult = await loadRepoConfig(repoConfigPath);
+    if (!repoConfigResult.success || !repoConfigResult.config) {
+      const errorMessages =
+        repoConfigResult.errors?.map((e) => e.message).join(', ') ?? 'unknown error';
+      throw new Error(`Invalid repository configuration: ${errorMessages}`);
+    }
+    const repoConfig = repoConfigResult.config;
+
+    logger.info('Starting task execution via CLIExecutionEngine', { feature_id: featureId });
+
+    const executionConfig = repoConfig.execution ?? DEFAULT_EXECUTION_CONFIG;
+    const mergedConfig: RepoConfig = {
+      ...repoConfig,
+      execution: {
+        ...executionConfig,
+        max_parallel_tasks: flags['max-parallel'] ?? executionConfig.max_parallel_tasks,
+      },
+    };
+
+    if (!mergedConfig.execution) {
+      throw new Error(
+        'Execution config is required. Ensure your .codepipe/config.json includes an "execution" section.'
+      );
+    }
+    const strategies = await buildExecutionStrategies(mergedConfig.execution, logger);
+
+    const executionEngine = new CLIExecutionEngine({
+      runDir: runDirPath,
+      config: mergedConfig,
+      strategies,
+      dryRun: false,
+      logger,
+      telemetry: executionTelemetry,
+    });
+
+    const prereqResult = await executionEngine.validatePrerequisites();
+    if (!prereqResult.valid) {
+      throw new Error(`Execution prerequisites failed: ${prereqResult.errors.join(', ')}`);
+    }
+
+    if (prereqResult.warnings.length > 0) {
+      prereqResult.warnings.forEach((w) => logger.warn(w));
+    }
+
+    const executionStartTime = Date.now();
+    const executionResults = await executionEngine.execute();
+    const executionDuration = Date.now() - executionStartTime;
+
+    logger.info('Resume execution completed', {
+      feature_id: featureId,
+      totalTasks: executionResults.totalTasks,
+      completed: executionResults.completedTasks,
+      failed: executionResults.failedTasks,
+      duration_ms: executionDuration,
+    });
+
+    // Update payload with execution results
+    payload.execution = {
+      total_tasks: executionResults.totalTasks,
+      completed: executionResults.completedTasks,
+      failed: executionResults.failedTasks,
+      permanently_failed: executionResults.permanentlyFailedTasks,
+      skipped: executionResults.skippedTasks,
+      duration_ms: executionDuration,
+    };
+
+    if (!flags.json) {
+      this.log('');
+      this.log('✅ Resume execution successful');
+      this.log('');
+      this.log('Execution results:');
+      this.log(`  Total tasks: ${executionResults.totalTasks}`);
+      this.log(`  Completed: ${executionResults.completedTasks}`);
+      this.log(`  Failed: ${executionResults.failedTasks}`);
+      this.log(`  Permanently failed: ${executionResults.permanentlyFailedTasks}`);
+      this.log(`  Skipped: ${executionResults.skippedTasks}`);
+      this.log(`  Duration: ${(executionDuration / 1000).toFixed(2)}s`);
+      this.log('');
+      this.log('Next steps:');
+      this.log(`  • Monitor progress with: codepipe status --feature ${featureId}`);
+      this.log(`  • View logs in: ${path.join(runDirPath, 'logs', 'logs.ndjson')}`);
+      this.log('');
+
+      if (executionResults.failedTasks > 0) {
+        this.warn(
+          `Warning: ${executionResults.failedTasks} task(s) failed. Run 'codepipe resume' to retry.`
+        );
       }
     }
   }
@@ -750,36 +773,5 @@ export default class Resume extends Command {
 
     // General blocker
     return 10;
-  }
-
-  private async flush(
-    logger: StructuredLogger | undefined,
-    metrics: MetricsCollector | undefined,
-    traceManager: TraceManager | undefined,
-    span: ActiveSpan | undefined,
-    runDirPath: string | undefined,
-    exitCode: number
-  ): Promise<void> {
-    if (metrics) {
-      await metrics.flush();
-    }
-
-    if (span) {
-      span.setAttribute('exit_code', exitCode);
-      span.end({ code: exitCode === 0 ? SpanStatusCode.OK : SpanStatusCode.ERROR });
-    }
-
-    if (traceManager) {
-      await traceManager.flush();
-    }
-
-    if (runDirPath) {
-      await ensureTelemetryReferences(runDirPath);
-    }
-
-    if (logger) {
-      logger.info('Resume command completed', { exit_code: exitCode });
-      await logger.flush();
-    }
   }
 }
