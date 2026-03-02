@@ -19,6 +19,7 @@ import { flushTelemetryError, flushTelemetrySuccess } from '../utils/telemetryLi
  */
 interface DiagnosticCheck {
   name: string;
+  category: 'credential' | 'environment' | 'config' | 'general';
   status: 'pass' | 'fail' | 'warn';
   message: string;
   remediation?: string;
@@ -58,17 +59,9 @@ function determineExitCode(checks: DiagnosticCheck[]): {
     return { exitCode: 0, status: hasWarnings ? 'issues_detected' : 'healthy' };
   }
 
-  const hasCredentialFailure = failed.some(
-    (c) => c.name.includes('Token') || c.name.includes('API Key') || c.name.includes('Credential')
-  );
-  const hasEnvironmentFailure = failed.some(
-    (c) =>
-      c.name.includes('Node') ||
-      c.name.includes('Git') ||
-      c.name.includes('Docker') ||
-      c.name.includes('Filesystem')
-  );
-  const hasConfigFailure = failed.some((c) => c.name.includes('Config'));
+  const hasCredentialFailure = failed.some((c) => c.category === 'credential');
+  const hasEnvironmentFailure = failed.some((c) => c.category === 'environment');
+  const hasConfigFailure = failed.some((c) => c.category === 'config');
 
   if (hasCredentialFailure) return { exitCode: 30, status: 'critical_failures' };
   if (hasEnvironmentFailure) return { exitCode: 20, status: 'critical_failures' };
@@ -256,6 +249,7 @@ export default class Doctor extends Command {
       if (majorVersion >= 24) {
         return {
           name: 'Node.js Version',
+          category: 'environment',
           status: 'pass',
           message: `Node.js ${versionOutput} (v24 LTS preferred)`,
           details: { version: versionOutput, major: majorVersion },
@@ -263,6 +257,7 @@ export default class Doctor extends Command {
       } else if (majorVersion >= 20) {
         return {
           name: 'Node.js Version',
+          category: 'environment',
           status: 'warn',
           message: `Node.js ${versionOutput} (v20 acceptable, v24 recommended)`,
           remediation: 'Upgrade to Node.js v24 LTS for optimal performance',
@@ -271,6 +266,7 @@ export default class Doctor extends Command {
       } else {
         return {
           name: 'Node.js Version',
+          category: 'environment',
           status: 'fail',
           message: `Node.js ${versionOutput} is below minimum required version`,
           remediation: 'Install Node.js v20 or v24 LTS from https://nodejs.org/',
@@ -280,6 +276,7 @@ export default class Doctor extends Command {
     } catch {
       return {
         name: 'Node.js Version',
+        category: 'environment',
         status: 'fail',
         message: 'Unable to determine Node.js version',
         remediation: 'Ensure Node.js is properly installed',
@@ -289,18 +286,20 @@ export default class Doctor extends Command {
 
   private checkToolVersion(options: {
     name: string;
+    category: DiagnosticCheck['category'];
     command: string;
     failStatus: 'fail' | 'warn';
     failRemediation: string;
     messageFormatter?: (version: string) => string;
   }): DiagnosticCheck {
-    const { name, command, failStatus, failRemediation, messageFormatter } = options;
+    const { name, category, command, failStatus, failRemediation, messageFormatter } = options;
     try {
       const result = spawnSync(command, ['--version'], { encoding: 'utf-8', timeout: 5000 });
       if (result.status === 0) {
         const version = result.stdout.trim();
         return {
           name,
+          category,
           status: 'pass',
           message: messageFormatter ? messageFormatter(version) : version,
           details: { version },
@@ -308,6 +307,7 @@ export default class Doctor extends Command {
       }
       return {
         name,
+        category,
         status: failStatus,
         message: `${name} command failed`,
         remediation: failRemediation,
@@ -315,6 +315,7 @@ export default class Doctor extends Command {
     } catch {
       return {
         name,
+        category,
         status: failStatus,
         message: `${name} not found`,
         remediation: failRemediation,
@@ -325,6 +326,7 @@ export default class Doctor extends Command {
   private checkGitInstalled(): DiagnosticCheck {
     return this.checkToolVersion({
       name: 'Git CLI',
+      category: 'environment',
       command: 'git',
       failStatus: 'fail',
       failRemediation: 'Install git from https://git-scm.com/',
@@ -334,6 +336,7 @@ export default class Doctor extends Command {
   private checkNpmInstalled(): DiagnosticCheck {
     return this.checkToolVersion({
       name: 'npm',
+      category: 'environment',
       command: 'npm',
       failStatus: 'fail',
       failRemediation: 'npm should be installed with Node.js',
@@ -344,6 +347,7 @@ export default class Doctor extends Command {
   private checkDockerInstalled(): DiagnosticCheck {
     return this.checkToolVersion({
       name: 'Docker',
+      category: 'environment',
       command: 'docker',
       failStatus: 'warn',
       failRemediation: 'Install Docker from https://docker.com/ (optional but recommended)',
@@ -363,6 +367,7 @@ export default class Doctor extends Command {
       if (gitRoot) {
         return {
           name: 'Git Repository',
+          category: 'environment',
           status: 'pass',
           message: `Git repository detected at ${gitRoot}`,
           details: { git_root: gitRoot },
@@ -370,6 +375,7 @@ export default class Doctor extends Command {
       } else {
         return {
           name: 'Git Repository',
+          category: 'environment',
           status: 'fail',
           message: 'Not in a git repository',
           remediation: 'Run "git init" or navigate to a git repository',
@@ -378,6 +384,7 @@ export default class Doctor extends Command {
     } catch {
       return {
         name: 'Git Repository',
+        category: 'environment',
         status: 'fail',
         message: 'Not in a git repository',
         remediation: 'Run "git init" or navigate to a git repository',
@@ -399,12 +406,14 @@ export default class Doctor extends Command {
 
       return {
         name: 'Filesystem Permissions',
+        category: 'environment',
         status: 'pass',
         message: 'Write permissions verified',
       };
     } catch {
       return {
         name: 'Filesystem Permissions',
+        category: 'environment',
         status: 'fail',
         message: 'Unable to write to .codepipe directory',
         remediation: 'Check directory permissions and ensure write access',
@@ -430,6 +439,7 @@ export default class Doctor extends Command {
       if (curlResult.status === 0) {
         return {
           name: 'Outbound HTTPS',
+          category: 'environment',
           status: 'pass',
           message: 'Connectivity verified (https://api.github.com)',
         };
@@ -444,6 +454,7 @@ export default class Doctor extends Command {
       if (wgetResult.status === 0) {
         return {
           name: 'Outbound HTTPS',
+          category: 'environment',
           status: 'pass',
           message: 'Connectivity verified (https://api.github.com)',
         };
@@ -451,6 +462,7 @@ export default class Doctor extends Command {
 
       return {
         name: 'Outbound HTTPS',
+        category: 'environment',
         status: 'warn',
         message: 'Unable to verify outbound HTTPS connectivity',
         remediation: 'Check network settings and firewall rules',
@@ -458,6 +470,7 @@ export default class Doctor extends Command {
     } catch {
       return {
         name: 'Outbound HTTPS',
+        category: 'environment',
         status: 'warn',
         message: 'Unable to verify connectivity (curl/wget not found)',
         remediation: 'Manually verify network access to https://api.github.com',
@@ -474,6 +487,7 @@ export default class Doctor extends Command {
     if (!fs.existsSync(configPath)) {
       return {
         name: 'RepoConfig',
+        category: 'config',
         status: 'warn',
         message: 'Configuration file not found',
         remediation: 'Run "codepipe init" to create configuration',
@@ -486,6 +500,7 @@ export default class Doctor extends Command {
     if (!result.success) {
       return {
         name: 'RepoConfig',
+        category: 'config',
         status: 'fail',
         message: 'Configuration validation failed',
         remediation: 'Run "codepipe init --validate-only" for details',
@@ -499,6 +514,7 @@ export default class Doctor extends Command {
     if (result.warnings && result.warnings.length > 0) {
       return {
         name: 'RepoConfig',
+        category: 'config',
         status: 'warn',
         message: `Configuration valid with ${result.warnings.length} warning(s)`,
         remediation: 'Review warnings with "codepipe init --validate-only"',
@@ -511,6 +527,7 @@ export default class Doctor extends Command {
 
     return {
       name: 'RepoConfig',
+      category: 'config',
       status: 'pass',
       message: 'Configuration valid',
       details: { config_path: configPath },
@@ -530,6 +547,7 @@ export default class Doctor extends Command {
     if (!config) {
       checks.push({
         name: 'Environment Variables',
+        category: 'credential',
         status: 'warn',
         message: 'Cannot check environment variables (config not found or invalid)',
         remediation: 'Run "codepipe init" first',
@@ -547,6 +565,7 @@ export default class Doctor extends Command {
       if (token) {
         checks.push({
           name: `${tokenVar} (GitHub)`,
+          category: 'credential',
           status: 'pass',
           message: 'Token present',
           details: { length: token.length },
@@ -556,6 +575,7 @@ export default class Doctor extends Command {
         const requiredScopes = (config.github.required_scopes ?? []) as string[];
         checks.push({
           name: `${tokenVar} (GitHub)`,
+          category: 'credential',
           status: 'fail',
           message: 'Token not set',
           remediation: `Set ${tokenVar} with scopes: ${requiredScopes.join(', ')}`,
@@ -573,6 +593,7 @@ export default class Doctor extends Command {
       if (key) {
         checks.push({
           name: `${keyVar} (Linear)`,
+          category: 'credential',
           status: 'pass',
           message: 'API key present',
           details: { length: key.length },
@@ -580,6 +601,7 @@ export default class Doctor extends Command {
       } else {
         checks.push({
           name: `${keyVar} (Linear)`,
+          category: 'credential',
           status: 'fail',
           message: 'API key not set',
           remediation: `Set ${keyVar} with a valid Linear API key`,
@@ -600,6 +622,7 @@ export default class Doctor extends Command {
         checks.push({
           // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access -- Config type not fully specified for this usage
           name: `${config.runtime.agent_endpoint_env_var as string} (Agent)`,
+          category: 'credential',
           status: 'warn',
           message: 'Agent endpoint not configured',
           // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access -- Config type not fully specified for this usage
@@ -608,6 +631,7 @@ export default class Doctor extends Command {
       } else {
         checks.push({
           name: `Agent Endpoint`,
+          category: 'credential',
           status: 'pass',
           message: `Configured: ${agentEndpoint}`,
           details: { endpoint: agentEndpoint },

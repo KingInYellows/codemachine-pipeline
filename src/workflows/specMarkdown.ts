@@ -13,6 +13,27 @@ import type {
   RolloutPlan,
 } from '../core/models/Specification';
 
+type Severity = 'low' | 'medium' | 'high' | 'critical';
+type NonMediumSeverity = Exclude<Severity, 'medium'>;
+
+const SEVERITY_KEYWORDS: Record<NonMediumSeverity, readonly string[]> = {
+  critical: ['critical', 'severe', 'blocker'],
+  high: ['high', 'major'],
+  low: ['low', 'minor'],
+};
+const SEVERITY_ORDER: readonly NonMediumSeverity[] = ['critical', 'high', 'low'];
+
+function classifySeverity(text: string): Severity {
+  const lower = text.toLowerCase();
+  for (const severity of SEVERITY_ORDER) {
+    const keywords = SEVERITY_KEYWORDS[severity];
+    if (keywords.some((kw) => lower.includes(kw))) {
+      return severity;
+    }
+  }
+  return 'medium';
+}
+
 /**
  * Generate risk assessments from PRD risks and completed research tasks
  */
@@ -25,10 +46,7 @@ export function generateRiskAssessments(
   for (const riskText of prdRisks) {
     if (!riskText || riskText.includes('TODO')) continue;
 
-    let severity: 'low' | 'medium' | 'high' | 'critical' = 'medium';
-    if (/critical|severe|blocker/i.test(riskText)) severity = 'critical';
-    else if (/high|major/i.test(riskText)) severity = 'high';
-    else if (/low|minor/i.test(riskText)) severity = 'low';
+    const severity = classifySeverity(riskText);
 
     const mitigationMatch = riskText.match(/mitigation:?\s*(.+)/i);
     const mitigation = mitigationMatch ? mitigationMatch[1].trim() : undefined;

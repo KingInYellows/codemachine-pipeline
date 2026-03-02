@@ -14,6 +14,7 @@ import { resolveBinary } from '../adapters/codemachine/binaryResolver.js';
  */
 export interface DiagnosticCheck {
   name: string;
+  category: 'credential' | 'environment' | 'config' | 'general';
   status: 'pass' | 'fail' | 'warn';
   message: string;
   remediation?: string;
@@ -43,6 +44,7 @@ export async function checkCodeMachineCli(config?: any): Promise<DiagnosticCheck
   if (!resolution.resolved || !resolution.binaryPath) {
     return {
       name: 'CodeMachine CLI (Execution)',
+      category: 'environment',
       status: 'warn',
       message: 'CodeMachine CLI not found',
       remediation:
@@ -61,6 +63,7 @@ export async function checkCodeMachineCli(config?: any): Promise<DiagnosticCheck
     if (result.status !== 0) {
       return {
         name: 'CodeMachine CLI (Execution)',
+        category: 'environment',
         status: 'warn',
         message: `CodeMachine CLI found but --version failed`,
         remediation: 'Check the binary at: ' + resolution.binaryPath,
@@ -77,6 +80,7 @@ export async function checkCodeMachineCli(config?: any): Promise<DiagnosticCheck
       if (parsed && !semver.satisfies(parsed, `>=${minVersion}`)) {
         return {
           name: 'CodeMachine CLI (Execution)',
+          category: 'environment',
           status: 'warn',
           message: `CodeMachine CLI v${version} below minimum v${minVersion}`,
           remediation: `Upgrade: npm install codemachine@^${minVersion}`,
@@ -92,6 +96,7 @@ export async function checkCodeMachineCli(config?: any): Promise<DiagnosticCheck
 
     return {
       name: 'CodeMachine CLI (Execution)',
+      category: 'environment',
       status: 'pass',
       message: `CodeMachine CLI v${version} (${resolution.source})`,
       details: { version, cli_path: resolution.binaryPath, source: resolution.source },
@@ -99,6 +104,7 @@ export async function checkCodeMachineCli(config?: any): Promise<DiagnosticCheck
   } catch {
     return {
       name: 'CodeMachine CLI (Execution)',
+      category: 'environment',
       status: 'warn',
       message: 'CodeMachine CLI found but version check failed',
       remediation: 'Check the binary at: ' + resolution.binaryPath,

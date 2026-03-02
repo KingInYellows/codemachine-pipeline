@@ -54,17 +54,31 @@ export async function loadBranchProtectionStatus(
   }
 }
 
-export async function refreshBranchProtectionArtifact(
+/** Validated context required to perform a branch protection refresh. */
+interface RefreshContext {
+  token: string;
+  owner: string;
+  repo: string;
+  config: NonNullable<RunDirectorySettings['config']>;
+  runDir: string;
+  branch: string;
+  baseBranch: string;
+  prNumber: number | undefined;
+}
+
+/**
+ * Validate all preconditions for a branch protection refresh.
+ * Returns `null` when any guard fails (with appropriate log messages).
+ */
+async function validateRefreshContext(
   settings: RunDirectorySettings,
   featureId: string,
   manifest: RunManifest | undefined,
-  logger: StructuredLogger | undefined,
-  traceManager: TraceManager | undefined,
-  parentSpan: ActiveSpan | undefined
-): Promise<void> {
+  logger: StructuredLogger | undefined
+): Promise<RefreshContext | null> {
   const config = settings.config;
   if (!config?.github.enabled) {
-    return;
+    return null;
   }
 
   const tokenEnvVar = config.github.token_env_var;
@@ -73,7 +87,7 @@ export async function refreshBranchProtectionArtifact(
     logger?.warn('Skipping branch protection refresh: GitHub token not found', {
       token_env_var: tokenEnvVar,
     });
-    return;
+    return null;
   }
 
   const repoUrl = config.project.repo_url;
@@ -82,7 +96,7 @@ export async function refreshBranchProtectionArtifact(
     logger?.warn('Skipping branch protection refresh: Unable to parse GitHub repository URL', {
       repo_url: repoUrl,
     });
-    return;
+    return null;
   }
 
   const [, owner, repo] = match;
@@ -98,14 +112,14 @@ export async function refreshBranchProtectionArtifact(
       run_dir: runDir,
       error_code: 'STATUS_PR_METADATA_READ_FAILED',
     });
-    return;
+    return null;
   }
 
   if (!prMetadata) {
     logger?.debug('Skipping branch protection refresh: No PR metadata recorded', {
       feature_id: featureId,
     });
-    return;
+    return null;
   }
 
   const branch = prMetadata.branch;
@@ -116,64 +130,109 @@ export async function refreshBranchProtectionArtifact(
       branch,
       base_branch: baseBranch,
     });
+    return null;
+  }
+
+  return {
+    token,
+    owner,
+    repo,
+    config,
+    runDir,
+    branch,
+    baseBranch,
+    prNumber: prMetadata.pr_number,
+  };
+}
+
+/**
+ * Fetch branch protection rules, evaluate compliance, and persist the report.
+ */
+async function executeBranchProtectionRefresh(
+  ctx: RefreshContext,
+  featureId: string,
+  config: NonNullable<RunDirectorySettings['config']>,
+  logger: StructuredLogger | undefined
+): Promise<void> {
+  const adapterConfig: BranchProtectionConfig = {
+    owner: ctx.owner,
+    repo: ctx.repo,
+    token: ctx.token,
+    baseUrl: config.github.api_base_url,
+    runDir: ctx.runDir,
+  };
+
+  if (logger) {
+    adapterConfig.logger = logger;
+  }
+
+  const adapter = new BranchProtectionAdapter(adapterConfig);
+
+  const complianceInput: { branch: string; sha: string; base_sha: string; pull_number?: number } = {
+    branch: ctx.branch,
+    sha: ctx.branch,
+    base_sha: ctx.baseBranch,
+  };
+  if (ctx.prNumber !== undefined) {
+    complianceInput.pull_number = ctx.prNumber;
+  }
+
+  const compliance = await evaluateCompliance(adapter, complianceInput, logger);
+
+  const reportMeta: { owner: string; repo: string; base_sha: string; pull_number?: number } = {
+    owner: ctx.owner,
+    repo: ctx.repo,
+    base_sha: ctx.baseBranch,
+  };
+  if (ctx.prNumber !== undefined) {
+    reportMeta.pull_number = ctx.prNumber;
+  }
+
+  const report = buildBranchProtectionReport(featureId, compliance, reportMeta);
+
+  if (report.required_checks.length > 0) {
+    try {
+      report.validation_mismatch = await detectValidationMismatch(
+        ctx.runDir,
+        report.required_checks
+      );
+    } catch (error) {
+      logger?.warn('Failed to compare ExecutionTask validations with required checks', {
+        error: error instanceof Error ? error.message : 'unknown error',
+        stack: error instanceof Error ? error.stack : undefined,
+        run_dir: ctx.runDir,
+        error_code: 'STATUS_BRANCH_PROTECTION_VALIDATION_COMPARE_FAILED',
+      });
+    }
+  }
+
+  await persistBranchProtectionReport(ctx.runDir, report);
+
+  logger?.info('Branch protection report refreshed', {
+    branch: ctx.branch,
+    base_branch: ctx.baseBranch,
+    compliant: report.compliant,
+    blockers: report.blockers.length,
+  });
+}
+
+export async function refreshBranchProtectionArtifact(
+  settings: RunDirectorySettings,
+  featureId: string,
+  manifest: RunManifest | undefined,
+  logger: StructuredLogger | undefined,
+  traceManager: TraceManager | undefined,
+  parentSpan: ActiveSpan | undefined
+): Promise<void> {
+  const ctx = await validateRefreshContext(settings, featureId, manifest, logger);
+  if (!ctx) {
     return;
   }
 
-  const executeRefresh = async (): Promise<void> => {
-    const adapterConfig: BranchProtectionConfig = {
-      owner,
-      repo,
-      token,
-      baseUrl: config.github.api_base_url,
-      runDir,
-    };
+  const { config } = ctx;
 
-    if (logger) {
-      adapterConfig.logger = logger;
-    }
-
-    const adapter = new BranchProtectionAdapter(adapterConfig);
-
-    const compliance = await evaluateCompliance(
-      adapter,
-      {
-        branch,
-        sha: branch,
-        base_sha: baseBranch,
-        pull_number: prMetadata?.pr_number,
-      },
-      logger
-    );
-
-    const report = buildBranchProtectionReport(featureId, compliance, {
-      owner,
-      repo,
-      base_sha: baseBranch,
-      pull_number: prMetadata?.pr_number,
-    });
-
-    if (report.required_checks.length > 0) {
-      try {
-        report.validation_mismatch = await detectValidationMismatch(runDir, report.required_checks);
-      } catch (error) {
-        logger?.warn('Failed to compare ExecutionTask validations with required checks', {
-          error: error instanceof Error ? error.message : 'unknown error',
-          stack: error instanceof Error ? error.stack : undefined,
-          run_dir: runDir,
-          error_code: 'STATUS_BRANCH_PROTECTION_VALIDATION_COMPARE_FAILED',
-        });
-      }
-    }
-
-    await persistBranchProtectionReport(runDir, report);
-
-    logger?.info('Branch protection report refreshed', {
-      branch,
-      base_branch: baseBranch,
-      compliant: report.compliant,
-      blockers: report.blockers.length,
-    });
-  };
+  const doRefresh = (): Promise<void> =>
+    executeBranchProtectionRefresh(ctx, featureId, config, logger);
 
   try {
     if (traceManager && parentSpan) {
@@ -182,23 +241,23 @@ export async function refreshBranchProtectionArtifact(
         'status.refresh_branch_protection',
         async (span) => {
           span.setAttribute('feature_id', featureId);
-          span.setAttribute('branch', branch);
-          span.setAttribute('base_branch', baseBranch);
-          if (prMetadata?.pr_number) {
-            span.setAttribute('pr_number', prMetadata.pr_number);
+          span.setAttribute('branch', ctx.branch);
+          span.setAttribute('base_branch', ctx.baseBranch);
+          if (ctx.prNumber !== undefined) {
+            span.setAttribute('pr_number', ctx.prNumber);
           }
-          await executeRefresh();
+          await doRefresh();
         },
         parentSpan.context
       );
     } else {
-      await executeRefresh();
+      await doRefresh();
     }
   } catch (error) {
     logger?.warn('Branch protection refresh failed', {
       error: error instanceof Error ? error.message : 'unknown error',
       stack: error instanceof Error ? error.stack : undefined,
-      run_dir: runDir,
+      run_dir: ctx.runDir,
       error_code: 'STATUS_BRANCH_PROTECTION_REFRESH_FAILED',
     });
   }

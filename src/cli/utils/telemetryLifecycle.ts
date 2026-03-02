@@ -39,7 +39,7 @@ export interface TelemetryResources {
  */
 export async function flushTelemetrySuccess(
   res: TelemetryResources,
-  extraLogFields?: Record<string, unknown>,
+  extraLogFields?: { [key: string]: unknown },
   exitCode = 0
 ): Promise<void> {
   const { commandName, startTime, logger, metrics, traceManager, commandSpan, runDirPath } = res;
@@ -85,7 +85,11 @@ export async function flushTelemetrySuccess(
  * Records error metrics, ends the command span with ERROR status, flushes
  * traces, and flushes the logger.
  */
-export async function flushTelemetryError(res: TelemetryResources, error: unknown): Promise<void> {
+export async function flushTelemetryError(
+  res: TelemetryResources,
+  error: unknown,
+  exitCode = 1
+): Promise<void> {
   const { commandName, startTime, logger, metrics, traceManager, commandSpan, runDirPath } = res;
   const duration = Date.now() - startTime;
 
@@ -95,13 +99,13 @@ export async function flushTelemetryError(res: TelemetryResources, error: unknow
     });
     metrics.increment(StandardMetrics.COMMAND_INVOCATIONS_TOTAL, {
       command: commandName,
-      exit_code: '1',
+      exit_code: String(exitCode),
     });
     await metrics.flush();
   }
 
   if (commandSpan) {
-    commandSpan.setAttribute('exit_code', 1);
+    commandSpan.setAttribute('exit_code', exitCode);
     commandSpan.setAttribute('error', true);
     if (error instanceof Error) {
       commandSpan.setAttribute('error.message', error.message);
@@ -126,6 +130,7 @@ export async function flushTelemetryError(res: TelemetryResources, error: unknow
       logger.error(`${commandName} command failed`, {
         error: error.message,
         stack: error.stack,
+        exit_code: exitCode,
         duration_ms: duration,
       });
     }
