@@ -5,10 +5,6 @@
  * paused execution runs. Delegates state verification to runStateVerifier
  * and queue recovery to resumeQueueRecovery.
  *
- * Implements:
- * - FR-3 (Resumability & Determinism): Hash-based input verification
- * - ADR-2 (State Persistence): Queue state restoration
- * - Blueprint Foundation: Idempotent execution with crash recovery
  */
 
 import {
@@ -41,10 +37,6 @@ export {
   getResumableTasks,
   type QueueSnapshotMetadata,
 } from './resumeQueueRecovery';
-
-// ============================================================================
-// Resume Analysis
-// ============================================================================
 
 /**
  * Analyze run directory state to determine if resume is safe
@@ -133,10 +125,6 @@ export async function analyzeResumeState(
   return analysis;
 }
 
-// ============================================================================
-// Resume Execution
-// ============================================================================
-
 /**
  * Prepare run directory for resume
  *
@@ -204,10 +192,6 @@ export async function prepareResume(
     { operation: 'prepare_resume' }
   );
 }
-
-// ============================================================================
-// Formatting
-// ============================================================================
 
 /**
  * Format resume analysis for CLI display

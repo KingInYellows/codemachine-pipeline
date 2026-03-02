@@ -2,11 +2,6 @@
  * PR Create Command
  *
  * Creates a pull request on GitHub with preflight validation
- *
- * Implements:
- * - FR-15: PR automation
- * - Section 2: Communication Patterns (PR orchestration)
- * - Section 3.10.4: `codepipe pr create` command flow
  */
 
 import { Command, Flags } from '@oclif/core';

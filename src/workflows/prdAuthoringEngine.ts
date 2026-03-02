@@ -11,9 +11,6 @@
  * - Iterative editing support with version history
  * - Traceability link management
  *
- * Implements:
- * - FR-4 (PRD Authoring): PRD generation and review
- * - FR-9 (Traceability): Goal → Spec mapping
  */
 
 import * as fs from 'node:fs/promises';
@@ -30,10 +27,6 @@ import type { PRDMetadata } from './prdStore';
 // Re-export persistence types and functions for backward compatibility
 export type { PRDMetadata, RecordApprovalOptions } from './prdStore';
 export { loadPRDMetadata, isPRDApproved, getPRDApprovals, recordPRDApproval } from './prdStore';
-
-// ============================================================================
-// Types
-// ============================================================================
 
 /**
  * PRD section identifiers
@@ -136,10 +129,6 @@ export interface PRDAuthoringResult {
     warnings: string[];
   };
 }
-
-// ============================================================================
-// Template Utilities
-// ============================================================================
 
 /**
  * Default template path
@@ -331,10 +320,6 @@ function buildTemplateVariables(
     APPROVAL_HASH: '_Pending_',
   };
 }
-
-// ============================================================================
-// PRD Document Generation
-// ============================================================================
 
 /**
  * Draft a new PRD document

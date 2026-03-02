@@ -618,7 +618,7 @@ executionMetrics.recordTaskLifecycle(sanitizedTaskId, ...);
 **Fix:**
 
 ```typescript
-const costTracker = createCostTracker(featureId, runDir, logger, metrics, {
+const costTracker = new CostTracker(featureId, runDir, logger, metrics, {
   maxCostUsd: 10.0,
   warningThreshold: 80,
 });

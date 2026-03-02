@@ -12,10 +12,6 @@ import { z } from 'zod';
 import type { BranchProtectionCompliance } from '../adapters/github/branchProtection';
 import { validateOrThrow } from '../validation/helpers.js';
 
-// ============================================================================
-// Schemas & Types
-// ============================================================================
-
 /**
  * Branch protection report schema for persistence
  */
@@ -110,16 +106,8 @@ const CommandsDataSchema = z.object({
     .optional(),
 });
 
-// ============================================================================
-// Constants
-// ============================================================================
-
 const SCHEMA_VERSION = '1.0.0';
 const BRANCH_PROTECTION_FILE = 'branch_protection.json';
-
-// ============================================================================
-// Reporter Functions
-// ============================================================================
 
 /**
  * Generate branch protection report from compliance result

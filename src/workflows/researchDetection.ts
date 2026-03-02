@@ -4,18 +4,12 @@
  * Extracted from researchCoordinator.ts — contains all unknown-detection
  * logic: pattern matching, text scanning, metadata extraction, and
  * context-file heuristic scanning.
- *
- * Implements FR-6, FR-7 detection requirements.
  */
 
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 import type { ResearchSource } from '../core/models/ResearchTask';
 import type { ContextDocument } from '../core/models/ContextDocument';
-
-// ============================================================================
-// Internal Types
-// ============================================================================
 
 /**
  * Manual unknown input accepted by detection helpers
@@ -56,10 +50,6 @@ export interface UnknownOrigin {
   source: ResearchSource;
   filePath?: string;
 }
-
-// ============================================================================
-// Constants
-// ============================================================================
 
 export const DEFAULT_CONTEXT_FILE_SCAN_LIMIT = 12;
 export const DEFAULT_MAX_UNKNOWN_PER_SOURCE = 5;
@@ -122,10 +112,6 @@ export const DETECTION_PATTERNS: DetectionPattern[] = [
     reason: 'Line asks for clarification or missing details',
   },
 ];
-
-// ============================================================================
-// Detection Helper Functions
-// ============================================================================
 
 /**
  * Determine if file path likely contains text content

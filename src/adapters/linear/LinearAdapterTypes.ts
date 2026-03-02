@@ -142,15 +142,4 @@ export interface PostCommentParams {
 /**
  * Linear adapter error with error taxonomy
  */
-export class LinearAdapterError extends AdapterError {
-  constructor(
-    message: string,
-    errorType: ErrorType,
-    statusCode?: number,
-    requestId?: string,
-    operation?: string
-  ) {
-    super(message, errorType, statusCode, requestId, operation);
-    this.name = 'LinearAdapterError';
-  }
-}
+export class LinearAdapterError extends AdapterError {}

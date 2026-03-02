@@ -4,11 +4,6 @@
  * In-memory index providing O(1) lookups for tasks.
  * Hydrates from snapshot + WAL replay and maintains task counts for fast status queries.
  *
- * Implements:
- * - Issue #45: Queue WAL Optimization Layer 4
- * - FR-3 (Resumability): Fast recovery via snapshot + WAL replay
- * - ADR-2 (State Persistence): In-memory index synchronized with persistent state
- *
  * Features:
  * - O(1) task lookup by ID using Map
  * - Accurate counts maintained on every update

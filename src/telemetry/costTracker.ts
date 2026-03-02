@@ -23,10 +23,6 @@ import type { StructuredLogger } from './logger';
 import { ExecutionMetricsHelper } from './executionMetrics';
 import { validateOrThrow } from '../validation/helpers.js';
 
-// ============================================================================
-// Types
-// ============================================================================
-
 /**
  * Cost entry for a single operation
  */
@@ -157,10 +153,6 @@ const CostTrackerStateSchema = z
     warnings: z.array(z.string()),
   })
   .passthrough();
-
-// ============================================================================
-// Cost Tracker Implementation
-// ============================================================================
 
 /**
  * Cost tracker for aggregating and persisting API costs
@@ -571,23 +563,6 @@ export class CostTracker {
   }
 }
 
-// ============================================================================
-// Factory Functions
-// ============================================================================
-
-/**
- * Create a cost tracker instance
- */
-export function createCostTracker(
-  featureId: string,
-  runDir: string,
-  logger: StructuredLogger,
-  metrics: MetricsCollector,
-  budget?: BudgetConfig
-): CostTracker {
-  return new CostTracker(featureId, runDir, logger, metrics, budget);
-}
-
 /**
  * Load or create a cost tracker
  */
@@ -603,5 +578,5 @@ export async function loadOrCreateCostTracker(
     return existing;
   }
 
-  return createCostTracker(featureId, runDir, logger, metrics, budget);
+  return new CostTracker(featureId, runDir, logger, metrics, budget);
 }

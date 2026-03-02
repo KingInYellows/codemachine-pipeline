@@ -57,7 +57,6 @@ interface PlanPayload {
 
 /**
  * Plan command - Display execution plan DAG and task summaries
- * Implements FR-12, FR-13, FR-14: Execution Task Generation and Dependency Management
  *
  * Exit codes:
  * - 0: Success

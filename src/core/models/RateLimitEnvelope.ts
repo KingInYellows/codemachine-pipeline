@@ -7,9 +7,6 @@ import { createModelParser } from './modelParser.js';
  * Provider-specific budget tracking with remaining counts,
  * reset timestamps, retry-after data, and last errors.
  *
- * Implements:
- * - ADR-7 (Validation Policy): Zod-based validation
- *
  * Used by CLI commands: status, http client
  */
 

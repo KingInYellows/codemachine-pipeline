@@ -1,10 +1,6 @@
 import { z } from 'zod';
 import type { ContextDocument, ContextSummary } from '../../core/models/ContextDocument';
 
-// ============================================================================
-// Types
-// ============================================================================
-
 /**
  * File chunk for summarization
  */

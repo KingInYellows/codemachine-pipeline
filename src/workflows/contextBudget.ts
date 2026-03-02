@@ -2,10 +2,6 @@ import { createHash } from 'node:crypto';
 import { estimateTokens } from './contextRanking';
 import type { FileChunk } from './summarizerClients/types';
 
-// ============================================================================
-// Chunking Logic
-// ============================================================================
-
 function chunkByFixedWidth(content: string, maxChars: number): FileChunk[] {
   const chunks: FileChunk[] = [];
   let cursor = 0;
@@ -116,10 +112,6 @@ export function chunkFile(content: string, maxTokens = 4000, overlapPercent = 10
 
   return chunks;
 }
-
-// ============================================================================
-// Chunk ID Generation
-// ============================================================================
 
 /**
  * Generate chunk ID from file path, SHA, and chunk index

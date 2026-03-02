@@ -33,7 +33,6 @@ import { flushTelemetrySuccess, flushTelemetryError } from '../utils/telemetryLi
 /**
  * Validate command - Execute validation commands (lint/test/typecheck/build)
  *
- * Implements FR-14: Validation command registry with auto-fix loop
  * Supports manual re-runs and provides detailed exit codes for automation
  *
  * Exit codes:

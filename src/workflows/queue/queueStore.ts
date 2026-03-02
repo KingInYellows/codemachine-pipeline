@@ -71,10 +71,7 @@ export function invalidateQueueRunState(runDir: string): void {
  * Manages persistent task queue storage with JSONL snapshots,
  * integrity checksums, and safe resume capabilities.
  *
- * Implements FR-2 (Run Directory), FR-3 (Resumability), ADR-2 (State Persistence).
  */
-
-// --- Types ---
 
 // Re-export types for backward compatibility
 export type {
@@ -94,14 +91,11 @@ const logger: StructuredLogger = createLogger({
   mirrorToStderr: true,
 });
 
-// --- Queue Initialization ---
-
 /** Initialize queue storage in run directory. */
 export async function initializeQueue(runDir: string, featureId: string): Promise<string> {
   const manifest = await readManifest(runDir);
   const queueDir = join(runDir, manifest.queue.queue_dir);
 
-  // Ensure queue directory exists
   await mkdir(queueDir, { recursive: true });
 
   // Create initial queue manifest
@@ -198,8 +192,6 @@ export async function initializeQueueFromPlan(
 function computeEmptyQueueChecksum(): string {
   return createHash('sha256').update('').digest('hex');
 }
-
-// --- Queue Writing ---
 
 /**
  * Append tasks to queue.
@@ -302,10 +294,8 @@ async function writeQueueManifest(queueDir: string, manifest: QueueManifest): Pr
       await handle.close();
     }
 
-    // Atomic rename
     await rename(tempPath, manifestPath);
   } catch (error) {
-    // Clean up temp file on error
     try {
       await unlink(tempPath);
     } catch (cleanupError) {
@@ -318,8 +308,6 @@ async function writeQueueManifest(queueDir: string, manifest: QueueManifest): Pr
     throw error;
   }
 }
-
-// --- Queue Reading ---
 
 export { loadQueue, loadQueueV2 } from './queueLoader.js';
 
@@ -358,8 +346,6 @@ export {
   type QueueIntegrityResult,
 } from './queueIntegrity.js';
 
-// --- Queue Snapshots ---
-
 /** Create queue snapshot for fast recovery via V2 compaction engine. */
 export async function createQueueSnapshot(runDir: string): Promise<QueueOperationResult> {
   try {
@@ -392,8 +378,6 @@ export async function createQueueSnapshot(runDir: string): Promise<QueueOperatio
     };
   }
 }
-
-// --- Re-exports from companion modules for backward compatibility ---
 
 export {
   getNextTask,

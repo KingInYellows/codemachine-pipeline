@@ -5,9 +5,6 @@
  * Delegates HTTP fetching to BranchProtectionAdapter and applies compliance rules
  * without any direct network calls.
  *
- * Implements:
- * - FR-15: Status checks mandate
- * - IR-5: Branch protection awareness
  */
 
 import { serializeError } from '../utils/errors';
@@ -20,10 +17,6 @@ import type {
   CommitStatus,
   PullRequestReview,
 } from '../adapters/github/branchProtection';
-
-// ============================================================================
-// Adapter Interface
-// ============================================================================
 
 /**
  * Minimal interface for the branch protection adapter methods required by
@@ -47,10 +40,6 @@ export interface BranchProtectionDataSource {
     head: string
   ): Promise<{ ahead_by: number; behind_by: number; status: string }>;
 }
-
-// ============================================================================
-// Compliance Evaluation
-// ============================================================================
 
 /**
  * Evaluate branch protection compliance for a pull request.

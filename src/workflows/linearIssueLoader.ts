@@ -8,7 +8,7 @@
  */
 
 import type { StructuredLogger } from '../telemetry/logger';
-import { createLinearAdapter, type IssueSnapshot } from '../adapters/linear/LinearAdapter.js';
+import { LinearAdapter, type IssueSnapshot } from '../adapters/linear/LinearAdapter.js';
 
 export async function loadLinearIssue(
   issueId: string,
@@ -17,7 +17,7 @@ export async function loadLinearIssue(
   apiKey: string,
   enablePreviewFeatures = false
 ): Promise<IssueSnapshot> {
-  const adapter = createLinearAdapter({
+  const adapter = new LinearAdapter({
     apiKey,
     runDir,
     logger,

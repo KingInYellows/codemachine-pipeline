@@ -24,10 +24,6 @@ import { isFileNotFound } from '../utils/safeJson';
 import { getErrorMessage } from '../utils/errors.js';
 import { type SpecMetadata, SpecMetadataSchema } from './specMetadata';
 
-// ============================================================================
-// Types
-// ============================================================================
-
 /**
  * Approval recording options
  */
@@ -43,10 +39,6 @@ export interface RecordSpecApprovalOptions {
   /** Intentional: spec approval metadata varies by workflow */
   metadata?: Record<string, unknown>;
 }
-
-// ============================================================================
-// Spec File I/O
-// ============================================================================
 
 /**
  * Write spec files (spec.md and spec.json) atomically under lock
@@ -83,10 +75,6 @@ export async function writeSpecMetadata(runDir: string, metadata: SpecMetadata):
 
   return metadataPath;
 }
-
-// ============================================================================
-// Metadata Loading
-// ============================================================================
 
 /**
  * Load spec metadata from run directory
@@ -145,10 +133,6 @@ export async function getSpecApprovals(runDir: string): Promise<ApprovalRecord[]
   return records;
 }
 
-// ============================================================================
-// Approval Management
-// ============================================================================
-
 /**
  * Record specification approval
  */
@@ -166,7 +150,6 @@ export function recordSpecApproval(
   });
 
   return withLock(runDir, async () => {
-    // Step 1: Load spec metadata
     const artifactsDir = getSubdirectoryPath(runDir, 'artifacts');
     const metadataPath = join(artifactsDir, 'spec_metadata.json');
     const specPath = join(artifactsDir, 'spec.md');
@@ -186,7 +169,6 @@ export function recordSpecApproval(
       );
     }
 
-    // Step 2: Verify spec hash matches
     const currentHash = await computeFileHash(specPath);
     if (currentHash !== metadata.specHash) {
       throw new Error(
@@ -196,7 +178,6 @@ export function recordSpecApproval(
       );
     }
 
-    // Step 3: Create approval record
     const approvalId = `APR-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
     const approvalRecordOptions: {
       signerName?: string;
@@ -228,14 +209,12 @@ export function recordSpecApproval(
       approvalRecordOptions
     );
 
-    // Step 4: Save approval record
     const approvalsDir = join(runDir, 'approvals');
     await mkdir(approvalsDir, { recursive: true });
 
     const approvalPath = join(approvalsDir, `${approvalId}.json`);
     await writeFile(approvalPath, serializeApprovalRecord(approvalRecord), 'utf-8');
 
-    // Step 5: Update metadata
     metadata.approvals.push(approvalId);
     metadata.approvalStatus =
       options.verdict === 'approved'

@@ -19,10 +19,6 @@ import {
 } from './writeActionQueueTypes.js';
 import { validateOrThrow, validateOrResult } from '../validation/helpers.js';
 
-// ============================================================================
-// Constants
-// ============================================================================
-
 export const QUEUE_SUBDIR = 'write_actions';
 export const QUEUE_FILE = 'queue.jsonl';
 export const MANIFEST_FILE = 'manifest.json';
@@ -32,10 +28,6 @@ export const DEFAULT_MAX_RETRIES = 3;
 export const DEFAULT_CONCURRENCY_LIMIT = 2;
 export const DEFAULT_BACKOFF_BASE_MS = 2000;
 export const DEFAULT_BACKOFF_MAX_MS = 60000;
-
-// ============================================================================
-// Helpers
-// ============================================================================
 
 export function generateActionId(): string {
   return `wa_${Date.now()}_${randomBytes(8).toString('hex')}`;
@@ -71,10 +63,6 @@ async function computeQueueChecksum(queuePath: string): Promise<string> {
     throw error;
   }
 }
-
-// ============================================================================
-// Write Action Store
-// ============================================================================
 
 export interface WriteActionStoreConfig {
   runDir: string;

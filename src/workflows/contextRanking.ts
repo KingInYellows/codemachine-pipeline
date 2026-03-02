@@ -102,7 +102,6 @@ export function scoreByGitRecency(
   now: Date = new Date()
 ): number {
   if (!gitLastModified) {
-    // No git data available, use neutral score
     return 0.5;
   }
 
@@ -132,12 +131,10 @@ export function scoreByFileType(relativePath: string): number {
   const pathLower = relativePath.toLowerCase();
   const fileName = relativePath.split('/').pop()?.toLowerCase() || '';
 
-  // README files
   if (fileName.startsWith('readme')) {
     return 1.0;
   }
 
-  // Build artifacts and lock files (check EARLY before source code)
   if (
     fileName.includes('package-lock') ||
     fileName.includes('yarn.lock') ||
@@ -149,12 +146,10 @@ export function scoreByFileType(relativePath: string): number {
     return 0.2;
   }
 
-  // Documentation
   if (pathLower.includes('/docs/') || pathLower.startsWith('docs/') || fileName.endsWith('.md')) {
     return 0.8;
   }
 
-  // Source code
   if (
     fileName.endsWith('.ts') ||
     fileName.endsWith('.js') ||
@@ -165,7 +160,6 @@ export function scoreByFileType(relativePath: string): number {
     fileName.endsWith('.rs') ||
     fileName.endsWith('.java')
   ) {
-    // Downgrade test files
     if (
       pathLower.includes('/test/') ||
       pathLower.includes('/tests/') ||
@@ -178,7 +172,6 @@ export function scoreByFileType(relativePath: string): number {
     return 0.6;
   }
 
-  // Config files
   if (
     fileName.endsWith('.json') ||
     fileName.endsWith('.yaml') ||
@@ -190,7 +183,6 @@ export function scoreByFileType(relativePath: string): number {
     return 0.5;
   }
 
-  // Tests
   if (
     pathLower.includes('/test/') ||
     pathLower.includes('/tests/') ||
@@ -200,7 +192,6 @@ export function scoreByFileType(relativePath: string): number {
     return 0.4;
   }
 
-  // Default for unknown types
   return 0.5;
 }
 
@@ -212,7 +203,6 @@ export function scoreByFileType(relativePath: string): number {
  *
  */
 export function scoreBySize(size: number): number {
-  // Empty files get lowest score
   if (size === 0) {
     return 0.0;
   }
@@ -225,12 +215,10 @@ export function scoreBySize(size: number): number {
     return 1.0;
   }
 
-  // Too small (< 1KB)
   if (size < optimalMin) {
     return size / optimalMin;
   }
 
-  // Too large (> 100KB), penalize heavily
   const maxSize = 1000 * 1024; // 1MB
   if (size > optimalMax) {
     const penalty = (size - optimalMax) / (maxSize - optimalMax);
@@ -251,7 +239,6 @@ export function calculateCompositeScore(
   weights: Partial<ScoringWeights> = {},
   now: Date = new Date()
 ): number {
-  // Default weights
   const finalWeights: ScoringWeights = {
     pathDepth: weights.pathDepth ?? 0.3,
     gitRecency: weights.gitRecency ?? 0.3,
@@ -259,13 +246,11 @@ export function calculateCompositeScore(
     fileSize: weights.fileSize ?? 0.1,
   };
 
-  // Calculate individual scores
   const depthScore = scoreByPathDepth(metadata.relativePath);
   const recencyScore = scoreByGitRecency(metadata.gitLastModified, now);
   const typeScore = scoreByFileType(metadata.relativePath);
   const sizeScore = scoreBySize(metadata.size);
 
-  // Weighted average
   const compositeScore =
     depthScore * finalWeights.pathDepth +
     recencyScore * finalWeights.gitRecency +

@@ -33,19 +33,13 @@ import { filterEnvironment } from '../utils/envFilter.js';
  * Orchestrates validation command execution with auto-fix retry loops.
  * Implements bounded retry policy with exponential backoff.
  *
- * Implements:
- * - ADR-7: Validation auto-fix loop with capped retries
- * - FR-14: Deterministic validation with audit trails
+ * Features:
  * - Command execution with timeout enforcement
  * - stdout/stderr capture and summarization
  * - Retry backoff policy
  *
  * Used by: validate CLI command, execution engine, PR workflow
  */
-
-// ============================================================================
-// Types
-// ============================================================================
 
 /**
  * Auto-fix execution options
@@ -84,10 +78,6 @@ export interface AutoFixResult {
   /** Summary message */
   summary: string;
 }
-
-// ============================================================================
-// Auto-Fix Engine
-// ============================================================================
 
 /**
  * Execute validation command with auto-fix retry loop
@@ -368,10 +358,6 @@ export async function executeAllValidations(
     summary,
   };
 }
-
-// ============================================================================
-// Internal Helpers
-// ============================================================================
 
 /**
  * Execute a single validation command

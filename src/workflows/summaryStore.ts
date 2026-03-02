@@ -4,10 +4,6 @@ import { ChunkMetadataSchema, type ChunkMetadata } from './summarizerClients/typ
 import { isFileNotFound } from '../utils/safeJson.js';
 import { validateOrResult } from '../validation/helpers.js';
 
-// ============================================================================
-// Cache Management
-// ============================================================================
-
 /**
  * Load cached chunk metadata
  *

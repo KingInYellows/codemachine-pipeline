@@ -17,10 +17,6 @@ import { StandardMetrics } from './metrics';
  * - CLI commands (status, rate-limits) for operator visibility
  */
 
-// ============================================================================
-// Types & Interfaces
-// ============================================================================
-
 /**
  * Rate limit report for a single provider
  */
@@ -89,10 +85,6 @@ export interface RateLimitCLIOutputOptions {
   /** Whether to show warnings for cooldowns */
   showWarnings?: boolean;
 }
-
-// ============================================================================
-// Rate Limit Reporter Class
-// ============================================================================
 
 /**
  * Rate limit reporter for generating telemetry and CLI output
@@ -400,10 +392,6 @@ export class RateLimitReporter {
     return remainingHours > 0 ? `${days}d ${remainingHours}h` : `${days}d`;
   }
 }
-
-// ============================================================================
-// Standalone Helper Functions
-// ============================================================================
 
 /**
  * Generate a rate limit report for a run directory

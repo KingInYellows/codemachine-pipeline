@@ -4,7 +4,6 @@ import * as path from 'node:path';
 import * as os from 'node:os';
 import {
   GitHubAdapter,
-  createGitHubAdapter,
   GitHubAdapterError,
   type RepositoryInfo,
   type PullRequest,
@@ -701,7 +700,7 @@ describe('GitHubAdapter Integration Tests', () => {
 
   describe('Factory Function', () => {
     it('should create adapter using factory function', () => {
-      const adapter = createGitHubAdapter({
+      const adapter = new GitHubAdapter({
         owner: 'test-org',
         repo: 'test-repo',
         token: 'test-token',

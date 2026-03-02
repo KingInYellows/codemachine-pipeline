@@ -20,7 +20,7 @@ import {
 } from '../../src/workflows/contextSummarizer';
 import { createContextDocument, type ContextDocument } from '../../src/core/models/ContextDocument';
 import { RedactionEngine, createLogger } from '../../src/telemetry/logger';
-import { createMetricsCollector } from '../../src/telemetry/metrics';
+import { MetricsCollector } from '../../src/telemetry/metrics';
 import { estimateTokens } from '../../src/workflows/contextRanking';
 
 // ============================================================================
@@ -439,7 +439,7 @@ describe('contextSummarizer - batch summarization', () => {
   let client: StubSummarizerClient;
   let config: SummarizerConfig;
   let logger: ReturnType<typeof createLogger>;
-  let metrics: ReturnType<typeof createMetricsCollector>;
+  let metrics: MetricsCollector;
   let redactor: RedactionEngine;
 
   beforeEach(async () => {
@@ -456,7 +456,7 @@ describe('contextSummarizer - batch summarization', () => {
       runDir,
       runId: 'test-batch-run-id',
     });
-    metrics = createMetricsCollector({ runDir });
+    metrics = new MetricsCollector({ runDir });
     redactor = new RedactionEngine(true);
 
     config = {

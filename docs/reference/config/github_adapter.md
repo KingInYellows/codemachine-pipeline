@@ -478,9 +478,9 @@ try {
 ### Basic Configuration
 
 ```typescript
-import { createGitHubAdapter } from './adapters/github/GitHubAdapter';
+import { GitHubAdapter } from './adapters/github/GitHubAdapter';
 
-const adapter = createGitHubAdapter({
+const adapter = new GitHubAdapter({
   owner: 'my-org',
   repo: 'my-repo',
   token: process.env.GITHUB_TOKEN!,
@@ -490,7 +490,7 @@ const adapter = createGitHubAdapter({
 ### Advanced Configuration
 
 ```typescript
-const adapter = createGitHubAdapter({
+const adapter = new GitHubAdapter({
   owner: 'my-org',
   repo: 'my-repo',
   token: process.env.GITHUB_TOKEN!,
@@ -532,7 +532,7 @@ if (!config.success) {
   throw new Error('Invalid config');
 }
 
-const adapter = createGitHubAdapter({
+const adapter = new GitHubAdapter({
   owner: extractOwner(config.config!.project.repo_url),
   repo: extractRepo(config.config!.project.repo_url),
   token: process.env[config.config!.github.token_env_var]!,
@@ -628,7 +628,7 @@ import { GitHubAdapter } from './GitHubAdapter';
 describe('GitHubAdapter Integration', () => {
   it('creates pull request with correct headers and payload', async () => {
     // Use nock or msw to intercept HTTP calls
-    const adapter = createGitHubAdapter({
+    const adapter = new GitHubAdapter({
       owner: 'test-org',
       repo: 'test-repo',
       token: 'test-token',

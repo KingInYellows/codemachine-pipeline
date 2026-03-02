@@ -16,10 +16,6 @@ import type { ExecutionTaskType } from '../../core/models/ExecutionTask';
 import type { StructuredLogger } from '../../telemetry/logger';
 import type { CostTracker } from '../../telemetry/costTracker';
 
-// ============================================================================
-// Error Taxonomy
-// ============================================================================
-
 /**
  * Error classification for deterministic failure handling
  * Per acceptance criteria: error taxonomy alignment for orchestration
@@ -75,10 +71,6 @@ export class AgentAdapterError extends Error implements AgentError {
     Object.setPrototypeOf(this, new.target.prototype);
   }
 }
-
-// ============================================================================
-// Execution Context & Capability Mapping
-// ============================================================================
 
 /**
  * Execution context classification for capability negotiation
@@ -185,10 +177,6 @@ export function mapTaskTypeToContext(taskType: ExecutionTaskType): ExecutionCont
   return mapping[taskType];
 }
 
-// ============================================================================
-// Agent Session
-// ============================================================================
-
 /**
  * Agent session request parameters
  */
@@ -274,10 +262,6 @@ export const SessionTelemetrySchema = z
   .strict();
 
 export type SessionTelemetry = z.infer<typeof SessionTelemetrySchema>;
-
-// ============================================================================
-// Adapter Configuration
-// ============================================================================
 
 /**
  * Agent Adapter configuration

@@ -11,10 +11,6 @@
  * - Summary generation for CLI consumption
  * - Integration with approval gates (PRD and Spec)
  *
- * Implements:
- * - FR-9 (Traceability): PRD → Spec → Plan mapping
- * - FR-10 (Specification Authoring): Spec → ExecutionTask links
- * - ADR-7 (Validation Policy): Zod-based link validation
  */
 
 import * as fs from 'node:fs/promises';
@@ -28,10 +24,6 @@ import type { MetricsCollector } from '../telemetry/metrics';
 import { computeFileHash } from '../persistence';
 import { isFileNotFound } from '../utils/safeJson';
 import { getErrorMessage } from '../utils/errors.js';
-
-// ============================================================================
-// Types
-// ============================================================================
 
 /**
  * Traceability mapper configuration
@@ -131,10 +123,6 @@ interface TraceDocument {
   /** Diagnostics persisted alongside trace map */
   diagnostics?: TraceDiagnostics;
 }
-
-// ============================================================================
-// Link Generation
-// ============================================================================
 
 /**
  * Extract PRD goals from prd.md content
@@ -379,10 +367,6 @@ function validateLinks(links: TraceLink[]): {
   return { valid, errors };
 }
 
-// ============================================================================
-// Main Mapper Function
-// ============================================================================
-
 /**
  * Generate traceability map linking PRD → Spec → ExecutionTasks
  */
@@ -439,7 +423,6 @@ export async function generateTraceMap(
     }
   }
 
-  // Step 1: Load PRD and Spec metadata
   const prdMetadata = await loadPRDMetadata(config.runDir);
   if (!prdMetadata) {
     throw new Error('PRD metadata not found. Generate PRD first.');
@@ -466,7 +449,6 @@ export async function generateTraceMap(
     traceId,
   });
 
-  // Step 2: Extract entities
   const prdGoals = await extractPRDGoals(config.runDir);
   const specRequirements = await extractSpecRequirements(config.runDir);
   const executionTasksResult = await extractExecutionTasks(config.runDir);
@@ -478,7 +460,6 @@ export async function generateTraceMap(
     executionTasks: executionTasks.length,
   });
 
-  // Step 3: Generate links
   const prdToSpecLinks = generatePRDToSpecLinks(
     config.featureId,
     traceId,
@@ -501,7 +482,6 @@ export async function generateTraceMap(
     total: allLinks.length,
   });
 
-  // Step 4: Deduplicate
   const { unique: deduplicatedLinks, duplicates } = deduplicateLinks(allLinks);
 
   logger.info('Deduplicated links', {
@@ -509,7 +489,6 @@ export async function generateTraceMap(
     duplicates,
   });
 
-  // Step 5: Validate
   const { valid: validLinks, errors: validationErrors } = validateLinks(deduplicatedLinks);
 
   if (validationErrors.length > 0) {
@@ -519,7 +498,6 @@ export async function generateTraceMap(
     });
   }
 
-  // Step 6: Identify gaps
   const gaps: TraceGap[] = [];
 
   if (prdGoals.length === 0) {
@@ -546,7 +524,6 @@ export async function generateTraceMap(
     });
   }
 
-  // Step 7: Collect warnings
   const warnings: string[] = [];
   if (validationErrors.length > 0) {
     warnings.push(`${validationErrors.length} link(s) failed validation`);
@@ -557,7 +534,6 @@ export async function generateTraceMap(
     gaps,
   };
 
-  // Step 8: Build trace document
   const now = new Date().toISOString();
 
   const traceDocument: TraceDocument = {
@@ -576,7 +552,6 @@ export async function generateTraceMap(
     diagnostics,
   };
 
-  // Step 9: Persist to disk
   await withLock(config.runDir, async () => {
     await fs.writeFile(tracePath, JSON.stringify(traceDocument, null, 2), 'utf-8');
   });
@@ -610,10 +585,6 @@ export async function generateTraceMap(
     diagnostics,
   };
 }
-
-// ============================================================================
-// Summary Generation
-// ============================================================================
 
 /**
  * Load trace summary for CLI status output

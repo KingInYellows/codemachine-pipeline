@@ -4,11 +4,6 @@
  * Merges WAL operations into snapshots when thresholds are exceeded.
  * Provides atomic compaction with file locking to prevent concurrent modifications.
  *
- * Implements:
- * - Issue #45: Queue WAL Optimization Layer 5
- * - FR-3 (Resumability): Periodic compaction maintains fast recovery times
- * - ADR-2 (State Persistence): Atomic snapshot + WAL truncation
- *
  * Compaction Process:
  * 1. Check thresholds (operation count and WAL size)
  * 2. Hydrate current state from snapshot + WAL

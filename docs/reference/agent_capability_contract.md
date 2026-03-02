@@ -600,7 +600,7 @@ import { createManifestLoader } from './adapters/agents/manifestLoader';
 
 // 1. Initialize loader + adapter
 const logger = createLogger({ level: 'info' });
-const costTracker = createCostTracker(logger);
+const costTracker = new CostTracker(logger);
 const manifestLoader = createManifestLoader(logger);
 manifestLoader.setCostTracker(costTracker);
 
