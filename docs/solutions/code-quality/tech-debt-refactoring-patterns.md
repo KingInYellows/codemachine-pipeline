@@ -5,10 +5,10 @@ category: code-quality
 tags: [refactoring, factories, naming, dead-code, config-dedup, retry, spread-pattern, tech-debt]
 severity: p2
 component: cli/commands, adapters, workflows, persistence
-symptom: "Trivial factories, name shadowing, dead code, repeated config fallbacks, unbounded retry, conditional mutation"
-root_cause: "Accumulated tech debt patterns across multiple modules during feature development"
-resolution: "Systematic refactoring guided by multi-agent code review findings"
-related_issues: ["PR #661", "PR #662", "PR #663"]
+symptom: 'Trivial factories, name shadowing, dead code, repeated config fallbacks, unbounded retry, conditional mutation'
+root_cause: 'Accumulated tech debt patterns across multiple modules during feature development'
+resolution: 'Systematic refactoring guided by multi-agent code review findings'
+related_issues: ['PR #661', 'PR #662', 'PR #663']
 ---
 
 # Tech Debt Refactoring Patterns from PRs #661-663
@@ -121,7 +121,7 @@ async function analyzeAndDisplayResumeState(
 ```typescript
 // Before: dead null guard (config is always set by this point)
 if (!config) {
-  throw new Error('Config not initialized');  // unreachable
+  throw new Error('Config not initialized'); // unreachable
 }
 
 // After: remove the guard entirely
@@ -199,9 +199,7 @@ if (protectionEnabled) {
 **Fix:** Use a spread pattern for cleaner, immutable-style construction:
 
 ```typescript
-const optionalFields = protectionEnabled
-  ? { protection: protectionDetails }
-  : {};
+const optionalFields = protectionEnabled ? { protection: protectionDetails } : {};
 
 const data: BranchData = { repo, branch, ...optionalFields };
 ```

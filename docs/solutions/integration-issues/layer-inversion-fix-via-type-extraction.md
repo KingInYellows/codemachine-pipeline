@@ -5,10 +5,10 @@ category: integration-issues
 tags: [architecture, layer-inversion, dependency-direction, type-extraction, persistence, workflows]
 severity: p1
 component: persistence/branchProtectionStore, workflows/branchProtectionReporter, core/models
-symptom: "persistence/ layer imports types from workflows/ layer, creating an upward dependency"
-root_cause: "Shared type (BranchProtectionReport) was defined in the higher-level workflows/ layer and imported by the lower-level persistence/ layer"
-resolution: "Extract shared types to core/models/ and have both layers import from there"
-related_issues: ["PR #661", "PR #662", "PR #663"]
+symptom: 'persistence/ layer imports types from workflows/ layer, creating an upward dependency'
+root_cause: 'Shared type (BranchProtectionReport) was defined in the higher-level workflows/ layer and imported by the lower-level persistence/ layer'
+resolution: 'Extract shared types to core/models/ and have both layers import from there'
+related_issues: ['PR #661', 'PR #662', 'PR #663']
 ---
 
 # Layer Inversion Fix via Type Extraction to core/models
