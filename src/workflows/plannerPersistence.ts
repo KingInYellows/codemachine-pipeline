@@ -9,19 +9,13 @@ import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 import { z } from 'zod';
 import { withLock } from '../persistence';
-import {
-  getEntryTasks,
-  type PlanArtifact,
-} from '../core/models/PlanArtifact';
+import { getEntryTasks, type PlanArtifact } from '../core/models/PlanArtifact';
 import { validateOrThrow } from '../validation/helpers.js';
 import type { StructuredLogger } from '../telemetry/logger';
 import type { TraceLink } from '../core/models/TraceLink';
 import type { PlanSummary, TaskPlannerConfig, TaskPlannerResult } from './taskPlannerTypes.js';
 import { createPlanSummary } from './taskPlannerGraph.js';
-import {
-  parsePlanArtifactForRead,
-  computePlanChecksum,
-} from './plannerDAG.js';
+import { parsePlanArtifactForRead, computePlanChecksum } from './plannerDAG.js';
 
 // ---------------------------------------------------------------------------
 // Plan metadata
@@ -123,9 +117,7 @@ export async function persistPlan(
 /**
  * Load traceability map for spec requirements → task IDs (if available)
  */
-export async function loadTraceabilityTaskIds(
-  runDir: string
-): Promise<Map<string, string>> {
+export async function loadTraceabilityTaskIds(runDir: string): Promise<Map<string, string>> {
   const tracePath = path.join(runDir, 'trace.json');
   const mapping = new Map<string, string>();
 
