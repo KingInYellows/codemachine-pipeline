@@ -196,7 +196,7 @@ export function resolveRepoRoot(runDir: string): string {
 export function resolveWorkingDirectory(
   repoRoot: string,
   commandCwd: string,
-  override?: string,
+  override?: string
 ): string {
   if (override) {
     return path.isAbsolute(override) ? override : path.resolve(repoRoot, override);
@@ -219,12 +219,12 @@ export function buildCommandTemplateContext(
   runDir: string,
   repoRoot: string,
   commandCwd: string,
-  templateContext?: Record<string, string>,
+  templateContext?: Record<string, string>
 ): Record<string, string> {
   for (const [key, value] of Object.entries(templateContext ?? {})) {
     if (SHELL_METACHARACTERS.test(value)) {
       throw new Error(
-        `Template context value for "${key}" contains shell metacharacters which are not permitted`,
+        `Template context value for "${key}" contains shell metacharacters which are not permitted`
       );
     }
   }
@@ -241,10 +241,7 @@ export function buildCommandTemplateContext(
 /**
  * Apply mustache-style `{{ key }}` interpolation to a command template.
  */
-export function applyCommandTemplate(
-  template: string,
-  context: Record<string, string>,
-): string {
+export function applyCommandTemplate(template: string, context: Record<string, string>): string {
   return template.replace(/\{\{\s*([\w.-]+)\s*\}\}/g, (_, key: string) => context[key] ?? '');
 }
 
@@ -264,7 +261,7 @@ export async function saveCommandOutput(
   commandType: string,
   attemptId: string,
   stdout: string,
-  stderr: string,
+  stderr: string
 ): Promise<{ stdoutPath: string; stderrPath: string }> {
   const outputDir = path.join(runDir, 'validation', 'outputs');
   await fs.mkdir(outputDir, { recursive: true });
