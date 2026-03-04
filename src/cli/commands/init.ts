@@ -155,7 +155,10 @@ export default class Init extends Command {
         await this.exitCommand(10, ctx);
       }
 
-      this.renderInitResult(flags, this.buildResultPayload(paths.configPath, validationResult, flags));
+      this.renderInitResult(
+        flags,
+        this.buildResultPayload(paths.configPath, validationResult, flags)
+      );
       await this.finalizeTelemetry(0, ctx);
     } catch (error) {
       await this.handleRunError(error, ctx);
@@ -183,7 +186,13 @@ export default class Init extends Command {
    */
   private initializeTelemetry(
     paths: ProjectPaths,
-    flags: { 'dry-run': boolean; json: boolean; yes: boolean; force: boolean; 'validate-only': boolean },
+    flags: {
+      'dry-run': boolean;
+      json: boolean;
+      yes: boolean;
+      force: boolean;
+      'validate-only': boolean;
+    },
     ctx: CommandTelemetryContext
   ): void {
     if (flags['dry-run']) {
@@ -230,7 +239,13 @@ export default class Init extends Command {
     pipelineDir: string,
     flags: { 'dry-run': boolean; yes: boolean; json: boolean; force: boolean }
   ): Promise<boolean> {
-    if (flags['dry-run'] || flags.yes || flags.json || !process.stdin.isTTY || !process.stdout.isTTY) {
+    if (
+      flags['dry-run'] ||
+      flags.yes ||
+      flags.json ||
+      !process.stdin.isTTY ||
+      !process.stdout.isTTY
+    ) {
       return false;
     }
 
@@ -270,9 +285,7 @@ export default class Init extends Command {
     config: RepoConfig,
     flags: { 'dry-run': boolean }
   ): Promise<ValidationResult> {
-    return flags['dry-run']
-      ? this.validateInMemoryConfig(config)
-      : loadRepoConfig(configPath);
+    return flags['dry-run'] ? this.validateInMemoryConfig(config) : loadRepoConfig(configPath);
   }
 
   /**
@@ -326,10 +339,7 @@ export default class Init extends Command {
   /**
    * Determine error exit code, finalize telemetry, and re-throw.
    */
-  private async handleRunError(
-    error: unknown,
-    ctx: CommandTelemetryContext
-  ): Promise<never> {
+  private async handleRunError(error: unknown, ctx: CommandTelemetryContext): Promise<never> {
     const exitCode = this.determineErrorExitCode(error);
     await this.finalizeTelemetry(exitCode, ctx, error);
 
