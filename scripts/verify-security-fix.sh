@@ -29,7 +29,7 @@ else
 fi
 echo ""
 
-# Test 2: Verify execFile is imported
+# Test 2: Verify execFile is imported (in commandRunner.ts, the shared execution module)
 echo "2. Checking for execFile import..."
 if grep -q "import.*execFile.*from.*node:child_process" src/workflows/commandRunner.ts; then
     echo -e "${GREEN}✓ PASSED${NC}: execFile is imported"
@@ -40,7 +40,7 @@ else
 fi
 echo ""
 
-# Test 3: Verify parseCommandString function exists
+# Test 3: Verify parseCommandString function exists (in commandRunner.ts, the shared execution module)
 echo "3. Checking for parseCommandString function..."
 if grep -q "function parseCommandString" src/workflows/commandRunner.ts; then
     echo -e "${GREEN}✓ PASSED${NC}: parseCommandString function exists"

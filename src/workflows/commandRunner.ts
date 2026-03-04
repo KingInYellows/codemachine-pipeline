@@ -172,24 +172,6 @@ export function parseCommandString(command: string): [string, string[]] {
   return [parts[0], parts.slice(1)];
 }
 
-/**
- * Execute shell command with timeout.
- *
- * SECURITY: This function prevents command injection by:
- * 1. Using execFile instead of spawn with shell:true
- * 2. Parsing commands into executable + args without shell interpretation
- * 3. Detecting shell metacharacters and logging warnings
- * 4. Never passing user input directly to a shell
- *
- * Limitations:
- * - Shell features (pipes, redirects, variable expansion) are NOT supported
- * - Commands requiring shell features will fail
- * - Use multiple validation commands instead of shell pipelines
- *
- * @param command - Command string to execute
- * @param options - Execution options (cwd, env, timeout, logger)
- * @returns Promise resolving to exit code, stdout, stderr, and duration
- */
 // ---------------------------------------------------------------------------
 // Path & working-directory helpers
 // ---------------------------------------------------------------------------
@@ -316,6 +298,24 @@ export function sleep(ms: number): Promise<void> {
 // Shell command execution
 // ---------------------------------------------------------------------------
 
+/**
+ * Execute shell command with timeout.
+ *
+ * SECURITY: This function prevents command injection by:
+ * 1. Using execFile instead of spawn with shell:true
+ * 2. Parsing commands into executable + args without shell interpretation
+ * 3. Detecting shell metacharacters and logging warnings
+ * 4. Never passing user input directly to a shell
+ *
+ * Limitations:
+ * - Shell features (pipes, redirects, variable expansion) are NOT supported
+ * - Commands requiring shell features will fail
+ * - Use multiple validation commands instead of shell pipelines
+ *
+ * @param command - Command string to execute
+ * @param options - Execution options (cwd, env, timeout, logger)
+ * @returns Promise resolving to exit code, stdout, stderr, and duration
+ */
 export async function executeShellCommand(
   command: string,
   options: {
