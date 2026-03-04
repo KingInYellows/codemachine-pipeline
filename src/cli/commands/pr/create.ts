@@ -131,6 +131,8 @@ export default class PRCreate extends Command {
   }
 
   private async executePRCreation(typedFlags: CreateFlags, startTime: number): Promise<void> {
+    // Setup errors here intentionally bubble to run() before telemetry initialization.
+    // We only flush telemetry once runDir/feature context and spans are available.
     const settings = await resolveRunDirectorySettings();
     const featureId = await selectFeatureId(settings.baseDir, typedFlags.feature);
     requireFeatureId(featureId, typedFlags.feature);

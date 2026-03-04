@@ -44,6 +44,26 @@ interface DoctorPayload {
   timestamp: string;
 }
 
+type EnvCheckDetails = Record<string, string | number>;
+
+interface EnvCheckDescriptor {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Config type not fully specified for this usage
+  enabled: (c: any) => boolean;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Config type not fully specified for this usage
+  envVar: (c: any) => string;
+  label: string;
+  displayName?: (varName: string) => string;
+  failStatus: 'fail' | 'warn';
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Config type not fully specified for this usage
+  failRemediation: (c: any, varName: string) => string;
+  passMessage: string;
+  failMessage: string;
+  showValueInPass?: boolean;
+  passDetails?: (value: string) => EnvCheckDetails;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Config type not fully specified for this usage
+  resolveValue?: (c: any, varName: string) => string | undefined;
+}
+
 /**
  * Determine exit code and status from diagnostic check results.
  * Priority: credential failures (30) > environment failures (20) > config failures (10) > generic (1).
@@ -554,20 +574,7 @@ export default class Doctor extends Command {
     }
 
     // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access -- Config type not fully specified for this usage
-    const envChecks: Array<{
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Config type not fully specified for this usage
-      enabled: (c: any) => boolean;
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Config type not fully specified for this usage
-      envVar: (c: any) => string;
-      label: string;
-      failStatus: 'fail' | 'warn';
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Config type not fully specified for this usage
-      failRemediation: (c: any, varName: string) => string;
-      passMessage: string;
-      failMessage: string;
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Config type not fully specified for this usage
-      resolveValue?: (c: any, varName: string) => string | undefined;
-    }> = [
+    const envChecks: EnvCheckDescriptor[] = [
       {
         // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access -- Config type not fully specified
         enabled: (c) => !!(c.github?.enabled && c.github?.token_env_var),
@@ -576,7 +583,8 @@ export default class Doctor extends Command {
         label: 'GitHub',
         failStatus: 'fail',
         // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access -- Config type not fully specified
-        failRemediation: (c, v) => `Set ${v} with scopes: ${((c.github?.required_scopes ?? []) as string[]).join(', ')}`,
+        failRemediation: (c, v) =>
+          `Set ${v} with scopes: ${((c.github?.required_scopes ?? []) as string[]).join(', ')}`,
         passMessage: 'Token present',
         failMessage: 'Token not set',
       },
@@ -601,6 +609,9 @@ export default class Doctor extends Command {
         failRemediation: (_c, v) => `Set ${v} or add runtime.agent_endpoint to config`,
         passMessage: 'Configured',
         failMessage: 'Agent endpoint not configured',
+        displayName: () => 'Agent Endpoint',
+        showValueInPass: true,
+        passDetails: (value) => ({ endpoint: value }),
         // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access -- Config type not fully specified
         resolveValue: (c, v) => (c.runtime?.agent_endpoint as string | undefined) ?? process.env[v],
       },
@@ -612,21 +623,20 @@ export default class Doctor extends Command {
       if (!check.enabled(config)) continue;
 
       const varName = check.envVar(config) as string;
-      const value = check.resolveValue
-        ? check.resolveValue(config, varName)
-        : process.env[varName];
+      const value = check.resolveValue ? check.resolveValue(config, varName) : process.env[varName];
+      const checkName = check.displayName ? check.displayName(varName) : `${varName} (${check.label})`;
 
       if (value) {
         checks.push({
-          name: check.resolveValue ? `${check.label} Endpoint` : `${varName} (${check.label})`,
+          name: checkName,
           category: 'credential',
           status: 'pass',
-          message: check.resolveValue ? `${check.passMessage}: ${value}` : check.passMessage,
-          details: check.resolveValue ? { endpoint: value } : { length: value.length },
+          message: check.showValueInPass ? `${check.passMessage}: ${value}` : check.passMessage,
+          details: check.passDetails ? check.passDetails(value) : { length: value.length },
         });
       } else {
         checks.push({
-          name: `${varName} (${check.label})`,
+          name: checkName,
           category: 'credential',
           status: check.failStatus,
           message: check.failMessage,
