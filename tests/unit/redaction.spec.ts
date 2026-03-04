@@ -28,16 +28,12 @@ describe('RedactionEngine.isSensitiveFieldName', () => {
     expect(RedactionEngine.isSensitiveFieldName(name)).toBe(true);
   });
 
-  it.each([
-    'content-type',
-    'accept',
-    'user-agent',
-    'x-request-id',
-    'cache-control',
-    'host',
-  ])('should not detect "%s" as sensitive', (name) => {
-    expect(RedactionEngine.isSensitiveFieldName(name)).toBe(false);
-  });
+  it.each(['content-type', 'accept', 'user-agent', 'x-request-id', 'cache-control', 'host'])(
+    'should not detect "%s" as sensitive',
+    (name) => {
+      expect(RedactionEngine.isSensitiveFieldName(name)).toBe(false);
+    }
+  );
 });
 
 describe('REDACTED constant', () => {
