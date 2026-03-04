@@ -57,6 +57,17 @@ interface ProjectPaths {
   logsDir: string;
 }
 
+interface InitResultPayload {
+  status: string;
+  config_path: string;
+  exit_code: number;
+  config: RepoConfig | undefined;
+  warnings: string[];
+  manifest_schema_doc: string;
+  readiness_checklist: string;
+  next_steps: string[];
+}
+
 /**
  * Init command - Initialize codemachine-pipeline in the current repository
  *
@@ -168,14 +179,14 @@ export default class Init extends Command {
   }
 
   /**
-   * Bootstrap telemetry (logger, metrics, traces) unless dry-run.
+   * Bootstrap telemetry (logger, metrics, traces) unless dry-run or validate-only.
    */
   private initializeTelemetry(
     paths: ProjectPaths,
     flags: { 'dry-run': boolean; json: boolean; yes: boolean; force: boolean; 'validate-only': boolean },
     ctx: CommandTelemetryContext
   ): void {
-    if (flags['dry-run']) {
+    if (flags['dry-run'] || flags['validate-only']) {
       return;
     }
 
@@ -293,16 +304,7 @@ export default class Init extends Command {
     configPath: string,
     validationResult: ValidationResult,
     flags: { 'dry-run': boolean }
-  ): {
-    status: string;
-    config_path: string;
-    exit_code: number;
-    config: RepoConfig | undefined;
-    warnings: string[];
-    manifest_schema_doc: string;
-    readiness_checklist: string;
-    next_steps: string[];
-  } {
+  ): InitResultPayload {
     return {
       status: flags['dry-run'] ? 'dry_run_success' : 'initialized',
       config_path: configPath,
@@ -332,7 +334,7 @@ export default class Init extends Command {
     await this.finalizeTelemetry(exitCode, ctx, error);
 
     if (error && typeof error === 'object' && 'oclif' in error) {
-      throw error;
+      throw error as Error;
     }
 
     if (error instanceof Error) {
@@ -340,6 +342,8 @@ export default class Init extends Command {
     } else {
       this.error('Initialization failed with an unknown error', { exit: exitCode });
     }
+    // Safety: should never be reached if this.error() is typed `never`
+    throw new Error('handleRunError: unreachable');
   }
 
   /**
@@ -390,14 +394,7 @@ export default class Init extends Command {
    */
   private renderInitResult(
     flags: { json: boolean; 'dry-run': boolean },
-    resultPayload: {
-      status: string;
-      config_path: string;
-      exit_code: number;
-      warnings: string[];
-      next_steps: string[];
-      config?: RepoConfig | undefined;
-    }
+    resultPayload: InitResultPayload
   ): void {
     if (flags.json) {
       this.log(JSON.stringify(resultPayload, null, 2));
