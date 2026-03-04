@@ -35,9 +35,6 @@ export {
   isReadyToMerge,
 } from './DeploymentRecord';
 
-export {
-  BranchProtectionReport,
-  BranchProtectionReportSchema,
-} from './BranchProtectionReport';
+export { BranchProtectionReport, BranchProtectionReportSchema } from './BranchProtectionReport';
 
 export type { PRMetadata } from './prMetadata';
