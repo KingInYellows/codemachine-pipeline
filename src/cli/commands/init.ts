@@ -179,14 +179,14 @@ export default class Init extends Command {
   }
 
   /**
-   * Bootstrap telemetry (logger, metrics, traces) unless dry-run or validate-only.
+   * Bootstrap telemetry (logger, metrics, traces) unless dry-run.
    */
   private initializeTelemetry(
     paths: ProjectPaths,
     flags: { 'dry-run': boolean; json: boolean; yes: boolean; force: boolean; 'validate-only': boolean },
     ctx: CommandTelemetryContext
   ): void {
-    if (flags['dry-run'] || flags['validate-only']) {
+    if (flags['dry-run']) {
       return;
     }
 
