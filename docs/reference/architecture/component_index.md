@@ -414,8 +414,8 @@ erDiagram
 
 **Existing ADR Files:**
 
-- [`docs/adr/ADR-6-linear-integration.md`](../adr/ADR-6-linear-integration.md) - Linear integration strategy and adapter design
-- [`docs/adr/ADR-7-validation-policy.md`](../adr/ADR-7-validation-policy.md) - Zod runtime validation policy
+- [`docs/adr/ADR-6-linear-integration.md`](../../adr/ADR-6-linear-integration.md) - Linear integration strategy and adapter design
+- [`docs/adr/ADR-7-validation-policy.md`](../../adr/ADR-7-validation-policy.md) - Zod runtime validation policy
 
 **Planned ADR Files:**
 

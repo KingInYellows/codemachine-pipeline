@@ -87,13 +87,18 @@ const mockManifest: RunManifest = {
   feature_id: TEST_FEATURE_ID,
   title: 'Test Feature',
   source: 'feature/test-branch',
+  repo: {
+    url: 'https://github.com/test-org/test-repo.git',
+    default_branch: 'main',
+  },
   status: 'in_progress',
   execution: {
     current_step: 'code',
     last_step: 'plan',
-    last_error: null,
+    completed_steps: 5,
   },
   queue: {
+    queue_dir: '.codepipe/runs/test-feature-123',
     pending_count: 0,
     completed_count: 5,
     failed_count: 0,
@@ -102,6 +107,7 @@ const mockManifest: RunManifest = {
     pending: [],
     completed: ['prd', 'spec', 'plan', 'code'],
   },
+  artifacts: {},
   telemetry: {
     logs_dir: 'logs',
     metrics_file: 'metrics/prometheus.txt',
@@ -109,6 +115,7 @@ const mockManifest: RunManifest = {
   },
   timestamps: {
     created_at: '2025-01-15T10:00:00Z',
+    updated_at: '2025-01-15T10:05:00Z',
     started_at: '2025-01-15T10:01:00Z',
   },
 };
