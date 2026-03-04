@@ -29,6 +29,8 @@ export interface HttpClientConfig {
   baseUrl: string;
   provider: Provider;
   token?: string;
+  /** Provider API version header value (used for GitHub's X-GitHub-Api-Version) */
+  apiVersion?: string;
   runDir?: string;
   defaultHeaders?: Record<string, string>;
   timeout?: number;
@@ -80,5 +82,5 @@ export const DEFAULT_MAX_BACKOFF = 32000;
 export const JITTER_FACTOR = 0.1;
 /** Standard Accept header for GitHub API */
 export const ACCEPT_HEADER = 'application/vnd.github+json';
-/** GitHub API version header value */
+/** GitHub API version header value (fallback; prefer config.github.api_version) */
 export const GITHUB_API_VERSION = '2022-11-28';

@@ -16,6 +16,7 @@ import {
   addConfigHistoryEntry,
   type ValidationError,
 } from './RepoConfig';
+import { DEFAULT_GITHUB_API_VERSION } from './RepoConfigDefaults';
 
 describe('RepoConfigSchema', () => {
   it('should validate a complete valid config', () => {
@@ -555,6 +556,44 @@ describe('Env var name validation (CDMCH-214)', () => {
       minimalConfig({ github: { enabled: true, token_env_var: 'TOKEN_V2' } })
     );
     expect(result.success).toBe(true);
+  });
+});
+
+describe('GitHub API version (CDMCH-209)', () => {
+  const minimalConfig = (githubOverrides: Record<string, unknown> = {}) => ({
+    schema_version: '1.0.0',
+    project: { id: 'test', repo_url: 'https://github.com/org/repo.git' },
+    github: { enabled: false, ...githubOverrides },
+    linear: { enabled: false },
+    runtime: {},
+    safety: {},
+    feature_flags: {},
+  });
+
+  it('should default api_version to 2022-11-28', () => {
+    const result = RepoConfigSchema.safeParse(minimalConfig());
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.github.api_version).toBe(DEFAULT_GITHUB_API_VERSION);
+    }
+  });
+
+  it('should accept a valid custom api_version', () => {
+    const result = RepoConfigSchema.safeParse(minimalConfig({ api_version: '2024-01-15' }));
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.github.api_version).toBe('2024-01-15');
+    }
+  });
+
+  it('should reject an invalid api_version format', () => {
+    const result = RepoConfigSchema.safeParse(minimalConfig({ api_version: 'latest' }));
+    expect(result.success).toBe(false);
+  });
+
+  it('should reject api_version values with out-of-range month/day', () => {
+    const result = RepoConfigSchema.safeParse(minimalConfig({ api_version: '2024-99-99' }));
+    expect(result.success).toBe(false);
   });
 });
 
