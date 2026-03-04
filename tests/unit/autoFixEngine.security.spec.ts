@@ -362,6 +362,21 @@ describe('autoFixEngine security - command execution', () => {
       expect(sourceCode).toMatch(/\[|&;`\$<>\(\)\{\}\[\]!\*\?~#\]/);
     });
 
+    test('SECURITY FIX: applyCommandTemplate validates substitutions for metacharacters (CDMCH-215)', async () => {
+      const fsSync = await import('node:fs');
+      const autoFixEnginePath = path.join(__dirname, '../../src/workflows/autoFixEngine.ts');
+      const sourceCode = fsSync.readFileSync(autoFixEnginePath, 'utf-8');
+
+      // Verify applyCommandTemplate itself checks for metacharacters (defense-in-depth)
+      const applyFnMatch = sourceCode.match(
+        /function applyCommandTemplate[\s\S]*?^}/m
+      );
+      expect(applyFnMatch).not.toBeNull();
+      const applyFnBody = applyFnMatch![0];
+      expect(applyFnBody).toContain('SHELL_METACHARACTERS');
+      expect(applyFnBody).toContain('shell metacharacters');
+    });
+
     test('SECURITY FIX: Command parsing function prevents shell interpretation', async () => {
       const fsSync = await import('node:fs');
       // parseCommandString is implemented in commandRunner.ts (extracted from autoFixEngine.ts)

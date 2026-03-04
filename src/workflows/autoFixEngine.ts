@@ -621,7 +621,16 @@ function buildCommandTemplateContext(
 }
 
 function applyCommandTemplate(template: string, context: Record<string, string>): string {
-  return template.replace(/\{\{\s*([\w.-]+)\s*\}\}/g, (_, key: string) => context[key] ?? '');
+  return template.replace(/\{\{\s*([\w.-]+)\s*\}\}/g, (_, key: string) => {
+    const value = context[key];
+    if (value === undefined) return '';
+    if (SHELL_METACHARACTERS.test(value)) {
+      throw new Error(
+        `Template substitution for "${key}" contains shell metacharacters`
+      );
+    }
+    return value;
+  });
 }
 
 /**

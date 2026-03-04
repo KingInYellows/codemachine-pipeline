@@ -506,6 +506,58 @@ describe('addConfigHistoryEntry', () => {
   });
 });
 
+describe('Env var name validation (CDMCH-214)', () => {
+  const minimalConfig = (overrides: Record<string, unknown>) => ({
+    schema_version: '1.0.0',
+    project: { id: 'test', repo_url: 'https://github.com/org/repo.git' },
+    github: { enabled: false },
+    linear: { enabled: false },
+    runtime: {},
+    safety: {},
+    feature_flags: {},
+    ...overrides,
+  });
+
+  it('should accept valid uppercase env var names', () => {
+    const result = RepoConfigSchema.safeParse(
+      minimalConfig({
+        github: { enabled: true, token_env_var: 'MY_GITHUB_TOKEN' },
+        linear: { enabled: false, api_key_env_var: 'MY_LINEAR_KEY' },
+        runtime: { agent_endpoint_env_var: 'MY_AGENT_ENDPOINT' },
+      })
+    );
+    expect(result.success).toBe(true);
+  });
+
+  it('should reject lowercase env var names', () => {
+    const result = RepoConfigSchema.safeParse(
+      minimalConfig({ github: { enabled: true, token_env_var: 'github_token' } })
+    );
+    expect(result.success).toBe(false);
+  });
+
+  it('should reject env var names with special characters', () => {
+    const result = RepoConfigSchema.safeParse(
+      minimalConfig({ linear: { enabled: false, api_key_env_var: 'KEY-NAME' } })
+    );
+    expect(result.success).toBe(false);
+  });
+
+  it('should reject env var names starting with a digit', () => {
+    const result = RepoConfigSchema.safeParse(
+      minimalConfig({ runtime: { agent_endpoint_env_var: '9AGENT' } })
+    );
+    expect(result.success).toBe(false);
+  });
+
+  it('should accept env var names with digits after first char', () => {
+    const result = RepoConfigSchema.safeParse(
+      minimalConfig({ github: { enabled: true, token_env_var: 'TOKEN_V2' } })
+    );
+    expect(result.success).toBe(true);
+  });
+});
+
 describe('Edge Cases', () => {
   it('should handle SSH repo URLs', () => {
     const config = createDefaultConfig('git@github.com:org/repo.git');
