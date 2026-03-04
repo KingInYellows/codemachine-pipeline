@@ -16,7 +16,7 @@ import {
 import { validateOrThrow } from '../validation/helpers.js';
 import type { StructuredLogger } from '../telemetry/logger';
 import type { TraceLink } from '../core/models/TraceLink';
-import type { PlanDiagnostics, PlanSummary, TaskPlannerConfig } from './taskPlannerTypes.js';
+import type { PlanSummary, TaskPlannerConfig, TaskPlannerResult } from './taskPlannerTypes.js';
 import { createPlanSummary } from './taskPlannerGraph.js';
 import {
   parsePlanArtifactForRead,
@@ -164,19 +164,7 @@ export async function loadExistingPlanIfPresent(
   config: TaskPlannerConfig,
   planPath: string,
   logger: StructuredLogger
-): Promise<{
-  planPath: string;
-  plan: PlanArtifact;
-  summary: PlanSummary;
-  statistics: {
-    totalTasks: number;
-    entryTasks: number;
-    maxDepth: number;
-    parallelPaths: number;
-    blockedTasks: number;
-  };
-  diagnostics: PlanDiagnostics;
-} | null> {
+): Promise<TaskPlannerResult | null> {
   if (config.force) return null;
 
   try {

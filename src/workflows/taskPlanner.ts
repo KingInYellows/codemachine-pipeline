@@ -51,6 +51,7 @@ export {
   loadPlanSummary,
   loadPlanMetadata,
 } from './plannerPersistence.js';
+export type { PlanMetadata } from './plannerPersistence.js';
 
 // -- local imports from extracted modules -----------------------------------
 import { collectMissingDepBlockers } from './plannerDAG.js';
