@@ -117,6 +117,8 @@ export interface RedactionReport {
   flags: string[];
 }
 
+export const REDACTED = '[REDACTED]';
+
 export class RedactionEngine {
   private readonly patterns: ReadonlyArray<{ name: string; pattern: RegExp; replacement: string }>;
   private readonly enabled: boolean;
@@ -184,7 +186,7 @@ export class RedactionEngine {
     return obj;
   }
 
-  private static isSensitiveFieldName(name: string): boolean {
+  static isSensitiveFieldName(name: string): boolean {
     const lowerName = name.toLowerCase();
     const sensitiveNames = [
       'password',
@@ -194,9 +196,14 @@ export class RedactionEngine {
       'apikey',
       'auth',
       'authorization',
+      'proxy-authorization',
       'credential',
       'private_key',
       'privatekey',
+      'cookie',
+      'set-cookie',
+      'x-api-key',
+      'x-csrf-token',
     ];
 
     return sensitiveNames.some((pattern) => lowerName.includes(pattern));

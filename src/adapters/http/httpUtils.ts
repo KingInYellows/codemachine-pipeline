@@ -7,19 +7,7 @@
 
 import type { Headers } from 'undici-types';
 import * as crypto from 'node:crypto';
-
-// Sensitive Data Constants
-
-export const SENSITIVE_HEADERS = new Set([
-  'authorization',
-  'proxy-authorization',
-  'cookie',
-  'set-cookie',
-  'x-api-key',
-  'x-csrf-token',
-]);
-
-export const SENSITIVE_KEYWORDS = ['token', 'secret', 'password', 'credential'];
+import { RedactionEngine, REDACTED } from '../../utils/redaction.js';
 
 // ID Generation
 
@@ -73,10 +61,8 @@ export function sanitizeHeaders(headers: Record<string, string>): Record<string,
   const sanitized: Record<string, string> = {};
 
   for (const [key, value] of Object.entries(headers)) {
-    const lowerKey = key.toLowerCase();
-
-    if (SENSITIVE_HEADERS.has(lowerKey) || SENSITIVE_KEYWORDS.some((kw) => lowerKey.includes(kw))) {
-      sanitized[key] = '***REDACTED***';
+    if (RedactionEngine.isSensitiveFieldName(key)) {
+      sanitized[key] = REDACTED;
     } else {
       sanitized[key] = value;
     }

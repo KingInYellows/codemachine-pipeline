@@ -683,7 +683,7 @@ describe('HttpClient', () => {
         // Response may include auth headers that should be redacted
         if (headers['authorization'] || headers['Authorization']) {
           const authHeader = headers['authorization'] || headers['Authorization'];
-          expect(authHeader).toBe('***REDACTED***');
+          expect(authHeader).toBe('[REDACTED]');
         } else {
           // If no auth header in response, verify error at least has headers
           expect(headers).toBeDefined();
@@ -707,11 +707,11 @@ describe('HttpClient', () => {
       const headers = json.headers as Record<string, string>;
 
       // These must be redacted
-      expect(headers['set-cookie']).toBe('***REDACTED***');
-      expect(headers['proxy-authorization']).toBe('***REDACTED***');
-      expect(headers['x-csrf-token']).toBe('***REDACTED***');
-      expect(headers['x-custom-secret']).toBe('***REDACTED***');
-      expect(headers['authorization']).toBe('***REDACTED***');
+      expect(headers['set-cookie']).toBe('[REDACTED]');
+      expect(headers['proxy-authorization']).toBe('[REDACTED]');
+      expect(headers['x-csrf-token']).toBe('[REDACTED]');
+      expect(headers['x-custom-secret']).toBe('[REDACTED]');
+      expect(headers['authorization']).toBe('[REDACTED]');
 
       // These must be preserved
       expect(headers['content-type']).toBe('application/json');

@@ -7,21 +7,11 @@
  */
 
 import { ErrorType } from './sharedTypes.js';
+import { RedactionEngine, REDACTED } from '../utils/redaction.js';
 
 export { ErrorType };
 
 const MAX_RESPONSE_BODY_SIZE = 2048;
-
-const SENSITIVE_HTTP_HEADERS = new Set([
-  'authorization',
-  'proxy-authorization',
-  'cookie',
-  'set-cookie',
-  'x-api-key',
-  'x-csrf-token',
-]);
-
-const SENSITIVE_KEYWORDS = ['token', 'secret', 'password', 'credential'];
 
 function truncateStr(str: string, maxLength: number): string {
   if (str.length <= maxLength) return str;
@@ -31,12 +21,8 @@ function truncateStr(str: string, maxLength: number): string {
 function sanitizeHttpHeaders(headers: Record<string, string>): Record<string, string> {
   const sanitized: Record<string, string> = {};
   for (const [key, value] of Object.entries(headers)) {
-    const lowerKey = key.toLowerCase();
-    if (
-      SENSITIVE_HTTP_HEADERS.has(lowerKey) ||
-      SENSITIVE_KEYWORDS.some((kw) => lowerKey.includes(kw))
-    ) {
-      sanitized[key] = '***REDACTED***';
+    if (RedactionEngine.isSensitiveFieldName(key)) {
+      sanitized[key] = REDACTED;
     } else {
       sanitized[key] = value;
     }
