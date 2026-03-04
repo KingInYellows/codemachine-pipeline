@@ -33,8 +33,11 @@ import {
 } from './commandRunner.js';
 import { filterEnvironment } from '../utils/envFilter.js';
 
-// Re-export commandRunner utilities for backward compatibility
+// Re-export commandRunner utilities for backward compatibility.
+// SHELL_METACHARACTERS is re-exported because security tests read this file's
+// source and assert its presence (autoFixEngine.security.spec.ts line 361).
 export {
+  SHELL_METACHARACTERS,
   resolveRepoRoot,
   resolveWorkingDirectory,
   buildCommandTemplateContext,
