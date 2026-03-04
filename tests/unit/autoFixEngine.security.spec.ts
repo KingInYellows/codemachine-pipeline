@@ -368,9 +368,7 @@ describe('autoFixEngine security - command execution', () => {
       const sourceCode = fsSync.readFileSync(autoFixEnginePath, 'utf-8');
 
       // Verify applyCommandTemplate itself checks for metacharacters (defense-in-depth)
-      const applyFnMatch = sourceCode.match(
-        /function applyCommandTemplate[\s\S]*?^}/m
-      );
+      const applyFnMatch = sourceCode.match(/function applyCommandTemplate[\s\S]*?^}/m);
       expect(applyFnMatch).not.toBeNull();
       const applyFnBody = applyFnMatch![0];
       expect(applyFnBody).toContain('SHELL_METACHARACTERS');

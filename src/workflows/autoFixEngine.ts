@@ -625,9 +625,7 @@ function applyCommandTemplate(template: string, context: Record<string, string>)
     const value = context[key];
     if (value === undefined) return '';
     if (SHELL_METACHARACTERS.test(value)) {
-      throw new Error(
-        `Template substitution for "${key}" contains shell metacharacters`
-      );
+      throw new Error(`Template substitution for "${key}" contains shell metacharacters`);
     }
     return value;
   });
