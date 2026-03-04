@@ -51,10 +51,10 @@ else
 fi
 echo ""
 
-# Test 4: Verify metacharacter detection
-echo "4. Checking for metacharacter detection..."
-if grep -q "TEMPLATE_VALUE_METACHARACTERS\|DANGEROUS_PATH_METACHARACTERS" src/workflows/autoFixEngine.ts; then
-    echo -e "${GREEN}✓ PASSED${NC}: Metacharacter detection implemented"
+# Test 4: Verify SHELL_METACHARACTERS detection (in commandRunner.ts, the shared execution module)
+echo "4. Checking for shell metacharacter detection..."
+if grep -q "SHELL_METACHARACTERS" src/workflows/commandRunner.ts; then
+    echo -e "${GREEN}✓ PASSED${NC}: Shell metacharacter detection implemented"
     PASSED=$((PASSED + 1))
 else
     echo -e "${RED}✗ FAILED${NC}: Metacharacter detection not found"

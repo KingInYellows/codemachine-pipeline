@@ -179,7 +179,7 @@ export function parseCommandString(command: string): [string, string[]] {
 /**
  * Resolve the repository root from a run directory.
  *
- * Run directories live at `<repo>/.codemachine/runs/<id>`, so the repo
+ * Run directories live at `<repo>/.codepipe/runs/<id>`, so the repo
  * root is three levels up.
  */
 export function resolveRepoRoot(runDir: string): string {

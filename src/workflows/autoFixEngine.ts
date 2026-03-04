@@ -35,9 +35,6 @@ import { filterEnvironment } from '../utils/envFilter.js';
 
 // Re-export commandRunner utilities for backward compatibility
 export {
-  SHELL_METACHARACTERS,
-  parseCommandString,
-  executeShellCommand,
   resolveRepoRoot,
   resolveWorkingDirectory,
   buildCommandTemplateContext,
