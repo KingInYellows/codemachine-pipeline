@@ -1,7 +1,7 @@
 import * as path from 'node:path';
 import * as fs from 'node:fs/promises';
 import { ExecutionTask, canRetry } from '../core/models/ExecutionTask.js';
-import { RepoConfig } from '../core/config/RepoConfig.js';
+import { RepoConfig, type ExecutionConfig } from '../core/config/RepoConfig.js';
 import {
   ExecutionStrategy,
   ExecutionContext,
@@ -119,7 +119,7 @@ export class CLIExecutionEngine {
   private async validateCliAvailability(
     errors: string[],
     warnings: string[],
-    executionConfig: RepoConfig['execution']
+    executionConfig: ExecutionConfig
   ): Promise<void> {
     const cliPath = executionConfig.codemachine_cli_path;
     const cliCheck = await validateCliAvailability(cliPath);
@@ -141,7 +141,7 @@ export class CLIExecutionEngine {
 
   private async validateWorkspace(
     errors: string[],
-    executionConfig: RepoConfig['execution']
+    executionConfig: ExecutionConfig
   ): Promise<void> {
     const workspaceDir = executionConfig.workspace_dir || this.runDir;
     try {
