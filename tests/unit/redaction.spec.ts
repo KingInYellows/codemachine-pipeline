@@ -51,20 +51,20 @@ describe('RedactionEngine.isSensitiveUrlQueryParamName', () => {
     'client_secret',
     'refresh_token',
     'id_token',
+    'auth_token',
     'authorization',
+    'password',
+    'secret',
   ])('should detect "%s" as a sensitive URL query parameter', (name) => {
     expect(RedactionEngine.isSensitiveUrlQueryParamName(name)).toBe(true);
   });
 
-  it.each([
-    'page_token',
-    'next_page_token',
-    'sync_token',
-    'continuation_token',
-    'oauth_state',
-  ])('should not detect "%s" as a sensitive URL query parameter', (name) => {
-    expect(RedactionEngine.isSensitiveUrlQueryParamName(name)).toBe(false);
-  });
+  it.each(['page_token', 'next_page_token', 'sync_token', 'continuation_token', 'oauth_state'])(
+    'should not detect "%s" as a sensitive URL query parameter',
+    (name) => {
+      expect(RedactionEngine.isSensitiveUrlQueryParamName(name)).toBe(false);
+    }
+  );
 });
 
 describe('REDACTED constant', () => {
