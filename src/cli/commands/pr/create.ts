@@ -115,10 +115,11 @@ export default class PRCreate extends Command {
           error.code === CliErrorCode.RUN_DIR_NOT_FOUND
             ? PRExitCode.VALIDATION_ERROR
             : error.exitCode;
-        this.error(error.message, { exit: exitCode });
-      }
-
-      if (error instanceof Error) {
+        const message = error.remediation
+          ? `${error.message}\n\n${error.remediation}`
+          : error.message;
+        this.error(message, { exit: exitCode });
+      } else if (error instanceof Error) {
         this.error(`PR create failed: ${error.message}`, {
           exit: PRExitCode.ERROR,
         });
@@ -219,7 +220,11 @@ export default class PRCreate extends Command {
 
       const adapter = getPRAdapter(context);
 
-      const branchName = manifest.source || (await this.getCurrentBranch())!;
+      const currentBranch = manifest.source || (await this.getCurrentBranch());
+      if (!currentBranch) {
+        this.error('Unable to determine branch name', { exit: PRExitCode.VALIDATION_ERROR });
+      }
+      const branchName = currentBranch;
       const baseBranch = typedFlags.base || config.project.default_branch;
       const prTitle = typedFlags.title || manifest.title || `Feature: ${featureId}`;
       const prBody = typedFlags.body || this.generatePRBody(manifest);

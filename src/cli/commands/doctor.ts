@@ -59,6 +59,7 @@ interface EnvCheckDescriptor {
   passMessage: string;
   failMessage: string;
   showValueInPass?: boolean;
+  /** Produce details for a passing check. Defaults to `{ length: value.length }` if omitted. */
   passDetails?: (value: string) => EnvCheckDetails;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Config type not fully specified for this usage
   resolveValue?: (c: any, varName: string) => string | undefined;
@@ -577,7 +578,7 @@ export default class Doctor extends Command {
     const envChecks: EnvCheckDescriptor[] = [
       {
         // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access -- Config type not fully specified
-        enabled: (c) => !!(c.github?.enabled && c.github?.token_env_var),
+        enabled: (c) => Boolean(c.github?.enabled && c.github?.token_env_var),
         // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-return -- Config type not fully specified
         envVar: (c) => c.github.token_env_var,
         label: 'GitHub',
@@ -590,7 +591,7 @@ export default class Doctor extends Command {
       },
       {
         // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access -- Config type not fully specified
-        enabled: (c) => !!(c.linear?.enabled && c.linear?.api_key_env_var),
+        enabled: (c) => Boolean(c.linear?.enabled && c.linear?.api_key_env_var),
         // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-return -- Config type not fully specified
         envVar: (c) => c.linear.api_key_env_var,
         label: 'Linear',
@@ -601,7 +602,7 @@ export default class Doctor extends Command {
       },
       {
         // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access -- Config type not fully specified
-        enabled: (c) => !!c.runtime?.agent_endpoint_env_var,
+        enabled: (c) => Boolean(c.runtime?.agent_endpoint_env_var),
         // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-return -- Config type not fully specified
         envVar: (c) => c.runtime.agent_endpoint_env_var,
         label: 'Agent',
