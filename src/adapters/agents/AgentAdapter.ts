@@ -60,7 +60,7 @@ import type {
 
 const TELEMETRY_FILENAME = 'agent_sessions.jsonl';
 const RATE_LIMIT_WINDOW_MS = 60 * 60 * 1000; // 1 hour sliding window
-const MAX_RETRY_WAIT_SECONDS = 300; // Cap external retry-after at 5 minutes
+export const MAX_RETRY_WAIT_SECONDS = 300; // Cap external retry-after at 5 minutes
 
 // Error classification patterns — module-level constants prevent repeated recompilation
 const TRANSIENT_PATTERNS = /timeout|rate limit|503|429|network|connection/i;

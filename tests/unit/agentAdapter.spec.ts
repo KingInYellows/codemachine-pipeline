@@ -20,6 +20,7 @@ import type { StructuredLogger } from '../../src/telemetry/logger';
 import {
   AgentAdapter,
   AgentAdapterError,
+  MAX_RETRY_WAIT_SECONDS,
   createAgentAdapter,
   mapTaskTypeToContext,
   CONTEXT_REQUIREMENTS,
@@ -686,17 +687,22 @@ describe('AgentAdapter - Fallback Logic', () => {
   });
 
   it('should cap retry-after values above 300 seconds before sleeping', async () => {
-    const sleepSpy = vi.spyOn(adapter as unknown as { sleep: (ms: number) => Promise<void> }, 'sleep');
+    const sleepSpy = vi.spyOn(
+      adapter as unknown as { sleep: (ms: number) => Promise<void> },
+      'sleep'
+    );
     sleepSpy.mockResolvedValue();
 
     let invokeCount = 0;
-    providerInvoker.mockImplementation((manifest, _request, sessionId, _startTime, fallbackAttempts) => {
-      invokeCount++;
-      if (invokeCount === 1) {
-        return Promise.reject(createRetryAfterError(600));
+    providerInvoker.mockImplementation(
+      (manifest, _request, sessionId, _startTime, fallbackAttempts) => {
+        invokeCount++;
+        if (invokeCount === 1) {
+          return Promise.reject(createRetryAfterError(600));
+        }
+        return Promise.resolve(createProviderResponse(manifest, sessionId, fallbackAttempts));
       }
-      return Promise.resolve(createProviderResponse(manifest, sessionId, fallbackAttempts));
-    });
+    );
 
     const request: AgentSessionRequest = {
       context: 'code_generation',
@@ -707,25 +713,31 @@ describe('AgentAdapter - Fallback Logic', () => {
 
     await adapter.executeSession(request);
 
-    expect(sleepSpy).toHaveBeenCalledWith(300_000);
+    expect(sleepSpy).toHaveBeenCalledWith(MAX_RETRY_WAIT_SECONDS * 1000);
     expect(logger.spies.warn).toHaveBeenCalledWith(
       'Capping retry-after from external API',
-      expect.objectContaining({ original: 600, capped: 300 })
+      expect.objectContaining({ original: 600, capped: MAX_RETRY_WAIT_SECONDS })
     );
+    sleepSpy.mockRestore();
   });
 
   it('should honor retry-after of exactly 300 seconds without capping', async () => {
-    const sleepSpy = vi.spyOn(adapter as unknown as { sleep: (ms: number) => Promise<void> }, 'sleep');
+    const sleepSpy = vi.spyOn(
+      adapter as unknown as { sleep: (ms: number) => Promise<void> },
+      'sleep'
+    );
     sleepSpy.mockResolvedValue();
 
     let invokeCount = 0;
-    providerInvoker.mockImplementation((manifest, _request, sessionId, _startTime, fallbackAttempts) => {
-      invokeCount++;
-      if (invokeCount === 1) {
-        return Promise.reject(createRetryAfterError(300));
+    providerInvoker.mockImplementation(
+      (manifest, _request, sessionId, _startTime, fallbackAttempts) => {
+        invokeCount++;
+        if (invokeCount === 1) {
+          return Promise.reject(createRetryAfterError(300));
+        }
+        return Promise.resolve(createProviderResponse(manifest, sessionId, fallbackAttempts));
       }
-      return Promise.resolve(createProviderResponse(manifest, sessionId, fallbackAttempts));
-    });
+    );
 
     const request: AgentSessionRequest = {
       context: 'code_generation',
@@ -736,25 +748,31 @@ describe('AgentAdapter - Fallback Logic', () => {
 
     await adapter.executeSession(request);
 
-    expect(sleepSpy).toHaveBeenCalledWith(300_000);
+    expect(sleepSpy).toHaveBeenCalledWith(MAX_RETRY_WAIT_SECONDS * 1000);
     expect(logger.spies.warn).not.toHaveBeenCalledWith(
       'Capping retry-after from external API',
       expect.any(Object)
     );
+    sleepSpy.mockRestore();
   });
 
   it('should preserve retry-after values below 300 seconds', async () => {
-    const sleepSpy = vi.spyOn(adapter as unknown as { sleep: (ms: number) => Promise<void> }, 'sleep');
+    const sleepSpy = vi.spyOn(
+      adapter as unknown as { sleep: (ms: number) => Promise<void> },
+      'sleep'
+    );
     sleepSpy.mockResolvedValue();
 
     let invokeCount = 0;
-    providerInvoker.mockImplementation((manifest, _request, sessionId, _startTime, fallbackAttempts) => {
-      invokeCount++;
-      if (invokeCount === 1) {
-        return Promise.reject(createRetryAfterError(120));
+    providerInvoker.mockImplementation(
+      (manifest, _request, sessionId, _startTime, fallbackAttempts) => {
+        invokeCount++;
+        if (invokeCount === 1) {
+          return Promise.reject(createRetryAfterError(120));
+        }
+        return Promise.resolve(createProviderResponse(manifest, sessionId, fallbackAttempts));
       }
-      return Promise.resolve(createProviderResponse(manifest, sessionId, fallbackAttempts));
-    });
+    );
 
     const request: AgentSessionRequest = {
       context: 'code_generation',
@@ -770,6 +788,7 @@ describe('AgentAdapter - Fallback Logic', () => {
       'Capping retry-after from external API',
       expect.any(Object)
     );
+    sleepSpy.mockRestore();
   });
 
   it('should not use fallback on permanent error', async () => {
