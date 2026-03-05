@@ -50,8 +50,6 @@ export {
   sanitizeHeaders,
   truncate,
   sleep,
-  SENSITIVE_HEADERS,
-  SENSITIVE_KEYWORDS,
 } from './httpUtils.js';
 
 import { HttpError } from '../../core/errors.js';
