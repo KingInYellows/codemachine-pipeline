@@ -25,9 +25,9 @@ The Component Index serves as:
 
 #### 1.1 Component Overview Diagram
 
-**File:** [`docs/diagrams/component_overview.puml`](../diagrams/component_overview.puml)
+**File:** [`docs/diagrams/component_overview.puml`](../../diagrams/component_overview.puml)
 
-**Documentation:** [`docs/diagrams/component_overview.md`](../diagrams/component_overview.md)
+**Documentation:** [`docs/diagrams/component_overview.md`](../../diagrams/component_overview.md)
 
 **Description:** High-level system architecture showing CLI, orchestration services, adapters, persistence, and observability layers with dependencies and extension points.
 
@@ -56,7 +56,7 @@ The Component Index serves as:
 
 #### 1.2 Run Directory Schema Diagram
 
-**File:** [`docs/diagrams/run_directory_schema.mmd`](../diagrams/run_directory_schema.mmd)
+**File:** [`docs/diagrams/run_directory_schema.mmd`](../../diagrams/run_directory_schema.mmd)
 
 **Documentation:** [`docs/reference/run_directory_schema.md`](../run_directory_schema.md)
 
@@ -133,7 +133,7 @@ graph TB
 
 ##### Context & Research Sequence
 
-> From [`docs/diagrams/context_research_sequence.mmd`](../diagrams/context_research_sequence.mmd).
+> From [`docs/diagrams/context_research_sequence.mmd`](../../diagrams/context_research_sequence.mmd).
 
 <details>
 <summary>Context & Research Sequence (click to expand)</summary>
@@ -202,7 +202,7 @@ sequenceDiagram
 
 ##### PR Automation Sequence
 
-> From [`docs/diagrams/pr_automation_sequence.mmd`](../diagrams/pr_automation_sequence.mmd).
+> From [`docs/diagrams/pr_automation_sequence.mmd`](../../diagrams/pr_automation_sequence.mmd).
 
 <details>
 <summary>PR Automation Sequence (click to expand)</summary>
@@ -253,7 +253,7 @@ sequenceDiagram
 
 ##### Data Model ERD
 
-> From [`docs/diagrams/data_model.mmd`](../diagrams/data_model.mmd).
+> From [`docs/diagrams/data_model.mmd`](../../diagrams/data_model.mmd).
 
 <details>
 <summary>Data Model ERD (click to expand)</summary>
@@ -328,7 +328,7 @@ erDiagram
 
 #### 1.4 Component Overview (PlantUML)
 
-**File:** [`docs/diagrams/component_overview.puml`](../diagrams/component_overview.puml)
+**File:** [`docs/diagrams/component_overview.puml`](../../diagrams/component_overview.puml)
 
 **Render online:** [PlantUML Server](http://www.plantuml.com/plantuml/uml/) (paste file contents)
 
@@ -342,7 +342,7 @@ erDiagram
 
 **File:** [`docs/reference/run_directory_schema.md`](../run_directory_schema.md)
 
-**Diagram:** [`docs/diagrams/run_directory_schema.mmd`](../diagrams/run_directory_schema.mmd)
+**Diagram:** [`docs/diagrams/run_directory_schema.mmd`](../../diagrams/run_directory_schema.mmd)
 
 **Description:** Comprehensive specification of the deterministic run directory structure, including manifest schemas, file formats, state machines, locking strategies, and cleanup policies.
 
@@ -676,13 +676,13 @@ All architecture artifacts must meet these standards:
 
 **Architects / Technical Leads:**
 
-- [Component Overview Diagram](../diagrams/component_overview.puml) - System architecture
+- [Component Overview Diagram](../../diagrams/component_overview.puml) - System architecture
 - Blueprint Foundation (generated: `.codemachine/artifacts/architecture/01_Blueprint_Foundation.md`) - Core principles
 - ADRs (pending upload) - Architectural decisions
 
 **Backend Developers:**
 
-- [Component Overview Diagram](../diagrams/component_overview.puml) - Module boundaries
+- [Component Overview Diagram](../../diagrams/component_overview.puml) - Module boundaries
 - [Run Directory Schema](../run_directory_schema.md) - Persistence layer
 - [Rate Limit Reference](../cli/rate_limit_reference.md) - HTTP layer
 
@@ -694,7 +694,7 @@ All architecture artifacts must meet these standards:
 
 **New Team Members:**
 
-1. Start with [Component Overview Documentation](../diagrams/component_overview.md)
+1. Start with [Component Overview Documentation](../../diagrams/component_overview.md)
 2. Review Blueprint Foundation (generated: `.codemachine/artifacts/architecture/01_Blueprint_Foundation.md`)
 3. Explore [Run Directory Schema](../run_directory_schema.md)
 4. Read ADRs (pending upload) for decision context
@@ -705,24 +705,24 @@ All architecture artifacts must meet these standards:
 
 **CLI Presentation:**
 
-- [Component Overview Diagram](../diagrams/component_overview.puml) (CLI Section)
+- [Component Overview Diagram](../../diagrams/component_overview.puml) (CLI Section)
 - Blueprint Foundation (generated: `.codemachine/artifacts/architecture/01_Blueprint_Foundation.md`) (CLI Orchestrator, RepoConfig Manager)
 
 **Orchestration Core:**
 
-- [Component Overview Diagram](../diagrams/component_overview.puml) (Orchestration Section)
+- [Component Overview Diagram](../../diagrams/component_overview.puml) (Orchestration Section)
 - Blueprint Foundation (generated: `.codemachine/artifacts/architecture/01_Blueprint_Foundation.md`) (Context, Research, PRD, Spec, Task Planning, Execution, Resume, Validation)
 
 **Adapter Boundary:**
 
-- [Component Overview Diagram](../diagrams/component_overview.puml) (Adapter Section)
+- [Component Overview Diagram](../../diagrams/component_overview.puml) (Adapter Section)
 - [Rate Limit Reference](../cli/rate_limit_reference.md) (HTTP Client)
 - Blueprint Foundation (generated: `.codemachine/artifacts/architecture/01_Blueprint_Foundation.md`) (GitHub, Linear, Agent, Git, Deployment, Notification adapters)
 
 **Persistence:**
 
 - [Run Directory Schema](../run_directory_schema.md)
-- [Run Directory Diagram](../diagrams/run_directory_schema.mmd)
+- [Run Directory Diagram](../../diagrams/run_directory_schema.mmd)
 - Blueprint Foundation (generated: `.codemachine/artifacts/architecture/01_Blueprint_Foundation.md`) (Run Directory Manager, Artifact Bundle)
 
 **Observability:**
