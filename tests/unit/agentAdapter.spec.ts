@@ -19,6 +19,7 @@ import type { CostTracker } from '../../src/telemetry/costTracker';
 import type { StructuredLogger } from '../../src/telemetry/logger';
 import {
   AgentAdapter,
+  AgentAdapterError,
   createAgentAdapter,
   mapTaskTypeToContext,
   CONTEXT_REQUIREMENTS,
@@ -637,6 +638,15 @@ describe('AgentAdapter - Fallback Logic', () => {
     });
   });
 
+  function createRetryAfterError(retryAfterSeconds: number): AgentAdapterError {
+    return new AgentAdapterError({
+      category: 'transient',
+      message: 'Rate limit exceeded - 429',
+      retryAfterSeconds,
+      timestamp: new Date().toISOString(),
+    });
+  }
+
   it('should use fallback provider on transient error', async () => {
     let invokeCount = 0;
     providerInvoker.mockImplementation(
@@ -672,6 +682,93 @@ describe('AgentAdapter - Fallback Logic', () => {
     expect(logger.spies.info).toHaveBeenCalledWith(
       'Attempting fallback provider',
       expect.objectContaining({ fallbackProviderId: 'fallback-provider' })
+    );
+  });
+
+  it('should cap retry-after values above 300 seconds before sleeping', async () => {
+    const sleepSpy = vi.spyOn(adapter as unknown as { sleep: (ms: number) => Promise<void> }, 'sleep');
+    sleepSpy.mockResolvedValue();
+
+    let invokeCount = 0;
+    providerInvoker.mockImplementation((manifest, _request, sessionId, _startTime, fallbackAttempts) => {
+      invokeCount++;
+      if (invokeCount === 1) {
+        return Promise.reject(createRetryAfterError(600));
+      }
+      return Promise.resolve(createProviderResponse(manifest, sessionId, fallbackAttempts));
+    });
+
+    const request: AgentSessionRequest = {
+      context: 'code_generation',
+      prompt: { instruction: 'Test' },
+      taskId: 'task-1',
+      featureId: 'FEAT-1',
+    };
+
+    await adapter.executeSession(request);
+
+    expect(sleepSpy).toHaveBeenCalledWith(300_000);
+    expect(logger.spies.warn).toHaveBeenCalledWith(
+      'Capping retry-after from external API',
+      expect.objectContaining({ original: 600, capped: 300 })
+    );
+  });
+
+  it('should honor retry-after of exactly 300 seconds without capping', async () => {
+    const sleepSpy = vi.spyOn(adapter as unknown as { sleep: (ms: number) => Promise<void> }, 'sleep');
+    sleepSpy.mockResolvedValue();
+
+    let invokeCount = 0;
+    providerInvoker.mockImplementation((manifest, _request, sessionId, _startTime, fallbackAttempts) => {
+      invokeCount++;
+      if (invokeCount === 1) {
+        return Promise.reject(createRetryAfterError(300));
+      }
+      return Promise.resolve(createProviderResponse(manifest, sessionId, fallbackAttempts));
+    });
+
+    const request: AgentSessionRequest = {
+      context: 'code_generation',
+      prompt: { instruction: 'Test' },
+      taskId: 'task-1',
+      featureId: 'FEAT-1',
+    };
+
+    await adapter.executeSession(request);
+
+    expect(sleepSpy).toHaveBeenCalledWith(300_000);
+    expect(logger.spies.warn).not.toHaveBeenCalledWith(
+      'Capping retry-after from external API',
+      expect.any(Object)
+    );
+  });
+
+  it('should preserve retry-after values below 300 seconds', async () => {
+    const sleepSpy = vi.spyOn(adapter as unknown as { sleep: (ms: number) => Promise<void> }, 'sleep');
+    sleepSpy.mockResolvedValue();
+
+    let invokeCount = 0;
+    providerInvoker.mockImplementation((manifest, _request, sessionId, _startTime, fallbackAttempts) => {
+      invokeCount++;
+      if (invokeCount === 1) {
+        return Promise.reject(createRetryAfterError(120));
+      }
+      return Promise.resolve(createProviderResponse(manifest, sessionId, fallbackAttempts));
+    });
+
+    const request: AgentSessionRequest = {
+      context: 'code_generation',
+      prompt: { instruction: 'Test' },
+      taskId: 'task-1',
+      featureId: 'FEAT-1',
+    };
+
+    await adapter.executeSession(request);
+
+    expect(sleepSpy).toHaveBeenCalledWith(120_000);
+    expect(logger.spies.warn).not.toHaveBeenCalledWith(
+      'Capping retry-after from external API',
+      expect.any(Object)
     );
   });
 

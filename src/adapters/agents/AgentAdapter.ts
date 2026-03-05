@@ -60,6 +60,7 @@ import type {
 
 const TELEMETRY_FILENAME = 'agent_sessions.jsonl';
 const RATE_LIMIT_WINDOW_MS = 60 * 60 * 1000; // 1 hour sliding window
+const MAX_RETRY_WAIT_SECONDS = 300; // Cap external retry-after at 5 minutes
 
 // Error classification patterns — module-level constants prevent repeated recompilation
 const TRANSIENT_PATTERNS = /timeout|rate limit|503|429|network|connection/i;
@@ -331,11 +332,19 @@ export class AgentAdapter {
     }
 
     if (agentError.retryAfterSeconds) {
+      const cappedSeconds = Math.min(agentError.retryAfterSeconds, MAX_RETRY_WAIT_SECONDS);
+      if (cappedSeconds < agentError.retryAfterSeconds) {
+        this.logger.warn('Capping retry-after from external API', {
+          sessionId,
+          original: agentError.retryAfterSeconds,
+          capped: cappedSeconds,
+        });
+      }
       this.logger.info('Waiting before fallback retry', {
         sessionId,
-        retryAfterSeconds: agentError.retryAfterSeconds,
+        retryAfterSeconds: cappedSeconds,
       });
-      await this.sleep(agentError.retryAfterSeconds * 1000);
+      await this.sleep(cappedSeconds * 1000);
     }
 
     this.logger.info('Attempting fallback provider', {
