@@ -324,7 +324,7 @@ If you encounter issues during migration:
    ```
 
 3. **Community support:**
-   - GitHub Issues: https://github.com/your-org/codemachine-pipeline/issues
+   - GitHub Issues: https://github.com/KingInYellows/codemachine-pipeline/issues
    - Team Slack: #codemachine-pipeline channel
 
 4. **Emergency rollback:**
