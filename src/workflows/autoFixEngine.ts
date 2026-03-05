@@ -602,7 +602,7 @@ function resolveWorkingDirectory(repoRoot: string, commandCwd: string, override?
  * Blocks characters that enable shell injection or corrupt parseCommandString argument boundaries.
  * Allows parens, brackets, etc. that are valid in filesystem paths.
  */
-const DANGEROUS_PATH_METACHARACTERS = /[|&;`$<>\x00'"\s]/u;
+const DANGEROUS_PATH_METACHARACTERS = /[|&;`$<>\u0000'"\s]/u;
 
 const BUILTIN_TEMPLATE_CONTEXT_KEYS = new Set([
   'feature_id',
