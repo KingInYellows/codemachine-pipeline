@@ -39,7 +39,9 @@ export function extractHeaders(headers: Headers): Record<string, string> {
 }
 
 /**
- * Sanitize URL by removing query parameters that might contain secrets
+ * Sanitize URL by redacting query parameters that might contain secrets.
+ * Known secret params (token, access_token, api_key, etc.) are removed entirely;
+ * other params matching sensitive field patterns have their values replaced with [REDACTED].
  */
 export function sanitizeUrl(url: string): string {
   try {
@@ -60,6 +62,8 @@ export function sanitizeUrl(url: string): string {
 /**
  * Sanitize headers by redacting authorization and sensitive values
  */
+const headerRedactor = new RedactionEngine(true);
+
 export function sanitizeHeaders(headers: Record<string, string>): Record<string, string> {
   const sanitized: Record<string, string> = {};
 
@@ -67,7 +71,7 @@ export function sanitizeHeaders(headers: Record<string, string>): Record<string,
     if (RedactionEngine.isSensitiveFieldName(key)) {
       sanitized[key] = REDACTED;
     } else {
-      sanitized[key] = value;
+      sanitized[key] = headerRedactor.redact(value);
     }
   }
 

@@ -487,7 +487,8 @@ The HTTP client sanitizes all logs to prevent token leakage:
 
 **URLs:**
 
-- Query parameters `token`, `access_token`, `api_key` are removed
+- Known secret parameters (`token`, `access_token`, `api_key`, etc.) are removed entirely
+- Other parameters matching sensitive field patterns are redacted as `[REDACTED]`
 
 **Ledger Storage:**
 

@@ -18,13 +18,15 @@ function truncateStr(str: string, maxLength: number): string {
   return `${str.substring(0, maxLength)}... (truncated)`;
 }
 
+const errorRedactor = new RedactionEngine(true);
+
 function sanitizeHttpHeaders(headers: Record<string, string>): Record<string, string> {
   const sanitized: Record<string, string> = {};
   for (const [key, value] of Object.entries(headers)) {
     if (RedactionEngine.isSensitiveFieldName(key)) {
       sanitized[key] = REDACTED;
     } else {
-      sanitized[key] = value;
+      sanitized[key] = errorRedactor.redact(value);
     }
   }
   return sanitized;
