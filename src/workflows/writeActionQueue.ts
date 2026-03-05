@@ -356,7 +356,7 @@ export class WriteActionQueue {
     );
   }
 
-  private statusDelta(
+  private static statusDelta(
     target: WriteActionStatus,
     oldStatus: WriteActionStatus,
     newStatus: WriteActionStatus
@@ -390,11 +390,11 @@ export class WriteActionQueue {
 
     await this.store.updateManifestCounts(
       0,
-      this.statusDelta(WriteActionStatus.PENDING, oldStatus, status),
-      this.statusDelta(WriteActionStatus.IN_PROGRESS, oldStatus, status),
-      this.statusDelta(WriteActionStatus.COMPLETED, oldStatus, status),
-      this.statusDelta(WriteActionStatus.FAILED, oldStatus, status),
-      this.statusDelta(WriteActionStatus.SKIPPED, oldStatus, status)
+      WriteActionQueue.statusDelta(WriteActionStatus.PENDING, oldStatus, status),
+      WriteActionQueue.statusDelta(WriteActionStatus.IN_PROGRESS, oldStatus, status),
+      WriteActionQueue.statusDelta(WriteActionStatus.COMPLETED, oldStatus, status),
+      WriteActionQueue.statusDelta(WriteActionStatus.FAILED, oldStatus, status),
+      WriteActionQueue.statusDelta(WriteActionStatus.SKIPPED, oldStatus, status)
     );
   }
 
