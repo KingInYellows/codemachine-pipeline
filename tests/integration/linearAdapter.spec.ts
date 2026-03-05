@@ -262,6 +262,53 @@ describe('LinearAdapter Integration Tests', () => {
       );
       expect(mockLogger.error).toHaveBeenCalledWith('Failed to fetch issue', expect.any(Object));
     });
+
+    it('should reject malformed issue IDs before fetching issue', async () => {
+      await expect(adapter.fetchIssue('---')).rejects.toMatchObject({
+        errorType: ErrorType.PERMANENT,
+      });
+      expect(mockHttpClient.post).not.toHaveBeenCalled();
+      expect(mockLogger.error).not.toHaveBeenCalledWith(
+        'Failed to fetch issue',
+        expect.any(Object)
+      );
+    });
+
+    it('should reject malformed issue IDs before fetching comments', async () => {
+      await expect(adapter.fetchComments('.')).rejects.toMatchObject({
+        errorType: ErrorType.PERMANENT,
+      });
+      expect(mockHttpClient.post).not.toHaveBeenCalled();
+      expect(mockLogger.error).not.toHaveBeenCalledWith(
+        'Failed to fetch comments',
+        expect.any(Object)
+      );
+    });
+
+    it('should allow single-segment opaque issue IDs', async () => {
+      mockHttpClient.post.mockResolvedValue({
+        status: 200,
+        headers: {},
+        data: MOCK_ISSUE_RESPONSE,
+        requestId: 'req_test',
+      });
+
+      const result = await adapter.fetchIssue('abc123');
+
+      expect(result).toEqual(MOCK_LINEAR_ISSUE);
+      expect(mockHttpClient.post).toHaveBeenCalledWith(
+        '/graphql',
+        expect.objectContaining({
+          variables: { issueId: 'abc123' },
+        }),
+        expect.objectContaining({
+          metadata: expect.objectContaining({
+            issueId: 'abc123',
+            operation: 'fetchIssue',
+          }),
+        }),
+      );
+    });
   });
 
   describe('Snapshot Caching', () => {
@@ -446,6 +493,42 @@ describe('LinearAdapter Integration Tests', () => {
         'Using stale cached snapshot due to API failure',
         expect.any(Object)
       );
+    });
+
+    it('should preserve permanent error types when returning a stale cached snapshot', async () => {
+      mockHttpClient.post
+        .mockResolvedValueOnce({
+          status: 200,
+          headers: {},
+          data: MOCK_ISSUE_RESPONSE,
+          requestId: 'req_test_1',
+        })
+        .mockResolvedValueOnce({
+          status: 200,
+          headers: {},
+          data: MOCK_COMMENTS_RESPONSE,
+          requestId: 'req_test_2',
+        });
+
+      await adapter.fetchIssueSnapshot(MOCK_LINEAR_ISSUE.id);
+
+      mockHttpClient.post.mockClear();
+      mockHttpClient.post.mockRejectedValue(
+        new LinearAdapterError(
+          'Issue not found',
+          ErrorType.PERMANENT,
+          404,
+          'req_test_3',
+          'fetchIssue'
+        )
+      );
+
+      const snapshot = await adapter.fetchIssueSnapshot(MOCK_LINEAR_ISSUE.id, {
+        forceRefresh: true,
+      });
+
+      expect(snapshot.issue.identifier).toBe('ENG-123');
+      expect(snapshot.metadata.last_error?.type).toBe(ErrorType.PERMANENT);
     });
 
     it('should throw error when API fails and no cache exists', async () => {
@@ -684,6 +767,38 @@ describe('LinearAdapter Integration Tests', () => {
           body: 'Test comment',
         })
       ).rejects.toThrow('Comment posting requires preview features to be enabled');
+    });
+
+    it('should reject malformed issue IDs before update', async () => {
+      await expect(
+        previewAdapter.updateIssue({
+          issueId: 'bad/id',
+          title: 'Updated title',
+        })
+      ).rejects.toMatchObject({
+        errorType: ErrorType.PERMANENT,
+      });
+      expect(mockHttpClient.post).not.toHaveBeenCalled();
+      expect(mockLogger.error).not.toHaveBeenCalledWith(
+        'Failed to update issue',
+        expect.any(Object)
+      );
+    });
+
+    it('should reject malformed issue IDs before posting comment', async () => {
+      await expect(
+        previewAdapter.postComment({
+          issueId: '..',
+          body: 'Test comment',
+        })
+      ).rejects.toMatchObject({
+        errorType: ErrorType.PERMANENT,
+      });
+      expect(mockHttpClient.post).not.toHaveBeenCalled();
+      expect(mockLogger.error).not.toHaveBeenCalledWith(
+        'Failed to post comment',
+        expect.any(Object)
+      );
     });
 
     it('should handle update failure gracefully', async () => {

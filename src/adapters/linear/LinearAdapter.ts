@@ -152,6 +152,9 @@ const RATE_LIMIT_PER_HOUR = 1500;
 const DEFAULT_CACHE_TTL = 3600; // 1 hour in seconds
 const RATE_LIMIT_WINDOW_MS = 60 * 60 * 1000; // 1 hour sliding window
 const SNAPSHOT_DIR = 'inputs';
+const LINEAR_ISSUE_IDENTIFIER_PATTERN = /^[A-Z][A-Z0-9]*-\d+$/;
+const STRUCTURED_OPAQUE_ISSUE_ID_PATTERN =
+  /^(?:[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}|[A-Za-z0-9]+(?:-[A-Za-z0-9]+)*)$/;
 
 /**
  * Linear adapter for issue operations via MCP
@@ -215,6 +218,7 @@ export class LinearAdapter {
       noCache?: boolean;
     }
   ): Promise<IssueSnapshot> {
+    LinearAdapter.validateIssueId(issueId);
     // Check cache first unless noCache or forceRefresh
     if (this.runDir && !options?.noCache && !options?.forceRefresh) {
       const cachedSnapshot = await this.loadCachedSnapshot(issueId);
@@ -264,7 +268,12 @@ export class LinearAdapter {
           cachedSnapshot.metadata.last_error = {
             timestamp: new Date().toISOString(),
             message: this.formatError(error),
-            type: error instanceof HttpError ? error.type : ErrorType.TRANSIENT,
+            type:
+              error instanceof LinearAdapterError
+                ? error.errorType
+                : error instanceof HttpError
+                  ? error.type
+                  : ErrorType.TRANSIENT,
           };
 
           this.logger.warn('Using stale cached snapshot due to API failure', {
@@ -289,7 +298,7 @@ export class LinearAdapter {
    * Fetch issue details from Linear API
    */
   async fetchIssue(issueId: string): Promise<LinearIssue> {
-    this.validateIssueId(issueId);
+    LinearAdapter.validateIssueId(issueId);
     try {
       const data = await this.executeGraphQL<{ data: { issue: LinearIssue } }>(
         'fetchIssue',
@@ -322,7 +331,7 @@ export class LinearAdapter {
    * Fetch comments for an issue
    */
   async fetchComments(issueId: string): Promise<LinearComment[]> {
-    this.validateIssueId(issueId);
+    LinearAdapter.validateIssueId(issueId);
     try {
       const data = await this.executeGraphQL<{
         data: { issue: { comments: { nodes: LinearComment[] } } };
@@ -342,7 +351,6 @@ export class LinearAdapter {
    * Update issue (only if preview features enabled)
    */
   async updateIssue(params: UpdateIssueParams): Promise<void> {
-    this.validateIssueId(params.issueId);
     if (!this.enablePreviewFeatures) {
       throw new LinearAdapterError(
         'Issue updates require preview features to be enabled',
@@ -353,6 +361,7 @@ export class LinearAdapter {
       );
     }
 
+    LinearAdapter.validateIssueId(params.issueId);
     try {
       const variables: {
         issueId: string;
@@ -390,7 +399,6 @@ export class LinearAdapter {
    * Post comment to issue (only if preview features enabled)
    */
   async postComment(params: PostCommentParams): Promise<void> {
-    this.validateIssueId(params.issueId);
     if (!this.enablePreviewFeatures) {
       throw new LinearAdapterError(
         'Comment posting requires preview features to be enabled',
@@ -401,6 +409,7 @@ export class LinearAdapter {
       );
     }
 
+    LinearAdapter.validateIssueId(params.issueId);
     try {
       const data = await this.executeGraphQL<{
         data: { commentCreate: { success: boolean } };
@@ -514,8 +523,10 @@ export class LinearAdapter {
     return crypto.createHash('sha256').update(content).digest('hex');
   }
 
-  private validateIssueId(issueId: string): void {
-    if (!issueId || issueId.length > 100 || !/^[A-Z][A-Z0-9]*-\d+$/.test(issueId)) {
+  private static validateIssueId(issueId: string): void {
+    const isLinearIdentifier = LINEAR_ISSUE_IDENTIFIER_PATTERN.test(issueId);
+    const isStructuredOpaqueId = STRUCTURED_OPAQUE_ISSUE_ID_PATTERN.test(issueId);
+    if (!issueId || issueId.length > 100 || (!isLinearIdentifier && !isStructuredOpaqueId)) {
       throw new LinearAdapterError(
         `Invalid Linear issue ID: ${JSON.stringify(issueId)}`,
         ErrorType.PERMANENT,
@@ -527,7 +538,7 @@ export class LinearAdapter {
   }
 
   private getSnapshotPath(issueId: string): string {
-    this.validateIssueId(issueId);
+    LinearAdapter.validateIssueId(issueId);
     return path.join(this.runDir!, SNAPSHOT_DIR, `linear_issue_${issueId}.json`);
   }
 
