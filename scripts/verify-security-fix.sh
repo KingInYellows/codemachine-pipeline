@@ -31,7 +31,7 @@ echo ""
 
 # Test 2: Verify execFile is imported
 echo "2. Checking for execFile import..."
-if grep -q "import.*execFile.*from.*node:child_process" src/workflows/autoFixEngine.ts; then
+if grep -q "import.*execFile.*from.*node:child_process" src/workflows/commandRunner.ts; then
     echo -e "${GREEN}✓ PASSED${NC}: execFile is imported"
     PASSED=$((PASSED + 1))
 else
@@ -42,7 +42,7 @@ echo ""
 
 # Test 3: Verify parseCommandString function exists
 echo "3. Checking for parseCommandString function..."
-if grep -q "function parseCommandString" src/workflows/autoFixEngine.ts; then
+if grep -q "function parseCommandString" src/workflows/commandRunner.ts; then
     echo -e "${GREEN}✓ PASSED${NC}: parseCommandString function exists"
     PASSED=$((PASSED + 1))
 else
@@ -51,13 +51,13 @@ else
 fi
 echo ""
 
-# Test 4: Verify SHELL_METACHARACTERS detection
-echo "4. Checking for shell metacharacter detection..."
-if grep -q "SHELL_METACHARACTERS" src/workflows/autoFixEngine.ts; then
-    echo -e "${GREEN}✓ PASSED${NC}: Shell metacharacter detection implemented"
+# Test 4: Verify metacharacter detection
+echo "4. Checking for metacharacter detection..."
+if grep -q "TEMPLATE_VALUE_METACHARACTERS\|DANGEROUS_PATH_METACHARACTERS" src/workflows/autoFixEngine.ts; then
+    echo -e "${GREEN}✓ PASSED${NC}: Metacharacter detection implemented"
     PASSED=$((PASSED + 1))
 else
-    echo -e "${RED}✗ FAILED${NC}: Shell metacharacter detection not found"
+    echo -e "${RED}✗ FAILED${NC}: Metacharacter detection not found"
     FAILED=$((FAILED + 1))
 fi
 echo ""
