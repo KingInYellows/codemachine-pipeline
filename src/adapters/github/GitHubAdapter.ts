@@ -97,7 +97,7 @@ export class GitHubAdapter {
       baseUrl,
       provider: Provider.GITHUB,
       token: config.token,
-      apiVersion: config.apiVersion,
+      ...(config.apiVersion !== undefined ? { apiVersion: config.apiVersion } : {}),
       maxRetries: config.maxRetries ?? 3,
       logger: this.logger,
     };
