@@ -132,7 +132,7 @@ export async function executeShellCommand(
   const startTime = Date.now();
 
   // Security check: Detect shell metacharacters
-  if (SHELL_METACHARACTERS.test(command) || command.includes('\0')) {
+  if (SHELL_METACHARACTERS.test(command)) {
     options.logger?.warn('Command contains shell metacharacters - potential security risk', {
       command,
       metacharacters_detected: true,

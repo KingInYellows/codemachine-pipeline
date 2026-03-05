@@ -602,10 +602,7 @@ function resolveWorkingDirectory(repoRoot: string, commandCwd: string, override?
  * Blocks characters that enable shell injection or corrupt parseCommandString argument boundaries.
  * Allows parens, brackets, etc. that are valid in filesystem paths.
  */
-const DANGEROUS_PATH_METACHARACTERS = new RegExp(
-  `[|&;\`$<>'"${String.fromCharCode(0)}]|\\s`,
-  'u'
-);
+const DANGEROUS_PATH_METACHARACTERS = new RegExp(`[|&;\`$<>'"${String.fromCharCode(0)}]|\\s`, 'u');
 
 const BUILTIN_TEMPLATE_CONTEXT_KEYS = new Set([
   'feature_id',
@@ -624,7 +621,7 @@ function buildCommandTemplateContext(
     if (BUILTIN_TEMPLATE_CONTEXT_KEYS.has(key)) {
       throw new Error(`Template context key "${key}" conflicts with built-in template key`);
     }
-    if (TEMPLATE_VALUE_METACHARACTERS.test(value) || value.includes('\0')) {
+    if (TEMPLATE_VALUE_METACHARACTERS.test(value)) {
       throw new Error(
         `Template context value for "${key}" contains shell metacharacters which are not permitted`
       );
@@ -647,7 +644,7 @@ function applyCommandTemplate(template: string, context: Record<string, string>)
     const metacharacterPattern = BUILTIN_TEMPLATE_CONTEXT_KEYS.has(key)
       ? DANGEROUS_PATH_METACHARACTERS
       : TEMPLATE_VALUE_METACHARACTERS;
-    if (metacharacterPattern.test(value) || value.includes('\0')) {
+    if (metacharacterPattern.test(value)) {
       throw new Error(`Template substitution for "${key}" contains shell metacharacters`);
     }
     return value;
