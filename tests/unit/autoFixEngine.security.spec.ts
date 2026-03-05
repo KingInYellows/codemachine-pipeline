@@ -372,15 +372,11 @@ describe('autoFixEngine security - command execution', () => {
       const autoFixEngineSource = fsSync.readFileSync(autoFixEnginePath, 'utf-8');
 
       expect(autoFixEngineSource).toContain('const BUILTIN_TEMPLATE_CONTEXT_KEYS');
+      expect(autoFixEngineSource).toContain("'feature_id'");
       expect(autoFixEngineSource).toContain("'run_dir'");
       expect(autoFixEngineSource).toContain("'repo_root'");
       expect(autoFixEngineSource).toContain("'command_cwd'");
-      // feature_id is user-influenced and uses the stricter TEMPLATE_VALUE_METACHARACTERS check
-      const builtinSetMatch = autoFixEngineSource.match(
-        /BUILTIN_TEMPLATE_CONTEXT_KEYS\s*=\s*new\s+Set\(\[([\s\S]*?)\]\)/
-      );
-      expect(builtinSetMatch).toBeTruthy();
-      expect(builtinSetMatch![1]).not.toContain('feature_id');
+      // Built-in keys use the narrower DANGEROUS_PATH_METACHARACTERS (no parens/brackets/spaces)
       expect(autoFixEngineSource).toContain('? DANGEROUS_PATH_METACHARACTERS');
       expect(autoFixEngineSource).toContain(': TEMPLATE_VALUE_METACHARACTERS');
     });

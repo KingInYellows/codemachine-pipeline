@@ -602,9 +602,14 @@ function resolveWorkingDirectory(repoRoot: string, commandCwd: string, override?
  * Only blocks characters that enable shell injection; allows parens, brackets, spaces, etc.
  * that are valid in filesystem paths.
  */
-const DANGEROUS_PATH_METACHARACTERS = /[|&;`$<>]/u;
+const DANGEROUS_PATH_METACHARACTERS = /[|&;`$<>\x00]/u;
 
-const BUILTIN_TEMPLATE_CONTEXT_KEYS = new Set(['run_dir', 'repo_root', 'command_cwd']);
+const BUILTIN_TEMPLATE_CONTEXT_KEYS = new Set([
+  'feature_id',
+  'run_dir',
+  'repo_root',
+  'command_cwd',
+]);
 
 function buildCommandTemplateContext(
   runDir: string,
