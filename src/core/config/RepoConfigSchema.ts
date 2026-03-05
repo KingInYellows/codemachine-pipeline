@@ -198,7 +198,7 @@ export const ExecutionConfigSchema = z.object({
     .min(1024)
     .max(100 * 1024 * 1024)
     .default(10 * 1024 * 1024),
-  env_allowlist: z.array(z.string()).default([]),
+  env_allowlist: z.array(z.string().regex(ENV_VAR_NAME, ENV_VAR_MSG)).default([]),
   max_retries: z.number().int().min(0).max(10).default(3),
   retry_backoff_ms: z.number().int().min(1000).default(5000),
   log_rotation_mb: z.number().int().min(1).max(10240).default(100),
@@ -213,7 +213,7 @@ export const ExecutionConfigSchema = z.object({
     .optional()
     .describe('Path to workflow template overrides directory'),
   env_credential_keys: z
-    .array(z.string())
+    .array(z.string().regex(ENV_VAR_NAME, ENV_VAR_MSG))
     .default([])
     .describe('Env var names to pipe to CodeMachine-CLI via stdin'),
 });

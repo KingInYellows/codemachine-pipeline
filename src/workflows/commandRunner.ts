@@ -14,7 +14,13 @@ import { getErrorMessage } from '../utils/errors.js';
  * Shell metacharacters that indicate shell interpretation is required.
  * These characters can enable command injection if user input contains them.
  */
-export const SHELL_METACHARACTERS = /[|&;`$<>(){}[\]!*?~#]/;
+export const SHELL_METACHARACTERS = /[|&;`$<>(){}[\]!*?~#"'\x00]/;
+
+/**
+ * Stricter metacharacter check for user-provided template values.
+ * Includes whitespace to block multi-token substitutions.
+ */
+export const TEMPLATE_VALUE_METACHARACTERS = /[|&;`$<>(){}[\]!*?~#"'\s\x00]/;
 
 /**
  * Parse command string into executable and arguments array.

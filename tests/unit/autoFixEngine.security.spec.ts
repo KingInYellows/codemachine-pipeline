@@ -11,6 +11,10 @@ import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
+import {
+  SHELL_METACHARACTERS,
+  TEMPLATE_VALUE_METACHARACTERS,
+} from '../../src/workflows/commandRunner';
 
 // Access the private executeShellCommand function via module internals for testing
 // This is necessary to test the security fix directly without full integration setup
@@ -29,9 +33,6 @@ const executeShellCommandForTesting = async (
   }
 ): Promise<{ exitCode: number; stdout: string; stderr: string; durationMs: number }> => {
   const startTime = Date.now();
-
-  // Shell metacharacters detection (matching implementation)
-  const SHELL_METACHARACTERS = /[|&;`$<>(){}[\]!*?~#]/;
 
   // Parse command into executable and arguments (simplified for testing)
   function parseCommandString(command: string): [string, string[]] {
@@ -354,25 +355,28 @@ describe('autoFixEngine security - command execution', () => {
     });
 
     test('SECURITY FIX: Shell metacharacter detection is implemented', async () => {
-      const fsSync = await import('node:fs');
-      const autoFixEnginePath = path.join(__dirname, '../../src/workflows/autoFixEngine.ts');
-      const sourceCode = fsSync.readFileSync(autoFixEnginePath, 'utf-8');
-
-      expect(sourceCode).toContain('SHELL_METACHARACTERS');
-      expect(sourceCode).toMatch(/\[|&;`\$<>\(\)\{\}\[\]!\*\?~#\]/);
+      expect(SHELL_METACHARACTERS.test('|')).toBe(true);
+      expect(SHELL_METACHARACTERS.test('npm run lint')).toBe(false);
+      expect(SHELL_METACHARACTERS.test('\x00')).toBe(true);
     });
 
-    test('SECURITY FIX: applyCommandTemplate validates substitutions for metacharacters (CDMCH-215)', async () => {
+    test('SECURITY FIX: template substitutions use stricter metacharacter checks (CDMCH-215)', () => {
+      expect(TEMPLATE_VALUE_METACHARACTERS.test('safeValue')).toBe(false);
+      expect(TEMPLATE_VALUE_METACHARACTERS.test('unsafe value')).toBe(true);
+      expect(TEMPLATE_VALUE_METACHARACTERS.test('unsafe;value')).toBe(true);
+    });
+
+    test('SECURITY FIX: built-in template path values use shell-metacharacter checks only', async () => {
       const fsSync = await import('node:fs');
       const autoFixEnginePath = path.join(__dirname, '../../src/workflows/autoFixEngine.ts');
-      const sourceCode = fsSync.readFileSync(autoFixEnginePath, 'utf-8');
+      const autoFixEngineSource = fsSync.readFileSync(autoFixEnginePath, 'utf-8');
 
-      // Verify applyCommandTemplate itself checks for metacharacters (defense-in-depth)
-      const applyFnMatch = sourceCode.match(/function applyCommandTemplate[\s\S]*?^}/m);
-      expect(applyFnMatch).not.toBeNull();
-      const applyFnBody = applyFnMatch![0];
-      expect(applyFnBody).toContain('SHELL_METACHARACTERS');
-      expect(applyFnBody).toContain('shell metacharacters');
+      expect(autoFixEngineSource).toContain('const BUILTIN_TEMPLATE_CONTEXT_KEYS');
+      expect(autoFixEngineSource).toContain("'run_dir'");
+      expect(autoFixEngineSource).toContain("'repo_root'");
+      expect(autoFixEngineSource).toContain("'command_cwd'");
+      expect(autoFixEngineSource).toContain('? SHELL_METACHARACTERS');
+      expect(autoFixEngineSource).toContain(': TEMPLATE_VALUE_METACHARACTERS');
     });
 
     test('SECURITY FIX: Command parsing function prevents shell interpretation', async () => {

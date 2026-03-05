@@ -24,7 +24,11 @@ import {
   summarizeError,
   getRequiredCommands,
 } from './validationRegistry';
-import { SHELL_METACHARACTERS, executeShellCommand } from './commandRunner.js';
+import {
+  SHELL_METACHARACTERS,
+  TEMPLATE_VALUE_METACHARACTERS,
+  executeShellCommand,
+} from './commandRunner.js';
 import { filterEnvironment } from '../utils/envFilter.js';
 
 /**
@@ -597,6 +601,8 @@ function resolveWorkingDirectory(repoRoot: string, commandCwd: string, override?
   return path.isAbsolute(commandCwd) ? commandCwd : path.resolve(repoRoot, commandCwd);
 }
 
+const BUILTIN_TEMPLATE_CONTEXT_KEYS = new Set(['feature_id', 'run_dir', 'repo_root', 'command_cwd']);
+
 function buildCommandTemplateContext(
   runDir: string,
   repoRoot: string,
@@ -604,7 +610,7 @@ function buildCommandTemplateContext(
   templateContext?: Record<string, string>
 ): Record<string, string> {
   for (const [key, value] of Object.entries(templateContext ?? {})) {
-    if (SHELL_METACHARACTERS.test(value)) {
+    if (TEMPLATE_VALUE_METACHARACTERS.test(value)) {
       throw new Error(
         `Template context value for "${key}" contains shell metacharacters which are not permitted`
       );
@@ -622,9 +628,12 @@ function buildCommandTemplateContext(
 
 function applyCommandTemplate(template: string, context: Record<string, string>): string {
   return template.replace(/\{\{\s*([\w.-]+)\s*\}\}/g, (_, key: string) => {
-    const value = context[key];
+    const value = Object.hasOwn(context, key) ? context[key] : undefined;
     if (value === undefined) return '';
-    if (SHELL_METACHARACTERS.test(value)) {
+    const metacharacterPattern = BUILTIN_TEMPLATE_CONTEXT_KEYS.has(key)
+      ? SHELL_METACHARACTERS
+      : TEMPLATE_VALUE_METACHARACTERS;
+    if (metacharacterPattern.test(value)) {
       throw new Error(`Template substitution for "${key}" contains shell metacharacters`);
     }
     return value;
