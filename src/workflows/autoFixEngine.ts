@@ -601,7 +601,12 @@ function resolveWorkingDirectory(repoRoot: string, commandCwd: string, override?
   return path.isAbsolute(commandCwd) ? commandCwd : path.resolve(repoRoot, commandCwd);
 }
 
-const BUILTIN_TEMPLATE_CONTEXT_KEYS = new Set(['feature_id', 'run_dir', 'repo_root', 'command_cwd']);
+const BUILTIN_TEMPLATE_CONTEXT_KEYS = new Set([
+  'feature_id',
+  'run_dir',
+  'repo_root',
+  'command_cwd',
+]);
 
 function buildCommandTemplateContext(
   runDir: string,
