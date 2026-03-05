@@ -481,9 +481,9 @@ The HTTP client sanitizes all logs to prevent token leakage:
 
 **Headers:**
 
-- `Authorization`: Redacted as `***REDACTED***`
-- `X-API-Key`: Redacted as `***REDACTED***`
-- `Cookie`: Redacted as `***REDACTED***`
+- `Authorization`: Redacted as `[REDACTED]`
+- `X-API-Key`: Redacted as `[REDACTED]`
+- `Cookie`: Redacted as `[REDACTED]`
 
 **URLs:**
 

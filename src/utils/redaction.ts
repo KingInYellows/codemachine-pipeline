@@ -118,6 +118,32 @@ export interface RedactionReport {
 }
 
 export const REDACTED = '[REDACTED]';
+const SENSITIVE_FIELD_PATTERNS = [
+  'password',
+  'secret',
+  'token',
+  'api_key',
+  'apikey',
+  'authorization',
+  'credential',
+  'private_key',
+  'privatekey',
+  'cookie',
+  'x-api-key',
+] as const;
+const SENSITIVE_URL_QUERY_PARAM_NAMES = new Set([
+  'token',
+  'access_token',
+  'api_key',
+  'apikey',
+  'client_secret',
+  'refresh_token',
+  'id_token',
+  'auth_token',
+  'authorization',
+  'password',
+  'secret',
+]);
 
 export class RedactionEngine {
   private readonly patterns: ReadonlyArray<{ name: string; pattern: RegExp; replacement: string }>;
@@ -174,7 +200,7 @@ export class RedactionEngine {
 
       for (const [key, value] of Object.entries(obj)) {
         if (RedactionEngine.isSensitiveFieldName(key)) {
-          redacted[key] = '[REDACTED]';
+          redacted[key] = REDACTED;
         } else {
           redacted[key] = this.redactObject(value);
         }
@@ -188,24 +214,10 @@ export class RedactionEngine {
 
   static isSensitiveFieldName(name: string): boolean {
     const lowerName = name.toLowerCase();
-    const sensitiveNames = [
-      'password',
-      'secret',
-      'token',
-      'api_key',
-      'apikey',
-      'auth',
-      'authorization',
-      'proxy-authorization',
-      'credential',
-      'private_key',
-      'privatekey',
-      'cookie',
-      'set-cookie',
-      'x-api-key',
-      'x-csrf-token',
-    ];
+    return SENSITIVE_FIELD_PATTERNS.some((pattern) => lowerName.includes(pattern));
+  }
 
-    return sensitiveNames.some((pattern) => lowerName.includes(pattern));
+  static isSensitiveUrlQueryParamName(name: string): boolean {
+    return SENSITIVE_URL_QUERY_PARAM_NAMES.has(name.toLowerCase());
   }
 }

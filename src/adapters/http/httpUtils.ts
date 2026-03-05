@@ -44,10 +44,13 @@ export function extractHeaders(headers: Headers): Record<string, string> {
 export function sanitizeUrl(url: string): string {
   try {
     const parsed = new URL(url);
-    // Remove sensitive query parameters
-    parsed.searchParams.delete('token');
-    parsed.searchParams.delete('access_token');
-    parsed.searchParams.delete('api_key');
+    for (const key of [...parsed.searchParams.keys()]) {
+      if (RedactionEngine.isSensitiveUrlQueryParamName(key)) {
+        parsed.searchParams.delete(key);
+      } else if (RedactionEngine.isSensitiveFieldName(key)) {
+        parsed.searchParams.set(key, REDACTED);
+      }
+    }
     return parsed.toString();
   } catch {
     return url;

@@ -22,18 +22,49 @@ describe('RedactionEngine.isSensitiveFieldName', () => {
     'credential',
     'private_key',
     'privatekey',
-    'auth',
     'X-API-KEY',
   ])('should detect "%s" as sensitive', (name) => {
     expect(RedactionEngine.isSensitiveFieldName(name)).toBe(true);
   });
 
-  it.each(['content-type', 'accept', 'user-agent', 'x-request-id', 'cache-control', 'host'])(
-    'should not detect "%s" as sensitive',
-    (name) => {
-      expect(RedactionEngine.isSensitiveFieldName(name)).toBe(false);
-    }
-  );
+  it.each([
+    'content-type',
+    'accept',
+    'user-agent',
+    'x-request-id',
+    'cache-control',
+    'host',
+    'oauth_state',
+    'www-authenticate',
+    'x-auth-provider',
+  ])('should not detect "%s" as sensitive', (name) => {
+    expect(RedactionEngine.isSensitiveFieldName(name)).toBe(false);
+  });
+});
+
+describe('RedactionEngine.isSensitiveUrlQueryParamName', () => {
+  it.each([
+    'token',
+    'access_token',
+    'api_key',
+    'apikey',
+    'client_secret',
+    'refresh_token',
+    'id_token',
+    'authorization',
+  ])('should detect "%s" as a sensitive URL query parameter', (name) => {
+    expect(RedactionEngine.isSensitiveUrlQueryParamName(name)).toBe(true);
+  });
+
+  it.each([
+    'page_token',
+    'next_page_token',
+    'sync_token',
+    'continuation_token',
+    'oauth_state',
+  ])('should not detect "%s" as a sensitive URL query parameter', (name) => {
+    expect(RedactionEngine.isSensitiveUrlQueryParamName(name)).toBe(false);
+  });
 });
 
 describe('REDACTED constant', () => {
