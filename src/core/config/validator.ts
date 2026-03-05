@@ -19,6 +19,7 @@ import {
 } from './RepoConfig';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
+import { REDACTED } from '../../utils/redaction.js';
 
 export interface ValidatorOptions {
   /**
@@ -307,7 +308,7 @@ export function validateEnvironmentVariables(
     result[tokenVar] = {
       required: true,
       present: !!tokenValue,
-      value: tokenValue ? '***REDACTED***' : undefined,
+      value: tokenValue ? REDACTED : undefined,
     };
   }
 
@@ -318,7 +319,7 @@ export function validateEnvironmentVariables(
     result[keyVar] = {
       required: true,
       present: !!keyValue,
-      value: keyValue ? '***REDACTED***' : undefined,
+      value: keyValue ? REDACTED : undefined,
     };
   }
 
@@ -328,7 +329,7 @@ export function validateEnvironmentVariables(
   result[endpointVar] = {
     required: !config.runtime.agent_endpoint, // Required if not in config
     present: !!endpointValue || !!config.runtime.agent_endpoint,
-    value: endpointValue || config.runtime.agent_endpoint ? '***REDACTED***' : undefined,
+    value: endpointValue || config.runtime.agent_endpoint ? REDACTED : undefined,
   };
 
   return result;

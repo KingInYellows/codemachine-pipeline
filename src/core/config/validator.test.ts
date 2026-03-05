@@ -235,7 +235,7 @@ describe('validateEnvironmentVariables', () => {
     expect(result.GITHUB_TOKEN).toBeDefined();
     expect(result.GITHUB_TOKEN.required).toBe(true);
     expect(result.GITHUB_TOKEN.present).toBe(true);
-    expect(result.GITHUB_TOKEN.value).toBe('***REDACTED***');
+    expect(result.GITHUB_TOKEN.value).toBe('[REDACTED]');
   });
 
   it('should detect missing Linear API key', () => {
@@ -258,7 +258,7 @@ describe('validateEnvironmentVariables', () => {
 
     expect(result.AGENT_ENDPOINT).toBeDefined();
     expect(result.AGENT_ENDPOINT.present).toBe(true);
-    expect(result.AGENT_ENDPOINT.value).toBe('***REDACTED***');
+    expect(result.AGENT_ENDPOINT.value).toBe('[REDACTED]');
   });
 
   it('should detect agent endpoint from config', () => {
@@ -270,7 +270,7 @@ describe('validateEnvironmentVariables', () => {
 
     expect(result.AGENT_ENDPOINT).toBeDefined();
     expect(result.AGENT_ENDPOINT.present).toBe(true);
-    expect(result.AGENT_ENDPOINT.value).toBe('***REDACTED***');
+    expect(result.AGENT_ENDPOINT.value).toBe('[REDACTED]');
   });
 
   it('should not require credentials for disabled integrations', () => {
