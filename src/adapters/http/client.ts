@@ -74,6 +74,7 @@ export class HttpClient {
       baseUrl: config.baseUrl,
       provider: config.provider,
       token: config.token ?? '',
+      apiVersion: config.apiVersion ?? GITHUB_API_VERSION,
       runDir: config.runDir ?? '',
       defaultHeaders: config.defaultHeaders ?? {},
       timeout: config.timeout ?? DEFAULT_TIMEOUT,
@@ -322,7 +323,7 @@ export class HttpClient {
     // Provider-specific headers
     if (this.config.provider === Provider.GITHUB) {
       headers['Accept'] = ACCEPT_HEADER;
-      headers['X-GitHub-Api-Version'] = GITHUB_API_VERSION;
+      headers['X-GitHub-Api-Version'] = this.config.apiVersion;
     }
 
     // Authorization

@@ -11,6 +11,8 @@ import {
 } from '../validation/validationCommandConfig';
 import type { RepoConfig, ExecutionConfig } from './RepoConfigSchema';
 
+export const DEFAULT_GITHUB_API_VERSION = '2022-11-28';
+
 /**
  * Clone default validation commands to avoid shared mutable state
  */
@@ -50,6 +52,7 @@ export function createDefaultConfig(
       enabled: false,
       token_env_var: 'GITHUB_TOKEN',
       api_base_url: 'https://api.github.com',
+      api_version: DEFAULT_GITHUB_API_VERSION,
       required_scopes: ['repo', 'workflow'],
       default_reviewers: [],
       branch_protection: {
