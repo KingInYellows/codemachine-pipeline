@@ -44,6 +44,27 @@ interface DoctorPayload {
   timestamp: string;
 }
 
+type EnvCheckDetails = Record<string, string | number>;
+
+interface EnvCheckDescriptor {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Config type not fully specified for this usage
+  enabled: (c: any) => boolean;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Config type not fully specified for this usage
+  envVar: (c: any) => string;
+  label: string;
+  displayName?: (varName: string) => string;
+  failStatus: 'fail' | 'warn';
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Config type not fully specified for this usage
+  failRemediation: (c: any, varName: string) => string;
+  passMessage: string;
+  failMessage: string;
+  showValueInPass?: boolean;
+  /** Produce details for a passing check. Defaults to `{ length: value.length }` if omitted. */
+  passDetails?: (value: string) => EnvCheckDetails;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Config type not fully specified for this usage
+  resolveValue?: (c: any, varName: string) => string | undefined;
+}
+
 /**
  * Determine exit code and status from diagnostic check results.
  * Priority: credential failures (30) > environment failures (20) > config failures (10) > generic (1).
@@ -541,100 +562,88 @@ export default class Doctor extends Command {
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Config used for minimal property extraction only
   private checkEnvironmentVariables(config?: any): DiagnosticCheck[] {
-    const checks: DiagnosticCheck[] = [];
-
-    // Check if config was provided and is valid
     if (!config) {
-      checks.push({
-        name: 'Environment Variables',
-        category: 'credential',
-        status: 'warn',
-        message: 'Cannot check environment variables (config not found or invalid)',
-        remediation: 'Run "codepipe init" first',
-      });
-      return checks;
-    }
-
-    // Check GitHub token
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access -- Config type not fully specified for this usage
-    if (config.github?.enabled && config.github.token_env_var) {
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access -- Config type not fully specified for this usage
-      const tokenVar = config.github.token_env_var as string;
-      const token = process.env[tokenVar];
-
-      if (token) {
-        checks.push({
-          name: `${tokenVar} (GitHub)`,
-          category: 'credential',
-          status: 'pass',
-          message: 'Token present',
-          details: { length: token.length },
-        });
-      } else {
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access -- Config type not fully specified for this usage
-        const requiredScopes = (config.github.required_scopes ?? []) as string[];
-        checks.push({
-          name: `${tokenVar} (GitHub)`,
-          category: 'credential',
-          status: 'fail',
-          message: 'Token not set',
-          remediation: `Set ${tokenVar} with scopes: ${requiredScopes.join(', ')}`,
-        });
-      }
-    }
-
-    // Check Linear API key
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access -- Config type not fully specified for this usage
-    if (config.linear?.enabled && config.linear.api_key_env_var) {
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access -- Config type not fully specified for this usage
-      const keyVar = config.linear.api_key_env_var as string;
-      const key = process.env[keyVar];
-
-      if (key) {
-        checks.push({
-          name: `${keyVar} (Linear)`,
-          category: 'credential',
-          status: 'pass',
-          message: 'API key present',
-          details: { length: key.length },
-        });
-      } else {
-        checks.push({
-          name: `${keyVar} (Linear)`,
-          category: 'credential',
-          status: 'fail',
-          message: 'API key not set',
-          remediation: `Set ${keyVar} with a valid Linear API key`,
-        });
-      }
-    }
-
-    // Check agent endpoint
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access -- Config type not fully specified for this usage
-    if (config.runtime?.agent_endpoint_env_var) {
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access -- Config type not fully specified for this usage
-      const agentEndpoint =
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access -- Config type not fully specified for this usage
-        (config.runtime.agent_endpoint as string | undefined) ??
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access -- Config type not fully specified for this usage
-        process.env[config.runtime.agent_endpoint_env_var as string];
-      if (!agentEndpoint) {
-        checks.push({
-          // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access -- Config type not fully specified for this usage
-          name: `${config.runtime.agent_endpoint_env_var as string} (Agent)`,
+      return [
+        {
+          name: 'Environment Variables',
           category: 'credential',
           status: 'warn',
-          message: 'Agent endpoint not configured',
-          // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access -- Config type not fully specified for this usage
-          remediation: `Set ${config.runtime.agent_endpoint_env_var as string} or add runtime.agent_endpoint to config`,
+          message: 'Cannot check environment variables (config not found or invalid)',
+          remediation: 'Run "codepipe init" first',
+        },
+      ];
+    }
+
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access -- Config type not fully specified for this usage
+    const envChecks: EnvCheckDescriptor[] = [
+      {
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access -- Config type not fully specified
+        enabled: (c) => Boolean(c.github?.enabled && c.github?.token_env_var),
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-return -- Config type not fully specified
+        envVar: (c) => c.github.token_env_var,
+        label: 'GitHub',
+        failStatus: 'fail',
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access -- Config type not fully specified
+        failRemediation: (c, v) =>
+          `Set ${v} with scopes: ${((c.github?.required_scopes ?? []) as string[]).join(', ')}`,
+        passMessage: 'Token present',
+        failMessage: 'Token not set',
+      },
+      {
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access -- Config type not fully specified
+        enabled: (c) => Boolean(c.linear?.enabled && c.linear?.api_key_env_var),
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-return -- Config type not fully specified
+        envVar: (c) => c.linear.api_key_env_var,
+        label: 'Linear',
+        failStatus: 'fail',
+        failRemediation: (_c, v) => `Set ${v} with a valid Linear API key`,
+        passMessage: 'API key present',
+        failMessage: 'API key not set',
+      },
+      {
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access -- Config type not fully specified
+        enabled: (c) => Boolean(c.runtime?.agent_endpoint_env_var),
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-return -- Config type not fully specified
+        envVar: (c) => c.runtime.agent_endpoint_env_var,
+        label: 'Agent',
+        failStatus: 'warn',
+        failRemediation: (_c, v) => `Set ${v} or add runtime.agent_endpoint to config`,
+        passMessage: 'Configured',
+        failMessage: 'Agent endpoint not configured',
+        displayName: () => 'Agent Endpoint',
+        showValueInPass: true,
+        passDetails: (value) => ({ endpoint: value }),
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access -- Config type not fully specified
+        resolveValue: (c, v) => (c.runtime?.agent_endpoint as string | undefined) ?? process.env[v],
+      },
+    ];
+
+    const checks: DiagnosticCheck[] = [];
+
+    for (const check of envChecks) {
+      if (!check.enabled(config)) continue;
+
+      const varName = check.envVar(config) as string;
+      const value = check.resolveValue ? check.resolveValue(config, varName) : process.env[varName];
+      const checkName = check.displayName
+        ? check.displayName(varName)
+        : `${varName} (${check.label})`;
+
+      if (value) {
+        checks.push({
+          name: checkName,
+          category: 'credential',
+          status: 'pass',
+          message: check.showValueInPass ? `${check.passMessage}: ${value}` : check.passMessage,
+          details: check.passDetails ? check.passDetails(value) : { length: value.length },
         });
       } else {
         checks.push({
-          name: `Agent Endpoint`,
+          name: checkName,
           category: 'credential',
-          status: 'pass',
-          message: `Configured: ${agentEndpoint}`,
-          details: { endpoint: agentEndpoint },
+          status: check.failStatus,
+          message: check.failMessage,
+          remediation: check.failRemediation(config, varName),
         });
       }
     }
