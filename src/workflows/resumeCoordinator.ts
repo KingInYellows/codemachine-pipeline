@@ -17,7 +17,6 @@ import type { ExecutionTelemetry } from '../telemetry/executionTelemetry';
 import {
   checkRunStatus,
   checkPendingApprovals,
-  checkIntegrity,
   analyzeLastError,
   checkQueueState,
   generateRecommendations,
@@ -26,10 +25,14 @@ import {
   type ResumeDiagnostic,
   type ResumeOptions,
 } from './runStateVerifier';
+import { checkIntegrity } from './resumeIntegrityChecker';
 import { checkQueueFiles } from './resumeQueueRecovery';
 
 // Re-export types for consumers
 export type { ResumeAnalysis, DiagnosticSeverity, ResumeDiagnostic, ResumeOptions };
+
+// Re-export integrity checker for backward compatibility
+export { checkIntegrity, type VerificationResult } from './resumeIntegrityChecker';
 
 // Re-export queue recovery helpers for backward compatibility
 export {
