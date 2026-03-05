@@ -289,6 +289,7 @@ export class LinearAdapter {
    * Fetch issue details from Linear API
    */
   async fetchIssue(issueId: string): Promise<LinearIssue> {
+    this.validateIssueId(issueId);
     try {
       const data = await this.executeGraphQL<{ data: { issue: LinearIssue } }>(
         'fetchIssue',
@@ -321,6 +322,7 @@ export class LinearAdapter {
    * Fetch comments for an issue
    */
   async fetchComments(issueId: string): Promise<LinearComment[]> {
+    this.validateIssueId(issueId);
     try {
       const data = await this.executeGraphQL<{
         data: { issue: { comments: { nodes: LinearComment[] } } };
@@ -340,6 +342,7 @@ export class LinearAdapter {
    * Update issue (only if preview features enabled)
    */
   async updateIssue(params: UpdateIssueParams): Promise<void> {
+    this.validateIssueId(params.issueId);
     if (!this.enablePreviewFeatures) {
       throw new LinearAdapterError(
         'Issue updates require preview features to be enabled',
@@ -387,6 +390,7 @@ export class LinearAdapter {
    * Post comment to issue (only if preview features enabled)
    */
   async postComment(params: PostCommentParams): Promise<void> {
+    this.validateIssueId(params.issueId);
     if (!this.enablePreviewFeatures) {
       throw new LinearAdapterError(
         'Comment posting requires preview features to be enabled',
@@ -510,10 +514,20 @@ export class LinearAdapter {
     return crypto.createHash('sha256').update(content).digest('hex');
   }
 
-  private getSnapshotPath(issueId: string): string {
+  private validateIssueId(issueId: string): void {
     if (!issueId || issueId.length > 100 || !/^[A-Z][A-Z0-9]*-\d+$/.test(issueId)) {
-      throw new Error(`Invalid Linear issue ID: ${JSON.stringify(issueId)}`);
+      throw new LinearAdapterError(
+        `Invalid Linear issue ID: ${JSON.stringify(issueId)}`,
+        ErrorType.PERMANENT,
+        undefined,
+        undefined,
+        'validateIssueId'
+      );
     }
+  }
+
+  private getSnapshotPath(issueId: string): string {
+    this.validateIssueId(issueId);
     return path.join(this.runDir!, SNAPSHOT_DIR, `linear_issue_${issueId}.json`);
   }
 
