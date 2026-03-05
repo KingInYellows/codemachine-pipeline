@@ -619,9 +619,7 @@ function buildCommandTemplateContext(
 ): Record<string, string> {
   for (const [key, value] of Object.entries(templateContext ?? {})) {
     if (BUILTIN_TEMPLATE_CONTEXT_KEYS.has(key)) {
-      throw new Error(
-        `Template context key "${key}" conflicts with built-in template key`
-      );
+      throw new Error(`Template context key "${key}" conflicts with built-in template key`);
     }
     if (TEMPLATE_VALUE_METACHARACTERS.test(value)) {
       throw new Error(
