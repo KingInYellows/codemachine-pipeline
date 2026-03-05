@@ -361,6 +361,7 @@ export class WriteActionQueue {
     oldStatus: WriteActionStatus,
     newStatus: WriteActionStatus
   ): number {
+    if (oldStatus === newStatus) return 0;
     if (newStatus === target) return 1;
     if (oldStatus === target) return -1;
     return 0;
@@ -393,7 +394,7 @@ export class WriteActionQueue {
       this.statusDelta(WriteActionStatus.IN_PROGRESS, oldStatus, status),
       this.statusDelta(WriteActionStatus.COMPLETED, oldStatus, status),
       this.statusDelta(WriteActionStatus.FAILED, oldStatus, status),
-      this.statusDelta(WriteActionStatus.SKIPPED, oldStatus, status),
+      this.statusDelta(WriteActionStatus.SKIPPED, oldStatus, status)
     );
   }
 
