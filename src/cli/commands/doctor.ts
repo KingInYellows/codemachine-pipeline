@@ -625,7 +625,9 @@ export default class Doctor extends Command {
 
       const varName = check.envVar(config);
       const value = check.resolveValue ? check.resolveValue(config, varName) : process.env[varName];
-      const checkName = check.displayName ? check.displayName(varName) : `${varName} (${check.label})`;
+      const checkName = check.displayName
+        ? check.displayName(varName)
+        : `${varName} (${check.label})`;
 
       if (value) {
         checks.push({
