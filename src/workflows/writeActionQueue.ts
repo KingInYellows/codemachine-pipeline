@@ -356,6 +356,16 @@ export class WriteActionQueue {
     );
   }
 
+  private statusDelta(
+    target: WriteActionStatus,
+    oldStatus: WriteActionStatus,
+    newStatus: WriteActionStatus
+  ): number {
+    if (newStatus === target) return 1;
+    if (oldStatus === target) return -1;
+    return 0;
+  }
+
   private async updateActionStatus(
     actionId: string,
     status: WriteActionStatus,
@@ -377,32 +387,13 @@ export class WriteActionQueue {
 
     await this.store.saveQueue(actions);
 
-    const pendingDelta =
-      status === WriteActionStatus.PENDING ? 1 : oldStatus === WriteActionStatus.PENDING ? -1 : 0;
-    const inProgressDelta =
-      status === WriteActionStatus.IN_PROGRESS
-        ? 1
-        : oldStatus === WriteActionStatus.IN_PROGRESS
-          ? -1
-          : 0;
-    const completedDelta =
-      status === WriteActionStatus.COMPLETED
-        ? 1
-        : oldStatus === WriteActionStatus.COMPLETED
-          ? -1
-          : 0;
-    const failedDelta =
-      status === WriteActionStatus.FAILED ? 1 : oldStatus === WriteActionStatus.FAILED ? -1 : 0;
-    const skippedDelta =
-      status === WriteActionStatus.SKIPPED ? 1 : oldStatus === WriteActionStatus.SKIPPED ? -1 : 0;
-
     await this.store.updateManifestCounts(
       0,
-      pendingDelta,
-      inProgressDelta,
-      completedDelta,
-      failedDelta,
-      skippedDelta
+      this.statusDelta(WriteActionStatus.PENDING, oldStatus, status),
+      this.statusDelta(WriteActionStatus.IN_PROGRESS, oldStatus, status),
+      this.statusDelta(WriteActionStatus.COMPLETED, oldStatus, status),
+      this.statusDelta(WriteActionStatus.FAILED, oldStatus, status),
+      this.statusDelta(WriteActionStatus.SKIPPED, oldStatus, status),
     );
   }
 
