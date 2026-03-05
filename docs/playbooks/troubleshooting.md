@@ -804,7 +804,7 @@ grep '"level":"error"' .codepipe/runs/<feature_id>/logs/execution.ndjson | \
 ### GitHub Issues
 
 Report bugs and request features:
-https://github.com/your-org/codemachine-pipeline/issues
+https://github.com/KingInYellows/codemachine-pipeline/issues
 
 ### Log Files to Include When Reporting Bugs
 

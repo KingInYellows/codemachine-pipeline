@@ -13,10 +13,7 @@
       "pattern": "^https://github.com/settings/"
     },
     {
-      "pattern": "^https://github.com/KingInYellows/codemachine-pipeline/issues"
-    },
-    {
-      "pattern": "^https://github.com/your-org/"
+      "pattern": "^https://github.com/KingInYellows/"
     }
   ],
   "replacementPatterns": [],

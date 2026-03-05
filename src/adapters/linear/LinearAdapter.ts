@@ -372,8 +372,6 @@ export class LinearAdapter {
       if (!data.data?.issueUpdate?.success) {
         throw new Error('Issue update failed');
       }
-
-      this.logger.info('Issue updated successfully', { issueId: params.issueId });
     } catch (error) {
       this.logger.error('Failed to update issue', {
         issueId: params.issueId,
@@ -381,6 +379,8 @@ export class LinearAdapter {
       });
       throw this.normalizeError(error, 'updateIssue');
     }
+
+    this.logger.info('Issue updated successfully', { issueId: params.issueId });
   }
 
   /**
@@ -410,8 +410,6 @@ export class LinearAdapter {
       if (!data.data?.commentCreate?.success) {
         throw new Error('Comment creation failed');
       }
-
-      this.logger.info('Comment posted successfully', { issueId: params.issueId });
     } catch (error) {
       this.logger.error('Failed to post comment', {
         issueId: params.issueId,
@@ -419,6 +417,8 @@ export class LinearAdapter {
       });
       throw this.normalizeError(error, 'postComment');
     }
+
+    this.logger.info('Comment posted successfully', { issueId: params.issueId });
   }
 
   private async loadCachedSnapshot(issueId: string): Promise<IssueSnapshot | null> {
@@ -511,11 +511,10 @@ export class LinearAdapter {
   }
 
   private getSnapshotPath(issueId: string): string {
-    if (!issueId || issueId.length > 100 || !/^[a-zA-Z0-9-]+$/.test(issueId)) {
+    if (!issueId || issueId.length > 100 || !/^[A-Z][A-Z0-9]*-\d+$/.test(issueId)) {
       throw new Error(`Invalid Linear issue ID: ${JSON.stringify(issueId)}`);
     }
-    const sanitized = issueId.replace(/[^a-zA-Z0-9-]/g, '_');
-    return path.join(this.runDir!, SNAPSHOT_DIR, `linear_issue_${sanitized}.json`);
+    return path.join(this.runDir!, SNAPSHOT_DIR, `linear_issue_${issueId}.json`);
   }
 
   private async executeGraphQL<T>(
