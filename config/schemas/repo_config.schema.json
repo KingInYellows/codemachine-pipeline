@@ -85,6 +85,12 @@
           },
           "default": ["repo", "workflow"]
         },
+        "api_version": {
+          "type": "string",
+          "description": "GitHub API version (YYYY-MM-DD format)",
+          "pattern": "^\\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\\d|3[01])$",
+          "default": "2022-11-28"
+        },
         "default_reviewers": {
           "type": "array",
           "description": "Default PR reviewers",

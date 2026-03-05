@@ -20,6 +20,8 @@ export interface GitHubAdapterConfig {
   token: string;
   /** Optional base URL for GitHub Enterprise */
   baseUrl?: string;
+  /** Optional GitHub API version date for X-GitHub-Api-Version header */
+  apiVersion?: string;
   /** Run directory for rate limit ledger */
   runDir?: string;
   logger?: LoggerInterface;
