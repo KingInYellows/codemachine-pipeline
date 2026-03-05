@@ -7,19 +7,7 @@
 
 import type { Headers } from 'undici-types';
 import * as crypto from 'node:crypto';
-
-// Sensitive Data Constants
-
-export const SENSITIVE_HEADERS = new Set([
-  'authorization',
-  'proxy-authorization',
-  'cookie',
-  'set-cookie',
-  'x-api-key',
-  'x-csrf-token',
-]);
-
-export const SENSITIVE_KEYWORDS = ['token', 'secret', 'password', 'credential'];
+import { RedactionEngine, REDACTED } from '../../utils/redaction.js';
 
 // ID Generation
 
@@ -51,15 +39,20 @@ export function extractHeaders(headers: Headers): Record<string, string> {
 }
 
 /**
- * Sanitize URL by removing query parameters that might contain secrets
+ * Sanitize URL by redacting query parameters that might contain secrets.
+ * Known secret params (token, access_token, api_key, etc.) are removed entirely;
+ * other params matching sensitive field patterns have their values replaced with [REDACTED].
  */
 export function sanitizeUrl(url: string): string {
   try {
     const parsed = new URL(url);
-    // Remove sensitive query parameters
-    parsed.searchParams.delete('token');
-    parsed.searchParams.delete('access_token');
-    parsed.searchParams.delete('api_key');
+    for (const key of [...parsed.searchParams.keys()]) {
+      if (RedactionEngine.isSensitiveUrlQueryParamName(key)) {
+        parsed.searchParams.delete(key);
+      } else if (RedactionEngine.isSensitiveFieldName(key)) {
+        parsed.searchParams.set(key, REDACTED);
+      }
+    }
     return parsed.toString();
   } catch {
     return url;
@@ -69,16 +62,16 @@ export function sanitizeUrl(url: string): string {
 /**
  * Sanitize headers by redacting authorization and sensitive values
  */
+const headerRedactor = new RedactionEngine(true);
+
 export function sanitizeHeaders(headers: Record<string, string>): Record<string, string> {
   const sanitized: Record<string, string> = {};
 
   for (const [key, value] of Object.entries(headers)) {
-    const lowerKey = key.toLowerCase();
-
-    if (SENSITIVE_HEADERS.has(lowerKey) || SENSITIVE_KEYWORDS.some((kw) => lowerKey.includes(kw))) {
-      sanitized[key] = '***REDACTED***';
+    if (RedactionEngine.isSensitiveFieldName(key)) {
+      sanitized[key] = REDACTED;
     } else {
-      sanitized[key] = value;
+      sanitized[key] = headerRedactor.redact(value);
     }
   }
 
