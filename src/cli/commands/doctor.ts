@@ -624,10 +624,15 @@ export default class Doctor extends Command {
       if (!check.enabled(config)) continue;
 
       const varName = check.envVar(config);
-      const value = check.resolveValue ? check.resolveValue(config, varName) : process.env[varName];
+      let value = check.resolveValue ? check.resolveValue(config, varName) : process.env[varName];
       const checkName = check.displayName
         ? check.displayName(varName)
         : `${varName} (${check.label})`;
+
+      // Security: Mask sensitive values if they don't look like URLs for the Agent endpoint
+      if (check.resolveValue && value && !/^https?:\/\//.test(value)) {
+        value = '[REDACTED]';
+      }
 
       if (value) {
         checks.push({
