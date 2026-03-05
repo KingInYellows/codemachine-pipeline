@@ -171,6 +171,7 @@ export function getPRAdapter(
     repo,
     token,
     baseUrl: config.github.api_base_url,
+    apiVersion: config.github.api_version,
     runDir,
     logger,
   });

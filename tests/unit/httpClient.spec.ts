@@ -34,6 +34,16 @@ describe('HttpClient', () => {
   let originalDispatcher: Dispatcher;
   let testRunDir: string;
   let mockLogger: MockedLogger;
+  const captureReplyHeaders = (opts: { headers?: unknown }): Record<string, string> => {
+    if (Array.isArray(opts.headers)) {
+      const headersObj: Record<string, string> = {};
+      for (let i = 0; i < opts.headers.length; i += 2) {
+        headersObj[opts.headers[i] as string] = opts.headers[i + 1] as string;
+      }
+      return headersObj;
+    }
+    return (opts.headers as Record<string, string>) ?? {};
+  };
 
   beforeEach(async () => {
     // Setup mock agent for undici
@@ -86,16 +96,7 @@ describe('HttpClient', () => {
           method: 'GET',
         })
         .reply((opts) => {
-          // Convert headers object/array to plain object
-          if (Array.isArray(opts.headers)) {
-            const headersObj: Record<string, string> = {};
-            for (let i = 0; i < opts.headers.length; i += 2) {
-              headersObj[opts.headers[i] as string] = opts.headers[i + 1] as string;
-            }
-            capturedHeaders = headersObj;
-          } else if (opts.headers) {
-            capturedHeaders = opts.headers as Record<string, string>;
-          }
+          capturedHeaders = captureReplyHeaders(opts);
 
           return {
             statusCode: 200,
@@ -126,6 +127,43 @@ describe('HttpClient', () => {
       );
     });
 
+    it('should use configured GitHub API version header when provided', async () => {
+      const client = new HttpClient({
+        baseUrl: 'https://api.github.com',
+        provider: Provider.GITHUB,
+        token: 'test-token',
+        apiVersion: '2024-01-15',
+        logger: mockLogger,
+      });
+
+      const pool = mockAgent.get('https://api.github.com');
+
+      let capturedHeaders: Record<string, string> = {};
+
+      pool
+        .intercept({
+          path: '/repos/test/repo',
+          method: 'GET',
+        })
+        .reply((opts) => {
+          capturedHeaders = captureReplyHeaders(opts);
+
+          return {
+            statusCode: 200,
+            data: { message: 'success' },
+            headers: {
+              'content-type': 'application/json',
+            },
+          };
+        });
+
+      await client.get('/repos/test/repo');
+
+      expect(
+        capturedHeaders['x-github-api-version'] || capturedHeaders['X-GitHub-Api-Version']
+      ).toBe('2024-01-15');
+    });
+
     it('should inject idempotency key for POST requests', async () => {
       const client = new HttpClient({
         baseUrl: 'https://api.github.com',
@@ -144,16 +182,7 @@ describe('HttpClient', () => {
           method: 'POST',
         })
         .reply((opts) => {
-          // Convert headers object/array to plain object
-          if (Array.isArray(opts.headers)) {
-            const headersObj: Record<string, string> = {};
-            for (let i = 0; i < opts.headers.length; i += 2) {
-              headersObj[opts.headers[i] as string] = opts.headers[i + 1] as string;
-            }
-            capturedHeaders = headersObj;
-          } else if (opts.headers) {
-            capturedHeaders = opts.headers as Record<string, string>;
-          }
+          capturedHeaders = captureReplyHeaders(opts);
 
           return {
             statusCode: 201,
@@ -189,16 +218,7 @@ describe('HttpClient', () => {
           method: 'GET',
         })
         .reply((opts) => {
-          // Convert headers object/array to plain object
-          if (Array.isArray(opts.headers)) {
-            const headersObj: Record<string, string> = {};
-            for (let i = 0; i < opts.headers.length; i += 2) {
-              headersObj[opts.headers[i] as string] = opts.headers[i + 1] as string;
-            }
-            capturedHeaders = headersObj;
-          } else if (opts.headers) {
-            capturedHeaders = opts.headers as Record<string, string>;
-          }
+          capturedHeaders = captureReplyHeaders(opts);
 
           return {
             statusCode: 200,
