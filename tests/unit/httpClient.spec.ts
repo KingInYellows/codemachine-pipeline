@@ -683,7 +683,7 @@ describe('HttpClient', () => {
         // Response may include auth headers that should be redacted
         if (headers['authorization'] || headers['Authorization']) {
           const authHeader = headers['authorization'] || headers['Authorization'];
-          expect(authHeader).toBe('***REDACTED***');
+          expect(authHeader).toBe('[REDACTED]');
         } else {
           // If no auth header in response, verify error at least has headers
           expect(headers).toBeDefined();
@@ -707,11 +707,11 @@ describe('HttpClient', () => {
       const headers = json.headers as Record<string, string>;
 
       // These must be redacted
-      expect(headers['set-cookie']).toBe('***REDACTED***');
-      expect(headers['proxy-authorization']).toBe('***REDACTED***');
-      expect(headers['x-csrf-token']).toBe('***REDACTED***');
-      expect(headers['x-custom-secret']).toBe('***REDACTED***');
-      expect(headers['authorization']).toBe('***REDACTED***');
+      expect(headers['set-cookie']).toBe('[REDACTED]');
+      expect(headers['proxy-authorization']).toBe('[REDACTED]');
+      expect(headers['x-csrf-token']).toBe('[REDACTED]');
+      expect(headers['x-custom-secret']).toBe('[REDACTED]');
+      expect(headers['authorization']).toBe('[REDACTED]');
 
       // These must be preserved
       expect(headers['content-type']).toBe('application/json');
@@ -760,6 +760,53 @@ describe('HttpClient', () => {
         throw new Error('HTTP request context missing url field');
       }
 
+      expect(context.url).not.toContain('secret123');
+    });
+
+    it('should preserve pagination token parameter names in sanitized URLs', async () => {
+      const client = new HttpClient({
+        baseUrl: 'https://api.example.com',
+        provider: Provider.CUSTOM,
+        logger: mockLogger,
+      });
+
+      const pool = mockAgent.get('https://api.example.com');
+
+      pool
+        .intercept({
+          path: '/test?page_token=cursor123&access_token=secret123',
+          method: 'GET',
+        })
+        .reply(
+          200,
+          { data: 'test' },
+          {
+            headers: {
+              'content-type': 'application/json',
+            },
+          }
+        );
+
+      await client.get('/test?page_token=cursor123&access_token=secret123');
+
+      const debugCalls = getMockCalls<[string, Record<string, unknown>]>(mockLogger.debug);
+      const requestLog = debugCalls.find(([message]) => message === 'HTTP request');
+      expect(requestLog).toBeDefined();
+
+      if (!requestLog) {
+        throw new Error('HTTP request log entry missing');
+      }
+
+      const [, context] = requestLog;
+      expect(isRecord(context)).toBe(true);
+
+      if (!isRecord(context) || typeof context.url !== 'string') {
+        throw new Error('HTTP request context missing url field');
+      }
+
+      // Pagination parameter name should remain visible, while token values are sanitized.
+      expect(context.url).toContain('page_token=');
+      expect(context.url).not.toContain('cursor123');
       expect(context.url).not.toContain('secret123');
     });
   });
