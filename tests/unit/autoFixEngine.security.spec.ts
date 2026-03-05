@@ -354,7 +354,7 @@ describe('autoFixEngine security - command execution', () => {
       expect(commandRunnerSource).toContain('SECURITY');
     });
 
-    test('SECURITY FIX: Shell metacharacter detection is implemented', async () => {
+    test('SECURITY FIX: Shell metacharacter detection is implemented', () => {
       expect(SHELL_METACHARACTERS.test('|')).toBe(true);
       expect(SHELL_METACHARACTERS.test('npm run lint')).toBe(false);
       expect(SHELL_METACHARACTERS.test('\x00')).toBe(true);
@@ -366,7 +366,7 @@ describe('autoFixEngine security - command execution', () => {
       expect(TEMPLATE_VALUE_METACHARACTERS.test('unsafe;value')).toBe(true);
     });
 
-    test('SECURITY FIX: built-in template path values use shell-metacharacter checks only', async () => {
+    test('SECURITY FIX: built-in template path values use narrower metacharacter checks', async () => {
       const fsSync = await import('node:fs');
       const autoFixEnginePath = path.join(__dirname, '../../src/workflows/autoFixEngine.ts');
       const autoFixEngineSource = fsSync.readFileSync(autoFixEnginePath, 'utf-8');
@@ -375,7 +375,13 @@ describe('autoFixEngine security - command execution', () => {
       expect(autoFixEngineSource).toContain("'run_dir'");
       expect(autoFixEngineSource).toContain("'repo_root'");
       expect(autoFixEngineSource).toContain("'command_cwd'");
-      expect(autoFixEngineSource).toContain('? SHELL_METACHARACTERS');
+      // feature_id is user-influenced and uses the stricter TEMPLATE_VALUE_METACHARACTERS check
+      const builtinSetMatch = autoFixEngineSource.match(
+        /BUILTIN_TEMPLATE_CONTEXT_KEYS\s*=\s*new\s+Set\(\[([\s\S]*?)\]\)/
+      );
+      expect(builtinSetMatch).toBeTruthy();
+      expect(builtinSetMatch![1]).not.toContain('feature_id');
+      expect(autoFixEngineSource).toContain('? DANGEROUS_PATH_METACHARACTERS');
       expect(autoFixEngineSource).toContain(': TEMPLATE_VALUE_METACHARACTERS');
     });
 

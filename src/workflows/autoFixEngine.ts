@@ -24,11 +24,7 @@ import {
   summarizeError,
   getRequiredCommands,
 } from './validationRegistry';
-import {
-  SHELL_METACHARACTERS,
-  TEMPLATE_VALUE_METACHARACTERS,
-  executeShellCommand,
-} from './commandRunner.js';
+import { TEMPLATE_VALUE_METACHARACTERS, executeShellCommand } from './commandRunner.js';
 import { filterEnvironment } from '../utils/envFilter.js';
 
 /**
@@ -601,12 +597,14 @@ function resolveWorkingDirectory(repoRoot: string, commandCwd: string, override?
   return path.isAbsolute(commandCwd) ? commandCwd : path.resolve(repoRoot, commandCwd);
 }
 
-const BUILTIN_TEMPLATE_CONTEXT_KEYS = new Set([
-  'feature_id',
-  'run_dir',
-  'repo_root',
-  'command_cwd',
-]);
+/**
+ * Narrower metacharacter check for built-in path values (run_dir, repo_root, command_cwd).
+ * Only blocks characters that enable shell injection; allows parens, brackets, spaces, etc.
+ * that are valid in filesystem paths.
+ */
+const DANGEROUS_PATH_METACHARACTERS = /[|&;`$<>]/u;
+
+const BUILTIN_TEMPLATE_CONTEXT_KEYS = new Set(['run_dir', 'repo_root', 'command_cwd']);
 
 function buildCommandTemplateContext(
   runDir: string,
@@ -615,6 +613,11 @@ function buildCommandTemplateContext(
   templateContext?: Record<string, string>
 ): Record<string, string> {
   for (const [key, value] of Object.entries(templateContext ?? {})) {
+    if (BUILTIN_TEMPLATE_CONTEXT_KEYS.has(key)) {
+      throw new Error(
+        `Template context key "${key}" conflicts with built-in template key`
+      );
+    }
     if (TEMPLATE_VALUE_METACHARACTERS.test(value)) {
       throw new Error(
         `Template context value for "${key}" contains shell metacharacters which are not permitted`
@@ -623,7 +626,7 @@ function buildCommandTemplateContext(
   }
 
   return {
-    feature_id: path.basename(runDir),
+    feature_id: path.basename(runDir).replace(/\s+/gu, '-'),
     run_dir: runDir,
     repo_root: repoRoot,
     command_cwd: commandCwd,
@@ -636,7 +639,7 @@ function applyCommandTemplate(template: string, context: Record<string, string>)
     const value = Object.hasOwn(context, key) ? context[key] : undefined;
     if (value === undefined) return '';
     const metacharacterPattern = BUILTIN_TEMPLATE_CONTEXT_KEYS.has(key)
-      ? SHELL_METACHARACTERS
+      ? DANGEROUS_PATH_METACHARACTERS
       : TEMPLATE_VALUE_METACHARACTERS;
     if (metacharacterPattern.test(value)) {
       throw new Error(`Template substitution for "${key}" contains shell metacharacters`);

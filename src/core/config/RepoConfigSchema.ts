@@ -10,7 +10,8 @@ import { z } from 'zod';
 import { ValidationCommandConfigSchema } from '../validation/validationCommandConfig';
 
 const ENV_VAR_NAME = /^[A-Z][A-Z0-9_]*$/;
-const ENV_VAR_MSG = 'Must be uppercase letters, digits, and underscores (e.g., GITHUB_TOKEN)';
+const ENV_VAR_MSG =
+  'Must start with an uppercase letter followed by uppercase letters, digits, and underscores (e.g., GITHUB_TOKEN)';
 
 export const ConfigHistoryEntrySchema = z.object({
   timestamp: z.string().datetime({ message: 'Must be ISO 8601 datetime' }),
