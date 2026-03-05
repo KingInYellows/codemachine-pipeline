@@ -1,7 +1,8 @@
 /**
  * Deployment domain sub-barrel
  *
- * Exports for deployment lifecycle models: ApprovalRecord, DeploymentRecord, PRMetadata.
+ * Exports for deployment lifecycle models: ApprovalRecord, DeploymentRecord,
+ * BranchProtectionReport, PRMetadata.
  * Prefer these granular imports over the main index.ts barrel for better tree-shaking.
  *
  * Usage:
