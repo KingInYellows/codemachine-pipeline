@@ -9,6 +9,10 @@
 import { z } from 'zod';
 import { ValidationCommandConfigSchema } from '../validation/validationCommandConfig';
 
+const ENV_VAR_NAME = /^[A-Z][A-Z0-9_]*$/;
+const ENV_VAR_MSG =
+  'Must start with an uppercase letter followed by uppercase letters, digits, and underscores (e.g., GITHUB_TOKEN)';
+
 export const ConfigHistoryEntrySchema = z.object({
   timestamp: z.string().datetime({ message: 'Must be ISO 8601 datetime' }),
   schema_version: z.string().regex(/^[0-9]+\.[0-9]+\.[0-9]+$/, 'Invalid semver format'),
@@ -75,7 +79,7 @@ export type Project = z.infer<typeof ProjectSchema>;
 
 export const GitHubSchema = z.object({
   enabled: z.boolean(),
-  token_env_var: z.string().default('GITHUB_TOKEN'),
+  token_env_var: z.string().regex(ENV_VAR_NAME, ENV_VAR_MSG).default('GITHUB_TOKEN'),
   api_base_url: z.string().url().default('https://api.github.com'),
   required_scopes: z
     .array(z.enum(['repo', 'workflow', 'read:org', 'write:org']))
@@ -93,7 +97,7 @@ export type GitHub = z.infer<typeof GitHubSchema>;
 
 export const LinearSchema = z.object({
   enabled: z.boolean(),
-  api_key_env_var: z.string().default('LINEAR_API_KEY'),
+  api_key_env_var: z.string().regex(ENV_VAR_NAME, ENV_VAR_MSG).default('LINEAR_API_KEY'),
   team_id: z.string().optional(),
   project_id: z.string().optional(),
   auto_link_issues: z.boolean().default(true),
@@ -103,7 +107,7 @@ export type Linear = z.infer<typeof LinearSchema>;
 
 export const RuntimeSchema = z.object({
   agent_endpoint: z.string().url().optional(),
-  agent_endpoint_env_var: z.string().default('AGENT_ENDPOINT'),
+  agent_endpoint_env_var: z.string().regex(ENV_VAR_NAME, ENV_VAR_MSG).default('AGENT_ENDPOINT'),
   max_concurrent_tasks: z.number().int().min(1).max(10).default(3),
   timeout_minutes: z.number().int().min(5).max(120).default(30),
   context_token_budget: z.number().int().min(1000).max(100000).default(32000),
@@ -195,7 +199,7 @@ export const ExecutionConfigSchema = z.object({
     .min(1024)
     .max(100 * 1024 * 1024)
     .default(10 * 1024 * 1024),
-  env_allowlist: z.array(z.string()).default([]),
+  env_allowlist: z.array(z.string().regex(ENV_VAR_NAME, ENV_VAR_MSG)).default([]),
   max_retries: z.number().int().min(0).max(10).default(3),
   retry_backoff_ms: z.number().int().min(1000).default(5000),
   log_rotation_mb: z.number().int().min(1).max(10240).default(100),
@@ -210,7 +214,7 @@ export const ExecutionConfigSchema = z.object({
     .optional()
     .describe('Path to workflow template overrides directory'),
   env_credential_keys: z
-    .array(z.string())
+    .array(z.string().regex(ENV_VAR_NAME, ENV_VAR_MSG))
     .default([])
     .describe('Env var names to pipe to CodeMachine-CLI via stdin'),
 });
