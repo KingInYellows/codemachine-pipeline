@@ -13,6 +13,7 @@
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import * as fs from 'node:fs/promises';
+import * as os from 'node:os';
 import * as path from 'node:path';
 import {
   loadPRContext,
@@ -28,9 +29,9 @@ import type { RunManifest } from '../../src/persistence/runDirectoryManager';
 const parseJson = <T>(value: string): T => JSON.parse(value) as unknown as T;
 
 // Test fixtures
-const TEST_RUN_DIR = '/tmp/pr-commands-test';
+let TEST_RUN_DIR: string;
 const TEST_FEATURE_ID = 'test-feature-123';
-const TEST_BASE_DIR = path.join(TEST_RUN_DIR, 'runs');
+let TEST_BASE_DIR: string;
 
 const mockRepoConfig = {
   schema_version: '1.0.0',
@@ -60,7 +61,7 @@ const mockRepoConfig = {
     context_token_budget: 32000,
     context_cost_budget_usd: 5,
     logs_format: 'ndjson' as const,
-    run_directory: TEST_BASE_DIR,
+    run_directory: '', // Set dynamically in beforeEach via fs.mkdtemp()
   },
   safety: {
     redact_secrets: true,
@@ -87,13 +88,18 @@ const mockManifest: RunManifest = {
   feature_id: TEST_FEATURE_ID,
   title: 'Test Feature',
   source: 'feature/test-branch',
+  repo: {
+    url: 'https://github.com/test-org/test-repo.git',
+    default_branch: 'main',
+  },
   status: 'in_progress',
   execution: {
     current_step: 'code',
     last_step: 'plan',
-    last_error: null,
+    completed_steps: 5,
   },
   queue: {
+    queue_dir: '.codepipe/runs/test-feature-123',
     pending_count: 0,
     completed_count: 5,
     failed_count: 0,
@@ -102,6 +108,7 @@ const mockManifest: RunManifest = {
     pending: [],
     completed: ['prd', 'spec', 'plan', 'code'],
   },
+  artifacts: {},
   telemetry: {
     logs_dir: 'logs',
     metrics_file: 'metrics/prometheus.txt',
@@ -109,12 +116,18 @@ const mockManifest: RunManifest = {
   },
   timestamps: {
     created_at: '2025-01-15T10:00:00Z',
+    updated_at: '2025-01-15T10:05:00Z',
     started_at: '2025-01-15T10:01:00Z',
   },
 };
 
 describe('PR Commands Integration Tests', () => {
   beforeEach(async () => {
+    // Create isolated temp directory for each test
+    TEST_RUN_DIR = await fs.mkdtemp(path.join(os.tmpdir(), 'pr-commands-test-'));
+    TEST_BASE_DIR = path.join(TEST_RUN_DIR, 'runs');
+    mockRepoConfig.runtime.run_directory = TEST_BASE_DIR;
+
     // Setup test run directory
     const runDir = path.join(TEST_BASE_DIR, TEST_FEATURE_ID);
     await fs.mkdir(runDir, { recursive: true });
