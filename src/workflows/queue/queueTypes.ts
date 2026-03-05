@@ -91,19 +91,14 @@ export interface QueueOperation {
  * Used for quick status queries without full queue scan.
  */
 export interface QueueCounts {
-  /** Total number of tasks */
   total: number;
-  /** Tasks awaiting execution */
   pending: number;
-  /** Tasks currently executing */
   running: number;
-  /** Successfully finished tasks */
   completed: number;
-  /** Tasks that failed execution */
   failed: number;
-  /** Tasks skipped due to dependency failures */
+  /** Skipped due to dependency failures */
   skipped: number;
-  /** Tasks cancelled by user or system */
+  /** Cancelled by user or system */
   cancelled: number;
 }
 
