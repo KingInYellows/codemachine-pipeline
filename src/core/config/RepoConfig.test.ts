@@ -556,6 +556,20 @@ describe('Env var name validation (CDMCH-214)', () => {
     );
     expect(result.success).toBe(true);
   });
+
+  it('should reject invalid env var names in env_allowlist', () => {
+    const result = RepoConfigSchema.safeParse(
+      minimalConfig({ execution: { env_allowlist: ['VALID_KEY', 'bad-key'] } })
+    );
+    expect(result.success).toBe(false);
+  });
+
+  it('should reject invalid env var names in env_credential_keys', () => {
+    const result = RepoConfigSchema.safeParse(
+      minimalConfig({ execution: { env_credential_keys: ['lowercase_key'] } })
+    );
+    expect(result.success).toBe(false);
+  });
 });
 
 describe('Edge Cases', () => {

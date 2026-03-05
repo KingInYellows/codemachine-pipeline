@@ -598,11 +598,11 @@ function resolveWorkingDirectory(repoRoot: string, commandCwd: string, override?
 }
 
 /**
- * Narrower metacharacter check for built-in path values (run_dir, repo_root, command_cwd).
- * Only blocks characters that enable shell injection; allows parens, brackets, spaces, etc.
- * that are valid in filesystem paths.
+ * Narrower metacharacter check for built-in context values (feature_id, run_dir, repo_root, command_cwd).
+ * Blocks characters that enable shell injection or corrupt parseCommandString argument boundaries.
+ * Allows parens, brackets, etc. that are valid in filesystem paths.
  */
-const DANGEROUS_PATH_METACHARACTERS = /[|&;`$<>\x00]/u;
+const DANGEROUS_PATH_METACHARACTERS = /[|&;`$<>\x00'"\s]/u;
 
 const BUILTIN_TEMPLATE_CONTEXT_KEYS = new Set([
   'feature_id',
