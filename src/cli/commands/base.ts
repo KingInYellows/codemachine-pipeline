@@ -116,6 +116,8 @@ export interface TelemetryContext {
  * ```
  */
 export abstract class TelemetryCommand extends Command {
+  static hidden = true;
+
   // ------------------------------------------------------------------
   // Subclass contract
   // ------------------------------------------------------------------
