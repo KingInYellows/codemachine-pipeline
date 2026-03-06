@@ -8,11 +8,8 @@ import {
   type RepositoryInfo,
   type PullRequest,
 } from '../../src/adapters/github/GitHubAdapter';
-import {
-  LinearAdapter,
-  type LinearIssue,
-  type LinearComment,
-} from '../../src/adapters/linear/LinearAdapter';
+import { LinearAdapter } from '../../src/adapters/linear/LinearAdapter';
+import type { LinearIssue, LinearComment } from '../../src/adapters/linear/LinearAdapterTypes';
 import { ErrorType, HttpError } from '../../src/adapters/http/client';
 import type { HttpClient } from '../../src/adapters/http/client';
 import { GitHubAdapterError } from '../../src/adapters/github/GitHubAdapter';

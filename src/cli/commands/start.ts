@@ -42,7 +42,7 @@ import {
 } from '../../workflows/researchCoordinator';
 import type { ResearchTask } from '../../core/models/ResearchTask';
 import { draftPRD } from '../../workflows/prdAuthoringEngine';
-import type { IssueSnapshot } from '../../adapters/linear/LinearAdapter';
+import type { IssueSnapshot } from '../../adapters/linear/LinearAdapterTypes';
 import { CLIExecutionEngine } from '../../workflows/cliExecutionEngine';
 import { loadQueue } from '../../workflows/queueStore';
 import { buildExecutionStrategies } from '../../workflows/executionStrategyBuilder.js';
