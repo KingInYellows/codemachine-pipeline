@@ -142,7 +142,7 @@ export default class Doctor extends TelemetryCommand {
       if (!fs.existsSync(ld)) {
         fs.mkdirSync(ld, { recursive: true });
       }
-      runDirPath = pipelineDir;
+      // runDirPath stays undefined — doctor is not tied to a specific run
       logsDir = ld;
     } catch {
       // telemetry not available — doctor still runs

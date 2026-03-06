@@ -5,13 +5,14 @@
 
 The `codepipe` CLI is the primary interface for managing feature development pipelines. This reference is auto-generated from the oclif command manifest.
 
-**Total commands:** 17
+**Total commands:** 18
 
 ## Table of Contents
 
 ### Core Commands
 
 - [`codepipe approve`](#codepipe-approve) — Approve or deny a feature pipeline gate
+- [`codepipe base`](#codepipe-base)
 - [`codepipe doctor`](#codepipe-doctor) — Run environment diagnostics and readiness checks
 - [`codepipe health`](#codepipe-health) — Quick runtime health check (config, disk, writable run dir)
 - [`codepipe init`](#codepipe-init) — Initialize codemachine-pipeline with schema-validated configuration
@@ -80,6 +81,18 @@ codepipe approve prd --approve --signer "user@example.com"
 codepipe approve spec --deny --signer "reviewer@example.com" --comment "Missing acceptance criteria"
 codepipe approve prd --approve --signer "user@example.com" --feature FEAT-abc123
 codepipe approve prd --approve --signer "user@example.com" --json
+```
+
+---
+
+#### codepipe base
+
+_No description available._
+
+##### Synopsis
+
+```bash
+codepipe base [FLAGS]
 ```
 
 ---
