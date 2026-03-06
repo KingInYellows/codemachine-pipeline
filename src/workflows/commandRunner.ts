@@ -12,7 +12,7 @@ import { getErrorMessage } from '../utils/errors.js';
 
 const NULL_BYTE_CHARACTER = String.fromCharCode(0);
 
-function escapeForCharacterClass(characters: string): string {
+export function escapeForCharacterClass(characters: string): string {
   return characters
     .replaceAll('\\', '\\\\')
     .replaceAll(']', '\\]')
