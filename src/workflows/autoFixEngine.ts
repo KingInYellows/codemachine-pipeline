@@ -68,6 +68,23 @@ export interface AutoFixOptions {
 /**
  * Auto-fix execution result
  */
+/**
+ * Telemetry dependencies for validation commands
+ */
+interface TelemetryContext {
+  logger?: StructuredLogger | undefined;
+  metrics?: MetricsCollector | undefined;
+  telemetry?: ExecutionTelemetry | undefined;
+}
+
+/**
+ * Per-attempt state for validation command execution
+ */
+interface AttemptContext {
+  attemptNumber: number;
+  isAutoFixAttempt: boolean;
+}
+
 export interface AutoFixResult {
   /** Whether all required validations passed */
   success: boolean;
@@ -158,12 +175,9 @@ export async function executeValidationWithAutoFix(
     const result = await executeValidationCommand(
       runDir,
       command,
-      attemptNumber,
-      isAutoFixAttempt,
+      { attemptNumber, isAutoFixAttempt },
       options,
-      logger,
-      metrics,
-      telemetry
+      { logger, metrics, telemetry }
     );
 
     lastResult = result;
@@ -420,13 +434,12 @@ function recordValidationFailure(
 async function executeValidationCommand(
   runDir: string,
   command: ValidationCommandConfig,
-  attemptNumber: number,
-  isAutoFixAttempt: boolean,
+  attemptCtx: AttemptContext,
   options: AutoFixOptions,
-  logger?: StructuredLogger,
-  metrics?: MetricsCollector,
-  telemetry?: ExecutionTelemetry
+  ctx: TelemetryContext
 ): Promise<ValidationResult> {
+  const { attemptNumber, isAutoFixAttempt } = attemptCtx;
+  const { logger, metrics, telemetry } = ctx;
   const attemptId = generateAttemptId();
   const startedAt = new Date().toISOString();
   const repoRoot = resolveRepoRoot(runDir);

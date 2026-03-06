@@ -9,9 +9,8 @@ WORKDIR /app
 # Copy package files
 COPY package*.json ./
 
-# Copy source code BEFORE installing (to avoid prepare script running without source)
+# Copy source code and build config
 COPY tsconfig.json ./
-COPY .npmrc ./
 COPY src ./src
 COPY scripts ./scripts
 
@@ -27,9 +26,8 @@ WORKDIR /app
 
 # Copy package files
 COPY package*.json ./
-COPY .npmrc ./
 
-# Install production dependencies only (skip prepare script)
+# Install production dependencies only
 RUN npm ci --omit=dev --ignore-scripts
 
 # Copy built artifacts from builder
