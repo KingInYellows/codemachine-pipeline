@@ -35,7 +35,13 @@ import {
   refreshBranchProtectionArtifact,
 } from '../../status/data';
 import { renderHumanReadable } from '../../status/renderers';
-import { CliError, CliErrorCode, formatErrorJson, formatErrorMessage, setJsonOutputMode } from '../../utils/cliErrors';
+import {
+  CliError,
+  CliErrorCode,
+  formatErrorJson,
+  formatErrorMessage,
+  setJsonOutputMode,
+} from '../../utils/cliErrors';
 import { TelemetryCommand } from '../base';
 
 /**
