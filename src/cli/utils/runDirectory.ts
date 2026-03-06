@@ -130,6 +130,13 @@ export function requireConfig(settings: RunDirectorySettings): RepoConfig {
 }
 
 export async function ensureTelemetryReferences(runDir: string): Promise<void> {
+  const manifestPath = path.join(runDir, 'manifest.json');
+  try {
+    await fs.access(manifestPath);
+  } catch {
+    return; // Not a run directory — skip manifest update
+  }
+
   const metricsPath = 'metrics/prometheus.txt';
   const tracesPath = 'telemetry/traces.json';
   const costsPath = 'telemetry/costs.json';

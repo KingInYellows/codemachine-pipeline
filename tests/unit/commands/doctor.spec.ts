@@ -63,6 +63,15 @@ describe('doctor command', () => {
       expect(output).toContain('Summary');
       expect(output).toContain('Total');
     });
+
+    test('writes telemetry artifacts to the pipeline directory', () => {
+      execSync(`node ${binPath} init`, { cwd: testDir, stdio: 'pipe' });
+      execSync(`node ${binPath} doctor`, { cwd: testDir, stdio: 'pipe' });
+
+      expect(fs.existsSync(path.join(pipelineDir, 'logs', 'logs.ndjson'))).toBe(true);
+      expect(fs.existsSync(path.join(pipelineDir, 'metrics', 'prometheus.txt'))).toBe(true);
+      expect(fs.existsSync(path.join(pipelineDir, 'telemetry', 'traces.json'))).toBe(true);
+    });
   });
 
   describe('--json flag', () => {
@@ -125,6 +134,21 @@ describe('doctor command', () => {
         expect(check).toHaveProperty('status');
         expect(check).toHaveProperty('message');
       }
+    });
+  });
+
+  describe('telemetry output', () => {
+    test('writes logs, metrics, and traces under .codepipe', () => {
+      execSync(`node ${binPath} init`, { cwd: testDir, stdio: 'pipe' });
+
+      execSync(`node ${binPath} doctor`, {
+        cwd: testDir,
+        stdio: 'pipe',
+      });
+
+      expect(fs.existsSync(path.join(pipelineDir, 'logs', 'logs.ndjson'))).toBe(true);
+      expect(fs.existsSync(path.join(pipelineDir, 'metrics', 'prometheus.txt'))).toBe(true);
+      expect(fs.existsSync(path.join(pipelineDir, 'telemetry', 'traces.json'))).toBe(true);
     });
   });
 

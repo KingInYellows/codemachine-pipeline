@@ -1,12 +1,9 @@
-import { Command, Flags } from '@oclif/core';
+import { Flags } from '@oclif/core';
 import { getRunDirectoryPath } from '../../persistence/runDirectoryManager';
-import { createCliLogger, LogLevel } from '../../telemetry/logger';
-import { createRunMetricsCollector, StandardMetrics } from '../../telemetry/metrics';
-import { createRunTraceManager } from '../../telemetry/traces';
+import { StandardMetrics } from '../../telemetry/metrics';
 import { createExecutionTelemetry } from '../../telemetry/executionTelemetry';
 import type { StructuredLogger } from '../../telemetry/logger';
 import type { MetricsCollector } from '../../telemetry/metrics';
-import type { TraceManager, ActiveSpan } from '../../telemetry/traces';
 import {
   resolveRunDirectorySettings,
   selectFeatureId,
@@ -27,8 +24,8 @@ import {
   type AutoFixOptions,
   type AutoFixResult,
 } from '../../workflows/autoFixEngine';
-import { CliError, CliErrorCode, setJsonOutputMode, rethrowIfOclifError } from '../utils/cliErrors';
-import { flushTelemetrySuccess, flushTelemetryError } from '../utils/telemetryLifecycle';
+import { setJsonOutputMode } from '../utils/cliErrors';
+import { TelemetryCommand } from './base';
 
 /**
  * Validate command - Execute validation commands (lint/test/typecheck/build)
@@ -41,7 +38,11 @@ import { flushTelemetrySuccess, flushTelemetryError } from '../utils/telemetryLi
  * - 10: Validation failed (one or more commands failed)
  * - 11: Retry limit exceeded (cannot proceed without manual intervention)
  */
-export default class Validate extends Command {
+export default class Validate extends TelemetryCommand {
+  protected get commandName(): string {
+    return 'validate';
+  }
+
   static description =
     'Execute validation commands (lint, test, typecheck, build) with auto-fix retry loops';
 
@@ -101,182 +102,140 @@ export default class Validate extends Command {
       setJsonOutputMode();
     }
 
-    // Initialize telemetry
-    let logger: StructuredLogger | undefined;
-    let metrics: MetricsCollector | undefined;
-    let traceManager: TraceManager | undefined;
-    let commandSpan: ActiveSpan | undefined;
-    let executionTelemetry: ReturnType<typeof createExecutionTelemetry> | undefined;
-    let runDirPath: string | undefined;
-    const startTime = Date.now();
-
+    const settings = await resolveRunDirectorySettings();
+    const featureId = await selectFeatureId(settings.baseDir, flags.feature);
     try {
-      const settings = await resolveRunDirectorySettings();
-      const featureId = await selectFeatureId(settings.baseDir, flags.feature);
       requireFeatureId(featureId, flags.feature);
-
-      runDirPath = getRunDirectoryPath(settings.baseDir, featureId);
-
-      // Initialize telemetry
-      logger = createCliLogger('validate', featureId, runDirPath, {
-        minLevel: flags.verbose ? LogLevel.DEBUG : LogLevel.INFO,
-        mirrorToStderr: !flags.json,
-      });
-      metrics = createRunMetricsCollector(runDirPath, featureId);
-      traceManager = createRunTraceManager(runDirPath, featureId, logger);
-      commandSpan = traceManager.startSpan('cli.validate');
-      commandSpan.setAttribute('feature_id', featureId);
-      commandSpan.setAttribute('json_mode', flags.json);
-      commandSpan.setAttribute('auto_fix_enabled', flags['auto-fix']);
-      if (!metrics || !logger) {
-        throw new Error('Telemetry initialization failed for validate command');
-      }
-      executionTelemetry = createExecutionTelemetry({
-        logger,
-        metrics,
-        runDir: runDirPath,
-        runId: featureId,
-        traceManager,
-        component: 'validation',
-      });
-
-      logger.info('Validate command invoked', {
-        feature_id: featureId,
-        command: flags.command ?? 'all',
-        auto_fix: flags['auto-fix'],
-        init_mode: flags.init,
-      });
-
-      // Handle --init flag
-      if (flags.init) {
-        await this.handleInit(runDirPath, settings.configPath, logger, metrics);
-        return;
-      }
-
-      // Check if registry is initialized
-      const registry = await loadValidationRegistry(runDirPath);
-      if (!registry) {
-        logger.error('Validation registry not initialized');
-        this.error(
-          'Validation registry not found. Run "codepipe validate --init" to initialize from config.',
-          { exit: 1 }
-        );
-      }
-
-      // Build execution options
-      const options: AutoFixOptions = {
-        enableAutoFix: flags['auto-fix'],
-        respectRetryLimits: typeof flags['max-retries'] !== 'number',
-      };
-
-      if (typeof flags['max-retries'] === 'number') {
-        options.maxRetriesOverride = flags['max-retries'];
-      }
-
-      if (typeof flags.timeout === 'number') {
-        options.timeoutOverride = flags.timeout * 1000;
-      }
-
-      // Execute validation(s)
-      let result: AutoFixResult;
-
-      if (flags.command) {
-        // Single command execution
-        const commandType = flags.command as ValidationCommandType;
-        const validationResult = await executeValidationWithAutoFix(
-          runDirPath,
-          commandType,
-          options,
-          logger,
-          metrics,
-          executionTelemetry
-        );
-
-        result = {
-          success: validationResult.success,
-          results: new Map([[commandType, validationResult]]),
-          totalAttempts: validationResult.attempt.attempt_number,
-          autoFixSuccesses:
-            validationResult.attempt.auto_fix_attempted && validationResult.success ? 1 : 0,
-          exceededRetryLimits: [],
-          summary: buildSingleCommandSummary(validationResult),
-        };
-      } else {
-        // All validations
-        result = await executeAllValidations(
-          runDirPath,
-          undefined,
-          options,
-          logger,
-          metrics,
-          executionTelemetry
-        );
-      }
-
-      // Load validation summary for JSON output
-      const validationSummary = await getValidationSummary(runDirPath);
-
-      // Output results
-      if (flags.json) {
-        this.outputJson(featureId, result, validationSummary);
-      } else {
-        this.outputHuman(result);
-      }
-
-      // Record success metrics
-      if (commandSpan) {
-        commandSpan.setAttribute('exit_code', result.success ? 0 : 10);
-        commandSpan.setAttribute('validation_success', result.success);
-        commandSpan.setAttribute('total_attempts', result.totalAttempts);
-      }
-      await flushTelemetrySuccess(
-        {
-          commandName: 'validate',
-          startTime,
-          logger,
-          metrics,
-          traceManager,
-          commandSpan,
-          runDirPath,
-        },
-        { success: result.success, total_attempts: result.totalAttempts }
-      );
-
-      // Exit with appropriate code
-      if (!result.success) {
-        if (result.exceededRetryLimits.length > 0) {
-          this.error('Validation failed: retry limits exceeded', { exit: 11 });
-        } else {
-          this.error('Validation failed', { exit: 10 });
-        }
-      }
     } catch (error) {
-      await flushTelemetryError(
-        {
-          commandName: 'validate',
-          startTime,
+      this.failWithCliExitCode(error);
+    }
+    const runDirPath = getRunDirectoryPath(settings.baseDir, featureId);
+
+    await this.runWithTelemetry(
+      {
+        runDirPath,
+        featureId,
+        jsonMode: flags.json,
+        verbose: flags.verbose,
+        spanAttributes: { auto_fix_enabled: flags['auto-fix'] },
+      },
+      async (ctx) => {
+        // runDirPath is always defined for validate, so telemetry resources exist here.
+        const logger = ctx.logger!;
+        const metrics = ctx.metrics!;
+
+        const executionTelemetry = createExecutionTelemetry({
           logger,
           metrics,
-          traceManager,
-          commandSpan,
-          runDirPath,
-        },
-        error
-      );
+          runDir: runDirPath,
+          runId: featureId,
+          ...(ctx.traceManager ? { traceManager: ctx.traceManager } : {}),
+          component: 'validation',
+        });
 
-      rethrowIfOclifError(error);
+        logger.info('Validate command invoked', {
+          feature_id: featureId,
+          command: flags.command ?? 'all',
+          auto_fix: flags['auto-fix'],
+          init_mode: flags.init,
+        });
 
-      if (error instanceof CliError) {
-        const exitCode = error.code === CliErrorCode.RUN_DIR_NOT_FOUND ? 10 : error.exitCode;
-        this.error(error.message, { exit: exitCode });
+        // Handle --init flag
+        if (flags.init) {
+          await this.handleInit(runDirPath, settings.configPath, logger, metrics);
+          return;
+        }
+
+        // Check if registry is initialized
+        const registry = await loadValidationRegistry(runDirPath);
+        if (!registry) {
+          logger.error('Validation registry not initialized');
+          this.error(
+            'Validation registry not found. Run "codepipe validate --init" to initialize from config.',
+            { exit: 1 }
+          );
+        }
+
+        // Build execution options
+        const options: AutoFixOptions = {
+          enableAutoFix: flags['auto-fix'],
+          respectRetryLimits: typeof flags['max-retries'] !== 'number',
+        };
+
+        if (typeof flags['max-retries'] === 'number') {
+          options.maxRetriesOverride = flags['max-retries'];
+        }
+
+        if (typeof flags.timeout === 'number') {
+          options.timeoutOverride = flags.timeout * 1000;
+        }
+
+        // Execute validation(s)
+        let result: AutoFixResult;
+
+        if (flags.command) {
+          // Single command execution
+          const commandType = flags.command as ValidationCommandType;
+          const validationResult = await executeValidationWithAutoFix(
+            runDirPath,
+            commandType,
+            options,
+            logger,
+            metrics,
+            executionTelemetry
+          );
+
+          result = {
+            success: validationResult.success,
+            results: new Map([[commandType, validationResult]]),
+            totalAttempts: validationResult.attempt.attempt_number,
+            autoFixSuccesses:
+              validationResult.attempt.auto_fix_attempted && validationResult.success ? 1 : 0,
+            exceededRetryLimits: [],
+            summary: buildSingleCommandSummary(validationResult),
+          };
+        } else {
+          // All validations
+          result = await executeAllValidations(
+            runDirPath,
+            undefined,
+            options,
+            logger,
+            metrics,
+            executionTelemetry
+          );
+        }
+
+        // Load validation summary for JSON output
+        const validationSummary = await getValidationSummary(runDirPath);
+
+        // Output results
+        if (flags.json) {
+          this.outputJson(featureId, result, validationSummary);
+        } else {
+          this.outputHuman(result);
+        }
+
+        // Record success metrics
+        if (ctx.commandSpan) {
+          ctx.commandSpan.setAttribute('exit_code', result.success ? 0 : 10);
+          ctx.commandSpan.setAttribute('validation_success', result.success);
+          ctx.commandSpan.setAttribute('total_attempts', result.totalAttempts);
+        }
+
+        if (!result.success) {
+          const exitCode = result.exceededRetryLimits.length > 0 ? 11 : 10;
+          return {
+            exitCode,
+            extraLogFields: { success: result.success, total_attempts: result.totalAttempts },
+          };
+        }
+
+        return {
+          extraLogFields: { success: result.success, total_attempts: result.totalAttempts },
+        };
       }
-
-      if (error instanceof Error) {
-        this.error(`Validate command failed: ${error.message}`, { exit: 1 });
-      } else {
-        this.error('Validate command failed with an unknown error', { exit: 1 });
-      }
-    }
+    );
   }
 
   private async handleInit(
