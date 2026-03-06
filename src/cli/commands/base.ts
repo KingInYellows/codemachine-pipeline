@@ -160,7 +160,7 @@ export abstract class TelemetryCommand extends Command {
         const logDir = logsDir ?? runDirPath;
 
         logger = createCliLogger(this.commandName, telemetryId, logDir, {
-          minLevel: verbose ? LogLevel.DEBUG : LogLevel.INFO,
+          minLevel: verbose ? LogLevel.DEBUG : jsonMode ? LogLevel.WARN : LogLevel.INFO,
           mirrorToStderr: !jsonMode,
         });
         metrics = createRunMetricsCollector(runDirPath, telemetryId);
