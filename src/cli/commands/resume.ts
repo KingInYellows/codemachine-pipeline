@@ -258,17 +258,25 @@ export default class Resume extends TelemetryCommand {
         if (!analysis.canResume) {
           const exitCode = this.determineExitCode(analysis);
           resumeTelemetry.logger.error('Resume blocked', {
-            blockers: analysis.diagnostics.filter((d) => d.severity === 'blocker').map((d) => d.code),
+            blockers: analysis.diagnostics
+              .filter((d) => d.severity === 'blocker')
+              .map((d) => d.code),
           });
           this.logToStderr('Resume is blocked. See diagnostics above.');
           return { exitCode, extraLogFields: { exit_code: exitCode } };
         }
 
         // Execute resume
-        await this.buildAndRunExecutionEngine(featureId, runDirPath, typedFlags, payload, resumeTelemetry);
+        await this.buildAndRunExecutionEngine(
+          featureId,
+          runDirPath,
+          typedFlags,
+          payload,
+          resumeTelemetry
+        );
 
         return { exitCode: 0, extraLogFields: { exit_code: 0 } };
-      },
+      }
     );
   }
 

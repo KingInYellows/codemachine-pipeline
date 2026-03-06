@@ -230,7 +230,7 @@ export default class Validate extends TelemetryCommand {
         return {
           extraLogFields: { success: result.success, total_attempts: result.totalAttempts },
         };
-      },
+      }
     );
   }
 

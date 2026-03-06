@@ -234,7 +234,7 @@ export default class Doctor extends TelemetryCommand {
             checks_failed: summary.failed,
           },
         };
-      },
+      }
     );
   }
 

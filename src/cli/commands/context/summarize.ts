@@ -161,11 +161,17 @@ export default class ContextSummarize extends TelemetryCommand {
           }),
         };
 
-        const costTracker = await loadOrCreateCostTracker(featureId, runDir, ctx.logger!, ctx.metrics!, {
-          maxCostUsd: repoConfig.runtime.context_cost_budget_usd,
-          maxTokens: repoConfig.runtime.context_token_budget,
-          warningThreshold: 80,
-        });
+        const costTracker = await loadOrCreateCostTracker(
+          featureId,
+          runDir,
+          ctx.logger!,
+          ctx.metrics!,
+          {
+            maxCostUsd: repoConfig.runtime.context_cost_budget_usd,
+            maxTokens: repoConfig.runtime.context_token_budget,
+            warningThreshold: 80,
+          }
+        );
 
         const patterns = typedFlags.path ?? [];
         const stats: SummarizationStats = {
@@ -240,7 +246,7 @@ export default class ContextSummarize extends TelemetryCommand {
         return {
           extraLogFields: { files: output.files, summaries: output.summaries },
         };
-      },
+      }
     );
   }
 

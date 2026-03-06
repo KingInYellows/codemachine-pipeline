@@ -106,7 +106,12 @@ export default class RateLimits extends TelemetryCommand {
 
         // Handle clear operation
         if (typedFlags.clear) {
-          await this.handleClearCooldown(runDirPath, typedFlags.clear, ctx.logger!, typedFlags.json);
+          await this.handleClearCooldown(
+            runDirPath,
+            typedFlags.clear,
+            ctx.logger!,
+            typedFlags.json
+          );
           ctx.commandSpan?.setAttribute('clear_provider', typedFlags.clear);
           return { extraLogFields: { operation: 'clear' } };
         }
@@ -136,9 +141,12 @@ export default class RateLimits extends TelemetryCommand {
           }
         }
 
-        ctx.commandSpan?.setAttribute('provider_count', Object.keys(filteredReport.providers).length);
+        ctx.commandSpan?.setAttribute(
+          'provider_count',
+          Object.keys(filteredReport.providers).length
+        );
         return undefined;
-      },
+      }
     );
   }
 
