@@ -154,7 +154,7 @@ const RATE_LIMIT_WINDOW_MS = 60 * 60 * 1000; // 1 hour sliding window
 const SNAPSHOT_DIR = 'inputs';
 const LINEAR_ISSUE_IDENTIFIER_PATTERN = /^[A-Z][A-Z0-9]*-\d+$/;
 const STRUCTURED_OPAQUE_ISSUE_ID_PATTERN =
-  /^(?:[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}|[A-Za-z0-9]+(?:-[A-Za-z0-9]+)*)$/;
+  /^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/;
 
 /**
  * Linear adapter for issue operations via MCP
@@ -524,9 +524,18 @@ export class LinearAdapter {
   }
 
   private static validateIssueId(issueId: string): void {
+    if (!issueId || issueId.length > 100) {
+      throw new LinearAdapterError(
+        `Invalid Linear issue ID: ${JSON.stringify(issueId)}`,
+        ErrorType.PERMANENT,
+        undefined,
+        undefined,
+        'validateIssueId'
+      );
+    }
     const isLinearIdentifier = LINEAR_ISSUE_IDENTIFIER_PATTERN.test(issueId);
     const isStructuredOpaqueId = STRUCTURED_OPAQUE_ISSUE_ID_PATTERN.test(issueId);
-    if (!issueId || issueId.length > 100 || (!isLinearIdentifier && !isStructuredOpaqueId)) {
+    if (!isLinearIdentifier && !isStructuredOpaqueId) {
       throw new LinearAdapterError(
         `Invalid Linear issue ID: ${JSON.stringify(issueId)}`,
         ErrorType.PERMANENT,
@@ -538,7 +547,6 @@ export class LinearAdapter {
   }
 
   private getSnapshotPath(issueId: string): string {
-    LinearAdapter.validateIssueId(issueId);
     return path.join(this.runDir!, SNAPSHOT_DIR, `linear_issue_${issueId}.json`);
   }
 

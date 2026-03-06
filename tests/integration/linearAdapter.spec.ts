@@ -47,7 +47,7 @@ const mockHttpClient: MockHttpClient = {
 
 // Test fixtures
 const MOCK_LINEAR_ISSUE: LinearIssue = {
-  id: 'linear-uuid-1234-5678-abcd',
+  id: 'a1b2c3d4-e5f6-7890-abcd-1234567890ab',
   identifier: 'ENG-123',
   title: 'Add Linear integration via MCP',
   description: 'Implement MCP-based Linear adapter with caching and offline support',
@@ -257,8 +257,8 @@ describe('LinearAdapter Integration Tests', () => {
         requestId: 'req_test',
       });
 
-      await expect(adapter.fetchIssue('nonexistent-id')).rejects.toThrow(
-        'Issue nonexistent-id not found'
+      await expect(adapter.fetchIssue('00000000-0000-0000-0000-000000000000')).rejects.toThrow(
+        'Issue 00000000-0000-0000-0000-000000000000 not found'
       );
       expect(mockLogger.error).toHaveBeenCalledWith('Failed to fetch issue', expect.any(Object));
     });
@@ -285,7 +285,7 @@ describe('LinearAdapter Integration Tests', () => {
       );
     });
 
-    it('should allow single-segment opaque issue IDs', async () => {
+    it('should allow UUID-format opaque issue IDs', async () => {
       mockHttpClient.post.mockResolvedValue({
         status: 200,
         headers: {},
@@ -293,21 +293,29 @@ describe('LinearAdapter Integration Tests', () => {
         requestId: 'req_test',
       });
 
-      const result = await adapter.fetchIssue('abc123');
+      const opaqueId = 'deadbeef-1234-5678-abcd-ef0123456789';
+      const result = await adapter.fetchIssue(opaqueId);
 
       expect(result).toEqual(MOCK_LINEAR_ISSUE);
       expect(mockHttpClient.post).toHaveBeenCalledWith(
         '/graphql',
         expect.objectContaining({
-          variables: { issueId: 'abc123' },
+          variables: { issueId: opaqueId },
         }),
         expect.objectContaining({
           metadata: expect.objectContaining({
-            issueId: 'abc123',
+            issueId: opaqueId,
             operation: 'fetchIssue',
           }),
         })
       );
+    });
+
+    it('should reject single-segment opaque issue IDs', async () => {
+      await expect(adapter.fetchIssue('abc123')).rejects.toMatchObject({
+        errorType: ErrorType.PERMANENT,
+      });
+      expect(mockHttpClient.post).not.toHaveBeenCalled();
     });
   });
 
@@ -544,7 +552,7 @@ describe('LinearAdapter Integration Tests', () => {
 
       mockHttpClient.post.mockRejectedValue(networkError);
 
-      await expect(adapter.fetchIssueSnapshot('new-issue-id')).rejects.toThrow(LinearAdapterError);
+      await expect(adapter.fetchIssueSnapshot('11111111-1111-1111-1111-111111111111')).rejects.toThrow(LinearAdapterError);
 
       expect(mockLogger.error).toHaveBeenCalledWith(
         'Failed to fetch issue snapshot and no cache available',
@@ -566,7 +574,7 @@ describe('LinearAdapter Integration Tests', () => {
       mockHttpClient.post.mockRejectedValue(rateLimitError);
 
       try {
-        await adapter.fetchIssue('test-issue-id');
+        await adapter.fetchIssue('22222222-2222-2222-2222-222222222222');
         expect.fail('Should have thrown');
       } catch (error) {
         expect(error).toBeInstanceOf(LinearAdapterError);
@@ -590,7 +598,7 @@ describe('LinearAdapter Integration Tests', () => {
       mockHttpClient.post.mockRejectedValue(authError);
 
       try {
-        await adapter.fetchIssue('test-issue-id');
+        await adapter.fetchIssue('22222222-2222-2222-2222-222222222222');
         expect.fail('Should have thrown');
       } catch (error) {
         expect(error).toBeInstanceOf(LinearAdapterError);
@@ -767,6 +775,13 @@ describe('LinearAdapter Integration Tests', () => {
           body: 'Test comment',
         })
       ).rejects.toThrow('Comment posting requires preview features to be enabled');
+    });
+
+    it('should reject malformed issue IDs before fetching snapshot', async () => {
+      await expect(adapter.fetchIssueSnapshot('---')).rejects.toMatchObject({
+        errorType: ErrorType.PERMANENT,
+      });
+      expect(mockHttpClient.post).not.toHaveBeenCalled();
     });
 
     it('should reject malformed issue IDs before update', async () => {

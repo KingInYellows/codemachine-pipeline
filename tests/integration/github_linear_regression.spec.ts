@@ -463,7 +463,7 @@ describe('Linear Adapter Regression Tests', () => {
         mockClient as unknown as HttpClient
       );
 
-      await expect(adapterContract.fetchIssue('linear-uuid-1234-5678-abcd')).resolves.toMatchObject(
+      await expect(adapterContract.fetchIssue('a1b2c3d4-e5f6-7890-abcd-1234567890ab')).resolves.toMatchObject(
         {
           identifier: 'ENG-123',
           title: stringMatcher('regression tests'),
@@ -475,7 +475,7 @@ describe('Linear Adapter Regression Tests', () => {
         '/graphql',
         expect.objectContaining({
           query: stringMatcher('query GetIssue'),
-          variables: { issueId: 'linear-uuid-1234-5678-abcd' },
+          variables: { issueId: 'a1b2c3d4-e5f6-7890-abcd-1234567890ab' },
         }),
         expect.any(Object)
       );
@@ -491,7 +491,7 @@ describe('Linear Adapter Regression Tests', () => {
         mockClient as unknown as HttpClient
       );
 
-      await adapterContract.fetchComments('linear-uuid-1234-5678-abcd').then((result) => {
+      await adapterContract.fetchComments('a1b2c3d4-e5f6-7890-abcd-1234567890ab').then((result) => {
         expect(result).toHaveLength(2);
         expect(result[0]).toMatchObject({
           body: stringMatcher('Starting implementation'),
@@ -526,7 +526,7 @@ describe('Linear Adapter Regression Tests', () => {
       );
 
       await previewAdapterContract.updateIssue({
-        issueId: 'linear-uuid-1234-5678-abcd',
+        issueId: 'a1b2c3d4-e5f6-7890-abcd-1234567890ab',
         title: 'Updated title',
       });
 
@@ -535,7 +535,7 @@ describe('Linear Adapter Regression Tests', () => {
         expect.objectContaining({
           query: stringMatcher('mutation UpdateIssue'),
           variables: objectMatcher({
-            issueId: 'linear-uuid-1234-5678-abcd',
+            issueId: 'a1b2c3d4-e5f6-7890-abcd-1234567890ab',
           }),
         }),
         expect.any(Object)
@@ -558,10 +558,10 @@ describe('Linear Adapter Regression Tests', () => {
         mockClient as unknown as HttpClient
       );
 
-      await expect(adapterContract.fetchIssue('linear-uuid-test')).rejects.toThrow();
+      await expect(adapterContract.fetchIssue('33333333-3333-3333-3333-333333333333')).rejects.toThrow();
 
       try {
-        await adapterContract.fetchIssue('linear-uuid-test');
+        await adapterContract.fetchIssue('33333333-3333-3333-3333-333333333333');
       } catch (error) {
         expect(error).toBeInstanceOf(LinearAdapterError);
         if (!(error instanceof LinearAdapterError)) {
@@ -586,10 +586,10 @@ describe('Linear Adapter Regression Tests', () => {
         mockClient as unknown as HttpClient
       );
 
-      await expect(adapterContract.fetchIssue('linear-uuid-test')).rejects.toThrow();
+      await expect(adapterContract.fetchIssue('33333333-3333-3333-3333-333333333333')).rejects.toThrow();
 
       try {
-        await adapterContract.fetchIssue('linear-uuid-test');
+        await adapterContract.fetchIssue('33333333-3333-3333-3333-333333333333');
       } catch (error) {
         expect(error).toBeInstanceOf(LinearAdapterError);
         if (!(error instanceof LinearAdapterError)) {
@@ -620,13 +620,13 @@ describe('Linear Adapter Regression Tests', () => {
 
       await expect(
         previewAdapterContract.updateIssue({
-          issueId: 'linear-uuid-test',
+          issueId: '33333333-3333-3333-3333-333333333333',
           title: 'Test',
         })
       ).rejects.toThrow();
 
       try {
-        await previewAdapterContract.updateIssue({ issueId: 'linear-uuid-test', title: 'Test' });
+        await previewAdapterContract.updateIssue({ issueId: '33333333-3333-3333-3333-333333333333', title: 'Test' });
       } catch (error) {
         expect(error).toBeInstanceOf(LinearAdapterError);
         if (!(error instanceof LinearAdapterError)) {
