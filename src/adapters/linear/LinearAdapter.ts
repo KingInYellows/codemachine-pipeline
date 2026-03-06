@@ -20,10 +20,20 @@ import * as crypto from 'node:crypto';
 import { HttpClient, Provider, HttpError, ErrorType } from '../http/client';
 import type { HttpClientConfig } from '../http/client';
 import { RateLimitLedger } from '../../telemetry/rateLimitLedger';
-import { serializeError, createErrorNormalizer } from '../../utils/errors';
+import { AdapterError, serializeError, createErrorNormalizer } from '../../utils/errors';
 import { createLogger, LogLevel, type LoggerInterface } from '../../telemetry/logger';
 import { isFileNotFound } from '../../utils/safeJson';
 import { validateOrThrow } from '../../validation/helpers.js';
+import { IssueSnapshotSchema } from './LinearAdapterTypes.js';
+import type {
+  LinearAdapterConfig,
+  LinearIssue,
+  LinearComment,
+  SnapshotMetadata,
+  IssueSnapshot,
+  UpdateIssueParams,
+  PostCommentParams,
+} from './LinearAdapterTypes.js';
 
 export type {
   LinearAdapterConfig,
@@ -34,17 +44,11 @@ export type {
   UpdateIssueParams,
   PostCommentParams,
 } from './LinearAdapterTypes.js';
-export { LinearAdapterError } from './LinearAdapterTypes.js';
-import { IssueSnapshotSchema, LinearAdapterError } from './LinearAdapterTypes.js';
-import type {
-  LinearAdapterConfig,
-  LinearIssue,
-  LinearComment,
-  SnapshotMetadata,
-  IssueSnapshot,
-  UpdateIssueParams,
-  PostCommentParams,
-} from './LinearAdapterTypes.js';
+
+/**
+ * Linear adapter error with error taxonomy
+ */
+export class LinearAdapterError extends AdapterError {}
 
 const ISSUE_QUERY = `
   query GetIssue($issueId: String!) {

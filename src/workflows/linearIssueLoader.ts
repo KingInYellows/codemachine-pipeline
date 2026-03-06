@@ -8,7 +8,8 @@
  */
 
 import type { StructuredLogger } from '../telemetry/logger';
-import { LinearAdapter, type IssueSnapshot } from '../adapters/linear/LinearAdapter.js';
+import { LinearAdapter } from '../adapters/linear/LinearAdapter.js';
+import type { IssueSnapshot } from '../adapters/linear/LinearAdapterTypes.js';
 
 export async function loadLinearIssue(
   issueId: string,

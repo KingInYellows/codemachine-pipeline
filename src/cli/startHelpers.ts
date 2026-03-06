@@ -10,7 +10,7 @@ import { execSync } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
 import type { StructuredLogger } from '../telemetry/logger';
 import type { RepoConfig } from '../core/config/RepoConfig';
-import type { IssueSnapshot } from '../adapters/linear/LinearAdapter';
+import type { IssueSnapshot } from '../adapters/linear/LinearAdapterTypes';
 import { loadLinearIssue } from '../workflows/linearIssueLoader.js';
 import { CliError, CliErrorCode, formatErrorMessage } from './utils/cliErrors';
 import { getErrorMessage } from '../utils/errors.js';
