@@ -2,13 +2,12 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 import * as os from 'node:os';
-import {
-  LinearAdapter,
-  LinearAdapterError,
-  type LinearIssue,
-  type LinearComment,
-  type IssueSnapshot,
-} from '../../src/adapters/linear/LinearAdapter';
+import { LinearAdapter, LinearAdapterError } from '../../src/adapters/linear/LinearAdapter';
+import type {
+  LinearIssue,
+  LinearComment,
+  IssueSnapshot,
+} from '../../src/adapters/linear/LinearAdapterTypes';
 import { ErrorType, HttpError } from '../../src/adapters/http/client';
 import type { HttpClient } from '../../src/adapters/http/client';
 import type { RateLimitLedger } from '../../src/telemetry/rateLimitLedger';
