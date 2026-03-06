@@ -10,17 +10,34 @@ import { promisify } from 'node:util';
 import type { StructuredLogger } from '../telemetry/logger';
 import { getErrorMessage } from '../utils/errors.js';
 
+const NULL_BYTE_CHARACTER = String.fromCharCode(0);
+
+export function escapeForCharacterClass(characters: string): string {
+  return characters
+    .replaceAll('\\', '\\\\')
+    .replaceAll(']', '\\]')
+    .replaceAll('[', '\\[')
+    .replaceAll('^', '\\^')
+    .replaceAll('-', '\\-');
+}
+
 /**
  * Shell metacharacters that indicate shell interpretation is required.
  * These characters can enable command injection if user input contains them.
  */
-export const SHELL_METACHARACTERS = /[|&;`$<>(){}[\]!*?~#\u0000]/u;
+export const SHELL_METACHARACTERS = new RegExp(
+  `[${escapeForCharacterClass(`|&;\`$<>(){}[]!*?~#${NULL_BYTE_CHARACTER}`)}]`,
+  'u'
+);
 
 /**
  * Stricter metacharacter check for user-provided template values.
  * Includes quotes and whitespace to block multi-token substitutions.
  */
-export const TEMPLATE_VALUE_METACHARACTERS = /[|&;`$<>(){}[\]!*?~#"'\s\u0000]/u;
+export const TEMPLATE_VALUE_METACHARACTERS = new RegExp(
+  `[${escapeForCharacterClass(`|&;\`$<>(){}[]!*?~#"'${NULL_BYTE_CHARACTER}`)}]|\\s`,
+  'u'
+);
 
 /**
  * Parse command string into executable and arguments array.
