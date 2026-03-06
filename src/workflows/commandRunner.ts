@@ -210,10 +210,27 @@ export function resolveWorkingDirectory(
 // ---------------------------------------------------------------------------
 
 /**
+ * Narrower metacharacter check for built-in context values (feature_id, run_dir, repo_root, command_cwd).
+ * Blocks characters that enable shell injection or corrupt parseCommandString argument boundaries.
+ * Allows parens, brackets, etc. that are valid in filesystem paths.
+ */
+export const DANGEROUS_PATH_METACHARACTERS = new RegExp(
+  `[${escapeForCharacterClass(`|&;\`$<>'"${String.fromCharCode(0)}`)}]|\\s`,
+  'u'
+);
+
+export const BUILTIN_TEMPLATE_CONTEXT_KEYS = new Set([
+  'feature_id',
+  'run_dir',
+  'repo_root',
+  'command_cwd',
+]);
+
+/**
  * Build the context object used for command-template interpolation.
  *
- * Throws if any caller-supplied `templateContext` value contains shell
- * metacharacters.
+ * Throws if any caller-supplied `templateContext` key conflicts with a
+ * built-in key, or if a value contains shell metacharacters.
  */
 export function buildCommandTemplateContext(
   runDir: string,
@@ -222,7 +239,10 @@ export function buildCommandTemplateContext(
   templateContext?: Record<string, string>
 ): Record<string, string> {
   for (const [key, value] of Object.entries(templateContext ?? {})) {
-    if (SHELL_METACHARACTERS.test(value)) {
+    if (BUILTIN_TEMPLATE_CONTEXT_KEYS.has(key)) {
+      throw new Error(`Template context key "${key}" conflicts with built-in template key`);
+    }
+    if (TEMPLATE_VALUE_METACHARACTERS.test(value)) {
       throw new Error(
         `Template context value for "${key}" contains shell metacharacters which are not permitted`
       );
@@ -230,7 +250,7 @@ export function buildCommandTemplateContext(
   }
 
   return {
-    feature_id: path.basename(runDir),
+    feature_id: path.basename(runDir).replace(/\s+/gu, '-'),
     run_dir: runDir,
     repo_root: repoRoot,
     command_cwd: commandCwd,
@@ -240,9 +260,22 @@ export function buildCommandTemplateContext(
 
 /**
  * Apply mustache-style `{{ key }}` interpolation to a command template.
+ *
+ * Built-in path keys are validated against DANGEROUS_PATH_METACHARACTERS;
+ * user-supplied values are validated against TEMPLATE_VALUE_METACHARACTERS.
  */
 export function applyCommandTemplate(template: string, context: Record<string, string>): string {
-  return template.replace(/\{\{\s*([\w.-]+)\s*\}\}/g, (_, key: string) => context[key] ?? '');
+  return template.replace(/\{\{\s*([\w.-]+)\s*\}\}/g, (_, key: string) => {
+    const value = Object.hasOwn(context, key) ? context[key] : undefined;
+    if (value === undefined) return '';
+    const metacharacterPattern = BUILTIN_TEMPLATE_CONTEXT_KEYS.has(key)
+      ? DANGEROUS_PATH_METACHARACTERS
+      : TEMPLATE_VALUE_METACHARACTERS;
+    if (metacharacterPattern.test(value)) {
+      throw new Error(`Template substitution for "${key}" contains shell metacharacters`);
+    }
+    return value;
+  });
 }
 
 // ---------------------------------------------------------------------------

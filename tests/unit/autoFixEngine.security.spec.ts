@@ -326,17 +326,18 @@ describe('autoFixEngine security - command execution', () => {
 
     test('SECURITY FIX: built-in template path values use narrower metacharacter checks', async () => {
       const fsSync = await import('node:fs');
-      const autoFixEnginePath = path.join(__dirname, '../../src/workflows/autoFixEngine.ts');
-      const autoFixEngineSource = fsSync.readFileSync(autoFixEnginePath, 'utf-8');
+      // These security guards now live in commandRunner.ts (extracted from autoFixEngine.ts)
+      const commandRunnerPath = path.join(__dirname, '../../src/workflows/commandRunner.ts');
+      const commandRunnerSource = fsSync.readFileSync(commandRunnerPath, 'utf-8');
 
-      expect(autoFixEngineSource).toContain('const BUILTIN_TEMPLATE_CONTEXT_KEYS');
-      expect(autoFixEngineSource).toContain("'feature_id'");
-      expect(autoFixEngineSource).toContain("'run_dir'");
-      expect(autoFixEngineSource).toContain("'repo_root'");
-      expect(autoFixEngineSource).toContain("'command_cwd'");
+      expect(commandRunnerSource).toContain('const BUILTIN_TEMPLATE_CONTEXT_KEYS');
+      expect(commandRunnerSource).toContain("'feature_id'");
+      expect(commandRunnerSource).toContain("'run_dir'");
+      expect(commandRunnerSource).toContain("'repo_root'");
+      expect(commandRunnerSource).toContain("'command_cwd'");
       // Built-in keys use the narrower DANGEROUS_PATH_METACHARACTERS (no parens/brackets/spaces)
-      expect(autoFixEngineSource).toContain('? DANGEROUS_PATH_METACHARACTERS');
-      expect(autoFixEngineSource).toContain(': TEMPLATE_VALUE_METACHARACTERS');
+      expect(commandRunnerSource).toContain('? DANGEROUS_PATH_METACHARACTERS');
+      expect(commandRunnerSource).toContain(': TEMPLATE_VALUE_METACHARACTERS');
     });
 
     test('SECURITY FIX: Command parsing function prevents shell interpretation', async () => {

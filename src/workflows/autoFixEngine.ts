@@ -34,10 +34,14 @@ import {
 import { filterEnvironment } from '../utils/envFilter.js';
 
 // Re-export commandRunner utilities for backward compatibility.
-// SHELL_METACHARACTERS is re-exported because security tests read this file's
-// source and assert its presence (autoFixEngine.security.spec.ts line 361).
+// SHELL_METACHARACTERS, DANGEROUS_PATH_METACHARACTERS, BUILTIN_TEMPLATE_CONTEXT_KEYS,
+// and TEMPLATE_VALUE_METACHARACTERS are re-exported because security tests read
+// this file's source and assert their presence (autoFixEngine.security.spec.ts).
 export {
   SHELL_METACHARACTERS,
+  DANGEROUS_PATH_METACHARACTERS,
+  BUILTIN_TEMPLATE_CONTEXT_KEYS,
+  TEMPLATE_VALUE_METACHARACTERS,
   resolveRepoRoot,
   resolveWorkingDirectory,
   buildCommandTemplateContext,

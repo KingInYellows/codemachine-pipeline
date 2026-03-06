@@ -18,10 +18,10 @@ NC='\033[0m' # No Color
 PASSED=0
 FAILED=0
 
-# Test 1: Verify shell:true is NOT in autoFixEngine.ts
-echo "1. Checking for shell:true in autoFixEngine.ts..."
-if grep -q "shell: true" src/workflows/autoFixEngine.ts 2>/dev/null; then
-    echo -e "${RED}✗ FAILED${NC}: Found 'shell: true' in autoFixEngine.ts"
+# Test 1: Verify shell:true is NOT in autoFixEngine.ts or commandRunner.ts
+echo "1. Checking for shell:true in autoFixEngine.ts and commandRunner.ts..."
+if grep -q "shell: true" src/workflows/autoFixEngine.ts 2>/dev/null || grep -q "shell: true" src/workflows/commandRunner.ts 2>/dev/null; then
+    echo -e "${RED}✗ FAILED${NC}: Found 'shell: true' in autoFixEngine.ts or commandRunner.ts"
     FAILED=$((FAILED + 1))
 else
     echo -e "${GREEN}✓ PASSED${NC}: No 'shell: true' found"
