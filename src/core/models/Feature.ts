@@ -207,6 +207,7 @@ export function createFeature(
     title?: string;
     source?: string;
     defaultBranch?: string;
+    // eslint-disable-next-line @typescript-eslint/no-restricted-types -- intentional: feature metadata is consumer-defined and open-ended
     metadata?: Record<string, unknown>;
   }
 ): Feature {

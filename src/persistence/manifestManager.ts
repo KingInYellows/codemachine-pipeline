@@ -95,6 +95,7 @@ export interface RunManifest {
     rate_limits_file?: string;
   };
   /** Intentional: run manifest metadata is consumer-defined */
+  // eslint-disable-next-line @typescript-eslint/no-restricted-types -- intentional: manifest metadata is consumer-defined and open-ended
   metadata?: Record<string, unknown>;
 }
 

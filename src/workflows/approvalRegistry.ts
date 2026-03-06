@@ -32,6 +32,7 @@ export interface RequestApprovalOptions {
   /** SHA-256 hash of artifact content */
   artifactHash: string;
   /** Intentional: approval request metadata varies by workflow */
+  // eslint-disable-next-line @typescript-eslint/no-restricted-types -- intentional: approval request metadata varies by workflow
   metadata?: Record<string, unknown>;
 }
 
@@ -45,6 +46,7 @@ export interface GrantApprovalOptions {
   /** Artifact path associated with approval */
   artifactPath?: string;
   /** Intentional: approval grant metadata varies by workflow */
+  // eslint-disable-next-line @typescript-eslint/no-restricted-types -- intentional: approval grant metadata varies by workflow
   metadata?: Record<string, unknown>;
 }
 
@@ -58,6 +60,7 @@ export interface DenyApprovalOptions {
   /** Artifact path associated with denial */
   artifactPath?: string;
   /** Intentional: approval denial metadata varies by workflow */
+  // eslint-disable-next-line @typescript-eslint/no-restricted-types -- intentional: approval denial metadata varies by workflow
   metadata?: Record<string, unknown>;
 }
 
@@ -78,6 +81,7 @@ export interface ApprovalsFile {
   /** List of approval records */
   approvals: ApprovalRecord[];
   /** Intentional: approvals-file metadata is consumer-defined */
+  // eslint-disable-next-line @typescript-eslint/no-restricted-types -- intentional: approvals-file metadata is consumer-defined
   metadata?: Record<string, unknown>;
 }
 

@@ -80,6 +80,7 @@ export interface PRDDocument {
   /** Structured sections */
   sections: Record<PRDSectionType, PRDSection>;
   /** Intentional: PRD document metadata varies by authoring context */
+  // eslint-disable-next-line @typescript-eslint/no-restricted-types -- intentional: PRD metadata varies per authoring workflow
   metadata?: Record<string, unknown>;
 }
 

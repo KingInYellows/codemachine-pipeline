@@ -247,6 +247,7 @@ export class HttpClient {
     requestId: string,
     attemptNumber: number,
     maxAttempts: number,
+    // eslint-disable-next-line @typescript-eslint/no-restricted-types -- intentional: request metadata for logging varies per caller
     metadata?: Record<string, unknown>,
     schema?: ZodSchema<unknown>
   ): Promise<AttemptResult<T>> {

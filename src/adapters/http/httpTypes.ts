@@ -53,6 +53,7 @@ export interface HttpRequestOptions extends Omit<RequestInit, 'headers'> {
     maxAttempts?: number;
   };
   /** Intentional: request metadata for logging — varies per caller */
+  // eslint-disable-next-line @typescript-eslint/no-restricted-types -- intentional: request metadata for logging varies per caller
   metadata?: Record<string, unknown>;
   /** Optional Zod schema to validate the parsed response body */
   schema?: ZodSchema<unknown>;

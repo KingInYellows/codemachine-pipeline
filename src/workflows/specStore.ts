@@ -37,6 +37,7 @@ export interface RecordSpecApprovalOptions {
   /** Rationale or comments */
   rationale?: string;
   /** Intentional: spec approval metadata varies by workflow */
+  // eslint-disable-next-line @typescript-eslint/no-restricted-types -- intentional: spec store metadata is consumer-defined and open-ended
   metadata?: Record<string, unknown>;
 }
 
@@ -184,6 +185,7 @@ export function recordSpecApproval(
       artifactHash?: string;
       artifactPath?: string;
       rationale?: string;
+      // eslint-disable-next-line @typescript-eslint/no-restricted-types -- intentional: spec store metadata is consumer-defined and open-ended
       metadata?: Record<string, unknown>;
     } = {
       artifactHash: currentHash,
