@@ -81,8 +81,11 @@ jobs:
           node-version: '24'
           cache: 'npm'
 
-      - name: Install dependencies (prepare builds manifest)
+      - name: Install dependencies
         run: npm ci --no-audit --no-fund
+
+      - name: Build project
+        run: npm run build
 
       - name: Validate Command Documentation
         run: node scripts/validate-docs-commands.js

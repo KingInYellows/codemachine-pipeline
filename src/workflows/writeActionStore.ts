@@ -8,6 +8,7 @@
 import { appendFile, access, mkdir, readFile, writeFile } from 'node:fs/promises';
 import { createHash, randomBytes } from 'node:crypto';
 import { join } from 'node:path';
+import { isFileNotFound } from '../utils/safeJson.js';
 import type { LoggerInterface } from '../telemetry/logger';
 import {
   WriteActionSchema,
@@ -41,15 +42,6 @@ export function generateIdempotencyKey(
 ): string {
   const data = JSON.stringify({ actionType, owner, repo, payload });
   return createHash('sha256').update(data).digest('hex');
-}
-
-export function isFileNotFound(error: unknown): error is NodeJS.ErrnoException {
-  return Boolean(
-    error &&
-    typeof error === 'object' &&
-    'code' in error &&
-    (error as NodeJS.ErrnoException).code === 'ENOENT'
-  );
 }
 
 async function computeQueueChecksum(queuePath: string): Promise<string> {
