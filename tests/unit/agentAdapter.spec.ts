@@ -791,6 +791,41 @@ describe('AgentAdapter - Fallback Logic', () => {
     sleepSpy.mockRestore();
   });
 
+  it('should clamp negative retry-after values to 0 seconds', async () => {
+    const sleepSpy = vi.spyOn(
+      adapter as unknown as { sleep: (ms: number) => Promise<void> },
+      'sleep'
+    );
+    sleepSpy.mockResolvedValue();
+
+    let invokeCount = 0;
+    providerInvoker.mockImplementation(
+      (manifest, _request, sessionId, _startTime, fallbackAttempts) => {
+        invokeCount++;
+        if (invokeCount === 1) {
+          return Promise.reject(createRetryAfterError(-1));
+        }
+        return Promise.resolve(createProviderResponse(manifest, sessionId, fallbackAttempts));
+      }
+    );
+
+    const request: AgentSessionRequest = {
+      context: 'code_generation',
+      prompt: { instruction: 'Test' },
+      taskId: 'task-1',
+      featureId: 'FEAT-1',
+    };
+
+    await adapter.executeSession(request);
+
+    expect(sleepSpy).toHaveBeenCalledWith(0);
+    expect(logger.spies.warn).not.toHaveBeenCalledWith(
+      'Capping retry-after from external API',
+      expect.any(Object)
+    );
+    sleepSpy.mockRestore();
+  });
+
   it('should not use fallback on permanent error', async () => {
     providerInvoker.mockRejectedValue(new Error('Invalid API key'));
 

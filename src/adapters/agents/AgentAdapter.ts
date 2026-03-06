@@ -332,7 +332,10 @@ export class AgentAdapter {
     }
 
     if (agentError.retryAfterSeconds) {
-      const cappedSeconds = Math.min(agentError.retryAfterSeconds, MAX_RETRY_WAIT_SECONDS);
+      const cappedSeconds = Math.min(
+        Math.max(0, agentError.retryAfterSeconds),
+        MAX_RETRY_WAIT_SECONDS
+      );
       if (cappedSeconds < agentError.retryAfterSeconds) {
         this.logger.warn('Capping retry-after from external API', {
           sessionId,
