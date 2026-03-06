@@ -200,19 +200,7 @@ export default class Approve extends TelemetryCommand {
           artifactHash = 'skipped';
           ctx.logger?.warn('Artifact hash validation skipped', { gate_type: gateType });
         } else {
-          try {
-            artifactHash = await computeArtifactHash(artifactInfo.absolutePath);
-          } catch (error) {
-            if (error instanceof Error && error.message.includes('hash mismatch')) {
-              this.error(
-                `Artifact modified after approval request:\n${error.message}\n\n` +
-                  `The artifact has been changed since the approval was requested. ` +
-                  `Please review the updated artifact and request approval again.`,
-                { exit: 30 }
-              );
-            }
-            throw error;
-          }
+          artifactHash = await computeArtifactHash(artifactInfo.absolutePath);
           ctx.logger?.info('Artifact hash computed', {
             gate_type: gateType,
             artifact_path: artifactInfo.relativePath,
@@ -222,95 +210,107 @@ export default class Approve extends TelemetryCommand {
 
         let payload: ApprovalResultPayload;
 
-        if (typedFlags.approve) {
-          // Grant approval
-          const grantOptions: GrantApprovalOptions = {
-            signer: typedFlags.signer,
-            artifactPath: artifactInfo.relativePath,
-            metadata: {
-              git_user: getGitUser(),
-              hostname: os.hostname(),
-            },
-          };
-          if (typedFlags.comment) {
-            grantOptions.rationale = typedFlags.comment;
-          }
-          if (typedFlags['signer-name']) {
-            grantOptions.signerName = typedFlags['signer-name'];
-          }
+        try {
+          if (typedFlags.approve) {
+            // Grant approval
+            const grantOptions: GrantApprovalOptions = {
+              signer: typedFlags.signer,
+              artifactPath: artifactInfo.relativePath,
+              metadata: {
+                git_user: getGitUser(),
+                hostname: os.hostname(),
+              },
+            };
+            if (typedFlags.comment) {
+              grantOptions.rationale = typedFlags.comment;
+            }
+            if (typedFlags['signer-name']) {
+              grantOptions.signerName = typedFlags['signer-name'];
+            }
 
-          const approvalRecord = await grantApproval(runDir, gateType, artifactHash, grantOptions);
+            const approvalRecord = await grantApproval(runDir, gateType, artifactHash, grantOptions);
 
-          payload = {
-            feature_id: featureId,
-            gate_type: gateType,
-            verdict: 'approved',
-            signer: approvalRecord.signer,
-            artifact_path: artifactInfo.relativePath,
-            approved_at: approvalRecord.approved_at,
-            next_steps: this.buildNextSteps(gateType, 'approved'),
-          };
-          if (approvalRecord.signer_name) {
-            payload.signer_name = approvalRecord.signer_name;
-          }
-          if (approvalRecord.artifact_hash) {
-            payload.artifact_hash = approvalRecord.artifact_hash;
-          }
-          if (approvalRecord.rationale) {
-            payload.rationale = approvalRecord.rationale;
-          }
+            payload = {
+              feature_id: featureId,
+              gate_type: gateType,
+              verdict: 'approved',
+              signer: approvalRecord.signer,
+              artifact_path: artifactInfo.relativePath,
+              approved_at: approvalRecord.approved_at,
+              next_steps: this.buildNextSteps(gateType, 'approved'),
+            };
+            if (approvalRecord.signer_name) {
+              payload.signer_name = approvalRecord.signer_name;
+            }
+            if (approvalRecord.artifact_hash) {
+              payload.artifact_hash = approvalRecord.artifact_hash;
+            }
+            if (approvalRecord.rationale) {
+              payload.rationale = approvalRecord.rationale;
+            }
 
-          ctx.logger?.info('Approval granted', {
-            gate_type: gateType,
-            signer: approvalRecord.signer,
-            approval_id: approvalRecord.approval_id,
-          });
+            ctx.logger?.info('Approval granted', {
+              gate_type: gateType,
+              signer: approvalRecord.signer,
+              approval_id: approvalRecord.approval_id,
+            });
 
-          await this.generateTraceAfterSpecApproval({
-            gateType,
-            featureId,
-            runDir,
-            logger: ctx.logger!,
-            metrics: ctx.metrics!,
-          });
-        } else {
-          // Deny approval
-          const denyOptions: DenyApprovalOptions = {
-            signer: typedFlags.signer,
-            artifactPath: artifactInfo.relativePath,
-            reason: typedFlags.comment || 'No reason provided',
-            metadata: {
-              git_user: getGitUser(),
-              hostname: os.hostname(),
-            },
-          };
-          if (typedFlags['signer-name']) {
-            denyOptions.signerName = typedFlags['signer-name'];
+            await this.generateTraceAfterSpecApproval({
+              gateType,
+              featureId,
+              runDir,
+              logger: ctx.logger!,
+              metrics: ctx.metrics!,
+            });
+          } else {
+            // Deny approval
+            const denyOptions: DenyApprovalOptions = {
+              signer: typedFlags.signer,
+              artifactPath: artifactInfo.relativePath,
+              reason: typedFlags.comment || 'No reason provided',
+              metadata: {
+                git_user: getGitUser(),
+                hostname: os.hostname(),
+              },
+            };
+            if (typedFlags['signer-name']) {
+              denyOptions.signerName = typedFlags['signer-name'];
+            }
+
+            const approvalRecord = await denyApproval(runDir, gateType, denyOptions);
+
+            payload = {
+              feature_id: featureId,
+              gate_type: gateType,
+              verdict: 'rejected',
+              signer: approvalRecord.signer,
+              artifact_path: artifactInfo.relativePath,
+              approved_at: approvalRecord.approved_at,
+              next_steps: this.buildNextSteps(gateType, 'rejected'),
+            };
+            if (approvalRecord.signer_name) {
+              payload.signer_name = approvalRecord.signer_name;
+            }
+            if (approvalRecord.rationale) {
+              payload.rationale = approvalRecord.rationale;
+            }
+
+            ctx.logger?.warn('Approval denied', {
+              gate_type: gateType,
+              signer: approvalRecord.signer,
+              reason: denyOptions.reason,
+            });
           }
-
-          const approvalRecord = await denyApproval(runDir, gateType, denyOptions);
-
-          payload = {
-            feature_id: featureId,
-            gate_type: gateType,
-            verdict: 'rejected',
-            signer: approvalRecord.signer,
-            artifact_path: artifactInfo.relativePath,
-            approved_at: approvalRecord.approved_at,
-            next_steps: this.buildNextSteps(gateType, 'rejected'),
-          };
-          if (approvalRecord.signer_name) {
-            payload.signer_name = approvalRecord.signer_name;
+        } catch (error) {
+          if (error instanceof Error && error.message.includes('hash mismatch')) {
+            this.error(
+              `Artifact modified after approval request:\n${error.message}\n\n` +
+                'The artifact has been changed since the approval was requested. ' +
+                'Please review the updated artifact and request approval again.',
+              { exit: 30 }
+            );
           }
-          if (approvalRecord.rationale) {
-            payload.rationale = approvalRecord.rationale;
-          }
-
-          ctx.logger?.warn('Approval denied', {
-            gate_type: gateType,
-            signer: approvalRecord.signer,
-            reason: denyOptions.reason,
-          });
+          throw error;
         }
 
         this.emitApprovalSummary(payload, typedFlags.json);
