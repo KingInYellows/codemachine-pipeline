@@ -286,7 +286,7 @@ export default class Init extends Command {
     config: RepoConfig,
     flags: { 'dry-run': boolean }
   ): Promise<ValidationResult> {
-    return flags['dry-run'] ? this.validateInMemoryConfig(config) : loadRepoConfig(configPath);
+    return flags['dry-run'] ? this.validateInMemoryConfig(config) : await loadRepoConfig(configPath);
   }
 
   /**
