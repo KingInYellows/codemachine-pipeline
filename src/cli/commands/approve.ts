@@ -228,7 +228,12 @@ export default class Approve extends TelemetryCommand {
               grantOptions.signerName = typedFlags['signer-name'];
             }
 
-            const approvalRecord = await grantApproval(runDir, gateType, artifactHash, grantOptions);
+            const approvalRecord = await grantApproval(
+              runDir,
+              gateType,
+              artifactHash,
+              grantOptions
+            );
 
             payload = {
               feature_id: featureId,
