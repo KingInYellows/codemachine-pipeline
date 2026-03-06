@@ -25,6 +25,7 @@ export interface FileHashRecord {
   /** Timestamp when hash was computed (ISO 8601) */
   timestamp: string;
   /** Intentional: file-level metadata varies by consumer (file type, purpose, tags, etc.) */
+  // eslint-disable-next-line @typescript-eslint/no-restricted-types -- intentional: hash entry metadata varies per file type
   metadata?: Record<string, unknown>;
 }
 
@@ -41,6 +42,7 @@ export interface HashManifest {
   /** Map of file paths to hash records */
   files: Record<string, FileHashRecord>;
   /** Intentional: manifest-level metadata varies by consumer */
+  // eslint-disable-next-line @typescript-eslint/no-restricted-types -- intentional: hash manifest metadata is consumer-defined
   metadata?: Record<string, unknown>;
 }
 
@@ -134,6 +136,7 @@ export async function computeFileHash(filePath: string): Promise<string> {
  */
 export async function createFileHashRecord(
   filePath: string,
+  // eslint-disable-next-line @typescript-eslint/no-restricted-types -- intentional: hash entry metadata varies per file type
   metadata?: Record<string, unknown>
 ): Promise<FileHashRecord> {
   const hash = await computeFileHash(filePath);
@@ -162,6 +165,7 @@ export async function createFileHashRecord(
  */
 export async function createHashManifest(
   filePaths: string[],
+  // eslint-disable-next-line @typescript-eslint/no-restricted-types -- intentional: hash manifest metadata is consumer-defined
   metadata?: Record<string, unknown>
 ): Promise<HashManifestResult> {
   const files: Record<string, FileHashRecord> = {};

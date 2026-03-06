@@ -508,6 +508,7 @@ describe('addConfigHistoryEntry', () => {
 });
 
 describe('Env var name validation (CDMCH-214)', () => {
+  // eslint-disable-next-line @typescript-eslint/no-restricted-types -- intentional: test factory accepts arbitrary config overrides
   const minimalConfig = (overrides: Record<string, unknown>) => ({
     schema_version: '1.0.0',
     project: { id: 'test', repo_url: 'https://github.com/org/repo.git' },
@@ -574,6 +575,7 @@ describe('Env var name validation (CDMCH-214)', () => {
 });
 
 describe('GitHub API version (CDMCH-209)', () => {
+  // eslint-disable-next-line @typescript-eslint/no-restricted-types -- intentional: test factory accepts arbitrary config overrides
   const minimalConfig = (githubOverrides: Record<string, unknown> = {}) => ({
     schema_version: '1.0.0',
     project: { id: 'test', repo_url: 'https://github.com/org/repo.git' },

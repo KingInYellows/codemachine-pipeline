@@ -161,6 +161,7 @@ export function createSpecification(
     risks?: RiskAssessment[];
     testPlan?: TestPlanItem[];
     rolloutPlan?: RolloutPlan;
+    // eslint-disable-next-line @typescript-eslint/no-restricted-types -- intentional: specification metadata varies per review workflow
     metadata?: Record<string, unknown>;
   }
 ): Specification {

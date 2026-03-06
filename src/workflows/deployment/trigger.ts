@@ -78,6 +78,7 @@ type StrategyRule = {
   predicate: () => boolean;
   strategy: DeploymentStrategy;
   message: string;
+  // eslint-disable-next-line @typescript-eslint/no-restricted-types -- intentional: logging context accepts arbitrary structured data
   logContext?: Record<string, unknown>;
 };
 

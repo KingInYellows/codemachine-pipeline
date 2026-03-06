@@ -58,6 +58,7 @@ export function createRateLimitEnvelope(
   options?: {
     totalTokens?: number;
     resetAt?: string;
+    // eslint-disable-next-line @typescript-eslint/no-restricted-types -- intentional: envelope metadata varies per provider
     metadata?: Record<string, unknown>;
   }
 ): RateLimitEnvelope {

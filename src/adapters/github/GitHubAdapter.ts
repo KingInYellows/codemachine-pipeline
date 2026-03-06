@@ -468,6 +468,7 @@ export class GitHubAdapter {
 
   private async executeGraphQLMutation(
     query: string,
+    // eslint-disable-next-line @typescript-eslint/no-restricted-types -- intentional: GraphQL mutation variables are open-ended by nature
     variables: Record<string, unknown>,
     operation: string,
     pull_number: number

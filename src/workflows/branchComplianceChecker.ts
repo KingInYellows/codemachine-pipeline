@@ -57,8 +57,11 @@ export async function evaluateCompliance(
     pull_number?: number;
   },
   logger?: {
+    // eslint-disable-next-line @typescript-eslint/no-restricted-types -- intentional: logger interface accepts arbitrary structured context
     info(message: string, context?: Record<string, unknown>): void;
+    // eslint-disable-next-line @typescript-eslint/no-restricted-types -- intentional: logger interface accepts arbitrary structured context
     debug(message: string, context?: Record<string, unknown>): void;
+    // eslint-disable-next-line @typescript-eslint/no-restricted-types -- intentional: logger interface accepts arbitrary structured context
     warn(message: string, context?: Record<string, unknown>): void;
   }
 ): Promise<BranchProtectionCompliance> {

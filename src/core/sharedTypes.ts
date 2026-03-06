@@ -184,4 +184,5 @@ export interface CommonLogContext {
  * for common properties. The `Record<string, unknown>` intersection means known
  * field types are advisory for IDE autocomplete, not enforced at compile time.
  */
+// eslint-disable-next-line @typescript-eslint/no-restricted-types -- intentional: logging context accepts arbitrary structured data
 export type LogContext = CommonLogContext & Record<string, unknown>;

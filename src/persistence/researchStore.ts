@@ -101,6 +101,7 @@ export async function appendTaskLog(
     event_type: 'created' | 'started' | 'completed' | 'failed' | 'cached';
     task_id: string;
     status: ResearchTask['status'];
+    // eslint-disable-next-line @typescript-eslint/no-restricted-types -- intentional: research task metadata varies by source and objective
     metadata?: Record<string, unknown>;
   }
 ): Promise<void> {

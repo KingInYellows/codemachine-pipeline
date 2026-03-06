@@ -51,6 +51,7 @@ export interface Blocker {
   /** Recommended action to resolve blocker */
   recommended_action: string;
   /** Intentional: blocker metadata varies by blocker type (config, protection, approvals, etc.) */
+  // eslint-disable-next-line @typescript-eslint/no-restricted-types -- intentional: deployment metadata varies per environment and action
   metadata?: Record<string, unknown>;
 }
 

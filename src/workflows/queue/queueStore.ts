@@ -124,8 +124,10 @@ export interface PlanTask {
   task_type: ExecutionTask['task_type'];
   dependency_ids?: string[];
   /** Intentional: task config shape varies by task_type */
+  // eslint-disable-next-line @typescript-eslint/no-restricted-types -- intentional: task config varies per execution task type
   config?: Record<string, unknown>;
   /** Intentional: task metadata varies by consumer */
+  // eslint-disable-next-line @typescript-eslint/no-restricted-types -- intentional: task metadata varies per execution task type
   metadata?: Record<string, unknown>;
 }
 

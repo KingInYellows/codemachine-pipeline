@@ -35,6 +35,7 @@ export function buildContextDocument(
   const options: {
     commitSha?: string;
     branch?: string;
+    // eslint-disable-next-line @typescript-eslint/no-restricted-types -- intentional: context metadata varies per provenance source
     metadata?: Record<string, unknown>;
   } = {};
 

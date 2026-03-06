@@ -22,6 +22,7 @@ interface ManualUnknownObject {
   /** Custom sources */
   sources?: ResearchSource[];
   /** Intentional: manual unknown metadata varies by detection source */
+  // eslint-disable-next-line @typescript-eslint/no-restricted-types -- intentional: manual unknown metadata varies by detection source
   metadata?: Record<string, unknown>;
 }
 
@@ -32,6 +33,7 @@ export interface UnknownDetectionHint {
   objectives: string[];
   sources: ResearchSource[];
   /** Intentional: detection hint metadata varies by origin type */
+  // eslint-disable-next-line @typescript-eslint/no-restricted-types -- intentional: detection hint metadata varies by origin type
   metadata?: Record<string, unknown>;
 }
 
@@ -235,6 +237,7 @@ export async function readContextFile(
  * Convert metadata unknown entries into detection hints
  */
 export function extractUnknownsFromMetadata(
+  // eslint-disable-next-line @typescript-eslint/no-restricted-types -- intentional: metadata parameter accepts arbitrary key-value context
   metadata?: Record<string, unknown> | Readonly<Record<string, unknown>>
 ): UnknownDetectionHint[] {
   if (!metadata) {

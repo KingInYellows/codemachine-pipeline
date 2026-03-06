@@ -189,11 +189,13 @@ export function createExecutionTask(
   title: string,
   taskType: ExecutionTaskType,
   options?: {
+    // eslint-disable-next-line @typescript-eslint/no-restricted-types -- intentional: task config varies per execution task type
     config?: Record<string, unknown>;
     assignedAgent?: string;
     dependencyIds?: string[];
     maxRetries?: number;
     traceId?: string;
+    // eslint-disable-next-line @typescript-eslint/no-restricted-types -- intentional: task metadata varies per execution task type
     metadata?: Record<string, unknown>;
   }
 ): ExecutionTask {
