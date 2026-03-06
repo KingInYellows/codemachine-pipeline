@@ -65,6 +65,12 @@ interface EnvCheckDescriptor {
   resolveValue?: (c: any, varName: string) => string | undefined;
 }
 
+interface GitHubEnvConfig {
+  enabled?: boolean;
+  token_env_var?: string;
+  required_scopes?: string[];
+}
+
 /**
  * Determine exit code and status from diagnostic check results.
  * Priority: credential failures (30) > environment failures (20) > config failures (10) > generic (1).
@@ -583,9 +589,10 @@ export default class Doctor extends Command {
         envVar: (c) => c.github.token_env_var,
         label: 'GitHub',
         failStatus: 'fail',
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access -- Config type not fully specified
-        failRemediation: (c, v) =>
-          `Set ${v} with scopes: ${((c.github?.required_scopes ?? []) as string[]).join(', ')}`,
+        failRemediation: (c, v) => {
+          const githubConfig = (c as { github?: GitHubEnvConfig }).github;
+          return `Set ${v} with scopes: ${(githubConfig?.required_scopes ?? []).join(', ')}`;
+        },
         passMessage: 'Token present',
         failMessage: 'Token not set',
       },
