@@ -135,7 +135,7 @@ export default class Doctor extends TelemetryCommand {
     }
 
     // Try to initialise telemetry directory (best-effort for doctor).
-    let runDirPath: string | undefined;
+    const runDirPath: string | undefined = undefined;
     let logsDir: string | undefined;
     const pipelineDir = path.join(process.cwd(), '.codepipe');
     try {
