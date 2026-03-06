@@ -153,8 +153,7 @@ const DEFAULT_CACHE_TTL = 3600; // 1 hour in seconds
 const RATE_LIMIT_WINDOW_MS = 60 * 60 * 1000; // 1 hour sliding window
 const SNAPSHOT_DIR = 'inputs';
 const LINEAR_ISSUE_IDENTIFIER_PATTERN = /^[A-Z][A-Z0-9]*-\d+$/;
-const STRUCTURED_OPAQUE_ISSUE_ID_PATTERN =
-  /^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/;
+const STRUCTURED_OPAQUE_ISSUE_ID_PATTERN = /^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/;
 
 /**
  * Linear adapter for issue operations via MCP

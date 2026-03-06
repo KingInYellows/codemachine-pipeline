@@ -463,14 +463,14 @@ describe('Linear Adapter Regression Tests', () => {
         mockClient as unknown as HttpClient
       );
 
-      await expect(adapterContract.fetchIssue('a1b2c3d4-e5f6-7890-abcd-1234567890ab')).resolves.toMatchObject(
-        {
-          identifier: 'ENG-123',
-          title: stringMatcher('regression tests'),
-          state: { name: 'In Progress' },
-          priority: 2,
-        }
-      );
+      await expect(
+        adapterContract.fetchIssue('a1b2c3d4-e5f6-7890-abcd-1234567890ab')
+      ).resolves.toMatchObject({
+        identifier: 'ENG-123',
+        title: stringMatcher('regression tests'),
+        state: { name: 'In Progress' },
+        priority: 2,
+      });
       expect(mockClient.post).toHaveBeenCalledWith(
         '/graphql',
         expect.objectContaining({
@@ -558,7 +558,9 @@ describe('Linear Adapter Regression Tests', () => {
         mockClient as unknown as HttpClient
       );
 
-      await expect(adapterContract.fetchIssue('33333333-3333-3333-3333-333333333333')).rejects.toThrow();
+      await expect(
+        adapterContract.fetchIssue('33333333-3333-3333-3333-333333333333')
+      ).rejects.toThrow();
 
       try {
         await adapterContract.fetchIssue('33333333-3333-3333-3333-333333333333');
@@ -586,7 +588,9 @@ describe('Linear Adapter Regression Tests', () => {
         mockClient as unknown as HttpClient
       );
 
-      await expect(adapterContract.fetchIssue('33333333-3333-3333-3333-333333333333')).rejects.toThrow();
+      await expect(
+        adapterContract.fetchIssue('33333333-3333-3333-3333-333333333333')
+      ).rejects.toThrow();
 
       try {
         await adapterContract.fetchIssue('33333333-3333-3333-3333-333333333333');
@@ -626,7 +630,10 @@ describe('Linear Adapter Regression Tests', () => {
       ).rejects.toThrow();
 
       try {
-        await previewAdapterContract.updateIssue({ issueId: '33333333-3333-3333-3333-333333333333', title: 'Test' });
+        await previewAdapterContract.updateIssue({
+          issueId: '33333333-3333-3333-3333-333333333333',
+          title: 'Test',
+        });
       } catch (error) {
         expect(error).toBeInstanceOf(LinearAdapterError);
         if (!(error instanceof LinearAdapterError)) {

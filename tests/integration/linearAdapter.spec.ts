@@ -552,7 +552,9 @@ describe('LinearAdapter Integration Tests', () => {
 
       mockHttpClient.post.mockRejectedValue(networkError);
 
-      await expect(adapter.fetchIssueSnapshot('11111111-1111-1111-1111-111111111111')).rejects.toThrow(LinearAdapterError);
+      await expect(
+        adapter.fetchIssueSnapshot('11111111-1111-1111-1111-111111111111')
+      ).rejects.toThrow(LinearAdapterError);
 
       expect(mockLogger.error).toHaveBeenCalledWith(
         'Failed to fetch issue snapshot and no cache available',
