@@ -552,7 +552,9 @@ export class LinearAdapter {
   private async executeGraphQL<T>(
     operation: string,
     query: string,
+    // eslint-disable-next-line @typescript-eslint/no-restricted-types -- intentional: GraphQL query variables are open-ended by nature
     variables: Record<string, unknown>,
+    // eslint-disable-next-line @typescript-eslint/no-restricted-types -- intentional: GraphQL execution context is open-ended by nature
     context: Record<string, unknown>
   ): Promise<T> {
     const timestamp = await this.assertRateLimitHeadroom(operation);

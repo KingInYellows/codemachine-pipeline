@@ -44,6 +44,7 @@ export interface CostEntry {
   /** Optional model identifier */
   model?: string;
   /** Intentional: cost entry metadata varies by operation type */
+  // eslint-disable-next-line @typescript-eslint/no-restricted-types -- intentional: cost entry metadata varies per provider and operation
   metadata?: Record<string, unknown>;
 }
 
@@ -313,6 +314,7 @@ export class CostTracker {
     promptTokens: number,
     completionTokens: number,
     model?: string,
+    // eslint-disable-next-line @typescript-eslint/no-restricted-types -- intentional: cost entry metadata varies per provider and operation
     metadata?: Record<string, unknown>
   ): Promise<void> {
     // Get cost config

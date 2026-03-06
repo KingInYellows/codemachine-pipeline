@@ -75,6 +75,7 @@ export interface CreateResearchTaskOptions {
   /** Freshness requirements */
   freshnessRequirements?: FreshnessRequirement;
   /** Intentional: research task metadata varies by source and objective */
+  // eslint-disable-next-line @typescript-eslint/no-restricted-types -- intentional: research task metadata varies by source and objective
   metadata?: Record<string, unknown>;
 }
 
@@ -236,6 +237,7 @@ export class ResearchCoordinator {
         sources?: ResearchSource[];
         cacheKey?: string;
         freshnessRequirements?: FreshnessRequirement;
+        // eslint-disable-next-line @typescript-eslint/no-restricted-types -- intentional: research task metadata varies by source and objective
         metadata?: Record<string, unknown>;
       } = {
         sources,

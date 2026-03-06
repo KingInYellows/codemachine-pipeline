@@ -13,6 +13,7 @@
  */
 
 const { readFileSync, writeFileSync, existsSync } = require('node:fs');
+const { execFileSync } = require('node:child_process');
 const { resolve } = require('node:path');
 
 const ROOT = resolve(__dirname, '..', '..');
@@ -247,10 +248,27 @@ function generateDocument() {
 }
 
 // ---------------------------------------------------------------------------
-// 5. Main: generate or check
+// 5. Format with Prettier (prevents drift from auto-formatters)
 // ---------------------------------------------------------------------------
 
-const markdown = generateDocument();
+function formatWithPrettier(content) {
+  try {
+    return execFileSync(
+      resolve(ROOT, 'node_modules', '.bin', 'prettier'),
+      ['--parser', 'markdown'],
+      { input: content, encoding: 'utf8', maxBuffer: 10 * 1024 * 1024 }
+    );
+  } catch {
+    // Prettier not available — return content as-is
+    return content;
+  }
+}
+
+// ---------------------------------------------------------------------------
+// 6. Main: generate or check
+// ---------------------------------------------------------------------------
+
+const markdown = formatWithPrettier(generateDocument());
 
 if (process.argv.includes('--check')) {
   // Drift detection mode
