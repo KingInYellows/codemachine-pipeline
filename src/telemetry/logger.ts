@@ -390,6 +390,16 @@ export function createLogger(options: LoggerOptions): StructuredLogger {
   return new StructuredLogger(options);
 }
 
+function runContext(
+  runId?: string,
+  runDir?: string
+): Pick<LoggerOptions, 'runId' | 'runDir'> {
+  return {
+    ...(runId !== undefined && { runId }),
+    ...(runDir !== undefined && { runDir }),
+  };
+}
+
 /**
  * Create a logger for CLI command execution
  */
@@ -402,9 +412,8 @@ export function createCliLogger(
   return createLogger({
     component: `cli:${component}`,
     minLevel: LogLevel.INFO,
-    mirrorToStderr: !process.env.JSON_OUTPUT, // Disable stderr mirroring in JSON mode
-    ...(runId !== undefined && { runId }),
-    ...(runDir !== undefined && { runDir }),
+    mirrorToStderr: !process.env.JSON_OUTPUT,
+    ...runContext(runId, runDir),
     ...(overrides ?? {}),
   });
 }
@@ -421,8 +430,7 @@ export function createHttpLogger(
     component: `http:${provider}`,
     minLevel: LogLevel.DEBUG,
     mirrorToStderr: false,
-    ...(runId !== undefined && { runId }),
-    ...(runDir !== undefined && { runDir }),
+    ...runContext(runId, runDir),
   });
 }
 
@@ -434,8 +442,7 @@ export function createQueueLogger(runId?: string, runDir?: string): StructuredLo
     component: 'queue',
     minLevel: LogLevel.INFO,
     mirrorToStderr: false,
-    ...(runId !== undefined && { runId }),
-    ...(runDir !== undefined && { runDir }),
+    ...runContext(runId, runDir),
   });
 }
 
