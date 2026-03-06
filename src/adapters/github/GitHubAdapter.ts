@@ -572,10 +572,7 @@ export class GitHubAdapter {
    * logging.  Catches any thrown error, logs it with the provided context,
    * normalizes it through the adapter error taxonomy, and re-throws.
    */
-  private async withLogging<T>(
-    config: WithLoggingConfig<T>,
-    fn: () => Promise<T>
-  ): Promise<T> {
+  private async withLogging<T>(config: WithLoggingConfig<T>, fn: () => Promise<T>): Promise<T> {
     if (config.entryMessage) {
       this.logger.info(config.entryMessage, config.entryContext ?? {});
     }
