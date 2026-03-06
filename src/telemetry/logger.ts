@@ -390,10 +390,7 @@ export function createLogger(options: LoggerOptions): StructuredLogger {
   return new StructuredLogger(options);
 }
 
-function runContext(
-  runId?: string,
-  runDir?: string
-): Pick<LoggerOptions, 'runId' | 'runDir'> {
+function runContext(runId?: string, runDir?: string): Pick<LoggerOptions, 'runId' | 'runDir'> {
   return {
     ...(runId !== undefined && { runId }),
     ...(runDir !== undefined && { runDir }),
