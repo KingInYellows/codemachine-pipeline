@@ -196,6 +196,7 @@ export interface AgentSessionRequest {
   /** Optional context window override */
   maxTokens?: number;
   /** Intentional: agent session metadata varies by provider and use case */
+  // eslint-disable-next-line @typescript-eslint/no-restricted-types -- intentional: agent session metadata varies by provider and use case
   metadata?: Record<string, unknown>;
 }
 

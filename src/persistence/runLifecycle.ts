@@ -31,6 +31,7 @@ export interface CreateRunDirectoryOptions {
   /** Default branch */
   defaultBranch?: string;
   /** Intentional: run directory metadata varies by creation context */
+  // eslint-disable-next-line @typescript-eslint/no-restricted-types -- intentional: run lifecycle metadata varies per execution context
   metadata?: Record<string, unknown>;
   /** Whether to seed SQLite WAL indexes (future enhancement) */
   seedSqlite?: boolean;

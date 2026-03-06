@@ -82,6 +82,7 @@ export { parseRunArtifact, serializeRunArtifact };
 export function createRunArtifact(
   featureId: string,
   options?: {
+    // eslint-disable-next-line @typescript-eslint/no-restricted-types -- intentional: artifact metadata varies per artifact type
     metadata?: Record<string, unknown>;
   }
 ): RunArtifact {

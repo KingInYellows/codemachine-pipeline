@@ -130,6 +130,7 @@ export function createResearchTask(
     sources?: ResearchSource[];
     cacheKey?: string;
     freshnessRequirements?: FreshnessRequirement;
+    // eslint-disable-next-line @typescript-eslint/no-restricted-types -- intentional: research task metadata varies by source and objective
     metadata?: Record<string, unknown>;
   }
 ): ResearchTask {

@@ -19,6 +19,7 @@ export interface DiagnosticCheck {
   message: string;
   remediation?: string;
   /** Details vary per diagnostic check type (version, path, counts, etc.) */
+  // eslint-disable-next-line @typescript-eslint/no-restricted-types -- intentional: diagnostic check details vary per check type
   details?: Record<string, unknown>;
 }
 

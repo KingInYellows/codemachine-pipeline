@@ -94,6 +94,7 @@ export function createPlanArtifact(
   tasks: TaskNode[],
   options?: {
     generatedBy?: string;
+    // eslint-disable-next-line @typescript-eslint/no-restricted-types -- intentional: plan metadata varies per generator and workflow
     metadata?: Record<string, unknown>;
   }
 ): PlanArtifact {

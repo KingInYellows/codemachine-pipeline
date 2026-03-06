@@ -69,6 +69,7 @@ export interface RecordApprovalOptions {
   /** Rationale or comments */
   rationale?: string;
   /** Intentional: approval metadata varies by workflow */
+  // eslint-disable-next-line @typescript-eslint/no-restricted-types -- intentional: approval metadata varies by workflow
   metadata?: Record<string, unknown>;
 }
 
@@ -179,6 +180,7 @@ export function recordPRDApproval(
       artifactHash?: string;
       artifactPath?: string;
       rationale?: string;
+      // eslint-disable-next-line @typescript-eslint/no-restricted-types -- intentional: approval metadata varies by workflow
       metadata?: Record<string, unknown>;
     } = {
       artifactHash: currentHash,

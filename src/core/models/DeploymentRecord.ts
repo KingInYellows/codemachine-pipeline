@@ -117,6 +117,7 @@ export function createDeploymentRecord(
     sourceBranch?: string;
     targetBranch?: string;
     autoMergeEnabled?: boolean;
+    // eslint-disable-next-line @typescript-eslint/no-restricted-types -- intentional: deployment metadata varies per environment and action
     metadata?: Record<string, unknown>;
   }
 ): DeploymentRecord {

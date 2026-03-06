@@ -85,6 +85,7 @@ export function createApprovalRecord(
     artifactHash?: string;
     artifactPath?: string;
     rationale?: string;
+    // eslint-disable-next-line @typescript-eslint/no-restricted-types -- intentional: approval metadata varies by gate type and workflow
     metadata?: Record<string, unknown>;
   }
 ): ApprovalRecord {
