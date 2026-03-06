@@ -5,13 +5,14 @@
 
 The `codepipe` CLI is the primary interface for managing feature development pipelines. This reference is auto-generated from the oclif command manifest.
 
-**Total commands:** 17
+**Total commands:** 18
 
 ## Table of Contents
 
 ### Core Commands
 
 - [`codepipe approve`](#codepipe-approve) — Approve or deny a feature pipeline gate
+- [`codepipe base`](#codepipe-base)
 - [`codepipe doctor`](#codepipe-doctor) — Run environment diagnostics and readiness checks
 - [`codepipe health`](#codepipe-health) — Quick runtime health check (config, disk, writable run dir)
 - [`codepipe init`](#codepipe-init) — Initialize codemachine-pipeline with schema-validated configuration
@@ -56,22 +57,22 @@ codepipe approve GATE [FLAGS]
 
 ##### Arguments
 
-| Argument | Description                                            | Required | Options                                       |
-| -------- | ------------------------------------------------------ | -------- | --------------------------------------------- |
-| `gate`   | Approval gate type (prd, spec, plan, code, pr, deploy) | Yes      | `prd`, `spec`, `plan`, `code`, `pr`, `deploy` |
+| Argument | Description | Required | Options |
+|----------|-------------|----------|---------|
+| `gate` | Approval gate type (prd, spec, plan, code, pr, deploy) | Yes | `prd`, `spec`, `plan`, `code`, `pr`, `deploy` |
 
 ##### Options
 
-| Option              | Short | Type    | Description                                        | Default |
-| ------------------- | ----- | ------- | -------------------------------------------------- | ------- |
-| `--approve`         | `-a`  | boolean | Grant approval                                     |         |
-| `--comment`         | `-c`  | string  | Approval or denial rationale                       |         |
-| `--deny`            | `-d`  | boolean | Deny approval                                      |         |
-| `--feature`         | `-f`  | string  | Feature ID (defaults to current/latest)            |         |
-| `--json`            |       | boolean | Output results in JSON format                      |         |
-| `--signer`          | `-s`  | string  | Signer identity (email or username) **(required)** |         |
-| `--signer-name`     |       | string  | Signer display name                                |         |
-| `--skip-hash-check` |       | boolean | Skip artifact hash validation (use with caution)   |         |
+| Option | Short | Type | Description | Default |
+|--------|-------|------|-------------|---------|
+| `--approve` | `-a` | boolean | Grant approval |  |
+| `--comment` | `-c` | string | Approval or denial rationale |  |
+| `--deny` | `-d` | boolean | Deny approval |  |
+| `--feature` | `-f` | string | Feature ID (defaults to current/latest) |  |
+| `--json` |  | boolean | Output results in JSON format |  |
+| `--signer` | `-s` | string | Signer identity (email or username) **(required)** |  |
+| `--signer-name` |  | string | Signer display name |  |
+| `--skip-hash-check` |  | boolean | Skip artifact hash validation (use with caution) |  |
 
 ##### Examples
 
@@ -80,6 +81,18 @@ codepipe approve prd --approve --signer "user@example.com"
 codepipe approve spec --deny --signer "reviewer@example.com" --comment "Missing acceptance criteria"
 codepipe approve prd --approve --signer "user@example.com" --feature FEAT-abc123
 codepipe approve prd --approve --signer "user@example.com" --json
+```
+
+---
+
+#### codepipe base
+
+_No description available._
+
+##### Synopsis
+
+```bash
+codepipe base [FLAGS]
 ```
 
 ---
@@ -96,10 +109,10 @@ codepipe doctor [FLAGS]
 
 ##### Options
 
-| Option      | Short | Type    | Description                          | Default |
-| ----------- | ----- | ------- | ------------------------------------ | ------- |
-| `--json`    |       | boolean | Output results in JSON format        |         |
-| `--verbose` | `-v`  | boolean | Show detailed diagnostic information |         |
+| Option | Short | Type | Description | Default |
+|--------|-------|------|-------------|---------|
+| `--json` |  | boolean | Output results in JSON format |  |
+| `--verbose` | `-v` | boolean | Show detailed diagnostic information |  |
 
 ##### Examples
 
@@ -123,9 +136,9 @@ codepipe health [FLAGS]
 
 ##### Options
 
-| Option   | Short | Type    | Description                   | Default |
-| -------- | ----- | ------- | ----------------------------- | ------- |
-| `--json` |       | boolean | Output results in JSON format |         |
+| Option | Short | Type | Description | Default |
+|--------|-------|------|-------------|---------|
+| `--json` |  | boolean | Output results in JSON format |  |
 
 ##### Examples
 
@@ -148,13 +161,13 @@ codepipe init [FLAGS]
 
 ##### Options
 
-| Option            | Short | Type    | Description                                              | Default |
-| ----------------- | ----- | ------- | -------------------------------------------------------- | ------- |
-| `--dry-run`       |       | boolean | Compute config and validation without creating files     |         |
-| `--force`         | `-f`  | boolean | Force re-initialization even if config already exists    |         |
-| `--json`          |       | boolean | Output results in JSON format                            |         |
-| `--validate-only` |       | boolean | Only validate existing config without creating new files |         |
-| `--yes`           | `-y`  | boolean | Skip interactive confirmations (assume yes)              |         |
+| Option | Short | Type | Description | Default |
+|--------|-------|------|-------------|---------|
+| `--dry-run` |  | boolean | Compute config and validation without creating files |  |
+| `--force` | `-f` | boolean | Force re-initialization even if config already exists |  |
+| `--json` |  | boolean | Output results in JSON format |  |
+| `--validate-only` |  | boolean | Only validate existing config without creating new files |  |
+| `--yes` | `-y` | boolean | Skip interactive confirmations (assume yes) |  |
 
 ##### Examples
 
@@ -180,12 +193,12 @@ codepipe plan [FLAGS]
 
 ##### Options
 
-| Option        | Short | Type    | Description                                        | Default |
-| ------------- | ----- | ------- | -------------------------------------------------- | ------- |
-| `--feature`   | `-f`  | string  | Feature ID to query (defaults to current/latest)   |         |
-| `--json`      |       | boolean | Output results in JSON format                      |         |
-| `--show-diff` |       | boolean | Compare plan against spec hash to detect changes   |         |
-| `--verbose`   | `-v`  | boolean | Show detailed task breakdown and dependency chains |         |
+| Option | Short | Type | Description | Default |
+|--------|-------|------|-------------|---------|
+| `--feature` | `-f` | string | Feature ID to query (defaults to current/latest) |  |
+| `--json` |  | boolean | Output results in JSON format |  |
+| `--show-diff` |  | boolean | Compare plan against spec hash to detect changes |  |
+| `--verbose` | `-v` | boolean | Show detailed task breakdown and dependency chains |  |
 
 ##### Examples
 
@@ -211,13 +224,13 @@ codepipe rate-limits [FLAGS]
 
 ##### Options
 
-| Option       | Short | Type    | Description                                                   | Default |
-| ------------ | ----- | ------- | ------------------------------------------------------------- | ------- |
-| `--clear`    |       | string  | Clear cooldown for specified provider (requires confirmation) |         |
-| `--feature`  | `-f`  | string  | Feature ID to query (defaults to current/latest)              |         |
-| `--json`     |       | boolean | Output results in JSON format                                 |         |
-| `--provider` | `-p`  | string  | Filter output to specific provider (github, linear, etc.)     |         |
-| `--verbose`  | `-v`  | boolean | Show detailed rate limit history and diagnostics              |         |
+| Option | Short | Type | Description | Default |
+|--------|-------|------|-------------|---------|
+| `--clear` |  | string | Clear cooldown for specified provider (requires confirmation) |  |
+| `--feature` | `-f` | string | Feature ID to query (defaults to current/latest) |  |
+| `--json` |  | boolean | Output results in JSON format |  |
+| `--provider` | `-p` | string | Filter output to specific provider (github, linear, etc.) |  |
+| `--verbose` | `-v` | boolean | Show detailed rate limit history and diagnostics |  |
 
 ##### Examples
 
@@ -243,16 +256,16 @@ codepipe resume [FLAGS]
 
 ##### Options
 
-| Option                     | Short | Type    | Description                                                    | Default |
-| -------------------------- | ----- | ------- | -------------------------------------------------------------- | ------- |
-| `--dry-run`                | `-d`  | boolean | Analyze resume eligibility without executing                   |         |
-| `--feature`                | `-f`  | string  | Feature ID to resume (defaults to current/latest)              |         |
-| `--force`                  |       | boolean | Override blockers (integrity warnings) - use with caution      |         |
-| `--json`                   |       | boolean | Output results in JSON format                                  |         |
-| `--max-parallel`           |       | string  | Maximum parallel tasks during execution (1-10)                 | `1`     |
-| `--skip-hash-verification` |       | boolean | Skip artifact integrity checks (dangerous, for debugging only) |         |
-| `--validate-queue`         |       | boolean | Validate queue files before resuming                           |         |
-| `--verbose`                | `-v`  | boolean | Show detailed diagnostics                                      |         |
+| Option | Short | Type | Description | Default |
+|--------|-------|------|-------------|---------|
+| `--dry-run` | `-d` | boolean | Analyze resume eligibility without executing |  |
+| `--feature` | `-f` | string | Feature ID to resume (defaults to current/latest) |  |
+| `--force` |  | boolean | Override blockers (integrity warnings) - use with caution |  |
+| `--json` |  | boolean | Output results in JSON format |  |
+| `--max-parallel` |  | string | Maximum parallel tasks during execution (1-10) | `1` |
+| `--skip-hash-verification` |  | boolean | Skip artifact integrity checks (dangerous, for debugging only) |  |
+| `--validate-queue` |  | boolean | Validate queue files before resuming |  |
+| `--verbose` | `-v` | boolean | Show detailed diagnostics |  |
 
 ##### Examples
 
@@ -278,15 +291,15 @@ codepipe start [FLAGS]
 
 ##### Options
 
-| Option             | Short | Type    | Description                                        | Default |
-| ------------------ | ----- | ------- | -------------------------------------------------- | ------- |
-| `--dry-run`        |       | boolean | Simulate execution without making changes          |         |
-| `--json`           |       | boolean | Output results in JSON format                      |         |
-| `--linear`         | `-l`  | string  | Linear issue ID to import as feature specification |         |
-| `--max-parallel`   |       | string  | Maximum parallel tasks during execution (1-10)     | `1`     |
-| `--prompt`         | `-p`  | string  | Feature description prompt                         |         |
-| `--skip-execution` |       | boolean | Skip task execution phase (stop after PRD)         |         |
-| `--spec`           | `-s`  | string  | Path to existing specification file                |         |
+| Option | Short | Type | Description | Default |
+|--------|-------|------|-------------|---------|
+| `--dry-run` |  | boolean | Simulate execution without making changes |  |
+| `--json` |  | boolean | Output results in JSON format |  |
+| `--linear` | `-l` | string | Linear issue ID to import as feature specification |  |
+| `--max-parallel` |  | string | Maximum parallel tasks during execution (1-10) | `1` |
+| `--prompt` | `-p` | string | Feature description prompt |  |
+| `--skip-execution` |  | boolean | Skip task execution phase (stop after PRD) |  |
+| `--spec` | `-s` | string | Path to existing specification file |  |
 
 ##### Examples
 
@@ -311,12 +324,12 @@ codepipe status [FLAGS]
 
 ##### Options
 
-| Option         | Short | Type    | Description                                      | Default |
-| -------------- | ----- | ------- | ------------------------------------------------ | ------- |
-| `--feature`    | `-f`  | string  | Feature ID to query (defaults to current/latest) |         |
-| `--json`       |       | boolean | Output results in JSON format                    |         |
-| `--show-costs` |       | boolean | Include token usage and cost estimates           |         |
-| `--verbose`    | `-v`  | boolean | Show detailed execution logs and task breakdown  |         |
+| Option | Short | Type | Description | Default |
+|--------|-------|------|-------------|---------|
+| `--feature` | `-f` | string | Feature ID to query (defaults to current/latest) |  |
+| `--json` |  | boolean | Output results in JSON format |  |
+| `--show-costs` |  | boolean | Include token usage and cost estimates |  |
+| `--verbose` | `-v` | boolean | Show detailed execution logs and task breakdown |  |
 
 ##### Examples
 
@@ -341,16 +354,16 @@ codepipe validate [FLAGS]
 
 ##### Options
 
-| Option          | Short | Type    | Description                                                       | Default |
-| --------------- | ----- | ------- | ----------------------------------------------------------------- | ------- |
-| `--auto-fix`    |       | boolean | Enable auto-fix for supported commands (e.g., lint --fix)         |         |
-| `--command`     | `-c`  | string  | Specific validation command to run (lint, test, typecheck, build) |         |
-| `--feature`     | `-f`  | string  | Feature ID to validate (defaults to current/latest)               |         |
-| `--init`        |       | boolean | Initialize validation registry from config (run this first)       |         |
-| `--json`        |       | boolean | Output results in JSON format                                     |         |
-| `--max-retries` |       | string  | Override maximum retry attempts (ignores configured limits)       |         |
-| `--timeout`     |       | string  | Override command timeout in seconds                               |         |
-| `--verbose`     | `-v`  | boolean | Show detailed execution logs                                      |         |
+| Option | Short | Type | Description | Default |
+|--------|-------|------|-------------|---------|
+| `--auto-fix` |  | boolean | Enable auto-fix for supported commands (e.g., lint --fix) |  |
+| `--command` | `-c` | string | Specific validation command to run (lint, test, typecheck, build) |  |
+| `--feature` | `-f` | string | Feature ID to validate (defaults to current/latest) |  |
+| `--init` |  | boolean | Initialize validation registry from config (run this first) |  |
+| `--json` |  | boolean | Output results in JSON format |  |
+| `--max-retries` |  | string | Override maximum retry attempts (ignores configured limits) |  |
+| `--timeout` |  | string | Override command timeout in seconds |  |
+| `--verbose` | `-v` | boolean | Show detailed execution logs |  |
 
 ##### Examples
 
@@ -379,14 +392,14 @@ codepipe context summarize [FLAGS]
 
 ##### Options
 
-| Option               | Short | Type    | Description                                        | Default |
-| -------------------- | ----- | ------- | -------------------------------------------------- | ------- |
-| `--chunk-overlap`    |       | string  | Chunk overlap percentage (default 10)              |         |
-| `--feature`          | `-f`  | string  | Feature ID to summarize (defaults to most recent)  |         |
-| `--force`            | `-F`  | boolean | Force re-summarization even if cache is warm       |         |
-| `--json`             |       | boolean | Emit machine-readable JSON output                  |         |
-| `--max-chunk-tokens` |       | string  | Override maximum tokens per chunk (default 4000)   |         |
-| `--path`             | `-p`  | string  | Glob pattern of files to re-summarize (repeatable) |         |
+| Option | Short | Type | Description | Default |
+|--------|-------|------|-------------|---------|
+| `--chunk-overlap` |  | string | Chunk overlap percentage (default 10) |  |
+| `--feature` | `-f` | string | Feature ID to summarize (defaults to most recent) |  |
+| `--force` | `-F` | boolean | Force re-summarization even if cache is warm |  |
+| `--json` |  | boolean | Emit machine-readable JSON output |  |
+| `--max-chunk-tokens` |  | string | Override maximum tokens per chunk (default 4000) |  |
+| `--path` | `-p` | string | Glob pattern of files to re-summarize (repeatable) |  |
 
 ##### Examples
 
@@ -413,15 +426,15 @@ codepipe pr create [FLAGS]
 
 ##### Options
 
-| Option        | Short | Type    | Description                                          | Default |
-| ------------- | ----- | ------- | ---------------------------------------------------- | ------- |
-| `--base`      |       | string  | Base branch (defaults to default branch from config) |         |
-| `--body`      | `-b`  | string  | PR body/description (defaults to generated summary)  |         |
-| `--draft`     | `-d`  | boolean | Create PR as draft                                   |         |
-| `--feature`   | `-f`  | string  | Feature ID (defaults to current/latest)              |         |
-| `--json`      |       | boolean | Output results in JSON format                        |         |
-| `--reviewers` | `-r`  | string  | Comma-separated list of reviewer usernames           |         |
-| `--title`     | `-t`  | string  | PR title (defaults to feature title)                 |         |
+| Option | Short | Type | Description | Default |
+|--------|-------|------|-------------|---------|
+| `--base` |  | string | Base branch (defaults to default branch from config) |  |
+| `--body` | `-b` | string | PR body/description (defaults to generated summary) |  |
+| `--draft` | `-d` | boolean | Create PR as draft |  |
+| `--feature` | `-f` | string | Feature ID (defaults to current/latest) |  |
+| `--json` |  | boolean | Output results in JSON format |  |
+| `--reviewers` | `-r` | string | Comma-separated list of reviewer usernames |  |
+| `--title` | `-t` | string | PR title (defaults to feature title) |  |
 
 ##### Examples
 
@@ -447,11 +460,11 @@ codepipe pr disable-auto-merge [FLAGS]
 
 ##### Options
 
-| Option      | Short | Type    | Description                                                 | Default |
-| ----------- | ----- | ------- | ----------------------------------------------------------- | ------- |
-| `--feature` | `-f`  | string  | Feature ID (defaults to current/latest)                     |         |
-| `--json`    |       | boolean | Output results in JSON format                               |         |
-| `--reason`  | `-r`  | string  | Reason for disabling auto-merge (logged to deployment.json) |         |
+| Option | Short | Type | Description | Default |
+|--------|-------|------|-------------|---------|
+| `--feature` | `-f` | string | Feature ID (defaults to current/latest) |  |
+| `--json` |  | boolean | Output results in JSON format |  |
+| `--reason` | `-r` | string | Reason for disabling auto-merge (logged to deployment.json) |  |
 
 ##### Examples
 
@@ -476,11 +489,11 @@ codepipe pr reviewers [FLAGS]
 
 ##### Options
 
-| Option      | Short | Type    | Description                                                      | Default |
-| ----------- | ----- | ------- | ---------------------------------------------------------------- | ------- |
-| `--add`     | `-a`  | string  | Comma-separated list of reviewer usernames to add **(required)** |         |
-| `--feature` | `-f`  | string  | Feature ID (defaults to current/latest)                          |         |
-| `--json`    |       | boolean | Output results in JSON format                                    |         |
+| Option | Short | Type | Description | Default |
+|--------|-------|------|-------------|---------|
+| `--add` | `-a` | string | Comma-separated list of reviewer usernames to add **(required)** |  |
+| `--feature` | `-f` | string | Feature ID (defaults to current/latest) |  |
+| `--json` |  | boolean | Output results in JSON format |  |
 
 ##### Examples
 
@@ -504,11 +517,11 @@ codepipe pr status [FLAGS]
 
 ##### Options
 
-| Option               | Short | Type    | Description                             | Default |
-| -------------------- | ----- | ------- | --------------------------------------- | ------- |
-| `--fail-on-blockers` |       | boolean | Exit with code 1 if blockers present    |         |
-| `--feature`          | `-f`  | string  | Feature ID (defaults to current/latest) |         |
-| `--json`             |       | boolean | Output results in JSON format           |         |
+| Option | Short | Type | Description | Default |
+|--------|-------|------|-------------|---------|
+| `--fail-on-blockers` |  | boolean | Exit with code 1 if blockers present |  |
+| `--feature` | `-f` | string | Feature ID (defaults to current/latest) |  |
+| `--json` |  | boolean | Output results in JSON format |  |
 
 ##### Examples
 
@@ -535,15 +548,15 @@ codepipe research create [FLAGS]
 
 ##### Options
 
-| Option          | Short | Type    | Description                                                                    | Default |
-| --------------- | ----- | ------- | ------------------------------------------------------------------------------ | ------- |
-| `--feature`     | `-f`  | string  | Feature ID to attach the research task to (defaults to latest run)             |         |
-| `--force-fresh` |       | boolean | Force new research even if cache exists                                        |         |
-| `--json`        |       | boolean | Emit machine-readable JSON output                                              |         |
-| `--max-age`     |       | string  | Freshness window in hours for cached results (default 24)                      |         |
-| `--objective`   | `-o`  | string  | Research objective/question (repeat for multiples) **(required)**              |         |
-| `--source`      | `-s`  | string  | Source to consult formatted as type:identifier or type:identifier\|description |         |
-| `--title`       | `-t`  | string  | Research task title **(required)**                                             |         |
+| Option | Short | Type | Description | Default |
+|--------|-------|------|-------------|---------|
+| `--feature` | `-f` | string | Feature ID to attach the research task to (defaults to latest run) |  |
+| `--force-fresh` |  | boolean | Force new research even if cache exists |  |
+| `--json` |  | boolean | Emit machine-readable JSON output |  |
+| `--max-age` |  | string | Freshness window in hours for cached results (default 24) |  |
+| `--objective` | `-o` | string | Research objective/question (repeat for multiples) **(required)** |  |
+| `--source` | `-s` | string | Source to consult formatted as type:identifier or type:identifier\|description |  |
+| `--title` | `-t` | string | Research task title **(required)** |  |
 
 ##### Examples
 
@@ -566,13 +579,13 @@ codepipe research list [FLAGS]
 
 ##### Options
 
-| Option      | Short | Type    | Description                                         | Default |
-| ----------- | ----- | ------- | --------------------------------------------------- | ------- |
-| `--feature` | `-f`  | string  | Feature ID to inspect (defaults to most recent run) |         |
-| `--json`    |       | boolean | Emit machine-readable JSON output                   |         |
-| `--limit`   |       | string  | Limit the number of tasks returned                  |         |
-| `--stale`   |       | boolean | Show only tasks whose cached results are stale      |         |
-| `--status`  | `-s`  | string  | Filter by task status (repeatable)                  |         |
+| Option | Short | Type | Description | Default |
+|--------|-------|------|-------------|---------|
+| `--feature` | `-f` | string | Feature ID to inspect (defaults to most recent run) |  |
+| `--json` |  | boolean | Emit machine-readable JSON output |  |
+| `--limit` |  | string | Limit the number of tasks returned |  |
+| `--stale` |  | boolean | Show only tasks whose cached results are stale |  |
+| `--status` | `-s` | string | Filter by task status (repeatable) |  |
 
 ##### Examples
 
