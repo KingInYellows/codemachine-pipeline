@@ -153,6 +153,7 @@ export default class Init extends Command {
       if (!validationResult.success) {
         this.renderValidationFailure(paths.configPath, validationResult, flags);
         await this.exitCommand(10, ctx);
+        return;
       }
 
       this.renderInitResult(
