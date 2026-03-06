@@ -26,11 +26,8 @@ export type ResearchStatus = z.infer<typeof ResearchStatusSchema>;
 // Research Source Schema
 
 const ResearchSourceSchema = z.object({
-  /** Source type (e.g., 'codebase', 'web', 'documentation', 'api') */
   type: z.enum(['codebase', 'web', 'documentation', 'api', 'linear', 'github', 'other']),
-  /** Source URL or identifier */
   identifier: z.string().min(1),
-  /** Optional source description */
   description: z.string().optional(),
 });
 
@@ -39,17 +36,11 @@ export type ResearchSource = z.infer<typeof ResearchSourceSchema>;
 // Research Result Schema
 
 const ResearchResultSchema = z.object({
-  /** Research findings summary */
   summary: z.string().min(1),
-  /** Detailed results or data */
   details: z.string().optional(),
-  /** Confidence score (0.0 to 1.0) */
   confidence_score: z.number().min(0).max(1).default(0.5),
-  /** ISO 8601 timestamp when result was generated */
   timestamp: z.string().datetime(),
-  /** Sources consulted for this result */
   sources_consulted: z.array(ResearchSourceSchema).default([]),
-  /** Optional result metadata */
   metadata: z.record(z.string(), z.unknown()).optional(),
 });
 
@@ -58,9 +49,8 @@ export type ResearchResult = z.infer<typeof ResearchResultSchema>;
 // Freshness Requirement Schema
 
 const FreshnessRequirementSchema = z.object({
-  /** Maximum age of cached result in hours */
   max_age_hours: z.number().int().nonnegative().default(24),
-  /** Whether to force fresh research even if cache exists */
+  /** Bypasses cache even if a fresh result exists */
   force_fresh: z.boolean().default(false),
 });
 
@@ -70,35 +60,21 @@ export type FreshnessRequirement = z.infer<typeof FreshnessRequirementSchema>;
 
 export const ResearchTaskSchema = z
   .object({
-    /** Schema version for future migrations (semver) */
     schema_version: z.string().regex(/^[0-9]+\.[0-9]+\.[0-9]+$/, 'Invalid semver format'),
-    /** Unique research task identifier */
     task_id: z.string().min(1),
-    /** Feature ID this research task belongs to */
     feature_id: z.string().min(1),
-    /** Research task title */
     title: z.string().min(1),
-    /** Research objectives (array of questions or goals) */
     objectives: z.array(z.string().min(1)).min(1),
-    /** Sources to consult during research */
     sources: z.array(ResearchSourceSchema).default([]),
-    /** Cache key for result reuse */
     cache_key: z.string().optional(),
-    /** Freshness requirements for cached results */
     freshness_requirements: FreshnessRequirementSchema.optional(),
-    /** Current research status */
     status: ResearchStatusSchema,
-    /** Research results (populated when completed) */
+    /** Populated when status reaches 'completed' */
     results: ResearchResultSchema.optional(),
-    /** ISO 8601 timestamp when task was created */
     created_at: z.string().datetime(),
-    /** ISO 8601 timestamp when task was last updated */
     updated_at: z.string().datetime(),
-    /** ISO 8601 timestamp when task started */
     started_at: z.string().datetime().nullable().optional(),
-    /** ISO 8601 timestamp when task completed */
     completed_at: z.string().datetime().nullable().optional(),
-    /** Optional task metadata */
     metadata: z.record(z.string(), z.unknown()).optional(),
   })
   .strict();

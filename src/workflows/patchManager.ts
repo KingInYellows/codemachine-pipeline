@@ -1,17 +1,7 @@
 /**
  * Patch Manager
  *
- * Manages patch application with git safety rails, dry-run validation,
- * allowlist/denylist enforcement from RepoConfig, and rollback snapshots.
- *
- * Key features:
- * - Dry-run validation using `git apply --check`
- * - Path constraint enforcement (allowed/blocked patterns)
- * - Rollback snapshot creation before applying patches
- * - Diff summaries stored in run directory artifacts
- * - Conflict detection and human-action-required state management
- * - Atomic patch application with file locking
- *
+ * Applies patches with git safety rails, dry-run validation, path constraints, and rollback snapshots.
  */
 
 import * as fs from 'node:fs/promises';

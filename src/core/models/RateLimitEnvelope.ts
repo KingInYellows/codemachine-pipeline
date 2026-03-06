@@ -14,29 +14,19 @@ import { createModelParser } from './modelParser.js';
 
 export const RateLimitEnvelopeSchema = z
   .object({
-    /** Schema version for future migrations (semver) */
     schema_version: z.string().regex(/^[0-9]+\.[0-9]+\.[0-9]+$/, 'Invalid semver format'),
-    /** Provider identifier (e.g., 'openai', 'anthropic', 'github', 'linear') */
     provider: z.string().min(1),
-    /** Remaining request quota */
     remaining_requests: z.number().int().nonnegative(),
-    /** Total request quota */
     total_requests: z.number().int().nonnegative(),
-    /** Remaining token quota (if applicable) */
+    /** Only applicable for token-based rate limits */
     remaining_tokens: z.number().int().nonnegative().optional(),
-    /** Total token quota (if applicable) */
+    /** Only applicable for token-based rate limits */
     total_tokens: z.number().int().nonnegative().optional(),
-    /** ISO 8601 timestamp when quota resets */
     reset_at: z.string().datetime().nullable().optional(),
-    /** Retry-after seconds if currently rate limited */
     retry_after_seconds: z.number().int().nonnegative().optional(),
-    /** Last rate limit error message */
     last_error: z.string().optional(),
-    /** ISO 8601 timestamp when last error occurred */
     last_error_at: z.string().datetime().optional(),
-    /** ISO 8601 timestamp when envelope was last updated */
     updated_at: z.string().datetime(),
-    /** Optional envelope metadata */
     metadata: z.record(z.string(), z.unknown()).optional(),
   })
   .strict();
