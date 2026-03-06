@@ -1,19 +1,17 @@
-import { Command, Flags } from '@oclif/core';
+import { Flags } from '@oclif/core';
 import { getRunDirectoryPath } from '../../../persistence/runDirectoryManager';
 import {
   resolveRunDirectorySettings,
   selectFeatureId,
   requireFeatureId,
 } from '../../utils/runDirectory';
-import { createCliLogger } from '../../../telemetry/logger';
-import { createRunMetricsCollector } from '../../../telemetry/metrics';
 import {
   createCoordinatorForRun,
   type CreateResearchTaskOptions,
 } from '../../../workflows/researchCoordinator';
 import type { FreshnessRequirement, ResearchSource } from '../../../core/models/ResearchTask';
 import { CliError, CliErrorCode, setJsonOutputMode } from '../../utils/cliErrors';
-import { flushTelemetrySuccess, flushTelemetryError } from '../../utils/telemetryLifecycle';
+import { TelemetryCommand } from '../base';
 
 type CreateFlags = {
   feature?: string;
@@ -35,7 +33,11 @@ const SOURCE_TYPES: ReadonlyArray<ResearchSource['type']> = [
   'other',
 ];
 
-export default class ResearchCreate extends Command {
+export default class ResearchCreate extends TelemetryCommand {
+  protected get commandName(): string {
+    return 'research:create';
+  }
+
   static description = 'Create a ResearchTask manually via the CLI';
 
   static examples = [
@@ -82,8 +84,6 @@ export default class ResearchCreate extends Command {
     const { flags } = await this.parse(ResearchCreate);
     const typedFlags = flags as CreateFlags;
 
-    const startTime = Date.now();
-
     if (typedFlags.json) {
       setJsonOutputMode();
     }
@@ -105,64 +105,56 @@ export default class ResearchCreate extends Command {
     }
 
     const runDir = getRunDirectoryPath(settings.baseDir, featureId);
-    const logger = createCliLogger('research:create', featureId, runDir);
-    const metrics = createRunMetricsCollector(runDir, featureId);
-    const coordinator = createCoordinatorForRun(runDir, featureId, logger, metrics);
 
-    const sources = (typedFlags.source ?? []).map((value) => this.parseSourceFlag(value));
-    const freshness = this.buildFreshnessRequirement(
-      typedFlags['max-age'],
-      typedFlags['force-fresh']
+    await this.runWithTelemetry(
+      {
+        runDirPath: runDir,
+        featureId,
+        jsonMode: typedFlags.json,
+      },
+      async (ctx) => {
+        const coordinator = createCoordinatorForRun(runDir, featureId, ctx.logger!, ctx.metrics!);
+
+        const sources = (typedFlags.source ?? []).map((value) => this.parseSourceFlag(value));
+        const freshness = this.buildFreshnessRequirement(
+          typedFlags['max-age'],
+          typedFlags['force-fresh']
+        );
+
+        const queueOptions: CreateResearchTaskOptions = {
+          title: typedFlags.title,
+          objectives: typedFlags.objective,
+          sources,
+          metadata: {
+            created_via: 'cli',
+          },
+        };
+
+        if (freshness) {
+          queueOptions.freshnessRequirements = freshness;
+        }
+
+        const queueResult = await coordinator.queueTask(queueOptions);
+
+        const payload = {
+          created: queueResult.created,
+          cached: queueResult.cached,
+          task: queueResult.task,
+        };
+
+        if (typedFlags.json) {
+          this.log(JSON.stringify(payload, null, 2));
+        } else if (queueResult.cached) {
+          this.log(`Cached research task reused: ${queueResult.task.task_id}`);
+        } else {
+          this.log(`Research task created: ${queueResult.task.task_id}`);
+        }
+
+        this.log(
+          `Objectives: ${queueResult.task.objectives.length} | Sources: ${queueResult.task.sources?.length ?? 0} | Cache: ${queueResult.task.cache_key ?? 'n/a'}`
+        );
+      },
     );
-
-    try {
-      const queueOptions: CreateResearchTaskOptions = {
-        title: typedFlags.title,
-        objectives: typedFlags.objective,
-        sources,
-        metadata: {
-          created_via: 'cli',
-        },
-      };
-
-      if (freshness) {
-        queueOptions.freshnessRequirements = freshness;
-      }
-
-      const queueResult = await coordinator.queueTask(queueOptions);
-
-      const payload = {
-        created: queueResult.created,
-        cached: queueResult.cached,
-        task: queueResult.task,
-      };
-
-      if (typedFlags.json) {
-        this.log(JSON.stringify(payload, null, 2));
-      } else if (queueResult.cached) {
-        this.log(`Cached research task reused: ${queueResult.task.task_id}`);
-      } else {
-        this.log(`Research task created: ${queueResult.task.task_id}`);
-      }
-
-      this.log(
-        `Objectives: ${queueResult.task.objectives.length} | Sources: ${queueResult.task.sources?.length ?? 0} | Cache: ${queueResult.task.cache_key ?? 'n/a'}`
-      );
-
-      await flushTelemetrySuccess({ commandName: 'research:create', startTime, metrics });
-    } catch (error) {
-      await flushTelemetryError({ commandName: 'research:create', startTime, metrics }, error);
-
-      if (error instanceof CliError) {
-        const exitCode = error.code === CliErrorCode.RUN_DIR_NOT_FOUND ? 10 : error.exitCode;
-        this.error(error.message, { exit: exitCode });
-      }
-
-      logger.error('Failed to create research task', {
-        error: error instanceof Error ? error.message : 'unknown error',
-      });
-      this.error('Failed to create research task', { exit: 1 });
-    }
   }
 
   private parseSourceFlag(value: string): ResearchSource {

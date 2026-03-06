@@ -1,4 +1,4 @@
-import { Command, Flags } from '@oclif/core';
+import { Flags } from '@oclif/core';
 import * as path from 'node:path';
 import {
   analyzeResumeState,
@@ -15,9 +15,6 @@ import {
   type RepoConfig,
   DEFAULT_EXECUTION_CONFIG,
 } from '../../core/config/RepoConfig';
-import { createCliLogger, LogLevel } from '../../telemetry/logger';
-import { createRunMetricsCollector } from '../../telemetry/metrics';
-import { createRunTraceManager } from '../../telemetry/traces';
 import { createExecutionTelemetry } from '../../telemetry/executionTelemetry';
 import type { StructuredLogger } from '../../telemetry/logger';
 import type { MetricsCollector } from '../../telemetry/metrics';
@@ -30,12 +27,9 @@ import {
 import { loadPlanSummary } from '../../workflows/taskPlanner';
 import { RateLimitReporter } from '../../telemetry/rateLimitReporter';
 import { loadReport as loadBranchProtectionReport } from '../../persistence/branchProtectionStore';
-import { CliError, CliErrorCode, setJsonOutputMode, rethrowIfOclifError } from '../utils/cliErrors';
-import {
-  flushTelemetrySuccess,
-  flushTelemetryError,
-  type TelemetryResources,
-} from '../utils/telemetryLifecycle';
+import { setJsonOutputMode } from '../utils/cliErrors';
+import { TelemetryCommand } from './base';
+import type { TelemetryResources } from '../utils/telemetryLifecycle';
 
 type ResumeFlags = {
   feature?: string;
@@ -48,7 +42,7 @@ type ResumeFlags = {
   'max-parallel'?: number;
 };
 
-interface TelemetryContext {
+interface ResumeTelemetry {
   logger: StructuredLogger;
   metrics: MetricsCollector;
   traceManager: TraceManager;
@@ -141,7 +135,11 @@ interface ResumePayload {
  * - 20: Integrity check failed (without --force)
  * - 30: Queue validation failed
  */
-export default class Resume extends Command {
+export default class Resume extends TelemetryCommand {
+  protected get commandName(): string {
+    return 'resume';
+  }
+
   static description = 'Resume a failed or paused feature pipeline execution with safety checks';
 
   static examples = [
@@ -199,131 +197,86 @@ export default class Resume extends Command {
       setJsonOutputMode();
     }
 
-    const startTime = Date.now();
-    let telemetry: TelemetryContext | undefined;
+    const settings = await resolveRunDirectorySettings();
+    const featureId = await selectFeatureId(settings.baseDir, typedFlags.feature);
+    requireFeatureId(featureId, typedFlags.feature);
+    const runDirPath = getRunDirectoryPath(settings.baseDir, featureId);
 
-    try {
-      const settings = await resolveRunDirectorySettings();
-      const featureId = await selectFeatureId(settings.baseDir, typedFlags.feature);
-      requireFeatureId(featureId, typedFlags.feature);
-
-      const runDirPath = getRunDirectoryPath(settings.baseDir, featureId);
-      telemetry = Resume.setupTelemetry(typedFlags, featureId, runDirPath, startTime);
-
-      telemetry.logger.info('Resume command invoked', {
-        feature_id: featureId,
-        dry_run: typedFlags['dry-run'],
-        force: typedFlags.force,
-        skip_hash_verification: typedFlags['skip-hash-verification'],
-      });
-
-      const { analysis, payload } = await this.analyzeAndDisplayResumeState(
-        featureId,
+    await this.runWithTelemetry(
+      {
         runDirPath,
-        typedFlags,
-        telemetry
-      );
-
-      // Dry run - stop here
-      if (typedFlags['dry-run']) {
-        telemetry.logger.info('Dry run completed', { can_resume: analysis.canResume });
-        await flushTelemetrySuccess(telemetry.resources, { exit_code: 0, dry_run: true }, 0);
-        return;
-      }
-
-      // Check if resume is blocked
-      if (!analysis.canResume) {
-        const exitCode = this.determineExitCode(analysis);
-        telemetry.logger.error('Resume blocked', {
-          blockers: analysis.diagnostics.filter((d) => d.severity === 'blocker').map((d) => d.code),
+        featureId,
+        jsonMode: typedFlags.json,
+        verbose: typedFlags.verbose,
+        spanAttributes: {
+          dry_run: typedFlags['dry-run'],
+          force: typedFlags.force,
+          skip_hash_verification: typedFlags['skip-hash-verification'],
+        },
+      },
+      async (ctx) => {
+        const executionTelemetry = createExecutionTelemetry({
+          logger: ctx.logger!,
+          metrics: ctx.metrics!,
+          runDir: runDirPath,
+          runId: featureId,
+          ...(ctx.traceManager ? { traceManager: ctx.traceManager } : {}),
+          component: 'execution_queue',
         });
-        await flushTelemetrySuccess(telemetry.resources, { exit_code: exitCode }, exitCode);
-        this.error(`Resume is blocked. See diagnostics above.`, { exit: exitCode });
-      }
 
-      // Execute resume
-      await this.buildAndRunExecutionEngine(featureId, runDirPath, typedFlags, payload, telemetry);
+        const resumeTelemetry: ResumeTelemetry = {
+          logger: ctx.logger!,
+          metrics: ctx.metrics!,
+          traceManager: ctx.traceManager!,
+          commandSpan: ctx.commandSpan!,
+          executionTelemetry,
+          runDirPath,
+          resources: ctx.resources,
+        };
 
-      await flushTelemetrySuccess(telemetry.resources, { exit_code: 0 }, 0);
-    } catch (error) {
-      const exitCode =
-        error instanceof CliError
-          ? error.code === CliErrorCode.RUN_DIR_NOT_FOUND
-            ? 10
-            : error.exitCode
-          : 1;
+        resumeTelemetry.logger.info('Resume command invoked', {
+          feature_id: featureId,
+          dry_run: typedFlags['dry-run'],
+          force: typedFlags.force,
+          skip_hash_verification: typedFlags['skip-hash-verification'],
+        });
 
-      if (telemetry) {
-        await flushTelemetryError(telemetry.resources, error, exitCode);
-      }
+        const { analysis, payload } = await this.analyzeAndDisplayResumeState(
+          featureId,
+          runDirPath,
+          typedFlags,
+          resumeTelemetry
+        );
 
-      rethrowIfOclifError(error);
+        // Dry run - stop here
+        if (typedFlags['dry-run']) {
+          resumeTelemetry.logger.info('Dry run completed', { can_resume: analysis.canResume });
+          return { exitCode: 0, extraLogFields: { dry_run: true } };
+        }
 
-      if (error instanceof CliError) {
-        this.error(error.message, { exit: exitCode });
-      }
+        // Check if resume is blocked
+        if (!analysis.canResume) {
+          const exitCode = this.determineExitCode(analysis);
+          resumeTelemetry.logger.error('Resume blocked', {
+            blockers: analysis.diagnostics.filter((d) => d.severity === 'blocker').map((d) => d.code),
+          });
+          this.logToStderr('Resume is blocked. See diagnostics above.');
+          return { exitCode, extraLogFields: { exit_code: exitCode } };
+        }
 
-      if (error instanceof Error) {
-        this.error(`Resume command failed: ${error.message}`, { exit: 1 });
-      } else {
-        this.error('Resume command failed with an unknown error', { exit: 1 });
-      }
-    }
-  }
+        // Execute resume
+        await this.buildAndRunExecutionEngine(featureId, runDirPath, typedFlags, payload, resumeTelemetry);
 
-  private static setupTelemetry(
-    flags: ResumeFlags,
-    featureId: string,
-    runDirPath: string,
-    startTime: number
-  ): TelemetryContext {
-    const logger = createCliLogger('resume', featureId, runDirPath, {
-      minLevel: flags.verbose ? LogLevel.DEBUG : LogLevel.INFO,
-      mirrorToStderr: !flags.json,
-    });
-    const metrics = createRunMetricsCollector(runDirPath, featureId);
-    const traceManager = createRunTraceManager(runDirPath, featureId, logger);
-    const commandSpan = traceManager.startSpan('cli.resume');
-    commandSpan.setAttribute('feature_id', featureId);
-    commandSpan.setAttribute('dry_run', flags['dry-run']);
-    commandSpan.setAttribute('force', flags.force);
-    commandSpan.setAttribute('skip_hash_verification', flags['skip-hash-verification']);
-
-    const executionTelemetry = createExecutionTelemetry({
-      logger,
-      metrics,
-      runDir: runDirPath,
-      runId: featureId,
-      traceManager,
-      component: 'execution_queue',
-    });
-
-    const resources: TelemetryResources = {
-      commandName: 'resume',
-      startTime,
-      logger,
-      metrics,
-      traceManager,
-      commandSpan,
-      runDirPath,
-    };
-
-    return {
-      logger,
-      metrics,
-      traceManager,
-      commandSpan,
-      executionTelemetry,
-      runDirPath,
-      resources,
-    };
+        return { exitCode: 0, extraLogFields: { exit_code: 0 } };
+      },
+    );
   }
 
   private async analyzeAndDisplayResumeState(
     _featureId: string,
     runDirPath: string,
     flags: ResumeFlags,
-    telemetry: TelemetryContext
+    telemetry: ResumeTelemetry
   ): Promise<{
     analysis: Awaited<ReturnType<typeof analyzeResumeState>>;
     payload: ResumePayload;
@@ -371,7 +324,7 @@ export default class Resume extends Command {
     runDirPath: string,
     flags: ResumeFlags,
     payload: ResumePayload,
-    telemetry: TelemetryContext
+    telemetry: ResumeTelemetry
   ): Promise<void> {
     const { logger, executionTelemetry } = telemetry;
 

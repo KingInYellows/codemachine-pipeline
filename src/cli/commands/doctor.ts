@@ -1,18 +1,12 @@
-import { Command, Flags } from '@oclif/core';
+import { Flags } from '@oclif/core';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { execSync, spawnSync } from 'node:child_process';
 import { loadRepoConfig } from '../../core/config/RepoConfig';
-import { createCliLogger, LogLevel } from '../../telemetry/logger';
-import { createRunMetricsCollector } from '../../telemetry/metrics';
-import { createRunTraceManager } from '../../telemetry/traces';
-import type { StructuredLogger } from '../../telemetry/logger';
-import type { MetricsCollector } from '../../telemetry/metrics';
-import type { TraceManager, ActiveSpan } from '../../telemetry/traces';
 import { checkCodeMachineCli } from '../diagnostics';
-import { setJsonOutputMode, rethrowIfOclifError } from '../utils/cliErrors';
+import { setJsonOutputMode } from '../utils/cliErrors';
 import { CONFIG_RELATIVE_PATH } from '../utils/runDirectory';
-import { flushTelemetryError, flushTelemetrySuccess } from '../utils/telemetryLifecycle';
+import { TelemetryCommand } from './base';
 
 /**
  * Diagnostic check result
@@ -107,7 +101,11 @@ function determineExitCode(checks: DiagnosticCheck[]): {
  * - 20: Environment issue (missing tools, version mismatches, filesystem)
  * - 30: Credential issue (missing tokens, invalid scopes)
  */
-export default class Doctor extends Command {
+export default class Doctor extends TelemetryCommand {
+  protected get commandName(): string {
+    return 'doctor';
+  }
+
   static description = 'Run environment diagnostics and readiness checks';
 
   static examples = [
@@ -130,140 +128,114 @@ export default class Doctor extends Command {
 
   async run(): Promise<void> {
     const { flags } = await this.parse(Doctor);
-    const startTime = Date.now();
 
     // Set JSON output mode environment variable
     if (flags.json) {
       setJsonOutputMode();
     }
 
-    // Initialize telemetry (logger, metrics, traces)
-    let logger: StructuredLogger | undefined;
-    let metrics: MetricsCollector | undefined;
-    let traceManager: TraceManager | undefined;
-    let commandSpan: ActiveSpan | undefined;
-
-    const checks: DiagnosticCheck[] = [];
-
+    // Try to initialise telemetry directory (best-effort for doctor).
+    let runDirPath: string | undefined;
+    let logsDir: string | undefined;
+    const pipelineDir = path.join(process.cwd(), '.codepipe');
     try {
-      // Try to initialize telemetry. Create local directories if missing.
-      const pipelineDir = path.join(process.cwd(), '.codepipe');
-      const logsDir = path.join(pipelineDir, 'logs');
-      let telemetryReady = false;
-
-      try {
-        if (!fs.existsSync(logsDir)) {
-          fs.mkdirSync(logsDir, { recursive: true });
-        }
-        telemetryReady = true;
-      } catch {
-        telemetryReady = false;
+      const ld = path.join(pipelineDir, 'logs');
+      if (!fs.existsSync(ld)) {
+        fs.mkdirSync(ld, { recursive: true });
       }
+      runDirPath = pipelineDir;
+      logsDir = ld;
+    } catch {
+      // telemetry not available — doctor still runs
+    }
 
-      if (telemetryReady) {
-        logger = createCliLogger('doctor', 'diagnostics', logsDir, {
-          minLevel: flags.verbose ? LogLevel.DEBUG : LogLevel.INFO,
-          mirrorToStderr: !flags.json,
-        });
-        metrics = createRunMetricsCollector(pipelineDir, 'diagnostics');
-        traceManager = createRunTraceManager(pipelineDir, 'diagnostics', logger);
-        commandSpan = traceManager.startSpan('cli.doctor');
-        commandSpan.setAttribute('json_mode', flags.json);
-        commandSpan.setAttribute('verbose', flags.verbose);
-
-        logger.info('Doctor command invoked', {
+    await this.runWithTelemetry(
+      {
+        runDirPath,
+        logsDir,
+        featureId: 'diagnostics',
+        jsonMode: flags.json,
+        verbose: flags.verbose,
+        spanAttributes: { verbose: flags.verbose },
+      },
+      async (ctx) => {
+        ctx.logger?.info('Doctor command invoked', {
           json_mode: flags.json,
           verbose: flags.verbose,
         });
-      }
 
-      // Run diagnostic checks (sync checks first, then async)
-      checks.push(this.checkNodeVersion());
-      checks.push(this.checkGitInstalled());
-      checks.push(this.checkNpmInstalled());
-      checks.push(this.checkDockerInstalled());
-      checks.push(this.checkGitRepository());
-      checks.push(this.checkFilesystemPermissions());
-      checks.push(this.checkOutboundConnectivity());
+        const checks: DiagnosticCheck[] = [];
 
-      // Pre-load config once for checks that need it
-      const configPath = path.resolve(process.cwd(), CONFIG_RELATIVE_PATH);
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Config used for minimal property extraction only
-      let loadedConfig: any;
-      if (fs.existsSync(configPath)) {
-        const configResult = await loadRepoConfig(configPath);
-        if (configResult.success && configResult.config) {
-          loadedConfig = configResult.config;
+        // Run diagnostic checks (sync checks first, then async)
+        checks.push(this.checkNodeVersion());
+        checks.push(this.checkGitInstalled());
+        checks.push(this.checkNpmInstalled());
+        checks.push(this.checkDockerInstalled());
+        checks.push(this.checkGitRepository());
+        checks.push(this.checkFilesystemPermissions());
+        checks.push(this.checkOutboundConnectivity());
+
+        // Pre-load config once for checks that need it
+        const configPath = path.resolve(process.cwd(), CONFIG_RELATIVE_PATH);
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Config used for minimal property extraction only
+        let loadedConfig: any;
+        if (fs.existsSync(configPath)) {
+          const configResult = await loadRepoConfig(configPath);
+          if (configResult.success && configResult.config) {
+            loadedConfig = configResult.config;
+          }
         }
-      }
 
-      // Async checks
-      checks.push(await this.checkRepoConfig());
-      checks.push(await this.checkCodeMachineCli(loadedConfig));
-      checks.push(...this.checkEnvironmentVariables(loadedConfig));
+        // Async checks
+        checks.push(await this.checkRepoConfig());
+        checks.push(await this.checkCodeMachineCli(loadedConfig));
+        checks.push(...this.checkEnvironmentVariables(loadedConfig));
 
-      // Compute summary
-      const summary = {
-        total: checks.length,
-        passed: checks.filter((c) => c.status === 'pass').length,
-        warnings: checks.filter((c) => c.status === 'warn').length,
-        failed: checks.filter((c) => c.status === 'fail').length,
-      };
+        // Compute summary
+        const summary = {
+          total: checks.length,
+          passed: checks.filter((c) => c.status === 'pass').length,
+          warnings: checks.filter((c) => c.status === 'warn').length,
+          failed: checks.filter((c) => c.status === 'fail').length,
+        };
 
-      // Determine exit code and status
-      const { exitCode, status } = determineExitCode(checks);
+        // Determine exit code and status
+        const { exitCode, status } = determineExitCode(checks);
 
-      // Build payload
-      const payload: DoctorPayload = {
-        status,
-        exit_code: exitCode,
-        checks,
-        summary,
-        config_path: path.resolve(process.cwd(), CONFIG_RELATIVE_PATH),
-        timestamp: new Date().toISOString(),
-      };
-
-      // Output results
-      if (flags.json) {
-        this.log(JSON.stringify(payload, null, 2));
-      } else {
-        this.printHumanReadable(payload, flags.verbose);
-      }
-
-      if (commandSpan) {
-        commandSpan.setAttribute('checks_total', summary.total);
-        commandSpan.setAttribute('checks_passed', summary.passed);
-        commandSpan.setAttribute('checks_failed', summary.failed);
-      }
-
-      await flushTelemetrySuccess(
-        { commandName: 'doctor', startTime, logger, metrics, traceManager, commandSpan },
-        {
+        // Build payload
+        const payload: DoctorPayload = {
+          status,
           exit_code: exitCode,
-          checks_total: summary.total,
-          checks_passed: summary.passed,
-          checks_failed: summary.failed,
-        },
-        exitCode
-      );
+          checks,
+          summary,
+          config_path: path.resolve(process.cwd(), CONFIG_RELATIVE_PATH),
+          timestamp: new Date().toISOString(),
+        };
 
-      if (exitCode !== 0) {
-        process.exit(exitCode);
-      }
-    } catch (error) {
-      await flushTelemetryError(
-        { commandName: 'doctor', startTime, logger, metrics, traceManager, commandSpan },
-        error
-      );
+        // Output results
+        if (flags.json) {
+          this.log(JSON.stringify(payload, null, 2));
+        } else {
+          this.printHumanReadable(payload, flags.verbose);
+        }
 
-      rethrowIfOclifError(error);
+        if (ctx.commandSpan) {
+          ctx.commandSpan.setAttribute('checks_total', summary.total);
+          ctx.commandSpan.setAttribute('checks_passed', summary.passed);
+          ctx.commandSpan.setAttribute('checks_failed', summary.failed);
+        }
 
-      if (error instanceof Error) {
-        this.error(`Doctor command failed: ${error.message}`, { exit: 1 });
-      } else {
-        this.error('Doctor command failed with an unknown error', { exit: 1 });
-      }
-    }
+        return {
+          exitCode,
+          extraLogFields: {
+            exit_code: exitCode,
+            checks_total: summary.total,
+            checks_passed: summary.passed,
+            checks_failed: summary.failed,
+          },
+        };
+      },
+    );
   }
 
   /**
