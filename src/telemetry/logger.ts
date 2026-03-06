@@ -409,7 +409,7 @@ export function createCliLogger(
   return createLogger({
     component: `cli:${component}`,
     minLevel: LogLevel.INFO,
-    mirrorToStderr: !process.env.JSON_OUTPUT,
+    mirrorToStderr: !process.env.JSON_OUTPUT, // Disable stderr mirroring in JSON mode
     ...runContext(runId, runDir),
     ...(overrides ?? {}),
   });

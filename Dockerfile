@@ -11,13 +11,14 @@ COPY package*.json ./
 
 # Copy source code and build config
 COPY tsconfig.json ./
+COPY .npmrc ./
 COPY src ./src
 COPY scripts ./scripts
 
 # Install all dependencies (including dev for build)
-# This will trigger prepare script which will build
 ENV OCLIF_SKIP_MANIFEST=1
 RUN npm ci
+RUN npm run build
 
 # Production stage
 FROM node:24-alpine

@@ -12,5 +12,4 @@ test
 *.test.ts
 .prettierrc.json
 .test-temp
-.npmrc
 .nvmrc

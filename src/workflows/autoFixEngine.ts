@@ -66,9 +66,6 @@ export interface AutoFixOptions {
 }
 
 /**
- * Auto-fix execution result
- */
-/**
  * Telemetry dependencies for validation commands
  */
 interface TelemetryContext {
@@ -85,6 +82,9 @@ interface AttemptContext {
   isAutoFixAttempt: boolean;
 }
 
+/**
+ * Auto-fix execution result
+ */
 export interface AutoFixResult {
   /** Whether all required validations passed */
   success: boolean;
