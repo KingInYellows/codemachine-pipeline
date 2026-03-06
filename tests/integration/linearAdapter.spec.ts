@@ -306,7 +306,7 @@ describe('LinearAdapter Integration Tests', () => {
             issueId: 'abc123',
             operation: 'fetchIssue',
           }),
-        }),
+        })
       );
     });
   });
