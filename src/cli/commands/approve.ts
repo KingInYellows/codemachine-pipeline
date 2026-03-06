@@ -21,12 +21,7 @@ import {
   requireFeatureId,
   requireConfig,
 } from '../utils/runDirectory';
-import {
-  CliError,
-  CliErrorCode,
-  formatErrorMessage,
-  setJsonOutputMode,
-} from '../utils/cliErrors';
+import { CliError, CliErrorCode, formatErrorMessage, setJsonOutputMode } from '../utils/cliErrors';
 import { TelemetryCommand } from './base';
 import { getGitUser } from '../startHelpers';
 
@@ -182,9 +177,12 @@ export default class Approve extends TelemetryCommand {
           );
 
           if (alreadyApproved) {
-            this.error(`Gate ${gateType} has already been approved. No pending approval required.`, {
-              exit: 10,
-            });
+            this.error(
+              `Gate ${gateType} has already been approved. No pending approval required.`,
+              {
+                exit: 10,
+              }
+            );
           } else {
             this.error(
               `No pending approval for gate ${gateType}. Current pending approvals: ${pendingApprovals.join(', ') || 'none'}`,
@@ -316,7 +314,7 @@ export default class Approve extends TelemetryCommand {
         }
 
         this.emitApprovalSummary(payload, typedFlags.json);
-      },
+      }
     );
   }
 

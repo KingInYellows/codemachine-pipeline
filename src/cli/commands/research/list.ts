@@ -131,7 +131,7 @@ export default class ResearchList extends TelemetryCommand {
         } else {
           this.printHumanReadable(payload);
         }
-      },
+      }
     );
   }
 

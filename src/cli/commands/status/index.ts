@@ -35,11 +35,7 @@ import {
   refreshBranchProtectionArtifact,
 } from '../../status/data';
 import { renderHumanReadable } from '../../status/renderers';
-import {
-  CliError,
-  CliErrorCode,
-  setJsonOutputMode,
-} from '../../utils/cliErrors';
+import { CliError, CliErrorCode, setJsonOutputMode } from '../../utils/cliErrors';
 import { TelemetryCommand } from '../base';
 
 /**
@@ -94,9 +90,7 @@ export default class Status extends TelemetryCommand {
 
     const settings = await resolveRunDirectorySettings();
     const featureId = await selectFeatureId(settings.baseDir, typedFlags.feature);
-    const runDirPath = featureId
-      ? getRunDirectoryPath(settings.baseDir, featureId)
-      : undefined;
+    const runDirPath = featureId ? getRunDirectoryPath(settings.baseDir, featureId) : undefined;
 
     await this.runWithTelemetry(
       {
@@ -133,7 +127,12 @@ export default class Status extends TelemetryCommand {
         }
 
         const manifestInfo = featureId
-          ? await loadManifestWithTracing(ctx.traceManager, ctx.commandSpan, settings.baseDir, featureId)
+          ? await loadManifestWithTracing(
+              ctx.traceManager,
+              ctx.commandSpan,
+              settings.baseDir,
+              featureId
+            )
           : undefined;
 
         const contextInfo = featureId
@@ -201,7 +200,7 @@ export default class Status extends TelemetryCommand {
             warn: (msg) => this.warn(msg),
           });
         }
-      },
+      }
     );
   }
 

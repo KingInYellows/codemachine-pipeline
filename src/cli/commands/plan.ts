@@ -101,9 +101,7 @@ export default class Plan extends TelemetryCommand {
 
     const settings = await resolveRunDirectorySettings();
     const featureId = await selectFeatureId(settings.baseDir, typedFlags.feature);
-    const runDirPath = featureId
-      ? getRunDirectoryPath(settings.baseDir, featureId)
-      : undefined;
+    const runDirPath = featureId ? getRunDirectoryPath(settings.baseDir, featureId) : undefined;
 
     await this.runWithTelemetry(
       {
@@ -130,7 +128,12 @@ export default class Plan extends TelemetryCommand {
         }
 
         const planSummary = featureId
-          ? await this.loadPlanWithTracing(ctx.traceManager, ctx.commandSpan, settings.baseDir, featureId)
+          ? await this.loadPlanWithTracing(
+              ctx.traceManager,
+              ctx.commandSpan,
+              settings.baseDir,
+              featureId
+            )
           : undefined;
 
         const specMetadata = featureId
@@ -147,7 +150,7 @@ export default class Plan extends TelemetryCommand {
           settings,
           planSummary,
           specMetadata,
-          planDiff,
+          planDiff
         );
 
         if (typedFlags.json) {
@@ -155,7 +158,7 @@ export default class Plan extends TelemetryCommand {
         } else {
           this.printHumanReadable(payload, typedFlags);
         }
-      },
+      }
     );
   }
 

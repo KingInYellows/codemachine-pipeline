@@ -153,7 +153,7 @@ export default class ResearchCreate extends TelemetryCommand {
         this.log(
           `Objectives: ${queueResult.task.objectives.length} | Sources: ${queueResult.task.sources?.length ?? 0} | Cache: ${queueResult.task.cache_key ?? 'n/a'}`
         );
-      },
+      }
     );
   }
 

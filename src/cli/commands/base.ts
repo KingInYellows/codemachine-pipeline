@@ -143,7 +143,7 @@ export abstract class TelemetryCommand extends Command {
    */
   protected async runWithTelemetry(
     options: TelemetryCommandOptions,
-    execute: (ctx: TelemetryContext) => Promise<TelemetryResult | void>,
+    execute: (ctx: TelemetryContext) => Promise<TelemetryResult | void>
   ): Promise<void> {
     const startTime = Date.now();
     const { runDirPath, featureId, jsonMode, verbose, spanAttributes, logsDir } = options;
@@ -223,7 +223,7 @@ export abstract class TelemetryCommand extends Command {
           commandSpan,
           runDirPath,
         },
-        error,
+        error
       );
 
       // Let oclif errors (from this.error / this.exit) propagate as-is.
@@ -231,8 +231,7 @@ export abstract class TelemetryCommand extends Command {
 
       // Surface CliError with its structured exit code.
       if (error instanceof CliError) {
-        const exitCode =
-          error.code === CliErrorCode.RUN_DIR_NOT_FOUND ? 10 : error.exitCode;
+        const exitCode = error.code === CliErrorCode.RUN_DIR_NOT_FOUND ? 10 : error.exitCode;
         this.error(error.message, { exit: exitCode });
       }
 
