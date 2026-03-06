@@ -345,7 +345,7 @@ export default class Init extends Command {
     await this.finalizeTelemetry(exitCode, ctx, error);
 
     if (error && typeof error === 'object' && 'oclif' in error) {
-      throw error as Error;
+      throw error as unknown as Error;
     }
 
     if (error instanceof Error) {
