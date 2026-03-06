@@ -212,19 +212,23 @@ export abstract class TelemetryCommand extends Command {
         process.exit(exitCode); // eslint-disable-line no-process-exit
       }
     } catch (error) {
-      // -- Error flush -------------------------------------------------
-      await flushTelemetryError(
-        {
-          commandName: this.commandName,
-          startTime,
-          logger,
-          metrics,
-          traceManager,
-          commandSpan,
-          runDirPath,
-        },
-        error
-      );
+      // -- Error flush (best-effort — must not mask the original error) --
+      try {
+        await flushTelemetryError(
+          {
+            commandName: this.commandName,
+            startTime,
+            logger,
+            metrics,
+            traceManager,
+            commandSpan,
+            runDirPath,
+          },
+          error
+        );
+      } catch {
+        // Telemetry flush failed; swallow so the original error surfaces.
+      }
 
       // Let oclif errors (from this.error / this.exit) propagate as-is.
       rethrowIfOclifError(error);
