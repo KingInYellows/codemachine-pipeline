@@ -460,24 +460,13 @@ function collectMissingDepBlockers(
 }
 
 /**
- * Generate execution plan from approved specification
+ * Load and validate the spec, extract requirements, and return the spec hash
+ * along with any warnings produced during extraction.
  */
-export async function generateExecutionPlan(
+async function loadAndValidateSpec(
   config: TaskPlannerConfig,
-  logger: StructuredLogger,
-  metrics: MetricsCollector
-): Promise<TaskPlannerResult> {
-  logger.info('Starting execution plan generation', {
-    featureId: config.featureId,
-    runDir: config.runDir,
-    iterationId: config.iterationId,
-  });
-
-  const planPath = path.join(config.runDir, 'plan.json');
-
-  const existing = await loadExistingPlanIfPresent(config, planPath, logger);
-  if (existing) return existing;
-
+  logger: StructuredLogger
+): Promise<{ specHash: string; requirements: SpecRequirement[]; warnings: string[] }> {
   const specMetadata = await loadSpecMetadata(config.runDir);
   if (!specMetadata) {
     throw new Error('Spec metadata not found. Generate spec first.');
@@ -503,6 +492,25 @@ export async function generateExecutionPlan(
     count: requirements.length,
   });
 
+  return { specHash: specMetadata.specHash, requirements, warnings };
+}
+
+/**
+ * Generate task nodes from requirements, build the dependency graph and
+ * topological order, and assemble the PlanArtifact with DAG metadata.
+ */
+async function assembleTaskGraph(
+  config: TaskPlannerConfig,
+  requirements: SpecRequirement[],
+  specHash: string,
+  logger: StructuredLogger
+): Promise<{
+  tasks: TaskNode[];
+  planWithDag: PlanArtifact;
+  maxDepth: number;
+  parallelPaths: number;
+  dependencyBlockers: PlanDiagnostics['blockers'];
+}> {
   const traceabilityTaskIds = await loadTraceabilityTaskIds(config.runDir);
   const { tasks, requirementTaskMap } = generateTaskNodes(
     requirements,
@@ -525,7 +533,7 @@ export async function generateExecutionPlan(
     generatedBy: 'task-planner:v1.0.0',
     metadata: {
       iteration_id: config.iterationId,
-      spec_hash: specMetadata.specHash,
+      spec_hash: specHash,
       requirement_count: requirements.length,
     },
   });
@@ -548,6 +556,32 @@ export async function generateExecutionPlan(
     parallelPaths,
   });
 
+  return { tasks, planWithDag, maxDepth, parallelPaths, dependencyBlockers };
+}
+
+/**
+ * Generate execution plan from approved specification
+ */
+export async function generateExecutionPlan(
+  config: TaskPlannerConfig,
+  logger: StructuredLogger,
+  metrics: MetricsCollector
+): Promise<TaskPlannerResult> {
+  logger.info('Starting execution plan generation', {
+    featureId: config.featureId,
+    runDir: config.runDir,
+    iterationId: config.iterationId,
+  });
+
+  const planPath = path.join(config.runDir, 'plan.json');
+
+  const existing = await loadExistingPlanIfPresent(config, planPath, logger);
+  if (existing) return existing;
+
+  const { specHash, requirements, warnings } = await loadAndValidateSpec(config, logger);
+  const { tasks, planWithDag, maxDepth, parallelPaths, dependencyBlockers } =
+    await assembleTaskGraph(config, requirements, specHash, logger);
+
   const validation = validateDAG(planWithDag);
   if (!validation.valid) {
     throw new Error(`Plan validation failed:\n${validation.errors.join('\n')}`);
@@ -567,7 +601,7 @@ export async function generateExecutionPlan(
   const { path: persistedPath, planWithChecksum } = await persistPlan(
     config.runDir,
     planWithDag,
-    specMetadata.specHash,
+    specHash,
     config.iterationId
   );
 
