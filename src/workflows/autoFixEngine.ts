@@ -82,6 +82,9 @@ interface AttemptContext {
   isAutoFixAttempt: boolean;
 }
 
+/** Maximum backoff delay between retry attempts (5 minutes). */
+const MAX_BACKOFF_MS = 300_000;
+
 /**
  * Auto-fix execution result
  */
@@ -207,7 +210,7 @@ export async function executeValidationWithAutoFix(
     if (attemptNumber < maxAttempts) {
       const cappedBackoffMs = Math.min(
         command.backoff_ms * Math.pow(2, attemptNumber - 1),
-        300_000
+        MAX_BACKOFF_MS
       );
       const backoffMs = Math.round(cappedBackoffMs * (0.5 + Math.random() * 0.5));
       logger?.info('Validation failed, retrying after backoff', {
