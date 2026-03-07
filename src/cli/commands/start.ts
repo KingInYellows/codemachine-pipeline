@@ -28,8 +28,9 @@ import {
   setJsonOutputMode,
 } from '../utils/cliErrors';
 import { flushTelemetryError } from '../utils/telemetryLifecycle';
-import { PipelineOrchestrator } from '../../workflows/pipelineOrchestrator';
+import { PipelineOrchestrator, PrerequisiteError } from '../../workflows/pipelineOrchestrator';
 import { emitStartSummary, outputDryRunPlan, type StartResultPayload } from '../startOutput.js';
+import type { RepoConfig } from '../../core/config/RepoConfig';
 
 export default class Start extends Command {
   static description = 'Start a new feature development pipeline';
@@ -108,7 +109,7 @@ export default class Start extends Command {
     }
 
     const settings = await resolveRunDirectorySettings();
-    let repoConfig;
+    let repoConfig: RepoConfig;
     try {
       repoConfig = requireConfig(settings);
     } catch (error) {
@@ -169,12 +170,6 @@ export default class Start extends Command {
     try {
       const specText = resolvedSpecPath ? await fs.readFile(resolvedSpecPath, 'utf-8') : undefined;
 
-      let linearContextText: string | undefined;
-      if (typedFlags.linear) {
-        const snapshot = await fetchLinearIssue(typedFlags.linear, runDir, logger);
-        linearContextText = formatLinearContext(snapshot);
-      }
-
       orchestrator = new PipelineOrchestrator({
         repoRoot,
         runDir,
@@ -186,6 +181,12 @@ export default class Start extends Command {
         metrics,
         telemetry: executionTelemetry,
       });
+
+      let linearContextText: string | undefined;
+      if (typedFlags.linear) {
+        const snapshot = await fetchLinearIssue(typedFlags.linear, runDir, logger);
+        linearContextText = formatLinearContext(snapshot);
+      }
 
       const result = await orchestrator.execute({
         promptText: typedFlags.prompt,
@@ -264,14 +265,26 @@ export default class Start extends Command {
         true
       );
 
-      const cliErr =
-        error instanceof CliError
-          ? error
-          : new CliError(
-              `Start command failed: ${formatErrorMessage(error)}`,
-              CliErrorCode.GENERAL,
-              error instanceof Error ? { cause: error } : {}
-            );
+      let cliErr: CliError;
+      if (error instanceof CliError) {
+        cliErr = error;
+      } else if (error instanceof PrerequisiteError) {
+        cliErr = new CliError(
+          error.message,
+          CliErrorCode.CONFIG_INVALID,
+          {
+            remediation: 'Fix the prerequisite issues and retry.',
+            howToFix: 'Review the errors above and ensure all required tools are installed.',
+            commonFixes: error.errors,
+          }
+        );
+      } else {
+        cliErr = new CliError(
+          `Start command failed: ${formatErrorMessage(error)}`,
+          CliErrorCode.GENERAL,
+          error instanceof Error ? { cause: error } : {}
+        );
+      }
       if (typedFlags.json) {
         this.log(JSON.stringify(formatErrorJson(cliErr), null, 2));
         this.exit(cliErr.exitCode);

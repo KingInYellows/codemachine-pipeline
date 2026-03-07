@@ -27,7 +27,22 @@ import {
   setLastStep,
   markApprovalRequired,
   updateManifest,
-} from '../persistence/runDirectoryManager';
+} from '../persistence/manifestManager.js';
+
+/**
+ * Thrown when execution prerequisites are not met.
+ * The CLI layer can detect this error type and re-wrap it with
+ * structured CliError metadata (CONFIG_INVALID, remediation hints).
+ */
+export class PrerequisiteError extends Error {
+  readonly errors: string[];
+
+  constructor(errors: string[]) {
+    super(`Execution prerequisites failed: ${errors.join(', ')}`);
+    this.name = 'PrerequisiteError';
+    this.errors = errors;
+  }
+}
 
 const EXECUTION_STEPS = {
   Context: 'context_aggregation',
@@ -315,21 +330,16 @@ export class PipelineOrchestrator {
     }
 
     const executionConfig = this.repoConfig.execution ?? DEFAULT_EXECUTION_CONFIG;
+    const effectiveExecutionConfig = {
+      ...executionConfig,
+      max_parallel_tasks: maxParallel,
+    };
     const mergedConfig: RepoConfig = {
       ...this.repoConfig,
-      execution: {
-        ...executionConfig,
-        max_parallel_tasks: maxParallel,
-      },
+      execution: effectiveExecutionConfig,
     };
 
-    if (!mergedConfig.execution) {
-      throw new Error(
-        'Execution config is required. Ensure your .codepipe/config.json includes an "execution" section.'
-      );
-    }
-
-    const strategies = await buildExecutionStrategies(mergedConfig.execution, this.logger);
+    const strategies = await buildExecutionStrategies(effectiveExecutionConfig, this.logger);
 
     const executionEngine = new CLIExecutionEngine({
       runDir: this.runDir,
@@ -342,9 +352,7 @@ export class PipelineOrchestrator {
 
     const prereqResult = await executionEngine.validatePrerequisites();
     if (!prereqResult.valid) {
-      throw new Error(
-        `Execution prerequisites failed: ${prereqResult.errors.join(', ')}`
-      );
+      throw new PrerequisiteError(prereqResult.errors);
     }
 
     if (prereqResult.warnings.length > 0) {

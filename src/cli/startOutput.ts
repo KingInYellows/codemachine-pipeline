@@ -81,7 +81,7 @@ export function emitStartSummary(
 
     if (payload.execution.failed > 0) {
       warn(
-        `  Warning: ${payload.execution.failed} task(s) failed. Use 'codepipe resume' to retry.`
+        `${payload.execution.failed} task(s) failed. Use 'codepipe resume' to retry.`
       );
     }
   }
