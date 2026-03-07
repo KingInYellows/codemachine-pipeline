@@ -1,10 +1,7 @@
 /**
  * Resume Coordinator
  *
- * Thin orchestrator that implements deterministic resumption of failed or
- * paused execution runs. Delegates state verification to runStateVerifier
- * and queue recovery to resumeQueueRecovery.
- *
+ * Orchestrates deterministic resumption of failed or paused execution runs.
  */
 
 import {

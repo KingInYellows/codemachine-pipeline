@@ -1,15 +1,7 @@
 /**
  * Research Coordinator
  *
- * Identifies unknowns from prompts/specs, queues ResearchTasks with objectives,
- * sources, and cache keys, manages caching/refresh policies, and records outputs.
- *
- * Key features:
- * - Auto-detection of unknowns from context documents and requirements
- * - Deterministic caching based on objectives + sources
- * - Freshness-aware result reuse (configurable TTL)
- * - CLI integration for task listing and management
- * - Storage under run directory with JSONL append logs
+ * Identifies unknowns, queues ResearchTasks, and manages cached results with freshness policies.
  */
 
 import { withLock } from '../persistence';

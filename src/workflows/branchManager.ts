@@ -1,17 +1,7 @@
 /**
  * Branch Manager
  *
- * Manages git branch operations with safety rails, including branch creation,
- * remote tracking, push operations, and branch metadata persistence.
- *
- * Key features:
- * - Feature branch creation from default branch
- * - Branch naming conventions (feature/, bugfix/, etc.)
- * - Remote push with upstream tracking
- * - Branch metadata storage in run directory
- * - Git safety validations (prevent force push, protect main branches)
- * - Status introspection (local/remote sync state)
- *
+ * Manages git branch operations with safety rails, metadata persistence, and remote tracking.
  */
 
 import * as fs from 'node:fs/promises';
