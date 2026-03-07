@@ -123,12 +123,16 @@ export class PipelineOrchestrator {
   }
 
   async execute(input: PipelineInput): Promise<PipelineResult> {
+    // Calculate total steps: context(1) + research(2) + PRD(3) + execution(4 if not skipped)
+    const willRunExecution = !input.skipExecution && !this.isApprovalRequired();
+    const totalSteps = willRunExecution ? 4 : 3;
+
     await updateManifest(this.runDir, (manifest) => ({
       status: 'in_progress',
       execution: {
         ...manifest.execution,
         completed_steps: 0,
-        total_steps: 3,
+        total_steps: totalSteps,
       },
     }));
 
@@ -147,7 +151,9 @@ export class PipelineOrchestrator {
     this.currentStep = EXECUTION_STEPS.PRD;
     const prdResult = await this.runPrdAuthoring(
       contextResult.contextDocument,
-      researchTasks
+      researchTasks,
+      input.promptText,
+      specText
     );
 
     const approvalRequired = this.isApprovalRequired();
@@ -278,7 +284,9 @@ export class PipelineOrchestrator {
 
   private async runPrdAuthoring(
     contextDocument: Parameters<typeof draftPRD>[0]['contextDocument'],
-    researchTasks: ResearchTask[]
+    researchTasks: ResearchTask[],
+    promptText?: string,
+    specText?: string
   ) {
     await setCurrentStep(this.runDir, EXECUTION_STEPS.PRD);
     const approvalRequired = this.isApprovalRequired();
@@ -289,6 +297,8 @@ export class PipelineOrchestrator {
       defaultBranch: this.repoConfig.project.default_branch,
       metadata: {
         approvals_required: approvalRequired,
+        prompt_text: promptText,
+        spec_text: specText,
       },
     });
 
@@ -361,6 +371,7 @@ export class PipelineOrchestrator {
 
     const results = await executionEngine.execute();
     await setLastStep(this.runDir, EXECUTION_STEPS.Execution);
+    await this.updateExecutionProgress(4);
 
     this.logger.info('Execution complete', {
       totalTasks: results.totalTasks,
