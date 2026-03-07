@@ -172,7 +172,7 @@ Validation command registry configuration (ADR-7 / FR-14).
 | `required` | `boolean` | ✗ | `true` | Whether the command blocks PR/deploy |
 | `timeout_ms` | `integer` | ✗ | `120000` | Timeout per attempt (1000-600000 ms) |
 | `max_retries` | `integer` | ✗ | `3` | Additional retries after the first attempt |
-| `backoff_ms` | `integer` | ✗ | `1000` | Backoff multiplier between retries |
+| `backoff_ms` | `integer` | ✗ | `1000` | Base delay for exponential backoff between retries in milliseconds (delay = `backoff_ms × 2^(attempt-1)`, capped at 5 min, with jitter) |
 | `description` | `string` | ✗ | - | Human-friendly description |
 | `template_context` | `record<string,string>` | ✗ | `{}` | Per-command templating tokens |
 
