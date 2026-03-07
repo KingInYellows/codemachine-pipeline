@@ -27,6 +27,7 @@ WORKDIR /app
 
 # Copy package files
 COPY package*.json ./
+COPY .npmrc ./
 
 # Install production dependencies only
 RUN npm ci --omit=dev --ignore-scripts

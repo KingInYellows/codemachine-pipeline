@@ -140,7 +140,7 @@ function sleep(ms: number): Promise<void> {
 /**
  * Check whether an error is an EEXIST filesystem error.
  */
-function isFileExists(error: unknown): boolean {
+function isFileExists(error: unknown): error is NodeJS.ErrnoException {
   return (
     error !== null &&
     typeof error === 'object' &&
