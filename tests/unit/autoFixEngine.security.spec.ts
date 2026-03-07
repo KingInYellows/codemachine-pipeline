@@ -73,7 +73,8 @@ const executeShellCommandForTesting = async (
     }
 
     if (error && typeof error === 'object' && 'code' in error) {
-      const exitCode = typeof error.code === 'number' ? error.code : 1;
+      const exitCode =
+        'status' in error && typeof error.status === 'number' ? error.status : 1;
       const stdout = 'stdout' in error && typeof error.stdout === 'string' ? error.stdout : '';
       const stderr = 'stderr' in error && typeof error.stderr === 'string' ? error.stderr : '';
 

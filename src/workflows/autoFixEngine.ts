@@ -33,10 +33,8 @@ import {
 } from './commandRunner.js';
 import { filterEnvironment } from '../utils/envFilter.js';
 
-// Re-export commandRunner utilities for backward compatibility.
-// SHELL_METACHARACTERS, DANGEROUS_PATH_METACHARACTERS, BUILTIN_TEMPLATE_CONTEXT_KEYS,
-// and TEMPLATE_VALUE_METACHARACTERS are re-exported because security tests read
-// this file's source and assert their presence (autoFixEngine.security.spec.ts).
+// Re-export commandRunner constants and utilities so that downstream consumers
+// can import them from either module.
 export {
   SHELL_METACHARACTERS,
   DANGEROUS_PATH_METACHARACTERS,
