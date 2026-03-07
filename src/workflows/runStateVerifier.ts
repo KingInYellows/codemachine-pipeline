@@ -261,19 +261,42 @@ export function checkQueueState(analysis: ResumeAnalysis, manifest: RunManifest)
   }
 }
 
-/** Static message map for blocker diagnostic codes */
-const BLOCKER_RECOMMENDATION_MAP: Record<string, string> = {
-  INTEGRITY_HASH_MISMATCH:
-    '   • Artifacts have been modified. Restore from backup or use --force (risky)',
-  NON_RECOVERABLE_ERROR: '   • Manual intervention required. See docs/playbooks/resume_playbook.md',
-};
+/** Handler signature for diagnostic-to-recommendation mapping */
+type RecommendationHandler = (diagnostic: ResumeDiagnostic, analysis: ResumeAnalysis) => string;
 
-/** Static message map for warning diagnostic codes */
-const WARNING_RECOMMENDATION_MAP: Record<string, string> = {
-  ERROR_RATE_LIMIT: '   • Wait for rate limit reset before resuming',
-  ERROR_NETWORK: '   • Check network connectivity before resuming',
-  QUEUE_HAS_FAILURES: '   • Review failed tasks in queue before resuming',
-};
+/** Map of blocker diagnostic codes to recommendation generators */
+const BLOCKER_RECOMMENDATION_MAP = new Map<string, RecommendationHandler>([
+  [
+    'APPROVALS_PENDING',
+    (diag) =>
+      `   • Complete pending approvals: ${((diag.context?.approvals as string[]) || []).join(', ')}`,
+  ],
+  [
+    'QUEUE_CORRUPTED',
+    (_diag, analysis) =>
+      `   • Queue files are corrupted. Run 'codepipe queue validate --feature ${analysis.featureId}' and rebuild with 'codepipe queue rebuild --feature ${analysis.featureId} --from-plan'`,
+  ],
+  [
+    'INTEGRITY_HASH_MISMATCH',
+    () => '   • Artifacts have been modified. Restore from backup or use --force (risky)',
+  ],
+  [
+    'NON_RECOVERABLE_ERROR',
+    () => '   • Manual intervention required. See docs/playbooks/resume_playbook.md',
+  ],
+]);
+
+/** Map of warning diagnostic codes to recommendation generators */
+const WARNING_RECOMMENDATION_MAP = new Map<string, RecommendationHandler>([
+  [
+    'QUEUE_VALIDATION_WARNINGS',
+    (_diag, analysis) =>
+      `   • Inspect queue warnings with 'codepipe queue validate --feature ${analysis.featureId} --verbose'`,
+  ],
+  ['ERROR_RATE_LIMIT', () => '   • Wait for rate limit reset before resuming'],
+  ['ERROR_NETWORK', () => '   • Check network connectivity before resuming'],
+  ['QUEUE_HAS_FAILURES', () => '   • Review failed tasks in queue before resuming'],
+]);
 
 /**
  * Generate actionable recommendations based on diagnostics
@@ -287,19 +310,10 @@ export function generateRecommendations(analysis: ResumeAnalysis): void {
     analysis.recommendations.push('🚫 Resume is blocked. Address the following issues:');
 
     for (const blocker of blockers) {
-      if (blocker.code === 'APPROVALS_PENDING') {
-        analysis.recommendations.push(
-          `   • Complete pending approvals: ${((blocker.context?.approvals as string[]) || []).join(', ')}`
-        );
-      } else if (blocker.code === 'QUEUE_CORRUPTED') {
-        analysis.recommendations.push(
-          `   • Queue files are corrupted. Run 'codepipe queue validate --feature ${analysis.featureId}' and rebuild with 'codepipe queue rebuild --feature ${analysis.featureId} --from-plan'`
-        );
-      } else {
-        analysis.recommendations.push(
-          BLOCKER_RECOMMENDATION_MAP[blocker.code ?? ''] ?? `   • ${blocker.message}`
-        );
-      }
+      const handler = BLOCKER_RECOMMENDATION_MAP.get(blocker.code ?? '');
+      analysis.recommendations.push(
+        handler ? handler(blocker, analysis) : `   • ${blocker.message}`
+      );
     }
   }
 
@@ -313,15 +327,9 @@ export function generateRecommendations(analysis: ResumeAnalysis): void {
   if (warnings.length > 0 && blockers.length === 0) {
     analysis.recommendations.push('⚠️  Warnings (resume may proceed with caution):');
     for (const warning of warnings) {
-      if (warning.code === 'QUEUE_VALIDATION_WARNINGS') {
-        analysis.recommendations.push(
-          `   • Inspect queue warnings with 'codepipe queue validate --feature ${analysis.featureId} --verbose'`
-        );
-      } else {
-        const mapped = WARNING_RECOMMENDATION_MAP[warning.code ?? ''];
-        if (mapped) {
-          analysis.recommendations.push(mapped);
-        }
+      const handler = WARNING_RECOMMENDATION_MAP.get(warning.code ?? '');
+      if (handler) {
+        analysis.recommendations.push(handler(warning, analysis));
       }
     }
   }
