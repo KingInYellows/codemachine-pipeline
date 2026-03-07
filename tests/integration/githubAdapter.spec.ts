@@ -709,4 +709,129 @@ describe('GitHubAdapter Integration Tests', () => {
       expect(adapter).toBeInstanceOf(GitHubAdapter);
     });
   });
+
+  describe('Input Validation (CDMCH-174)', () => {
+    describe('owner/repo validation', () => {
+      it('should reject empty owner', () => {
+        expect(
+          () => new GitHubAdapter({ owner: '', repo: 'test-repo', token: 'tok' })
+        ).toThrow(GitHubAdapterError);
+      });
+
+      it('should reject owner with path traversal', () => {
+        expect(
+          () => new GitHubAdapter({ owner: '../etc', repo: 'test-repo', token: 'tok' })
+        ).toThrow(GitHubAdapterError);
+      });
+
+      it('should reject owner with slashes', () => {
+        expect(
+          () => new GitHubAdapter({ owner: 'org/evil', repo: 'test-repo', token: 'tok' })
+        ).toThrow(GitHubAdapterError);
+      });
+
+      it('should reject owner with dots', () => {
+        expect(
+          () => new GitHubAdapter({ owner: 'my-org.test', repo: 'test-repo', token: 'tok' })
+        ).toThrow(GitHubAdapterError);
+      });
+
+      it('should reject dot-prefixed owner', () => {
+        expect(
+          () => new GitHubAdapter({ owner: '.myorg', repo: 'test-repo', token: 'tok' })
+        ).toThrow(GitHubAdapterError);
+      });
+
+      it('should reject repo with special characters', () => {
+        expect(
+          () => new GitHubAdapter({ owner: 'test-org', repo: 'repo%20name', token: 'tok' })
+        ).toThrow(GitHubAdapterError);
+      });
+
+      it('should reject repository names that collapse path segments', () => {
+        expect(() => new GitHubAdapter({ owner: 'test-org', repo: '.', token: 'tok' })).toThrow(
+          GitHubAdapterError
+        );
+        expect(() => new GitHubAdapter({ owner: 'test-org', repo: '..', token: 'tok' })).toThrow(
+          GitHubAdapterError
+        );
+      });
+
+      it('should reject repository names that end with "." or ".git"', () => {
+        expect(
+          () => new GitHubAdapter({ owner: 'test-org', repo: 'repo.', token: 'tok' })
+        ).toThrow(GitHubAdapterError);
+        expect(
+          () => new GitHubAdapter({ owner: 'test-org', repo: 'repo.git', token: 'tok' })
+        ).toThrow(GitHubAdapterError);
+      });
+
+      it('should accept owner with hyphens and repo with hyphens, dots, and underscores', () => {
+        expect(
+          () => new GitHubAdapter({ owner: 'my-org-test', repo: 'my_repo-v2.0', token: 'tok' })
+        ).not.toThrow();
+      });
+
+      it('should accept repository names that start with a dot', () => {
+        expect(
+          () => new GitHubAdapter({ owner: 'test-org', repo: '.github', token: 'tok' })
+        ).not.toThrow();
+      });
+    });
+
+    describe('pull_number validation', () => {
+      it('should reject NaN pull number', async () => {
+        await expect(adapter.getPullRequest(NaN)).rejects.toThrow(GitHubAdapterError);
+      });
+
+      it('should reject negative pull number', async () => {
+        await expect(adapter.getPullRequest(-1)).rejects.toThrow(GitHubAdapterError);
+      });
+
+      it('should reject zero pull number', async () => {
+        await expect(adapter.getPullRequest(0)).rejects.toThrow(GitHubAdapterError);
+      });
+
+      it('should reject fractional pull number', async () => {
+        await expect(adapter.getPullRequest(1.5)).rejects.toThrow(GitHubAdapterError);
+      });
+
+      it('should accept valid positive integer', async () => {
+        mockHttpClient.get.mockResolvedValue({ data: MOCK_PULL_REQUEST });
+        await expect(adapter.getPullRequest(42)).resolves.toBeDefined();
+      });
+
+      it('should validate pull_number in requestReviewers', async () => {
+        await expect(
+          adapter.requestReviewers({ pull_number: -1, reviewers: ['user'] })
+        ).rejects.toThrow(GitHubAdapterError);
+        expect(mockHttpClient.post).not.toHaveBeenCalled();
+      });
+
+      it('should validate pull_number in mergePullRequest', async () => {
+        await expect(
+          adapter.mergePullRequest({ pull_number: 0 })
+        ).rejects.toThrow(GitHubAdapterError);
+        expect(mockHttpClient.put).not.toHaveBeenCalled();
+      });
+
+      it('should validate pull_number in isPullRequestReadyToMerge', async () => {
+        await expect(adapter.isPullRequestReadyToMerge(0)).rejects.toThrow(GitHubAdapterError);
+        expect(mockHttpClient.get).not.toHaveBeenCalled();
+      });
+
+      it('should validate pull_number in enableAutoMerge', async () => {
+        await expect(adapter.enableAutoMerge(0, 'MERGE')).rejects.toThrow(GitHubAdapterError);
+        expect(mockHttpClient.get).not.toHaveBeenCalled();
+        expect(mockHttpClient.post).not.toHaveBeenCalled();
+      });
+
+      it('should validate pull_number in disableAutoMerge', async () => {
+        await expect(adapter.disableAutoMerge(0)).rejects.toThrow(GitHubAdapterError);
+        expect(mockHttpClient.get).not.toHaveBeenCalled();
+        expect(mockHttpClient.post).not.toHaveBeenCalled();
+      });
+    });
+  });
+
 });
