@@ -422,11 +422,8 @@ export async function executeShellCommand(
     }
 
     // Handle command execution errors
-    // Node.js ExecFileException uses `status` (number | null) for the process
-    // exit code and `code` (string | null) for error codes like 'ENOENT'.
     if (error && typeof error === 'object' && 'code' in error) {
-      const exitCode =
-        'status' in error && typeof error.status === 'number' ? error.status : 1;
+      const exitCode = typeof error.code === 'number' ? error.code : 1;
       const stdout = 'stdout' in error && typeof error.stdout === 'string' ? error.stdout : '';
       const stderr = 'stderr' in error && typeof error.stderr === 'string' ? error.stderr : '';
 
