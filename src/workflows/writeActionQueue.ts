@@ -1,16 +1,7 @@
 /**
  * Write Action Queue
  *
- * Orchestration layer that coordinates throttled GitHub write operations
- * (PR comments, labels, review requests) to prevent secondary rate limits.
- * Delegates persistence to WriteActionStore and rate-limit checks to
- * WriteActionRateLimiter.
- *
- * Key features:
- * - Serialized write actions with deduplication via idempotency keys
- * - Automatic cooldown on secondary limit detection (429 responses)
- * - Backoff and retry logic with exponential delays
- * - Telemetry emission for queue depth and action outcomes
+ * Coordinates throttled GitHub write operations with deduplication, cooldown, and retry logic.
  */
 
 import { createLogger, LogLevel, type LoggerInterface } from '../telemetry/logger';

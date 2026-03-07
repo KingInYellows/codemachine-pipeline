@@ -1,15 +1,7 @@
 /**
- * Context Ranking Module
+ * Context Ranking
  *
- * Provides scoring and ranking functions for repository files
- * to prioritize context aggregation under token budgets.
- *
- *
- * Scoring factors:
- * - Path depth (shallower files = higher priority)
- * - Git recency (recently modified = higher priority)
- * - File type (README/docs > source > tests)
- * - File size (reasonable size preferred)
+ * Scores and ranks repository files to prioritize context aggregation under token budgets.
  */
 
 /**

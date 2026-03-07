@@ -1,10 +1,7 @@
 /**
  * Specification Composer
  *
- * Converts approved PRD + research data into structured engineering specification
- * covering constraints, rollout plan, test plan, and risks. Supports CLI editing
- * loops, highlights unknowns requiring more research, and stores change logs.
- *
+ * Converts approved PRD and research data into a structured engineering specification.
  */
 
 import * as fs from 'node:fs/promises';

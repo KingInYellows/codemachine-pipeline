@@ -1,16 +1,7 @@
 /**
  * PRD Authoring Engine
  *
- * Drafts Product Requirements Documents using context aggregation and research
- * outputs, supports iterative editing, and maintains traceability links to
- * goals and specifications.
- *
- * Key features:
- * - Template-based PRD generation with variable substitution
- * - Context and research citation integration
- * - Iterative editing support with version history
- * - Traceability link management
- *
+ * Orchestrates PRD generation from context, research, and feature metadata.
  */
 
 import * as fs from 'node:fs/promises';

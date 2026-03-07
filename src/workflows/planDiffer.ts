@@ -1,15 +1,7 @@
 /**
  * Plan Differ
  *
- * Compares current plan state against spec metadata to detect when
- * specifications change and tasks need regeneration.
- *
- * Features:
- * - Spec hash comparison
- * - Plan checksum validation
- * - Change detection and recommendations
- * - CLI-friendly diff summaries
- *
+ * Compares plan state against spec metadata to detect spec changes requiring task regeneration.
  */
 
 import * as fs from 'node:fs/promises';

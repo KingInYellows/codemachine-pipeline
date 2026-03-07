@@ -1,16 +1,7 @@
 /**
  * Traceability Mapper
  *
- * Links PRD goals → spec requirements → planned ExecutionTasks, storing results
- * in trace.json for auditability and surfacing summaries in CLI status output.
- *
- * Key features:
- * - Deterministic trace link generation from approved artifacts
- * - Deduplication and validation via TraceLink schema
- * - Lock-based atomic writes to trace.json
- * - Summary generation for CLI consumption
- * - Integration with approval gates (PRD and Spec)
- *
+ * Links PRD goals, spec requirements, and ExecutionTasks into trace.json for auditability.
  */
 
 import * as fs from 'node:fs/promises';

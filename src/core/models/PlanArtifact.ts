@@ -11,41 +11,28 @@ import { createModelParser } from './modelParser.js';
  */
 
 const TaskDependencySchema = z.object({
-  /** Dependent task ID */
   task_id: z.string().min(1),
-  /** Dependency type (e.g., 'required', 'optional') */
   type: z.enum(['required', 'optional']).default('required'),
 });
 
 export type TaskDependency = z.infer<typeof TaskDependencySchema>;
 
 const TaskNodeSchema = z.object({
-  /** Unique task identifier */
   task_id: z.string().min(1),
-  /** Task title or description */
   title: z.string().min(1),
-  /** Task type (e.g., 'research', 'code_generation', 'testing') */
   task_type: z.string().min(1),
-  /** Array of task IDs this task depends on */
   dependencies: z.array(TaskDependencySchema).default([]),
-  /** Estimated execution time in minutes */
   estimated_duration_minutes: z.number().int().nonnegative().optional(),
-  /** Task-specific configuration */
   config: z.record(z.string(), z.unknown()).optional(),
 });
 
 export type TaskNode = z.infer<typeof TaskNodeSchema>;
 
 const DAGMetadataSchema = z.object({
-  /** Total number of tasks in the plan */
   total_tasks: z.number().int().nonnegative(),
-  /** Number of parallel execution paths */
   parallel_paths: z.number().int().nonnegative().optional(),
-  /** Estimated total execution time in minutes */
   estimated_total_duration_minutes: z.number().int().nonnegative().optional(),
-  /** Plan generation timestamp (ISO 8601) */
   generated_at: z.string().datetime(),
-  /** Plan generator agent or tool identifier */
   generated_by: z.string().optional(),
 });
 
@@ -53,24 +40,17 @@ export type DAGMetadata = z.infer<typeof DAGMetadataSchema>;
 
 export const PlanArtifactSchema = z
   .object({
-    /** Schema version for future migrations (semver) */
     schema_version: z.string().regex(/^[0-9]+\.[0-9]+\.[0-9]+$/, 'Invalid semver format'),
-    /** Feature ID this plan belongs to */
     feature_id: z.string().min(1),
-    /** ISO 8601 timestamp when plan was created */
     created_at: z.string().datetime(),
-    /** ISO 8601 timestamp when plan was last updated */
     updated_at: z.string().datetime(),
-    /** DAG task nodes defining the execution plan */
     tasks: z.array(TaskNodeSchema),
-    /** DAG metadata and statistics */
     dag_metadata: DAGMetadataSchema,
-    /** SHA-256 checksum of plan content for idempotence */
+    /** SHA-256 checksum for idempotence verification */
     checksum: z
       .string()
       .regex(/^[a-f0-9]{64}$/, 'Invalid SHA-256 hash format')
       .optional(),
-    /** Optional plan-level metadata */
     metadata: z.record(z.string(), z.unknown()).optional(),
   })
   .strict();

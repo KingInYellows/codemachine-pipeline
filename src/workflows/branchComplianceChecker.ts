@@ -1,10 +1,7 @@
 /**
  * Branch Compliance Checker
  *
- * Pure domain workflow that orchestrates branch protection compliance evaluation.
- * Delegates HTTP fetching to BranchProtectionAdapter and applies compliance rules
- * without any direct network calls.
- *
+ * Evaluates branch protection compliance by delegating to BranchProtectionAdapter.
  */
 
 import { serializeError } from '../utils/errors';

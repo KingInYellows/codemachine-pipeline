@@ -29,17 +29,12 @@ export type ArtifactType = z.infer<typeof ArtifactTypeSchema>;
 // Single Artifact Record
 
 const ArtifactRecordSchema = z.object({
-  /** Artifact type classification */
   artifact_type: ArtifactTypeSchema,
-  /** Relative path to artifact file (from run directory root) */
+  /** Relative to run directory root */
   path: z.string().min(1),
-  /** SHA-256 hash of artifact contents */
   hash: z.string().regex(/^[a-f0-9]{64}$/, 'Invalid SHA-256 hash format'),
-  /** File size in bytes */
   size: z.number().int().nonnegative(),
-  /** ISO 8601 timestamp when artifact was created */
   timestamp: z.string().datetime(),
-  /** Optional artifact-specific metadata */
   metadata: z.record(z.string(), z.unknown()).optional(),
 });
 
@@ -49,17 +44,12 @@ export type ArtifactRecord = z.infer<typeof ArtifactRecordSchema>;
 
 export const RunArtifactSchema = z
   .object({
-    /** Schema version for future migrations (semver) */
     schema_version: z.string().regex(/^[0-9]+\.[0-9]+\.[0-9]+$/, 'Invalid semver format'),
-    /** Feature ID this artifact collection belongs to */
     feature_id: z.string().min(1),
-    /** ISO 8601 timestamp when collection was created */
     created_at: z.string().datetime(),
-    /** ISO 8601 timestamp when collection was last updated */
     updated_at: z.string().datetime(),
-    /** Map of artifact IDs to artifact records */
+    /** Keyed by artifact ID */
     artifacts: z.record(z.string(), ArtifactRecordSchema),
-    /** Optional collection-level metadata */
     metadata: z.record(z.string(), z.unknown()).optional(),
   })
   .strict();
