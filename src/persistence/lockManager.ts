@@ -144,7 +144,7 @@ function isFileExists(error: unknown): boolean {
   return (
     error !== null &&
     typeof error === 'object' &&
-    'code' in (error as Record<string, unknown>) &&
+    'code' in error &&
     (error as NodeJS.ErrnoException).code === 'EEXIST'
   );
 }
