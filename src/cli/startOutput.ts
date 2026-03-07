@@ -104,7 +104,7 @@ export function outputDryRunPlan(flags: StartFlags, jsonMode: boolean, log: LogF
     'Create feature run directory and manifest',
     'Aggregate context files under configured globs',
     'Detect unknowns to queue research tasks',
-    'Render PRD draft using docs/templates/prd_template.md',
+    'Render PRD draft using configured PRD template',
     'Record PRD hash for approval workflow',
   ];
 

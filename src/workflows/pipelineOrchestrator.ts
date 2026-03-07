@@ -92,12 +92,16 @@ export interface PipelineResult {
         totalTasks: number;
         completedTasks: number;
         failedTasks: number;
+        permanentlyFailedTasks: number;
       }
     | undefined;
 }
 
 export class PipelineOrchestrator {
-  currentStep = 'initializing';
+  private _currentStep = 'initializing';
+  get currentStep(): string {
+    return this._currentStep;
+  }
 
   private readonly repoRoot: string;
   private readonly runDir: string;
@@ -122,8 +126,9 @@ export class PipelineOrchestrator {
   }
 
   async execute(input: PipelineInput): Promise<PipelineResult> {
+    const approvalRequired = this.isApprovalRequired();
     // Calculate total steps: context(1) + research(2) + PRD(3) + execution(4 if not skipped)
-    const willRunExecution = !input.skipExecution && !this.isApprovalRequired();
+    const willRunExecution = !input.skipExecution && !approvalRequired;
     const totalSteps = willRunExecution ? 4 : 3;
 
     await updateManifest(this.runDir, (manifest) => ({
@@ -137,30 +142,29 @@ export class PipelineOrchestrator {
 
     const specText = this.mergeSpecText(input.specText, input.linearContextText);
 
-    this.currentStep = EXECUTION_STEPS.Context;
+    this._currentStep = EXECUTION_STEPS.Context;
     const contextResult = await this.runContextAggregation();
 
-    this.currentStep = EXECUTION_STEPS.Research;
+    this._currentStep = EXECUTION_STEPS.Research;
     const researchTasks = await this.runResearchDetection({
       promptText: input.promptText,
       specText,
       contextDocument: contextResult.contextDocument,
     });
 
-    this.currentStep = EXECUTION_STEPS.PRD;
+    this._currentStep = EXECUTION_STEPS.PRD;
     const prdResult = await this.runPrdAuthoring(
       contextResult.contextDocument,
       researchTasks,
+      approvalRequired,
       input.promptText,
       specText
     );
 
-    const approvalRequired = this.isApprovalRequired();
-
     await updateManifest(this.runDir, (manifest) => ({
       artifacts: {
         ...manifest.artifacts,
-        prd: 'artifacts/prd.md',
+        prd: path.relative(this.runDir, prdResult.prdPath),
       },
       status: approvalRequired ? 'paused' : 'in_progress',
     }));
@@ -170,11 +174,16 @@ export class PipelineOrchestrator {
     }
 
     let executionResult:
-      | { totalTasks: number; completedTasks: number; failedTasks: number }
+      | {
+          totalTasks: number;
+          completedTasks: number;
+          failedTasks: number;
+          permanentlyFailedTasks: number;
+        }
       | undefined;
 
     if (!input.skipExecution && !approvalRequired) {
-      this.currentStep = EXECUTION_STEPS.Execution;
+      this._currentStep = EXECUTION_STEPS.Execution;
       executionResult = await this.runTaskExecution(input.maxParallel);
     }
 
@@ -281,11 +290,11 @@ export class PipelineOrchestrator {
   private async runPrdAuthoring(
     contextDocument: Parameters<typeof draftPRD>[0]['contextDocument'],
     researchTasks: ResearchTask[],
+    approvalRequired: boolean,
     promptText?: string,
     specText?: string
   ) {
     await setCurrentStep(this.runDir, EXECUTION_STEPS.PRD);
-    const approvalRequired = this.isApprovalRequired();
 
     const feature = createFeature(this.featureId, this.repoConfig.project.repo_url, {
       title: this.featureTitle,
@@ -324,7 +333,12 @@ export class PipelineOrchestrator {
 
   private async runTaskExecution(
     maxParallel: number
-  ): Promise<{ totalTasks: number; completedTasks: number; failedTasks: number }> {
+  ): Promise<{
+    totalTasks: number;
+    completedTasks: number;
+    failedTasks: number;
+    permanentlyFailedTasks: number;
+  }> {
     await setCurrentStep(this.runDir, EXECUTION_STEPS.Execution);
     this.logger.info('Starting task execution via CLIExecutionEngine');
 
@@ -332,7 +346,8 @@ export class PipelineOrchestrator {
     if (queue.size === 0) {
       this.logger.info('No tasks in queue, skipping execution');
       await setLastStep(this.runDir, EXECUTION_STEPS.Execution);
-      return { totalTasks: 0, completedTasks: 0, failedTasks: 0 };
+      await this.updateExecutionProgress(4);
+      return { totalTasks: 0, completedTasks: 0, failedTasks: 0, permanentlyFailedTasks: 0 };
     }
 
     const executionConfig = this.repoConfig.execution ?? DEFAULT_EXECUTION_CONFIG;
@@ -387,6 +402,7 @@ export class PipelineOrchestrator {
       totalTasks: results.totalTasks,
       completedTasks: results.completedTasks,
       failedTasks: results.failedTasks,
+      permanentlyFailedTasks: results.permanentlyFailedTasks,
     };
   }
 

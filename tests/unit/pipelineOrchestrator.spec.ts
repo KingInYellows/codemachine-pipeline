@@ -152,23 +152,21 @@ describe('PipelineOrchestrator', () => {
     mockCreateResearchCoordinator.mockReturnValue({
       detectUnknownsFromContext: vi.fn().mockResolvedValue([]),
     } as never);
-    MockCLIExecutionEngine.mockImplementation(
-      function MockExecutionEngine() {
-        return {
-          validatePrerequisites: vi.fn().mockResolvedValue({
-            valid: true,
-            errors: [],
-            warnings: [],
-          }),
-          execute: vi.fn().mockResolvedValue({
-            totalTasks: 0,
-            completedTasks: 0,
-            failedTasks: 0,
-            permanentlyFailedTasks: 0,
-          }),
-        } as never;
-      } as never
-    );
+    MockCLIExecutionEngine.mockImplementation(function MockExecutionEngine() {
+      return {
+        validatePrerequisites: vi.fn().mockResolvedValue({
+          valid: true,
+          errors: [],
+          warnings: [],
+        }),
+        execute: vi.fn().mockResolvedValue({
+          totalTasks: 0,
+          completedTasks: 0,
+          failedTasks: 0,
+          permanentlyFailedTasks: 0,
+        }),
+      } as never;
+    } as never);
   });
 
   it('completes PRD stages without executing tasks when skipExecution is true', async () => {
@@ -192,6 +190,113 @@ describe('PipelineOrchestrator', () => {
     expect(mockMarkApprovalRequired).not.toHaveBeenCalled();
   });
 
+  it('records the PRD artifact path returned by the authoring engine', async () => {
+    const orchestrator = createOrchestrator();
+    const manifestUpdates: Array<Record<string, unknown>> = [];
+
+    mockDraftPRD.mockResolvedValue({
+      ...createPrdResult(),
+      prdPath: '/tmp/run/output/generated-prd.md',
+    } as never);
+    mockUpdateManifest.mockImplementation(async (_runDir, update) => {
+      manifestUpdates.push(
+        update({
+          artifacts: {},
+          execution: {
+            completed_steps: 0,
+          },
+          status: 'initializing',
+        } as never) as Record<string, unknown>
+      );
+    });
+
+    await orchestrator.execute({
+      promptText: 'Capture PRD path',
+      skipExecution: true,
+    });
+
+    expect(manifestUpdates).toContainEqual(
+      expect.objectContaining({
+        artifacts: expect.objectContaining({
+          prd: 'output/generated-prd.md',
+        }),
+      })
+    );
+  });
+
+  it('runs task execution and returns results when skipExecution is false and queue is non-empty', async () => {
+    const orchestrator = createOrchestrator();
+    mockLoadQueue.mockResolvedValue(new Map([['task-1', {}]]) as never);
+
+    const execute = vi.fn().mockResolvedValue({
+      totalTasks: 1,
+      completedTasks: 1,
+      failedTasks: 0,
+      permanentlyFailedTasks: 0,
+    });
+    MockCLIExecutionEngine.mockImplementation(function MockExecutionEngine() {
+      return {
+        validatePrerequisites: vi.fn().mockResolvedValue({
+          valid: true,
+          errors: [],
+          warnings: [],
+        }),
+        execute,
+      } as never;
+    } as never);
+
+    const result = await orchestrator.execute({
+      promptText: 'Run tasks',
+      maxParallel: 1,
+      skipExecution: false,
+    });
+
+    expect(result.execution).toEqual({
+      totalTasks: 1,
+      completedTasks: 1,
+      failedTasks: 0,
+      permanentlyFailedTasks: 0,
+    });
+    expect(execute).toHaveBeenCalledTimes(1);
+    expect(mockSetLastStep).toHaveBeenCalledWith('/tmp/run', 'task_execution');
+    expect(mockSetCurrentStep).toHaveBeenCalledWith('/tmp/run', 'task_execution');
+  });
+
+  it('returns permanently failed task counts from the execution engine', async () => {
+    const orchestrator = createOrchestrator();
+    mockLoadQueue.mockResolvedValue(new Map([['task-1', {}]]) as never);
+
+    const execute = vi.fn().mockResolvedValue({
+      totalTasks: 1,
+      completedTasks: 0,
+      failedTasks: 0,
+      permanentlyFailedTasks: 1,
+    });
+    MockCLIExecutionEngine.mockImplementation(function MockExecutionEngine() {
+      return {
+        validatePrerequisites: vi.fn().mockResolvedValue({
+          valid: true,
+          errors: [],
+          warnings: [],
+        }),
+        execute,
+      } as never;
+    } as never);
+
+    const result = await orchestrator.execute({
+      promptText: 'Run tasks',
+      maxParallel: 1,
+      skipExecution: false,
+    });
+
+    expect(result.execution).toEqual({
+      totalTasks: 1,
+      completedTasks: 0,
+      failedTasks: 0,
+      permanentlyFailedTasks: 1,
+    });
+  });
+
   it('keeps task_execution as currentStep when prerequisite validation fails', async () => {
     const orchestrator = createOrchestrator();
     mockLoadQueue.mockResolvedValue(new Map([['task-1', {}]]) as never);
@@ -203,14 +308,12 @@ describe('PipelineOrchestrator', () => {
     });
     const execute = vi.fn();
 
-    MockCLIExecutionEngine.mockImplementation(
-      function MockExecutionEngine() {
-        return {
-          validatePrerequisites,
-          execute,
-        } as never;
-      } as never
-    );
+    MockCLIExecutionEngine.mockImplementation(function MockExecutionEngine() {
+      return {
+        validatePrerequisites,
+        execute,
+      } as never;
+    } as never);
 
     await expect(
       orchestrator.execute({

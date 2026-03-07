@@ -32,6 +32,27 @@ import { PipelineOrchestrator, PrerequisiteError } from '../../workflows/pipelin
 import { emitStartSummary, outputDryRunPlan, type StartResultPayload } from '../startOutput.js';
 import type { RepoConfig } from '../../core/config/RepoConfig';
 
+type StartExitCodeInput = {
+  approvalRequired: boolean;
+  execution?:
+    | {
+        failedTasks: number;
+        permanentlyFailedTasks: number;
+      }
+    | undefined;
+};
+
+export function getStartExitCode(result: StartExitCodeInput): number {
+  if (result.approvalRequired) {
+    return 30;
+  }
+
+  return result.execution &&
+    (result.execution.failedTasks > 0 || result.execution.permanentlyFailedTasks > 0)
+    ? 1
+    : 0;
+}
+
 export default class Start extends Command {
   static description = 'Start a new feature development pipeline';
 
@@ -168,8 +189,6 @@ export default class Start extends Command {
     let orchestrator: PipelineOrchestrator | undefined;
 
     try {
-      const specText = resolvedSpecPath ? await fs.readFile(resolvedSpecPath, 'utf-8') : undefined;
-
       orchestrator = new PipelineOrchestrator({
         repoRoot,
         runDir,
@@ -181,6 +200,8 @@ export default class Start extends Command {
         metrics,
         telemetry: executionTelemetry,
       });
+
+      const specText = resolvedSpecPath ? await fs.readFile(resolvedSpecPath, 'utf-8') : undefined;
 
       let linearContextText: string | undefined;
       if (typedFlags.linear) {
@@ -237,7 +258,7 @@ export default class Start extends Command {
         (msg) => this.warn(msg)
       );
 
-      const exitCode = result.approvalRequired ? 30 : 0;
+      const exitCode = getStartExitCode(result);
       const duration = Date.now() - startTime;
       metrics.observe(StandardMetrics.COMMAND_EXECUTION_DURATION_MS, duration, {
         command: 'start',
