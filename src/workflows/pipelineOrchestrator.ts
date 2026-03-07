@@ -14,10 +14,7 @@ import { DEFAULT_EXECUTION_CONFIG } from '../core/config/RepoConfig.js';
 import { createFeature } from '../core/models/Feature';
 import type { ResearchTask } from '../core/models/ResearchTask';
 import { aggregateContext, type AggregatorConfig } from './contextAggregator';
-import {
-  createResearchCoordinator,
-  type UnknownDetectionOptions,
-} from './researchCoordinator';
+import { createResearchCoordinator, type UnknownDetectionOptions } from './researchCoordinator';
 import { draftPRD } from './prdAuthoringEngine';
 import { CLIExecutionEngine } from './cliExecutionEngine';
 import { loadQueue } from './queueStore';
@@ -90,11 +87,13 @@ export interface PipelineResult {
     };
   };
   approvalRequired: boolean;
-  execution?: {
-    totalTasks: number;
-    completedTasks: number;
-    failedTasks: number;
-  } | undefined;
+  execution?:
+    | {
+        totalTasks: number;
+        completedTasks: number;
+        failedTasks: number;
+      }
+    | undefined;
 }
 
 export class PipelineOrchestrator {
@@ -202,10 +201,7 @@ export class PipelineOrchestrator {
     };
   }
 
-  private mergeSpecText(
-    specText?: string,
-    linearContextText?: string
-  ): string | undefined {
+  private mergeSpecText(specText?: string, linearContextText?: string): string | undefined {
     const parts = [specText, linearContextText].filter(Boolean);
     return parts.length > 0 ? parts.join('\n\n') : undefined;
   }

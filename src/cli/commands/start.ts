@@ -269,15 +269,11 @@ export default class Start extends Command {
       if (error instanceof CliError) {
         cliErr = error;
       } else if (error instanceof PrerequisiteError) {
-        cliErr = new CliError(
-          error.message,
-          CliErrorCode.CONFIG_INVALID,
-          {
-            remediation: 'Fix the prerequisite issues and retry.',
-            howToFix: 'Review the errors above and ensure all required tools are installed.',
-            commonFixes: error.errors,
-          }
-        );
+        cliErr = new CliError(error.message, CliErrorCode.CONFIG_INVALID, {
+          remediation: 'Fix the prerequisite issues and retry.',
+          howToFix: 'Review the errors above and ensure all required tools are installed.',
+          commonFixes: error.errors,
+        });
       } else {
         cliErr = new CliError(
           `Start command failed: ${formatErrorMessage(error)}`,
@@ -293,4 +289,3 @@ export default class Start extends Command {
     }
   }
 }
-

@@ -80,9 +80,7 @@ export function emitStartSummary(
     log(`  Duration: ${(payload.execution.duration_ms / 1000).toFixed(2)}s`);
 
     if (payload.execution.failed > 0) {
-      warn(
-        `${payload.execution.failed} task(s) failed. Use 'codepipe resume' to retry.`
-      );
+      warn(`${payload.execution.failed} task(s) failed. Use 'codepipe resume' to retry.`);
     }
   }
 
