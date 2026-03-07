@@ -1,3 +1,4 @@
+import { describe, it, expect, vi } from 'vitest';
 import { isProcessRunning } from '../../src/utils/processExists.js';
 
 /**

@@ -1,5 +1,4 @@
 # syntax=docker/dockerfile:1.7
-
 # Multi-stage build for codemachine-pipeline CLI
 # Targets Node v24 (Active LTS as of December 2025)
 
