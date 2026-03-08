@@ -10,6 +10,7 @@ import { HttpClient, Provider, HttpError } from '../http/client';
 import type { HttpClientConfig } from '../http/client';
 import { serializeError, createErrorNormalizer, AdapterError } from '../../utils/errors';
 import { createLogger, LogLevel, type LoggerInterface } from '../../telemetry/logger';
+import { validateGitHubName, validatePullNumber } from './validation.js';
 
 /**
  * Branch protection configuration
@@ -158,8 +159,8 @@ export class BranchProtectionAdapter {
   private readonly logger: LoggerInterface;
 
   constructor(config: BranchProtectionConfig) {
-    this.owner = config.owner;
-    this.repo = config.repo;
+    this.owner = validateGitHubName(config.owner, 'owner', BranchProtectionError);
+    this.repo = validateGitHubName(config.repo, 'repo', BranchProtectionError);
     this.logger =
       config.logger ??
       createLogger({
@@ -329,6 +330,7 @@ export class BranchProtectionAdapter {
    * Get pull request reviews
    */
   async getPullRequestReviews(pull_number: number): Promise<PullRequestReview[]> {
+    validatePullNumber(pull_number, BranchProtectionError);
     try {
       const response = await this.client.get<PullRequestReview[]>(
         `/repos/${this.owner}/${this.repo}/pulls/${pull_number}/reviews`,
@@ -358,6 +360,7 @@ export class BranchProtectionAdapter {
     mergeable: boolean | null;
     mergeable_state: string | null;
   }> {
+    validatePullNumber(pull_number, BranchProtectionError);
     try {
       const response = await this.client.get<{
         number: number;

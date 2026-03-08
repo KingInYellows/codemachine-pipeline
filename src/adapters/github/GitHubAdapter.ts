@@ -17,8 +17,8 @@
 import { HttpClient, Provider } from '../http/client';
 import type { HttpClientConfig } from '../http/client';
 import { serializeError, createErrorNormalizer, AdapterError } from '../../utils/errors';
-import { ErrorType } from '../../core/sharedTypes';
 import { createLogger, LogLevel, type LoggerInterface } from '../../telemetry/logger';
+import { validateGitHubName, validatePullNumber } from './validation.js';
 import type {
   GitHubAdapterConfig,
   RepositoryInfo,
@@ -76,11 +76,6 @@ const DISABLE_AUTO_MERGE_MUTATION = `
   }
 ` as const;
 
-/** GitHub usernames and organizations use alphanumerics with single hyphen separators. */
-const GITHUB_OWNER_RE = /^[a-zA-Z0-9]+(?:-[a-zA-Z0-9]+)*$/;
-/** Repository names allow dot-prefixed repos like `.github` but must remain a single safe path segment. */
-const GITHUB_REPO_RE = /^[a-zA-Z0-9._-]+$/;
-
 /**
  * Configuration for the {@link GitHubAdapter.withLogging} wrapper.
  *
@@ -115,8 +110,8 @@ export class GitHubAdapter {
   private readonly logger: LoggerInterface;
 
   constructor(config: GitHubAdapterConfig) {
-    this.owner = GitHubAdapter.validateName(config.owner, 'owner');
-    this.repo = GitHubAdapter.validateName(config.repo, 'repo');
+    this.owner = validateGitHubName(config.owner, 'owner', GitHubAdapterError);
+    this.repo = validateGitHubName(config.repo, 'repo', GitHubAdapterError);
     this.logger =
       config.logger ??
       createLogger({ component: 'github-adapter', minLevel: LogLevel.DEBUG, mirrorToStderr: true });
@@ -147,50 +142,6 @@ export class GitHubAdapter {
       repo: this.repo,
       baseUrl,
     });
-  }
-
-  private static validateName(value: string, label: 'owner' | 'repo'): string {
-    if (!value) {
-      throw new GitHubAdapterError(
-        `Invalid GitHub ${label}: "${value}" — cannot be empty`,
-        ErrorType.PERMANENT
-      );
-    }
-
-    if (label === 'owner') {
-      if (!GITHUB_OWNER_RE.test(value)) {
-        throw new GitHubAdapterError(
-          `Invalid GitHub owner: "${value}" — must contain only alphanumeric characters or single hyphens`,
-          ErrorType.PERMANENT
-        );
-      }
-      return value;
-    }
-
-    if (!GITHUB_REPO_RE.test(value) || value === '.' || value === '..') {
-      throw new GitHubAdapterError(
-        `Invalid GitHub repo: "${value}" — must be a single safe path segment`,
-        ErrorType.PERMANENT
-      );
-    }
-
-    if (value.endsWith('.') || value.endsWith('.git')) {
-      throw new GitHubAdapterError(
-        `Invalid GitHub repo: "${value}" — cannot end with "." or ".git"`,
-        ErrorType.PERMANENT
-      );
-    }
-
-    return value;
-  }
-
-  private static validatePullNumber(value: number): void {
-    if (!Number.isInteger(value) || value <= 0) {
-      throw new GitHubAdapterError(
-        `Invalid pull request number: ${String(value)} — must be a positive integer`,
-        ErrorType.PERMANENT
-      );
-    }
   }
 
   /**
@@ -311,7 +262,7 @@ export class GitHubAdapter {
    * Get pull request details
    */
   async getPullRequest(pull_number: number): Promise<PullRequest> {
-    GitHubAdapter.validatePullNumber(pull_number);
+    validatePullNumber(pull_number, GitHubAdapterError);
     return this.withLogging(
       {
         operation: 'getPullRequest',
@@ -335,7 +286,7 @@ export class GitHubAdapter {
    * Request reviewers for a pull request
    */
   async requestReviewers(params: RequestReviewersParams): Promise<PullRequest> {
-    GitHubAdapter.validatePullNumber(params.pull_number);
+    validatePullNumber(params.pull_number, GitHubAdapterError);
     return this.withLogging(
       {
         operation: 'requestReviewers',
@@ -405,7 +356,7 @@ export class GitHubAdapter {
     ready: boolean;
     reasons: string[];
   }> {
-    GitHubAdapter.validatePullNumber(pull_number);
+    validatePullNumber(pull_number, GitHubAdapterError);
     return this.withLogging(
       {
         operation: 'isPullRequestReadyToMerge',
@@ -459,7 +410,7 @@ export class GitHubAdapter {
    * Merge a pull request
    */
   async mergePullRequest(params: MergePullRequestParams): Promise<MergeResult> {
-    GitHubAdapter.validatePullNumber(params.pull_number);
+    validatePullNumber(params.pull_number, GitHubAdapterError);
     return this.withLogging(
       {
         operation: 'mergePullRequest',
@@ -518,7 +469,7 @@ export class GitHubAdapter {
     pull_number: number,
     merge_method?: 'MERGE' | 'SQUASH' | 'REBASE'
   ): Promise<void> {
-    GitHubAdapter.validatePullNumber(pull_number);
+    validatePullNumber(pull_number, GitHubAdapterError);
     return this.withLogging(
       {
         operation: 'enableAutoMerge',
@@ -544,7 +495,7 @@ export class GitHubAdapter {
    * Note: This uses the GraphQL API wrapped in REST-like envelope
    */
   async disableAutoMerge(pull_number: number): Promise<void> {
-    GitHubAdapter.validatePullNumber(pull_number);
+    validatePullNumber(pull_number, GitHubAdapterError);
     return this.withLogging(
       {
         operation: 'disableAutoMerge',
