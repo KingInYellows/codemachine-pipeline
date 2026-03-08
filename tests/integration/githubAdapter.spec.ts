@@ -713,9 +713,9 @@ describe('GitHubAdapter Integration Tests', () => {
   describe('Input Validation (CDMCH-174)', () => {
     describe('owner/repo validation', () => {
       it('should reject empty owner', () => {
-        expect(
-          () => new GitHubAdapter({ owner: '', repo: 'test-repo', token: 'tok' })
-        ).toThrow(GitHubAdapterError);
+        expect(() => new GitHubAdapter({ owner: '', repo: 'test-repo', token: 'tok' })).toThrow(
+          GitHubAdapterError
+        );
       });
 
       it('should reject owner with path traversal', () => {
@@ -758,9 +758,9 @@ describe('GitHubAdapter Integration Tests', () => {
       });
 
       it('should reject repository names that end with "." or ".git"', () => {
-        expect(
-          () => new GitHubAdapter({ owner: 'test-org', repo: 'repo.', token: 'tok' })
-        ).toThrow(GitHubAdapterError);
+        expect(() => new GitHubAdapter({ owner: 'test-org', repo: 'repo.', token: 'tok' })).toThrow(
+          GitHubAdapterError
+        );
         expect(
           () => new GitHubAdapter({ owner: 'test-org', repo: 'repo.git', token: 'tok' })
         ).toThrow(GitHubAdapterError);
@@ -809,9 +809,9 @@ describe('GitHubAdapter Integration Tests', () => {
       });
 
       it('should validate pull_number in mergePullRequest', async () => {
-        await expect(
-          adapter.mergePullRequest({ pull_number: 0 })
-        ).rejects.toThrow(GitHubAdapterError);
+        await expect(adapter.mergePullRequest({ pull_number: 0 })).rejects.toThrow(
+          GitHubAdapterError
+        );
         expect(mockHttpClient.put).not.toHaveBeenCalled();
       });
 
@@ -833,5 +833,4 @@ describe('GitHubAdapter Integration Tests', () => {
       });
     });
   });
-
 });

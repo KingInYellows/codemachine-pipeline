@@ -1,13 +1,6 @@
-import { Command, Flags } from '@oclif/core';
+import { Flags } from '@oclif/core';
 import * as path from 'node:path';
 import { getRunDirectoryPath } from '../../../persistence/runDirectoryManager';
-import { createCliLogger, LogLevel } from '../../../telemetry/logger';
-import { createRunMetricsCollector } from '../../../telemetry/metrics';
-import { createRunTraceManager } from '../../../telemetry/traces';
-import type { StructuredLogger } from '../../../telemetry/logger';
-import type { MetricsCollector } from '../../../telemetry/metrics';
-import type { TraceManager, ActiveSpan } from '../../../telemetry/traces';
-import { flushTelemetrySuccess, flushTelemetryError } from '../../utils/telemetryLifecycle';
 import {
   resolveRunDirectorySettings,
   selectFeatureId,
@@ -45,11 +38,11 @@ import { renderHumanReadable } from '../../status/renderers';
 import {
   CliError,
   CliErrorCode,
-  formatErrorMessage,
   formatErrorJson,
+  formatErrorMessage,
   setJsonOutputMode,
-  rethrowIfOclifError,
 } from '../../utils/cliErrors';
+import { TelemetryCommand } from '../../telemetryCommand';
 
 /**
  * Status command - Display current state of a feature pipeline
@@ -59,7 +52,11 @@ import {
  * - 1: General error
  * - 10: Validation error (feature not found)
  */
-export default class Status extends Command {
+export default class Status extends TelemetryCommand {
+  protected get commandName(): string {
+    return 'status';
+  }
+
   static description = 'Show the current state of a feature development pipeline';
 
   static examples = [
@@ -97,170 +94,142 @@ export default class Status extends Command {
       setJsonOutputMode();
     }
 
-    // Initialize telemetry (logger, metrics, traces)
-    let logger: StructuredLogger | undefined;
-    let metrics: MetricsCollector | undefined;
-    let traceManager: TraceManager | undefined;
-    let commandSpan: ActiveSpan | undefined;
-    let runDirPath: string | undefined;
-    const startTime = Date.now();
+    const settings = await resolveRunDirectorySettings();
+    const featureId = await selectFeatureId(settings.baseDir, typedFlags.feature);
+    const runDirPath = featureId ? getRunDirectoryPath(settings.baseDir, featureId) : undefined;
 
-    try {
-      const settings = await resolveRunDirectorySettings();
-      const featureId = await selectFeatureId(settings.baseDir, typedFlags.feature);
-
-      // Initialize telemetry if feature exists
-      if (featureId) {
-        runDirPath = getRunDirectoryPath(settings.baseDir, featureId);
-        logger = createCliLogger('status', featureId, runDirPath, {
-          minLevel: typedFlags.verbose ? LogLevel.DEBUG : LogLevel.INFO,
-          mirrorToStderr: !typedFlags.json,
-        });
-        metrics = createRunMetricsCollector(runDirPath, featureId);
-        traceManager = createRunTraceManager(runDirPath, featureId, logger);
-        commandSpan = traceManager.startSpan('cli.status');
-        commandSpan.setAttribute('feature_id', featureId);
-        commandSpan.setAttribute('json_mode', typedFlags.json);
-        commandSpan.setAttribute('verbose_flag', typedFlags.verbose);
-
-        logger.info('Status command invoked', {
-          feature_id: featureId,
-          json_mode: typedFlags.json,
-          verbose: typedFlags.verbose,
-        });
-      }
-
-      if (typedFlags.feature && featureId !== typedFlags.feature) {
-        if (logger) {
-          logger.error('Feature not found', { requested: typedFlags.feature });
-        }
-        throw new CliError(
-          `Feature run directory not found: ${typedFlags.feature}`,
-          CliErrorCode.RUN_DIR_NOT_FOUND,
-          {
-            remediation:
-              'Check the feature ID with "codepipe status" or start a new run with "codepipe start".',
-            howToFix:
-              'List available features with "codepipe status" (no --feature flag) to see existing runs.',
-            commonFixes: [
-              'Verify the feature ID spelling',
-              'Run "codepipe status" without --feature to see available runs',
-              'Start a new run with "codepipe start"',
-            ],
-          }
-        );
-      }
-
-      const manifestInfo = featureId
-        ? await loadManifestWithTracing(traceManager, commandSpan, settings.baseDir, featureId)
-        : undefined;
-
-      const contextInfo = featureId
-        ? await loadContextStatus(settings.baseDir, featureId, logger)
-        : undefined;
-
-      const traceInfo = featureId
-        ? await loadTraceabilityStatus(settings.baseDir, featureId, logger)
-        : undefined;
-
-      const planInfo = featureId
-        ? await loadPlanStatus(settings.baseDir, featureId, logger)
-        : undefined;
-
-      const validationInfo = featureId
-        ? await loadValidationStatus(settings.baseDir, featureId, logger)
-        : undefined;
-
-      if (featureId) {
-        await refreshBranchProtectionArtifact(
-          settings,
-          featureId,
-          manifestInfo?.manifest,
-          logger,
-          traceManager,
-          commandSpan
-        );
-      }
-
-      const branchProtectionInfo = featureId
-        ? await loadBranchProtectionStatus(settings.baseDir, featureId, logger)
-        : undefined;
-
-      const integrationsInfo = featureId
-        ? await loadIntegrationsStatus(settings, featureId, logger)
-        : undefined;
-
-      const rateLimitsInfo = featureId
-        ? await loadRateLimitsStatus(settings.baseDir, featureId, logger)
-        : undefined;
-
-      const researchInfo = featureId
-        ? await loadResearchStatus(settings.baseDir, featureId, logger, metrics)
-        : undefined;
-
-      const payload = this.buildStatusPayload(
-        featureId,
-        settings,
-        manifestInfo,
-        contextInfo,
-        traceInfo,
-        planInfo,
-        validationInfo,
-        branchProtectionInfo,
-        integrationsInfo,
-        rateLimitsInfo,
-        researchInfo
-      );
-
-      if (typedFlags.json) {
-        // Disable stderr mirroring in JSON mode (already set in createCliLogger)
-        this.log(JSON.stringify(payload, null, 2));
-      } else {
-        renderHumanReadable(payload, typedFlags, {
-          log: (msg) => this.log(msg),
-          warn: (msg) => this.warn(msg),
-        });
-      }
-
-      await flushTelemetrySuccess({
-        commandName: 'status',
-        startTime,
-        logger,
-        metrics,
-        traceManager,
-        commandSpan,
+    await this.runWithTelemetry(
+      {
         runDirPath,
-      });
-    } catch (error) {
-      await flushTelemetryError(
-        {
-          commandName: 'status',
-          startTime,
-          logger,
-          metrics,
-          traceManager,
-          commandSpan,
-          runDirPath,
-        },
-        error
-      );
+        featureId: featureId ?? undefined,
+        jsonMode: typedFlags.json,
+        verbose: typedFlags.verbose,
+        spanAttributes: { verbose_flag: typedFlags.verbose },
+      },
+      async (ctx) => {
+        try {
+          ctx.logger?.info('Status command invoked', {
+            feature_id: featureId,
+            json_mode: typedFlags.json,
+            verbose: typedFlags.verbose,
+          });
 
-      rethrowIfOclifError(error);
-
-      const cliErr =
-        error instanceof CliError
-          ? error
-          : new CliError(
-              `Status command failed: ${formatErrorMessage(error)}`,
-              CliErrorCode.GENERAL,
-              error instanceof Error ? { cause: error } : {}
+          if (typedFlags.feature && featureId !== typedFlags.feature) {
+            ctx.logger?.error('Feature not found', { requested: typedFlags.feature });
+            throw new CliError(
+              `Feature run directory not found: ${typedFlags.feature}`,
+              CliErrorCode.RUN_DIR_NOT_FOUND,
+              {
+                remediation:
+                  'Check the feature ID with "codepipe status" or start a new run with "codepipe start".',
+                howToFix:
+                  'List available features with "codepipe status" (no --feature flag) to see existing runs.',
+                commonFixes: [
+                  'Verify the feature ID spelling',
+                  'Run "codepipe status" without --feature to see available runs',
+                  'Start a new run with "codepipe start"',
+                ],
+              }
             );
-      if (typedFlags.json) {
-        this.log(JSON.stringify(formatErrorJson(cliErr), null, 2));
-        this.exit(cliErr.exitCode);
+          }
+
+          const manifestInfo = featureId
+            ? await loadManifestWithTracing(
+                ctx.traceManager,
+                ctx.commandSpan,
+                settings.baseDir,
+                featureId
+              )
+            : undefined;
+
+          const contextInfo = featureId
+            ? await loadContextStatus(settings.baseDir, featureId, ctx.logger)
+            : undefined;
+
+          const traceInfo = featureId
+            ? await loadTraceabilityStatus(settings.baseDir, featureId, ctx.logger)
+            : undefined;
+
+          const planInfo = featureId
+            ? await loadPlanStatus(settings.baseDir, featureId, ctx.logger)
+            : undefined;
+
+          const validationInfo = featureId
+            ? await loadValidationStatus(settings.baseDir, featureId, ctx.logger)
+            : undefined;
+
+          if (featureId) {
+            await refreshBranchProtectionArtifact(
+              settings,
+              featureId,
+              manifestInfo?.manifest,
+              ctx.logger,
+              ctx.traceManager,
+              ctx.commandSpan
+            );
+          }
+
+          const branchProtectionInfo = featureId
+            ? await loadBranchProtectionStatus(settings.baseDir, featureId, ctx.logger)
+            : undefined;
+
+          const integrationsInfo = featureId
+            ? await loadIntegrationsStatus(settings, featureId, ctx.logger)
+            : undefined;
+
+          const rateLimitsInfo = featureId
+            ? await loadRateLimitsStatus(settings.baseDir, featureId, ctx.logger)
+            : undefined;
+
+          const researchInfo = featureId
+            ? await loadResearchStatus(settings.baseDir, featureId, ctx.logger, ctx.metrics)
+            : undefined;
+
+          const payload = this.buildStatusPayload(
+            featureId,
+            settings,
+            manifestInfo,
+            contextInfo,
+            traceInfo,
+            planInfo,
+            validationInfo,
+            branchProtectionInfo,
+            integrationsInfo,
+            rateLimitsInfo,
+            researchInfo
+          );
+
+          if (typedFlags.json) {
+            this.log(JSON.stringify(payload, null, 2));
+          } else {
+            renderHumanReadable(payload, typedFlags, {
+              log: (msg) => this.log(msg),
+              warn: (msg) => this.warn(msg),
+            });
+          }
+
+          return undefined;
+        } catch (error) {
+          // Preserve structured JSON error output in --json mode
+          if (typedFlags.json) {
+            const cliErr =
+              error instanceof CliError
+                ? error
+                : new CliError(
+                    `Status command failed: ${formatErrorMessage(error)}`,
+                    CliErrorCode.GENERAL,
+                    error instanceof Error ? { cause: error } : {}
+                  );
+            const exitCode = this.surfaceExitCode(cliErr);
+            const payload = formatErrorJson(cliErr);
+            payload.exit_code = exitCode;
+            this.log(JSON.stringify(payload, null, 2));
+            throw this.markErrorAsReported(cliErr);
+          }
+          throw error;
+        }
       }
-      this.error(cliErr.message, { exit: cliErr.exitCode });
-    }
+    );
   }
 
   private deriveManifestPath(baseDir: string, featureId?: string): string {
