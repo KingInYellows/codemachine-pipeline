@@ -138,6 +138,54 @@ function sleep(ms: number): Promise<void> {
 }
 
 /**
+ * Check whether an error is an EEXIST filesystem error.
+ */
+function isFileExists(error: unknown): error is NodeJS.ErrnoException {
+  return (
+    error !== null &&
+    typeof error === 'object' &&
+    'code' in error &&
+    (error as NodeJS.ErrnoException).code === 'EEXIST'
+  );
+}
+
+/**
+ * Attempt to create the lock file with exclusive mode (`wx`).
+ *
+ * Returns `true` if the file was created (lock acquired).
+ * Returns `false` if the file already exists (EEXIST).
+ * Re-throws any other filesystem error.
+ */
+async function tryWriteLockFile(lockPath: string, lockData: LockFile): Promise<boolean> {
+  try {
+    await writeFile(lockPath, JSON.stringify(lockData, null, 2), {
+      flag: 'wx',
+      encoding: 'utf-8',
+    });
+    return true;
+  } catch (error: unknown) {
+    if (isFileExists(error)) {
+      return false;
+    }
+    throw error;
+  }
+}
+
+/**
+ * Handle an existing lock file: remove it if stale, otherwise wait.
+ *
+ * Returns `true` if a stale lock was removed (caller should retry immediately).
+ * Returns `false` if the lock is held by a live process (caller should poll).
+ */
+async function handleLockConflict(lockPath: string): Promise<boolean> {
+  if (await isLockStale(lockPath)) {
+    await removeStaleLock(lockPath);
+    return true;
+  }
+  return false;
+}
+
+/**
  * Acquire an exclusive lock on a run directory
  *
  * Uses file-based locking with stale lock detection.
@@ -156,30 +204,30 @@ export async function acquireLock(runDir: string, options: LockOptions = {}): Pr
   const startTime = Date.now();
 
   while (Date.now() - startTime < timeout) {
+    const lockData: LockFile = {
+      pid: process.pid,
+      hostname: hostname(),
+      acquired_at: new Date().toISOString(),
+      operation,
+    };
+
+    let acquired: boolean;
     try {
-      const lockData: LockFile = {
-        pid: process.pid,
-        hostname: hostname(),
-        acquired_at: new Date().toISOString(),
-        operation,
-      };
-      await writeFile(lockPath, JSON.stringify(lockData, null, 2), {
-        flag: 'wx',
-        encoding: 'utf-8',
-      });
-      return;
+      acquired = await tryWriteLockFile(lockPath, lockData);
     } catch (error: unknown) {
-      if (!(error && typeof error === 'object' && 'code' in error && error.code === 'EEXIST')) {
-        throw wrapError(error, `acquire lock for ${runDir}`);
-      }
-
-      if (await isLockStale(lockPath)) {
-        await removeStaleLock(lockPath);
-        continue;
-      }
-
-      await sleep(pollInterval);
+      throw wrapError(error, `acquire lock for ${runDir}`);
     }
+
+    if (acquired) {
+      return;
+    }
+
+    const staleLockRemoved = await handleLockConflict(lockPath);
+    if (staleLockRemoved) {
+      continue;
+    }
+
+    await sleep(pollInterval);
   }
 
   throw new Error(
