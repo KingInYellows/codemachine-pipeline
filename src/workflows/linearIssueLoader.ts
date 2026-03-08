@@ -28,7 +28,7 @@ export async function loadLinearIssue(
     issueId: snapshot.issue.identifier,
     title: snapshot.issue.title,
     commentsCount: snapshot.comments.length,
-    hasLastError: snapshot.metadata.last_error !== undefined,
+    cached: snapshot.metadata.last_error !== undefined,
   });
   return snapshot;
 }
