@@ -22,7 +22,7 @@ import {
   requireConfig,
 } from '../utils/runDirectory';
 import { CliError, CliErrorCode, formatErrorMessage, setJsonOutputMode } from '../utils/cliErrors';
-import { TelemetryCommand } from './base';
+import { TelemetryCommand } from '../telemetryCommand';
 import { getGitUser } from '../startHelpers';
 
 /**

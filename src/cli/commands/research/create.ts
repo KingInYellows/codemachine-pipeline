@@ -11,7 +11,7 @@ import {
 } from '../../../workflows/researchCoordinator';
 import type { FreshnessRequirement, ResearchSource } from '../../../core/models/ResearchTask';
 import { CliError, CliErrorCode, setJsonOutputMode } from '../../utils/cliErrors';
-import { TelemetryCommand } from '../base';
+import { TelemetryCommand } from '../../telemetryCommand';
 
 type CreateFlags = {
   feature?: string;

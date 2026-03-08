@@ -12,7 +12,7 @@ import {
 } from '../../../workflows/researchCoordinator';
 import type { ResearchTask } from '../../../core/models/ResearchTask';
 import { CliError, CliErrorCode, setJsonOutputMode } from '../../utils/cliErrors';
-import { TelemetryCommand } from '../base';
+import { TelemetryCommand } from '../../telemetryCommand';
 
 type ListFlags = {
   feature?: string;

@@ -13,7 +13,7 @@ import { loadPlanSummary, buildDagMetadata, type PlanSummary } from '../../workf
 import { loadSpecMetadata } from '../../workflows/specComposer';
 import { comparePlanDiff, type PlanDiff } from '../../workflows/planDiffer';
 import { setJsonOutputMode } from '../utils/cliErrors';
-import { TelemetryCommand } from './base';
+import { TelemetryCommand } from '../telemetryCommand';
 
 type PlanFlags = {
   feature?: string;

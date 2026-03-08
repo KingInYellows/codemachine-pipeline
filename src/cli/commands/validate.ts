@@ -1,9 +1,7 @@
 import { Flags } from '@oclif/core';
 import { getRunDirectoryPath } from '../../persistence/runDirectoryManager';
-import { StandardMetrics } from '../../telemetry/metrics';
 import { createExecutionTelemetry } from '../../telemetry/executionTelemetry';
 import type { StructuredLogger } from '../../telemetry/logger';
-import type { MetricsCollector } from '../../telemetry/metrics';
 import {
   resolveRunDirectorySettings,
   selectFeatureId,
@@ -25,7 +23,7 @@ import {
   type AutoFixResult,
 } from '../../workflows/autoFixEngine';
 import { setJsonOutputMode } from '../utils/cliErrors';
-import { TelemetryCommand } from './base';
+import { TelemetryCommand } from '../telemetryCommand';
 
 /**
  * Validate command - Execute validation commands (lint/test/typecheck/build)
@@ -114,6 +112,7 @@ export default class Validate extends TelemetryCommand {
     await this.runWithTelemetry(
       {
         runDirPath,
+        commandNameOverride: flags.init ? 'validate.init' : undefined,
         featureId,
         jsonMode: flags.json,
         verbose: flags.verbose,
@@ -142,8 +141,8 @@ export default class Validate extends TelemetryCommand {
 
         // Handle --init flag
         if (flags.init) {
-          await this.handleInit(runDirPath, settings.configPath, logger, metrics);
-          return;
+          await this.handleInit(runDirPath, settings.configPath, logger);
+          return { extraLogFields: { operation: 'init' } };
         }
 
         // Check if registry is initialized
@@ -225,9 +224,16 @@ export default class Validate extends TelemetryCommand {
 
         if (!result.success) {
           const exitCode = result.exceededRetryLimits.length > 0 ? 11 : 10;
+          const message =
+            exitCode === 11 ? 'Validation failed: retry limits exceeded' : 'Validation failed';
+          this.logToStderr(message);
           return {
             exitCode,
-            extraLogFields: { success: result.success, total_attempts: result.totalAttempts },
+            extraLogFields: {
+              success: result.success,
+              total_attempts: result.totalAttempts,
+              error_message: message,
+            },
           };
         }
 
@@ -241,8 +247,7 @@ export default class Validate extends TelemetryCommand {
   private async handleInit(
     runDirPath: string,
     configPath: string,
-    logger: StructuredLogger,
-    metrics: MetricsCollector
+    logger: StructuredLogger
   ): Promise<void> {
     logger.info('Initializing validation registry from config');
 
@@ -279,13 +284,6 @@ export default class Validate extends TelemetryCommand {
     this.log('');
     this.log('Run "codepipe validate" to execute validation commands.');
     this.log('');
-
-    metrics.increment(StandardMetrics.COMMAND_INVOCATIONS_TOTAL, {
-      command: 'validate.init',
-      exit_code: '0',
-    });
-    await metrics.flush();
-    await logger.flush();
   }
 
   private outputJson(

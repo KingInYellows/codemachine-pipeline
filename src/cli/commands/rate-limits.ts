@@ -14,7 +14,7 @@ import {
 } from '../../telemetry/rateLimitReporter';
 import { RateLimitLedger } from '../../telemetry/rateLimitLedger';
 import { setJsonOutputMode } from '../utils/cliErrors';
-import { TelemetryCommand } from './base';
+import { TelemetryCommand } from '../telemetryCommand';
 
 type RateLimitsFlags = {
   feature?: string;

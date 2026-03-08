@@ -28,7 +28,7 @@ import { loadPlanSummary } from '../../workflows/taskPlanner';
 import { RateLimitReporter } from '../../telemetry/rateLimitReporter';
 import { loadReport as loadBranchProtectionReport } from '../../persistence/branchProtectionStore';
 import { setJsonOutputMode } from '../utils/cliErrors';
-import { TelemetryCommand } from './base';
+import { TelemetryCommand } from '../telemetryCommand';
 import type { TelemetryResources } from '../utils/telemetryLifecycle';
 
 type ResumeFlags = {

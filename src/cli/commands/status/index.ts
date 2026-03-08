@@ -42,7 +42,7 @@ import {
   formatErrorMessage,
   setJsonOutputMode,
 } from '../../utils/cliErrors';
-import { TelemetryCommand } from '../base';
+import { TelemetryCommand } from '../../telemetryCommand';
 
 /**
  * Status command - Display current state of a feature pipeline
@@ -224,7 +224,7 @@ export default class Status extends TelemetryCommand {
             const payload = formatErrorJson(cliErr);
             payload.exit_code = exitCode;
             this.log(JSON.stringify(payload, null, 2));
-            return { exitCode };
+            throw this.markErrorAsReported(cliErr);
           }
           throw error;
         }

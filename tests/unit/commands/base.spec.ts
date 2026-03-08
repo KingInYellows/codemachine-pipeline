@@ -1,3 +1,4 @@
+import { Errors } from '@oclif/core';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { CliError, CliErrorCode } from '../../../src/cli/utils/cliErrors';
 import {
@@ -9,7 +10,7 @@ import {
   type TelemetryCommandOptions,
   type TelemetryContext,
   type TelemetryResult,
-} from '../../../src/cli/commands/base';
+} from '../../../src/cli/telemetryCommand';
 
 vi.mock('../../../src/cli/utils/telemetryLifecycle', () => ({
   flushTelemetrySuccess: vi.fn(),
@@ -19,6 +20,10 @@ vi.mock('../../../src/cli/utils/telemetryLifecycle', () => ({
 class TestTelemetryCommand extends TelemetryCommand {
   protected get commandName(): string {
     return 'test-command';
+  }
+
+  reportError<T extends Error>(error: T): T {
+    return this.markErrorAsReported(error);
   }
 
   async invoke(
@@ -81,6 +86,7 @@ describe('TelemetryCommand', () => {
     const command = createCommand();
     const cliError = new CliError('run missing', CliErrorCode.RUN_DIR_NOT_FOUND);
     const exitSpy = vi.spyOn(process, 'exit').mockImplementation((() => undefined) as never);
+    const errorSpy = vi.spyOn(Errors, 'error').mockImplementation(() => undefined as never);
 
     await command.invoke({}, async () => {
       throw cliError;
@@ -91,9 +97,39 @@ describe('TelemetryCommand', () => {
       cliError,
       10
     );
-    expect(command.logToStderr).toHaveBeenCalledWith('run missing');
+    expect(errorSpy).toHaveBeenCalledWith('run missing', {
+      exit: false,
+      code: CliErrorCode.RUN_DIR_NOT_FOUND,
+      suggestions: undefined,
+    });
     expect(exitSpy).toHaveBeenCalledWith(10);
 
+    errorSpy.mockRestore();
+    exitSpy.mockRestore();
+  });
+
+  it('exits silently after flushing telemetry for already-reported CliErrors', async () => {
+    const command = createCommand();
+    const cliError = command.reportError(
+      new CliError('json already rendered', CliErrorCode.GENERAL)
+    );
+    const exitSpy = vi.spyOn(process, 'exit').mockImplementation((() => undefined) as never);
+    const errorSpy = vi.spyOn(Errors, 'error').mockImplementation(() => undefined as never);
+
+    await command.invoke({}, async () => {
+      throw cliError;
+    });
+
+    expect(flushTelemetryError).toHaveBeenCalledWith(
+      expect.objectContaining({ commandName: 'test-command' }),
+      cliError,
+      1
+    );
+    expect(errorSpy).not.toHaveBeenCalled();
+    expect(command.error).not.toHaveBeenCalled();
+    expect(exitSpy).toHaveBeenCalledWith(1);
+
+    errorSpy.mockRestore();
     exitSpy.mockRestore();
   });
 
@@ -116,5 +152,17 @@ describe('TelemetryCommand', () => {
       23
     );
     expect(command.error).not.toHaveBeenCalled();
+  });
+
+  it('supports overriding the telemetry command label', async () => {
+    const command = createCommand();
+
+    await command.invoke({ commandNameOverride: 'validate.init' }, async () => undefined);
+
+    expect(flushTelemetrySuccess).toHaveBeenCalledWith(
+      expect.objectContaining({ commandName: 'validate.init' }),
+      undefined,
+      0
+    );
   });
 });

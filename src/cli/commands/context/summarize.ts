@@ -30,7 +30,7 @@ import {
   type ContextDocument,
 } from '../../../core/models/ContextDocument';
 import { setJsonOutputMode } from '../../utils/cliErrors';
-import { TelemetryCommand } from '../base';
+import { TelemetryCommand } from '../../telemetryCommand';
 
 type SummarizeFlags = {
   feature?: string;

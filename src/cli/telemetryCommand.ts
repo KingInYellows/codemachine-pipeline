@@ -10,20 +10,20 @@
  * `this.runWithTelemetry(options, execute)` for the boilerplate.
  */
 
-import { Command } from '@oclif/core';
-import { createCliLogger, LogLevel } from '../../telemetry/logger';
-import { createRunMetricsCollector } from '../../telemetry/metrics';
-import { createRunTraceManager } from '../../telemetry/traces';
-import type { StructuredLogger } from '../../telemetry/logger';
-import type { MetricsCollector } from '../../telemetry/metrics';
-import type { TraceManager, ActiveSpan } from '../../telemetry/traces';
-import { rethrowIfOclifError } from '../utils/cliErrors';
-import { CliError, CliErrorCode } from '../utils/cliErrors';
+import { Command, Errors } from '@oclif/core';
+import { createCliLogger, LogLevel } from '../telemetry/logger';
+import { createRunMetricsCollector } from '../telemetry/metrics';
+import { createRunTraceManager } from '../telemetry/traces';
+import type { StructuredLogger } from '../telemetry/logger';
+import type { MetricsCollector } from '../telemetry/metrics';
+import type { TraceManager, ActiveSpan } from '../telemetry/traces';
+import { rethrowIfOclifError } from './utils/cliErrors';
+import { CliError, CliErrorCode, formatErrorJson } from './utils/cliErrors';
 import {
   flushTelemetrySuccess,
   flushTelemetryError,
   type TelemetryResources,
-} from '../utils/telemetryLifecycle';
+} from './utils/telemetryLifecycle';
 
 // ---------------------------------------------------------------------------
 // Public types
@@ -36,6 +36,8 @@ import {
 export interface TelemetryCommandOptions {
   /** Directory for metrics / traces output (run-dir or pipeline-dir). */
   runDirPath?: string | undefined;
+  /** Optional override for the telemetry/logging command label. */
+  commandNameOverride?: string | undefined;
   /** Identifier written into telemetry labels (feature-id or a label like 'diagnostics'). */
   featureId?: string | undefined;
   /** Whether JSON output mode is active (controls logger stderr mirroring). */
@@ -69,7 +71,7 @@ export interface TelemetryResult {
  * logic can record spans, metrics and structured logs.
  *
  * All fields are optional because telemetry initialisation may be skipped
- * (e.g. when `runDirPath` is not available).  Commands that know they will
+ * (e.g. when `runDirPath` is not available). Commands that know they will
  * always have telemetry can safely use the non-null assertion operator.
  */
 export interface TelemetryContext {
@@ -117,6 +119,8 @@ export interface TelemetryContext {
  * ```
  */
 export abstract class TelemetryCommand extends Command {
+  private static readonly reportedToUserMarker = Symbol('reportedToUser');
+
   // ------------------------------------------------------------------
   // Subclass contract
   // ------------------------------------------------------------------
@@ -138,7 +142,7 @@ export abstract class TelemetryCommand extends Command {
    *    `runDirPath` is provided).
    * 2. Calls `execute(ctx)`.
    * 3. On success — flushes telemetry with the returned exit-code /
-   *    extra-log-fields.  Calls `process.exit` for non-zero codes.
+   *    extra-log-fields. Calls `process.exit` for non-zero codes.
    * 4. On error — flushes error telemetry, re-throws oclif errors,
    *    handles `CliError`, and falls back to a generic error message.
    */
@@ -147,7 +151,16 @@ export abstract class TelemetryCommand extends Command {
     execute: (ctx: TelemetryContext) => Promise<TelemetryResult | void>
   ): Promise<void> {
     const startTime = Date.now();
-    const { runDirPath, featureId, jsonMode, verbose, spanAttributes, logsDir } = options;
+    const {
+      runDirPath,
+      commandNameOverride,
+      featureId,
+      jsonMode,
+      verbose,
+      spanAttributes,
+      logsDir,
+    } = options;
+    const commandName = commandNameOverride ?? this.commandName;
 
     let logger: StructuredLogger | undefined;
     let metrics: MetricsCollector | undefined;
@@ -157,11 +170,11 @@ export abstract class TelemetryCommand extends Command {
     try {
       // -- Initialise telemetry (best-effort) --------------------------
       if (runDirPath || logsDir) {
-        const telemetryId = featureId ?? this.commandName;
+        const telemetryId = featureId ?? commandName;
         const logDir = logsDir ?? runDirPath;
 
         if (logDir) {
-          logger = createCliLogger(this.commandName, telemetryId, logDir, {
+          logger = createCliLogger(commandName, telemetryId, logDir, {
             minLevel: verbose ? LogLevel.DEBUG : jsonMode ? LogLevel.WARN : LogLevel.INFO,
             mirrorToStderr: !jsonMode,
           });
@@ -170,7 +183,7 @@ export abstract class TelemetryCommand extends Command {
         if (runDirPath) {
           metrics = createRunMetricsCollector(runDirPath, telemetryId);
           traceManager = createRunTraceManager(runDirPath, telemetryId, logger);
-          commandSpan = traceManager.startSpan(this.deriveSpanName());
+          commandSpan = traceManager.startSpan(this.deriveSpanName(commandName));
 
           if (jsonMode !== undefined) {
             commandSpan.setAttribute('json_mode', jsonMode);
@@ -188,7 +201,7 @@ export abstract class TelemetryCommand extends Command {
 
       // -- Build context & resources -----------------------------------
       const resources: TelemetryResources = {
-        commandName: this.commandName,
+        commandName,
         startTime,
         logger,
         metrics,
@@ -223,7 +236,7 @@ export abstract class TelemetryCommand extends Command {
         const exitCode = this.surfaceExitCode(error);
         await flushTelemetryError(
           {
-            commandName: this.commandName,
+            commandName,
             startTime,
             logger,
             metrics,
@@ -241,11 +254,14 @@ export abstract class TelemetryCommand extends Command {
       // Let oclif errors (from this.error / this.exit) propagate as-is.
       rethrowIfOclifError(error);
 
-      // Surface CliError with its structured exit code.
+      // Surface CliError with its structured exit code. Errors that already rendered
+      // their user-facing payload should not be rendered a second time.
       if (error instanceof CliError) {
-        this.logToStderr(error.message);
-        process.exit(this.surfaceExitCode(error));
-        return;
+        if (this.wasReportedToUser(error)) {
+          process.exit(this.surfaceExitCode(error));
+          return;
+        }
+        return this.emitCliErrorAndExit(error);
       }
 
       // Generic fallback.
@@ -268,18 +284,51 @@ export abstract class TelemetryCommand extends Command {
    * - Colons become dots (`context:summarize` → `context.summarize`)
    * - Prefixed with `cli.`
    */
-  private deriveSpanName(): string {
-    const normalized = this.commandName.replace(/-/g, '_').replace(/:/g, '.');
+  private deriveSpanName(commandName: string): string {
+    const normalized = commandName.replace(/-/g, '_').replace(/:/g, '.');
     return `cli.${normalized}`;
   }
 
   protected failWithCliExitCode(error: unknown): never {
     if (error instanceof CliError) {
-      this.logToStderr(error.message);
-      process.exit(this.surfaceExitCode(error));
-      return undefined as never;
+      this.emitCliErrorAndExit(error);
     }
     throw error;
+  }
+
+  protected markErrorAsReported<T extends Error>(error: T): T {
+    Object.defineProperty(error, TelemetryCommand.reportedToUserMarker, {
+      value: true,
+      configurable: true,
+    });
+    return error;
+  }
+
+  private wasReportedToUser(error: Error): boolean {
+    return (
+      (error as Error & { [TelemetryCommand.reportedToUserMarker]?: boolean })[
+        TelemetryCommand.reportedToUserMarker
+      ] === true
+    );
+  }
+
+  private emitCliErrorAndExit(error: CliError): never {
+    const exitCode = this.surfaceExitCode(error);
+
+    if (process.env['JSON_OUTPUT'] === '1') {
+      const payload = formatErrorJson(error);
+      payload.exit_code = exitCode;
+      this.log(JSON.stringify(payload, null, 2));
+    } else {
+      Errors.error(error.message, {
+        exit: false,
+        code: error.code,
+        suggestions: error.commonFixes,
+      });
+    }
+
+    process.exit(exitCode);
+    return undefined as never;
   }
 
   protected surfaceExitCode(error: unknown): number {

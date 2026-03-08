@@ -6,7 +6,7 @@ import { loadRepoConfig } from '../../core/config/RepoConfig';
 import { checkCodeMachineCli } from '../diagnostics';
 import { setJsonOutputMode } from '../utils/cliErrors';
 import { CONFIG_RELATIVE_PATH } from '../utils/runDirectory';
-import { TelemetryCommand } from './base';
+import { TelemetryCommand } from '../telemetryCommand';
 
 /**
  * Diagnostic check result
