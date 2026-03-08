@@ -1,12 +1,6 @@
-import { Command, Flags } from '@oclif/core';
+import { Flags } from '@oclif/core';
 import { getRunDirectoryPath } from '../../persistence/runDirectoryManager';
-import { createCliLogger, LogLevel } from '../../telemetry/logger';
-import { createRunMetricsCollector } from '../../telemetry/metrics';
-import { createRunTraceManager } from '../../telemetry/traces';
 import type { StructuredLogger } from '../../telemetry/logger';
-import type { MetricsCollector } from '../../telemetry/metrics';
-import type { TraceManager, ActiveSpan } from '../../telemetry/traces';
-import { flushTelemetrySuccess, flushTelemetryError } from '../utils/telemetryLifecycle';
 import {
   resolveRunDirectorySettings,
   selectFeatureId,
@@ -19,7 +13,8 @@ import {
   type RateLimitReport,
 } from '../../telemetry/rateLimitReporter';
 import { RateLimitLedger } from '../../telemetry/rateLimitLedger';
-import { CliError, CliErrorCode, setJsonOutputMode, rethrowIfOclifError } from '../utils/cliErrors';
+import { setJsonOutputMode } from '../utils/cliErrors';
+import { TelemetryCommand } from '../telemetryCommand';
 
 type RateLimitsFlags = {
   feature?: string;
@@ -41,7 +36,11 @@ type RateLimitsFlags = {
  * - 1: General error
  * - 10: Feature not found
  */
-export default class RateLimits extends Command {
+export default class RateLimits extends TelemetryCommand {
+  protected get commandName(): string {
+    return 'rate-limits';
+  }
+
   static description = 'Display rate limit status and telemetry for API providers';
 
   static examples = [
@@ -83,121 +82,76 @@ export default class RateLimits extends Command {
       setJsonOutputMode();
     }
 
-    // Initialize telemetry
-    let logger: StructuredLogger | undefined;
-    let metrics: MetricsCollector | undefined;
-    let traceManager: TraceManager | undefined;
-    let commandSpan: ActiveSpan | undefined;
-    let runDirPath: string | undefined;
-    const startTime = Date.now();
-
+    const settings = await resolveRunDirectorySettings();
+    const featureId = await selectFeatureId(settings.baseDir, typedFlags.feature);
     try {
-      const settings = await resolveRunDirectorySettings();
-      const featureId = await selectFeatureId(settings.baseDir, typedFlags.feature);
       requireFeatureId(featureId, typedFlags.feature);
-
-      // Initialize telemetry
-      runDirPath = getRunDirectoryPath(settings.baseDir, featureId);
-      logger = createCliLogger('rate-limits', featureId, runDirPath, {
-        minLevel: typedFlags.verbose ? LogLevel.DEBUG : LogLevel.INFO,
-        mirrorToStderr: !typedFlags.json,
-      });
-      metrics = createRunMetricsCollector(runDirPath, featureId);
-      traceManager = createRunTraceManager(runDirPath, featureId, logger);
-      commandSpan = traceManager.startSpan('cli.rate_limits');
-      commandSpan.setAttribute('feature_id', featureId);
-      commandSpan.setAttribute('json_mode', typedFlags.json);
-      commandSpan.setAttribute('verbose_flag', typedFlags.verbose);
-
-      logger.info('Rate-limits command invoked', {
-        feature_id: featureId,
-        json_mode: typedFlags.json,
-        verbose: typedFlags.verbose,
-        provider_filter: typedFlags.provider,
-        clear_provider: typedFlags.clear,
-      });
-
-      // Handle clear operation
-      if (typedFlags.clear) {
-        await this.handleClearCooldown(runDirPath, typedFlags.clear, logger, typedFlags.json);
-        commandSpan?.setAttribute('clear_provider', typedFlags.clear);
-        await flushTelemetrySuccess(
-          {
-            commandName: 'rate-limits',
-            startTime,
-            logger,
-            metrics,
-            traceManager,
-            commandSpan,
-            runDirPath,
-          },
-          { operation: 'clear' }
-        );
-        return;
-      }
-
-      // Generate rate limit report
-      const report = await generateRateLimitReport(runDirPath);
-
-      // Filter by provider if requested
-      let filteredReport = report;
-      if (typedFlags.provider) {
-        filteredReport = this.filterReportByProvider(report, typedFlags.provider);
-      }
-
-      // Export metrics
-      await exportRateLimitMetrics(runDirPath, metrics);
-
-      // Output report
-      if (typedFlags.json) {
-        this.log(JSON.stringify(filteredReport, null, 2));
-      } else {
-        const lines = formatRateLimitCLIOutput(filteredReport, {
-          verbose: typedFlags.verbose,
-          showWarnings: true,
-        });
-        for (const line of lines) {
-          this.log(line);
-        }
-      }
-
-      commandSpan?.setAttribute('provider_count', Object.keys(filteredReport.providers).length);
-      await flushTelemetrySuccess({
-        commandName: 'rate-limits',
-        startTime,
-        logger,
-        metrics,
-        traceManager,
-        commandSpan,
-        runDirPath,
-      });
     } catch (error) {
-      await flushTelemetryError(
-        {
-          commandName: 'rate-limits',
-          startTime,
-          logger,
-          metrics,
-          traceManager,
-          commandSpan,
-          runDirPath,
-        },
-        error
-      );
-
-      rethrowIfOclifError(error);
-
-      if (error instanceof CliError) {
-        const exitCode = error.code === CliErrorCode.RUN_DIR_NOT_FOUND ? 10 : error.exitCode;
-        this.error(error.message, { exit: exitCode });
-      }
-
-      if (error instanceof Error) {
-        this.error(`Rate-limits command failed: ${error.message}`, { exit: 1 });
-      } else {
-        this.error('Rate-limits command failed with an unknown error', { exit: 1 });
-      }
+      this.failWithCliExitCode(error);
     }
+    const runDirPath = getRunDirectoryPath(settings.baseDir, featureId);
+
+    await this.runWithTelemetry(
+      {
+        runDirPath,
+        featureId,
+        jsonMode: typedFlags.json,
+        verbose: typedFlags.verbose,
+        spanAttributes: { verbose_flag: typedFlags.verbose },
+      },
+      async (ctx) => {
+        ctx.logger?.info('Rate-limits command invoked', {
+          feature_id: featureId,
+          json_mode: typedFlags.json,
+          verbose: typedFlags.verbose,
+          provider_filter: typedFlags.provider,
+          clear_provider: typedFlags.clear,
+        });
+
+        // Handle clear operation
+        if (typedFlags.clear) {
+          await this.handleClearCooldown(
+            runDirPath,
+            typedFlags.clear,
+            ctx.logger!,
+            typedFlags.json
+          );
+          ctx.commandSpan?.setAttribute('clear_provider', typedFlags.clear);
+          return { extraLogFields: { operation: 'clear' } };
+        }
+
+        // Generate rate limit report
+        const report = await generateRateLimitReport(runDirPath);
+
+        // Filter by provider if requested
+        let filteredReport = report;
+        if (typedFlags.provider) {
+          filteredReport = this.filterReportByProvider(report, typedFlags.provider);
+        }
+
+        // Export metrics
+        await exportRateLimitMetrics(runDirPath, ctx.metrics!);
+
+        // Output report
+        if (typedFlags.json) {
+          this.log(JSON.stringify(filteredReport, null, 2));
+        } else {
+          const lines = formatRateLimitCLIOutput(filteredReport, {
+            verbose: typedFlags.verbose,
+            showWarnings: true,
+          });
+          for (const line of lines) {
+            this.log(line);
+          }
+        }
+
+        ctx.commandSpan?.setAttribute(
+          'provider_count',
+          Object.keys(filteredReport.providers).length
+        );
+        return undefined;
+      }
+    );
   }
 
   /**

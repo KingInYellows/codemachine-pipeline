@@ -1,9 +1,8 @@
-import { Args, Command, Flags } from '@oclif/core';
+import { Args, Flags } from '@oclif/core';
 import * as path from 'node:path';
 import * as os from 'node:os';
-import { createCliLogger, LogLevel, type StructuredLogger } from '../../telemetry/logger';
-import { createRunMetricsCollector, type MetricsCollector } from '../../telemetry/metrics';
-import { createRunTraceManager } from '../../telemetry/traces';
+import type { StructuredLogger } from '../../telemetry/logger';
+import type { MetricsCollector } from '../../telemetry/metrics';
 import { getRunDirectoryPath, readManifest } from '../../persistence/runDirectoryManager';
 import {
   grantApproval,
@@ -22,14 +21,8 @@ import {
   requireFeatureId,
   requireConfig,
 } from '../utils/runDirectory';
-import {
-  CliError,
-  CliErrorCode,
-  formatErrorMessage,
-  rethrowIfOclifError,
-  setJsonOutputMode,
-} from '../utils/cliErrors';
-import { flushTelemetrySuccess, flushTelemetryError } from '../utils/telemetryLifecycle';
+import { CliError, CliErrorCode, formatErrorMessage, setJsonOutputMode } from '../utils/cliErrors';
+import { TelemetryCommand } from '../telemetryCommand';
 import { getGitUser } from '../startHelpers';
 
 /**
@@ -74,7 +67,11 @@ interface ApprovalResultPayload {
   next_steps: string[];
 }
 
-export default class Approve extends Command {
+export default class Approve extends TelemetryCommand {
+  protected get commandName(): string {
+    return 'approve';
+  }
+
   static description = 'Approve or deny a feature pipeline gate';
 
   static examples = [
@@ -142,7 +139,6 @@ export default class Approve extends Command {
       setJsonOutputMode();
     }
 
-    const startTime = Date.now();
     const settings = await resolveRunDirectorySettings();
     const featureId = await selectFeatureId(settings.baseDir, typedFlags.feature);
     try {
@@ -158,195 +154,173 @@ export default class Approve extends Command {
 
     const runDir = getRunDirectoryPath(settings.baseDir, featureId);
 
-    const logger = createCliLogger('approve', featureId, runDir, {
-      minLevel: typedFlags.json ? LogLevel.WARN : LogLevel.INFO,
-      mirrorToStderr: !typedFlags.json,
-    });
-    const metrics = createRunMetricsCollector(runDir, featureId);
-    const traceManager = createRunTraceManager(runDir, featureId, logger);
-    const commandSpan = traceManager.startSpan('cli.approve');
-    commandSpan.setAttribute('feature_id', featureId);
-    commandSpan.setAttribute('gate_type', gateArg);
-    commandSpan.setAttribute('verdict', typedFlags.approve ? 'approved' : 'rejected');
-
-    try {
-      // Validate gate type
-      const gateType = this.validateGateType(gateArg);
-
-      // Check if approval is pending
-      const pendingApprovals = await getPendingApprovals(runDir);
-      if (!pendingApprovals.includes(gateType)) {
-        const history = await getApprovalHistory(runDir);
-        const alreadyApproved = history.some(
-          (a) => a.gate_type === gateType && a.verdict === 'approved'
-        );
-
-        if (alreadyApproved) {
-          this.error(`Gate ${gateType} has already been approved. No pending approval required.`, {
-            exit: 10,
-          });
-        } else {
-          this.error(
-            `No pending approval for gate ${gateType}. Current pending approvals: ${pendingApprovals.join(', ') || 'none'}`,
-            { exit: 10 }
-          );
-        }
-      }
-
-      // Resolve artifact path and compute hash
-      const manifest = await readManifest(runDir);
-      const artifactInfo = this.resolveArtifactPath(runDir, manifest, gateType);
-
-      let artifactHash: string;
-      if (typedFlags['skip-hash-check']) {
-        artifactHash = 'skipped';
-        logger.warn('Artifact hash validation skipped', { gate_type: gateType });
-      } else {
-        artifactHash = await computeArtifactHash(artifactInfo.absolutePath);
-        logger.info('Artifact hash computed', {
-          gate_type: gateType,
-          artifact_path: artifactInfo.relativePath,
-          hash: artifactHash,
-        });
-      }
-
-      let payload: ApprovalResultPayload;
-
-      if (typedFlags.approve) {
-        // Grant approval
-        const grantOptions: GrantApprovalOptions = {
-          signer: typedFlags.signer,
-          artifactPath: artifactInfo.relativePath,
-          metadata: {
-            git_user: getGitUser(),
-            hostname: os.hostname(),
-          },
-        };
-        if (typedFlags.comment) {
-          grantOptions.rationale = typedFlags.comment;
-        }
-        if (typedFlags['signer-name']) {
-          grantOptions.signerName = typedFlags['signer-name'];
-        }
-
-        const approvalRecord = await grantApproval(runDir, gateType, artifactHash, grantOptions);
-
-        payload = {
-          feature_id: featureId,
-          gate_type: gateType,
-          verdict: 'approved',
-          signer: approvalRecord.signer,
-          artifact_path: artifactInfo.relativePath,
-          approved_at: approvalRecord.approved_at,
-          next_steps: this.buildNextSteps(gateType, 'approved'),
-        };
-        if (approvalRecord.signer_name) {
-          payload.signer_name = approvalRecord.signer_name;
-        }
-        if (approvalRecord.artifact_hash) {
-          payload.artifact_hash = approvalRecord.artifact_hash;
-        }
-        if (approvalRecord.rationale) {
-          payload.rationale = approvalRecord.rationale;
-        }
-
-        logger.info('Approval granted', {
-          gate_type: gateType,
-          signer: approvalRecord.signer,
-          approval_id: approvalRecord.approval_id,
-        });
-
-        await this.generateTraceAfterSpecApproval({
-          gateType,
-          featureId,
-          runDir,
-          logger,
-          metrics,
-        });
-      } else {
-        // Deny approval
-        const denyOptions: DenyApprovalOptions = {
-          signer: typedFlags.signer,
-          artifactPath: artifactInfo.relativePath,
-          reason: typedFlags.comment || 'No reason provided',
-          metadata: {
-            git_user: getGitUser(),
-            hostname: os.hostname(),
-          },
-        };
-        if (typedFlags['signer-name']) {
-          denyOptions.signerName = typedFlags['signer-name'];
-        }
-
-        const approvalRecord = await denyApproval(runDir, gateType, denyOptions);
-
-        payload = {
-          feature_id: featureId,
-          gate_type: gateType,
-          verdict: 'rejected',
-          signer: approvalRecord.signer,
-          artifact_path: artifactInfo.relativePath,
-          approved_at: approvalRecord.approved_at,
-          next_steps: this.buildNextSteps(gateType, 'rejected'),
-        };
-        if (approvalRecord.signer_name) {
-          payload.signer_name = approvalRecord.signer_name;
-        }
-        if (approvalRecord.rationale) {
-          payload.rationale = approvalRecord.rationale;
-        }
-
-        logger.warn('Approval denied', {
-          gate_type: gateType,
-          signer: approvalRecord.signer,
-          reason: denyOptions.reason,
-        });
-      }
-
-      this.emitApprovalSummary(payload, typedFlags.json);
-
-      await flushTelemetrySuccess({
-        commandName: 'approve',
-        startTime,
-        logger,
-        metrics,
-        traceManager,
-        commandSpan,
+    await this.runWithTelemetry(
+      {
         runDirPath: runDir,
-      });
-    } catch (error) {
-      await flushTelemetryError(
-        {
-          commandName: 'approve',
-          startTime,
-          logger,
-          metrics,
-          traceManager,
-          commandSpan,
-          runDirPath: runDir,
+        featureId,
+        jsonMode: typedFlags.json,
+        spanAttributes: {
+          gate_type: gateArg,
+          verdict: typedFlags.approve ? 'approved' : 'rejected',
         },
-        error
-      );
+      },
+      async (ctx) => {
+        // Validate gate type
+        const gateType = this.validateGateType(gateArg);
 
-      // Check for hash mismatch error (exit 30)
-      if (error instanceof Error && error.message.includes('hash mismatch')) {
-        this.error(
-          `Artifact modified after approval request:\n${error.message}\n\n` +
-            `The artifact has been changed since the approval was requested. ` +
-            `Please review the updated artifact and request approval again.`,
-          { exit: 30 }
-        );
+        // Check if approval is pending
+        const pendingApprovals = await getPendingApprovals(runDir);
+        if (!pendingApprovals.includes(gateType)) {
+          const history = await getApprovalHistory(runDir);
+          const alreadyApproved = history.some(
+            (a) => a.gate_type === gateType && a.verdict === 'approved'
+          );
+
+          if (alreadyApproved) {
+            this.error(
+              `Gate ${gateType} has already been approved. No pending approval required.`,
+              {
+                exit: 10,
+              }
+            );
+          } else {
+            this.error(
+              `No pending approval for gate ${gateType}. Current pending approvals: ${pendingApprovals.join(', ') || 'none'}`,
+              { exit: 10 }
+            );
+          }
+        }
+
+        // Resolve artifact path and compute hash
+        const manifest = await readManifest(runDir);
+        const artifactInfo = this.resolveArtifactPath(runDir, manifest, gateType);
+
+        let artifactHash: string;
+        if (typedFlags['skip-hash-check']) {
+          artifactHash = 'skipped';
+          ctx.logger?.warn('Artifact hash validation skipped', { gate_type: gateType });
+        } else {
+          artifactHash = await computeArtifactHash(artifactInfo.absolutePath);
+          ctx.logger?.info('Artifact hash computed', {
+            gate_type: gateType,
+            artifact_path: artifactInfo.relativePath,
+            hash: artifactHash,
+          });
+        }
+
+        let payload: ApprovalResultPayload;
+
+        try {
+          if (typedFlags.approve) {
+            // Grant approval
+            const grantOptions: GrantApprovalOptions = {
+              signer: typedFlags.signer,
+              artifactPath: artifactInfo.relativePath,
+              metadata: {
+                git_user: getGitUser(),
+                hostname: os.hostname(),
+              },
+            };
+            if (typedFlags.comment) {
+              grantOptions.rationale = typedFlags.comment;
+            }
+            if (typedFlags['signer-name']) {
+              grantOptions.signerName = typedFlags['signer-name'];
+            }
+
+            const approvalRecord = await grantApproval(
+              runDir,
+              gateType,
+              artifactHash,
+              grantOptions
+            );
+
+            payload = {
+              feature_id: featureId,
+              gate_type: gateType,
+              verdict: 'approved',
+              signer: approvalRecord.signer,
+              artifact_path: artifactInfo.relativePath,
+              approved_at: approvalRecord.approved_at,
+              next_steps: this.buildNextSteps(gateType, 'approved'),
+            };
+            if (approvalRecord.signer_name) {
+              payload.signer_name = approvalRecord.signer_name;
+            }
+            if (approvalRecord.artifact_hash) {
+              payload.artifact_hash = approvalRecord.artifact_hash;
+            }
+            if (approvalRecord.rationale) {
+              payload.rationale = approvalRecord.rationale;
+            }
+
+            ctx.logger?.info('Approval granted', {
+              gate_type: gateType,
+              signer: approvalRecord.signer,
+              approval_id: approvalRecord.approval_id,
+            });
+
+            await this.generateTraceAfterSpecApproval({
+              gateType,
+              featureId,
+              runDir,
+              logger: ctx.logger!,
+              metrics: ctx.metrics!,
+            });
+          } else {
+            // Deny approval
+            const denyOptions: DenyApprovalOptions = {
+              signer: typedFlags.signer,
+              artifactPath: artifactInfo.relativePath,
+              reason: typedFlags.comment || 'No reason provided',
+              metadata: {
+                git_user: getGitUser(),
+                hostname: os.hostname(),
+              },
+            };
+            if (typedFlags['signer-name']) {
+              denyOptions.signerName = typedFlags['signer-name'];
+            }
+
+            const approvalRecord = await denyApproval(runDir, gateType, denyOptions);
+
+            payload = {
+              feature_id: featureId,
+              gate_type: gateType,
+              verdict: 'rejected',
+              signer: approvalRecord.signer,
+              artifact_path: artifactInfo.relativePath,
+              approved_at: approvalRecord.approved_at,
+              next_steps: this.buildNextSteps(gateType, 'rejected'),
+            };
+            if (approvalRecord.signer_name) {
+              payload.signer_name = approvalRecord.signer_name;
+            }
+            if (approvalRecord.rationale) {
+              payload.rationale = approvalRecord.rationale;
+            }
+
+            ctx.logger?.warn('Approval denied', {
+              gate_type: gateType,
+              signer: approvalRecord.signer,
+              reason: denyOptions.reason,
+            });
+          }
+        } catch (error) {
+          if (error instanceof Error && error.message.includes('hash mismatch')) {
+            this.error(
+              `Artifact modified after approval request:\n${error.message}\n\n` +
+                'The artifact has been changed since the approval was requested. ' +
+                'Please review the updated artifact and request approval again.',
+              { exit: 30 }
+            );
+          }
+          throw error;
+        }
+
+        this.emitApprovalSummary(payload, typedFlags.json);
       }
-
-      if (error instanceof CliError) {
-        const exitCode = error.code === CliErrorCode.RUN_DIR_NOT_FOUND ? 10 : error.exitCode;
-        this.error(error.message, { exit: exitCode });
-      }
-
-      rethrowIfOclifError(error);
-
-      this.error(`Approve command failed: ${formatErrorMessage(error)}`, { exit: 1 });
-    }
+    );
   }
 
   private validateGateType(gate: string): ApprovalGateType {
