@@ -331,9 +331,7 @@ export class PipelineOrchestrator {
     return result;
   }
 
-  private async runTaskExecution(
-    maxParallel: number
-  ): Promise<{
+  private async runTaskExecution(maxParallel: number): Promise<{
     totalTasks: number;
     completedTasks: number;
     failedTasks: number;

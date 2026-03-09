@@ -80,6 +80,16 @@ const mockTelemetry = {
   failTask: vi.fn(),
 } as unknown as ExecutionTelemetry;
 
+type ManifestUpdateSnapshot = {
+  artifacts?: {
+    prd?: string;
+  };
+  execution?: {
+    completed_steps: number;
+  };
+  status?: string;
+};
+
 function createRepoConfig(): RepoConfig {
   const config = createDefaultConfig('https://github.com/test/repo.git');
   return {
@@ -192,7 +202,7 @@ describe('PipelineOrchestrator', () => {
 
   it('records the PRD artifact path returned by the authoring engine', async () => {
     const orchestrator = createOrchestrator();
-    const manifestUpdates: Array<Record<string, unknown>> = [];
+    const manifestUpdates: ManifestUpdateSnapshot[] = [];
 
     mockDraftPRD.mockResolvedValue({
       ...createPrdResult(),
@@ -206,7 +216,7 @@ describe('PipelineOrchestrator', () => {
             completed_steps: 0,
           },
           status: 'initializing',
-        } as never) as Record<string, unknown>
+        } as never) as ManifestUpdateSnapshot
       );
     });
 
