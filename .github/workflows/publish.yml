@@ -16,18 +16,13 @@ jobs:
     timeout-minutes: 15
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+      - name: Setup Node.js environment
+        uses: ./.github/actions/setup-node
         with:
-          ref: ${{ github.event.release.target_commitish || github.ref }}
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '24'
-          cache: npm
+          checkout-ref: ${{ github.event.release.target_commitish || github.ref }}
           registry-url: 'https://npm.pkg.github.com'
           scope: '@kinginyellows'
+          enable-preflight: 'false'
 
       - name: Verify package version
         run: |

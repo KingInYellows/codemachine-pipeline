@@ -1,0 +1,63 @@
+name: 'Setup Node.js Environment'
+description: 'Shared CI setup: checkout, npm cache directories, Node.js installation, and runner preflight checks'
+
+inputs:
+  node-version:
+    description: 'Node.js version to install'
+    default: '24'
+  cache:
+    description: 'Package manager to cache (npm, yarn, pnpm, or empty string to disable)'
+    default: 'npm'
+  registry-url:
+    description: 'npm registry URL for publishing (leave empty to skip)'
+    default: ''
+  scope:
+    description: 'npm scope for publishing (leave empty to skip)'
+    default: ''
+  checkout-ref:
+    description: 'Git ref to checkout (leave empty for default event ref)'
+    default: ''
+  checkout-clean:
+    description: 'Whether to clean the checkout directory'
+    default: 'true'
+  enable-preflight:
+    description: 'Run Node.js version preflight check'
+    default: 'true'
+  prepare-npm-dirs:
+    description: 'Prepare npm cache directories for self-hosted runners'
+    default: 'false'
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Checkout code
+      uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.2.2
+      with:
+        ref: ${{ inputs.checkout-ref }}
+        clean: ${{ inputs.checkout-clean }}
+
+    - name: Prepare npm directories
+      if: inputs.prepare-npm-dirs == 'true'
+      shell: bash
+      run: |
+        set -euo pipefail
+        echo "HOME=$RUNNER_TEMP/codemachine-home" >> "$GITHUB_ENV"
+        echo "NPM_CONFIG_CACHE=$RUNNER_TEMP/codemachine-npm-cache" >> "$GITHUB_ENV"
+        mkdir -p "$RUNNER_TEMP/codemachine-home" "$RUNNER_TEMP/codemachine-npm-cache"
+
+    - name: Setup Node.js
+      uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.1.0
+      with:
+        node-version: ${{ inputs.node-version }}
+        cache: ${{ inputs.cache }}
+        registry-url: ${{ inputs.registry-url }}
+        scope: ${{ inputs.scope }}
+
+    - name: Runner preflight checks
+      if: inputs.enable-preflight == 'true'
+      shell: bash
+      run: |
+        set -euo pipefail
+        node -v
+        npm -v
+        node -e "const major=Number(process.versions.node.split('.')[0]); if (major < 24) { console.error('Node 24+ is required for CI'); process.exit(1) }"
