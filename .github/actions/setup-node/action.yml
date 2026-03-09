@@ -1,5 +1,5 @@
 name: 'Setup Node.js Environment'
-description: 'Shared CI setup: checkout, npm cache directories, Node.js installation, and runner preflight checks'
+description: 'Shared CI setup: npm cache directories, Node.js installation, and runner preflight checks'
 
 inputs:
   node-version:
@@ -14,12 +14,6 @@ inputs:
   scope:
     description: 'npm scope for publishing (leave empty to skip)'
     default: ''
-  checkout-ref:
-    description: 'Git ref to checkout (leave empty for default event ref)'
-    default: ''
-  checkout-clean:
-    description: 'Whether to clean the checkout directory'
-    default: 'true'
   enable-preflight:
     description: 'Run Node.js version preflight check'
     default: 'true'
@@ -30,12 +24,6 @@ inputs:
 runs:
   using: 'composite'
   steps:
-    - name: Checkout code
-      uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.2.2
-      with:
-        ref: ${{ inputs.checkout-ref }}
-        clean: ${{ inputs.checkout-clean }}
-
     - name: Prepare npm directories
       if: inputs.prepare-npm-dirs == 'true'
       shell: bash
