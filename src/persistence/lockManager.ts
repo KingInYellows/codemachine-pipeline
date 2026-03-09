@@ -2,6 +2,7 @@ import { access, readFile, unlink, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { hostname } from 'node:os';
 import { wrapError } from '../utils/errors.js';
+import { isProcessRunning } from '../utils/processExists.js';
 import { isFileNotFound } from '../utils/safeJson.js';
 
 /**
@@ -51,31 +52,6 @@ function isLockFilePayload(value: unknown): value is LockFile {
     typeof candidate.hostname === 'string' &&
     typeof candidate.acquired_at === 'string'
   );
-}
-
-/**
- * Check if a process exists (Unix-like systems only).
- * Uses POSIX signal 0 as a sentinel — kill(pid, 0) does not send a signal
- * but checks process existence (POSIX.1-2017, §2.4).
- *
- * Returns:
- * - 'running' if the process exists (kill succeeds or fails with EPERM).
- * - 'stopped' if the process does not exist (ESRCH).
- * - 'unknown' on Windows, where process existence cannot be checked this way.
- */
-function isProcessRunning(pid: number): 'running' | 'stopped' | 'unknown' {
-  if (process.platform === 'win32') return 'unknown';
-  try {
-    process.kill(pid, 0);
-    return 'running';
-  } catch (error) {
-    if (error && typeof error === 'object' && 'code' in error) {
-      const code = (error as NodeJS.ErrnoException).code;
-      if (code === 'ESRCH') return 'stopped';
-      if (code === 'EPERM') return 'running'; // process exists but we can't signal it
-    }
-    throw wrapError(error, `check if lock process ${pid} exists`);
-  }
 }
 
 /**
