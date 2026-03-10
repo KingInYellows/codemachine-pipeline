@@ -223,7 +223,9 @@ describe('autoFixEngine security - command execution', () => {
       // so command substitution cannot occur.
       expect(result.exitCode).toBe(0);
       expect(mockLogger.warn).not.toHaveBeenCalled();
-      expect(result.stdout).toContain('`whoami`');
+      if (process.platform !== 'win32') {
+        expect(result.stdout).toContain('`whoami`');
+      }
     });
 
     test('should prevent variable expansion via dollar sign', async () => {

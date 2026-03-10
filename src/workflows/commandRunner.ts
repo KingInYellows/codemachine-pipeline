@@ -180,7 +180,7 @@ export function parseCommandString(command: string): [string, string[]] {
           throw new Error('Shell operators are not allowed in command strings');
         }
       }
-      throw new Error('Shell operators are not allowed in command strings');
+      throw new Error(`Unexpected token from shell-quote parser: ${JSON.stringify(part)}`);
     })
     .filter((part): part is string => part !== null);
   if (parts.length === 0) {
