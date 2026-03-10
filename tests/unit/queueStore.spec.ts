@@ -346,9 +346,10 @@ describe('queueStore - initializeQueueFromPlan', () => {
       expect(result.success).toBe(false);
       expect(result.message).toBeDefined();
       expect(result.errors).toBeDefined();
-      if (result.errors) {
-        expect(result.errors.length).toBeGreaterThan(0);
+      if (!result.errors) {
+        throw new Error('Expected result.errors to be defined');
       }
+      expect(result.errors.length).toBeGreaterThan(0);
     });
 
     it('should return error details with stack trace on failure', async () => {

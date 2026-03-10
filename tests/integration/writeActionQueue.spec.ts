@@ -388,6 +388,9 @@ describe('WriteActionQueue', () => {
         }
         return Promise.resolve();
       };
+
+      // First drain (should execute 1 action due to concurrency limit)
+      const result1 = await queue.drain(executor);
       expect(result1.actionsAffected).toBe(1);
 
       // Second drain (should execute 1 more)

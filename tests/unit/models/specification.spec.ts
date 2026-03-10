@@ -137,10 +137,11 @@ describe('Specification model', () => {
       expect(spec.test_plan[0].test_id).toBe('T-001');
       expect(spec.rollout_plan).toBeDefined();
       const rolloutPlanVal = spec.rollout_plan;
-      if (rolloutPlanVal) {
-        expect(rolloutPlanVal.strategy).toBe('canary');
-        expect(rolloutPlanVal.phases).toHaveLength(2);
+      if (!rolloutPlanVal) {
+        throw new Error('Expected rollout_plan to be defined');
       }
+      expect(rolloutPlanVal.strategy).toBe('canary');
+      expect(rolloutPlanVal.phases).toHaveLength(2);
       expect(spec.metadata).toEqual({ priority: 'high' });
     });
   });
@@ -213,9 +214,10 @@ describe('Specification model', () => {
         expect(parsed.data.risks).toHaveLength(1);
         expect(parsed.data.test_plan).toHaveLength(1);
         expect(parsed.data.rollout_plan).toBeDefined();
-        if (parsed.data.rollout_plan) {
-          expect(parsed.data.rollout_plan.strategy).toBe('canary');
+        if (!parsed.data.rollout_plan) {
+          throw new Error('Expected rollout_plan to be defined');
         }
+        expect(parsed.data.rollout_plan.strategy).toBe('canary');
       }
     });
 

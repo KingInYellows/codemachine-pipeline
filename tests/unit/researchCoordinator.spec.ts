@@ -352,13 +352,14 @@ describe('ResearchCoordinator', () => {
       const started = await coordinator.startTask(task.task_id);
 
       expect(started).toBeDefined();
-      if (started) {
-        expect(started.status).toBe('in_progress');
-        expect(started.started_at).toBeDefined();
-        expect(new Date(started.updated_at).getTime()).toBeGreaterThanOrEqual(
-          new Date(task.updated_at).getTime()
-        );
+      if (!started) {
+        throw new Error('Expected started to be non-null');
       }
+      expect(started.status).toBe('in_progress');
+      expect(started.started_at).toBeDefined();
+      expect(new Date(started.updated_at).getTime()).toBeGreaterThanOrEqual(
+        new Date(task.updated_at).getTime()
+      );
     });
 
     it('should return null for non-existent task', async () => {

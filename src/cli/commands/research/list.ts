@@ -182,7 +182,6 @@ export default class ResearchList extends Command {
         this.log(
           `    Status: ${task.status} | Objectives: ${objectivesCount} | Sources: ${sourcesCount} | Cache: ${cachePreview}${completedAt}`
         );
-        );
 
         if (task.results?.summary) {
           this.log(`    Summary: ${this.truncate(task.results.summary)}`);

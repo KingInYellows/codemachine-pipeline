@@ -691,7 +691,7 @@ export default class Init extends Command {
 
       if (!jsonMode) {
         this.log('\n❌ Configuration validation failed:\n');
-        this.log(formatValidationErrors(result.errors || []));
+        this.log(formatValidationErrors(result.errors ?? []));
       }
 
       return payload;

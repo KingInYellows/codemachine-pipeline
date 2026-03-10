@@ -85,9 +85,10 @@ describe('Smoke Tests: No Credentials Required', () => {
 
       expect(result.success).toBe(true);
       expect(result.checks).toBeDefined();
-      if (result.checks) {
-        expect(result.checks.credentials).toBe(false);
+      if (!result.checks) {
+        throw new Error('Expected result.checks to be defined');
       }
+      expect(result.checks.credentials).toBe(false);
     });
 
     it('should validate config with enabled integrations but skip credential checks', async () => {
