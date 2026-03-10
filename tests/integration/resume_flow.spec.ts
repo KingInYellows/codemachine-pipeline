@@ -21,7 +21,7 @@ import {
   getNextTask,
   updateTaskInQueue,
   loadQueue,
-} from '../../src/workflows/queueStore';
+} from '../../src/workflows/queue/queueStore';
 import { createExecutionTask } from '../../src/core/models/ExecutionTask';
 
 type ResumeState = Awaited<ReturnType<typeof analyzeResumeState>>;

@@ -12,7 +12,7 @@ import {
   verifyQueueIntegrity,
   invalidateV2Cache,
   QueueIntegrityError,
-} from '../../src/workflows/queueStore.js';
+} from '../../src/workflows/queue/queueStore.js';
 import { createRunDirectory, writeManifest } from '../../src/persistence/runDirectoryManager.js';
 import { type ExecutionTask } from '../../src/core/models/ExecutionTask.js';
 

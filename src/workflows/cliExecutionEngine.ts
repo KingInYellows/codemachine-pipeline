@@ -7,7 +7,7 @@ import {
   ExecutionContext,
   ExecutionStrategyResult,
 } from './executionStrategy.js';
-import { updateTaskInQueue, loadQueue } from './queueStore.js';
+import { updateTaskInQueue, loadQueue } from './queue/queueStore.js';
 import { validateCliAvailability } from './codeMachineRunner.js';
 import { StructuredLogger } from '../telemetry/logger.js';
 import { ExecutionLogWriter } from '../telemetry/logWriters.js';

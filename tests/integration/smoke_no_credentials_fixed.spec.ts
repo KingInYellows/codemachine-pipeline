@@ -30,7 +30,7 @@ import {
   updateTaskInQueue,
   loadQueue,
   getNextTask,
-} from '../../src/workflows/queueStore';
+} from '../../src/workflows/queue/queueStore';
 import { createExecutionTask } from '../../src/core/models/ExecutionTask';
 import { analyzeResumeState } from '../../src/workflows/resumeCoordinator';
 

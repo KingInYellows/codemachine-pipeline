@@ -23,18 +23,18 @@ import {
   clearIndex,
   exportIndexState,
   getOperationsSinceSnapshot,
-} from '../../src/workflows/queueMemoryIndex.js';
+} from '../../src/workflows/queue/queueMemoryIndex.js';
 import type {
   QueueIndexState,
   QueueOperation,
   ExecutionTaskData,
-} from '../../src/workflows/queueTypes.js';
-import { createEmptyIndexState, createEmptyQueueCounts } from '../../src/workflows/queueTypes.js';
-import { saveSnapshot } from '../../src/workflows/queueSnapshotManager.js';
+} from '../../src/workflows/queue/queueTypes.js';
+import { createEmptyIndexState, createEmptyQueueCounts } from '../../src/workflows/queue/queueTypes.js';
+import { saveSnapshot } from '../../src/workflows/queue/queueSnapshotManager.js';
 import {
   appendOperationsBatch,
   initializeOperationsLog,
-} from '../../src/workflows/queueOperationsLog.js';
+} from '../../src/workflows/queue/queueOperationsLog.js';
 import type { ExecutionTask } from '../../src/core/models/ExecutionTask.js';
 
 describe('queueMemoryIndex', () => {

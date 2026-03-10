@@ -10,13 +10,13 @@ import {
   deleteSnapshot,
   snapshotExists,
   getSnapshotMetadata,
-} from '../../src/workflows/queueSnapshotManager.js';
+} from '../../src/workflows/queue/queueSnapshotManager.js';
 import type {
   QueueSnapshotV2,
   QueueCounts,
   ExecutionTaskData,
-} from '../../src/workflows/queueTypes.js';
-import { createEmptyQueueCounts } from '../../src/workflows/queueTypes.js';
+} from '../../src/workflows/queue/queueTypes.js';
+import { createEmptyQueueCounts } from '../../src/workflows/queue/queueTypes.js';
 import type { ExecutionTask } from '../../src/core/models/ExecutionTask.js';
 
 vi.mock('node:fs/promises', async () => {

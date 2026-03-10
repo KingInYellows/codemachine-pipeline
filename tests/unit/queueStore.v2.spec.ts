@@ -9,7 +9,7 @@ import {
   updateTaskInQueue,
   getNextTask,
   invalidateV2Cache,
-} from '../../src/workflows/queueStore.js';
+} from '../../src/workflows/queue/queueStore.js';
 import { createRunDirectory } from '../../src/persistence/runDirectoryManager.js';
 import type { ExecutionTask } from '../../src/core/models/ExecutionTask.js';
 

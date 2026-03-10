@@ -8,7 +8,7 @@ import {
   type QueueOperation,
   type QueueSnapshotV2,
   type ExecutionTaskData,
-} from '../../src/workflows/queueTypes';
+} from '../../src/workflows/queue/queueTypes';
 
 describe('queueTypes', () => {
   // Helper to create valid task data

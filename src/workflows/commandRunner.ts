@@ -31,7 +31,7 @@ export function escapeForCharacterClass(characters: string): string {
  * These characters can enable command injection if user input contains them.
  */
 export const SHELL_METACHARACTERS = new RegExp(
-  `[${escapeForCharacterClass(`|&;\`$<>(){}[]!*?~#${NULL_BYTE_CHARACTER}`)}]`,
+  `[${escapeForCharacterClass(`|&;$<>(){}[]!*?~#${NULL_BYTE_CHARACTER}`)}]`,
   'u'
 );
 
@@ -154,22 +154,40 @@ function restoreLiteralVariableReferences(
  * Shell operators (|, &&, ;, etc.) are rejected instead of interpreted or
  * silently discarded, preventing command injection and argument rewriting.
  *
- * Behavioral note: Unquoted `#` starts a comment (POSIX shell semantics).
- * For example, `echo hello # world` parses as ['echo', 'hello', '# world']
- * (comment merged into one token), not ['echo', 'hello', '#', 'world'].
- * Quote the `#` if you need it as a separate literal token.
+ * Unquoted `#` starts a comment (POSIX shell semantics). Everything from
+ * the `#` to end-of-string is discarded. For example,
+ * `echo hello # world` parses as ['echo', 'hello'].
+ * Quote the `#` if you need it as a literal token.
  *
  * @param command - Command string to parse (e.g., "npm run lint -- --fix")
  * @returns Tuple of [executable, args[]]
  */
 export function parseCommandString(command: string): [string, string[]] {
   const { placeholders, sanitizedCommand } = preserveLiteralVariableReferences(command);
-  const parts = parse(sanitizedCommand).map((part) => {
+  const parts = parse(sanitizedCommand)
+    .map((part): string | null => {
+      if (typeof part === 'string') {
+        return restoreLiteralVariableReferences(part, placeholders);
+      }
+      if (typeof part === 'object' && part !== null) {
+        if ('comment' in part) {
+          return null;
+        }
+        if ('pattern' in part) {
+          return restoreLiteralVariableReferences(String(part.pattern), placeholders);
+        }
+        if ('op' in part) {
+          throw new Error('Shell operators are not allowed in command strings');
+        }
+      }
+      throw new Error(`Unexpected token from shell-quote parser: ${JSON.stringify(part)}`);
+    })
+    .filter((part): part is string => part !== null);
   if (parts.length === 0) {
     throw new Error('Empty command string');
   }
 
-  return [parts[0], parts.slice(1)];
+  return [parts[0], parts.slice(1)] as [string, string[]];
 }
 
 // ---------------------------------------------------------------------------

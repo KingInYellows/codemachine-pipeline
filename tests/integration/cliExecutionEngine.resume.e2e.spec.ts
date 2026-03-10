@@ -16,7 +16,7 @@ import {
   loadQueue,
   updateTaskInQueue,
   createQueueSnapshot,
-} from '../../src/workflows/queueStore';
+} from '../../src/workflows/queue/queueStore';
 import { createExecutionTask } from '../../src/core/models/ExecutionTask';
 import { analyzeResumeState, prepareResume } from '../../src/workflows/resumeCoordinator';
 import { RepoConfig } from '../../src/core/config/RepoConfig';
