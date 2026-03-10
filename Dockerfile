@@ -1,3 +1,4 @@
+# syntax=docker/dockerfile:1.7
 # Multi-stage build for codemachine-pipeline CLI
 # Targets Node v24 (Active LTS as of December 2025)
 
@@ -9,16 +10,15 @@ WORKDIR /app
 # Copy package files
 COPY package*.json ./
 
-# Copy source code BEFORE installing (to avoid prepare script running without source)
+# Copy source code and build config
 COPY tsconfig.json ./
-COPY .npmrc ./
 COPY src ./src
 COPY scripts ./scripts
 
 # Install all dependencies (including dev for build)
-# This will trigger prepare script which will build
 ENV OCLIF_SKIP_MANIFEST=1
-RUN npm ci
+RUN --mount=type=bind,source=.npmrc,target=/app/.npmrc,readonly npm ci
+RUN npm run build
 
 # Production stage
 FROM node:24-alpine
@@ -27,10 +27,10 @@ WORKDIR /app
 
 # Copy package files
 COPY package*.json ./
-COPY .npmrc ./
 
-# Install production dependencies only (skip prepare script)
-RUN npm ci --omit=dev --ignore-scripts
+# Install production dependencies without copying registry credentials into an image layer.
+RUN --mount=type=bind,source=.npmrc,target=/app/.npmrc,readonly \
+    npm ci --omit=dev --ignore-scripts
 
 # Copy built artifacts from builder
 COPY --from=builder /app/dist ./dist

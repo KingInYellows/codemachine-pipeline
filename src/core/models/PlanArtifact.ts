@@ -7,99 +7,55 @@ import { createModelParser } from './modelParser.js';
  * Defines the execution plan DAG with task dependencies, metadata,
  * and checksum for idempotence verification.
  *
- * Implements:
- * - FR-2 (Run Directory): Plan persistence in plan.json
- * - FR-3 (Resumability): Dependency graph for step ordering
- * - ADR-7 (Validation Policy): Zod-based validation
- *
  * Used by CLI commands: start, resume, status
  */
 
-// ============================================================================
-// Task Dependency Schema
-// ============================================================================
-
 const TaskDependencySchema = z.object({
-  /** Dependent task ID */
   task_id: z.string().min(1),
-  /** Dependency type (e.g., 'required', 'optional') */
   type: z.enum(['required', 'optional']).default('required'),
 });
 
 export type TaskDependency = z.infer<typeof TaskDependencySchema>;
 
-// ============================================================================
-// Task Node Schema
-// ============================================================================
-
 const TaskNodeSchema = z.object({
-  /** Unique task identifier */
   task_id: z.string().min(1),
-  /** Task title or description */
   title: z.string().min(1),
-  /** Task type (e.g., 'research', 'code_generation', 'testing') */
   task_type: z.string().min(1),
-  /** Array of task IDs this task depends on */
   dependencies: z.array(TaskDependencySchema).default([]),
-  /** Estimated execution time in minutes */
   estimated_duration_minutes: z.number().int().nonnegative().optional(),
-  /** Task-specific configuration */
   config: z.record(z.string(), z.unknown()).optional(),
 });
 
 export type TaskNode = z.infer<typeof TaskNodeSchema>;
 
-// ============================================================================
-// DAG Metadata Schema
-// ============================================================================
-
 const DAGMetadataSchema = z.object({
-  /** Total number of tasks in the plan */
   total_tasks: z.number().int().nonnegative(),
-  /** Number of parallel execution paths */
   parallel_paths: z.number().int().nonnegative().optional(),
-  /** Estimated total execution time in minutes */
   estimated_total_duration_minutes: z.number().int().nonnegative().optional(),
-  /** Plan generation timestamp (ISO 8601) */
   generated_at: z.string().datetime(),
-  /** Plan generator agent or tool identifier */
   generated_by: z.string().optional(),
 });
 
 export type DAGMetadata = z.infer<typeof DAGMetadataSchema>;
 
-// ============================================================================
-// PlanArtifact Schema
-// ============================================================================
-
 export const PlanArtifactSchema = z
   .object({
-    /** Schema version for future migrations (semver) */
     schema_version: z.string().regex(/^[0-9]+\.[0-9]+\.[0-9]+$/, 'Invalid semver format'),
-    /** Feature ID this plan belongs to */
     feature_id: z.string().min(1),
-    /** ISO 8601 timestamp when plan was created */
     created_at: z.string().datetime(),
-    /** ISO 8601 timestamp when plan was last updated */
     updated_at: z.string().datetime(),
-    /** DAG task nodes defining the execution plan */
     tasks: z.array(TaskNodeSchema),
-    /** DAG metadata and statistics */
     dag_metadata: DAGMetadataSchema,
-    /** SHA-256 checksum of plan content for idempotence */
+    /** SHA-256 checksum for idempotence verification */
     checksum: z
       .string()
       .regex(/^[a-f0-9]{64}$/, 'Invalid SHA-256 hash format')
       .optional(),
-    /** Optional plan-level metadata */
     metadata: z.record(z.string(), z.unknown()).optional(),
   })
   .strict();
 
 export type PlanArtifact = Readonly<z.infer<typeof PlanArtifactSchema>>;
-
-// ============================================================================
-// Serialization Helpers
 
 const { parse: parsePlanArtifact, serialize: serializePlanArtifact } =
   createModelParser<PlanArtifact>(PlanArtifactSchema);
@@ -118,6 +74,7 @@ export function createPlanArtifact(
   tasks: TaskNode[],
   options?: {
     generatedBy?: string;
+    // eslint-disable-next-line @typescript-eslint/no-restricted-types -- intentional: plan metadata varies per generator and workflow
     metadata?: Record<string, unknown>;
   }
 ): PlanArtifact {

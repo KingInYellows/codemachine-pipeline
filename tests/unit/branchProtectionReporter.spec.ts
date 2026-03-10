@@ -2,10 +2,9 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 import * as os from 'node:os';
+import { persistReport, loadReport } from '../../src/persistence/branchProtectionStore';
 import {
   generateReport,
-  persistReport,
-  loadReport,
   generateSummary,
   formatSummary,
   formatBlockers,

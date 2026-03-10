@@ -7,9 +7,6 @@ import { createModelParser } from './modelParser.js';
  * Captures PR numbers, merge SHAs, status checks, required reviews,
  * auto-merge state, and deployment job links.
  *
- * Implements:
- * - ADR-7 (Validation Policy): Zod-based validation
- *
  * Used by CLI commands: deploy, status
  */
 
@@ -29,13 +26,9 @@ export type DeploymentStatus = z.infer<typeof DeploymentStatusSchema>;
 // Status Check Schema
 
 const StatusCheckSchema = z.object({
-  /** Status check name */
   name: z.string().min(1),
-  /** Status check state (pending, success, failure, error) */
   state: z.enum(['pending', 'success', 'failure', 'error']),
-  /** Status check description */
   description: z.string().optional(),
-  /** Target URL for status check details */
   target_url: z.string().url().optional(),
 });
 
@@ -44,11 +37,8 @@ export type StatusCheck = z.infer<typeof StatusCheckSchema>;
 // Review Record Schema
 
 const ReviewRecordSchema = z.object({
-  /** Reviewer username or ID */
   reviewer: z.string().min(1),
-  /** Review state (approved, changes_requested, commented, pending) */
   state: z.enum(['approved', 'changes_requested', 'commented', 'pending']),
-  /** ISO 8601 timestamp when review was submitted */
   submitted_at: z.string().datetime().nullable().optional(),
 });
 
@@ -58,44 +48,26 @@ export type ReviewRecord = z.infer<typeof ReviewRecordSchema>;
 
 export const DeploymentRecordSchema = z
   .object({
-    /** Schema version for future migrations (semver) */
     schema_version: z.string().regex(/^[0-9]+\.[0-9]+\.[0-9]+$/, 'Invalid semver format'),
-    /** Unique deployment record identifier */
     deployment_id: z.string().min(1),
-    /** Feature ID this deployment belongs to */
     feature_id: z.string().min(1),
-    /** Current deployment status */
     status: DeploymentStatusSchema,
-    /** Pull request number */
     pr_number: z.number().int().positive().optional(),
-    /** Pull request URL */
     pr_url: z.string().url().optional(),
-    /** Merge commit SHA (40-character Git hash) */
     merge_sha: z
       .string()
       .regex(/^[a-f0-9]{40}$/, 'Invalid Git SHA format')
       .optional(),
-    /** Source branch name */
     source_branch: z.string().optional(),
-    /** Target branch name */
     target_branch: z.string().optional(),
-    /** Status checks for this deployment */
     status_checks: z.array(StatusCheckSchema).default([]),
-    /** Required reviews for this deployment */
     required_reviews: z.array(ReviewRecordSchema).default([]),
-    /** Whether auto-merge is enabled */
     auto_merge_enabled: z.boolean().default(false),
-    /** Deployment job/workflow URL */
     deployment_job_url: z.string().url().optional(),
-    /** ISO 8601 timestamp when deployment was created */
     created_at: z.string().datetime(),
-    /** ISO 8601 timestamp when deployment was last updated */
     updated_at: z.string().datetime(),
-    /** ISO 8601 timestamp when deployment started */
     started_at: z.string().datetime().nullable().optional(),
-    /** ISO 8601 timestamp when deployment completed */
     completed_at: z.string().datetime().nullable().optional(),
-    /** Optional deployment metadata */
     metadata: z.record(z.string(), z.unknown()).optional(),
   })
   .strict();
@@ -120,6 +92,7 @@ export function createDeploymentRecord(
     sourceBranch?: string;
     targetBranch?: string;
     autoMergeEnabled?: boolean;
+    // eslint-disable-next-line @typescript-eslint/no-restricted-types -- intentional: deployment metadata varies per environment and action
     metadata?: Record<string, unknown>;
   }
 ): DeploymentRecord {

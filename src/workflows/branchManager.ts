@@ -1,28 +1,14 @@
 /**
  * Branch Manager
  *
- * Manages git branch operations with safety rails, including branch creation,
- * remote tracking, push operations, and branch metadata persistence.
- *
- * Key features:
- * - Feature branch creation from default branch
- * - Branch naming conventions (feature/, bugfix/, etc.)
- * - Remote push with upstream tracking
- * - Branch metadata storage in run directory
- * - Git safety validations (prevent force push, protect main branches)
- * - Status introspection (local/remote sync state)
- *
- * Implements:
- * - FR-12: Branch Lifecycle Management
- * - FR-13: Git Safety Rails
- * - ADR-3: Git Integration Patterns
+ * Manages git branch operations with safety rails, metadata persistence, and remote tracking.
  */
 
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 import { z } from 'zod';
 import { validateOrThrow } from '../validation/helpers.js';
-import { exec } from 'node:child_process';
+import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import { wrapError } from '../utils/errors';
 import { withLock, getSubdirectoryPath, updateManifest } from '../persistence';
@@ -30,11 +16,7 @@ import type { RepoConfig } from '../core/config/RepoConfig';
 import type { StructuredLogger } from '../telemetry/logger';
 import type { MetricsCollector } from '../telemetry/metrics';
 
-const execAsync = promisify(exec);
-
-// ============================================================================
-// Types
-// ============================================================================
+const execFileAsync = promisify(execFile);
 
 /**
  * Branch manager configuration
@@ -147,10 +129,6 @@ export interface BranchSyncStatus {
   lastCommitSha: string;
 }
 
-// ============================================================================
-// Branch Validation
-// ============================================================================
-
 /**
  * Check if a branch name is protected (e.g., main, master, develop)
  */
@@ -173,14 +151,24 @@ export function isProtectedBranch(branchName: string, repoConfig: RepoConfig): b
  * Validate branch name follows conventions
  */
 export function validateBranchName(branchName: string): { valid: boolean; error?: string } {
-  // Git branch name rules
+  // Allowlist approach: only permit characters valid in git branch names
+  // Rejects shell metacharacters (", `, $, (, ), etc.) as defense-in-depth
+  const allowlistPattern = /^[a-zA-Z0-9._/-]+$/;
+
+  if (!allowlistPattern.test(branchName)) {
+    return {
+      valid: false,
+      error: `Branch name "${branchName}" contains invalid characters (only alphanumeric, dot, underscore, slash, and hyphen are allowed)`,
+    };
+  }
+
+  // Additional git-specific structural rules
   const invalidPatterns: RegExp[] = [
     /\.\./, // No double dots
     /\/\//, // No double slashes
     /^[./]/, // Cannot start with . or /
     /[/.]$/, // Cannot end with / or .
     /\.lock$/, // Cannot end with .lock
-    new RegExp('[@{}\\[\\]\\\\^~:?*\\s]'), // No special characters
   ];
 
   for (const pattern of invalidPatterns) {
@@ -195,16 +183,14 @@ export function validateBranchName(branchName: string): { valid: boolean; error?
   return { valid: true };
 }
 
-// ============================================================================
-// Git Operations
-// ============================================================================
-
 /**
  * Get current branch name
  */
 export async function getCurrentBranch(workingDir: string): Promise<string> {
   try {
-    const { stdout } = await execAsync('git rev-parse --abbrev-ref HEAD', { cwd: workingDir });
+    const { stdout } = await execFileAsync('git', ['rev-parse', '--abbrev-ref', 'HEAD'], {
+      cwd: workingDir,
+    });
     return stdout.trim();
   } catch (error) {
     throw wrapError(error, 'get current branch');
@@ -216,7 +202,7 @@ export async function getCurrentBranch(workingDir: string): Promise<string> {
  */
 export async function branchExists(branchName: string, workingDir: string): Promise<boolean> {
   try {
-    await execAsync(`git rev-parse --verify "${branchName}"`, { cwd: workingDir });
+    await execFileAsync('git', ['rev-parse', '--verify', branchName], { cwd: workingDir });
     return true;
   } catch {
     return false;
@@ -228,7 +214,7 @@ export async function branchExists(branchName: string, workingDir: string): Prom
  */
 export async function getCommitSha(ref: string, workingDir: string): Promise<string> {
   try {
-    const { stdout } = await execAsync(`git rev-parse "${ref}"`, { cwd: workingDir });
+    const { stdout } = await execFileAsync('git', ['rev-parse', ref], { cwd: workingDir });
     return stdout.trim();
   } catch (error) {
     throw wrapError(error, `get commit SHA for ${ref}`);
@@ -240,7 +226,9 @@ export async function getCommitSha(ref: string, workingDir: string): Promise<str
  */
 export async function getRemoteUrl(remoteName: string, workingDir: string): Promise<string | null> {
   try {
-    const { stdout } = await execAsync(`git remote get-url "${remoteName}"`, { cwd: workingDir });
+    const { stdout } = await execFileAsync('git', ['remote', 'get-url', remoteName], {
+      cwd: workingDir,
+    });
     return stdout.trim();
   } catch {
     return null;
@@ -252,9 +240,11 @@ export async function getRemoteUrl(remoteName: string, workingDir: string): Prom
  */
 export async function getTrackingBranch(workingDir: string): Promise<string | null> {
   try {
-    const { stdout } = await execAsync('git rev-parse --abbrev-ref --symbolic-full-name @{u}', {
-      cwd: workingDir,
-    });
+    const { stdout } = await execFileAsync(
+      'git',
+      ['rev-parse', '--abbrev-ref', '--symbolic-full-name', '@{u}'],
+      { cwd: workingDir }
+    );
     return stdout.trim();
   } catch {
     return null;
@@ -268,9 +258,11 @@ export async function getAheadBehindCounts(
   workingDir: string
 ): Promise<{ ahead: number; behind: number }> {
   try {
-    const { stdout } = await execAsync('git rev-list --left-right --count @{u}...HEAD', {
-      cwd: workingDir,
-    });
+    const { stdout } = await execFileAsync(
+      'git',
+      ['rev-list', '--left-right', '--count', '@{u}...HEAD'],
+      { cwd: workingDir }
+    );
     const parts = stdout.trim().split(/\s+/);
     return {
       behind: parseInt(parts[0] || '0', 10),
@@ -280,10 +272,6 @@ export async function getAheadBehindCounts(
     return { ahead: 0, behind: 0 };
   }
 }
-
-// ============================================================================
-// Branch Creation
-// ============================================================================
 
 /**
  * Generate branch name from feature ID
@@ -319,7 +307,6 @@ export async function createBranch(
   };
 
   try {
-    // Step 1: Generate and validate branch name
     const branchName = generateBranchName(config.featureId, options);
     const validation = validateBranchName(branchName);
 
@@ -329,7 +316,6 @@ export async function createBranch(
       return result;
     }
 
-    // Step 2: Check if branch already exists
     const exists = await branchExists(branchName, config.workingDir);
     if (exists) {
       result.error = `Branch "${branchName}" already exists`;
@@ -337,30 +323,25 @@ export async function createBranch(
       return result;
     }
 
-    // Step 3: Determine base branch
     const baseBranch = options.baseBranch || config.repoConfig.project.default_branch;
 
-    // Step 4: Ensure we're on the base branch and it's up to date
     const currentBranch = await getCurrentBranch(config.workingDir);
     if (currentBranch !== baseBranch) {
       logger.info('Switching to base branch', { baseBranch });
-      await execAsync(`git checkout "${baseBranch}"`, { cwd: config.workingDir });
+      await execFileAsync('git', ['checkout', baseBranch], { cwd: config.workingDir });
     }
 
-    // Step 5: Get base commit SHA
     const baseSha = await getCommitSha(baseBranch, config.workingDir);
     result.baseSha = baseSha;
 
-    // Step 6: Create the branch
     logger.info('Creating branch', { branchName, baseBranch, baseSha });
-    await execAsync(`git checkout -b "${branchName}"`, { cwd: config.workingDir });
+    await execFileAsync('git', ['checkout', '-b', branchName], { cwd: config.workingDir });
 
     result.branchName = branchName;
     result.success = true;
 
     logger.info('Branch created successfully', { branchName, baseBranch });
 
-    // Step 7: Create branch metadata
     const metadataPath = await saveBranchMetadata(
       config,
       {
@@ -378,7 +359,6 @@ export async function createBranch(
 
     result.metadataPath = metadataPath;
 
-    // Step 8: Push to remote if requested
     if (options.pushToRemote) {
       const remoteName = options.remoteName || 'origin';
       const pushResult = await pushBranch(config, branchName, remoteName, logger, metrics);
@@ -410,10 +390,6 @@ export async function createBranch(
   return result;
 }
 
-// ============================================================================
-// Branch Push
-// ============================================================================
-
 /**
  * Push branch to remote with upstream tracking
  */
@@ -429,14 +405,12 @@ export async function pushBranch(
   };
 
   try {
-    // Step 1: Validate branch is not protected
     if (isProtectedBranch(branchName, config.repoConfig)) {
       result.error = `Cannot push protected branch: ${branchName}`;
       logger.error('Attempted to push protected branch', { branchName });
       return result;
     }
 
-    // Step 2: Check if remote exists
     const remoteUrl = await getRemoteUrl(remoteName, config.workingDir);
     if (!remoteUrl) {
       result.error = `Remote "${remoteName}" does not exist`;
@@ -446,9 +420,8 @@ export async function pushBranch(
 
     result.remoteUrl = remoteUrl;
 
-    // Step 3: Push with upstream tracking
     logger.info('Pushing branch to remote', { branchName, remoteName, remoteUrl });
-    await execAsync(`git push -u "${remoteName}" "${branchName}"`, { cwd: config.workingDir });
+    await execFileAsync('git', ['push', '-u', remoteName, branchName], { cwd: config.workingDir });
 
     result.trackingBranch = `${remoteName}/${branchName}`;
     result.success = true;
@@ -458,7 +431,6 @@ export async function pushBranch(
       trackingBranch: result.trackingBranch,
     });
 
-    // Step 4: Update branch metadata
     await updateBranchMetadata(
       config,
       {
@@ -487,10 +459,6 @@ export async function pushBranch(
 
   return result;
 }
-
-// ============================================================================
-// Branch Status
-// ============================================================================
 
 /**
  * Get current branch sync status
@@ -539,10 +507,6 @@ export async function getBranchSyncStatus(
 
   return status;
 }
-
-// ============================================================================
-// Metadata Persistence
-// ============================================================================
 
 /**
  * Get path to branch metadata file
@@ -655,10 +619,6 @@ export async function loadBranchMetadata(config: BranchConfig): Promise<BranchMe
   }
 }
 
-// ============================================================================
-// Safe Commit Operations
-// ============================================================================
-
 /**
  * Create a safe commit with automatic metadata tagging
  */
@@ -687,7 +647,7 @@ export async function createSafeCommit(
     // Create commit with metadata tags
     const commitMessage = `${message}\n\n[task_id: ${taskId}]\n[feature_id: ${config.featureId}]`;
 
-    await execAsync(`git commit -m "${commitMessage.replace(/"/g, '\\"')}"`, {
+    await execFileAsync('git', ['commit', '-m', commitMessage], {
       cwd: config.workingDir,
     });
 

@@ -4,18 +4,12 @@
  * Extracted from researchCoordinator.ts — contains all unknown-detection
  * logic: pattern matching, text scanning, metadata extraction, and
  * context-file heuristic scanning.
- *
- * Implements FR-6, FR-7 detection requirements.
  */
 
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 import type { ResearchSource } from '../core/models/ResearchTask';
 import type { ContextDocument } from '../core/models/ContextDocument';
-
-// ============================================================================
-// Internal Types
-// ============================================================================
 
 /**
  * Manual unknown input accepted by detection helpers
@@ -28,6 +22,7 @@ interface ManualUnknownObject {
   /** Custom sources */
   sources?: ResearchSource[];
   /** Intentional: manual unknown metadata varies by detection source */
+  // eslint-disable-next-line @typescript-eslint/no-restricted-types -- intentional: manual unknown metadata varies by detection source
   metadata?: Record<string, unknown>;
 }
 
@@ -38,6 +33,7 @@ export interface UnknownDetectionHint {
   objectives: string[];
   sources: ResearchSource[];
   /** Intentional: detection hint metadata varies by origin type */
+  // eslint-disable-next-line @typescript-eslint/no-restricted-types -- intentional: detection hint metadata varies by origin type
   metadata?: Record<string, unknown>;
 }
 
@@ -56,10 +52,6 @@ export interface UnknownOrigin {
   source: ResearchSource;
   filePath?: string;
 }
-
-// ============================================================================
-// Constants
-// ============================================================================
 
 export const DEFAULT_CONTEXT_FILE_SCAN_LIMIT = 12;
 export const DEFAULT_MAX_UNKNOWN_PER_SOURCE = 5;
@@ -122,10 +114,6 @@ export const DETECTION_PATTERNS: DetectionPattern[] = [
     reason: 'Line asks for clarification or missing details',
   },
 ];
-
-// ============================================================================
-// Detection Helper Functions
-// ============================================================================
 
 /**
  * Determine if file path likely contains text content
@@ -249,6 +237,7 @@ export async function readContextFile(
  * Convert metadata unknown entries into detection hints
  */
 export function extractUnknownsFromMetadata(
+  // eslint-disable-next-line @typescript-eslint/no-restricted-types -- intentional: metadata parameter accepts arbitrary key-value context
   metadata?: Record<string, unknown> | Readonly<Record<string, unknown>>
 ): UnknownDetectionHint[] {
   if (!metadata) {

@@ -10,13 +10,10 @@ import { execSync } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
 import type { StructuredLogger } from '../telemetry/logger';
 import type { RepoConfig } from '../core/config/RepoConfig';
-import { createLinearAdapter, type IssueSnapshot } from '../adapters/linear/LinearAdapter';
+import type { IssueSnapshot } from '../adapters/linear/LinearAdapterTypes';
+import { loadLinearIssue } from '../workflows/linearIssueLoader.js';
 import { CliError, CliErrorCode, formatErrorMessage } from './utils/cliErrors';
 import { getErrorMessage } from '../utils/errors.js';
-
-// ============================================================================
-// Types
-// ============================================================================
 
 export type StartFlags = {
   prompt?: string;
@@ -27,10 +24,6 @@ export type StartFlags = {
   'max-parallel'?: number;
   'skip-execution': boolean;
 };
-
-// ============================================================================
-// Feature Identity Helpers
-// ============================================================================
 
 export function resolveFeatureTitle(flags: StartFlags): string {
   if (flags.prompt) {
@@ -65,10 +58,6 @@ export function generateFeatureId(): string {
   return `FEAT-${randomUUID().split('-')[0]}`;
 }
 
-// ============================================================================
-// Git Helpers
-// ============================================================================
-
 export function findGitRoot(): string {
   try {
     return execSync('git rev-parse --show-toplevel', {
@@ -93,9 +82,24 @@ export function findGitRoot(): string {
   }
 }
 
-// ============================================================================
-// Config Helpers
-// ============================================================================
+/**
+ * Get the git user email from the local git config.
+ *
+ * Returns 'unknown' if the git config is unavailable.
+ * Previously a private method in approve.ts — extracted here so it can be
+ * reused by any command that needs the current git user identity.
+ */
+export function getGitUser(): string {
+  try {
+    const email = execSync('git config user.email', {
+      encoding: 'utf-8',
+      stdio: ['pipe', 'pipe', 'pipe'],
+    }).trim();
+    return email || 'unknown';
+  } catch {
+    return 'unknown';
+  }
+}
 
 export function prdApprovalRequired(config: RepoConfig): boolean {
   if (config.governance?.approval_workflow) {
@@ -103,10 +107,6 @@ export function prdApprovalRequired(config: RepoConfig): boolean {
   }
   return config.safety.require_approval_for_prd;
 }
-
-// ============================================================================
-// Linear Integration Helpers
-// ============================================================================
 
 export async function fetchLinearIssue(
   issueId: string,
@@ -131,22 +131,14 @@ export async function fetchLinearIssue(
     );
   }
 
-  const adapter = createLinearAdapter({
-    apiKey,
-    runDir,
-    logger,
-    enablePreviewFeatures: process.env.LINEAR_ENABLE_PREVIEW === 'true',
-  });
-
   try {
-    const snapshot = await adapter.fetchIssueSnapshot(issueId);
-    logger.info('Linear issue snapshot loaded', {
-      issueId: snapshot.issue.identifier,
-      title: snapshot.issue.title,
-      commentsCount: snapshot.comments.length,
-      cached: snapshot.metadata.last_error !== undefined,
-    });
-    return snapshot;
+    return await loadLinearIssue(
+      issueId,
+      runDir,
+      logger,
+      apiKey,
+      process.env.LINEAR_ENABLE_PREVIEW === 'true'
+    );
   } catch (error) {
     logger.error('Failed to fetch Linear issue', {
       issueId,

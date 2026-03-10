@@ -51,10 +51,8 @@ export class LinearAdapter {
   }
 }
 
-// Factory function for testability
-export function createLinearAdapter(config: LinearAdapterConfig): LinearAdapter {
-  return new LinearAdapter(config);
-}
+// Direct instantiation
+const adapter = new LinearAdapter(config);
 ```
 
 **Key patterns:**
@@ -62,7 +60,8 @@ export function createLinearAdapter(config: LinearAdapterConfig): LinearAdapter 
 - Config object with optional fields (default injection)
 - Logger injection (testability)
 - Internal client initialization in constructor
-- Factory function for ease of testing and dependency injection
+- Direct class instantiation as the default construction pattern
+- Optional factory wrappers only for backwards compatibility at integration boundaries
 
 ### 1.2 Proposed CodeMachineCLIAdapter Pattern
 

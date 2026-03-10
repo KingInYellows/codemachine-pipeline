@@ -4,9 +4,6 @@
  * Pure functions for extracting structured data from PRD markdown, deriving
  * constraints, file globs, and detecting unknowns. Extracted from specComposer.ts.
  *
- * Implements:
- * - FR-10 (Specification Authoring): PRD section extraction and constraint derivation
- * - FR-9 (Traceability): File glob and reference tracking
  */
 
 import * as path from 'node:path';

@@ -36,7 +36,7 @@ describe('validate command', () => {
         expect(true).toBe(false);
       } catch (error: unknown) {
         if (error && typeof error === 'object' && 'status' in error) {
-          expect(error.status).toBe(1);
+          expect(error.status).toBe(10);
         }
       }
     });
@@ -234,7 +234,7 @@ describe('validate command', () => {
   });
 
   describe('exit codes', () => {
-    test('returns exit code 1 when no feature exists', () => {
+    test('returns exit code 10 when no feature exists', () => {
       execSync(`node ${binPath} init`, { cwd: testDir, stdio: 'pipe' });
 
       try {
@@ -245,7 +245,7 @@ describe('validate command', () => {
         expect(true).toBe(false);
       } catch (error: unknown) {
         if (error && typeof error === 'object' && 'status' in error) {
-          expect(error.status).toBe(1);
+          expect(error.status).toBe(10);
         }
       }
     });

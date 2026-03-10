@@ -127,7 +127,6 @@ export default class Health extends Command {
     const runsDir = path.resolve(process.cwd(), '.codepipe', 'runs');
 
     try {
-      // Ensure directory exists
       if (!fs.existsSync(runsDir)) {
         fs.mkdirSync(runsDir, { recursive: true });
       }

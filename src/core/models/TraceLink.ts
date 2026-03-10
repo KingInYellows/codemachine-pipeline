@@ -6,7 +6,6 @@ import { createModelParser } from './modelParser.js';
  *
  * Connects PRD goals to spec requirements, ExecutionTasks, and resulting diffs for audit.
  *
- * Implements ADR-7 (Validation Policy): Zod-based validation
  * Used by CLI commands: trace, audit, status
  */
 

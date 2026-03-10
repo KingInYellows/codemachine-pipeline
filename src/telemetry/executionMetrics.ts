@@ -23,10 +23,6 @@ import { getErrorMessage } from '../utils/errors.js';
 import { type ExecutionTaskType } from '../core/models/ExecutionTask.js';
 export type { ExecutionTaskType } from '../core/models/ExecutionTask.js';
 
-// ============================================================================
-// Types & Interfaces
-// ============================================================================
-
 /**
  * Execution task status
  */
@@ -84,10 +80,6 @@ export interface ExecutionMetricsOptions {
   logger?: LoggerInterface;
 }
 
-// ============================================================================
-// Standard Execution Metric Names
-// ============================================================================
-
 /**
  * Standard metric names for execution engine telemetry
  */
@@ -136,10 +128,6 @@ const LINE_COUNT_BUCKETS = [10, 50, 100, 250, 500, 1000, 2500, 5000, 10000];
  * Histogram buckets for validation durations (seconds)
  */
 const VALIDATION_DURATION_BUCKETS = [0.1, 0.5, 1, 2.5, 5, 10, 30, 60, 120];
-
-// ============================================================================
-// Execution Metrics Helper
-// ============================================================================
 
 /**
  * Specialized metrics helper for execution engine instrumentation
@@ -492,10 +480,6 @@ export class ExecutionMetricsHelper {
     }
   }
 }
-
-// ============================================================================
-// Factory Functions
-// ============================================================================
 
 /**
  * Create execution metrics helper

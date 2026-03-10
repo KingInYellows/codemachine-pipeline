@@ -2,18 +2,18 @@
  * PR Reviewers Command
  *
  * Request reviewers for a pull request
- *
- * Implements:
- * - FR-15: PR automation
- * - Section 2: Communication Patterns (PR orchestration, reviewer assignment)
- * - Section 3.10.4: `codepipe pr reviewers` command flow
  */
 
 import { Command, Flags } from '@oclif/core';
 import { createRunMetricsCollector } from '../../../telemetry/metrics';
 import { createRunTraceManager, withSpan } from '../../../telemetry/traces';
 import { flushTelemetrySuccess, flushTelemetryError } from '../../utils/telemetryLifecycle';
-import { resolveRunDirectorySettings, selectFeatureId } from '../../utils/runDirectory';
+import {
+  resolveRunDirectorySettings,
+  selectFeatureId,
+  requireFeatureId,
+  requireConfig,
+} from '../../utils/runDirectory';
 import {
   loadPRContext,
   getPRAdapter,
@@ -23,7 +23,13 @@ import {
   PRExitCode,
   type PRMetadata,
 } from '../../pr/shared';
-import { setJsonOutputMode } from '../../utils/cliErrors';
+import {
+  CliError,
+  CliErrorCode,
+  setJsonOutputMode,
+  rethrowIfOclifError,
+} from '../../utils/cliErrors';
+import { parseReviewerList } from '../../pr/shared';
 
 type ReviewersFlags = {
   feature?: string;
@@ -77,21 +83,11 @@ export default class PRReviewers extends Command {
     try {
       const settings = await resolveRunDirectorySettings();
       const featureId = await selectFeatureId(settings.baseDir, typedFlags.feature);
-
-      if (!featureId) {
-        this.error('No feature run directory found. Run "codepipe start" first.', {
-          exit: PRExitCode.VALIDATION_ERROR,
-        });
-      }
-
-      if (typedFlags.feature && featureId !== typedFlags.feature) {
-        this.error(`Feature run directory not found: ${typedFlags.feature}`, {
-          exit: PRExitCode.VALIDATION_ERROR,
-        });
-      }
+      requireFeatureId(featureId, typedFlags.feature);
+      const config = requireConfig(settings);
 
       // Load PR context
-      const context = await loadPRContext(settings.baseDir, featureId, settings.config!, false);
+      const context = await loadPRContext(settings.baseDir, featureId, config, false);
 
       const { logger, runDir, prMetadata } = context;
       const metrics = createRunMetricsCollector(runDir, featureId);
@@ -115,12 +111,7 @@ export default class PRReviewers extends Command {
         }
 
         // Parse reviewers to add
-        const reviewersToAdd = typedFlags.add
-          ? typedFlags.add
-              .split(',')
-              .map((r) => r.trim())
-              .filter((r) => r.length > 0)
-          : [];
+        const reviewersToAdd = typedFlags.add ? parseReviewerList(typedFlags.add) : [];
 
         if (reviewersToAdd.length === 0) {
           this.error('No reviewers specified. Use --add flag with comma-separated usernames.', {
@@ -222,9 +213,14 @@ export default class PRReviewers extends Command {
         throw error;
       }
     } catch (error) {
-      // Re-throw oclif errors to preserve exit codes
-      if (error && typeof error === 'object' && 'oclif' in error) {
-        throw error;
+      rethrowIfOclifError(error);
+
+      if (error instanceof CliError) {
+        const exitCode =
+          error.code === CliErrorCode.RUN_DIR_NOT_FOUND
+            ? PRExitCode.VALIDATION_ERROR
+            : error.exitCode;
+        this.error(error.message, { exit: exitCode });
       }
 
       if (error instanceof Error) {

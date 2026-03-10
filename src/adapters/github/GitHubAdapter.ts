@@ -12,15 +12,12 @@
  * - Logging with structured telemetry
  * - OpenAPI spec generation for future remote endpoints
  *
- * Implements:
- * - Section 2.1: Key Components - GitHub Adapter
- * - IR-1..IR-7: Integration requirements
- * - FR-15: PR automation
  */
 
-import { HttpClient, Provider, ErrorType } from '../http/client';
+import { HttpClient, Provider } from '../http/client';
 import type { HttpClientConfig } from '../http/client';
 import { serializeError, createErrorNormalizer, AdapterError } from '../../utils/errors';
+import { ErrorType } from '../../core/sharedTypes';
 import { createLogger, LogLevel, type LoggerInterface } from '../../telemetry/logger';
 import type {
   GitHubAdapterConfig,
@@ -51,10 +48,6 @@ export type {
   CreateBranchParams,
 } from './GitHubAdapterTypes.js';
 
-// ============================================================================
-// GraphQL Mutations
-// ============================================================================
-
 const ENABLE_AUTO_MERGE_MUTATION = `
   mutation EnableAutoMerge($pullRequestId: ID!, $mergeMethod: PullRequestMergeMethod!) {
     enablePullRequestAutoMerge(input: {
@@ -83,9 +76,34 @@ const DISABLE_AUTO_MERGE_MUTATION = `
   }
 ` as const;
 
-// ============================================================================
-// GitHub Adapter
-// ============================================================================
+/** GitHub usernames and organizations use alphanumerics with single hyphen or underscore separators. */
+const GITHUB_OWNER_RE = /^[a-zA-Z0-9]+(?:[-_][a-zA-Z0-9]+)*$/;
+/** Repository names allow dot-prefixed repos like `.github` but must remain a single safe path segment. */
+const GITHUB_REPO_RE = /^[a-zA-Z0-9._][a-zA-Z0-9._-]*$/;
+
+/**
+ * Configuration for the {@link GitHubAdapter.withLogging} wrapper.
+ *
+ * Controls optional entry, success, and error logging around an async
+ * operation while normalizing thrown errors through the adapter's
+ * error taxonomy.
+ */
+interface WithLoggingConfig<T> {
+  /** Method name forwarded to {@link createErrorNormalizer} on failure */
+  operation: string;
+  /** Message logged at `error` level when the wrapped function rejects */
+  errorMessage: string;
+  /** Extra context merged into the error log entry */
+  errorContext?: Record<string, unknown>;
+  /** If provided, logged at `info` level *before* `fn()` executes */
+  entryMessage?: string;
+  /** Extra context merged into the entry log entry */
+  entryContext?: Record<string, unknown>;
+  /** If provided, logged at `info` level *after* `fn()` resolves */
+  successMessage?: string;
+  /** Derives extra context from the resolved value for the success log */
+  successContext?: (result: T) => Record<string, unknown>;
+}
 
 /**
  * GitHub adapter for repository operations
@@ -97,8 +115,8 @@ export class GitHubAdapter {
   private readonly logger: LoggerInterface;
 
   constructor(config: GitHubAdapterConfig) {
-    this.owner = config.owner;
-    this.repo = config.repo;
+    this.owner = GitHubAdapter.validateName(config.owner, 'owner');
+    this.repo = GitHubAdapter.validateName(config.repo, 'repo');
     this.logger =
       config.logger ??
       createLogger({ component: 'github-adapter', minLevel: LogLevel.DEBUG, mirrorToStderr: true });
@@ -109,6 +127,7 @@ export class GitHubAdapter {
       baseUrl,
       provider: Provider.GITHUB,
       token: config.token,
+      ...(config.apiVersion !== undefined ? { apiVersion: config.apiVersion } : {}),
       maxRetries: config.maxRetries ?? 3,
       logger: this.logger,
     };
@@ -130,236 +149,248 @@ export class GitHubAdapter {
     });
   }
 
+  private static validateName(value: string, label: 'owner' | 'repo'): string {
+    if (!value) {
+      throw new GitHubAdapterError(
+        `Invalid GitHub ${label}: "${value}" — cannot be empty`,
+        ErrorType.PERMANENT
+      );
+    }
+
+    if (label === 'owner') {
+      if (!GITHUB_OWNER_RE.test(value)) {
+        throw new GitHubAdapterError(
+          `Invalid GitHub owner: "${value}" — must contain only alphanumeric characters or single hyphens`,
+          ErrorType.PERMANENT
+        );
+      }
+      return value;
+    }
+
+    if (!GITHUB_REPO_RE.test(value) || value === '.' || value === '..') {
+      throw new GitHubAdapterError(
+        `Invalid GitHub repo: "${value}" — must be a single safe path segment`,
+        ErrorType.PERMANENT
+      );
+    }
+
+    if (value.endsWith('.') || value.toLowerCase().endsWith('.git')) {
+      throw new GitHubAdapterError(
+        `Invalid GitHub repo: "${value}" — cannot end with "." or ".git"`,
+        ErrorType.PERMANENT
+      );
+    }
+
+    return value;
+  }
+
+  private static validatePullNumber(value: number): void {
+    if (!Number.isInteger(value) || value <= 0) {
+      throw new GitHubAdapterError(
+        `Invalid pull request number: ${String(value)} — must be a positive integer`,
+        ErrorType.PERMANENT
+      );
+    }
+  }
+
   /**
    * Get repository metadata
    */
   async getRepository(): Promise<RepositoryInfo> {
-    this.logger.info('Fetching repository metadata', {
-      owner: this.owner,
-      repo: this.repo,
-    });
+    return this.withLogging(
+      {
+        operation: 'getRepository',
+        errorMessage: 'Failed to fetch repository metadata',
+        entryMessage: 'Fetching repository metadata',
+        entryContext: { owner: this.owner, repo: this.repo },
+      },
+      async () => {
+        const response = await this.client.get<RepositoryInfo>(
+          `/repos/${this.owner}/${this.repo}`,
+          {
+            metadata: { operation: 'getRepository' },
+          }
+        );
 
-    try {
-      const response = await this.client.get<RepositoryInfo>(`/repos/${this.owner}/${this.repo}`, {
-        metadata: { operation: 'getRepository' },
-      });
-
-      this.logger.debug('Repository metadata fetched', {
-        repo: response.data.full_name,
-        default_branch: response.data.default_branch,
-      });
-
-      return response.data;
-    } catch (error) {
-      this.logger.error('Failed to fetch repository metadata', {
-        error: serializeError(error),
-      });
-      throw this.normalizeError(error, 'getRepository');
-    }
+        return response.data;
+      }
+    );
   }
 
   /**
    * Create a new branch from a specific commit
    */
   async createBranch(params: CreateBranchParams): Promise<GitReference> {
-    this.logger.info('Creating branch', {
-      branch: params.branch,
-      sha: params.sha,
-    });
+    return this.withLogging(
+      {
+        operation: 'createBranch',
+        errorMessage: 'Failed to create branch',
+        errorContext: { branch: params.branch },
+      },
+      async () => {
+        const response = await this.client.post<GitReference>(
+          `/repos/${this.owner}/${this.repo}/git/refs`,
+          {
+            ref: `refs/heads/${params.branch}`,
+            sha: params.sha,
+          },
+          {
+            metadata: { operation: 'createBranch', branch: params.branch },
+          }
+        );
 
-    try {
-      const response = await this.client.post<GitReference>(
-        `/repos/${this.owner}/${this.repo}/git/refs`,
-        {
-          ref: `refs/heads/${params.branch}`,
-          sha: params.sha,
-        },
-        {
-          metadata: { operation: 'createBranch', branch: params.branch },
-        }
-      );
-
-      this.logger.info('Branch created successfully', {
-        branch: params.branch,
-        ref: response.data.ref,
-      });
-
-      return response.data;
-    } catch (error) {
-      this.logger.error('Failed to create branch', {
-        branch: params.branch,
-        error: serializeError(error),
-      });
-      throw this.normalizeError(error, 'createBranch');
-    }
+        return response.data;
+      }
+    );
   }
 
   /**
    * Get a specific branch reference
    */
   async getBranch(branch: string): Promise<GitReference> {
-    this.logger.debug('Fetching branch reference', { branch });
+    return this.withLogging(
+      {
+        operation: 'getBranch',
+        errorMessage: 'Failed to fetch branch reference',
+        errorContext: { branch },
+      },
+      async () => {
+        const response = await this.client.get<GitReference>(
+          `/repos/${this.owner}/${this.repo}/git/ref/heads/${branch.split('/').map(encodeURIComponent).join('/')}`,
+          {
+            metadata: { operation: 'getBranch', branch },
+          }
+        );
 
-    try {
-      const response = await this.client.get<GitReference>(
-        `/repos/${this.owner}/${this.repo}/git/ref/heads/${branch.split('/').map(encodeURIComponent).join('/')}`,
-        {
-          metadata: { operation: 'getBranch', branch },
-        }
-      );
-
-      return response.data;
-    } catch (error) {
-      this.logger.error('Failed to fetch branch reference', {
-        branch,
-        error: serializeError(error),
-      });
-      throw this.normalizeError(error, 'getBranch');
-    }
+        return response.data;
+      }
+    );
   }
 
   /**
    * Create a pull request
    */
   async createPullRequest(params: CreatePullRequestParams): Promise<PullRequest> {
-    this.logger.info('Creating pull request', {
-      title: params.title,
-      head: params.head,
-      base: params.base,
-      draft: params.draft,
-    });
-
-    try {
-      const response = await this.client.post<PullRequest>(
-        `/repos/${this.owner}/${this.repo}/pulls`,
-        {
-          title: params.title,
-          body: params.body,
-          head: params.head,
-          base: params.base,
-          draft: params.draft ?? false,
-          maintainer_can_modify: params.maintainer_can_modify ?? true,
-        },
-        {
-          metadata: {
-            operation: 'createPullRequest',
+    return this.withLogging(
+      {
+        operation: 'createPullRequest',
+        errorMessage: 'Failed to create pull request',
+        errorContext: { title: params.title },
+        successMessage: 'Pull request created successfully',
+        successContext: (result) => ({
+          pr_number: result.number,
+          html_url: result.html_url,
+        }),
+      },
+      async () => {
+        const response = await this.client.post<PullRequest>(
+          `/repos/${this.owner}/${this.repo}/pulls`,
+          {
+            title: params.title,
+            body: params.body,
             head: params.head,
             base: params.base,
+            draft: params.draft ?? false,
+            maintainer_can_modify: params.maintainer_can_modify ?? true,
           },
-        }
-      );
+          {
+            metadata: {
+              operation: 'createPullRequest',
+              head: params.head,
+              base: params.base,
+            },
+          }
+        );
 
-      this.logger.info('Pull request created successfully', {
-        pr_number: response.data.number,
-        html_url: response.data.html_url,
-      });
-
-      return response.data;
-    } catch (error) {
-      this.logger.error('Failed to create pull request', {
-        title: params.title,
-        error: serializeError(error),
-      });
-      throw this.normalizeError(error, 'createPullRequest');
-    }
+        return response.data;
+      }
+    );
   }
 
   /**
    * Get pull request details
    */
   async getPullRequest(pull_number: number): Promise<PullRequest> {
-    this.logger.debug('Fetching pull request', { pull_number });
+    GitHubAdapter.validatePullNumber(pull_number);
+    return this.withLogging(
+      {
+        operation: 'getPullRequest',
+        errorMessage: 'Failed to fetch pull request',
+        errorContext: { pull_number },
+      },
+      async () => {
+        const response = await this.client.get<PullRequest>(
+          `/repos/${this.owner}/${this.repo}/pulls/${pull_number}`,
+          {
+            metadata: { operation: 'getPullRequest', pull_number },
+          }
+        );
 
-    try {
-      const response = await this.client.get<PullRequest>(
-        `/repos/${this.owner}/${this.repo}/pulls/${pull_number}`,
-        {
-          metadata: { operation: 'getPullRequest', pull_number },
-        }
-      );
-
-      return response.data;
-    } catch (error) {
-      this.logger.error('Failed to fetch pull request', {
-        pull_number,
-        error: serializeError(error),
-      });
-      throw this.normalizeError(error, 'getPullRequest');
-    }
+        return response.data;
+      }
+    );
   }
 
   /**
    * Request reviewers for a pull request
    */
   async requestReviewers(params: RequestReviewersParams): Promise<PullRequest> {
-    this.logger.info('Requesting reviewers', {
-      pull_number: params.pull_number,
-      reviewers: params.reviewers,
-      team_reviewers: params.team_reviewers,
-    });
-
-    try {
-      const payload: { reviewers?: string[]; team_reviewers?: string[] } = {};
-      if (params.reviewers && params.reviewers.length > 0) {
-        payload.reviewers = params.reviewers;
-      }
-      if (params.team_reviewers && params.team_reviewers.length > 0) {
-        payload.team_reviewers = params.team_reviewers;
-      }
-
-      const response = await this.client.post<PullRequest>(
-        `/repos/${this.owner}/${this.repo}/pulls/${params.pull_number}/requested_reviewers`,
-        payload,
-        {
-          metadata: {
-            operation: 'requestReviewers',
-            pull_number: params.pull_number,
-          },
+    GitHubAdapter.validatePullNumber(params.pull_number);
+    return this.withLogging(
+      {
+        operation: 'requestReviewers',
+        errorMessage: 'Failed to request reviewers',
+        errorContext: { pull_number: params.pull_number },
+        successMessage: 'Reviewers requested successfully',
+        successContext: () => ({ pull_number: params.pull_number }),
+      },
+      async () => {
+        const payload: { reviewers?: string[]; team_reviewers?: string[] } = {};
+        if (params.reviewers && params.reviewers.length > 0) {
+          payload.reviewers = params.reviewers;
         }
-      );
+        if (params.team_reviewers && params.team_reviewers.length > 0) {
+          payload.team_reviewers = params.team_reviewers;
+        }
 
-      this.logger.info('Reviewers requested successfully', {
-        pull_number: params.pull_number,
-      });
+        const response = await this.client.post<PullRequest>(
+          `/repos/${this.owner}/${this.repo}/pulls/${params.pull_number}/requested_reviewers`,
+          payload,
+          {
+            metadata: {
+              operation: 'requestReviewers',
+              pull_number: params.pull_number,
+            },
+          }
+        );
 
-      return response.data;
-    } catch (error) {
-      this.logger.error('Failed to request reviewers', {
-        pull_number: params.pull_number,
-        error: serializeError(error),
-      });
-      throw this.normalizeError(error, 'requestReviewers');
-    }
+        return response.data;
+      }
+    );
   }
 
   /**
    * Get status checks for a commit
    */
   async getStatusChecks(sha: string): Promise<StatusCheck[]> {
-    this.logger.debug('Fetching status checks', { sha });
+    return this.withLogging(
+      {
+        operation: 'getStatusChecks',
+        errorMessage: 'Failed to fetch status checks',
+        errorContext: { sha },
+      },
+      async () => {
+        // GitHub REST API v3 uses check-suites endpoint
+        const response = await this.client.get<{ check_suites: StatusCheck[] }>(
+          `/repos/${this.owner}/${this.repo}/commits/${encodeURIComponent(sha)}/check-suites`,
+          {
+            metadata: { operation: 'getStatusChecks', sha },
+          }
+        );
 
-    try {
-      // GitHub REST API v3 uses check-suites endpoint
-      const response = await this.client.get<{ check_suites: StatusCheck[] }>(
-        `/repos/${this.owner}/${this.repo}/commits/${encodeURIComponent(sha)}/check-suites`,
-        {
-          metadata: { operation: 'getStatusChecks', sha },
-        }
-      );
-
-      this.logger.debug('Status checks fetched', {
-        sha,
-        count: response.data.check_suites?.length ?? 0,
-      });
-
-      return response.data.check_suites ?? [];
-    } catch (error) {
-      this.logger.error('Failed to fetch status checks', {
-        sha,
-        error: serializeError(error),
-      });
-      throw this.normalizeError(error, 'getStatusChecks');
-    }
+        return response.data.check_suites ?? [];
+      }
+    );
   }
 
   /**
@@ -374,111 +405,108 @@ export class GitHubAdapter {
     ready: boolean;
     reasons: string[];
   }> {
-    this.logger.debug('Checking merge readiness', { pull_number });
+    GitHubAdapter.validatePullNumber(pull_number);
+    return this.withLogging(
+      {
+        operation: 'isPullRequestReadyToMerge',
+        errorMessage: 'Failed to check merge readiness',
+        errorContext: { pull_number },
+        successMessage: 'Merge readiness checked',
+        successContext: (result) => ({
+          pull_number,
+          ready: result.ready,
+          reasons: result.reasons,
+        }),
+      },
+      async () => {
+        const pr = await this.getPullRequest(pull_number);
+        const reasons: string[] = [];
 
-    try {
-      const pr = await this.getPullRequest(pull_number);
-      const reasons: string[] = [];
+        if (pr.state !== 'open') {
+          reasons.push(`PR state is ${pr.state}, expected open`);
+        }
 
-      if (pr.state !== 'open') {
-        reasons.push(`PR state is ${pr.state}, expected open`);
+        if (pr.draft) {
+          reasons.push('PR is in draft mode');
+        }
+
+        if (pr.mergeable === false) {
+          reasons.push('PR has merge conflicts');
+        }
+
+        if (pr.mergeable_state === 'blocked') {
+          reasons.push('PR is blocked by required status checks or reviews');
+        }
+
+        // Check status checks
+        const statusChecks = await this.getStatusChecks(pr.head.sha);
+        const failedChecks = statusChecks.filter(
+          (check) => check.conclusion === 'failure' || check.conclusion === 'cancelled'
+        );
+
+        if (failedChecks.length > 0) {
+          reasons.push(`${failedChecks.length} status check(s) failed`);
+        }
+
+        const ready = reasons.length === 0;
+
+        return { ready, reasons };
       }
-
-      if (pr.draft) {
-        reasons.push('PR is in draft mode');
-      }
-
-      if (pr.mergeable === false) {
-        reasons.push('PR has merge conflicts');
-      }
-
-      if (pr.mergeable_state === 'blocked') {
-        reasons.push('PR is blocked by required status checks or reviews');
-      }
-
-      // Check status checks
-      const statusChecks = await this.getStatusChecks(pr.head.sha);
-      const failedChecks = statusChecks.filter(
-        (check) => check.conclusion === 'failure' || check.conclusion === 'cancelled'
-      );
-
-      if (failedChecks.length > 0) {
-        reasons.push(`${failedChecks.length} status check(s) failed`);
-      }
-
-      const ready = reasons.length === 0;
-
-      this.logger.info('Merge readiness checked', {
-        pull_number,
-        ready,
-        reasons,
-      });
-
-      return { ready, reasons };
-    } catch (error) {
-      this.logger.error('Failed to check merge readiness', {
-        pull_number,
-        error: serializeError(error),
-      });
-      throw this.normalizeError(error, 'isPullRequestReadyToMerge');
-    }
+    );
   }
 
   /**
    * Merge a pull request
    */
   async mergePullRequest(params: MergePullRequestParams): Promise<MergeResult> {
-    this.logger.info('Merging pull request', {
-      pull_number: params.pull_number,
-      merge_method: params.merge_method,
-    });
+    GitHubAdapter.validatePullNumber(params.pull_number);
+    return this.withLogging(
+      {
+        operation: 'mergePullRequest',
+        errorMessage: 'Failed to merge pull request',
+        errorContext: { pull_number: params.pull_number },
+        successMessage: 'Pull request merged successfully',
+        successContext: (result) => ({
+          pull_number: params.pull_number,
+          sha: result.sha,
+        }),
+      },
+      async () => {
+        const payload: {
+          merge_method: string;
+          commit_title?: string;
+          commit_message?: string;
+          sha?: string;
+        } = {
+          merge_method: params.merge_method ?? 'merge',
+        };
 
-    try {
-      const payload: {
-        merge_method: string;
-        commit_title?: string;
-        commit_message?: string;
-        sha?: string;
-      } = {
-        merge_method: params.merge_method ?? 'merge',
-      };
-
-      if (params.commit_title) {
-        payload.commit_title = params.commit_title;
-      }
-
-      if (params.commit_message) {
-        payload.commit_message = params.commit_message;
-      }
-
-      if (params.sha) {
-        payload.sha = params.sha;
-      }
-
-      const response = await this.client.put<MergeResult>(
-        `/repos/${this.owner}/${this.repo}/pulls/${params.pull_number}/merge`,
-        payload,
-        {
-          metadata: {
-            operation: 'mergePullRequest',
-            pull_number: params.pull_number,
-          },
+        if (params.commit_title) {
+          payload.commit_title = params.commit_title;
         }
-      );
 
-      this.logger.info('Pull request merged successfully', {
-        pull_number: params.pull_number,
-        sha: response.data.sha,
-      });
+        if (params.commit_message) {
+          payload.commit_message = params.commit_message;
+        }
 
-      return response.data;
-    } catch (error) {
-      this.logger.error('Failed to merge pull request', {
-        pull_number: params.pull_number,
-        error: serializeError(error),
-      });
-      throw this.normalizeError(error, 'mergePullRequest');
-    }
+        if (params.sha) {
+          payload.sha = params.sha;
+        }
+
+        const response = await this.client.put<MergeResult>(
+          `/repos/${this.owner}/${this.repo}/pulls/${params.pull_number}/merge`,
+          payload,
+          {
+            metadata: {
+              operation: 'mergePullRequest',
+              pull_number: params.pull_number,
+            },
+          }
+        );
+
+        return response.data;
+      }
+    );
   }
 
   /**
@@ -490,25 +518,24 @@ export class GitHubAdapter {
     pull_number: number,
     merge_method?: 'MERGE' | 'SQUASH' | 'REBASE'
   ): Promise<void> {
-    this.logger.info('Enabling auto-merge', { pull_number, merge_method });
+    GitHubAdapter.validatePullNumber(pull_number);
+    return this.withLogging(
+      {
+        operation: 'enableAutoMerge',
+        errorMessage: 'Failed to enable auto-merge',
+        errorContext: { pull_number },
+      },
+      async () => {
+        const prNodeId = await this.getPRNodeId(pull_number);
 
-    try {
-      const prNodeId = await this.getPRNodeId(pull_number);
-
-      await this.executeGraphQLMutation(
-        ENABLE_AUTO_MERGE_MUTATION,
-        { pullRequestId: prNodeId, mergeMethod: merge_method ?? 'MERGE' },
-        'enableAutoMerge',
-        pull_number
-      );
-      this.logger.info('Auto-merge enabled successfully', { pull_number });
-    } catch (error) {
-      this.logger.error('Failed to enable auto-merge', {
-        pull_number,
-        error: serializeError(error),
-      });
-      throw this.normalizeError(error, 'enableAutoMerge');
-    }
+        await this.executeGraphQLMutation(
+          ENABLE_AUTO_MERGE_MUTATION,
+          { pullRequestId: prNodeId, mergeMethod: merge_method ?? 'MERGE' },
+          'enableAutoMerge',
+          pull_number
+        );
+      }
+    );
   }
 
   /**
@@ -517,25 +544,26 @@ export class GitHubAdapter {
    * Note: This uses the GraphQL API wrapped in REST-like envelope
    */
   async disableAutoMerge(pull_number: number): Promise<void> {
-    this.logger.info('Disabling auto-merge', { pull_number });
+    GitHubAdapter.validatePullNumber(pull_number);
+    return this.withLogging(
+      {
+        operation: 'disableAutoMerge',
+        errorMessage: 'Failed to disable auto-merge',
+        errorContext: { pull_number },
+        successMessage: 'Auto-merge disabled successfully',
+        successContext: () => ({ pull_number }),
+      },
+      async () => {
+        const prNodeId = await this.getPRNodeId(pull_number);
 
-    try {
-      const prNodeId = await this.getPRNodeId(pull_number);
-
-      await this.executeGraphQLMutation(
-        DISABLE_AUTO_MERGE_MUTATION,
-        { pullRequestId: prNodeId },
-        'disableAutoMerge',
-        pull_number
-      );
-      this.logger.info('Auto-merge disabled successfully', { pull_number });
-    } catch (error) {
-      this.logger.error('Failed to disable auto-merge', {
-        pull_number,
-        error: serializeError(error),
-      });
-      throw this.normalizeError(error, 'disableAutoMerge');
-    }
+        await this.executeGraphQLMutation(
+          DISABLE_AUTO_MERGE_MUTATION,
+          { pullRequestId: prNodeId },
+          'disableAutoMerge',
+          pull_number
+        );
+      }
+    );
   }
 
   private async getPRNodeId(pull_number: number): Promise<string> {
@@ -549,6 +577,7 @@ export class GitHubAdapter {
 
   private async executeGraphQLMutation(
     query: string,
+    // eslint-disable-next-line @typescript-eslint/no-restricted-types -- intentional: GraphQL mutation variables are open-ended by nature
     variables: Record<string, unknown>,
     operation: string,
     pull_number: number
@@ -564,70 +593,75 @@ export class GitHubAdapter {
    * Trigger a workflow dispatch
    */
   async triggerWorkflow(params: WorkflowDispatchParams): Promise<void> {
-    this.logger.info('Triggering workflow dispatch', {
-      workflow_id: params.workflow_id,
-      ref: params.ref,
-    });
+    return this.withLogging(
+      {
+        operation: 'triggerWorkflow',
+        errorMessage: 'Failed to trigger workflow dispatch',
+        errorContext: { workflow_id: params.workflow_id },
+        successMessage: 'Workflow dispatch triggered successfully',
+        successContext: () => ({
+          workflow_id: params.workflow_id,
+          ref: params.ref,
+        }),
+      },
+      async () => {
+        await this.client.post(
+          `/repos/${this.owner}/${this.repo}/actions/workflows/${encodeURIComponent(params.workflow_id)}/dispatches`,
+          {
+            ref: params.ref,
+            inputs: params.inputs ?? {},
+          },
+          {
+            metadata: {
+              operation: 'triggerWorkflow',
+              workflow_id: params.workflow_id,
+              ref: params.ref,
+            },
+          }
+        );
+      }
+    );
+  }
+
+  /**
+   * Execute an async operation with structured entry, success, and error
+   * logging.  Catches any thrown error, logs it with the provided context,
+   * normalizes it through the adapter error taxonomy, and re-throws.
+   */
+  private async withLogging<T>(config: WithLoggingConfig<T>, fn: () => Promise<T>): Promise<T> {
+    if (config.entryMessage) {
+      this.logger.info(config.entryMessage, config.entryContext ?? {});
+    }
 
     try {
-      await this.client.post(
-        `/repos/${this.owner}/${this.repo}/actions/workflows/${encodeURIComponent(params.workflow_id)}/dispatches`,
-        {
-          ref: params.ref,
-          inputs: params.inputs ?? {},
-        },
-        {
-          metadata: {
-            operation: 'triggerWorkflow',
-            workflow_id: params.workflow_id,
-            ref: params.ref,
-          },
-        }
-      );
+      const result = await fn();
 
-      this.logger.info('Workflow dispatch triggered successfully', {
-        workflow_id: params.workflow_id,
-        ref: params.ref,
-      });
+      if (config.successMessage) {
+        const ctx = config.successContext ? config.successContext(result) : {};
+        this.logger.info(config.successMessage, ctx);
+      }
+
+      return result;
     } catch (error) {
-      this.logger.error('Failed to trigger workflow dispatch', {
-        workflow_id: params.workflow_id,
+      this.logger.error(config.errorMessage, {
+        ...(config.errorContext ?? {}),
         error: serializeError(error),
       });
-      throw this.normalizeError(error, 'triggerWorkflow');
+      throw this.normalizeError(error, config.operation);
     }
   }
 
   private readonly normalizeError = createErrorNormalizer(GitHubAdapterError, 'GitHub');
 }
 
-// ============================================================================
-// Error Classes
-// ============================================================================
-
 /**
- * GitHub adapter error with error taxonomy
- */
-export class GitHubAdapterError extends AdapterError {
-  constructor(
-    message: string,
-    errorType: ErrorType,
-    statusCode?: number,
-    requestId?: string,
-    operation?: string
-  ) {
-    super(message, errorType, statusCode, requestId, operation);
-    this.name = 'GitHubAdapterError';
-  }
-}
-
-// ============================================================================
-// Factory Functions
-// ============================================================================
-
-/**
- * Create GitHub adapter instance
+ * Backwards-compatible factory helper retained for external/example callers.
  */
 export function createGitHubAdapter(config: GitHubAdapterConfig): GitHubAdapter {
   return new GitHubAdapter(config);
 }
+
+/**
+ * GitHub adapter error with error taxonomy
+ */
+export class GitHubAdapterError extends AdapterError {}

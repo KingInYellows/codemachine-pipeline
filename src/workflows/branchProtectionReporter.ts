@@ -4,65 +4,17 @@
  * Workflow helper that evaluates branch protection compliance and generates
  * deterministic JSON artifacts for CLI status/deploy commands.
  *
- * Implements:
- * - FR-15: Status checks mandate
- * - Section 2.1: Deployment trigger module responsibilities
- * - Task I4.T5: Branch protection intelligence integration
  */
 
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 import { z } from 'zod';
 import type { BranchProtectionCompliance } from '../adapters/github/branchProtection';
+import type { BranchProtectionReport } from '../core/models/BranchProtectionReport';
+import { validateOrThrow } from '../validation/helpers.js';
 
-// ============================================================================
-// Schemas & Types
-// ============================================================================
-
-/**
- * Branch protection report schema for persistence
- */
-export const BranchProtectionReportSchema = z.object({
-  schema_version: z.string(),
-  feature_id: z.string(),
-  branch: z.string(),
-  sha: z.string(),
-  base_sha: z.string(),
-  pull_number: z.number().optional(),
-  protected: z.boolean(),
-  compliant: z.boolean(),
-  required_checks: z.array(z.string()),
-  checks_passing: z.boolean(),
-  failing_checks: z.array(z.string()),
-  reviews_required: z.number(),
-  reviews_count: z.number(),
-  reviews_satisfied: z.boolean(),
-  up_to_date: z.boolean(),
-  stale_commit: z.boolean(),
-  allows_auto_merge: z.boolean(),
-  allows_force_push: z.boolean(),
-  blockers: z.array(z.string()),
-  evaluated_at: z.string(),
-  validation_mismatch: z
-    .object({
-      missing_in_registry: z.array(z.string()),
-      extra_in_registry: z.array(z.string()),
-      recommendations: z.array(z.string()),
-    })
-    .optional(),
-  metadata: z
-    .object({
-      owner: z.string(),
-      repo: z.string(),
-      protection_enabled: z.boolean(),
-      enforce_admins: z.boolean().optional(),
-      required_linear_history: z.boolean().optional(),
-      required_conversation_resolution: z.boolean().optional(),
-    })
-    .optional(),
-});
-
-export type BranchProtectionReport = z.infer<typeof BranchProtectionReportSchema>;
+export { BranchProtectionReportSchema } from '../core/models/BranchProtectionReport';
+export type { BranchProtectionReport } from '../core/models/BranchProtectionReport';
 
 /**
  * Summary for CLI display
@@ -100,16 +52,20 @@ export interface ValidationMismatch {
   recommendations: string[];
 }
 
-// ============================================================================
-// Constants
-// ============================================================================
+const CommandsDataSchema = z.object({
+  commands: z
+    .array(
+      z.object({
+        type: z
+          .string()
+          .regex(/^[a-zA-Z0-9_-]+$/, 'Command type must contain only safe characters'),
+        description: z.string().optional(),
+      })
+    )
+    .optional(),
+});
 
 const SCHEMA_VERSION = '1.0.0';
-const BRANCH_PROTECTION_FILE = 'branch_protection.json';
-
-// ============================================================================
-// Reporter Functions
-// ============================================================================
 
 /**
  * Generate branch protection report from compliance result
@@ -161,45 +117,6 @@ export function generateReport(
 }
 
 /**
- * Persist branch protection report to run directory
- */
-export async function persistReport(
-  runDir: string,
-  report: BranchProtectionReport
-): Promise<string> {
-  const reportPath = path.join(runDir, 'status', BRANCH_PROTECTION_FILE);
-
-  // Ensure status directory exists
-  await fs.mkdir(path.dirname(reportPath), { recursive: true });
-
-  // Validate report schema
-  const validated = BranchProtectionReportSchema.parse(report);
-
-  // Write report
-  await fs.writeFile(reportPath, JSON.stringify(validated, null, 2), 'utf-8');
-
-  return reportPath;
-}
-
-/**
- * Load branch protection report from run directory
- */
-export async function loadReport(runDir: string): Promise<BranchProtectionReport | null> {
-  const reportPath = path.join(runDir, 'status', BRANCH_PROTECTION_FILE);
-
-  try {
-    const content = await fs.readFile(reportPath, 'utf-8');
-    const data: unknown = JSON.parse(content);
-    return BranchProtectionReportSchema.parse(data);
-  } catch (error) {
-    if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
-      return null;
-    }
-    throw error;
-  }
-}
-
-/**
  * Generate summary for CLI display
  */
 export function generateSummary(report: BranchProtectionReport): BranchProtectionSummary {
@@ -238,9 +155,11 @@ export async function detectValidationMismatch(
 
   try {
     const commandsContent = await fs.readFile(validationCommandsPath, 'utf-8');
-    const commandsData = JSON.parse(commandsContent) as {
-      commands?: Array<{ type: string; description?: string }>;
-    };
+    const commandsData = validateOrThrow(
+      CommandsDataSchema,
+      JSON.parse(commandsContent),
+      'validation commands'
+    );
 
     // Map validation command types to GitHub check contexts
     // Convention: validation type maps to "validation/{type}" context
@@ -248,7 +167,6 @@ export async function detectValidationMismatch(
       registryContexts = commandsData.commands.map((cmd) => `validation/${cmd.type}`);
     }
   } catch (error) {
-    // Validation registry not found or not readable
     if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
       throw error;
     }

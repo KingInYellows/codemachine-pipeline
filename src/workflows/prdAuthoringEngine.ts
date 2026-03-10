@@ -1,43 +1,23 @@
 /**
  * PRD Authoring Engine
  *
- * Drafts Product Requirements Documents using context aggregation and research
- * outputs, supports iterative editing, records approvals, and maintains
- * traceability links to goals and specifications.
- *
- * Key features:
- * - Template-based PRD generation with variable substitution
- * - Context and research citation integration
- * - Approval workflow with SHA-256 hash tracking
- * - Iterative editing support with version history
- * - Traceability link management
- *
- * Implements:
- * - FR-4 (PRD Authoring): PRD generation and review
- * - FR-9 (Traceability): Goal → Spec mapping
- * - ADR-5 (Approval Workflow): Human-in-the-loop gates
+ * Orchestrates PRD generation from context, research, and feature metadata.
  */
 
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
-import { computeFileHash, withLock, getSubdirectoryPath } from '../persistence';
+import { withLock, getSubdirectoryPath, computeFileHash } from '../persistence';
 import type { StructuredLogger } from '../telemetry/logger';
 import type { MetricsCollector } from '../telemetry/metrics';
 import type { ContextDocument } from '../core/models/ContextDocument';
 import type { ResearchTask } from '../core/models/ResearchTask';
 import type { Feature } from '../core/models/Feature';
 import type { RepoConfig } from '../core/config/RepoConfig';
-import {
-  createApprovalRecord,
-  serializeApprovalRecord,
-  parseApprovalRecord,
-  type ApprovalRecord,
-  type ApprovalVerdict,
-} from '../core/models/ApprovalRecord';
+import type { PRDMetadata } from './prdStore';
 
-// ============================================================================
-// Types
-// ============================================================================
+// Re-export persistence types and functions for backward compatibility
+export type { PRDMetadata, RecordApprovalOptions } from './prdStore';
+export { loadPRDMetadata, isPRDApproved, getPRDApprovals, recordPRDApproval } from './prdStore';
 
 /**
  * PRD section identifiers
@@ -91,29 +71,8 @@ export interface PRDDocument {
   /** Structured sections */
   sections: Record<PRDSectionType, PRDSection>;
   /** Intentional: PRD document metadata varies by authoring context */
+  // eslint-disable-next-line @typescript-eslint/no-restricted-types -- intentional: PRD metadata varies per authoring workflow
   metadata?: Record<string, unknown>;
-}
-
-/**
- * PRD metadata persisted alongside markdown
- */
-export interface PRDMetadata {
-  /** Feature identifier */
-  featureId: string;
-  /** PRD file hash (SHA-256) */
-  prdHash: string;
-  /** Creation timestamp */
-  createdAt: string;
-  /** Last update timestamp */
-  updatedAt: string;
-  /** Approval status */
-  approvalStatus: 'pending' | 'approved' | 'rejected' | 'changes_requested';
-  /** Approval record IDs */
-  approvals: string[];
-  /** Version number */
-  version: string;
-  /** Trace identifier */
-  traceId?: string;
 }
 
 /**
@@ -162,26 +121,6 @@ export interface PRDAuthoringResult {
     warnings: string[];
   };
 }
-
-/**
- * Approval recording options
- */
-export interface RecordApprovalOptions {
-  /** Signer identifier */
-  signer: string;
-  /** Signer display name */
-  signerName?: string;
-  /** Approval verdict */
-  verdict: ApprovalVerdict;
-  /** Rationale or comments */
-  rationale?: string;
-  /** Intentional: approval metadata varies by workflow */
-  metadata?: Record<string, unknown>;
-}
-
-// ============================================================================
-// Template Utilities
-// ============================================================================
 
 /**
  * Default template path
@@ -374,10 +313,6 @@ function buildTemplateVariables(
   };
 }
 
-// ============================================================================
-// PRD Document Generation
-// ============================================================================
-
 /**
  * Draft a new PRD document
  */
@@ -395,7 +330,6 @@ export async function draftPRD(
   const now = new Date().toISOString();
   const traceId = `TRACE-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
 
-  // Step 1: Create structured PRD document
   const sections = createDefaultSections();
 
   const prdDocument: PRDDocument = {
@@ -414,7 +348,6 @@ export async function draftPRD(
     },
   };
 
-  // Step 2: Load and render template
   const template = await loadTemplate(config.templatePath);
   const variables = buildTemplateVariables(
     prdDocument,
@@ -423,7 +356,6 @@ export async function draftPRD(
   );
   const renderedMarkdown = substituteVariables(template, variables);
 
-  // Step 3: Persist PRD to run directory
   const artifactsDir = getSubdirectoryPath(config.runDir, 'artifacts');
   await fs.mkdir(artifactsDir, { recursive: true });
 
@@ -432,10 +364,8 @@ export async function draftPRD(
     await fs.writeFile(prdPath, renderedMarkdown, 'utf-8');
   });
 
-  // Step 4: Compute hash
   const prdHash = await computeFileHash(prdPath);
 
-  // Step 5: Save metadata
   const metadata: PRDMetadata = {
     featureId: config.feature.feature_id,
     prdHash,
@@ -452,7 +382,6 @@ export async function draftPRD(
     await fs.writeFile(metadataPath, JSON.stringify(metadata, null, 2), 'utf-8');
   });
 
-  // Step 6: Detect incomplete sections
   const incompleteSections: PRDSectionType[] = [];
   for (const [key, section] of Object.entries(sections)) {
     if (section.content.includes('_TODO:')) {
@@ -460,7 +389,6 @@ export async function draftPRD(
     }
   }
 
-  // Step 7: Count citations
   const totalCitations =
     Object.keys(config.contextDocument.files).length + config.researchTasks.length;
 
@@ -498,184 +426,4 @@ export async function draftPRD(
       warnings,
     },
   };
-}
-
-/**
- * Record PRD approval
- */
-export async function recordPRDApproval(
-  runDir: string,
-  featureId: string,
-  options: RecordApprovalOptions,
-  logger: StructuredLogger,
-  metrics: MetricsCollector
-): Promise<ApprovalRecord> {
-  logger.info('Recording PRD approval', {
-    featureId,
-    signer: options.signer,
-    verdict: options.verdict,
-  });
-
-  return withLock(runDir, async () => {
-    // Step 1: Load PRD metadata
-    const artifactsDir = getSubdirectoryPath(runDir, 'artifacts');
-    const metadataPath = path.join(artifactsDir, 'prd_metadata.json');
-    const prdPath = path.join(artifactsDir, 'prd.md');
-
-    let metadata: PRDMetadata;
-    try {
-      const metadataContent = await fs.readFile(metadataPath, 'utf-8');
-      const parsedMetadata = JSON.parse(metadataContent) as unknown;
-      metadata = parsedMetadata as PRDMetadata;
-    } catch (error) {
-      throw new Error(
-        `Failed to load PRD metadata: ${error instanceof Error ? error.message : 'Unknown error'}`,
-        { cause: error }
-      );
-    }
-
-    // Step 2: Verify PRD hash matches
-    const currentHash = await computeFileHash(prdPath);
-    if (currentHash !== metadata.prdHash) {
-      throw new Error(
-        `PRD content has changed since metadata was last updated. ` +
-          `Expected hash: ${metadata.prdHash}, Current hash: ${currentHash}. ` +
-          `Please regenerate PRD or update metadata.`
-      );
-    }
-
-    // Step 3: Create approval record
-    const approvalId = `APR-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
-    const approvalOptions: {
-      signerName?: string;
-      artifactHash?: string;
-      artifactPath?: string;
-      rationale?: string;
-      metadata?: Record<string, unknown>;
-    } = {
-      artifactHash: currentHash,
-      artifactPath: 'docs/prd.md',
-    };
-
-    if (options.signerName) {
-      approvalOptions.signerName = options.signerName;
-    }
-    if (options.rationale) {
-      approvalOptions.rationale = options.rationale;
-    }
-    if (options.metadata) {
-      approvalOptions.metadata = options.metadata;
-    }
-
-    const approvalRecord = createApprovalRecord(
-      approvalId,
-      featureId,
-      'prd',
-      options.verdict,
-      options.signer,
-      approvalOptions
-    );
-
-    // Step 4: Save approval record
-    const approvalsDir = path.join(runDir, 'approvals');
-    await fs.mkdir(approvalsDir, { recursive: true });
-
-    const approvalPath = path.join(approvalsDir, `${approvalId}.json`);
-    await fs.writeFile(approvalPath, serializeApprovalRecord(approvalRecord), 'utf-8');
-
-    // Step 5: Update metadata
-    metadata.approvals.push(approvalId);
-    metadata.approvalStatus =
-      options.verdict === 'approved'
-        ? 'approved'
-        : options.verdict === 'rejected'
-          ? 'rejected'
-          : 'changes_requested';
-    metadata.updatedAt = new Date().toISOString();
-
-    await fs.writeFile(metadataPath, JSON.stringify(metadata, null, 2), 'utf-8');
-
-    // Step 6: Update approvals.json in run root (if exists)
-    const approvalsIndexPath = path.join(runDir, 'approvals.json');
-    let approvalsIndex: { approvals: ApprovalRecord[] } = { approvals: [] };
-
-    try {
-      const existingContent = await fs.readFile(approvalsIndexPath, 'utf-8');
-      const parsedIndex = JSON.parse(existingContent) as unknown;
-      approvalsIndex = parsedIndex as { approvals: ApprovalRecord[] };
-    } catch {
-      // File doesn't exist yet, use empty array
-    }
-
-    approvalsIndex.approvals.push(approvalRecord);
-    await fs.writeFile(approvalsIndexPath, JSON.stringify(approvalsIndex, null, 2), 'utf-8');
-
-    logger.info('PRD approval recorded', {
-      featureId,
-      approvalId,
-      verdict: options.verdict,
-      artifactHash: currentHash,
-    });
-
-    metrics.increment('prd_approvals_recorded_total', {
-      feature_id: featureId,
-      verdict: options.verdict,
-    });
-
-    return approvalRecord;
-  });
-}
-
-/**
- * Load PRD metadata from run directory
- */
-export async function loadPRDMetadata(runDir: string): Promise<PRDMetadata | null> {
-  const artifactsDir = getSubdirectoryPath(runDir, 'artifacts');
-  const metadataPath = path.join(artifactsDir, 'prd_metadata.json');
-
-  try {
-    const content = await fs.readFile(metadataPath, 'utf-8');
-    const parsedMetadata = JSON.parse(content) as unknown;
-    return parsedMetadata as PRDMetadata;
-  } catch {
-    return null;
-  }
-}
-
-/**
- * Check if PRD is approved
- */
-export async function isPRDApproved(runDir: string): Promise<boolean> {
-  const metadata = await loadPRDMetadata(runDir);
-  return metadata?.approvalStatus === 'approved';
-}
-
-/**
- * Get PRD approval records
- */
-export async function getPRDApprovals(runDir: string): Promise<ApprovalRecord[]> {
-  const metadata = await loadPRDMetadata(runDir);
-  if (!metadata || metadata.approvals.length === 0) {
-    return [];
-  }
-
-  const approvalsDir = path.join(runDir, 'approvals');
-  const records: ApprovalRecord[] = [];
-
-  for (const approvalId of metadata.approvals) {
-    const approvalPath = path.join(approvalsDir, `${approvalId}.json`);
-
-    try {
-      const content = await fs.readFile(approvalPath, 'utf-8');
-      const parsed = parseApprovalRecord(JSON.parse(content));
-
-      if (parsed.success && parsed.data.gate_type === 'prd') {
-        records.push(parsed.data);
-      }
-    } catch {
-      // Skip invalid or missing approval files
-    }
-  }
-
-  return records;
 }

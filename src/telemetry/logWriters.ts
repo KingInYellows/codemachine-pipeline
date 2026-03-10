@@ -19,10 +19,6 @@ import { LogLevel, type StructuredLogger } from './logger';
 import type { LogContext } from '../core/sharedTypes';
 import type { DiffStats, ValidationResult, ExecutionTaskType } from './executionMetrics';
 
-// ============================================================================
-// Types & Interfaces
-// ============================================================================
-
 /**
  * Execution log writer options
  */
@@ -72,10 +68,6 @@ export interface ValidationContext extends TaskContext {
   /** Error types */
   error_types?: string[];
 }
-
-// ============================================================================
-// Execution Log Writer
-// ============================================================================
 
 /**
  * Specialized log writer for execution engine events
@@ -305,10 +297,6 @@ export class ExecutionLogWriter {
     await this.logger.flush();
   }
 }
-
-// ============================================================================
-// Factory Functions
-// ============================================================================
 
 /**
  * Create execution log writer

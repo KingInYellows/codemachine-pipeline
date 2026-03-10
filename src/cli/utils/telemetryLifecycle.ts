@@ -32,10 +32,15 @@ export interface TelemetryResources {
  *
  * Any extra span attributes (e.g., pr_number) must be set on commandSpan
  * BEFORE calling this function.
+ *
+ * @param exitCode Optional exit code to record in metrics (defaults to 0).
+ *   Commands that succeed with a non-zero exit code (e.g. doctor) pass this
+ *   explicitly so metrics accurately reflect the actual exit code.
  */
 export async function flushTelemetrySuccess(
   res: TelemetryResources,
-  extraLogFields?: Record<string, unknown>
+  extraLogFields?: { [key: string]: unknown },
+  exitCode = 0
 ): Promise<void> {
   const { commandName, startTime, logger, metrics, traceManager, commandSpan, runDirPath } = res;
   const duration = Date.now() - startTime;
@@ -46,14 +51,15 @@ export async function flushTelemetrySuccess(
     });
     metrics.increment(StandardMetrics.COMMAND_INVOCATIONS_TOTAL, {
       command: commandName,
-      exit_code: '0',
+      exit_code: String(exitCode),
     });
     await metrics.flush();
   }
 
   if (commandSpan) {
-    commandSpan.setAttribute('exit_code', 0);
-    commandSpan.end({ code: SpanStatusCode.OK });
+    commandSpan.setAttribute('exit_code', exitCode);
+    const statusCode = exitCode === 0 ? SpanStatusCode.OK : SpanStatusCode.ERROR;
+    commandSpan.end({ code: statusCode });
   }
 
   if (traceManager) {
@@ -79,7 +85,11 @@ export async function flushTelemetrySuccess(
  * Records error metrics, ends the command span with ERROR status, flushes
  * traces, and flushes the logger.
  */
-export async function flushTelemetryError(res: TelemetryResources, error: unknown): Promise<void> {
+export async function flushTelemetryError(
+  res: TelemetryResources,
+  error: unknown,
+  exitCode = 1
+): Promise<void> {
   const { commandName, startTime, logger, metrics, traceManager, commandSpan, runDirPath } = res;
   const duration = Date.now() - startTime;
 
@@ -89,13 +99,13 @@ export async function flushTelemetryError(res: TelemetryResources, error: unknow
     });
     metrics.increment(StandardMetrics.COMMAND_INVOCATIONS_TOTAL, {
       command: commandName,
-      exit_code: '1',
+      exit_code: String(exitCode),
     });
     await metrics.flush();
   }
 
   if (commandSpan) {
-    commandSpan.setAttribute('exit_code', 1);
+    commandSpan.setAttribute('exit_code', exitCode);
     commandSpan.setAttribute('error', true);
     if (error instanceof Error) {
       commandSpan.setAttribute('error.message', error.message);
@@ -120,6 +130,7 @@ export async function flushTelemetryError(res: TelemetryResources, error: unknow
       logger.error(`${commandName} command failed`, {
         error: error.message,
         stack: error.stack,
+        exit_code: exitCode,
         duration_ms: duration,
       });
     }

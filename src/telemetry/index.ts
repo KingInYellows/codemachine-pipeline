@@ -14,7 +14,6 @@ export {
 
 // Metrics exports
 export {
-  createMetricsCollector,
   createRunMetricsCollector,
   MetricsCollector,
   MetricType,
@@ -43,7 +42,6 @@ export {
 // Cost tracker exports
 export {
   CostTracker,
-  createCostTracker,
   loadOrCreateCostTracker,
   type BudgetConfig,
   type BudgetWarning,

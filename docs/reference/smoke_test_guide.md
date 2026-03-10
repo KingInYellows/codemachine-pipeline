@@ -61,7 +61,7 @@ Before running smoke tests, ensure the project is properly set up:
 
 ```bash
 # Clone repository
-git clone https://github.com/your-org/codemachine-pipeline.git
+git clone https://github.com/KingInYellows/codemachine-pipeline.git
 cd codemachine-pipeline
 
 # Install dependencies

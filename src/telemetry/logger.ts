@@ -1,7 +1,8 @@
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 import { LogContext } from '../core/sharedTypes';
-import { CREDENTIAL_PATTERNS } from '../utils/redaction.js';
+import { RedactionEngine } from '../utils/redaction.js';
+export { RedactionEngine, type RedactionReport } from '../utils/redaction.js';
 
 /**
  * Structured Logger
@@ -13,12 +14,8 @@ import { CREDENTIAL_PATTERNS } from '../utils/redaction.js';
  * - NDJSON file persistence + optional stderr mirroring
  * - Integration with run directory structure
  *
- * Implements Observability Rulebook and NFR-6 (secret protection).
+ * Includes automatic secret redaction for tokens and API keys.
  */
-
-// ============================================================================
-// Types & Interfaces
-// ============================================================================
 
 /**
  * Log severity levels
@@ -89,132 +86,6 @@ export interface LoggerOptions {
   /** Base context attached to all log entries */
   baseContext?: LogContext;
 }
-
-// ============================================================================
-// Redaction Engine
-// ============================================================================
-
-/** Alias CREDENTIAL_PATTERNS for the RedactionEngine (same shape) */
-const SECRET_PATTERNS = CREDENTIAL_PATTERNS;
-
-function normalizeRedactionLabels(input: string): string {
-  return input
-    .replaceAll('[GITHUB_TOKEN_REDACTED]', '[REDACTED_GITHUB_TOKEN]')
-    .replaceAll('[JWT_REDACTED]', '[REDACTED_JWT]');
-}
-
-/**
- * Redaction engine for removing secrets from strings
- */
-export interface RedactionReport {
-  /** Redacted text */
-  text: string;
-  /** Flags representing patterns matched during redaction */
-  flags: string[];
-}
-
-export class RedactionEngine {
-  private readonly patterns: ReadonlyArray<{ name: string; pattern: RegExp; replacement: string }>;
-  private readonly enabled: boolean;
-
-  constructor(
-    enabled = true,
-    customPatterns?: ReadonlyArray<{ name: string; pattern: RegExp; replacement: string }>
-  ) {
-    this.enabled = enabled;
-    this.patterns = customPatterns ?? SECRET_PATTERNS;
-  }
-
-  /**
-   * Redact secrets from a string
-   */
-  redact(input: string): string {
-    return this.redactWithReport(input).text;
-  }
-
-  /**
-   * Redact secrets from a string and capture flags for matched patterns
-   */
-  redactWithReport(input: string): RedactionReport {
-    if (!this.enabled) {
-      return { text: input, flags: [] };
-    }
-
-    let output = input;
-    const flags = new Set<string>();
-
-    for (const { pattern, replacement, name } of this.patterns) {
-      pattern.lastIndex = 0;
-      if (pattern.test(output)) {
-        flags.add(name);
-      }
-      pattern.lastIndex = 0;
-      output = output.replace(pattern, replacement);
-    }
-
-    return { text: normalizeRedactionLabels(output), flags: Array.from(flags) };
-  }
-
-  /**
-   * Redact secrets from structured data (deep traversal)
-   */
-  redactObject(obj: unknown): unknown {
-    if (!this.enabled) {
-      return obj;
-    }
-
-    if (typeof obj === 'string') {
-      return this.redact(obj);
-    }
-
-    if (Array.isArray(obj)) {
-      return obj.map((item) => this.redactObject(item));
-    }
-
-    if (obj && typeof obj === 'object') {
-      // eslint-disable-next-line @typescript-eslint/no-restricted-types -- intentional: redaction output preserves arbitrary input keys
-      const redacted: Record<string, unknown> = {};
-
-      for (const [key, value] of Object.entries(obj)) {
-        // Redact common secret field names
-        if (this.isSensitiveFieldName(key)) {
-          redacted[key] = '[REDACTED]';
-        } else {
-          redacted[key] = this.redactObject(value);
-        }
-      }
-
-      return redacted;
-    }
-
-    return obj;
-  }
-
-  /**
-   * Check if field name suggests sensitive data
-   */
-  private isSensitiveFieldName(name: string): boolean {
-    const lowerName = name.toLowerCase();
-    const sensitiveNames = [
-      'password',
-      'secret',
-      'token',
-      'api_key',
-      'apikey',
-      'auth',
-      'authorization',
-      'credential',
-      'private_key',
-      'privatekey',
-    ];
-
-    return sensitiveNames.some((pattern) => lowerName.includes(pattern));
-  }
-}
-
-// ============================================================================
-// Structured Logger Implementation
-// ============================================================================
 
 /**
  * Structured logger with NDJSON file output and optional stderr mirroring
@@ -383,7 +254,6 @@ export class StructuredLogger implements LoggerInterface {
       return;
     }
 
-    // Ensure logs directory exists
     const logsDir = path.dirname(this.logFilePath);
     try {
       await fs.mkdir(logsDir, { recursive: true });
@@ -513,15 +383,18 @@ export class StructuredLogger implements LoggerInterface {
   }
 }
 
-// ============================================================================
-// Factory Functions
-// ============================================================================
-
 /**
  * Create a logger instance for a run directory
  */
 export function createLogger(options: LoggerOptions): StructuredLogger {
   return new StructuredLogger(options);
+}
+
+function runContext(runId?: string, runDir?: string): Pick<LoggerOptions, 'runId' | 'runDir'> {
+  return {
+    ...(runId !== undefined && { runId }),
+    ...(runDir !== undefined && { runDir }),
+  };
 }
 
 /**
@@ -537,8 +410,7 @@ export function createCliLogger(
     component: `cli:${component}`,
     minLevel: LogLevel.INFO,
     mirrorToStderr: !process.env.JSON_OUTPUT, // Disable stderr mirroring in JSON mode
-    ...(runId !== undefined && { runId }),
-    ...(runDir !== undefined && { runDir }),
+    ...runContext(runId, runDir),
     ...(overrides ?? {}),
   });
 }
@@ -555,8 +427,7 @@ export function createHttpLogger(
     component: `http:${provider}`,
     minLevel: LogLevel.DEBUG,
     mirrorToStderr: false,
-    ...(runId !== undefined && { runId }),
-    ...(runDir !== undefined && { runDir }),
+    ...runContext(runId, runDir),
   });
 }
 
@@ -568,8 +439,7 @@ export function createQueueLogger(runId?: string, runDir?: string): StructuredLo
     component: 'queue',
     minLevel: LogLevel.INFO,
     mirrorToStderr: false,
-    ...(runId !== undefined && { runId }),
-    ...(runDir !== undefined && { runDir }),
+    ...runContext(runId, runDir),
   });
 }
 

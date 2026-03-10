@@ -65,4 +65,5 @@ thoughts/
 
 # RuVector intelligence data
 .ruvector/
+ruvector.db
 .claude/statusline.sh

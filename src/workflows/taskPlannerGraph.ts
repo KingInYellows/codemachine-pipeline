@@ -7,20 +7,9 @@
 
 import type { TaskNode, PlanArtifact } from '../core/models/PlanArtifact';
 import { getEntryTasks } from '../core/models/PlanArtifact';
-import type { PlanSummary } from './taskPlanner';
+import type { PlanSummary, PlanDiagnostics } from './taskPlannerTypes.js';
 
-// ============================================================================
-// Internal Types
-// ============================================================================
-
-export interface PlanDiagnostics {
-  warnings: string[];
-  blockers: Array<{
-    taskId: string;
-    reason: string;
-    missingDependencies?: string[];
-  }>;
-}
+export type { PlanDiagnostics } from './taskPlannerTypes.js';
 
 export interface SpecRequirement {
   requirementId: string;
@@ -31,10 +20,6 @@ export interface SpecRequirement {
 }
 
 export type RequirementTaskMap = Map<string, string>;
-
-// ============================================================================
-// Graph Algorithms
-// ============================================================================
 
 /**
  * Build dependency graph based on task types and logical ordering

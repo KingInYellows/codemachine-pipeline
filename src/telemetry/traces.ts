@@ -21,10 +21,6 @@ import { getErrorMessage } from '../utils/errors.js';
  * Future enhancement: Add optional OTLP export support.
  */
 
-// ============================================================================
-// Types & Interfaces
-// ============================================================================
-
 /**
  * Trace context (W3C Trace Context compatible)
  */
@@ -132,10 +128,6 @@ export interface TraceManagerOptions {
   logger?: LoggerInterface;
 }
 
-// ============================================================================
-// ID Generation
-// ============================================================================
-
 /**
  * Generate a random trace ID (128-bit hex string)
  */
@@ -149,10 +141,6 @@ function generateTraceId(): string {
 function generateSpanId(): string {
   return crypto.randomBytes(8).toString('hex');
 }
-
-// ============================================================================
-// Active Span Implementation
-// ============================================================================
 
 /**
  * Active span implementation with fluent API
@@ -226,10 +214,6 @@ class ActiveSpanImpl implements ActiveSpan {
     this.onEnd(span);
   }
 }
-
-// ============================================================================
-// Trace Manager
-// ============================================================================
 
 /**
  * Trace manager with file-based export
@@ -391,7 +375,6 @@ export class TraceManager {
       return;
     }
 
-    // Ensure telemetry directory exists
     const telemetryDir = path.dirname(this.tracesFilePath);
     try {
       await fs.mkdir(telemetryDir, { recursive: true });
@@ -478,10 +461,6 @@ export class TraceManager {
   }
 }
 
-// ============================================================================
-// Instrumentation Helpers
-// ============================================================================
-
 /**
  * Execute a function within a trace span
  */
@@ -559,10 +538,6 @@ export function withSpanSync<T>(
     throw error;
   }
 }
-
-// ============================================================================
-// Factory Functions
-// ============================================================================
 
 /**
  * Create a trace manager instance

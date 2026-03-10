@@ -176,7 +176,7 @@ codepipe resume --linear-refresh  # Attempts refresh, uses cache on failure
 Mutating operations (updates, comment posting) are gated behind `enablePreviewFeatures`:
 
 ```typescript
-const adapter = createLinearAdapter({
+const adapter = new LinearAdapter({
   apiKey: process.env.LINEAR_API_KEY!,
   enablePreviewFeatures: true, // Opt-in required
   runDir: '.codepipe/runs/FEAT-123',

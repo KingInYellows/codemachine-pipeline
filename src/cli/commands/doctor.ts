@@ -1,28 +1,24 @@
-import { Command, Flags } from '@oclif/core';
+import { Flags } from '@oclif/core';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { execSync, spawnSync } from 'node:child_process';
 import { loadRepoConfig } from '../../core/config/RepoConfig';
-import { createCliLogger, LogLevel } from '../../telemetry/logger';
-import { createRunMetricsCollector, StandardMetrics } from '../../telemetry/metrics';
-import { createRunTraceManager, SpanStatusCode } from '../../telemetry/traces';
-import type { StructuredLogger } from '../../telemetry/logger';
-import type { MetricsCollector } from '../../telemetry/metrics';
-import type { TraceManager, ActiveSpan } from '../../telemetry/traces';
 import { checkCodeMachineCli } from '../diagnostics';
 import { setJsonOutputMode } from '../utils/cliErrors';
 import { CONFIG_RELATIVE_PATH } from '../utils/runDirectory';
-import { flushTelemetryError } from '../utils/telemetryLifecycle';
+import { TelemetryCommand } from '../telemetryCommand';
 
 /**
  * Diagnostic check result
  */
 interface DiagnosticCheck {
   name: string;
+  category: 'credential' | 'environment' | 'config' | 'general';
   status: 'pass' | 'fail' | 'warn';
   message: string;
   remediation?: string;
   /** Intentional: details vary per diagnostic check type (version, path, counts, etc.) */
+  // eslint-disable-next-line @typescript-eslint/no-restricted-types -- intentional: diagnostic check details vary per check type
   details?: Record<string, unknown>;
 }
 
@@ -43,6 +39,33 @@ interface DoctorPayload {
   timestamp: string;
 }
 
+type EnvCheckDetails = Record<string, string | number>;
+
+interface EnvCheckDescriptor {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Config type not fully specified for this usage
+  enabled: (c: any) => boolean;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Config type not fully specified for this usage
+  envVar: (c: any) => string;
+  label: string;
+  displayName?: (varName: string) => string;
+  failStatus: 'fail' | 'warn';
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Config type not fully specified for this usage
+  failRemediation: (c: any, varName: string) => string;
+  passMessage: string;
+  failMessage: string;
+  showValueInPass?: boolean;
+  /** Produce details for a passing check. Defaults to `{ length: value.length }` if omitted. */
+  passDetails?: (value: string) => EnvCheckDetails;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Config type not fully specified for this usage
+  resolveValue?: (c: any, varName: string) => string | undefined;
+}
+
+interface GitHubEnvConfig {
+  enabled?: boolean;
+  token_env_var?: string;
+  required_scopes?: string[];
+}
+
 /**
  * Determine exit code and status from diagnostic check results.
  * Priority: credential failures (30) > environment failures (20) > config failures (10) > generic (1).
@@ -58,17 +81,9 @@ function determineExitCode(checks: DiagnosticCheck[]): {
     return { exitCode: 0, status: hasWarnings ? 'issues_detected' : 'healthy' };
   }
 
-  const hasCredentialFailure = failed.some(
-    (c) => c.name.includes('Token') || c.name.includes('API Key') || c.name.includes('Credential')
-  );
-  const hasEnvironmentFailure = failed.some(
-    (c) =>
-      c.name.includes('Node') ||
-      c.name.includes('Git') ||
-      c.name.includes('Docker') ||
-      c.name.includes('Filesystem')
-  );
-  const hasConfigFailure = failed.some((c) => c.name.includes('Config'));
+  const hasCredentialFailure = failed.some((c) => c.category === 'credential');
+  const hasEnvironmentFailure = failed.some((c) => c.category === 'environment');
+  const hasConfigFailure = failed.some((c) => c.category === 'config');
 
   if (hasCredentialFailure) return { exitCode: 30, status: 'critical_failures' };
   if (hasEnvironmentFailure) return { exitCode: 20, status: 'critical_failures' };
@@ -86,7 +101,11 @@ function determineExitCode(checks: DiagnosticCheck[]): {
  * - 20: Environment issue (missing tools, version mismatches, filesystem)
  * - 30: Credential issue (missing tokens, invalid scopes)
  */
-export default class Doctor extends Command {
+export default class Doctor extends TelemetryCommand {
+  protected get commandName(): string {
+    return 'doctor';
+  }
+
   static description = 'Run environment diagnostics and readiness checks';
 
   static examples = [
@@ -109,162 +128,110 @@ export default class Doctor extends Command {
 
   async run(): Promise<void> {
     const { flags } = await this.parse(Doctor);
-    const startTime = Date.now();
 
     // Set JSON output mode environment variable
     if (flags.json) {
       setJsonOutputMode();
     }
 
-    // Initialize telemetry (logger, metrics, traces)
-    let logger: StructuredLogger | undefined;
-    let metrics: MetricsCollector | undefined;
-    let traceManager: TraceManager | undefined;
-    let commandSpan: ActiveSpan | undefined;
-
-    const checks: DiagnosticCheck[] = [];
-
+    // Doctor is pipeline-scoped, so telemetry should live under `.codepipe`.
+    let runDirPath: string | undefined;
+    const pipelineDir = path.join(process.cwd(), '.codepipe');
     try {
-      // Try to initialize telemetry. Create local directories if missing.
-      const pipelineDir = path.join(process.cwd(), '.codepipe');
-      const logsDir = path.join(pipelineDir, 'logs');
-      let telemetryReady = false;
-
-      try {
-        if (!fs.existsSync(logsDir)) {
-          fs.mkdirSync(logsDir, { recursive: true });
-        }
-        telemetryReady = true;
-      } catch {
-        telemetryReady = false;
+      if (!fs.existsSync(pipelineDir)) {
+        fs.mkdirSync(pipelineDir, { recursive: true });
       }
+      runDirPath = pipelineDir;
+    } catch {
+      // telemetry not available — doctor still runs
+    }
 
-      if (telemetryReady) {
-        logger = createCliLogger('doctor', 'diagnostics', logsDir, {
-          minLevel: flags.verbose ? LogLevel.DEBUG : LogLevel.INFO,
-          mirrorToStderr: !flags.json,
-        });
-        metrics = createRunMetricsCollector(pipelineDir, 'diagnostics');
-        traceManager = createRunTraceManager(pipelineDir, 'diagnostics', logger);
-        commandSpan = traceManager.startSpan('cli.doctor');
-        commandSpan.setAttribute('json_mode', flags.json);
-        commandSpan.setAttribute('verbose', flags.verbose);
-
-        logger.info('Doctor command invoked', {
+    await this.runWithTelemetry(
+      {
+        runDirPath,
+        featureId: 'diagnostics',
+        jsonMode: flags.json,
+        verbose: flags.verbose,
+        spanAttributes: { verbose: flags.verbose },
+      },
+      async (ctx) => {
+        ctx.logger?.info('Doctor command invoked', {
           json_mode: flags.json,
           verbose: flags.verbose,
         });
-      }
 
-      // Run diagnostic checks (sync checks first, then async)
-      checks.push(this.checkNodeVersion());
-      checks.push(this.checkGitInstalled());
-      checks.push(this.checkNpmInstalled());
-      checks.push(this.checkDockerInstalled());
-      checks.push(this.checkGitRepository());
-      checks.push(this.checkFilesystemPermissions());
-      checks.push(this.checkOutboundConnectivity());
+        const checks: DiagnosticCheck[] = [];
 
-      // Pre-load config once for checks that need it
-      const configPath = path.resolve(process.cwd(), CONFIG_RELATIVE_PATH);
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Config used for minimal property extraction only
-      let loadedConfig: any;
-      if (fs.existsSync(configPath)) {
-        const configResult = await loadRepoConfig(configPath);
-        if (configResult.success && configResult.config) {
-          loadedConfig = configResult.config;
+        // Run diagnostic checks (sync checks first, then async)
+        checks.push(this.checkNodeVersion());
+        checks.push(this.checkGitInstalled());
+        checks.push(this.checkNpmInstalled());
+        checks.push(this.checkDockerInstalled());
+        checks.push(this.checkGitRepository());
+        checks.push(this.checkFilesystemPermissions());
+        checks.push(this.checkOutboundConnectivity());
+
+        // Pre-load config once for checks that need it
+        const configPath = path.resolve(process.cwd(), CONFIG_RELATIVE_PATH);
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Config used for minimal property extraction only
+        let loadedConfig: any;
+        if (fs.existsSync(configPath)) {
+          const configResult = await loadRepoConfig(configPath);
+          if (configResult.success && configResult.config) {
+            loadedConfig = configResult.config;
+          }
         }
-      }
 
-      // Async checks
-      checks.push(await this.checkRepoConfig());
-      checks.push(await this.checkCodeMachineCli(loadedConfig));
-      checks.push(...this.checkEnvironmentVariables(loadedConfig));
+        // Async checks
+        checks.push(await this.checkRepoConfig());
+        checks.push(await this.checkCodeMachineCli(loadedConfig));
+        checks.push(...this.checkEnvironmentVariables(loadedConfig));
 
-      // Compute summary
-      const summary = {
-        total: checks.length,
-        passed: checks.filter((c) => c.status === 'pass').length,
-        warnings: checks.filter((c) => c.status === 'warn').length,
-        failed: checks.filter((c) => c.status === 'fail').length,
-      };
+        // Compute summary
+        const summary = {
+          total: checks.length,
+          passed: checks.filter((c) => c.status === 'pass').length,
+          warnings: checks.filter((c) => c.status === 'warn').length,
+          failed: checks.filter((c) => c.status === 'fail').length,
+        };
 
-      // Determine exit code and status
-      const { exitCode, status } = determineExitCode(checks);
+        // Determine exit code and status
+        const { exitCode, status } = determineExitCode(checks);
 
-      // Build payload
-      const payload: DoctorPayload = {
-        status,
-        exit_code: exitCode,
-        checks,
-        summary,
-        config_path: path.resolve(process.cwd(), CONFIG_RELATIVE_PATH),
-        timestamp: new Date().toISOString(),
-      };
-
-      // Output results
-      if (flags.json) {
-        this.log(JSON.stringify(payload, null, 2));
-      } else {
-        this.printHumanReadable(payload, flags.verbose);
-      }
-
-      // Record success metrics
-      if (metrics) {
-        const duration = Date.now() - startTime;
-        metrics.observe(StandardMetrics.COMMAND_EXECUTION_DURATION_MS, duration, {
-          command: 'doctor',
-        });
-        metrics.increment(StandardMetrics.COMMAND_INVOCATIONS_TOTAL, {
-          command: 'doctor',
-          exit_code: String(exitCode),
-        });
-        await metrics.flush();
-      }
-
-      if (commandSpan) {
-        commandSpan.setAttribute('exit_code', exitCode);
-        commandSpan.setAttribute('checks_total', summary.total);
-        commandSpan.setAttribute('checks_passed', summary.passed);
-        commandSpan.setAttribute('checks_failed', summary.failed);
-        commandSpan.end({ code: exitCode === 0 ? SpanStatusCode.OK : SpanStatusCode.ERROR });
-      }
-
-      if (traceManager) {
-        await traceManager.flush();
-      }
-
-      if (logger) {
-        logger.info('Doctor command completed', {
-          duration_ms: Date.now() - startTime,
+        // Build payload
+        const payload: DoctorPayload = {
+          status,
           exit_code: exitCode,
-          checks_total: summary.total,
-          checks_passed: summary.passed,
-          checks_failed: summary.failed,
-        });
-        await logger.flush();
-      }
+          checks,
+          summary,
+          config_path: path.resolve(process.cwd(), CONFIG_RELATIVE_PATH),
+          timestamp: new Date().toISOString(),
+        };
 
-      if (exitCode !== 0) {
-        process.exit(exitCode);
-      }
-    } catch (error) {
-      await flushTelemetryError(
-        { commandName: 'doctor', startTime, logger, metrics, traceManager, commandSpan },
-        error
-      );
+        // Output results
+        if (flags.json) {
+          this.log(JSON.stringify(payload, null, 2));
+        } else {
+          this.printHumanReadable(payload, flags.verbose);
+        }
 
-      // Re-throw oclif errors to preserve exit codes
-      if (error && typeof error === 'object' && 'oclif' in error) {
-        throw error;
-      }
+        if (ctx.commandSpan) {
+          ctx.commandSpan.setAttribute('checks_total', summary.total);
+          ctx.commandSpan.setAttribute('checks_passed', summary.passed);
+          ctx.commandSpan.setAttribute('checks_failed', summary.failed);
+        }
 
-      if (error instanceof Error) {
-        this.error(`Doctor command failed: ${error.message}`, { exit: 1 });
-      } else {
-        this.error('Doctor command failed with an unknown error', { exit: 1 });
+        return {
+          exitCode,
+          extraLogFields: {
+            exit_code: exitCode,
+            checks_total: summary.total,
+            checks_passed: summary.passed,
+            checks_failed: summary.failed,
+          },
+        };
       }
-    }
+    );
   }
 
   /**
@@ -278,6 +245,7 @@ export default class Doctor extends Command {
       if (majorVersion >= 24) {
         return {
           name: 'Node.js Version',
+          category: 'environment',
           status: 'pass',
           message: `Node.js ${versionOutput} (v24 LTS preferred)`,
           details: { version: versionOutput, major: majorVersion },
@@ -285,6 +253,7 @@ export default class Doctor extends Command {
       } else if (majorVersion >= 20) {
         return {
           name: 'Node.js Version',
+          category: 'environment',
           status: 'warn',
           message: `Node.js ${versionOutput} (v20 acceptable, v24 recommended)`,
           remediation: 'Upgrade to Node.js v24 LTS for optimal performance',
@@ -293,6 +262,7 @@ export default class Doctor extends Command {
       } else {
         return {
           name: 'Node.js Version',
+          category: 'environment',
           status: 'fail',
           message: `Node.js ${versionOutput} is below minimum required version`,
           remediation: 'Install Node.js v20 or v24 LTS from https://nodejs.org/',
@@ -302,6 +272,7 @@ export default class Doctor extends Command {
     } catch {
       return {
         name: 'Node.js Version',
+        category: 'environment',
         status: 'fail',
         message: 'Unable to determine Node.js version',
         remediation: 'Ensure Node.js is properly installed',
@@ -311,18 +282,20 @@ export default class Doctor extends Command {
 
   private checkToolVersion(options: {
     name: string;
+    category: DiagnosticCheck['category'];
     command: string;
     failStatus: 'fail' | 'warn';
     failRemediation: string;
     messageFormatter?: (version: string) => string;
   }): DiagnosticCheck {
-    const { name, command, failStatus, failRemediation, messageFormatter } = options;
+    const { name, category, command, failStatus, failRemediation, messageFormatter } = options;
     try {
       const result = spawnSync(command, ['--version'], { encoding: 'utf-8', timeout: 5000 });
       if (result.status === 0) {
         const version = result.stdout.trim();
         return {
           name,
+          category,
           status: 'pass',
           message: messageFormatter ? messageFormatter(version) : version,
           details: { version },
@@ -330,6 +303,7 @@ export default class Doctor extends Command {
       }
       return {
         name,
+        category,
         status: failStatus,
         message: `${name} command failed`,
         remediation: failRemediation,
@@ -337,6 +311,7 @@ export default class Doctor extends Command {
     } catch {
       return {
         name,
+        category,
         status: failStatus,
         message: `${name} not found`,
         remediation: failRemediation,
@@ -347,6 +322,7 @@ export default class Doctor extends Command {
   private checkGitInstalled(): DiagnosticCheck {
     return this.checkToolVersion({
       name: 'Git CLI',
+      category: 'environment',
       command: 'git',
       failStatus: 'fail',
       failRemediation: 'Install git from https://git-scm.com/',
@@ -356,6 +332,7 @@ export default class Doctor extends Command {
   private checkNpmInstalled(): DiagnosticCheck {
     return this.checkToolVersion({
       name: 'npm',
+      category: 'environment',
       command: 'npm',
       failStatus: 'fail',
       failRemediation: 'npm should be installed with Node.js',
@@ -366,6 +343,7 @@ export default class Doctor extends Command {
   private checkDockerInstalled(): DiagnosticCheck {
     return this.checkToolVersion({
       name: 'Docker',
+      category: 'environment',
       command: 'docker',
       failStatus: 'warn',
       failRemediation: 'Install Docker from https://docker.com/ (optional but recommended)',
@@ -385,6 +363,7 @@ export default class Doctor extends Command {
       if (gitRoot) {
         return {
           name: 'Git Repository',
+          category: 'environment',
           status: 'pass',
           message: `Git repository detected at ${gitRoot}`,
           details: { git_root: gitRoot },
@@ -392,6 +371,7 @@ export default class Doctor extends Command {
       } else {
         return {
           name: 'Git Repository',
+          category: 'environment',
           status: 'fail',
           message: 'Not in a git repository',
           remediation: 'Run "git init" or navigate to a git repository',
@@ -400,6 +380,7 @@ export default class Doctor extends Command {
     } catch {
       return {
         name: 'Git Repository',
+        category: 'environment',
         status: 'fail',
         message: 'Not in a git repository',
         remediation: 'Run "git init" or navigate to a git repository',
@@ -421,12 +402,14 @@ export default class Doctor extends Command {
 
       return {
         name: 'Filesystem Permissions',
+        category: 'environment',
         status: 'pass',
         message: 'Write permissions verified',
       };
     } catch {
       return {
         name: 'Filesystem Permissions',
+        category: 'environment',
         status: 'fail',
         message: 'Unable to write to .codepipe directory',
         remediation: 'Check directory permissions and ensure write access',
@@ -452,6 +435,7 @@ export default class Doctor extends Command {
       if (curlResult.status === 0) {
         return {
           name: 'Outbound HTTPS',
+          category: 'environment',
           status: 'pass',
           message: 'Connectivity verified (https://api.github.com)',
         };
@@ -466,6 +450,7 @@ export default class Doctor extends Command {
       if (wgetResult.status === 0) {
         return {
           name: 'Outbound HTTPS',
+          category: 'environment',
           status: 'pass',
           message: 'Connectivity verified (https://api.github.com)',
         };
@@ -473,6 +458,7 @@ export default class Doctor extends Command {
 
       return {
         name: 'Outbound HTTPS',
+        category: 'environment',
         status: 'warn',
         message: 'Unable to verify outbound HTTPS connectivity',
         remediation: 'Check network settings and firewall rules',
@@ -480,6 +466,7 @@ export default class Doctor extends Command {
     } catch {
       return {
         name: 'Outbound HTTPS',
+        category: 'environment',
         status: 'warn',
         message: 'Unable to verify connectivity (curl/wget not found)',
         remediation: 'Manually verify network access to https://api.github.com',
@@ -496,6 +483,7 @@ export default class Doctor extends Command {
     if (!fs.existsSync(configPath)) {
       return {
         name: 'RepoConfig',
+        category: 'config',
         status: 'warn',
         message: 'Configuration file not found',
         remediation: 'Run "codepipe init" to create configuration',
@@ -508,6 +496,7 @@ export default class Doctor extends Command {
     if (!result.success) {
       return {
         name: 'RepoConfig',
+        category: 'config',
         status: 'fail',
         message: 'Configuration validation failed',
         remediation: 'Run "codepipe init --validate-only" for details',
@@ -521,6 +510,7 @@ export default class Doctor extends Command {
     if (result.warnings && result.warnings.length > 0) {
       return {
         name: 'RepoConfig',
+        category: 'config',
         status: 'warn',
         message: `Configuration valid with ${result.warnings.length} warning(s)`,
         remediation: 'Review warnings with "codepipe init --validate-only"',
@@ -533,6 +523,7 @@ export default class Doctor extends Command {
 
     return {
       name: 'RepoConfig',
+      category: 'config',
       status: 'pass',
       message: 'Configuration valid',
       details: { config_path: configPath },
@@ -546,93 +537,93 @@ export default class Doctor extends Command {
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Config used for minimal property extraction only
   private checkEnvironmentVariables(config?: any): DiagnosticCheck[] {
+    if (!config) {
+      return [
+        {
+          name: 'Environment Variables',
+          category: 'credential',
+          status: 'warn',
+          message: 'Cannot check environment variables (config not found or invalid)',
+          remediation: 'Run "codepipe init" first',
+        },
+      ];
+    }
+
+    const envChecks: EnvCheckDescriptor[] = [
+      {
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access -- Config type not fully specified
+        enabled: (c) => Boolean(c.github?.enabled && c.github?.token_env_var),
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-return -- Config type not fully specified
+        envVar: (c) => c.github.token_env_var,
+        label: 'GitHub',
+        failStatus: 'fail',
+        failRemediation: (c, v) => {
+          const githubConfig = (c as { github?: GitHubEnvConfig }).github;
+          return `Set ${v} with scopes: ${(githubConfig?.required_scopes ?? []).join(', ')}`;
+        },
+        passMessage: 'Token present',
+        failMessage: 'Token not set',
+      },
+      {
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access -- Config type not fully specified
+        enabled: (c) => Boolean(c.linear?.enabled && c.linear?.api_key_env_var),
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-return -- Config type not fully specified
+        envVar: (c) => c.linear.api_key_env_var,
+        label: 'Linear',
+        failStatus: 'fail',
+        failRemediation: (_c, v) => `Set ${v} with a valid Linear API key`,
+        passMessage: 'API key present',
+        failMessage: 'API key not set',
+      },
+      {
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access -- Config type not fully specified
+        enabled: (c) => Boolean(c.runtime?.agent_endpoint_env_var),
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-return -- Config type not fully specified
+        envVar: (c) => c.runtime.agent_endpoint_env_var,
+        label: 'Agent',
+        failStatus: 'warn',
+        failRemediation: (_c, v) => `Set ${v} or add runtime.agent_endpoint to config`,
+        passMessage: 'Configured',
+        failMessage: 'Agent endpoint not configured',
+        displayName: () => 'Agent Endpoint',
+        showValueInPass: true,
+        passDetails: (value) => ({ endpoint: value }),
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access -- Config type not fully specified
+        resolveValue: (c, v) => (c.runtime?.agent_endpoint as string | undefined) ?? process.env[v],
+      },
+    ];
+
     const checks: DiagnosticCheck[] = [];
 
-    // Check if config was provided and is valid
-    if (!config) {
-      checks.push({
-        name: 'Environment Variables',
-        status: 'warn',
-        message: 'Cannot check environment variables (config not found or invalid)',
-        remediation: 'Run "codepipe init" first',
-      });
-      return checks;
-    }
+    for (const check of envChecks) {
+      if (!check.enabled(config)) continue;
 
-    // Check GitHub token
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access -- Config type not fully specified for this usage
-    if (config.github?.enabled && config.github.token_env_var) {
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access -- Config type not fully specified for this usage
-      const tokenVar = config.github.token_env_var as string;
-      const token = process.env[tokenVar];
+      const varName = check.envVar(config);
+      let value = check.resolveValue ? check.resolveValue(config, varName) : process.env[varName];
+      const checkName = check.displayName
+        ? check.displayName(varName)
+        : `${varName} (${check.label})`;
 
-      if (token) {
-        checks.push({
-          name: `${tokenVar} (GitHub)`,
-          status: 'pass',
-          message: 'Token present',
-          details: { length: token.length },
-        });
-      } else {
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access -- Config type not fully specified for this usage
-        const requiredScopes = (config.github.required_scopes ?? []) as string[];
-        checks.push({
-          name: `${tokenVar} (GitHub)`,
-          status: 'fail',
-          message: 'Token not set',
-          remediation: `Set ${tokenVar} with scopes: ${requiredScopes.join(', ')}`,
-        });
+      // Security: Mask sensitive values if they don't look like URLs for the Agent endpoint
+      if (check.resolveValue && value && !/^https?:\/\//.test(value)) {
+        value = '[REDACTED]';
       }
-    }
 
-    // Check Linear API key
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access -- Config type not fully specified for this usage
-    if (config.linear?.enabled && config.linear.api_key_env_var) {
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access -- Config type not fully specified for this usage
-      const keyVar = config.linear.api_key_env_var as string;
-      const key = process.env[keyVar];
-
-      if (key) {
+      if (value) {
         checks.push({
-          name: `${keyVar} (Linear)`,
+          name: checkName,
+          category: 'credential',
           status: 'pass',
-          message: 'API key present',
-          details: { length: key.length },
+          message: check.showValueInPass ? `${check.passMessage}: ${value}` : check.passMessage,
+          details: check.passDetails ? check.passDetails(value) : { length: value.length },
         });
       } else {
         checks.push({
-          name: `${keyVar} (Linear)`,
-          status: 'fail',
-          message: 'API key not set',
-          remediation: `Set ${keyVar} with a valid Linear API key`,
-        });
-      }
-    }
-
-    // Check agent endpoint
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access -- Config type not fully specified for this usage
-    if (config.runtime?.agent_endpoint_env_var) {
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access -- Config type not fully specified for this usage
-      const agentEndpoint =
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access -- Config type not fully specified for this usage
-        (config.runtime.agent_endpoint as string | undefined) ??
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access -- Config type not fully specified for this usage
-        process.env[config.runtime.agent_endpoint_env_var as string];
-      if (!agentEndpoint) {
-        checks.push({
-          // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access -- Config type not fully specified for this usage
-          name: `${config.runtime.agent_endpoint_env_var as string} (Agent)`,
-          status: 'warn',
-          message: 'Agent endpoint not configured',
-          // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access -- Config type not fully specified for this usage
-          remediation: `Set ${config.runtime.agent_endpoint_env_var as string} or add runtime.agent_endpoint to config`,
-        });
-      } else {
-        checks.push({
-          name: `Agent Endpoint`,
-          status: 'pass',
-          message: `Configured: ${agentEndpoint}`,
-          details: { endpoint: agentEndpoint },
+          name: checkName,
+          category: 'credential',
+          status: check.failStatus,
+          message: check.failMessage,
+          remediation: check.failRemediation(config, varName),
         });
       }
     }

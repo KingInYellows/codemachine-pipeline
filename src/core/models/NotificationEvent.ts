@@ -6,7 +6,6 @@ import { createModelParser } from './modelParser.js';
  *
  * Optional outbound message log referencing channels, audiences, delivery status, metadata.
  *
- * Implements ADR-7 (Validation Policy): Zod-based validation
  * Used by CLI commands: notify, status
  */
 

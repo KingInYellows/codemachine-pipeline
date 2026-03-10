@@ -6,7 +6,6 @@ import { createModelParser } from './modelParser.js';
  *
  * Export bundle manifest referencing included files, hashes, delivery targets, and CLI versions.
  *
- * Implements ADR-7 (Validation Policy): Zod-based validation
  * Used by CLI commands: export, bundle
  */
 
