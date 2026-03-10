@@ -1,10 +1,14 @@
 /**
  * Command Runner
  *
- * Extracted from autoFixEngine.ts: secure child process execution utilities
- * for running validation commands without shell injection risk.
+ * Shared child-process execution and retry utilities extracted from
+ * autoFixEngine.ts.  Provides secure command execution without shell
+ * injection risk, plus helpers for working-directory resolution,
+ * template rendering, output persistence, and retry back-off.
  */
 
+import * as fs from 'node:fs/promises';
+import * as path from 'node:path';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import { parse } from 'shell-quote';
@@ -167,6 +171,162 @@ export function parseCommandString(command: string): [string, string[]] {
 
   return [parts[0], parts.slice(1)];
 }
+
+// ---------------------------------------------------------------------------
+// Path & working-directory helpers
+// ---------------------------------------------------------------------------
+
+/**
+ * Resolve the repository root from a run directory.
+ *
+ * Run directories live at `<repo>/.codepipe/runs/<id>`, so the repo
+ * root is three levels up.
+ */
+export function resolveRepoRoot(runDir: string): string {
+  return path.resolve(runDir, '..', '..', '..');
+}
+
+/**
+ * Resolve the working directory for a command.
+ *
+ * If an `override` is provided it takes precedence; otherwise the
+ * command's own `commandCwd` is used.  Relative paths are resolved
+ * against `repoRoot`.
+ */
+export function resolveWorkingDirectory(
+  repoRoot: string,
+  commandCwd: string,
+  override?: string
+): string {
+  if (override) {
+    return path.isAbsolute(override) ? override : path.resolve(repoRoot, override);
+  }
+
+  return path.isAbsolute(commandCwd) ? commandCwd : path.resolve(repoRoot, commandCwd);
+}
+
+// ---------------------------------------------------------------------------
+// Template helpers
+// ---------------------------------------------------------------------------
+
+/**
+ * Narrower metacharacter check for built-in context values (feature_id, run_dir, repo_root, command_cwd).
+ * Blocks characters that enable shell injection or corrupt parseCommandString argument boundaries.
+ * Allows parens, brackets, etc. that are valid in filesystem paths.
+ */
+export const DANGEROUS_PATH_METACHARACTERS = new RegExp(
+  `[${escapeForCharacterClass(`|&;\`$<>'"${String.fromCharCode(0)}`)}]|\\s`,
+  'u'
+);
+
+export const BUILTIN_TEMPLATE_CONTEXT_KEYS = new Set([
+  'feature_id',
+  'run_dir',
+  'repo_root',
+  'command_cwd',
+]);
+
+/**
+ * Build the context object used for command-template interpolation.
+ *
+ * Throws if any caller-supplied `templateContext` key conflicts with a
+ * built-in key, or if a value contains shell metacharacters.
+ */
+export function buildCommandTemplateContext(
+  runDir: string,
+  repoRoot: string,
+  commandCwd: string,
+  templateContext?: Record<string, string>
+): Record<string, string> {
+  for (const [key, value] of Object.entries(templateContext ?? {})) {
+    if (BUILTIN_TEMPLATE_CONTEXT_KEYS.has(key)) {
+      throw new Error(`Template context key "${key}" conflicts with built-in template key`);
+    }
+    if (TEMPLATE_VALUE_METACHARACTERS.test(value)) {
+      throw new Error(
+        `Template context value for "${key}" contains shell metacharacters which are not permitted`
+      );
+    }
+  }
+
+  return {
+    feature_id: path.basename(runDir).replace(/\s+/gu, '-'),
+    run_dir: runDir,
+    repo_root: repoRoot,
+    command_cwd: commandCwd,
+    ...(templateContext ?? {}),
+  };
+}
+
+/**
+ * Apply mustache-style `{{ key }}` interpolation to a command template.
+ *
+ * Built-in path keys are validated against DANGEROUS_PATH_METACHARACTERS;
+ * user-supplied values are validated against TEMPLATE_VALUE_METACHARACTERS.
+ */
+export function applyCommandTemplate(template: string, context: Record<string, string>): string {
+  return template.replace(/\{\{\s*([\w.-]+)\s*\}\}/g, (_, key: string) => {
+    const value = Object.hasOwn(context, key) ? context[key] : undefined;
+    if (value === undefined) return '';
+    const metacharacterPattern = BUILTIN_TEMPLATE_CONTEXT_KEYS.has(key)
+      ? DANGEROUS_PATH_METACHARACTERS
+      : TEMPLATE_VALUE_METACHARACTERS;
+    if (metacharacterPattern.test(value)) {
+      throw new Error(`Template substitution for "${key}" contains shell metacharacters`);
+    }
+    return value;
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Output persistence
+// ---------------------------------------------------------------------------
+
+/**
+ * Persist command stdout / stderr to the run directory.
+ *
+ * Files are written under `<runDir>/validation/outputs/`.
+ *
+ * @returns Relative paths (from `runDir`) for each file.
+ */
+export async function saveCommandOutput(
+  runDir: string,
+  commandType: string,
+  attemptId: string,
+  stdout: string,
+  stderr: string
+): Promise<{ stdoutPath: string; stderrPath: string }> {
+  const outputDir = path.join(runDir, 'validation', 'outputs');
+  await fs.mkdir(outputDir, { recursive: true });
+
+  const stdoutPath = `validation/outputs/${commandType}_${attemptId}.stdout.txt`;
+  const stderrPath = `validation/outputs/${commandType}_${attemptId}.stderr.txt`;
+
+  const stdoutAbsPath = path.join(runDir, stdoutPath);
+  const stderrAbsPath = path.join(runDir, stderrPath);
+
+  await Promise.all([
+    fs.writeFile(stdoutAbsPath, stdout, 'utf-8'),
+    fs.writeFile(stderrAbsPath, stderr, 'utf-8'),
+  ]);
+
+  return { stdoutPath, stderrPath };
+}
+
+// ---------------------------------------------------------------------------
+// Retry helpers
+// ---------------------------------------------------------------------------
+
+/**
+ * Sleep for `ms` milliseconds.  Used for retry back-off.
+ */
+export function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+// ---------------------------------------------------------------------------
+// Shell command execution
+// ---------------------------------------------------------------------------
 
 /**
  * Execute shell command with timeout.

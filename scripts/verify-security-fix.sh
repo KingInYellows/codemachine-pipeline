@@ -18,10 +18,10 @@ NC='\033[0m' # No Color
 PASSED=0
 FAILED=0
 
-# Test 1: Verify shell:true is NOT in autoFixEngine.ts
-echo "1. Checking for shell:true in autoFixEngine.ts..."
-if grep -q "shell: true" src/workflows/autoFixEngine.ts 2>/dev/null; then
-    echo -e "${RED}✗ FAILED${NC}: Found 'shell: true' in autoFixEngine.ts"
+# Test 1: Verify shell:true is NOT in autoFixEngine.ts or commandRunner.ts
+echo "1. Checking for shell:true in autoFixEngine.ts and commandRunner.ts..."
+if grep -q "shell: true" src/workflows/autoFixEngine.ts 2>/dev/null || grep -q "shell: true" src/workflows/commandRunner.ts 2>/dev/null; then
+    echo -e "${RED}✗ FAILED${NC}: Found 'shell: true' in autoFixEngine.ts or commandRunner.ts"
     FAILED=$((FAILED + 1))
 else
     echo -e "${GREEN}✓ PASSED${NC}: No 'shell: true' found"
@@ -29,7 +29,7 @@ else
 fi
 echo ""
 
-# Test 2: Verify execFile is imported
+# Test 2: Verify execFile is imported (in commandRunner.ts, the shared execution module)
 echo "2. Checking for execFile import..."
 if grep -q "import.*execFile.*from.*node:child_process" src/workflows/commandRunner.ts; then
     echo -e "${GREEN}✓ PASSED${NC}: execFile is imported"
@@ -40,7 +40,7 @@ else
 fi
 echo ""
 
-# Test 3: Verify parseCommandString function exists
+# Test 3: Verify parseCommandString function exists (in commandRunner.ts, the shared execution module)
 echo "3. Checking for parseCommandString function..."
 if grep -q "function parseCommandString" src/workflows/commandRunner.ts; then
     echo -e "${GREEN}✓ PASSED${NC}: parseCommandString function exists"
@@ -51,10 +51,10 @@ else
 fi
 echo ""
 
-# Test 4: Verify metacharacter detection
-echo "4. Checking for metacharacter detection..."
-if grep -q "TEMPLATE_VALUE_METACHARACTERS\|DANGEROUS_PATH_METACHARACTERS" src/workflows/autoFixEngine.ts; then
-    echo -e "${GREEN}✓ PASSED${NC}: Metacharacter detection implemented"
+# Test 4: Verify SHELL_METACHARACTERS detection (in commandRunner.ts, the shared execution module)
+echo "4. Checking for shell metacharacter detection..."
+if grep -q "SHELL_METACHARACTERS" src/workflows/commandRunner.ts; then
+    echo -e "${GREEN}✓ PASSED${NC}: Shell metacharacter detection implemented"
     PASSED=$((PASSED + 1))
 else
     echo -e "${RED}✗ FAILED${NC}: Metacharacter detection not found"

@@ -1,5 +1,3 @@
-import * as fs from 'node:fs/promises';
-import * as path from 'node:path';
 import type { StructuredLogger } from '../telemetry/logger';
 import type { MetricsCollector } from '../telemetry/metrics';
 import { StandardMetrics } from '../telemetry/metrics';
@@ -25,11 +23,30 @@ import {
   getRequiredCommands,
 } from './validationRegistry';
 import {
-  TEMPLATE_VALUE_METACHARACTERS,
-  escapeForCharacterClass,
   executeShellCommand,
+  resolveRepoRoot,
+  resolveWorkingDirectory,
+  buildCommandTemplateContext,
+  applyCommandTemplate,
+  saveCommandOutput,
+  sleep,
 } from './commandRunner.js';
 import { filterEnvironment } from '../utils/envFilter.js';
+
+// Re-export commandRunner constants and utilities so that downstream consumers
+// can import them from either module.
+export {
+  SHELL_METACHARACTERS,
+  DANGEROUS_PATH_METACHARACTERS,
+  BUILTIN_TEMPLATE_CONTEXT_KEYS,
+  TEMPLATE_VALUE_METACHARACTERS,
+  resolveRepoRoot,
+  resolveWorkingDirectory,
+  buildCommandTemplateContext,
+  applyCommandTemplate,
+  saveCommandOutput,
+  sleep,
+} from './commandRunner.js';
 
 /**
  * Auto-Fix Engine
@@ -583,102 +600,6 @@ async function executeValidationCommand(
 }
 
 /**
- * Save command output to run directory
- */
-async function saveCommandOutput(
-  runDir: string,
-  commandType: ValidationCommandType,
-  attemptId: string,
-  stdout: string,
-  stderr: string
-): Promise<{ stdoutPath: string; stderrPath: string }> {
-  const outputDir = path.join(runDir, 'validation', 'outputs');
-  await fs.mkdir(outputDir, { recursive: true });
-
-  const stdoutPath = `validation/outputs/${commandType}_${attemptId}.stdout.txt`;
-  const stderrPath = `validation/outputs/${commandType}_${attemptId}.stderr.txt`;
-
-  const stdoutAbsPath = path.join(runDir, stdoutPath);
-  const stderrAbsPath = path.join(runDir, stderrPath);
-
-  await Promise.all([
-    fs.writeFile(stdoutAbsPath, stdout, 'utf-8'),
-    fs.writeFile(stderrAbsPath, stderr, 'utf-8'),
-  ]);
-
-  return { stdoutPath, stderrPath };
-}
-
-function resolveRepoRoot(runDir: string): string {
-  return path.resolve(runDir, '..', '..', '..');
-}
-
-function resolveWorkingDirectory(repoRoot: string, commandCwd: string, override?: string): string {
-  if (override) {
-    return path.isAbsolute(override) ? override : path.resolve(repoRoot, override);
-  }
-
-  return path.isAbsolute(commandCwd) ? commandCwd : path.resolve(repoRoot, commandCwd);
-}
-
-/**
- * Narrower metacharacter check for built-in context values (feature_id, run_dir, repo_root, command_cwd).
- * Blocks characters that enable shell injection or corrupt parseCommandString argument boundaries.
- * Allows parens, brackets, etc. that are valid in filesystem paths.
- */
-const DANGEROUS_PATH_METACHARACTERS = new RegExp(
-  `[${escapeForCharacterClass(`|&;\`$<>'"${String.fromCharCode(0)}`)}]|\\s`,
-  'u'
-);
-
-const BUILTIN_TEMPLATE_CONTEXT_KEYS = new Set([
-  'feature_id',
-  'run_dir',
-  'repo_root',
-  'command_cwd',
-]);
-
-function buildCommandTemplateContext(
-  runDir: string,
-  repoRoot: string,
-  commandCwd: string,
-  templateContext?: Record<string, string>
-): Record<string, string> {
-  for (const [key, value] of Object.entries(templateContext ?? {})) {
-    if (BUILTIN_TEMPLATE_CONTEXT_KEYS.has(key)) {
-      throw new Error(`Template context key "${key}" conflicts with built-in template key`);
-    }
-    if (TEMPLATE_VALUE_METACHARACTERS.test(value)) {
-      throw new Error(
-        `Template context value for "${key}" contains shell metacharacters which are not permitted`
-      );
-    }
-  }
-
-  return {
-    feature_id: path.basename(runDir).replace(/\s+/gu, '-'),
-    run_dir: runDir,
-    repo_root: repoRoot,
-    command_cwd: commandCwd,
-    ...(templateContext ?? {}),
-  };
-}
-
-function applyCommandTemplate(template: string, context: Record<string, string>): string {
-  return template.replace(/\{\{\s*([\w.-]+)\s*\}\}/g, (_, key: string) => {
-    const value = Object.hasOwn(context, key) ? context[key] : undefined;
-    if (value === undefined) return '';
-    const metacharacterPattern = BUILTIN_TEMPLATE_CONTEXT_KEYS.has(key)
-      ? DANGEROUS_PATH_METACHARACTERS
-      : TEMPLATE_VALUE_METACHARACTERS;
-    if (metacharacterPattern.test(value)) {
-      throw new Error(`Template substitution for "${key}" contains shell metacharacters`);
-    }
-    return value;
-  });
-}
-
-/**
  * Build human-readable validation summary
  */
 function buildValidationSummary(
@@ -728,11 +649,4 @@ function buildValidationSummary(
   }
 
   return lines.join('\n');
-}
-
-/**
- * Sleep helper
- */
-function sleep(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
 }
