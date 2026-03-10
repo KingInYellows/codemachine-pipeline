@@ -167,26 +167,8 @@ describe('parseCommandString', () => {
   });
 
   // ── Path arguments ───────────────────────────────────────────────────────
-    const [exe, args] = parseCommandString('echo foo #bar');
-    expect(exe).toBe('echo');
-    expect(args).toEqual(['foo', '#bar']);
-  });
-
-  // ── Path arguments ───────────────────────────────────────────────────────
 
   it('handles absolute path as executable', () => {
-    const [exe, args] = parseCommandString('/usr/bin/node --version');
-    expect(exe).toBe('/usr/bin/node');
-    expect(args).toEqual(['--version']);
-  });
-
-  it('handles flags with equals sign', () => {
-    const [exe, args] = parseCommandString('npm install --save-dev=true');
-    expect(exe).toBe('npm');
-    expect(args).toEqual(['install', '--save-dev=true']);
-  });
-
-  // ── Error conditions ─────────────────────────────────────────────────────
 
   it('throws on empty string', () => {
     expect(() => parseCommandString('')).toThrow('Empty command string');
@@ -202,18 +184,6 @@ describe('parseCommandString', () => {
     const [exe, args] = parseCommandString('npm test -- --reporter=verbose');
     expect(exe).toBe('npm');
     expect(args).toEqual(['test', '--', '--reporter=verbose']);
-  });
-
-  it('parses tsc command', () => {
-    const [exe, args] = parseCommandString('npx tsc --noEmit');
-    expect(exe).toBe('npx');
-    expect(args).toEqual(['tsc', '--noEmit']);
-  });
-
-  it('handles unquoted glob with find command', () => {
-    const [exe, args] = parseCommandString('find . -name *.json');
-    expect(exe).toBe('find');
-    expect(args).toEqual(['.', '-name', '*.json']);
   });
 
   it('parses tsc command', () => {

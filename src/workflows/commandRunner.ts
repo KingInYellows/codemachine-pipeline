@@ -105,9 +105,9 @@ function preserveLiteralVariableReferences(command: string): {
       variableReferenceLength = closingBraceIndex - i + 1;
     } else if (nextCharacter && /[*@#?$!_-]/u.test(nextCharacter)) {
       variableReferenceLength = 2;
-    } else if (nextCharacter && /[\w\d_]/u.test(nextCharacter)) {
+    } else if (nextCharacter && /\w/u.test(nextCharacter)) {
       let endIndex = i + 1;
-      while (endIndex < command.length && /[\w\d_]/u.test(command[endIndex])) {
+      while (endIndex < command.length && /\w/u.test(command[endIndex])) {
         endIndex += 1;
       }
       variableReferenceLength = endIndex - i;
@@ -149,6 +149,16 @@ function restoreLiteralVariableReferences(
  * references as literal text.
  * Shell operators (|, &&, ;, etc.) are rejected instead of interpreted or
  * silently discarded, preventing command injection and argument rewriting.
+ *
+ * Behavioral note: Unquoted `#` starts a comment (POSIX shell semantics).
+ * For example, `echo hello # world` parses as ['echo', 'hello', '# world']
+ * (comment merged into one token), not ['echo', 'hello', '#', 'world'].
+ * Quote the `#` if you need it as a separate literal token.
+ *
+ * @param command - Command string to parse (e.g., "npm run lint -- --fix")
+ * @returns Tuple of [executable, args[]]
+ */
+ * Quote the `#` if you need it as a separate literal token.
  *
  * @param command - Command string to parse (e.g., "npm run lint -- --fix")
  * @returns Tuple of [executable, args[]]
