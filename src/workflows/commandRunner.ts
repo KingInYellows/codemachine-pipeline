@@ -7,6 +7,7 @@
 
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
+import { parse } from 'shell-quote';
 import type { StructuredLogger } from '../telemetry/logger';
 import { getErrorMessage } from '../utils/errors.js';
 
@@ -39,61 +40,125 @@ export const TEMPLATE_VALUE_METACHARACTERS = new RegExp(
   'u'
 );
 
+function createVariablePlaceholder(index: number, command: string): string {
+  let placeholder = `__CODEPIPE_LITERAL_VAR_${index}__`;
+  while (command.includes(placeholder)) {
+    placeholder = `_${placeholder}_`;
+  }
+  return placeholder;
+}
+
+function preserveLiteralVariableReferences(command: string): {
+  placeholders: Map<string, string>;
+  sanitizedCommand: string;
+} {
+  const placeholders = new Map<string, string>();
+  let sanitizedCommand = '';
+  let inSingleQuote = false;
+  let inDoubleQuote = false;
+  let escaped = false;
+  let placeholderIndex = 0;
+
+  for (let i = 0; i < command.length; i += 1) {
+    const currentCharacter = command[i];
+
+    if (escaped) {
+      sanitizedCommand += currentCharacter;
+      escaped = false;
+      continue;
+    }
+
+    if (currentCharacter === '\\' && !inSingleQuote) {
+      sanitizedCommand += currentCharacter;
+      escaped = true;
+      continue;
+    }
+
+    if (currentCharacter === "'" && !inDoubleQuote) {
+      inSingleQuote = !inSingleQuote;
+      sanitizedCommand += currentCharacter;
+      continue;
+    }
+
+    if (currentCharacter === '"' && !inSingleQuote) {
+      inDoubleQuote = !inDoubleQuote;
+      sanitizedCommand += currentCharacter;
+      continue;
+    }
+
+    if (currentCharacter !== '$' || inSingleQuote) {
+      sanitizedCommand += currentCharacter;
+      continue;
+    }
+
+    const nextCharacter = command[i + 1];
+    let variableReferenceLength = 1;
+
+    if (nextCharacter === '{') {
+      const closingBraceIndex = command.indexOf('}', i + 2);
+      if (closingBraceIndex === -1) {
+        sanitizedCommand += currentCharacter;
+        continue;
+      }
+      variableReferenceLength = closingBraceIndex - i + 1;
+    } else if (nextCharacter && /[*@#?$!_-]/u.test(nextCharacter)) {
+      variableReferenceLength = 2;
+    } else if (nextCharacter && /[\w\d_]/u.test(nextCharacter)) {
+      let endIndex = i + 1;
+      while (endIndex < command.length && /[\w\d_]/u.test(command[endIndex])) {
+        endIndex += 1;
+      }
+      variableReferenceLength = endIndex - i;
+    }
+
+    if (variableReferenceLength === 1) {
+      sanitizedCommand += currentCharacter;
+      continue;
+    }
+
+    const literalVariableReference = command.slice(i, i + variableReferenceLength);
+    const placeholder = createVariablePlaceholder(placeholderIndex, command);
+
+    placeholders.set(placeholder, literalVariableReference);
+    sanitizedCommand += placeholder;
+    placeholderIndex += 1;
+    i += variableReferenceLength - 1;
+  }
+
+  return { placeholders, sanitizedCommand };
+}
+
+function restoreLiteralVariableReferences(
+  parsedArgument: string,
+  placeholders: ReadonlyMap<string, string>
+): string {
+  let restoredArgument = parsedArgument;
+  for (const [placeholder, literalVariableReference] of placeholders) {
+    restoredArgument = restoredArgument.replaceAll(placeholder, literalVariableReference);
+  }
+  return restoredArgument;
+}
+
 /**
  * Parse command string into executable and arguments array.
  * Handles quoted arguments (single and double quotes) properly.
  *
- * Security: This parser extracts arguments without shell interpretation,
- * preventing command injection via metacharacters.
+ * Security: Delegates to shell-quote while preserving raw $VARS / ${VARS}
+ * references as literal text.
+ * Shell operators (|, &&, ;, etc.) are rejected instead of interpreted or
+ * silently discarded, preventing command injection and argument rewriting.
  *
  * @param command - Command string to parse (e.g., "npm run lint -- --fix")
  * @returns Tuple of [executable, args[]]
  */
 export function parseCommandString(command: string): [string, string[]] {
-  const parts: string[] = [];
-  let current = '';
-  let inSingleQuote = false;
-  let inDoubleQuote = false;
-  let escaped = false;
-
-  for (let i = 0; i < command.length; i++) {
-    const char = command[i];
-
-    if (escaped) {
-      current += char;
-      escaped = false;
-      continue;
+  const { placeholders, sanitizedCommand } = preserveLiteralVariableReferences(command);
+  const parts = parse(sanitizedCommand).map((part) => {
+    if (typeof part !== 'string') {
+      throw new Error('Shell operators are not allowed in command strings');
     }
-
-    if (char === '\\' && (inSingleQuote || inDoubleQuote)) {
-      escaped = true;
-      continue;
-    }
-
-    if (char === "'" && !inDoubleQuote) {
-      inSingleQuote = !inSingleQuote;
-      continue;
-    }
-
-    if (char === '"' && !inSingleQuote) {
-      inDoubleQuote = !inDoubleQuote;
-      continue;
-    }
-
-    if (char === ' ' && !inSingleQuote && !inDoubleQuote) {
-      if (current) {
-        parts.push(current);
-        current = '';
-      }
-      continue;
-    }
-
-    current += char;
-  }
-
-  if (current) {
-    parts.push(current);
-  }
+    return restoreLiteralVariableReferences(part, placeholders);
+  });
 
   if (parts.length === 0) {
     throw new Error('Empty command string');

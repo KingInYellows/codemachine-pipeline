@@ -1,14 +1,13 @@
 /**
  * Unit tests for commandRunner module
  *
- * Comprehensive coverage for parseCommandString, which implements a
- * character-by-character shell-style argument parser. Tests cover:
+ * Coverage for parseCommandString, which delegates to shell-quote for
+ * POSIX-compliant argument parsing. Tests cover:
  * - Basic splitting
- * - Single-quoted strings (no escape interpretation)
- * - Double-quoted strings (escape interpretation)
- * - Backslash escape sequences
+ * - Single-quoted strings
+ * - Double-quoted strings
  * - Mixed quote types
- * - Edge cases and error conditions
+ * - Edge cases, error conditions, and security (operator rejection)
  */
 
 import { describe, it, expect } from 'vitest';
@@ -55,12 +54,10 @@ describe('parseCommandString', () => {
     expect(args).toEqual(['commit', '-m', 'fix: resolve bug', '--author', 'Jane Doe']);
   });
 
-  it('drops empty double-quoted string (implementation limitation)', () => {
-    // Note: empty quotes '' or "" are not preserved as empty-string args.
-    // The implementation silently drops them, unlike POSIX sh.
+  it('preserves empty double-quoted string (POSIX-compliant)', () => {
     const [exe, args] = parseCommandString('echo ""');
     expect(exe).toBe('echo');
-    expect(args).toEqual([]);
+    expect(args).toEqual(['']);
   });
 
   it('concatenates adjacent tokens and quoted strings', () => {
@@ -77,12 +74,10 @@ describe('parseCommandString', () => {
     expect(args).toEqual(['hello world']);
   });
 
-  it('drops empty single-quoted string (implementation limitation)', () => {
-    // Note: empty quotes '' or "" are not preserved as empty-string args.
-    // The implementation silently drops them, unlike POSIX sh.
+  it('preserves empty single-quoted string (POSIX-compliant)', () => {
     const [exe, args] = parseCommandString("echo ''");
     expect(exe).toBe('echo');
-    expect(args).toEqual([]);
+    expect(args).toEqual(['']);
   });
 
   // ── Backslash escape sequences ───────────────────────────────────────────
@@ -93,10 +88,10 @@ describe('parseCommandString', () => {
     expect(args).toEqual(['it"s']);
   });
 
-  it('handles backslash escape inside single quotes', () => {
-    const [exe, args] = parseCommandString("echo 'it\\'s'");
+  it('keeps backslashes literal inside single quotes', () => {
+    const [exe, args] = parseCommandString("echo 'it\\\\s'");
     expect(exe).toBe('echo');
-    expect(args).toEqual(["it's"]);
+    expect(args).toEqual(['it\\\\s']);
   });
 
   // ── Mixed quote types ────────────────────────────────────────────────────
@@ -113,18 +108,30 @@ describe('parseCommandString', () => {
     expect(args).toEqual(['say "hello"']);
   });
 
-  // ── Shell metacharacter passthrough ──────────────────────────────────────
+  // ── Shell operator rejection (security) ─────────────────────────────────
 
-  it('passes through shell metacharacters without interpretation', () => {
+  it('preserves env vars as literal strings', () => {
     const [exe, args] = parseCommandString('echo $HOME');
     expect(exe).toBe('echo');
     expect(args).toEqual(['$HOME']);
   });
 
-  it('treats pipe character as a literal argument token', () => {
-    const [exe, args] = parseCommandString('echo foo|bar');
+  it('preserves brace-style env vars as literal strings', () => {
+    const [exe, args] = parseCommandString('echo ${HOME}');
     expect(exe).toBe('echo');
-    expect(args).toEqual(['foo|bar']);
+    expect(args).toEqual(['${HOME}']);
+  });
+
+  it('rejects pipe operator (security)', () => {
+    expect(() => parseCommandString('echo foo | cat')).toThrow(
+      'Shell operators are not allowed in command strings'
+    );
+  });
+
+  it('rejects semicolon operator (security)', () => {
+    expect(() => parseCommandString('echo safe ; rm -rf /')).toThrow(
+      'Shell operators are not allowed in command strings'
+    );
   });
 
   // ── Path arguments ───────────────────────────────────────────────────────
