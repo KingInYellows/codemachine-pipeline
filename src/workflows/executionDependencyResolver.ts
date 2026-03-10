@@ -1,5 +1,5 @@
 import { ExecutionTask, canRetry, areDependenciesCompleted } from '../core/models/ExecutionTask.js';
-import { loadQueue } from './queueStore.js';
+import { loadQueue } from './queue/queueStore.js';
 import { StructuredLogger } from '../telemetry/logger.js';
 import { DEFAULT_EXECUTION_CONFIG } from '../core/config/RepoConfig.js';
 import type { RepoConfig } from '../core/config/RepoConfig.js';

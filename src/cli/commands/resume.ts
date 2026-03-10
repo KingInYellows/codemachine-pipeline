@@ -7,7 +7,7 @@ import {
   type ResumeOptions,
 } from '../../workflows/resumeCoordinator';
 import { getRunDirectoryPath } from '../../persistence/runDirectoryManager';
-import type { QueueValidationResult } from '../../workflows/queueStore';
+import type { QueueValidationResult } from '../../workflows/queue/queueStore.js';
 import { CLIExecutionEngine } from '../../workflows/cliExecutionEngine';
 import { buildExecutionStrategies } from '../../workflows/executionStrategyBuilder.js';
 import {
