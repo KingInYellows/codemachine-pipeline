@@ -59,10 +59,10 @@ function isVulnerableGlob(versionValue) {
 
 function hasDependency(packageJson, name) {
   return Boolean(
-    (packageJson.dependencies && packageJson.dependencies[name]) ||
-    (packageJson.devDependencies && packageJson.devDependencies[name]) ||
-    (packageJson.optionalDependencies && packageJson.optionalDependencies[name]) ||
-    (packageJson.peerDependencies && packageJson.peerDependencies[name])
+    packageJson.dependencies?.[name] ||
+    packageJson.devDependencies?.[name] ||
+    packageJson.optionalDependencies?.[name] ||
+    packageJson.peerDependencies?.[name]
   );
 }
 
