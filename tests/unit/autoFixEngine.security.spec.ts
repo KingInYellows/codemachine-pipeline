@@ -12,6 +12,7 @@ import * as path from 'node:path';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import {
+  parseCommandString,
   SHELL_METACHARACTERS,
   TEMPLATE_VALUE_METACHARACTERS,
 } from '../../src/workflows/commandRunner';
@@ -33,60 +34,6 @@ const executeShellCommandForTesting = async (
   }
 ): Promise<{ exitCode: number; stdout: string; stderr: string; durationMs: number }> => {
   const startTime = Date.now();
-
-  // Parse command into executable and arguments (simplified for testing)
-  function parseCommandString(command: string): [string, string[]] {
-    const parts: string[] = [];
-    let current = '';
-    let inSingleQuote = false;
-    let inDoubleQuote = false;
-    let escaped = false;
-
-    for (let i = 0; i < command.length; i++) {
-      const char = command[i];
-
-      if (escaped) {
-        current += char;
-        escaped = false;
-        continue;
-      }
-
-      if (char === '\\' && (inSingleQuote || inDoubleQuote)) {
-        escaped = true;
-        continue;
-      }
-
-      if (char === "'" && !inDoubleQuote) {
-        inSingleQuote = !inSingleQuote;
-        continue;
-      }
-
-      if (char === '"' && !inSingleQuote) {
-        inDoubleQuote = !inDoubleQuote;
-        continue;
-      }
-
-      if (char === ' ' && !inSingleQuote && !inDoubleQuote) {
-        if (current) {
-          parts.push(current);
-          current = '';
-        }
-        continue;
-      }
-
-      current += char;
-    }
-
-    if (current) {
-      parts.push(current);
-    }
-
-    if (parts.length === 0) {
-      throw new Error('Empty command string');
-    }
-
-    return [parts[0], parts.slice(1)];
-  }
 
   // Check for metacharacters
   if (SHELL_METACHARACTERS.test(command) && options.logger) {
@@ -205,7 +152,7 @@ describe('autoFixEngine security - command execution', () => {
   });
 
   describe('command injection prevention', () => {
-    test('should detect shell metacharacters (pipe) and treat as literal', async () => {
+    test('should reject shell operators after logging the warning', async () => {
       const mockLogger = {
         warn: vi.fn(),
         error: vi.fn(),
@@ -220,8 +167,8 @@ describe('autoFixEngine security - command execution', () => {
         logger: mockLogger,
       });
 
-      expect(result.exitCode).toBe(0);
-      expect(result.stdout).toContain('|');
+      expect(result.exitCode).toBe(1);
+      expect(result.stderr).toContain('Shell operators are not allowed');
 
       expect(mockLogger.warn).toHaveBeenCalledWith(
         expect.stringContaining('shell metacharacters'),
@@ -240,8 +187,8 @@ describe('autoFixEngine security - command execution', () => {
         timeout: 5000,
       });
 
-      expect(result.exitCode).toBe(0);
-      expect(result.stdout).toContain(';');
+      expect(result.exitCode).toBe(1);
+      expect(result.stderr).toContain('Shell operators are not allowed');
 
       // CRITICAL: Verify the malicious file was NOT created
       await expect(fs.access(maliciousFile)).rejects.toThrow();
@@ -264,8 +211,8 @@ describe('autoFixEngine security - command execution', () => {
         timeout: 5000,
       });
 
-      expect(result.exitCode).toBe(0);
-      expect(result.stdout).toContain('`');
+      expect(result.exitCode).toBe(1);
+      expect(result.stderr).toContain('Shell operators are not allowed');
     });
 
     test('should prevent variable expansion via dollar sign', async () => {
@@ -277,6 +224,17 @@ describe('autoFixEngine security - command execution', () => {
 
       expect(result.exitCode).toBe(0);
       expect(result.stdout).toContain('$HOME');
+    });
+
+    test('should preserve brace-style variable references verbatim', async () => {
+      const result = await executeShellCommandForTesting('echo ${HOME}', {
+        cwd: testRunDir,
+        env: process.env,
+        timeout: 5000,
+      });
+
+      expect(result.exitCode).toBe(0);
+      expect(result.stdout).toContain('${HOME}');
     });
   });
 
@@ -388,8 +346,10 @@ describe('autoFixEngine security - command execution', () => {
       const commandRunnerSource = fsSync.readFileSync(commandRunnerPath, 'utf-8');
 
       expect(commandRunnerSource).toContain('parseCommandString');
-      expect(commandRunnerSource).toContain('inSingleQuote');
-      expect(commandRunnerSource).toContain('inDoubleQuote');
+      // Uses shell-quote with literal $VAR preservation and operator rejection
+      expect(commandRunnerSource).toContain('shell-quote');
+      expect(commandRunnerSource).toContain('preserveLiteralVariableReferences');
+      expect(commandRunnerSource).toContain('Shell operators are not allowed in command strings');
     });
   });
 });
