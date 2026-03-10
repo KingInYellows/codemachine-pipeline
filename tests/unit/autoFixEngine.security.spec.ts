@@ -211,8 +211,8 @@ describe('autoFixEngine security - command execution', () => {
         timeout: 5000,
       });
 
-      expect(result.exitCode).toBe(0);
-      expect(result.stdout).toContain('`');
+      expect(result.exitCode).toBe(1);
+      expect(result.stderr).toContain('Shell operators are not allowed');
     });
 
     test('should prevent variable expansion via dollar sign', async () => {

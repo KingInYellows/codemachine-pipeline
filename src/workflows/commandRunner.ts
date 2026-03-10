@@ -95,6 +95,8 @@ function preserveLiteralVariableReferences(command: string): {
     let variableReferenceLength = 1;
 
     if (nextCharacter === '{') {
+      // NOTE: Does not support nested brace expressions like ${VAR:-${DEFAULT}}.
+      // Only simple ${VAR_NAME} and ${SPECIAL} forms are handled.
       const closingBraceIndex = command.indexOf('}', i + 2);
       if (closingBraceIndex === -1) {
         sanitizedCommand += currentCharacter;
@@ -154,10 +156,19 @@ function restoreLiteralVariableReferences(
 export function parseCommandString(command: string): [string, string[]] {
   const { placeholders, sanitizedCommand } = preserveLiteralVariableReferences(command);
   const parts = parse(sanitizedCommand).map((part) => {
-    if (typeof part !== 'string') {
-      throw new Error('Shell operators are not allowed in command strings');
+    if (typeof part === 'string') {
+      return restoreLiteralVariableReferences(part, placeholders);
     }
-    return restoreLiteralVariableReferences(part, placeholders);
+    // Allow glob patterns (e.g., *, ?, [...]) - execFile doesn't expand them
+    if (typeof part === 'object' && part !== null && 'op' in part && part.op === 'glob' && 'pattern' in part) {
+      return restoreLiteralVariableReferences(String(part.pattern), placeholders);
+    }
+    // Allow comment tokens (e.g., #...) - execFile treats them literally
+    if (typeof part === 'object' && part !== null && 'comment' in part) {
+      return restoreLiteralVariableReferences('#' + String(part.comment), placeholders);
+    }
+    // Reject actual shell operators (|, &&, ;, >, <, etc.)
+    throw new Error('Shell operators are not allowed in command strings');
   });
 
   if (parts.length === 0) {

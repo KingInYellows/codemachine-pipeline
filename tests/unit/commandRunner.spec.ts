@@ -134,6 +134,44 @@ describe('parseCommandString', () => {
     );
   });
 
+  it('rejects && operator (security)', () => {
+    expect(() => parseCommandString('npm test && npm run lint')).toThrow(
+      'Shell operators are not allowed in command strings'
+    );
+  });
+
+  it('rejects || operator (security)', () => {
+    expect(() => parseCommandString('npm test || exit 1')).toThrow(
+      'Shell operators are not allowed in command strings'
+    );
+  });
+
+  it('preserves comment-like tokens as literals', () => {
+    const [exe, args] = parseCommandString('echo foo #bar');
+    expect(exe).toBe('echo');
+    expect(args).toEqual(['foo', '#bar']);
+  });
+
+  // ── Glob patterns (regression test) ──────────────────────────────────────
+
+  it('handles unquoted glob pattern with find command', () => {
+    const [exe, args] = parseCommandString('find . -name *.json');
+    expect(exe).toBe('find');
+    expect(args).toEqual(['.', '-name', '*.json']);
+  });
+
+  it('handles unquoted glob pattern with eslint', () => {
+    const [exe, args] = parseCommandString('npx eslint src/**/*.ts --max-warnings 0');
+    expect(exe).toBe('npx');
+    expect(args).toEqual(['eslint', 'src/**/*.ts', '--max-warnings', '0']);
+  });
+
+  // ── Path arguments ───────────────────────────────────────────────────────
+    const [exe, args] = parseCommandString('echo foo #bar');
+    expect(exe).toBe('echo');
+    expect(args).toEqual(['foo', '#bar']);
+  });
+
   // ── Path arguments ───────────────────────────────────────────────────────
 
   it('handles absolute path as executable', () => {
@@ -166,10 +204,16 @@ describe('parseCommandString', () => {
     expect(args).toEqual(['test', '--', '--reporter=verbose']);
   });
 
-  it('parses eslint with quoted glob pattern', () => {
-    const [exe, args] = parseCommandString('npx eslint "src/**/*.ts" --max-warnings 0');
+  it('parses tsc command', () => {
+    const [exe, args] = parseCommandString('npx tsc --noEmit');
     expect(exe).toBe('npx');
-    expect(args).toEqual(['eslint', 'src/**/*.ts', '--max-warnings', '0']);
+    expect(args).toEqual(['tsc', '--noEmit']);
+  });
+
+  it('handles unquoted glob with find command', () => {
+    const [exe, args] = parseCommandString('find . -name *.json');
+    expect(exe).toBe('find');
+    expect(args).toEqual(['.', '-name', '*.json']);
   });
 
   it('parses tsc command', () => {
