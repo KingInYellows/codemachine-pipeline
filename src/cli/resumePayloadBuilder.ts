@@ -102,10 +102,7 @@ export async function buildResumePayload(
   return payload;
 }
 
-async function attachRateLimitWarnings(
-  payload: ResumePayload,
-  runDir: string
-): Promise<void> {
+async function attachRateLimitWarnings(payload: ResumePayload, runDir: string): Promise<void> {
   try {
     const rateLimitReport = await RateLimitReporter.generateReport(runDir);
 
