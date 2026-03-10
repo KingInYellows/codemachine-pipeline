@@ -12,11 +12,6 @@
  * - Error taxonomy (transient, permanent, human action required)
  * - Logging with structured telemetry
  *
- * Implements:
- * - Section 2.1: Key Components - Linear Adapter
- * - IR-8..IR-11: Linear integration requirements
- * - ADR-6: Linear integration architecture
- * - FR-16: Issue snapshot caching
  */
 
 import * as fs from 'node:fs/promises';
@@ -25,22 +20,11 @@ import * as crypto from 'node:crypto';
 import { HttpClient, Provider, HttpError, ErrorType } from '../http/client';
 import type { HttpClientConfig } from '../http/client';
 import { RateLimitLedger } from '../../telemetry/rateLimitLedger';
-import { serializeError, createErrorNormalizer } from '../../utils/errors';
+import { AdapterError, serializeError, createErrorNormalizer } from '../../utils/errors';
 import { createLogger, LogLevel, type LoggerInterface } from '../../telemetry/logger';
 import { isFileNotFound } from '../../utils/safeJson';
 import { validateOrThrow } from '../../validation/helpers.js';
-
-export type {
-  LinearAdapterConfig,
-  LinearIssue,
-  LinearComment,
-  SnapshotMetadata,
-  IssueSnapshot,
-  UpdateIssueParams,
-  PostCommentParams,
-} from './LinearAdapterTypes.js';
-export { LinearAdapterError } from './LinearAdapterTypes.js';
-import { IssueSnapshotSchema, LinearAdapterError } from './LinearAdapterTypes.js';
+import { IssueSnapshotSchema } from './LinearAdapterTypes.js';
 import type {
   LinearAdapterConfig,
   LinearIssue,
@@ -51,9 +35,20 @@ import type {
   PostCommentParams,
 } from './LinearAdapterTypes.js';
 
-// ============================================================================
-// GraphQL Queries
-// ============================================================================
+export type {
+  LinearAdapterConfig,
+  LinearIssue,
+  LinearComment,
+  SnapshotMetadata,
+  IssueSnapshot,
+  UpdateIssueParams,
+  PostCommentParams,
+} from './LinearAdapterTypes.js';
+
+/**
+ * Linear adapter error with error taxonomy
+ */
+export class LinearAdapterError extends AdapterError {}
 
 const ISSUE_QUERY = `
   query GetIssue($issueId: String!) {
@@ -155,20 +150,14 @@ const POST_COMMENT_MUTATION = `
   }
 `;
 
-// ============================================================================
-// Constants
-// ============================================================================
-
 const LINEAR_API_URL = 'https://api.linear.app';
 const GRAPHQL_ENDPOINT = '/graphql';
 const RATE_LIMIT_PER_HOUR = 1500;
 const DEFAULT_CACHE_TTL = 3600; // 1 hour in seconds
 const RATE_LIMIT_WINDOW_MS = 60 * 60 * 1000; // 1 hour sliding window
 const SNAPSHOT_DIR = 'inputs';
-
-// ============================================================================
-// Linear Adapter
-// ============================================================================
+const LINEAR_ISSUE_IDENTIFIER_PATTERN = /^[A-Z][A-Z0-9]*-\d+$/;
+const STRUCTURED_OPAQUE_ISSUE_ID_PATTERN = /^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/;
 
 /**
  * Linear adapter for issue operations via MCP
@@ -232,12 +221,7 @@ export class LinearAdapter {
       noCache?: boolean;
     }
   ): Promise<IssueSnapshot> {
-    this.logger.info('Fetching issue snapshot', {
-      issueId,
-      forceRefresh: options?.forceRefresh,
-      noCache: options?.noCache,
-    });
-
+    LinearAdapter.validateIssueId(issueId);
     // Check cache first unless noCache or forceRefresh
     if (this.runDir && !options?.noCache && !options?.forceRefresh) {
       const cachedSnapshot = await this.loadCachedSnapshot(issueId);
@@ -272,11 +256,6 @@ export class LinearAdapter {
         await this.saveSnapshot(snapshot);
       }
 
-      this.logger.info('Issue snapshot fetched successfully', {
-        issueId: issue.identifier,
-        commentsCount: comments.length,
-      });
-
       return snapshot;
     } catch (error) {
       this.logger.warn('API fetch failed, attempting to use cached snapshot', {
@@ -292,7 +271,12 @@ export class LinearAdapter {
           cachedSnapshot.metadata.last_error = {
             timestamp: new Date().toISOString(),
             message: this.formatError(error),
-            type: error instanceof HttpError ? error.type : ErrorType.TRANSIENT,
+            type:
+              error instanceof LinearAdapterError
+                ? error.errorType
+                : error instanceof HttpError
+                  ? error.type
+                  : ErrorType.TRANSIENT,
           };
 
           this.logger.warn('Using stale cached snapshot due to API failure', {
@@ -317,8 +301,7 @@ export class LinearAdapter {
    * Fetch issue details from Linear API
    */
   async fetchIssue(issueId: string): Promise<LinearIssue> {
-    this.logger.debug('Fetching issue from API', { issueId });
-
+    LinearAdapter.validateIssueId(issueId);
     try {
       const data = await this.executeGraphQL<{ data: { issue: LinearIssue } }>(
         'fetchIssue',
@@ -351,8 +334,7 @@ export class LinearAdapter {
    * Fetch comments for an issue
    */
   async fetchComments(issueId: string): Promise<LinearComment[]> {
-    this.logger.debug('Fetching comments from API', { issueId });
-
+    LinearAdapter.validateIssueId(issueId);
     try {
       const data = await this.executeGraphQL<{
         data: { issue: { comments: { nodes: LinearComment[] } } };
@@ -382,11 +364,7 @@ export class LinearAdapter {
       );
     }
 
-    this.logger.info('Updating issue', {
-      issueId: params.issueId,
-      updates: Object.keys(params).filter((k) => k !== 'issueId'),
-    });
-
+    LinearAdapter.validateIssueId(params.issueId);
     try {
       const variables: {
         issueId: string;
@@ -409,8 +387,6 @@ export class LinearAdapter {
       if (!data.data?.issueUpdate?.success) {
         throw new Error('Issue update failed');
       }
-
-      this.logger.info('Issue updated successfully', { issueId: params.issueId });
     } catch (error) {
       this.logger.error('Failed to update issue', {
         issueId: params.issueId,
@@ -418,6 +394,8 @@ export class LinearAdapter {
       });
       throw this.normalizeError(error, 'updateIssue');
     }
+
+    this.logger.info('Issue updated successfully', { issueId: params.issueId });
   }
 
   /**
@@ -434,11 +412,7 @@ export class LinearAdapter {
       );
     }
 
-    this.logger.info('Posting comment', {
-      issueId: params.issueId,
-      bodyLength: params.body.length,
-    });
-
+    LinearAdapter.validateIssueId(params.issueId);
     try {
       const data = await this.executeGraphQL<{
         data: { commentCreate: { success: boolean } };
@@ -452,8 +426,6 @@ export class LinearAdapter {
       if (!data.data?.commentCreate?.success) {
         throw new Error('Comment creation failed');
       }
-
-      this.logger.info('Comment posted successfully', { issueId: params.issueId });
     } catch (error) {
       this.logger.error('Failed to post comment', {
         issueId: params.issueId,
@@ -461,11 +433,10 @@ export class LinearAdapter {
       });
       throw this.normalizeError(error, 'postComment');
     }
+
+    this.logger.info('Comment posted successfully', { issueId: params.issueId });
   }
 
-  /**
-   * Load cached snapshot from run directory
-   */
   private async loadCachedSnapshot(issueId: string): Promise<IssueSnapshot | null> {
     if (!this.runDir) {
       return null;
@@ -510,9 +481,6 @@ export class LinearAdapter {
     }
   }
 
-  /**
-   * Save snapshot to run directory
-   */
   private async saveSnapshot(snapshot: IssueSnapshot): Promise<void> {
     if (!this.runDir) {
       return;
@@ -538,9 +506,6 @@ export class LinearAdapter {
     }
   }
 
-  /**
-   * Check if snapshot is still valid based on TTL
-   */
   private isSnapshotValid(metadata: SnapshotMetadata): boolean {
     const ttl = metadata.ttl ?? DEFAULT_CACHE_TTL;
     const retrievedAt = new Date(metadata.retrieved_at).getTime();
@@ -550,41 +515,53 @@ export class LinearAdapter {
     return age < ttl;
   }
 
-  /**
-   * Get snapshot age in seconds
-   */
   private getSnapshotAge(metadata: SnapshotMetadata): number {
     const retrievedAt = new Date(metadata.retrieved_at).getTime();
     const now = Date.now();
     return Math.floor((now - retrievedAt) / 1000);
   }
 
-  /**
-   * Compute SHA-256 hash of snapshot content
-   */
   private computeSnapshotHash(data: { issue: LinearIssue; comments: LinearComment[] }): string {
     const content = JSON.stringify(data);
     return crypto.createHash('sha256').update(content).digest('hex');
   }
 
-  /**
-   * Get snapshot file path
-   */
-  private getSnapshotPath(issueId: string): string {
-    if (!issueId || issueId.length > 100 || !/^[A-Z][A-Z0-9]*-\d+$/.test(issueId)) {
-      throw new Error(`Invalid Linear issue ID: ${JSON.stringify(issueId)}`);
+  private static validateIssueId(issueId: string): void {
+    if (!issueId || issueId.length > 100) {
+      throw new LinearAdapterError(
+        `Invalid Linear issue ID: ${JSON.stringify(issueId)}`,
+        ErrorType.PERMANENT,
+        undefined,
+        undefined,
+        'validateIssueId'
+      );
     }
-    const sanitized = issueId.replace(/[^a-zA-Z0-9-]/g, '_');
+    const isLinearIdentifier = LINEAR_ISSUE_IDENTIFIER_PATTERN.test(issueId);
+    const isStructuredOpaqueId = STRUCTURED_OPAQUE_ISSUE_ID_PATTERN.test(issueId);
+    if (!isLinearIdentifier && !isStructuredOpaqueId) {
+      throw new LinearAdapterError(
+        `Invalid Linear issue ID: ${JSON.stringify(issueId)}`,
+        ErrorType.PERMANENT,
+        undefined,
+        undefined,
+        'validateIssueId'
+      );
+    }
+  }
+
+  private getSnapshotPath(issueId: string): string {
     if (!this.runDir) {
       throw new Error('runDir is not set');
     }
-    return path.join(this.runDir, SNAPSHOT_DIR, `linear_issue_${sanitized}.json`);
+    return path.join(this.runDir, SNAPSHOT_DIR, `linear_issue_${issueId}.json`);
   }
 
   private async executeGraphQL<T>(
     operation: string,
     query: string,
+    // eslint-disable-next-line @typescript-eslint/no-restricted-types -- intentional: GraphQL query variables are open-ended by nature
     variables: Record<string, unknown>,
+    // eslint-disable-next-line @typescript-eslint/no-restricted-types -- intentional: GraphQL execution context is open-ended by nature
     context: Record<string, unknown>
   ): Promise<T> {
     const timestamp = await this.assertRateLimitHeadroom(operation);
@@ -599,9 +576,6 @@ export class LinearAdapter {
 
   private readonly normalizeError = createErrorNormalizer(LinearAdapterError, 'Linear');
 
-  /**
-   * Format error message
-   */
   private formatError(error: unknown): string {
     if (error instanceof Error) {
       return error.message;
@@ -609,9 +583,6 @@ export class LinearAdapter {
     return String(error);
   }
 
-  /**
-   * Ensure outgoing request stays within Linear's sliding window budget
-   */
   private async assertRateLimitHeadroom(operation: string): Promise<number> {
     const now = Date.now();
     this.trimRequestWindow(now);
@@ -667,33 +638,14 @@ export class LinearAdapter {
     return now;
   }
 
-  /**
-   * Record request timestamp for sliding window tracking
-   */
   private recordRequest(timestamp: number): void {
     this.requestTimestamps.push(timestamp);
   }
 
-  /**
-   * Remove timestamps that are outside the sliding window
-   */
   private trimRequestWindow(now: number): void {
     const windowStart = now - RATE_LIMIT_WINDOW_MS;
     while (this.requestTimestamps.length > 0 && this.requestTimestamps[0] < windowStart) {
       this.requestTimestamps.shift();
     }
   }
-}
-
-// ============================================================================
-// Error Classes
-// ============================================================================
-// Factory Functions
-// ============================================================================
-
-/**
- * Create Linear adapter instance
- */
-export function createLinearAdapter(config: LinearAdapterConfig): LinearAdapter {
-  return new LinearAdapter(config);
 }

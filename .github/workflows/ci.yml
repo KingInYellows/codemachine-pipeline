@@ -88,25 +88,10 @@ jobs:
         with:
           clean: true
 
-      - name: Prepare npm directories
-        run: |
-          set -euo pipefail
-          echo "HOME=$RUNNER_TEMP/codemachine-home" >> "$GITHUB_ENV"
-          echo "NPM_CONFIG_CACHE=$RUNNER_TEMP/codemachine-npm-cache" >> "$GITHUB_ENV"
-          mkdir -p "$RUNNER_TEMP/codemachine-home" "$RUNNER_TEMP/codemachine-npm-cache"
-
-      - name: Setup Node.js
-        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.1.0
+      - name: Setup Node.js environment
+        uses: ./.github/actions/setup-node
         with:
-          node-version: '24'
-          cache: npm
-
-      - name: Runner preflight checks
-        run: |
-          set -euo pipefail
-          node -v
-          npm -v
-          node -e "const major=Number(process.versions.node.split('.')[0]); if (major < 24) { console.error('Node 24+ is required for CI'); process.exit(1) }"
+          prepare-npm-dirs: 'true'
 
       - name: Install dependencies
         run: npm ci --no-audit --no-fund
@@ -165,12 +150,13 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.2.2
 
-      - name: Setup Node.js
-        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.1.0
+      - name: Setup Node.js environment
+        uses: ./.github/actions/setup-node
         with:
-          node-version: '24'
+          cache: ''
+          enable-preflight: 'false'
 
       - name: Runner preflight checks
         id: docker_preflight

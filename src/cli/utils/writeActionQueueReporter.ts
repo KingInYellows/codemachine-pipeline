@@ -8,11 +8,9 @@
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 import type { WriteActionQueueManifest } from '../../workflows/writeActionQueue';
+import { WriteActionQueueManifestSchema } from '../../workflows/writeActionQueueTypes.js';
 import { isFileNotFound } from '../../utils/safeJson.js';
-
-// ============================================================================
-// Types
-// ============================================================================
+import { validateOrThrow } from '../../validation/helpers.js';
 
 /**
  * Queue status report for CLI output
@@ -87,10 +85,6 @@ export interface WriteActionQueueCLIOutputOptions {
   showWarnings?: boolean;
 }
 
-// ============================================================================
-// Constants
-// ============================================================================
-
 const QUEUE_SUBDIR = 'write_actions';
 const MANIFEST_FILE = 'manifest.json';
 
@@ -99,10 +93,6 @@ const BACKLOG_WARNING_THRESHOLD = 50;
 const BACKLOG_CRITICAL_THRESHOLD = 200;
 const FAILURE_WARNING_THRESHOLD = 5;
 const FAILURE_CRITICAL_THRESHOLD = 20;
-
-// ============================================================================
-// Reporter Functions
-// ============================================================================
 
 /**
  * Generate write action queue report
@@ -119,7 +109,11 @@ export async function generateWriteActionQueueReport(
 
     // Load manifest
     const manifestContent = await fs.readFile(manifestPath, 'utf-8');
-    const manifest = JSON.parse(manifestContent) as WriteActionQueueManifest;
+    const manifest = validateOrThrow(
+      WriteActionQueueManifestSchema,
+      JSON.parse(manifestContent),
+      'write action queue manifest'
+    ) as WriteActionQueueManifest;
 
     // Calculate derived metrics
     const backlog = manifest.pending_count + manifest.in_progress_count;
@@ -367,10 +361,6 @@ export function formatWriteActionQueueJSON(
     recommendations: generateRecommendations(report),
   };
 }
-
-// ============================================================================
-// Standalone Helper Functions
-// ============================================================================
 
 /**
  * Export helper for status command integration

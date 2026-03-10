@@ -1,8 +1,8 @@
 /**
  * Resume Queue Recovery
  *
- * Extracted from resumeCoordinator.ts: queue snapshot validation
- * and task recovery for execution resumption.
+ * Extracted from resumeCoordinator.ts: queue snapshot validation,
+ * queue file integrity checks, and task recovery for execution resumption.
  */
 
 import * as fs from 'node:fs/promises';
@@ -13,11 +13,10 @@ import {
   canRetry,
   areDependenciesCompleted,
 } from '../core/models/ExecutionTask';
-import { loadQueue } from './queueStore';
-
-// ============================================================================
-// Types
-// ============================================================================
+import { validateQueue, loadQueue } from './queueStore';
+import { RawSnapshotSchema } from './resumeSnapshotSchema';
+import { validateOrThrow } from '../validation/helpers.js';
+import type { ResumeAnalysis, ResumeOptions } from './runStateVerifier';
 
 export interface QueueSnapshotMetadata {
   /** Number of tasks captured in the snapshot */
@@ -29,10 +28,6 @@ export interface QueueSnapshotMetadata {
   /** Queue file path (relative to queue directory) */
   queueFile: string;
 }
-
-// ============================================================================
-// Queue Recovery Functions
-// ============================================================================
 
 /**
  * Validate queue snapshot integrity
@@ -55,16 +50,7 @@ export async function validateQueueSnapshot(
     // Load raw snapshot file to check format (handles both V1 and V2)
     const snapshotPath = path.join(queueDir, 'queue_snapshot.json');
     const content = await fs.readFile(snapshotPath, 'utf-8');
-    const rawSnapshot = JSON.parse(content) as {
-      schemaVersion?: string;
-      schema_version?: string;
-      tasks: { [taskId: string]: unknown };
-      counts?: unknown;
-      dependencyGraph?: Record<string, string[]>;
-      dependency_graph?: Record<string, string[]>;
-      checksum: string;
-      timestamp: string;
-    };
+    const rawSnapshot = validateOrThrow(RawSnapshotSchema, JSON.parse(content), 'queue snapshot');
 
     const taskCount = Object.keys(rawSnapshot.tasks).length;
     const normalizedStoredTimestamp = new Date(rawSnapshot.timestamp).toISOString();
@@ -83,9 +69,53 @@ export async function validateQueueSnapshot(
 }
 
 /**
+ * Validate queue files for corruption or schema mismatches
+ */
+export async function checkQueueFiles(
+  analysis: ResumeAnalysis,
+  runDir: string,
+  options: ResumeOptions
+): Promise<void> {
+  const shouldValidateQueue = options.validateQueue !== false;
+  if (!shouldValidateQueue) {
+    return;
+  }
+
+  const validation = await validateQueue(runDir);
+  analysis.queueValidation = validation;
+
+  if (!validation.valid) {
+    analysis.diagnostics.push({
+      severity: 'blocker',
+      message: `Queue validation failed (${validation.corruptedTasks}/${validation.totalTasks} corrupted entr${validation.corruptedTasks === 1 ? 'y' : 'ies'})`,
+      code: 'QUEUE_CORRUPTED',
+      context: {
+        errors: validation.errors,
+      },
+    });
+    return;
+  }
+
+  analysis.diagnostics.push({
+    severity: 'info',
+    message: `Queue validation succeeded (${validation.totalTasks} task${validation.totalTasks === 1 ? '' : 's'})`,
+    code: 'QUEUE_VALIDATED',
+  });
+
+  if (validation.warnings.length > 0) {
+    analysis.diagnostics.push({
+      severity: 'warning',
+      message: `${validation.warnings.length} queue warning${validation.warnings.length === 1 ? '' : 's'} detected`,
+      code: 'QUEUE_VALIDATION_WARNINGS',
+      context: {
+        warnings: validation.warnings,
+      },
+    });
+  }
+}
+
+/**
  * Get resumable tasks from queue
- *
- * This is a placeholder - actual implementation will use queueStore
  *
  * @param runDir - Run directory path
  * @returns Array of tasks that can be resumed

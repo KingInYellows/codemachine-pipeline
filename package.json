@@ -71,11 +71,11 @@
     "/oclif.manifest.json"
   ],
   "dependencies": {
-    "@oclif/core": "^4.0.30",
+    "@oclif/core": "^4.8.4",
     "@oclif/plugin-help": "^6.2.37",
     "picomatch": "^4.0.3",
     "semver": "^7.7.4",
-    "undici": "^7.21.0",
+    "undici": "^7.22.0",
     "zod": "^4.3.6"
   },
   "optionalDependencies": {
@@ -83,14 +83,14 @@
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
-    "@types/node": "^25.2.2",
+    "@types/node": "^25.4.0",
     "@types/picomatch": "^4.0.2",
     "@types/semver": "^7.7.1",
-    "@typescript-eslint/eslint-plugin": "^8.54.0",
-    "@typescript-eslint/parser": "^8.54.0",
+    "@typescript-eslint/eslint-plugin": "^8.57.0",
+    "@typescript-eslint/parser": "^8.57.0",
     "@vitest/ui": "^4.0.18",
     "cross-env": "^10.1.0",
-    "eslint": "^10.0.0",
+    "eslint": "^10.0.3",
     "eslint-config-prettier": "^10.1.8",
     "madge": "^8.0.0",
     "markdown-link-check": "^3.13.6",

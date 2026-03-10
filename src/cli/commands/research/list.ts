@@ -1,16 +1,18 @@
-import { Command, Flags } from '@oclif/core';
+import { Flags } from '@oclif/core';
 import { getRunDirectoryPath } from '../../../persistence/runDirectoryManager';
-import { resolveRunDirectorySettings, selectFeatureId } from '../../utils/runDirectory';
-import { createCliLogger } from '../../../telemetry/logger';
-import { createRunMetricsCollector } from '../../../telemetry/metrics';
 import {
-  createResearchCoordinator,
+  resolveRunDirectorySettings,
+  selectFeatureId,
+  requireFeatureId,
+} from '../../utils/runDirectory';
+import {
+  createCoordinatorForRun,
   type ResearchDiagnostics,
   type ResearchTaskFilters,
 } from '../../../workflows/researchCoordinator';
 import type { ResearchTask } from '../../../core/models/ResearchTask';
-import { setJsonOutputMode } from '../../utils/cliErrors';
-import { flushTelemetrySuccess, flushTelemetryError } from '../../utils/telemetryLifecycle';
+import { CliError, CliErrorCode, setJsonOutputMode } from '../../utils/cliErrors';
+import { TelemetryCommand } from '../../telemetryCommand';
 
 type ListFlags = {
   feature?: string;
@@ -26,7 +28,11 @@ interface ResearchListPayload {
   diagnostics: ResearchDiagnostics;
 }
 
-export default class ResearchList extends Command {
+export default class ResearchList extends TelemetryCommand {
+  protected get commandName(): string {
+    return 'research:list';
+  }
+
   static description = 'List ResearchTasks for the selected feature run directory';
 
   static examples = [
@@ -70,73 +76,63 @@ export default class ResearchList extends Command {
       setJsonOutputMode();
     }
 
-    const startTime = Date.now();
     const settings = await resolveRunDirectorySettings();
     const featureId = await selectFeatureId(settings.baseDir, typedFlags.feature);
-
-    if (!featureId) {
-      this.error('No feature run directory found. Use `codepipe start` first.', { exit: 10 });
-    }
-
-    if (typedFlags.feature && featureId !== typedFlags.feature) {
-      this.error(`Feature run directory not found: ${typedFlags.feature}`, { exit: 10 });
+    try {
+      requireFeatureId(featureId, typedFlags.feature);
+    } catch (error) {
+      if (error instanceof CliError) {
+        const exitCode = error.code === CliErrorCode.RUN_DIR_NOT_FOUND ? 10 : error.exitCode;
+        this.error(error.message, { exit: exitCode });
+      }
+      throw error;
     }
 
     const runDir = getRunDirectoryPath(settings.baseDir, featureId);
-    const logger = createCliLogger('research:list', featureId, runDir);
-    const metrics = createRunMetricsCollector(runDir, featureId);
-    const coordinator = createResearchCoordinator(
+
+    await this.runWithTelemetry(
       {
-        repoRoot: process.cwd(),
-        runDir,
+        runDirPath: runDir,
         featureId,
+        jsonMode: typedFlags.json,
       },
-      logger,
-      metrics
+      async (ctx) => {
+        const coordinator = createCoordinatorForRun(runDir, featureId, ctx.logger!, ctx.metrics!);
+
+        const statusFilter =
+          typedFlags.status && typedFlags.status.length > 0
+            ? typedFlags.status.length === 1
+              ? typedFlags.status[0]
+              : typedFlags.status
+            : undefined;
+
+        const filters: ResearchTaskFilters = {};
+        if (statusFilter !== undefined) {
+          filters.status = statusFilter;
+        }
+        if (typedFlags.stale) {
+          filters.onlyStale = true;
+        }
+        if (typeof typedFlags.limit === 'number') {
+          filters.limit = typedFlags.limit;
+        }
+
+        const tasks = await coordinator.listTasks(filters);
+        const diagnostics = await coordinator.getDiagnostics();
+
+        const payload: ResearchListPayload = {
+          feature_id: featureId,
+          tasks,
+          diagnostics,
+        };
+
+        if (typedFlags.json) {
+          this.log(JSON.stringify(payload, null, 2));
+        } else {
+          this.printHumanReadable(payload);
+        }
+      }
     );
-
-    try {
-      const statusFilter =
-        typedFlags.status && typedFlags.status.length > 0
-          ? typedFlags.status.length === 1
-            ? typedFlags.status[0]
-            : typedFlags.status
-          : undefined;
-
-      const filters: ResearchTaskFilters = {};
-      if (statusFilter !== undefined) {
-        filters.status = statusFilter;
-      }
-      if (typedFlags.stale) {
-        filters.onlyStale = true;
-      }
-      if (typeof typedFlags.limit === 'number') {
-        filters.limit = typedFlags.limit;
-      }
-
-      const tasks = await coordinator.listTasks(filters);
-      const diagnostics = await coordinator.getDiagnostics();
-
-      const payload: ResearchListPayload = {
-        feature_id: featureId,
-        tasks,
-        diagnostics,
-      };
-
-      if (typedFlags.json) {
-        this.log(JSON.stringify(payload, null, 2));
-      } else {
-        this.printHumanReadable(payload);
-      }
-      await flushTelemetrySuccess({ commandName: 'research:list', startTime, metrics });
-    } catch (error) {
-      await flushTelemetryError({ commandName: 'research:list', startTime, metrics }, error);
-
-      logger.error('Failed to list research tasks', {
-        error: error instanceof Error ? error.message : 'unknown error',
-      });
-      this.error('Failed to list research tasks', { exit: 1 });
-    }
   }
 
   private printHumanReadable(payload: ResearchListPayload): void {

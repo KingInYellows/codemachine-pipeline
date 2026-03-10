@@ -1,5 +1,7 @@
 import type { RequestInit, Response, HeadersInit } from 'undici-types';
-import { RateLimitLedger, RateLimitEnvelope } from '../../telemetry/rateLimitLedger';
+import { RateLimitLedger, type RateLimitEnvelope } from '../../telemetry/rateLimitLedger';
+import type { RateLimitRecorder } from './httpTypes.js';
+export type { RateLimitRecorder } from './httpTypes.js';
 import {
   ErrorType,
   Provider,
@@ -11,6 +13,8 @@ import {
   ACCEPT_HEADER,
   GITHUB_API_VERSION,
 } from './httpTypes.js';
+import type { ZodSchema } from 'zod';
+import { validateOrThrow } from '../../validation/helpers.js';
 import type { HttpClientConfig, HttpRequestOptions, HttpResponse } from './httpTypes.js';
 import type { LoggerInterface } from '../../telemetry/logger';
 import { createConsoleLogger, LogLevel } from '../../telemetry/logger';
@@ -19,8 +23,6 @@ import {
   generateIdempotencyKey,
   extractHeaders,
   sanitizeUrl,
-  sanitizeHeaders,
-  truncate,
   sleep,
 } from './httpUtils.js';
 
@@ -48,62 +50,10 @@ export {
   sanitizeHeaders,
   truncate,
   sleep,
-  SENSITIVE_HEADERS,
-  SENSITIVE_KEYWORDS,
 } from './httpUtils.js';
 
-/**
- * Structured HTTP error with metadata
- */
-const MAX_RESPONSE_BODY_SIZE = 2048;
-
-export class HttpError extends Error {
-  constructor(
-    message: string,
-    public readonly type: ErrorType,
-    public readonly statusCode?: number,
-    public readonly headers?: Record<string, string>,
-    responseBody?: string,
-    public readonly requestId?: string,
-    public readonly retryable: boolean = false
-  ) {
-    super(message);
-    this.name = 'HttpError';
-    this.responseBody = responseBody ? truncate(responseBody, MAX_RESPONSE_BODY_SIZE) : undefined;
-    Object.setPrototypeOf(this, HttpError.prototype);
-  }
-
-  public readonly responseBody: string | undefined;
-
-  /**
-   * Convert to JSON-serializable object for logging
-   */
-  toJSON(): {
-    name: string;
-    message: string;
-    type: ErrorType;
-    statusCode?: number | undefined;
-    requestId?: string | undefined;
-    retryable: boolean;
-    headers?: Record<string, string> | undefined;
-    responseBody?: string | undefined;
-  } {
-    return {
-      name: this.name,
-      message: this.message,
-      type: this.type,
-      statusCode: this.statusCode,
-      requestId: this.requestId,
-      retryable: this.retryable,
-      headers: this.headers ? sanitizeHeaders(this.headers) : undefined,
-      responseBody: this.responseBody ? truncate(this.responseBody, 500) : undefined,
-    };
-  }
-}
-
-// ============================================================================
-// HTTP Client
-// ============================================================================
+import { HttpError } from '../../core/errors.js';
+export { HttpError } from '../../core/errors.js';
 
 type AttemptResult<T> =
   | { ok: true; result: HttpResponse<T> }
@@ -113,8 +63,8 @@ type AttemptResult<T> =
  * Unified HTTP client with rate limiting, retries, and structured errors
  */
 export class HttpClient {
-  private readonly config: Required<HttpClientConfig>;
-  private readonly rateLimitLedger?: RateLimitLedger;
+  private readonly config: Required<Omit<HttpClientConfig, 'rateLimitRecorder'>>;
+  private readonly rateLimitRecorder?: RateLimitRecorder;
   private readonly logger: LoggerInterface;
 
   constructor(config: HttpClientConfig) {
@@ -122,6 +72,7 @@ export class HttpClient {
       baseUrl: config.baseUrl,
       provider: config.provider,
       token: config.token ?? '',
+      apiVersion: config.apiVersion ?? GITHUB_API_VERSION,
       runDir: config.runDir ?? '',
       defaultHeaders: config.defaultHeaders ?? {},
       timeout: config.timeout ?? DEFAULT_TIMEOUT,
@@ -133,9 +84,10 @@ export class HttpClient {
 
     this.logger = this.config.logger;
 
-    // Initialize rate limit ledger if run directory is provided
-    if (this.config.runDir) {
-      this.rateLimitLedger = new RateLimitLedger(
+    if (config.rateLimitRecorder) {
+      this.rateLimitRecorder = config.rateLimitRecorder;
+    } else if (this.config.runDir) {
+      this.rateLimitRecorder = new RateLimitLedger(
         this.config.runDir,
         this.config.provider,
         this.logger
@@ -239,7 +191,8 @@ export class HttpClient {
         requestId,
         attempt + 1,
         maxAttempts,
-        options.metadata
+        options.metadata,
+        options.schema
       );
 
       if (outcome.ok) return outcome.result;
@@ -294,7 +247,9 @@ export class HttpClient {
     requestId: string,
     attemptNumber: number,
     maxAttempts: number,
-    metadata?: Record<string, unknown>
+    // eslint-disable-next-line @typescript-eslint/no-restricted-types -- intentional: request metadata for logging varies per caller
+    metadata?: Record<string, unknown>,
+    schema?: ZodSchema<unknown>
   ): Promise<AttemptResult<T>> {
     this.logger.debug('HTTP request', {
       method,
@@ -314,8 +269,8 @@ export class HttpClient {
       const response = await fetch(url, fetchOptions);
 
       const rateLimitEnvelope = this.extractRateLimitEnvelope(response, requestId);
-      if (rateLimitEnvelope && this.rateLimitLedger) {
-        await this.rateLimitLedger.recordEnvelope(rateLimitEnvelope);
+      if (rateLimitEnvelope && this.rateLimitRecorder) {
+        await this.rateLimitRecorder.recordEnvelope(rateLimitEnvelope);
       }
 
       if (!response.ok) {
@@ -323,7 +278,7 @@ export class HttpClient {
         return { ok: false, error, rateLimitEnvelope };
       }
 
-      const data = await this.parseResponseBody<T>(response);
+      const data = await this.parseResponseBody<T>(response, schema);
       this.logger.debug('HTTP response', {
         requestId,
         status: response.status,
@@ -367,7 +322,7 @@ export class HttpClient {
     // Provider-specific headers
     if (this.config.provider === Provider.GITHUB) {
       headers['Accept'] = ACCEPT_HEADER;
-      headers['X-GitHub-Api-Version'] = GITHUB_API_VERSION;
+      headers['X-GitHub-Api-Version'] = this.config.apiVersion;
     }
 
     // Authorization
@@ -618,32 +573,53 @@ export class HttpClient {
   /**
    * Parse response body as JSON
    */
-  private async parseResponseBody<T>(response: Response): Promise<T> {
+
+  private async parseResponseBody<T>(response: Response, schema?: ZodSchema<unknown>): Promise<T> {
     const contentType = response.headers.get('content-type') ?? '';
 
+    let parsed: unknown;
     if (contentType.includes('application/json')) {
-      return (await response.json()) as T;
+      parsed = await response.json();
+    } else {
+      // No content-type or non-JSON: try JSON parsing first (many APIs omit the header),
+      // fall back to text. Avoids the unsafe `as unknown as T` silent cast.
+      const text = await this.safeReadText(response);
+      if (!text) {
+        parsed = undefined;
+      } else {
+        try {
+          parsed = JSON.parse(text);
+        } catch {
+          throw new HttpError(
+            `Non-JSON response with content type: ${contentType || '(none)'}`,
+            ErrorType.PERMANENT,
+            response.status,
+            extractHeaders(response.headers),
+            text,
+            undefined,
+            false
+          );
+        }
+      }
     }
 
-    // No content-type or non-JSON: try JSON parsing first (many APIs omit the header),
-    // fall back to text. Avoids the unsafe `as unknown as T` silent cast.
-    const text = await this.safeReadText(response);
-    if (!text) {
-      return undefined as unknown as T;
+    if (schema) {
+      try {
+        return validateOrThrow(schema, parsed, 'http response') as T;
+      } catch (error) {
+        const message = error instanceof Error ? error.message : 'Schema validation failed';
+        throw new HttpError(
+          `Response schema validation failed: ${message}`,
+          ErrorType.PERMANENT,
+          response.status,
+          extractHeaders(response.headers),
+          JSON.stringify(parsed),
+          undefined,
+          false
+        );
+      }
     }
-    try {
-      return JSON.parse(text) as T;
-    } catch {
-      throw new HttpError(
-        `Non-JSON response with content type: ${contentType || '(none)'}`,
-        ErrorType.PERMANENT,
-        response.status,
-        extractHeaders(response.headers),
-        text,
-        undefined,
-        false
-      );
-    }
+    return parsed as T;
   }
 
   /**

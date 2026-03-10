@@ -1,8 +1,10 @@
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
+import { z } from 'zod';
 import type { Provider } from '../core/sharedTypes';
 import type { LoggerInterface } from './logger';
 import { isFileNotFound } from '../utils/safeJson.js';
+import { validateOrThrow } from '../validation/helpers.js';
 
 /**
  * Rate Limit Ledger
@@ -16,10 +18,6 @@ import { isFileNotFound } from '../utils/safeJson.js';
  *
  * Implements Rate Limit Discipline from the Rulebook.
  */
-
-// ============================================================================
-// Types & Schemas
-// ============================================================================
 
 /**
  * Rate limit envelope captured from HTTP response headers
@@ -91,9 +89,17 @@ export interface RateLimitLedgerData {
   };
 }
 
-// ============================================================================
-// Constants
-// ============================================================================
+const RateLimitLedgerDataSchema = z
+  .object({
+    schema_version: z.string(),
+    feature_id: z.string().optional(),
+    providers: z.record(z.string(), z.unknown()),
+    metadata: z.object({
+      created_at: z.string(),
+      updated_at: z.string(),
+    }),
+  })
+  .passthrough();
 
 const LEDGER_FILENAME = 'rate_limits.json';
 const LEDGER_SCHEMA_VERSION = '1.0.0';
@@ -102,10 +108,6 @@ const MAX_RECENT_ENVELOPES = 10;
 // Cooldown thresholds
 const COOLDOWN_THRESHOLD_REMAINING = 10; // Enter cooldown when less than 10 requests remain
 const SECONDARY_LIMIT_RETRY_COUNT = 3; // Number of consecutive 429s before requiring manual ack
-
-// ============================================================================
-// Helpers
-// ============================================================================
 
 function getLedgerPath(runDir: string): string {
   return path.join(runDir, LEDGER_FILENAME);
@@ -127,7 +129,11 @@ function createEmptyLedgerData(): RateLimitLedgerData {
 async function loadLedgerFile(ledgerPath: string): Promise<RateLimitLedgerData> {
   try {
     const content = await fs.readFile(ledgerPath, 'utf-8');
-    return JSON.parse(content) as RateLimitLedgerData;
+    return validateOrThrow(
+      RateLimitLedgerDataSchema,
+      JSON.parse(content),
+      'rate limit ledger'
+    ) as RateLimitLedgerData;
   } catch (error) {
     if (isFileNotFound(error)) {
       return createEmptyLedgerData();
@@ -140,10 +146,6 @@ async function saveLedgerFile(ledgerPath: string, ledger: RateLimitLedgerData): 
   const content = JSON.stringify(ledger, null, 2);
   await fs.writeFile(ledgerPath, content, 'utf-8');
 }
-
-// ============================================================================
-// Rate Limit Ledger Class
-// ============================================================================
 
 /**
  * Rate limit ledger writer and reader
@@ -403,10 +405,6 @@ export class RateLimitLedger {
   }
 }
 
-// ============================================================================
-// File helpers
-// ============================================================================
-
 export async function readRateLimitLedger(runDir: string): Promise<RateLimitLedgerData> {
   const ledgerPath = getLedgerPath(runDir);
   return loadLedgerFile(ledgerPath);
@@ -419,10 +417,6 @@ export async function writeRateLimitLedger(
   const ledgerPath = getLedgerPath(runDir);
   await saveLedgerFile(ledgerPath, ledger);
 }
-
-// ============================================================================
-// Utility Functions
-// ============================================================================
 
 /**
  * Export helper to create a ledger instance

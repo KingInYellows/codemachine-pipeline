@@ -21,7 +21,7 @@ import {
   type CreateResearchTaskOptions,
 } from '../../src/workflows/researchCoordinator';
 import { createLogger } from '../../src/telemetry/logger';
-import { createMetricsCollector } from '../../src/telemetry/metrics';
+import { MetricsCollector } from '../../src/telemetry/metrics';
 import { type ResearchResult, type ResearchTask } from '../../src/core/models/ResearchTask';
 import type { ContextDocument } from '../../src/core/models/ContextDocument';
 
@@ -67,7 +67,7 @@ function createTestCoordinator(runDir: string): ResearchCoordinator {
     minLevel: 'error', // Suppress logs during tests
   });
 
-  const metrics = createMetricsCollector();
+  const metrics = new MetricsCollector();
 
   return createResearchCoordinator(config, logger, metrics);
 }

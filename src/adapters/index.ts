@@ -24,7 +24,6 @@ export {
 
 export {
   BranchProtectionAdapter,
-  createBranchProtectionAdapter,
   BranchProtectionError,
   type BranchProtectionConfig,
   type BranchProtectionRules,
@@ -38,18 +37,16 @@ export {
 } from './github/branchProtection.js';
 
 // Linear exports
-export {
-  LinearAdapter,
-  createLinearAdapter,
-  LinearAdapterError,
-  type LinearAdapterConfig,
-  type IssueSnapshot,
-  type LinearIssue,
-  type LinearComment,
-  type UpdateIssueParams,
-  type PostCommentParams,
-  type SnapshotMetadata,
-} from './linear/LinearAdapter.js';
+export { LinearAdapter, LinearAdapterError } from './linear/LinearAdapter.js';
+export type {
+  LinearAdapterConfig,
+  IssueSnapshot,
+  LinearIssue,
+  LinearComment,
+  UpdateIssueParams,
+  PostCommentParams,
+  SnapshotMetadata,
+} from './linear/LinearAdapterTypes.js';
 
 // Agent exports
 export {

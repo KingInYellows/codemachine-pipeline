@@ -1,26 +1,19 @@
-import { Command, Flags } from '@oclif/core';
+import { Flags } from '@oclif/core';
 import * as path from 'node:path';
 import { getRunDirectoryPath } from '../../persistence/runDirectoryManager';
-import { createCliLogger, LogLevel } from '../../telemetry/logger';
-import { createRunMetricsCollector } from '../../telemetry/metrics';
-import { createRunTraceManager, withSpan } from '../../telemetry/traces';
+import { withSpan } from '../../telemetry/traces';
 import type { StructuredLogger } from '../../telemetry/logger';
-import type { MetricsCollector } from '../../telemetry/metrics';
 import type { TraceManager, ActiveSpan } from '../../telemetry/traces';
 import {
   resolveRunDirectorySettings,
   selectFeatureId,
   type RunDirectorySettings,
 } from '../utils/runDirectory';
-import {
-  flushTelemetrySuccess,
-  flushTelemetryError,
-  type TelemetryResources,
-} from '../utils/telemetryLifecycle';
-import { loadPlanSummary, type PlanSummary } from '../../workflows/taskPlanner';
+import { loadPlanSummary, buildDagMetadata, type PlanSummary } from '../../workflows/taskPlanner';
 import { loadSpecMetadata } from '../../workflows/specComposer';
 import { comparePlanDiff, type PlanDiff } from '../../workflows/planDiffer';
 import { setJsonOutputMode } from '../utils/cliErrors';
+import { TelemetryCommand } from '../telemetryCommand';
 
 type PlanFlags = {
   feature?: string;
@@ -57,14 +50,17 @@ interface PlanPayload {
 
 /**
  * Plan command - Display execution plan DAG and task summaries
- * Implements FR-12, FR-13, FR-14: Execution Task Generation and Dependency Management
  *
  * Exit codes:
  * - 0: Success
  * - 1: General error
  * - 10: Validation error (feature not found)
  */
-export default class Plan extends Command {
+export default class Plan extends TelemetryCommand {
+  protected get commandName(): string {
+    return 'plan';
+  }
+
   static description = 'Display the execution plan DAG, task summaries, and dependency graph';
 
   static examples = [
@@ -103,109 +99,67 @@ export default class Plan extends Command {
       setJsonOutputMode();
     }
 
-    // Initialize telemetry
-    let logger: StructuredLogger | undefined;
-    let metrics: MetricsCollector | undefined;
-    let traceManager: TraceManager | undefined;
-    let commandSpan: ActiveSpan | undefined;
-    let runDirPath: string | undefined;
-    const startTime = Date.now();
+    const settings = await resolveRunDirectorySettings();
+    const featureId = await selectFeatureId(settings.baseDir, typedFlags.feature);
+    const runDirPath = featureId ? getRunDirectoryPath(settings.baseDir, featureId) : undefined;
 
-    try {
-      const settings = await resolveRunDirectorySettings();
-      const featureId = await selectFeatureId(settings.baseDir, typedFlags.feature);
-
-      // Initialize telemetry if feature exists
-      if (featureId) {
-        runDirPath = getRunDirectoryPath(settings.baseDir, featureId);
-        logger = createCliLogger('plan', featureId, runDirPath, {
-          minLevel: typedFlags.verbose ? LogLevel.DEBUG : LogLevel.INFO,
-          mirrorToStderr: !typedFlags.json,
-        });
-        metrics = createRunMetricsCollector(runDirPath, featureId);
-        traceManager = createRunTraceManager(runDirPath, featureId, logger);
-        commandSpan = traceManager.startSpan('cli.plan');
-        commandSpan.setAttribute('feature_id', featureId);
-        commandSpan.setAttribute('json_mode', typedFlags.json);
-        commandSpan.setAttribute('verbose_flag', typedFlags.verbose);
-        commandSpan.setAttribute('show_diff', typedFlags['show-diff']);
-
-        logger.info('Plan command invoked', {
+    await this.runWithTelemetry(
+      {
+        runDirPath,
+        featureId: featureId ?? undefined,
+        jsonMode: typedFlags.json,
+        verbose: typedFlags.verbose,
+        spanAttributes: {
+          verbose_flag: typedFlags.verbose,
+          show_diff: typedFlags['show-diff'],
+        },
+      },
+      async (ctx) => {
+        ctx.logger?.info('Plan command invoked', {
           feature_id: featureId,
           json_mode: typedFlags.json,
           verbose: typedFlags.verbose,
           show_diff: typedFlags['show-diff'],
         });
-      }
 
-      if (typedFlags.feature && featureId !== typedFlags.feature) {
-        if (logger) {
-          logger.error('Feature not found', { requested: typedFlags.feature });
+        if (typedFlags.feature && featureId !== typedFlags.feature) {
+          ctx.logger?.error('Feature not found', { requested: typedFlags.feature });
+          this.error(`Feature run directory not found: ${typedFlags.feature}`, { exit: 10 });
         }
-        this.error(`Feature run directory not found: ${typedFlags.feature}`, { exit: 10 });
-      }
 
-      const planSummary = featureId
-        ? await this.loadPlanWithTracing(traceManager, commandSpan, settings.baseDir, featureId)
-        : undefined;
-
-      const specMetadata = featureId
-        ? await loadSpecMetadata(getRunDirectoryPath(settings.baseDir, featureId))
-        : undefined;
-
-      const planDiff =
-        featureId && typedFlags['show-diff']
-          ? await this.computePlanDiff(settings.baseDir, featureId, logger)
+        const planSummary = featureId
+          ? await this.loadPlanWithTracing(
+              ctx.traceManager,
+              ctx.commandSpan,
+              settings.baseDir,
+              featureId
+            )
           : undefined;
 
-      const payload = this.buildPlanPayload(
-        featureId,
-        settings,
-        planSummary,
-        specMetadata,
-        planDiff
-      );
+        const specMetadata = featureId
+          ? await loadSpecMetadata(getRunDirectoryPath(settings.baseDir, featureId))
+          : undefined;
 
-      if (typedFlags.json) {
-        this.log(JSON.stringify(payload, null, 2));
-      } else {
-        this.printHumanReadable(payload, typedFlags);
+        const planDiff =
+          featureId && typedFlags['show-diff']
+            ? await this.computePlanDiff(settings.baseDir, featureId, ctx.logger)
+            : undefined;
+
+        const payload = this.buildPlanPayload(
+          featureId,
+          settings,
+          planSummary,
+          specMetadata,
+          planDiff
+        );
+
+        if (typedFlags.json) {
+          this.log(JSON.stringify(payload, null, 2));
+        } else {
+          this.printHumanReadable(payload, typedFlags);
+        }
       }
-
-      await flushTelemetrySuccess({
-        commandName: 'plan',
-        startTime,
-        logger,
-        metrics,
-        traceManager,
-        commandSpan,
-        runDirPath,
-      });
-    } catch (error) {
-      await flushTelemetryError(
-        {
-          commandName: 'plan',
-          startTime,
-          logger,
-          metrics,
-          traceManager,
-          commandSpan,
-          runDirPath,
-        } satisfies TelemetryResources,
-        error
-      );
-
-      // Re-throw oclif errors to preserve exit codes
-      if (error && typeof error === 'object' && 'oclif' in error) {
-        throw error;
-      }
-
-      if (error instanceof Error) {
-        this.error(`Plan command failed: ${error.message}`, { exit: 1 });
-      } else {
-        this.error('Plan command failed with an unknown error', { exit: 1 });
-      }
-    }
+    );
   }
 
   private async loadPlanWithTracing(
@@ -285,16 +239,9 @@ export default class Plan extends Command {
         last_updated: planSummary.lastUpdated,
       };
 
-      if (planSummary.dag) {
-        payload.plan_summary.dag_metadata = {
-          ...(planSummary.dag.parallelPaths !== undefined && {
-            parallel_paths: planSummary.dag.parallelPaths,
-          }),
-          ...(planSummary.dag.criticalPathDepth !== undefined && {
-            critical_path_depth: planSummary.dag.criticalPathDepth,
-          }),
-          generated_at: planSummary.dag.generatedAt,
-        };
+      const dagMetadata = buildDagMetadata(planSummary.dag);
+      if (dagMetadata) {
+        payload.plan_summary.dag_metadata = dagMetadata;
       }
 
       payload.notes.push(

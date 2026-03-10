@@ -19,10 +19,7 @@ import {
 } from './RepoConfig';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
-
-// ============================================================================
-// Validation Options
-// ============================================================================
+import { REDACTED } from '../../utils/redaction.js';
 
 export interface ValidatorOptions {
   /**
@@ -70,10 +67,6 @@ export interface ExtendedValidationResult extends ValidationResult {
     config_file_size_bytes: number;
   };
 }
-
-// ============================================================================
-// Main Validation Functions
-// ============================================================================
 
 /**
  * Validate RepoConfig with comprehensive checks
@@ -264,8 +257,7 @@ function validateGovernance(config: RepoConfig): ValidationError[] {
   if (!anyApprovalEnabled) {
     errors.push({
       path: 'governance.approval_workflow',
-      message:
-        'All approval gates are disabled - this violates ADR-5 human-in-the-loop requirements',
+      message: 'All approval gates are disabled - this violates human-in-the-loop requirements',
       suggestion: 'Enable at least one approval gate (recommended: require_approval_for_pr)',
     });
   }
@@ -299,10 +291,6 @@ function validateGovernance(config: RepoConfig): ValidationError[] {
   return errors;
 }
 
-// ============================================================================
-// Environment Variable Validation
-// ============================================================================
-
 /**
  * Check if required environment variables are set
  * @param config Validated config
@@ -323,7 +311,7 @@ export function validateEnvironmentVariables(
     result[tokenVar] = {
       required: true,
       present: !!tokenValue,
-      value: tokenValue ? '***REDACTED***' : undefined,
+      value: tokenValue ? REDACTED : undefined,
     };
   }
 
@@ -334,7 +322,7 @@ export function validateEnvironmentVariables(
     result[keyVar] = {
       required: true,
       present: !!keyValue,
-      value: keyValue ? '***REDACTED***' : undefined,
+      value: keyValue ? REDACTED : undefined,
     };
   }
 
@@ -344,15 +332,11 @@ export function validateEnvironmentVariables(
   result[endpointVar] = {
     required: !config.runtime.agent_endpoint, // Required if not in config
     present: !!endpointValue || !!config.runtime.agent_endpoint,
-    value: endpointValue || config.runtime.agent_endpoint ? '***REDACTED***' : undefined,
+    value: endpointValue || config.runtime.agent_endpoint ? REDACTED : undefined,
   };
 
   return result;
 }
-
-// ============================================================================
-// Schema Compatibility Checking
-// ============================================================================
 
 /**
  * Check if config can be safely migrated to a new schema version
@@ -440,10 +424,6 @@ export function checkSchemaCompatibility(
     migration_notes: migrationNotes,
   };
 }
-
-// ============================================================================
-// Validation Result Formatting
-// ============================================================================
 
 /**
  * Format extended validation result for CLI display

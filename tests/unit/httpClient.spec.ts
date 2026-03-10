@@ -34,6 +34,16 @@ describe('HttpClient', () => {
   let originalDispatcher: Dispatcher;
   let testRunDir: string;
   let mockLogger: MockedLogger;
+  const captureReplyHeaders = (opts: { headers?: unknown }): Record<string, string> => {
+    if (Array.isArray(opts.headers)) {
+      const headersObj: Record<string, string> = {};
+      for (let i = 0; i < opts.headers.length; i += 2) {
+        headersObj[opts.headers[i] as string] = opts.headers[i + 1] as string;
+      }
+      return headersObj;
+    }
+    return (opts.headers as Record<string, string>) ?? {};
+  };
 
   beforeEach(async () => {
     // Setup mock agent for undici
@@ -86,16 +96,7 @@ describe('HttpClient', () => {
           method: 'GET',
         })
         .reply((opts) => {
-          // Convert headers object/array to plain object
-          if (Array.isArray(opts.headers)) {
-            const headersObj: Record<string, string> = {};
-            for (let i = 0; i < opts.headers.length; i += 2) {
-              headersObj[opts.headers[i] as string] = opts.headers[i + 1] as string;
-            }
-            capturedHeaders = headersObj;
-          } else if (opts.headers) {
-            capturedHeaders = opts.headers as Record<string, string>;
-          }
+          capturedHeaders = captureReplyHeaders(opts);
 
           return {
             statusCode: 200,
@@ -126,6 +127,43 @@ describe('HttpClient', () => {
       );
     });
 
+    it('should use configured GitHub API version header when provided', async () => {
+      const client = new HttpClient({
+        baseUrl: 'https://api.github.com',
+        provider: Provider.GITHUB,
+        token: 'test-token',
+        apiVersion: '2024-01-15',
+        logger: mockLogger,
+      });
+
+      const pool = mockAgent.get('https://api.github.com');
+
+      let capturedHeaders: Record<string, string> = {};
+
+      pool
+        .intercept({
+          path: '/repos/test/repo',
+          method: 'GET',
+        })
+        .reply((opts) => {
+          capturedHeaders = captureReplyHeaders(opts);
+
+          return {
+            statusCode: 200,
+            data: { message: 'success' },
+            headers: {
+              'content-type': 'application/json',
+            },
+          };
+        });
+
+      await client.get('/repos/test/repo');
+
+      expect(
+        capturedHeaders['x-github-api-version'] || capturedHeaders['X-GitHub-Api-Version']
+      ).toBe('2024-01-15');
+    });
+
     it('should inject idempotency key for POST requests', async () => {
       const client = new HttpClient({
         baseUrl: 'https://api.github.com',
@@ -144,16 +182,7 @@ describe('HttpClient', () => {
           method: 'POST',
         })
         .reply((opts) => {
-          // Convert headers object/array to plain object
-          if (Array.isArray(opts.headers)) {
-            const headersObj: Record<string, string> = {};
-            for (let i = 0; i < opts.headers.length; i += 2) {
-              headersObj[opts.headers[i] as string] = opts.headers[i + 1] as string;
-            }
-            capturedHeaders = headersObj;
-          } else if (opts.headers) {
-            capturedHeaders = opts.headers as Record<string, string>;
-          }
+          capturedHeaders = captureReplyHeaders(opts);
 
           return {
             statusCode: 201,
@@ -189,16 +218,7 @@ describe('HttpClient', () => {
           method: 'GET',
         })
         .reply((opts) => {
-          // Convert headers object/array to plain object
-          if (Array.isArray(opts.headers)) {
-            const headersObj: Record<string, string> = {};
-            for (let i = 0; i < opts.headers.length; i += 2) {
-              headersObj[opts.headers[i] as string] = opts.headers[i + 1] as string;
-            }
-            capturedHeaders = headersObj;
-          } else if (opts.headers) {
-            capturedHeaders = opts.headers as Record<string, string>;
-          }
+          capturedHeaders = captureReplyHeaders(opts);
 
           return {
             statusCode: 200,
@@ -663,7 +683,7 @@ describe('HttpClient', () => {
         // Response may include auth headers that should be redacted
         if (headers['authorization'] || headers['Authorization']) {
           const authHeader = headers['authorization'] || headers['Authorization'];
-          expect(authHeader).toBe('***REDACTED***');
+          expect(authHeader).toBe('[REDACTED]');
         } else {
           // If no auth header in response, verify error at least has headers
           expect(headers).toBeDefined();
@@ -687,11 +707,11 @@ describe('HttpClient', () => {
       const headers = json.headers as Record<string, string>;
 
       // These must be redacted
-      expect(headers['set-cookie']).toBe('***REDACTED***');
-      expect(headers['proxy-authorization']).toBe('***REDACTED***');
-      expect(headers['x-csrf-token']).toBe('***REDACTED***');
-      expect(headers['x-custom-secret']).toBe('***REDACTED***');
-      expect(headers['authorization']).toBe('***REDACTED***');
+      expect(headers['set-cookie']).toBe('[REDACTED]');
+      expect(headers['proxy-authorization']).toBe('[REDACTED]');
+      expect(headers['x-csrf-token']).toBe('[REDACTED]');
+      expect(headers['x-custom-secret']).toBe('[REDACTED]');
+      expect(headers['authorization']).toBe('[REDACTED]');
 
       // These must be preserved
       expect(headers['content-type']).toBe('application/json');
@@ -740,6 +760,53 @@ describe('HttpClient', () => {
         throw new Error('HTTP request context missing url field');
       }
 
+      expect(context.url).not.toContain('secret123');
+    });
+
+    it('should preserve pagination token parameter names in sanitized URLs', async () => {
+      const client = new HttpClient({
+        baseUrl: 'https://api.example.com',
+        provider: Provider.CUSTOM,
+        logger: mockLogger,
+      });
+
+      const pool = mockAgent.get('https://api.example.com');
+
+      pool
+        .intercept({
+          path: '/test?page_token=cursor123&access_token=secret123',
+          method: 'GET',
+        })
+        .reply(
+          200,
+          { data: 'test' },
+          {
+            headers: {
+              'content-type': 'application/json',
+            },
+          }
+        );
+
+      await client.get('/test?page_token=cursor123&access_token=secret123');
+
+      const debugCalls = getMockCalls<[string, Record<string, unknown>]>(mockLogger.debug);
+      const requestLog = debugCalls.find(([message]) => message === 'HTTP request');
+      expect(requestLog).toBeDefined();
+
+      if (!requestLog) {
+        throw new Error('HTTP request log entry missing');
+      }
+
+      const [, context] = requestLog;
+      expect(isRecord(context)).toBe(true);
+
+      if (!isRecord(context) || typeof context.url !== 'string') {
+        throw new Error('HTTP request context missing url field');
+      }
+
+      // Pagination parameter name should remain visible, while token values are sanitized.
+      expect(context.url).toContain('page_token=');
+      expect(context.url).not.toContain('cursor123');
       expect(context.url).not.toContain('secret123');
     });
   });

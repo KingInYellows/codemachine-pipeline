@@ -2,18 +2,18 @@
  * PR Create Command
  *
  * Creates a pull request on GitHub with preflight validation
- *
- * Implements:
- * - FR-15: PR automation
- * - Section 2: Communication Patterns (PR orchestration)
- * - Section 3.10.4: `codepipe pr create` command flow
  */
 
 import { Command, Flags } from '@oclif/core';
 import { createRunMetricsCollector } from '../../../telemetry/metrics';
 import { createRunTraceManager, withSpan } from '../../../telemetry/traces';
 import { flushTelemetrySuccess, flushTelemetryError } from '../../utils/telemetryLifecycle';
-import { resolveRunDirectorySettings, selectFeatureId } from '../../utils/runDirectory';
+import {
+  resolveRunDirectorySettings,
+  selectFeatureId,
+  requireFeatureId,
+  requireConfig,
+} from '../../utils/runDirectory';
 import {
   loadPRContext,
   getPRAdapter,
@@ -26,7 +26,13 @@ import {
   PRExitCode,
   type PRMetadata,
 } from '../../pr/shared';
-import { setJsonOutputMode } from '../../utils/cliErrors';
+import {
+  CliError,
+  CliErrorCode,
+  setJsonOutputMode,
+  rethrowIfOclifError,
+} from '../../utils/cliErrors';
+import { parseReviewerList } from '../../pr/shared';
 
 type CreateFlags = {
   feature?: string;
@@ -100,271 +106,20 @@ export default class PRCreate extends Command {
     const startTime = Date.now();
 
     try {
-      const settings = await resolveRunDirectorySettings();
-      const featureId = await selectFeatureId(settings.baseDir, typedFlags.feature);
-
-      if (!featureId) {
-        this.error('No feature run directory found. Run "codepipe start" first.', {
-          exit: PRExitCode.VALIDATION_ERROR,
-        });
-      }
-
-      if (typedFlags.feature && featureId !== typedFlags.feature) {
-        this.error(`Feature run directory not found: ${typedFlags.feature}`, {
-          exit: PRExitCode.VALIDATION_ERROR,
-        });
-      }
-
-      // Load PR context
-      if (!settings.config) {
-        this.error('No configuration found.', {
-          exit: PRExitCode.VALIDATION_ERROR,
-        });
-      }
-      const context = await loadPRContext(settings.baseDir, featureId, settings.config, false);
-
-      const { logger, manifest, runDir, config } = context;
-      const metrics = createRunMetricsCollector(runDir, featureId);
-      const traceManager = createRunTraceManager(runDir, featureId, logger);
-      const commandSpan = traceManager.startSpan('cli.pr.create');
-
-      try {
-        commandSpan.setAttribute('feature_id', featureId);
-        commandSpan.setAttribute('draft', typedFlags.draft);
-
-        logger.info('PR create command invoked', {
-          feature_id: featureId,
-          draft: typedFlags.draft,
-          reviewers: typedFlags.reviewers,
-        });
-
-        // Preflight validation
-        await withSpan(
-          traceManager,
-          'pr.create.preflight',
-          async (span) => {
-            span.setAttribute('feature_id', featureId);
-
-            // Check if PR already exists
-            if (context.prMetadata) {
-              logger.warn('PR already exists', {
-                pr_number: context.prMetadata.pr_number,
-                url: context.prMetadata.url,
-              });
-              this.error(
-                `PR already exists: #${context.prMetadata.pr_number} (${context.prMetadata.url})`,
-                { exit: PRExitCode.VALIDATION_ERROR }
-              );
-            }
-
-            // Check Code approval gate
-            if (!isCodeApproved(manifest)) {
-              logger.error('Code approval gate not completed', {
-                pending: manifest.approvals.pending,
-                completed: manifest.approvals.completed,
-              });
-              span.setAttribute('preflight_failure', 'code_not_approved');
-              this.error(
-                'Code approval gate is required before creating PR. Run "codepipe approve code --signer <email>" first.',
-                { exit: PRExitCode.HUMAN_ACTION_REQUIRED }
-              );
-            }
-
-            // Check validations passed
-            const validationsPassed = await hasValidationsPassed(runDir);
-            if (!validationsPassed) {
-              logger.error('Validations have not passed', { run_dir: runDir });
-              span.setAttribute('preflight_failure', 'validations_failed');
-              this.error(
-                'Validations (lint/test/build) must pass before creating PR. Run "codepipe validate" first.',
-                { exit: PRExitCode.HUMAN_ACTION_REQUIRED }
-              );
-            }
-
-            // Determine branch name from manifest or Git
-            const branchName = manifest.source || (await this.getCurrentBranch());
-            if (!branchName) {
-              span.setAttribute('preflight_failure', 'branch_unknown');
-              this.error('Unable to determine branch name', {
-                exit: PRExitCode.VALIDATION_ERROR,
-              });
-            }
-
-            // Check branch exists locally
-            const branchExists = await isBranchLocal(branchName);
-            if (!branchExists) {
-              span.setAttribute('preflight_failure', 'branch_not_found');
-              this.error(`Branch not found locally: ${branchName}`, {
-                exit: PRExitCode.VALIDATION_ERROR,
-              });
-            }
-
-            span.setAttribute('branch', branchName);
-            logger.debug('Preflight validation passed', { branch: branchName });
-          },
-          commandSpan.context
-        );
-
-        // Create GitHub adapter
-        const adapter = getPRAdapter(context);
-
-        // Determine PR parameters
-        const currentBranch = await this.getCurrentBranch();
-        if (!manifest.source && !currentBranch) {
-          this.error('Unable to determine branch name', {
-            exit: PRExitCode.VALIDATION_ERROR,
-          });
-        }
-        const branchName = manifest.source || currentBranch;
-        const baseBranch = typedFlags.base || config.project.default_branch;
-        const prTitle = typedFlags.title || manifest.title || `Feature: ${featureId}`;
-        const prBody = typedFlags.body || this.generatePRBody(manifest);
-
-        // Create PR
-        const pr = await withSpan(
-          traceManager,
-          'pr.create.github_api',
-          async (span) => {
-            span.setAttribute('head', branchName);
-            span.setAttribute('base', baseBranch);
-            span.setAttribute('draft', typedFlags.draft);
-
-            logger.info('Creating pull request', {
-              head: branchName,
-              base: baseBranch,
-              draft: typedFlags.draft,
-            });
-
-            const result = await adapter.createPullRequest({
-              title: prTitle,
-              body: prBody,
-              head: branchName,
-              base: baseBranch,
-              draft: typedFlags.draft,
-            });
-
-            span.setAttribute('pr_number', result.number);
-            logger.info('Pull request created', {
-              pr_number: result.number,
-              url: result.html_url,
-            });
-
-            return result;
-          },
-          commandSpan.context
-        );
-
-        // Request reviewers if specified
-        let reviewersRequested: string[] = [];
-        if (typedFlags.reviewers) {
-          reviewersRequested = await withSpan(
-            traceManager,
-            'pr.create.request_reviewers',
-            async (span) => {
-              const reviewersList = (typedFlags.reviewers ?? '')
-                .split(',')
-                .map((r) => r.trim())
-                .filter((r) => r.length > 0);
-
-              span.setAttribute('reviewers_count', reviewersList.length);
-
-              logger.info('Requesting reviewers', {
-                pr_number: pr.number,
-                reviewers: reviewersList,
-              });
-
-              await adapter.requestReviewers({
-                pull_number: pr.number,
-                reviewers: reviewersList,
-              });
-
-              logger.info('Reviewers requested', {
-                pr_number: pr.number,
-                reviewers: reviewersList,
-              });
-
-              return reviewersList;
-            },
-            commandSpan.context
-          );
-        }
-
-        // Persist PR metadata
-        const prMetadata: PRMetadata = {
-          pr_number: pr.number,
-          url: pr.html_url,
-          branch: branchName,
-          base_branch: baseBranch,
-          head_sha: pr.head.sha,
-          base_sha: pr.base.sha,
-          created_at: pr.created_at,
-          reviewers_requested: reviewersRequested,
-          auto_merge_enabled: false,
-          last_updated: new Date().toISOString(),
-        };
-
-        await persistPRData(context, prMetadata);
-
-        // Log to deployment.json
-        await logDeploymentAction(context, 'pr_created', {
-          pr_number: pr.number,
-          url: pr.html_url,
-          branch: branchName,
-          base_branch: baseBranch,
-          reviewers_requested: reviewersRequested,
-        });
-
-        // Render output
-        const output = renderPROutput(
-          {
-            success: true,
-            pr_number: pr.number,
-            url: pr.html_url,
-            branch: branchName,
-            base_branch: baseBranch,
-            reviewers_requested: reviewersRequested,
-            message: `Pull request created successfully. View at: ${pr.html_url}`,
-          },
-          typedFlags.json
-        );
-
-        this.log(output);
-
-        commandSpan.setAttribute('pr_number', pr.number);
-        await flushTelemetrySuccess(
-          {
-            commandName: 'pr.create',
-            startTime,
-            logger,
-            metrics,
-            traceManager,
-            commandSpan,
-            runDirPath: runDir,
-          },
-          { pr_number: pr.number }
-        );
-      } catch (error) {
-        await flushTelemetryError(
-          {
-            commandName: 'pr.create',
-            startTime,
-            logger,
-            metrics,
-            traceManager,
-            commandSpan,
-            runDirPath: runDir,
-          },
-          error
-        );
-        throw error;
-      }
+      await this.executePRCreation(typedFlags, startTime);
     } catch (error) {
-      // Re-throw oclif errors to preserve exit codes
-      if (error && typeof error === 'object' && 'oclif' in error) {
-        throw error;
-      }
+      rethrowIfOclifError(error);
 
-      if (error instanceof Error) {
+      if (error instanceof CliError) {
+        const exitCode =
+          error.code === CliErrorCode.RUN_DIR_NOT_FOUND
+            ? PRExitCode.VALIDATION_ERROR
+            : error.exitCode;
+        const message = error.remediation
+          ? `${error.message}\n\n${error.remediation}`
+          : error.message;
+        this.error(message, { exit: exitCode });
+      } else if (error instanceof Error) {
         this.error(`PR create failed: ${error.message}`, {
           exit: PRExitCode.ERROR,
         });
@@ -373,6 +128,237 @@ export default class PRCreate extends Command {
           exit: PRExitCode.ERROR,
         });
       }
+    }
+  }
+
+  private async executePRCreation(typedFlags: CreateFlags, startTime: number): Promise<void> {
+    // Setup errors here intentionally bubble to run() before telemetry initialization.
+    // We only flush telemetry once runDir/feature context and spans are available.
+    const settings = await resolveRunDirectorySettings();
+    const featureId = await selectFeatureId(settings.baseDir, typedFlags.feature);
+    requireFeatureId(featureId, typedFlags.feature);
+    const repoConfig = requireConfig(settings);
+
+    const context = await loadPRContext(settings.baseDir, featureId, repoConfig, false);
+
+    const { logger, manifest, runDir, config } = context;
+    const metrics = createRunMetricsCollector(runDir, featureId);
+    const traceManager = createRunTraceManager(runDir, featureId, logger);
+    const commandSpan = traceManager.startSpan('cli.pr.create');
+
+    try {
+      commandSpan.setAttribute('feature_id', featureId);
+      commandSpan.setAttribute('draft', typedFlags.draft);
+
+      logger.info('PR create command invoked', {
+        feature_id: featureId,
+        draft: typedFlags.draft,
+        reviewers: typedFlags.reviewers,
+      });
+
+      // Preflight validation
+      await withSpan(
+        traceManager,
+        'pr.create.preflight',
+        async (span) => {
+          span.setAttribute('feature_id', featureId);
+
+          if (context.prMetadata) {
+            logger.warn('PR already exists', {
+              pr_number: context.prMetadata.pr_number,
+              url: context.prMetadata.url,
+            });
+            this.error(
+              `PR already exists: #${context.prMetadata.pr_number} (${context.prMetadata.url})`,
+              { exit: PRExitCode.VALIDATION_ERROR }
+            );
+          }
+
+          if (!isCodeApproved(manifest)) {
+            logger.error('Code approval gate not completed', {
+              pending: manifest.approvals.pending,
+              completed: manifest.approvals.completed,
+            });
+            span.setAttribute('preflight_failure', 'code_not_approved');
+            this.error(
+              'Code approval gate is required before creating PR. Run "codepipe approve code --signer <email>" first.',
+              { exit: PRExitCode.HUMAN_ACTION_REQUIRED }
+            );
+          }
+
+          const validationsPassed = await hasValidationsPassed(runDir);
+          if (!validationsPassed) {
+            logger.error('Validations have not passed', { run_dir: runDir });
+            span.setAttribute('preflight_failure', 'validations_failed');
+            this.error(
+              'Validations (lint/test/build) must pass before creating PR. Run "codepipe validate" first.',
+              { exit: PRExitCode.HUMAN_ACTION_REQUIRED }
+            );
+          }
+
+          const branchName = manifest.source || (await this.getCurrentBranch());
+          if (!branchName) {
+            span.setAttribute('preflight_failure', 'branch_unknown');
+            this.error('Unable to determine branch name', {
+              exit: PRExitCode.VALIDATION_ERROR,
+            });
+          }
+
+          const branchExists = await isBranchLocal(branchName);
+          if (!branchExists) {
+            span.setAttribute('preflight_failure', 'branch_not_found');
+            this.error(`Branch not found locally: ${branchName}`, {
+              exit: PRExitCode.VALIDATION_ERROR,
+            });
+          }
+
+          span.setAttribute('branch', branchName);
+          logger.debug('Preflight validation passed', { branch: branchName });
+        },
+        commandSpan.context
+      );
+
+      const adapter = getPRAdapter(context);
+
+      const currentBranch = manifest.source || (await this.getCurrentBranch());
+      if (!currentBranch) {
+        this.error('Unable to determine branch name', { exit: PRExitCode.VALIDATION_ERROR });
+      }
+      const branchName = currentBranch;
+      const baseBranch = typedFlags.base || config.project.default_branch;
+      const prTitle = typedFlags.title || manifest.title || `Feature: ${featureId}`;
+      const prBody = typedFlags.body || this.generatePRBody(manifest);
+
+      const pr = await withSpan(
+        traceManager,
+        'pr.create.github_api',
+        async (span) => {
+          span.setAttribute('head', branchName);
+          span.setAttribute('base', baseBranch);
+          span.setAttribute('draft', typedFlags.draft);
+
+          logger.info('Creating pull request', {
+            head: branchName,
+            base: baseBranch,
+            draft: typedFlags.draft,
+          });
+
+          const result = await adapter.createPullRequest({
+            title: prTitle,
+            body: prBody,
+            head: branchName,
+            base: baseBranch,
+            draft: typedFlags.draft,
+          });
+
+          span.setAttribute('pr_number', result.number);
+          logger.info('Pull request created', {
+            pr_number: result.number,
+            url: result.html_url,
+          });
+
+          return result;
+        },
+        commandSpan.context
+      );
+
+      let reviewersRequested: string[] = [];
+      const reviewersFlag = typedFlags.reviewers;
+      if (reviewersFlag) {
+        reviewersRequested = await withSpan(
+          traceManager,
+          'pr.create.request_reviewers',
+          async (span) => {
+            const reviewersList = parseReviewerList(reviewersFlag);
+
+            span.setAttribute('reviewers_count', reviewersList.length);
+
+            logger.info('Requesting reviewers', {
+              pr_number: pr.number,
+              reviewers: reviewersList,
+            });
+
+            await adapter.requestReviewers({
+              pull_number: pr.number,
+              reviewers: reviewersList,
+            });
+
+            logger.info('Reviewers requested', {
+              pr_number: pr.number,
+              reviewers: reviewersList,
+            });
+
+            return reviewersList;
+          },
+          commandSpan.context
+        );
+      }
+
+      const prMetadata: PRMetadata = {
+        pr_number: pr.number,
+        url: pr.html_url,
+        branch: branchName,
+        base_branch: baseBranch,
+        head_sha: pr.head.sha,
+        base_sha: pr.base.sha,
+        created_at: pr.created_at,
+        reviewers_requested: reviewersRequested,
+        auto_merge_enabled: false,
+        last_updated: new Date().toISOString(),
+      };
+
+      await persistPRData(context, prMetadata);
+
+      await logDeploymentAction(context, 'pr_created', {
+        pr_number: pr.number,
+        url: pr.html_url,
+        branch: branchName,
+        base_branch: baseBranch,
+        reviewers_requested: reviewersRequested,
+      });
+
+      const output = renderPROutput(
+        {
+          success: true,
+          pr_number: pr.number,
+          url: pr.html_url,
+          branch: branchName,
+          base_branch: baseBranch,
+          reviewers_requested: reviewersRequested,
+          message: `Pull request created successfully. View at: ${pr.html_url}`,
+        },
+        typedFlags.json
+      );
+
+      this.log(output);
+
+      commandSpan.setAttribute('pr_number', pr.number);
+      await flushTelemetrySuccess(
+        {
+          commandName: 'pr.create',
+          startTime,
+          logger,
+          metrics,
+          traceManager,
+          commandSpan,
+          runDirPath: runDir,
+        },
+        { pr_number: pr.number }
+      );
+    } catch (error) {
+      await flushTelemetryError(
+        {
+          commandName: 'pr.create',
+          startTime,
+          logger,
+          metrics,
+          traceManager,
+          commandSpan,
+          runDirPath: runDir,
+        },
+        error
+      );
+      throw error;
     }
   }
 

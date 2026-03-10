@@ -10,6 +10,7 @@ import type { StructuredLogger } from '../telemetry/logger.js';
 import { CodeMachineEngineTypeSchema } from './codemachineTypes.js';
 import { shouldUseNativeEngine } from './taskMapper.js';
 import { normalizeResult } from './resultNormalizer.js';
+import { buildStrategyResult } from './strategyHelpers.js';
 
 export interface CodeMachineCLIStrategyOptions {
   config: ExecutionConfig;
@@ -119,22 +120,13 @@ export class CodeMachineCLIStrategy implements ExecutionStrategy {
     const normalized = normalizeResult({ ...result, taskId: task.task_id }, this.logger);
     const durationMs = result.durationMs ?? Date.now() - startTime;
 
-    const strategyResult: ExecutionStrategyResult = {
-      success: normalized.success,
-      status: normalized.status,
+    return buildStrategyResult(normalized, {
+      durationMs,
       summary: normalized.success
         ? normalized.redactedStdout.slice(0, 500)
         : normalized.redactedStderr.slice(0, 500),
-      recoverable: normalized.recoverable,
-      durationMs,
-      artifacts: normalized.artifacts,
-    };
-
-    if (!normalized.success) {
-      strategyResult.errorMessage = normalized.redactedStderr || `Exit code ${result.exitCode}`;
-    }
-
-    return strategyResult;
+      errorMessage: normalized.redactedStderr || `Exit code ${result.exitCode}`,
+    });
   }
 
   /** Expose adapter for direct use (e.g., doctor command). */

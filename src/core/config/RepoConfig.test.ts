@@ -16,6 +16,7 @@ import {
   addConfigHistoryEntry,
   type ValidationError,
 } from './RepoConfig';
+import { DEFAULT_GITHUB_API_VERSION } from './RepoConfigDefaults';
 
 describe('RepoConfigSchema', () => {
   it('should validate a complete valid config', () => {
@@ -503,6 +504,112 @@ describe('addConfigHistoryEntry', () => {
     });
 
     expect(config.config_history.length).toBe(originalLength);
+  });
+});
+
+describe('Env var name validation (CDMCH-214)', () => {
+  // eslint-disable-next-line @typescript-eslint/no-restricted-types -- intentional: test factory accepts arbitrary config overrides
+  const minimalConfig = (overrides: Record<string, unknown>) => ({
+    schema_version: '1.0.0',
+    project: { id: 'test', repo_url: 'https://github.com/org/repo.git' },
+    github: { enabled: false },
+    linear: { enabled: false },
+    runtime: {},
+    safety: {},
+    feature_flags: {},
+    ...overrides,
+  });
+
+  it('should accept valid uppercase env var names', () => {
+    const result = RepoConfigSchema.safeParse(
+      minimalConfig({
+        github: { enabled: true, token_env_var: 'MY_GITHUB_TOKEN' },
+        linear: { enabled: false, api_key_env_var: 'MY_LINEAR_KEY' },
+        runtime: { agent_endpoint_env_var: 'MY_AGENT_ENDPOINT' },
+      })
+    );
+    expect(result.success).toBe(true);
+  });
+
+  it('should reject lowercase env var names', () => {
+    const result = RepoConfigSchema.safeParse(
+      minimalConfig({ github: { enabled: true, token_env_var: 'github_token' } })
+    );
+    expect(result.success).toBe(false);
+  });
+
+  it('should reject env var names with special characters', () => {
+    const result = RepoConfigSchema.safeParse(
+      minimalConfig({ linear: { enabled: false, api_key_env_var: 'KEY-NAME' } })
+    );
+    expect(result.success).toBe(false);
+  });
+
+  it('should reject env var names starting with a digit', () => {
+    const result = RepoConfigSchema.safeParse(
+      minimalConfig({ runtime: { agent_endpoint_env_var: '9AGENT' } })
+    );
+    expect(result.success).toBe(false);
+  });
+
+  it('should accept env var names with digits after first char', () => {
+    const result = RepoConfigSchema.safeParse(
+      minimalConfig({ github: { enabled: true, token_env_var: 'TOKEN_V2' } })
+    );
+    expect(result.success).toBe(true);
+  });
+
+  it('should reject invalid env var names in env_allowlist', () => {
+    const result = RepoConfigSchema.safeParse(
+      minimalConfig({ execution: { env_allowlist: ['VALID_KEY', 'bad-key'] } })
+    );
+    expect(result.success).toBe(false);
+  });
+
+  it('should reject invalid env var names in env_credential_keys', () => {
+    const result = RepoConfigSchema.safeParse(
+      minimalConfig({ execution: { env_credential_keys: ['lowercase_key'] } })
+    );
+    expect(result.success).toBe(false);
+  });
+});
+
+describe('GitHub API version (CDMCH-209)', () => {
+  // eslint-disable-next-line @typescript-eslint/no-restricted-types -- intentional: test factory accepts arbitrary config overrides
+  const minimalConfig = (githubOverrides: Record<string, unknown> = {}) => ({
+    schema_version: '1.0.0',
+    project: { id: 'test', repo_url: 'https://github.com/org/repo.git' },
+    github: { enabled: false, ...githubOverrides },
+    linear: { enabled: false },
+    runtime: {},
+    safety: {},
+    feature_flags: {},
+  });
+
+  it('should default api_version to 2022-11-28', () => {
+    const result = RepoConfigSchema.safeParse(minimalConfig());
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.github.api_version).toBe(DEFAULT_GITHUB_API_VERSION);
+    }
+  });
+
+  it('should accept a valid custom api_version', () => {
+    const result = RepoConfigSchema.safeParse(minimalConfig({ api_version: '2024-01-15' }));
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.github.api_version).toBe('2024-01-15');
+    }
+  });
+
+  it('should reject an invalid api_version format', () => {
+    const result = RepoConfigSchema.safeParse(minimalConfig({ api_version: 'latest' }));
+    expect(result.success).toBe(false);
+  });
+
+  it('should reject api_version values with out-of-range month/day', () => {
+    const result = RepoConfigSchema.safeParse(minimalConfig({ api_version: '2024-99-99' }));
+    expect(result.success).toBe(false);
   });
 });
 

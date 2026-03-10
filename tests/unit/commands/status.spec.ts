@@ -63,7 +63,7 @@ describe('status command', () => {
       execSync(`node ${binPath} init`, { cwd: testDir, stdio: 'pipe' });
 
       try {
-        execSync('node bin/run.js status --feature nonexistent', {
+        execSync(`node ${binPath} status --feature nonexistent`, {
           cwd: testDir,
           encoding: 'utf8',
           stdio: 'pipe',
@@ -71,7 +71,7 @@ describe('status command', () => {
         throw new Error('Command should have failed');
       } catch (error: unknown) {
         if (error && typeof error === 'object' && 'status' in error) {
-          expect(error.status).toBe(1);
+          expect(error.status).toBe(10);
         }
       }
     });
@@ -80,7 +80,7 @@ describe('status command', () => {
       execSync(`node ${binPath} init`, { cwd: testDir, stdio: 'pipe' });
 
       try {
-        execSync('node bin/run.js status -f nonexistent', {
+        execSync(`node ${binPath} status -f nonexistent`, {
           cwd: testDir,
           encoding: 'utf8',
           stdio: 'pipe',
@@ -88,7 +88,7 @@ describe('status command', () => {
         throw new Error('Command should have failed');
       } catch (error: unknown) {
         if (error && typeof error === 'object' && 'status' in error) {
-          expect(error.status).toBe(1);
+          expect(error.status).toBe(10);
         }
       }
     });
@@ -214,7 +214,7 @@ describe('status command', () => {
       execSync(`node ${binPath} init`, { cwd: testDir, stdio: 'pipe' });
 
       try {
-        execSync('node bin/run.js status --feature nonexistent', {
+        execSync(`node ${binPath} status --feature nonexistent`, {
           cwd: testDir,
           encoding: 'utf8',
           stdio: 'pipe',
@@ -222,7 +222,7 @@ describe('status command', () => {
         throw new Error('Command should have failed');
       } catch (error: unknown) {
         if (error && typeof error === 'object' && 'status' in error) {
-          expect(error.status).toBe(1);
+          expect(error.status).toBe(10);
         }
       }
     });

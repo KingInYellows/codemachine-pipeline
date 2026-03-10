@@ -1,17 +1,7 @@
 /**
  * Research Coordinator
  *
- * Identifies unknowns from prompts/specs, queues ResearchTasks with objectives,
- * sources, and cache keys, manages caching/refresh policies, and records outputs.
- *
- * Key features:
- * - Auto-detection of unknowns from context documents and requirements
- * - Deterministic caching based on objectives + sources
- * - Freshness-aware result reuse (configurable TTL)
- * - CLI integration for task listing and management
- * - Storage under run directory with JSONL append logs
- *
- * Implements FR-6, FR-7, ADR-4 requirements for research discovery.
+ * Identifies unknowns, queues ResearchTasks, and manages cached results with freshness policies.
  */
 
 import { withLock } from '../persistence';
@@ -46,11 +36,7 @@ import {
   listTaskIds,
   findCachedTask,
   isCachedTaskFresh,
-} from './researchPersistence';
-
-// ============================================================================
-// Types
-// ============================================================================
+} from '../persistence/researchStore.js';
 
 /**
  * Research coordinator configuration
@@ -81,6 +67,7 @@ export interface CreateResearchTaskOptions {
   /** Freshness requirements */
   freshnessRequirements?: FreshnessRequirement;
   /** Intentional: research task metadata varies by source and objective */
+  // eslint-disable-next-line @typescript-eslint/no-restricted-types -- intentional: research task metadata varies by source and objective
   metadata?: Record<string, unknown>;
 }
 
@@ -155,10 +142,6 @@ export interface UnknownDetectionOptions {
   /** Maximum number of context files to scan for TODO/TBD markers */
   maxContextFiles?: number;
 }
-
-// ============================================================================
-// Research Coordinator Class
-// ============================================================================
 
 /**
  * Research coordinator service
@@ -246,6 +229,7 @@ export class ResearchCoordinator {
         sources?: ResearchSource[];
         cacheKey?: string;
         freshnessRequirements?: FreshnessRequirement;
+        // eslint-disable-next-line @typescript-eslint/no-restricted-types -- intentional: research task metadata varies by source and objective
         metadata?: Record<string, unknown>;
       } = {
         sources,
@@ -707,10 +691,6 @@ export class ResearchCoordinator {
   }
 }
 
-// ============================================================================
-// Factory Functions
-// ============================================================================
-
 /**
  * Create a research coordinator instance
  */
@@ -720,6 +700,25 @@ export function createResearchCoordinator(
   metrics: MetricsCollector
 ): ResearchCoordinator {
   return new ResearchCoordinator(config, logger, metrics);
+}
+
+/**
+ * Convenience factory that creates a ResearchCoordinator with repoRoot defaulting
+ * to process.cwd().
+ *
+ * Three call sites (research/create.ts, research/list.ts, status/data/researchData.ts)
+ * all construct coordinators with the same shape:
+ *   createResearchCoordinator({ repoRoot: process.cwd(), runDir, featureId }, logger, metrics)
+ *
+ * This helper centralises that pattern.
+ */
+export function createCoordinatorForRun(
+  runDir: string,
+  featureId: string,
+  logger: StructuredLogger,
+  metrics: MetricsCollector
+): ResearchCoordinator {
+  return createResearchCoordinator({ repoRoot: process.cwd(), runDir, featureId }, logger, metrics);
 }
 
 /**

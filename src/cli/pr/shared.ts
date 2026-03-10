@@ -1,10 +1,5 @@
 /**
  * Shared utilities for PR automation commands
- *
- * Implements:
- * - FR-15: PR automation
- * - Section 2: Communication Patterns (PR orchestration)
- * - ADR-3: Integration Layer design
  */
 
 import * as path from 'node:path';
@@ -15,11 +10,7 @@ import {
   type RunManifest,
 } from '../../persistence/runDirectoryManager';
 import { safeJsonParse } from '../../utils/safeJson';
-import {
-  createGitHubAdapter,
-  GitHubAdapter,
-  type GitHubAdapterConfig,
-} from '../../adapters/github/GitHubAdapter';
+import { GitHubAdapter, type GitHubAdapterConfig } from '../../adapters/github/GitHubAdapter';
 import { createCliLogger, LogLevel, type StructuredLogger } from '../../telemetry/logger';
 import type { RepoConfig } from '../../core/config/RepoConfig';
 import { getErrorMessage } from '../../utils/errors.js';
@@ -147,7 +138,8 @@ export async function loadPRContext(
  */
 export function getPRAdapter(
   context: PRContext,
-  adapterFactory: (config: GitHubAdapterConfig) => GitHubAdapter = createGitHubAdapter
+  adapterFactory: (config: GitHubAdapterConfig) => GitHubAdapter = (config: GitHubAdapterConfig) =>
+    new GitHubAdapter(config)
 ): GitHubAdapter {
   const { config, runDir, logger } = context;
 
@@ -179,6 +171,7 @@ export function getPRAdapter(
     repo,
     token,
     baseUrl: config.github.api_base_url,
+    apiVersion: config.github.api_version,
     runDir,
     logger,
   });
@@ -201,7 +194,6 @@ export async function persistPRData(context: PRContext, prMetadata: PRMetadata):
   });
 
   try {
-    // Write to temp file first (atomic write)
     await fs.writeFile(prJsonTempPath, JSON.stringify(prMetadata, null, 2), 'utf-8');
     await fs.rename(prJsonTempPath, prJsonPath);
 
@@ -253,6 +245,7 @@ export async function persistPRData(context: PRContext, prMetadata: PRMetadata):
  * @param jsonMode Whether to render as JSON
  * @returns Formatted output string
  */
+// eslint-disable-next-line @typescript-eslint/no-restricted-types -- intentional: callers pass varying PR-related shapes
 export function renderPROutput(data: Record<string, unknown>, jsonMode: boolean): string {
   if (jsonMode) {
     // Stable property ordering for diff-friendly output
@@ -417,6 +410,7 @@ export async function isBranchLocal(branchName: string): Promise<boolean> {
 export async function logDeploymentAction(
   context: PRContext,
   action: string,
+  // eslint-disable-next-line @typescript-eslint/no-restricted-types -- intentional: deployment action metadata varies per action type
   metadata: Record<string, unknown> // Intentional: deployment action metadata varies per action type
 ): Promise<void> {
   const { runDir, logger } = context;
@@ -467,6 +461,21 @@ export async function logDeploymentAction(
   }
 }
 
+/**
+ * Parse a comma-separated reviewer list string into individual usernames.
+ *
+ * Trims whitespace and removes empty entries.
+ *
+ * @param input - Comma-separated string of reviewer usernames
+ * @returns Array of trimmed, non-empty reviewer username strings
+ */
+export function parseReviewerList(input: string): string[] {
+  return input
+    .split(',')
+    .map((r) => r.trim())
+    .filter((r) => r.length > 0);
+}
+
 function isStringOrNumber(value: unknown): value is string | number {
   return typeof value === 'string' || typeof value === 'number';
 }
@@ -493,6 +502,7 @@ function isStatusCheckShape(
 
 type DeploymentLog = {
   /** Intentional: action metadata varies per deployment action type */
+  // eslint-disable-next-line @typescript-eslint/no-restricted-types -- intentional: deployment action metadata varies per action type
   actions?: Array<{ timestamp: string; action: string; metadata: Record<string, unknown> }>;
 };
 

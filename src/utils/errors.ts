@@ -1,4 +1,4 @@
-import { HttpError } from '../adapters/http/client';
+import { HttpError } from '../core/errors.js';
 import { ErrorType, SerializedError } from '../core/sharedTypes';
 
 /**
@@ -124,7 +124,7 @@ export function classifyError(error: unknown): ErrorType {
 
 /**
  * Base class for adapter-specific errors with error taxonomy.
- * Extend this class in each adapter and set `this.name` to the subclass name.
+ * Subclasses inherit the correct `this.name` automatically via `new.target`.
  */
 export class AdapterError extends Error {
   constructor(
@@ -135,7 +135,7 @@ export class AdapterError extends Error {
     public readonly operation?: string
   ) {
     super(message);
-    this.name = 'AdapterError';
+    this.name = new.target.name;
     Object.setPrototypeOf(this, new.target.prototype);
   }
 

@@ -13,6 +13,7 @@
  */
 
 const { readFileSync, writeFileSync, existsSync } = require('node:fs');
+const { execFileSync } = require('node:child_process');
 const { resolve } = require('node:path');
 
 const ROOT = resolve(__dirname, '..', '..');
@@ -68,6 +69,10 @@ function resolveExampleForCommand(example, cmd) {
   return example.replace(/<%= config\.bin %>/g, BIN_NAME).replace(/<%= command\.id %>/g, displayId);
 }
 
+function escapeTableCell(value) {
+  return String(value).replace(/\|/g, '\\|').replace(/\r?\n/g, '<br/>').replace(/\t/g, '  ');
+}
+
 function renderFlagsTable(flags) {
   const entries = Object.values(flags).sort((a, b) => a.name.localeCompare(b.name));
   if (entries.length === 0) return '';
@@ -80,8 +85,8 @@ function renderFlagsTable(flags) {
     const name = `\`--${flag.name}\``;
     const short = flag.char ? `\`-${flag.char}\`` : '';
     const type = flag.type === 'boolean' ? 'boolean' : 'string';
-    const desc = flag.description || '_No description_';
-    const def = flag.default !== undefined ? `\`${flag.default}\`` : '';
+    const desc = escapeTableCell(flag.description || '_No description_');
+    const def = flag.default !== undefined ? `\`${escapeTableCell(flag.default)}\`` : '';
     const required = flag.required ? ' **(required)**' : '';
     lines.push(`| ${name} | ${short} | ${type} | ${desc}${required} | ${def} |`);
   }
@@ -99,9 +104,11 @@ function renderArgsTable(args) {
 
   for (const arg of entries) {
     const name = `\`${arg.name}\``;
-    const desc = arg.description || '_No description_';
+    const desc = escapeTableCell(arg.description || '_No description_');
     const required = arg.required ? 'Yes' : 'No';
-    const options = arg.options ? arg.options.map((o) => `\`${o}\``).join(', ') : '';
+    const options = arg.options
+      ? arg.options.map((o) => `\`${escapeTableCell(o)}\``).join(', ')
+      : '';
     lines.push(`| ${name} | ${desc} | ${required} | ${options} |`);
   }
 
@@ -241,10 +248,27 @@ function generateDocument() {
 }
 
 // ---------------------------------------------------------------------------
-// 5. Main: generate or check
+// 5. Format with Prettier (prevents drift from auto-formatters)
 // ---------------------------------------------------------------------------
 
-const markdown = generateDocument();
+function formatWithPrettier(content) {
+  try {
+    return execFileSync(
+      resolve(ROOT, 'node_modules', '.bin', 'prettier'),
+      ['--parser', 'markdown'],
+      { input: content, encoding: 'utf8', maxBuffer: 10 * 1024 * 1024 }
+    );
+  } catch {
+    // Prettier not available — return content as-is
+    return content;
+  }
+}
+
+// ---------------------------------------------------------------------------
+// 6. Main: generate or check
+// ---------------------------------------------------------------------------
+
+const markdown = formatWithPrettier(generateDocument());
 
 if (process.argv.includes('--check')) {
   // Drift detection mode

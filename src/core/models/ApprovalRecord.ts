@@ -6,10 +6,6 @@ import { createModelParser } from './modelParser.js';
  *
  * Gate approvals referencing artifacts, signers, timestamps, and rationale.
  *
- * Implements:
- * - ADR-5 (Approval Workflow): Human-in-the-loop gates
- * - ADR-7 (Validation Policy): Zod-based validation
- *
  * Used by CLI commands: approve, status
  */
 
@@ -37,32 +33,22 @@ export type ApprovalVerdict = z.infer<typeof ApprovalVerdictSchema>;
 
 export const ApprovalRecordSchema = z
   .object({
-    /** Schema version for future migrations (semver) */
     schema_version: z.string().regex(/^[0-9]+\.[0-9]+\.[0-9]+$/, 'Invalid semver format'),
-    /** Unique approval record identifier */
     approval_id: z.string().min(1),
-    /** Feature ID this approval belongs to */
     feature_id: z.string().min(1),
-    /** Approval gate type */
     gate_type: ApprovalGateTypeSchema,
-    /** Approval verdict */
     verdict: ApprovalVerdictSchema,
-    /** Signer identifier (username, email, or ID) */
-    signer: z.string().min(1),
-    /** Signer display name */
+    signer: z.string().min(1), // Signer identifier (username, email, or ID)
     signer_name: z.string().optional(),
-    /** ISO 8601 timestamp when approval was granted */
     approved_at: z.string().datetime(),
-    /** SHA-256 hash of artifact being approved */
+    /** SHA-256 hash of the artifact being approved */
     artifact_hash: z
       .string()
       .regex(/^[a-f0-9]{64}$/, 'Invalid SHA-256 hash format')
       .optional(),
-    /** Path to approved artifact (relative to run directory) */
+    /** Path to the approved artifact, relative to run directory */
     artifact_path: z.string().optional(),
-    /** Rationale or comments for approval decision */
     rationale: z.string().optional(),
-    /** Optional approval metadata */
     metadata: z.record(z.string(), z.unknown()).optional(),
   })
   .strict();
@@ -89,6 +75,7 @@ export function createApprovalRecord(
     artifactHash?: string;
     artifactPath?: string;
     rationale?: string;
+    // eslint-disable-next-line @typescript-eslint/no-restricted-types -- intentional: approval metadata varies by gate type and workflow
     metadata?: Record<string, unknown>;
   }
 ): ApprovalRecord {

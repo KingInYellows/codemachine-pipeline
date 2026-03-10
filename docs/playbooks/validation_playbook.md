@@ -120,7 +120,7 @@ Each command configuration includes:
   required: boolean,            // Whether required for pipeline success
   timeout_ms: number,           // Command timeout (1s - 10min)
   max_retries: number,          // Maximum retry attempts (0-10)
-  backoff_ms: number,           // Backoff multiplier between retries
+  backoff_ms: number,           // Base delay for exponential backoff between retries
   supports_auto_fix: boolean,   // Whether command can auto-fix issues
   auto_fix_command?: string,    // Auto-fix variant (e.g., 'npm run lint:fix')
   description?: string          // Human-readable description
@@ -204,7 +204,8 @@ FOR each validation command:
       RETURN success
 
     IF attempts < max_retries + 1:
-      backoff = backoff_ms * attempts
+      capped = min(backoff_ms * 2^(attempts - 1), 300_000)
+      backoff = round(capped * random(0.5, 1.0))
       sleep(backoff)
 
   RETURN failure (all attempts exhausted)
@@ -214,18 +215,20 @@ FOR each validation command:
 
 - **Initial Attempt**: Standard command execution
 - **Retry Attempts**: If initial attempt fails and auto-fix is supported, subsequent attempts use auto-fix variant
-- **Backoff**: Linear backoff (backoff_ms × attempt_number)
+- **Backoff**: Exponential backoff (`backoff_ms × 2^(attempt-1)`) capped at 5 minutes, with equal jitter (×random [0.5, 1.0])
 - **Bounded**: Maximum attempts = `max_retries + 1` (initial + retries)
 - **Exit on Success**: Loop terminates immediately upon successful execution
 
 ### Example Execution Timeline
 
-Lint command with `max_retries: 2`:
+Lint command with `max_retries: 2`, `backoff_ms: 500`:
 
 ```
-Time 0ms:     Attempt 1 - Execute 'npm run lint'           → Exit code 1 (failed)
-Time 500ms:   Attempt 2 - Execute 'npm run lint:fix'       → Exit code 1 (failed)
-Time 1500ms:  Attempt 3 - Execute 'npm run lint:fix'       → Exit code 0 (success)
+Time 0ms:      Attempt 1 - Execute 'npm run lint'           → Exit code 1 (failed)
+~250-500ms:    Attempt 2 - Execute 'npm run lint:fix'       → Exit code 1 (failed)
+               backoff = 500 × 2^0 = 500ms, jittered to ~250-500ms
+~750-1500ms:   Attempt 3 - Execute 'npm run lint:fix'       → Exit code 0 (success)
+               backoff = 500 × 2^1 = 1000ms, jittered to ~500-1000ms
 Result: SUCCESS after 3 attempts (1 initial + 2 retries)
 ```
 

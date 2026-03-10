@@ -2,14 +2,12 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 import * as os from 'node:os';
-import {
-  LinearAdapter,
-  createLinearAdapter,
-  LinearAdapterError,
-  type LinearIssue,
-  type LinearComment,
-  type IssueSnapshot,
-} from '../../src/adapters/linear/LinearAdapter';
+import { LinearAdapter, LinearAdapterError } from '../../src/adapters/linear/LinearAdapter';
+import type {
+  LinearIssue,
+  LinearComment,
+  IssueSnapshot,
+} from '../../src/adapters/linear/LinearAdapterTypes';
 import { ErrorType, HttpError } from '../../src/adapters/http/client';
 import type { HttpClient } from '../../src/adapters/http/client';
 import type { RateLimitLedger } from '../../src/telemetry/rateLimitLedger';
@@ -48,7 +46,7 @@ const mockHttpClient: MockHttpClient = {
 
 // Test fixtures
 const MOCK_LINEAR_ISSUE: LinearIssue = {
-  id: 'linear-uuid-1234-5678-abcd',
+  id: 'a1b2c3d4-e5f6-7890-abcd-1234567890ab',
   identifier: 'ENG-123',
   title: 'Add Linear integration via MCP',
   description: 'Implement MCP-based Linear adapter with caching and offline support',
@@ -223,10 +221,6 @@ describe('LinearAdapter Integration Tests', () => {
         operation: 'fetchIssue',
         issueId: MOCK_LINEAR_ISSUE.id,
       });
-      expect(mockLogger.debug).toHaveBeenCalledWith(
-        'Fetching issue from API',
-        expect.objectContaining({ issueId: MOCK_LINEAR_ISSUE.id })
-      );
     });
 
     it('should fetch comments with correct GraphQL query', async () => {
@@ -262,10 +256,65 @@ describe('LinearAdapter Integration Tests', () => {
         requestId: 'req_test',
       });
 
-      await expect(adapter.fetchIssue('nonexistent-id')).rejects.toThrow(
-        'Issue nonexistent-id not found'
+      await expect(adapter.fetchIssue('00000000-0000-0000-0000-000000000000')).rejects.toThrow(
+        'Issue 00000000-0000-0000-0000-000000000000 not found'
       );
       expect(mockLogger.error).toHaveBeenCalledWith('Failed to fetch issue', expect.any(Object));
+    });
+
+    it('should reject malformed issue IDs before fetching issue', async () => {
+      await expect(adapter.fetchIssue('---')).rejects.toMatchObject({
+        errorType: ErrorType.PERMANENT,
+      });
+      expect(mockHttpClient.post).not.toHaveBeenCalled();
+      expect(mockLogger.error).not.toHaveBeenCalledWith(
+        'Failed to fetch issue',
+        expect.any(Object)
+      );
+    });
+
+    it('should reject malformed issue IDs before fetching comments', async () => {
+      await expect(adapter.fetchComments('.')).rejects.toMatchObject({
+        errorType: ErrorType.PERMANENT,
+      });
+      expect(mockHttpClient.post).not.toHaveBeenCalled();
+      expect(mockLogger.error).not.toHaveBeenCalledWith(
+        'Failed to fetch comments',
+        expect.any(Object)
+      );
+    });
+
+    it('should allow UUID-format opaque issue IDs', async () => {
+      mockHttpClient.post.mockResolvedValue({
+        status: 200,
+        headers: {},
+        data: MOCK_ISSUE_RESPONSE,
+        requestId: 'req_test',
+      });
+
+      const opaqueId = 'deadbeef-1234-5678-abcd-ef0123456789';
+      const result = await adapter.fetchIssue(opaqueId);
+
+      expect(result).toEqual(MOCK_LINEAR_ISSUE);
+      expect(mockHttpClient.post).toHaveBeenCalledWith(
+        '/graphql',
+        expect.objectContaining({
+          variables: { issueId: opaqueId },
+        }),
+        expect.objectContaining({
+          metadata: expect.objectContaining({
+            issueId: opaqueId,
+            operation: 'fetchIssue',
+          }),
+        })
+      );
+    });
+
+    it('should reject single-segment opaque issue IDs', async () => {
+      await expect(adapter.fetchIssue('abc123')).rejects.toMatchObject({
+        errorType: ErrorType.PERMANENT,
+      });
+      expect(mockHttpClient.post).not.toHaveBeenCalled();
     });
   });
 
@@ -453,6 +502,42 @@ describe('LinearAdapter Integration Tests', () => {
       );
     });
 
+    it('should preserve permanent error types when returning a stale cached snapshot', async () => {
+      mockHttpClient.post
+        .mockResolvedValueOnce({
+          status: 200,
+          headers: {},
+          data: MOCK_ISSUE_RESPONSE,
+          requestId: 'req_test_1',
+        })
+        .mockResolvedValueOnce({
+          status: 200,
+          headers: {},
+          data: MOCK_COMMENTS_RESPONSE,
+          requestId: 'req_test_2',
+        });
+
+      await adapter.fetchIssueSnapshot(MOCK_LINEAR_ISSUE.id);
+
+      mockHttpClient.post.mockClear();
+      mockHttpClient.post.mockRejectedValue(
+        new LinearAdapterError(
+          'Issue not found',
+          ErrorType.PERMANENT,
+          404,
+          'req_test_3',
+          'fetchIssue'
+        )
+      );
+
+      const snapshot = await adapter.fetchIssueSnapshot(MOCK_LINEAR_ISSUE.id, {
+        forceRefresh: true,
+      });
+
+      expect(snapshot.issue.identifier).toBe('ENG-123');
+      expect(snapshot.metadata.last_error?.type).toBe(ErrorType.PERMANENT);
+    });
+
     it('should throw error when API fails and no cache exists', async () => {
       const networkError = new HttpError(
         'Service temporarily unavailable',
@@ -466,7 +551,9 @@ describe('LinearAdapter Integration Tests', () => {
 
       mockHttpClient.post.mockRejectedValue(networkError);
 
-      await expect(adapter.fetchIssueSnapshot('new-issue-id')).rejects.toThrow(LinearAdapterError);
+      await expect(
+        adapter.fetchIssueSnapshot('11111111-1111-1111-1111-111111111111')
+      ).rejects.toThrow(LinearAdapterError);
 
       expect(mockLogger.error).toHaveBeenCalledWith(
         'Failed to fetch issue snapshot and no cache available',
@@ -488,7 +575,7 @@ describe('LinearAdapter Integration Tests', () => {
       mockHttpClient.post.mockRejectedValue(rateLimitError);
 
       try {
-        await adapter.fetchIssue('test-issue-id');
+        await adapter.fetchIssue('22222222-2222-2222-2222-222222222222');
         expect.fail('Should have thrown');
       } catch (error) {
         expect(error).toBeInstanceOf(LinearAdapterError);
@@ -512,7 +599,7 @@ describe('LinearAdapter Integration Tests', () => {
       mockHttpClient.post.mockRejectedValue(authError);
 
       try {
-        await adapter.fetchIssue('test-issue-id');
+        await adapter.fetchIssue('22222222-2222-2222-2222-222222222222');
         expect.fail('Should have thrown');
       } catch (error) {
         expect(error).toBeInstanceOf(LinearAdapterError);
@@ -691,6 +778,45 @@ describe('LinearAdapter Integration Tests', () => {
       ).rejects.toThrow('Comment posting requires preview features to be enabled');
     });
 
+    it('should reject malformed issue IDs before fetching snapshot', async () => {
+      await expect(adapter.fetchIssueSnapshot('---')).rejects.toMatchObject({
+        errorType: ErrorType.PERMANENT,
+      });
+      expect(mockHttpClient.post).not.toHaveBeenCalled();
+    });
+
+    it('should reject malformed issue IDs before update', async () => {
+      await expect(
+        previewAdapter.updateIssue({
+          issueId: 'bad/id',
+          title: 'Updated title',
+        })
+      ).rejects.toMatchObject({
+        errorType: ErrorType.PERMANENT,
+      });
+      expect(mockHttpClient.post).not.toHaveBeenCalled();
+      expect(mockLogger.error).not.toHaveBeenCalledWith(
+        'Failed to update issue',
+        expect.any(Object)
+      );
+    });
+
+    it('should reject malformed issue IDs before posting comment', async () => {
+      await expect(
+        previewAdapter.postComment({
+          issueId: '..',
+          body: 'Test comment',
+        })
+      ).rejects.toMatchObject({
+        errorType: ErrorType.PERMANENT,
+      });
+      expect(mockHttpClient.post).not.toHaveBeenCalled();
+      expect(mockLogger.error).not.toHaveBeenCalledWith(
+        'Failed to post comment',
+        expect.any(Object)
+      );
+    });
+
     it('should handle update failure gracefully', async () => {
       mockHttpClient.post.mockResolvedValue({
         status: 200,
@@ -797,9 +923,9 @@ describe('LinearAdapter Integration Tests', () => {
     });
   });
 
-  describe('Factory Function', () => {
-    it('should create adapter using factory function', () => {
-      const adapter = createLinearAdapter({
+  describe('Adapter Construction', () => {
+    it('should create adapter via direct instantiation', () => {
+      const adapter = new LinearAdapter({
         apiKey: 'lin_api_test_key',
         runDir,
       });

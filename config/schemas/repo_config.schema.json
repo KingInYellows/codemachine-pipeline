@@ -85,6 +85,12 @@
           },
           "default": ["repo", "workflow"]
         },
+        "api_version": {
+          "type": "string",
+          "description": "GitHub API version (YYYY-MM-DD format)",
+          "pattern": "^\\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\\d|3[01])$",
+          "default": "2022-11-28"
+        },
         "default_reviewers": {
           "type": "array",
           "description": "Default PR reviewers",
@@ -327,7 +333,7 @@
               },
               "backoff_ms": {
                 "type": "integer",
-                "description": "Backoff multiplier between retries in milliseconds",
+                "description": "Base delay for exponential backoff between retries in milliseconds (delay = backoff_ms × 2^(attempt-1), capped at 5 min, with jitter)",
                 "minimum": 100,
                 "maximum": 10000,
                 "default": 1000

@@ -1,26 +1,13 @@
 /**
  * Patch Manager
  *
- * Manages patch application with git safety rails, dry-run validation,
- * allowlist/denylist enforcement from RepoConfig, and rollback snapshots.
- *
- * Key features:
- * - Dry-run validation using `git apply --check`
- * - Path constraint enforcement (allowed/blocked patterns)
- * - Rollback snapshot creation before applying patches
- * - Diff summaries stored in run directory artifacts
- * - Conflict detection and human-action-required state management
- * - Atomic patch application with file locking
- *
- * Implements:
- * - FR-12: Safe Patch Application
- * - FR-13: Git Constraints Enforcement
- * - ADR-3: Git Safety Rails
+ * Applies patches with git safety rails, dry-run validation, path constraints, and rollback snapshots.
  */
 
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 import * as crypto from 'node:crypto';
+import { tmpdir } from 'node:os';
 import { exec, execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import picomatch from 'picomatch';
@@ -65,10 +52,6 @@ function validatePatchId(patchId: string): void {
     );
   }
 }
-
-// ============================================================================
-// Types
-// ============================================================================
 
 /**
  * Patch application configuration
@@ -166,10 +149,6 @@ interface SnapshotMetadata {
   stashed_changes?: boolean;
 }
 
-// ============================================================================
-// Constraint Validation
-// ============================================================================
-
 /**
  * Validate that affected files comply with RepoConfig constraints.
  *
@@ -235,10 +214,6 @@ export function validateFileConstraints(
   return { valid: violations.length === 0, violations };
 }
 
-// ============================================================================
-// Patch Parsing
-// ============================================================================
-
 /**
  * Extract affected files from a unified diff patch.
  *
@@ -295,10 +270,6 @@ function summarizeLineChanges(patchContent: string): { insertions: number; delet
   return { insertions, deletions };
 }
 
-// ============================================================================
-// Git Operations
-// ============================================================================
-
 /**
  * Check if the git working tree is clean (no uncommitted changes).
  *
@@ -331,13 +302,18 @@ export async function isWorkingTreeClean(workingDir: string): Promise<boolean> {
  */
 export async function getCurrentGitRef(workingDir: string): Promise<{ ref: string; sha: string }> {
   try {
-    const { stdout: ref } = normalizeExecResult(
-      await execAsync('git symbolic-ref -q HEAD || git rev-parse HEAD', {
+    let ref: string;
+    try {
+      const result = await execFileAsync('git', ['symbolic-ref', '-q', 'HEAD'], {
         cwd: workingDir,
-      })
-    );
+      });
+      ref = normalizeExecResult(result).stdout;
+    } catch {
+      const result = await execFileAsync('git', ['rev-parse', 'HEAD'], { cwd: workingDir });
+      ref = normalizeExecResult(result).stdout;
+    }
     const { stdout: sha } = normalizeExecResult(
-      await execAsync('git rev-parse HEAD', { cwd: workingDir })
+      await execFileAsync('git', ['rev-parse', 'HEAD'], { cwd: workingDir })
     );
 
     return {
@@ -421,9 +397,10 @@ export async function validatePatchDryRun(
   }
 
   // Step 4: Test patch application with git apply --check
-  const patchFile = path.join('/tmp', `patch-${patch.patchId}-${Date.now()}.diff`);
+  const tmpDir = await fs.mkdtemp(path.join(tmpdir(), 'codepipe-patch-'));
+  const patchFile = path.join(tmpDir, `patch-${patch.patchId}.diff`);
   try {
-    await fs.writeFile(patchFile, patch.content, 'utf-8');
+    await fs.writeFile(patchFile, patch.content, { encoding: 'utf-8', mode: 0o600 });
 
     await execFileAsync('git', ['apply', '--check', patchFile], { cwd: workingDir });
 
@@ -441,9 +418,9 @@ export async function validatePatchDryRun(
       error: error instanceof Error ? error.message : 'Unknown error',
     });
   } finally {
-    // Clean up temporary patch file
+    // Clean up private temporary directory
     try {
-      await fs.unlink(patchFile);
+      await fs.rm(tmpDir, { recursive: true, force: true });
     } catch {
       // Ignore cleanup errors
     }
@@ -451,10 +428,6 @@ export async function validatePatchDryRun(
 
   return result;
 }
-
-// ============================================================================
-// Snapshot Management
-// ============================================================================
 
 /**
  * Create a rollback snapshot before applying a patch.
@@ -554,10 +527,6 @@ export async function generateDiffSummary(
   return summaryPath;
 }
 
-// ============================================================================
-// Patch Application
-// ============================================================================
-
 /**
  * Apply a patch to the working directory with full safety rails.
  *
@@ -638,9 +607,10 @@ export async function applyPatch(
         result.snapshotPath = snapshotPath;
 
         // Step 3: Apply the patch
-        const patchFile = path.join('/tmp', `patch-${patch.patchId}-${Date.now()}.diff`);
+        const patchTmpDir = await fs.mkdtemp(path.join(tmpdir(), 'codepipe-patch-'));
+        const patchFile = path.join(patchTmpDir, `patch-${patch.patchId}.diff`);
         try {
-          await fs.writeFile(patchFile, patch.content, 'utf-8');
+          await fs.writeFile(patchFile, patch.content, { encoding: 'utf-8', mode: 0o600 });
 
           logger.debug('Applying patch with git apply');
           await execFileAsync('git', ['apply', patchFile], { cwd: config.workingDir });
@@ -712,9 +682,9 @@ export async function applyPatch(
             reason: 'git_apply_failed',
           });
         } finally {
-          // Clean up temporary patch file
+          // Clean up private temporary directory
           try {
-            await fs.unlink(patchFile);
+            await fs.rm(patchTmpDir, { recursive: true, force: true });
           } catch {
             // Ignore cleanup errors
           }

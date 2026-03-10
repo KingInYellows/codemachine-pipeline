@@ -17,13 +17,11 @@
 
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
+import { z } from 'zod';
 import type { MetricsCollector } from './metrics';
 import type { StructuredLogger } from './logger';
 import { ExecutionMetricsHelper } from './executionMetrics';
-
-// ============================================================================
-// Types
-// ============================================================================
+import { validateOrThrow } from '../validation/helpers.js';
 
 /**
  * Cost entry for a single operation
@@ -46,6 +44,7 @@ export interface CostEntry {
   /** Optional model identifier */
   model?: string;
   /** Intentional: cost entry metadata varies by operation type */
+  // eslint-disable-next-line @typescript-eslint/no-restricted-types -- intentional: cost entry metadata varies per provider and operation
   metadata?: Record<string, unknown>;
 }
 
@@ -137,9 +136,24 @@ export interface BudgetWarning {
   message: string;
 }
 
-// ============================================================================
-// Cost Tracker Implementation
-// ============================================================================
+const CostTrackerStateSchema = z
+  .object({
+    schema_version: z.string(),
+    feature_id: z.string(),
+    created_at: z.string(),
+    updated_at: z.string(),
+    providers: z.record(z.string(), z.unknown()),
+    totals: z.object({
+      promptTokens: z.number().nonnegative(),
+      completionTokens: z.number().nonnegative(),
+      totalTokens: z.number().nonnegative(),
+      totalCostUsd: z.number().nonnegative(),
+      operationCount: z.number().nonnegative(),
+    }),
+    budget: z.unknown().optional(),
+    warnings: z.array(z.string()),
+  })
+  .passthrough();
 
 /**
  * Cost tracker for aggregating and persisting API costs
@@ -300,6 +314,7 @@ export class CostTracker {
     promptTokens: number,
     completionTokens: number,
     model?: string,
+    // eslint-disable-next-line @typescript-eslint/no-restricted-types -- intentional: cost entry metadata varies per provider and operation
     metadata?: Record<string, unknown>
   ): Promise<void> {
     // Get cost config
@@ -473,7 +488,6 @@ export class CostTracker {
    */
   private async appendCostLog(entry: CostEntry): Promise<void> {
     try {
-      // Ensure telemetry directory exists
       const telemetryDir = path.dirname(this.costsLogPath);
       await fs.mkdir(telemetryDir, { recursive: true });
 
@@ -493,7 +507,6 @@ export class CostTracker {
    */
   async flush(): Promise<void> {
     try {
-      // Ensure telemetry directory exists
       const telemetryDir = path.dirname(this.costsFilePath);
       await fs.mkdir(telemetryDir, { recursive: true });
 
@@ -530,7 +543,11 @@ export class CostTracker {
 
     try {
       const content = await fs.readFile(costsFilePath, 'utf-8');
-      const state = JSON.parse(content) as CostTrackerState;
+      const state = validateOrThrow(
+        CostTrackerStateSchema,
+        JSON.parse(content),
+        'cost tracker state'
+      ) as CostTrackerState;
 
       const tracker = new CostTracker(state.feature_id, runDir, logger, metrics, state.budget);
       tracker.state = state;
@@ -548,23 +565,6 @@ export class CostTracker {
   }
 }
 
-// ============================================================================
-// Factory Functions
-// ============================================================================
-
-/**
- * Create a cost tracker instance
- */
-export function createCostTracker(
-  featureId: string,
-  runDir: string,
-  logger: StructuredLogger,
-  metrics: MetricsCollector,
-  budget?: BudgetConfig
-): CostTracker {
-  return new CostTracker(featureId, runDir, logger, metrics, budget);
-}
-
 /**
  * Load or create a cost tracker
  */
@@ -580,5 +580,5 @@ export async function loadOrCreateCostTracker(
     return existing;
   }
 
-  return createCostTracker(featureId, runDir, logger, metrics, budget);
+  return new CostTracker(featureId, runDir, logger, metrics, budget);
 }

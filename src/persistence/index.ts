@@ -31,6 +31,21 @@ export {
   type CleanupHook,
 } from './runDirectoryManager.js';
 
+// Research store exports
+export {
+  getResearchDirectory,
+  getTasksDirectory,
+  getTaskFilePath,
+  getTasksLogPath,
+  ensureResearchDirectories,
+  saveTask,
+  loadTask,
+  appendTaskLog,
+  listTaskIds,
+  findCachedTask,
+  isCachedTaskFresh,
+} from './researchStore.js';
+
 // Hash manifest exports
 export {
   computeFileHash,

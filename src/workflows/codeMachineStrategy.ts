@@ -12,7 +12,8 @@ import {
   type RunnerOptions,
 } from './codeMachineRunner.js';
 import { mapTaskToWorkflow, shouldUseNativeEngine } from './taskMapper.js';
-import { normalizeResult, isRecoverableError } from './resultNormalizer.js';
+import { normalizeResult } from './resultNormalizer.js';
+import { buildStrategyResult } from './strategyHelpers.js';
 import type { StructuredLogger } from '../telemetry/logger.js';
 
 export interface CodeMachineStrategyOptions {
@@ -62,20 +63,7 @@ export class CodeMachineStrategy implements ExecutionStrategy {
     const result = await runCodeMachine(this.config, runnerOptions);
     const normalized = normalizeResult(result);
 
-    const strategyResult: ExecutionStrategyResult = {
-      success: normalized.success,
-      status: this.mapStatus(normalized),
-      summary: normalized.redactedStdout.slice(0, 500),
-      recoverable: isRecoverableError(normalized.errorCategory),
-      durationMs: normalized.durationMs,
-      artifacts: normalized.artifacts,
-    };
-
-    if (normalized.errorCategory !== 'none') {
-      strategyResult.errorMessage = normalized.redactedStderr;
-    }
-
-    return strategyResult;
+    return buildStrategyResult(normalized);
   }
 
   async validatePrerequisites(): Promise<{ valid: boolean; errors: string[] }> {
@@ -99,21 +87,6 @@ export class CodeMachineStrategy implements ExecutionStrategy {
     }
 
     return path.join(context.runDir, 'specs', `${task.task_id}.md`);
-  }
-
-  private mapStatus(
-    normalized: ReturnType<typeof normalizeResult>
-  ): ExecutionStrategyResult['status'] {
-    if (normalized.success) {
-      return 'completed';
-    }
-    if (normalized.timedOut) {
-      return 'timeout';
-    }
-    if (normalized.killed) {
-      return 'killed';
-    }
-    return 'failed';
   }
 }
 
