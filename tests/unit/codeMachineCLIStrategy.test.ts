@@ -199,7 +199,7 @@ describe('CodeMachineCLIStrategy', () => {
     });
 
     it('rejects openai engine as unsupported by CodeMachine-CLI', async () => {
-      const config = makeConfig({ default_engine: 'openai' as unknown });
+      const config = makeConfig({ default_engine: 'openai' });
       const strategy = new CodeMachineCLIStrategy({ config });
       const result = await strategy.execute(makeTask(), makeContext());
 
