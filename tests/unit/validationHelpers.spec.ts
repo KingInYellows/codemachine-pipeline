@@ -184,7 +184,7 @@ describe('fromZodError', () => {
       const err = fromZodError('config', result.error);
       const nestedIssue = err.issues.find((i) => i.path.includes('nested'));
       expect(nestedIssue).toBeDefined();
-      expect(nestedIssue!.path).toBe('nested.enabled');
+      expect(nestedIssue?.path).toBe('nested.enabled');
     }
   });
 
@@ -195,7 +195,7 @@ describe('fromZodError', () => {
       const err = fromZodError('test', result.error);
       const nameIssue = err.issues.find((i) => i.path === 'name');
       expect(nameIssue).toBeDefined();
-      expect(nameIssue!.code).toBeDefined();
+      expect(nameIssue?.code).toBeDefined();
       // The mapper preserves expected/received when present; only assert when present
       if (nameIssue && 'expected' in nameIssue && nameIssue.expected !== undefined) {
         expect(nameIssue.expected).toBeDefined();

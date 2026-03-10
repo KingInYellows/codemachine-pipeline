@@ -148,7 +148,10 @@ export default class ResearchList extends TelemetryCommand {
       if (!grouped.has(task.status)) {
         grouped.set(task.status, []);
       }
-      grouped.get(task.status)!.push(task);
+      const tasksForStatus = grouped.get(task.status);
+      if (tasksForStatus) {
+        tasksForStatus.push(task);
+      }
     }
 
     const statusOrder: ResearchTask['status'][] = [

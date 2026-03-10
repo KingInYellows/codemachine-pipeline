@@ -302,8 +302,9 @@ function renderIntegrationsSection(
 
   if (integrations.github) {
     renderIntegration('GitHub', integrations.github, () => {
-      if (integrations.github!.pr_status) {
-        const pr = integrations.github!.pr_status;
+      const githubIntegration = integrations.github;
+      if (githubIntegration?.pr_status) {
+        const pr = githubIntegration.pr_status;
         log(`    PR #${pr.number}: ${pr.state}`);
         log(`    Mergeable: ${pr.mergeable === null ? 'Unknown' : pr.mergeable ? 'Yes' : 'No'}`);
         if (flags.verbose && pr.url) {
@@ -315,8 +316,8 @@ function renderIntegrationsSection(
 
   if (integrations.linear) {
     renderIntegration('Linear', integrations.linear, () => {
-      if (integrations.linear!.issue_status) {
-        const issue = integrations.linear!.issue_status;
+      if (integrations.linear?.issue_status) {
+        const issue = integrations.linear.issue_status;
         log(`    Issue: ${issue.identifier} (${issue.state})`);
         if (flags.verbose && issue.url) {
           log(`    URL: ${issue.url}`);

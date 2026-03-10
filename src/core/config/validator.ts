@@ -116,7 +116,10 @@ export async function validateRepoConfig(
     };
   }
 
-  const config = baseResult.config!;
+  const config = baseResult.config;
+  if (config == null) {
+    throw new Error('Loaded configuration is null or undefined');
+  }
   const warnings = [...(baseResult.warnings || [])];
   const errors: ValidationError[] = [];
 

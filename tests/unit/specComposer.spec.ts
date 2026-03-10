@@ -465,7 +465,10 @@ describe('Specification Composer', () => {
         );
 
       expect(specWriteCall).toBeDefined();
-      const [, markdown] = specWriteCall!;
+      if (!specWriteCall) {
+        throw new Error('specWriteCall is undefined');
+      }
+      const [, markdown] = specWriteCall;
       expect(typeof markdown).toBe('string');
       const markdownContent = markdown as string;
       expect(markdownContent).toContain('## Referenced File Globs');
@@ -576,7 +579,10 @@ describe('Specification Composer', () => {
         );
 
       expect(writeCall).toBeDefined();
-      const [, metadataPayload] = writeCall!;
+      if (!writeCall) {
+        throw new Error('Expected writeCall to be defined');
+      }
+      const [, metadataPayload] = writeCall;
       expect(typeof metadataPayload).toBe('string');
       const parsedMetadata = JSON.parse(metadataPayload as string) as {
         approvalStatus: string;
@@ -624,7 +630,10 @@ describe('Specification Composer', () => {
         );
 
       expect(writeCall).toBeDefined();
-      const [, metadataPayload] = writeCall!;
+      if (!writeCall) {
+        throw new Error('No writeCall found');
+      }
+      const [, metadataPayload] = writeCall;
       expect(typeof metadataPayload).toBe('string');
       const parsedMetadata = JSON.parse(metadataPayload as string) as { approvalStatus: string };
       expect(parsedMetadata.approvalStatus).toBe('rejected');
@@ -654,7 +663,10 @@ describe('Specification Composer', () => {
         );
 
       expect(writeCall).toBeDefined();
-      const [, metadataPayload] = writeCall!;
+      if (!writeCall) {
+        throw new Error('writeCall must be defined');
+      }
+      const [, metadataPayload] = writeCall;
       expect(typeof metadataPayload).toBe('string');
       const parsedMetadata = JSON.parse(metadataPayload as string) as { approvalStatus: string };
       expect(parsedMetadata.approvalStatus).toBe('changes_requested');

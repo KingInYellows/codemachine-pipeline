@@ -87,7 +87,7 @@ describe('CostTracker', () => {
       const summary = tracker.getProviderSummary('custom-provider');
       expect(summary).toBeDefined();
       // Cost should be 0.05 * 1 + 0.10 * 1 = 0.15
-      expect(summary!.totalCostUsd).toBeCloseTo(0.15, 4);
+      expect(summary?.totalCostUsd).toBeCloseTo(0.15, 4);
     });
   });
 
@@ -131,14 +131,20 @@ describe('CostTracker', () => {
       const anthropicSummary = tracker.getProviderSummary('anthropic');
 
       expect(openaiSummary).toBeDefined();
-      expect(openaiSummary!.promptTokens).toBe(1000);
-      expect(openaiSummary!.completionTokens).toBe(500);
-      expect(openaiSummary!.operationCount).toBe(1);
+      if (!openaiSummary) {
+        throw new Error('openaiSummary is undefined');
+      }
+      expect(openaiSummary.promptTokens).toBe(1000);
+      expect(openaiSummary.completionTokens).toBe(500);
+      expect(openaiSummary.operationCount).toBe(1);
 
       expect(anthropicSummary).toBeDefined();
-      expect(anthropicSummary!.promptTokens).toBe(2000);
-      expect(anthropicSummary!.completionTokens).toBe(1000);
-      expect(anthropicSummary!.operationCount).toBe(1);
+      if (!anthropicSummary) {
+        throw new Error('anthropicSummary is undefined');
+      }
+      expect(anthropicSummary.promptTokens).toBe(2000);
+      expect(anthropicSummary.completionTokens).toBe(1000);
+      expect(anthropicSummary.operationCount).toBe(1);
     });
   });
 
@@ -153,7 +159,7 @@ describe('CostTracker', () => {
 
       const summary = tracker.getProviderSummary('openai');
       expect(summary).toBeDefined();
-      expect(summary!.provider).toBe('openai');
+      expect(summary?.provider).toBe('openai');
     });
   });
 
