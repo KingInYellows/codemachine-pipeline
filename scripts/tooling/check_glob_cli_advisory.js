@@ -47,21 +47,22 @@ function isVulnerableGlob(versionValue) {
   if (!version) {
     return false;
   }
-  if (isVersionInRange(version, { major: 10, minor: 2, patch: 0 }, { major: 10, minor: 5, patch: 0 })) {
-    return true;
-  }
-  if (isVersionInRange(version, { major: 11, minor: 0, patch: 0 }, { major: 11, minor: 1, patch: 0 })) {
-    return true;
-  }
-  return false;
+  return Boolean(
+    isVersionInRange(
+      version,
+      { major: 10, minor: 2, patch: 0 },
+      { major: 10, minor: 5, patch: 0 }
+    ) ||
+    isVersionInRange(version, { major: 11, minor: 0, patch: 0 }, { major: 11, minor: 1, patch: 0 })
+  );
 }
 
 function hasDependency(packageJson, name) {
   return Boolean(
-    (packageJson.dependencies && packageJson.dependencies[name]) ||
-      (packageJson.devDependencies && packageJson.devDependencies[name]) ||
-      (packageJson.optionalDependencies && packageJson.optionalDependencies[name]) ||
-      (packageJson.peerDependencies && packageJson.peerDependencies[name])
+    packageJson.dependencies?.[name] ||
+    packageJson.devDependencies?.[name] ||
+    packageJson.optionalDependencies?.[name] ||
+    packageJson.peerDependencies?.[name]
   );
 }
 
@@ -80,8 +81,10 @@ function main() {
   }
 
   const lockPackages = collectLockPackages(lockData);
-  const pluginEntries = lockPackages.filter(([key]) => 
-    key === 'node_modules/@oclif/plugin-plugins' || key.endsWith('/node_modules/@oclif/plugin-plugins')
+  const pluginEntries = lockPackages.filter(
+    ([key]) =>
+      key === 'node_modules/@oclif/plugin-plugins' ||
+      key.endsWith('/node_modules/@oclif/plugin-plugins')
   );
   if (pluginEntries.length > 0) {
     issues.push('package-lock.json includes @oclif/plugin-plugins (remove from dependency tree).');
@@ -95,9 +98,7 @@ function main() {
   });
 
   if (globEntries.length > 0) {
-    const versions = globEntries
-      .map(([key, value]) => `${key}: ${value.version}`)
-      .sort();
+    const versions = globEntries.map(([key, value]) => `${key}: ${value.version}`).sort();
     issues.push(
       `Vulnerable glob CLI versions detected (GHSA-5j98-mcp5-4vw2):\n${versions.join('\n')}`
     );
