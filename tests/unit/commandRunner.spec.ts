@@ -189,60 +189,6 @@ describe('parseCommandString', () => {
   // ── Error conditions ─────────────────────────────────────────────────────
 
   it('throws on empty string', () => {
-
-  it('merges space-separated comment token into single arg', () => {
-    const [exe, args] = parseCommandString('echo foo # bar');
-    expect(exe).toBe('echo');
-    expect(args).toEqual(['foo', '# bar']); // comment includes the leading space
-  });
-
-  // ── Path arguments ───────────────────────────────────────────────────────
-
-  it('handles absolute path as executable', () => {
-    const [exe, args] = parseCommandString('/usr/bin/node --version');
-    expect(exe).toBe('/usr/bin/node');
-    expect(args).toEqual(['--version']);
-  });
-
-  it('handles flags with equals sign', () => {
-    const [exe, args] = parseCommandString('npm install --save-dev=true');
-    expect(exe).toBe('npm');
-    expect(args).toEqual(['install', '--save-dev=true']);
-  });
-
-  // ── Error conditions ─────────────────────────────────────────────────────
-
-  it('throws on empty string', () => {
-    expect(() => parseCommandString('')).toThrow('Empty command string');
-  });
-
-  it('throws on whitespace-only string', () => {
-    expect(() => parseCommandString('   ')).toThrow('Empty command string');
-  });
-
-  // ── Real-world validation command examples ───────────────────────────────
-
-  it('parses npm test command', () => {
-    const [exe, args] = parseCommandString('npm install --save-dev=true');
-    expect(exe).toBe('npm');
-    expect(args).toEqual(['install', '--save-dev=true']);
-  });
-
-  // ── Error conditions ─────────────────────────────────────────────────────
-
-  it('throws on empty string', () => {
-    expect(args).toEqual(['--version']);
-  });
-
-  it('handles flags with equals sign', () => {
-    const [exe, args] = parseCommandString('npm install --save-dev=true');
-    expect(exe).toBe('npm');
-    expect(args).toEqual(['install', '--save-dev=true']);
-  });
-
-  // ── Error conditions ─────────────────────────────────────────────────────
-
-  it('throws on empty string', () => {
     expect(() => parseCommandString('')).toThrow('Empty command string');
   });
 

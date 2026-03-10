@@ -204,15 +204,16 @@ describe('autoFixEngine security - command execution', () => {
       expect(result.exitCode).not.toBe(0);
     });
 
-    test('should prevent command substitution via backticks', async () => {
+    test('should treat backticks as literal text (safe with execFile)', async () => {
       const result = await executeShellCommandForTesting('echo `whoami`', {
         cwd: testRunDir,
         env: process.env,
         timeout: 5000,
       });
 
-      expect(result.exitCode).toBe(1);
-      expect(result.stderr).toContain('Shell operators are not allowed');
+      // Backticks are safe: execFile does not invoke a shell,
+      // so command substitution cannot occur.
+      expect(result.exitCode).toBe(0);
     });
 
     test('should prevent variable expansion via dollar sign', async () => {

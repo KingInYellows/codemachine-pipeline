@@ -165,11 +165,27 @@ function restoreLiteralVariableReferences(
 export function parseCommandString(command: string): [string, string[]] {
   const { placeholders, sanitizedCommand } = preserveLiteralVariableReferences(command);
   const parts = parse(sanitizedCommand).map((part) => {
+    if (typeof part === 'string') {
+      return restoreLiteralVariableReferences(part, placeholders);
+    }
+    if (typeof part === 'object' && part !== null) {
+      if ('comment' in part) {
+        return restoreLiteralVariableReferences(`#${String(part.comment)}`, placeholders);
+      }
+      if ('pattern' in part) {
+        return restoreLiteralVariableReferences(String(part.pattern), placeholders);
+      }
+      if ('op' in part) {
+        throw new Error('Shell operators are not allowed in command strings');
+      }
+    }
+    throw new Error('Shell operators are not allowed in command strings');
+  });
   if (parts.length === 0) {
     throw new Error('Empty command string');
   }
 
-  return [parts[0], parts.slice(1)];
+  return [parts[0], parts.slice(1)] as [string, string[]];
 }
 
 // ---------------------------------------------------------------------------
