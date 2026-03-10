@@ -362,7 +362,10 @@ describe('PRD Authoring Engine', () => {
         .mocked(fs.writeFile)
         .mock.calls.find((call) => call[0] === '/tmp/test-repo/.runs/run-001/artifacts/prd.md');
       expect(writeCall).toBeDefined();
-      const renderedMarkdown = writeCall![1] as string;
+      if (!writeCall) {
+        throw new Error('Expected writeCall to be defined');
+      }
+      const renderedMarkdown = writeCall[1] as string;
 
       expect(renderedMarkdown).toContain('# PRD: Test Feature');
       expect(renderedMarkdown).toContain('**Feature ID:** feat-123');
@@ -377,7 +380,10 @@ describe('PRD Authoring Engine', () => {
       const writeCall = vi
         .mocked(fs.writeFile)
         .mock.calls.find((call) => call[0] === '/tmp/test-repo/.runs/run-001/artifacts/prd.md');
-      const renderedMarkdown = writeCall![1] as string;
+      if (!writeCall) {
+        throw new Error('Expected writeCall to be found');
+      }
+      const renderedMarkdown = writeCall[1] as string;
 
       expect(renderedMarkdown).toContain('`src/main.ts`');
       expect(renderedMarkdown).toContain('`src/utils.ts`');
@@ -390,7 +396,10 @@ describe('PRD Authoring Engine', () => {
       const writeCall = vi
         .mocked(fs.writeFile)
         .mock.calls.find((call) => call[0] === '/tmp/test-repo/.runs/run-001/artifacts/prd.md');
-      const renderedMarkdown = writeCall![1] as string;
+      if (!writeCall) {
+        throw new Error('Expected writeCall to be defined');
+      }
+      const renderedMarkdown = writeCall[1] as string;
 
       expect(renderedMarkdown).toContain('Research scalability requirements');
       expect(renderedMarkdown).toContain('RT-001');
@@ -500,7 +509,10 @@ describe('PRD Authoring Engine', () => {
         );
       expect(metadataWriteCall).toBeDefined();
 
-      const metadata = JSON.parse(metadataWriteCall![1] as string) as PRDMetadata;
+      if (!metadataWriteCall) {
+        throw new Error('Expected metadataWriteCall to be defined');
+      }
+      const metadata = JSON.parse(metadataWriteCall[1] as string) as PRDMetadata;
       expect(metadata.featureId).toBe('feat-123');
       expect(metadata.approvalStatus).toBe('pending');
       expect(metadata.approvals).toEqual([]);
@@ -573,7 +585,10 @@ describe('PRD Authoring Engine', () => {
       const writeCall = vi
         .mocked(fs.writeFile)
         .mock.calls.find((call) => call[0] === '/tmp/test-repo/.runs/run-001/artifacts/prd.md');
-      const rendered = writeCall![1] as string;
+      if (!writeCall) {
+        throw new Error('Expected writeCall to be defined');
+      }
+      const rendered = writeCall[1] as string;
       expect(rendered).toContain('_No context files available._');
     });
 
@@ -586,7 +601,10 @@ describe('PRD Authoring Engine', () => {
       const writeCall = vi
         .mocked(fs.writeFile)
         .mock.calls.find((call) => call[0] === '/tmp/test-repo/.runs/run-001/artifacts/prd.md');
-      const rendered = writeCall![1] as string;
+      if (!writeCall) {
+        throw new Error('Expected fs.writeFile to be called for prd.md');
+      }
+      const rendered = writeCall[1] as string;
       expect(rendered).toContain('_No research tasks available._');
     });
 
@@ -598,7 +616,10 @@ describe('PRD Authoring Engine', () => {
       const writeCall = vi
         .mocked(fs.writeFile)
         .mock.calls.find((call) => call[0] === '/tmp/test-repo/.runs/run-001/artifacts/prd.md');
-      const rendered = writeCall![1] as string;
+      if (!writeCall) {
+        throw new Error('Expected writeCall for prd.md to be defined');
+      }
+      const rendered = writeCall[1] as string;
       expect(rendered).toContain('_Research tasks pending completion._');
     });
 
@@ -633,7 +654,10 @@ describe('PRD Authoring Engine', () => {
       const writeCall = vi
         .mocked(fs.writeFile)
         .mock.calls.find((call) => call[0] === '/tmp/test-repo/.runs/run-001/artifacts/prd.md');
-      const rendered = writeCall![1] as string;
+      if (!writeCall) {
+        throw new Error('Expected write call for prd.md to be defined');
+      }
+      const rendered = writeCall[1] as string;
       expect(rendered).toContain('...and 5 more files');
     });
 
@@ -644,7 +668,10 @@ describe('PRD Authoring Engine', () => {
       const writeCall = vi
         .mocked(fs.writeFile)
         .mock.calls.find((call) => call[0] === '/tmp/test-repo/.runs/run-001/artifacts/prd.md');
-      const rendered = writeCall![1] as string;
+      if (!writeCall) {
+        throw new Error('Expected writeCall for prd.md to be defined');
+      }
+      const rendered = writeCall[1] as string;
 
       // Should not contain any unresolved placeholders from our template
       expect(rendered).not.toContain('{{FEATURE_ID}}');
@@ -733,7 +760,11 @@ describe('PRD Authoring Engine', () => {
         .mock.calls.find((call) => (call[0] as string).endsWith('prd_metadata.json'));
       expect(metadataWriteCall).toBeDefined();
 
-      const updatedMetadata = JSON.parse(metadataWriteCall![1] as string) as PRDMetadata;
+      if (!metadataWriteCall) {
+        throw new Error('Expected metadata write call to prd_metadata.json');
+      }
+
+      const updatedMetadata = JSON.parse(metadataWriteCall[1] as string) as PRDMetadata;
       expect(updatedMetadata.approvalStatus).toBe('approved');
       expect(updatedMetadata.approvals).toHaveLength(1);
     });
@@ -749,7 +780,10 @@ describe('PRD Authoring Engine', () => {
       const metadataWriteCall = vi
         .mocked(fs.writeFile)
         .mock.calls.find((call) => (call[0] as string).endsWith('prd_metadata.json'));
-      const updatedMetadata = JSON.parse(metadataWriteCall![1] as string) as PRDMetadata;
+      if (!metadataWriteCall) {
+        throw new Error('Expected a writeFile call for prd_metadata.json');
+      }
+      const updatedMetadata = JSON.parse(metadataWriteCall[1] as string) as PRDMetadata;
       expect(updatedMetadata.approvalStatus).toBe('rejected');
     });
 
@@ -764,7 +798,10 @@ describe('PRD Authoring Engine', () => {
       const metadataWriteCall = vi
         .mocked(fs.writeFile)
         .mock.calls.find((call) => (call[0] as string).endsWith('prd_metadata.json'));
-      const updatedMetadata = JSON.parse(metadataWriteCall![1] as string) as PRDMetadata;
+      if (!metadataWriteCall) {
+        throw new Error('Expected prd_metadata.json write call not found');
+      }
+      const updatedMetadata = JSON.parse(metadataWriteCall[1] as string) as PRDMetadata;
       expect(updatedMetadata.approvalStatus).toBe('changes_requested');
     });
 
@@ -824,8 +861,10 @@ describe('PRD Authoring Engine', () => {
         .mocked(fs.writeFile)
         .mock.calls.find((call) => (call[0] as string).endsWith('approvals.json'));
       expect(approvalsIndexWrite).toBeDefined();
-
-      const index = JSON.parse(approvalsIndexWrite![1] as string);
+      if (!approvalsIndexWrite) {
+        throw new Error('Approvals write call not found');
+      }
+      const index = JSON.parse(approvalsIndexWrite[1] as string);
       expect(index.approvals).toHaveLength(1);
     });
 
@@ -865,7 +904,11 @@ describe('PRD Authoring Engine', () => {
       const approvalsIndexWrite = vi
         .mocked(fs.writeFile)
         .mock.calls.find((call) => (call[0] as string).endsWith('approvals.json'));
-      const index = JSON.parse(approvalsIndexWrite![1] as string);
+      if (!approvalsIndexWrite) {
+        throw new Error('Expected writeFile to be called with approvals.json');
+      }
+
+      const index = JSON.parse(approvalsIndexWrite[1] as string);
       expect(index.approvals).toHaveLength(2);
     });
 
@@ -922,8 +965,10 @@ describe('PRD Authoring Engine', () => {
       const result = await loadPRDMetadata(runDir);
 
       expect(result).not.toBeNull();
-      expect(result!.featureId).toBe('feat-123');
-      expect(result!.approvalStatus).toBe('pending');
+      if (result !== null) {
+        expect(result.featureId).toBe('feat-123');
+        expect(result.approvalStatus).toBe('pending');
+      }
     });
 
     it('should return null when metadata file does not exist', async () => {
@@ -1097,7 +1142,10 @@ describe('PRD Authoring Engine', () => {
       const writeCall = vi
         .mocked(fs.writeFile)
         .mock.calls.find((call) => (call[0] as string).endsWith('prd.md'));
-      const rendered = writeCall![1] as string;
+      if (!writeCall) {
+        throw new Error('fs.writeFile mock call for prd.md not found');
+      }
+      const rendered = writeCall[1] as string;
       expect(rendered).toBe('feat-123 is feat-123 and title is Test Feature');
     });
 
@@ -1111,7 +1159,10 @@ describe('PRD Authoring Engine', () => {
       const writeCall = vi
         .mocked(fs.writeFile)
         .mock.calls.find((call) => (call[0] as string).endsWith('prd.md'));
-      const rendered = writeCall![1] as string;
+      if (!writeCall) {
+        throw new Error('writeCall not found');
+      }
+      const rendered = writeCall[1] as string;
       expect(rendered).toContain('{{UNKNOWN_VAR}}');
     });
 

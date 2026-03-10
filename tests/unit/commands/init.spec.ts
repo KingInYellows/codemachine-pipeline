@@ -206,7 +206,7 @@ describe('init command', () => {
       const result = await loadRepoConfig(configPath);
       expect(result.success).toBe(false);
       expect(result.errors).toBeDefined();
-      expect(result.errors!.length).toBeGreaterThan(0);
+      expect(result.errors?.length).toBeGreaterThan(0);
     });
 
     test('invalid JSON produces parse error', async () => {
@@ -216,14 +216,14 @@ describe('init command', () => {
       const result = await loadRepoConfig(configPath);
       expect(result.success).toBe(false);
       expect(result.errors).toBeDefined();
-      expect(result.errors![0].path).toBe('json');
+      expect(result.errors?.[0].path).toBe('json');
     });
 
     test('non-existent config file produces file error', async () => {
       const result = await loadRepoConfig(configPath);
       expect(result.success).toBe(false);
       expect(result.errors).toBeDefined();
-      expect(result.errors![0].path).toBe('file');
+      expect(result.errors?.[0]?.path).toBe('file');
     });
   });
 

@@ -231,7 +231,7 @@ describe('loadRepoConfig', () => {
     const result = await loadRepoConfig('/nonexistent/config.json');
     expect(result.success).toBe(false);
     expect(result.errors).toBeDefined();
-    expect(result.errors![0].path).toBe('file');
+    expect(result.errors?.[0]?.path).toBe('file');
   });
 
   it('should return error for invalid JSON', async () => {
@@ -240,7 +240,7 @@ describe('loadRepoConfig', () => {
     const result = await loadRepoConfig(configPath);
     expect(result.success).toBe(false);
     expect(result.errors).toBeDefined();
-    expect(result.errors![0].path).toBe('json');
+    expect(result.errors?.[0].path).toBe('json');
   });
 
   it('should return errors for invalid schema', async () => {
@@ -253,7 +253,7 @@ describe('loadRepoConfig', () => {
     const result = await loadRepoConfig(configPath);
     expect(result.success).toBe(false);
     expect(result.errors).toBeDefined();
-    expect(result.errors!.length).toBeGreaterThan(0);
+    expect(result.errors?.length).toBeGreaterThan(0);
   });
 
   it('should include warnings for missing credentials', async () => {
@@ -264,7 +264,7 @@ describe('loadRepoConfig', () => {
     const result = await loadRepoConfig(configPath);
     expect(result.success).toBe(true);
     expect(result.warnings).toBeDefined();
-    expect(result.warnings!.some((w) => w.includes('GITHUB_TOKEN'))).toBe(true);
+    expect(result.warnings?.some((w) => w.includes('GITHUB_TOKEN'))).toBe(true);
   });
 
   it('should apply environment overrides', async () => {
@@ -305,10 +305,10 @@ describe('loadRepoConfig', () => {
     expect(result.success).toBe(false);
     expect(result.errors).toBeDefined();
 
-    const schemaVersionError = result.errors!.find((e) => e.path.includes('schema_version'));
+    const schemaVersionError = result.errors?.find((e) => e.path.includes('schema_version'));
     expect(schemaVersionError?.suggestion).toContain('semver');
 
-    const repoUrlError = result.errors!.find((e) => e.path.includes('repo_url'));
+    const repoUrlError = result.errors?.find((e) => e.path.includes('repo_url'));
     expect(repoUrlError?.suggestion).toBeDefined();
   });
 });

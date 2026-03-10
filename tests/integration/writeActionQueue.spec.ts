@@ -382,7 +382,10 @@ describe('WriteActionQueue', () => {
       // Create executor that tracks execution order
       const executionOrder: number[] = [];
       const executor = (action: WriteAction): Promise<void> => {
-        executionOrder.push(action.payload.target_number!);
+        const targetNumber = action.payload.target_number;
+        if (targetNumber != null) {
+          executionOrder.push(targetNumber);
+        }
         return Promise.resolve();
       };
 

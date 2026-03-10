@@ -550,7 +550,10 @@ export class LinearAdapter {
   }
 
   private getSnapshotPath(issueId: string): string {
-    return path.join(this.runDir!, SNAPSHOT_DIR, `linear_issue_${issueId}.json`);
+    if (!this.runDir) {
+      throw new Error('runDir is not set');
+    }
+    return path.join(this.runDir, SNAPSHOT_DIR, `linear_issue_${issueId}.json`);
   }
 
   private async executeGraphQL<T>(

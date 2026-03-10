@@ -590,7 +590,11 @@ describe('TraceManager', () => {
       const spans = await readTraceFile(tracesPath);
 
       expect(spans[0].duration).toBeGreaterThanOrEqual(50);
-      expect(spans[0].startTime).toBeLessThan(spans[0].endTime!);
+      const span0 = spans[0];
+      if (span0.endTime == null) {
+        throw new Error('endTime should not be null or undefined');
+      }
+      expect(span0.startTime).toBeLessThan(span0.endTime);
     });
   });
 

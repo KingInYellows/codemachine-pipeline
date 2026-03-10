@@ -349,8 +349,11 @@ describe('PR Commands Integration Tests', () => {
       expect(context.prMetadata?.auto_merge_enabled).toBe(true);
 
       // Simulate what the command does after the API call:
+      if (!context.prMetadata) {
+        throw new Error('prMetadata is null');
+      }
       const updatedMeta: PRMetadata = {
-        ...context.prMetadata!,
+        ...context.prMetadata,
         auto_merge_enabled: false,
         last_updated: new Date().toISOString(),
       };
@@ -437,7 +440,7 @@ describe('PR Commands Integration Tests', () => {
         .filter((r) => r.length > 0);
 
       const allReviewers = Array.from(
-        new Set([...context.prMetadata!.reviewers_requested, ...reviewersToAdd])
+        new Set([...(context.prMetadata?.reviewers_requested ?? []), ...reviewersToAdd])
       );
 
       expect(allReviewers).toEqual(['alice', 'bob', 'charlie', 'dave']);
@@ -450,14 +453,18 @@ describe('PR Commands Integration Tests', () => {
       await setupRunDir({}, prMeta);
 
       const context = await loadPRContext(baseDir, TEST_FEATURE_ID, buildRepoConfig(), false);
+      const prMetadata = context.prMetadata;
+      if (!prMetadata) {
+        throw new Error('Expected prMetadata to be defined');
+      }
 
       const reviewersToAdd = ['bob', 'charlie'];
       const allReviewers = Array.from(
-        new Set([...context.prMetadata!.reviewers_requested, ...reviewersToAdd])
+        new Set([...prMetadata.reviewers_requested, ...reviewersToAdd])
       );
 
       const updatedMeta: PRMetadata = {
-        ...context.prMetadata!,
+        ...prMetadata,
         reviewers_requested: allReviewers,
         last_updated: new Date().toISOString(),
       };
