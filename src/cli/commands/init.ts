@@ -50,6 +50,24 @@ interface ConfigValidationPayload {
   };
 }
 
+interface ProjectPaths {
+  gitRoot: string;
+  pipelineDir: string;
+  configPath: string;
+  logsDir: string;
+}
+
+interface InitResultPayload {
+  status: string;
+  config_path: string;
+  exit_code: number;
+  config: RepoConfig | undefined;
+  warnings: string[];
+  manifest_schema_doc: string;
+  readiness_checklist: string;
+  next_steps: string[];
+}
+
 /**
  * Init command - Initialize codemachine-pipeline in the current repository
  *
@@ -97,177 +115,267 @@ export default class Init extends Command {
 
   async run(): Promise<void> {
     const { flags } = await this.parse(Init);
-    const startTime = Date.now();
 
-    // Set JSON output mode environment variable
     if (flags.json) {
       setJsonOutputMode();
     }
 
-    // Initialize telemetry (logger, metrics, traces)
-    let logger: StructuredLogger | undefined;
-    let metrics: MetricsCollector | undefined;
-    let traceManager: TraceManager | undefined;
-    let commandSpan: ActiveSpan | undefined;
-    let exitCode = 0;
-    const ctx: CommandTelemetryContext = { startTime };
+    const ctx: CommandTelemetryContext = { startTime: Date.now() };
 
     try {
-      const gitRoot = this.findGitRoot();
-      const pipelineDir = path.join(gitRoot, '.codepipe');
-      const configPath = path.join(pipelineDir, 'config.json');
-      const logsDir = path.join(pipelineDir, 'logs');
-      const telemetryEnabled = !flags['dry-run'];
+      const paths = this.resolveProjectPaths();
+      this.initializeTelemetry(paths, flags, ctx);
 
-      if (telemetryEnabled) {
-        if (!fs.existsSync(logsDir)) {
-          fs.mkdirSync(logsDir, { recursive: true });
-        }
-
-        logger = createCliLogger('init', 'bootstrap', logsDir, {
-          minLevel: LogLevel.INFO,
-          mirrorToStderr: !flags.json,
-        });
-        metrics = createRunMetricsCollector(pipelineDir, 'bootstrap');
-        traceManager = createRunTraceManager(pipelineDir, 'bootstrap', logger);
-        commandSpan = traceManager.startSpan('cli.init');
-        ctx.logger = logger;
-        ctx.metrics = metrics;
-        ctx.traceManager = traceManager;
-        ctx.commandSpan = commandSpan;
-        commandSpan.setAttribute('dry_run', flags['dry-run']);
-        commandSpan.setAttribute('json_mode', flags.json);
-        commandSpan.setAttribute('yes_mode', flags.yes);
-        commandSpan.setAttribute('force', flags.force);
-        commandSpan.setAttribute('validate_only', flags['validate-only']);
-
-        logger.info('Init command invoked', {
-          dry_run: flags['dry-run'],
-          json_mode: flags.json,
-          yes_mode: flags.yes,
-          force: flags.force,
-          validate_only: flags['validate-only'],
-        });
-      }
-
-      // Validate-only mode
       if (flags['validate-only']) {
-        await this.handleValidateOnlyMode(configPath, flags, ctx);
+        await this.handleValidateOnlyMode(paths.configPath, flags, ctx);
         return;
       }
 
       if (!flags.json && !flags['dry-run']) {
-        this.log(`✓ Git repository detected at: ${gitRoot}`);
+        this.log(`✓ Git repository detected at: ${paths.gitRoot}`);
       }
 
-      if (await this.handleAlreadyInitialized(configPath, flags, ctx)) {
+      if (await this.handleAlreadyInitialized(paths.configPath, flags, ctx)) {
         return;
       }
 
-      if (
-        !flags['dry-run'] &&
-        !flags.yes &&
-        !flags.json &&
-        process.stdin.isTTY &&
-        process.stdout.isTTY
-      ) {
-        const promptMessage = flags.force
-          ? 'This will overwrite existing .codepipe/config.json. Continue?'
-          : `Proceed with creating .codepipe scaffolding at ${pipelineDir}?`;
-        const confirmed = await this.promptForConfirmation(promptMessage);
-
-        if (!confirmed) {
-          if (!flags.json) {
-            this.warn('Initialization cancelled by user input.');
-          }
-          await this.finalizeTelemetry(exitCode, ctx);
-          return;
+      if (await this.shouldAbortFromPrompt(paths.pipelineDir, flags)) {
+        if (!flags.json) {
+          this.warn('Initialization cancelled by user input.');
         }
+        await this.finalizeTelemetry(0, ctx);
+        return;
       }
 
-      if (!flags['dry-run']) {
-        this.createDirectoryStructure(pipelineDir, flags.json);
-      }
-
-      const repoUrl = this.getRepositoryUrl(gitRoot);
-
-      const config = createDefaultConfig(repoUrl);
-
-      if (!flags['dry-run']) {
-        this.writeConfiguration(configPath, config, flags.force, flags.json);
-      }
-
-      const validationResult = flags['dry-run']
-        ? this.validateInMemoryConfig(config)
-        : await loadRepoConfig(configPath);
+      const config = this.scaffoldConfiguration(paths, flags);
+      const validationResult = await this.validateNewConfiguration(paths.configPath, config, flags);
 
       if (!validationResult.success) {
-        exitCode = 10;
-        if (flags.json) {
-          const errorPayload: ConfigValidationPayload = {
-            status: 'validation_error',
-            config_path: configPath,
-            exit_code: exitCode,
-            ...(validationResult.errors !== undefined && { errors: validationResult.errors }),
-          };
-          this.log(JSON.stringify(errorPayload, null, 2));
-        } else {
-          this.log('\n❌ Configuration validation failed after creation:\n');
-          this.log(formatValidationErrors(validationResult.errors!));
-        }
-        await this.exitCommand(exitCode, ctx);
+        this.renderValidationFailure(paths.configPath, validationResult, flags);
+        await this.exitCommand(10, ctx);
+        return;
       }
 
-      // Build result payload
-      const resultPayload = {
-        status: flags['dry-run'] ? 'dry_run_success' : 'initialized',
-        config_path: configPath,
-        exit_code: 0,
-        config: validationResult.config,
-        warnings: validationResult.warnings || [],
-        manifest_schema_doc: 'docs/reference/run_directory_schema.md',
-        readiness_checklist: 'plan/readiness_checklist.md',
-        next_steps: [
-          'Review and edit: .codepipe/config.json',
-          'Enable integrations and set credentials (GITHUB_TOKEN, LINEAR_API_KEY, AGENT_ENDPOINT)',
-          'Validate configuration: codepipe init --validate-only',
-          'Check environment: codepipe doctor',
-          'Start a feature: codepipe start --prompt "your feature description"',
-        ],
-      };
-
-      // Output results
-      this.renderInitResult(flags, resultPayload);
-
-      await this.finalizeTelemetry(exitCode, ctx);
+      this.renderInitResult(
+        flags,
+        this.buildResultPayload(paths.configPath, validationResult, flags)
+      );
+      await this.finalizeTelemetry(0, ctx);
     } catch (error) {
-      // Determine exit code based on error type
-      let errorExitCode = 1;
-      if (error instanceof Error) {
-        if (error.message.includes('Not a git repository')) {
-          errorExitCode = 20;
-        } else if (
-          error.message.includes('permission denied') ||
-          error.message.includes('EACCES')
-        ) {
-          errorExitCode = 20;
-        }
-      }
-
-      await this.finalizeTelemetry(errorExitCode, ctx, error);
-
-      // Re-throw oclif errors to preserve exit codes
-      if (error && typeof error === 'object' && 'oclif' in error) {
-        throw error;
-      }
-
-      if (error instanceof Error) {
-        this.error(`Initialization failed: ${error.message}`, { exit: errorExitCode });
-      } else {
-        this.error('Initialization failed with an unknown error', { exit: errorExitCode });
-      }
+      await this.handleRunError(error, ctx);
     }
   }
+
+  // ── Step extraction methods ───────────────────────────────────────────
+
+  /**
+   * Resolve all project paths from the git root.
+   */
+  private resolveProjectPaths(): ProjectPaths {
+    const gitRoot = this.findGitRoot();
+    const pipelineDir = path.join(gitRoot, '.codepipe');
+    return {
+      gitRoot,
+      pipelineDir,
+      configPath: path.join(pipelineDir, 'config.json'),
+      logsDir: path.join(pipelineDir, 'logs'),
+    };
+  }
+
+  /**
+   * Bootstrap telemetry (logger, metrics, traces) unless dry-run.
+   */
+  private initializeTelemetry(
+    paths: ProjectPaths,
+    flags: {
+      'dry-run': boolean;
+      json: boolean;
+      yes: boolean;
+      force: boolean;
+      'validate-only': boolean;
+    },
+    ctx: CommandTelemetryContext
+  ): void {
+    if (flags['dry-run']) {
+      return;
+    }
+
+    if (!fs.existsSync(paths.logsDir)) {
+      fs.mkdirSync(paths.logsDir, { recursive: true });
+    }
+
+    const logger = createCliLogger('init', 'bootstrap', paths.logsDir, {
+      minLevel: LogLevel.INFO,
+      mirrorToStderr: !flags.json,
+    });
+    const metrics = createRunMetricsCollector(paths.pipelineDir, 'bootstrap');
+    const traceManager = createRunTraceManager(paths.pipelineDir, 'bootstrap', logger);
+    const commandSpan = traceManager.startSpan('cli.init');
+
+    ctx.logger = logger;
+    ctx.metrics = metrics;
+    ctx.traceManager = traceManager;
+    ctx.commandSpan = commandSpan;
+
+    commandSpan.setAttribute('dry_run', flags['dry-run']);
+    commandSpan.setAttribute('json_mode', flags.json);
+    commandSpan.setAttribute('yes_mode', flags.yes);
+    commandSpan.setAttribute('force', flags.force);
+    commandSpan.setAttribute('validate_only', flags['validate-only']);
+
+    logger.info('Init command invoked', {
+      dry_run: flags['dry-run'],
+      json_mode: flags.json,
+      yes_mode: flags.yes,
+      force: flags.force,
+      validate_only: flags['validate-only'],
+    });
+  }
+
+  /**
+   * Prompt the user for confirmation when running interactively.
+   * Returns true if the user declined (command should abort).
+   */
+  private async shouldAbortFromPrompt(
+    pipelineDir: string,
+    flags: { 'dry-run': boolean; yes: boolean; json: boolean; force: boolean }
+  ): Promise<boolean> {
+    if (
+      flags['dry-run'] ||
+      flags.yes ||
+      flags.json ||
+      !process.stdin.isTTY ||
+      !process.stdout.isTTY
+    ) {
+      return false;
+    }
+
+    const promptMessage = flags.force
+      ? 'This will overwrite existing .codepipe/config.json. Continue?'
+      : `Proceed with creating .codepipe scaffolding at ${pipelineDir}?`;
+    const confirmed = await this.promptForConfirmation(promptMessage);
+    return !confirmed;
+  }
+
+  /**
+   * Create directory structure, generate default config, and write to disk.
+   */
+  private scaffoldConfiguration(
+    paths: ProjectPaths,
+    flags: { 'dry-run': boolean; json: boolean; force: boolean }
+  ): RepoConfig {
+    if (!flags['dry-run']) {
+      this.createDirectoryStructure(paths.pipelineDir, flags.json);
+    }
+
+    const repoUrl = this.getRepositoryUrl(paths.gitRoot);
+    const config = createDefaultConfig(repoUrl);
+
+    if (!flags['dry-run']) {
+      this.writeConfiguration(paths.configPath, config, flags.force, flags.json);
+    }
+
+    return config;
+  }
+
+  /**
+   * Validate newly created (or in-memory) configuration.
+   */
+  private async validateNewConfiguration(
+    configPath: string,
+    config: RepoConfig,
+    flags: { 'dry-run': boolean }
+  ): Promise<ValidationResult> {
+    return flags['dry-run']
+      ? this.validateInMemoryConfig(config)
+      : await loadRepoConfig(configPath);
+  }
+
+  /**
+   * Render validation failure output (JSON or human-readable).
+   */
+  private renderValidationFailure(
+    configPath: string,
+    validationResult: ValidationResult,
+    flags: { json: boolean }
+  ): void {
+    if (flags.json) {
+      const errorPayload: ConfigValidationPayload = {
+        status: 'validation_error',
+        config_path: configPath,
+        exit_code: 10,
+        ...(validationResult.errors !== undefined && { errors: validationResult.errors }),
+      };
+      this.log(JSON.stringify(errorPayload, null, 2));
+    } else {
+      this.log('\n❌ Configuration validation failed after creation:\n');
+      this.log(formatValidationErrors(validationResult.errors!));
+    }
+  }
+
+  /**
+   * Build the structured result payload for a successful init.
+   */
+  private buildResultPayload(
+    configPath: string,
+    validationResult: ValidationResult,
+    flags: { 'dry-run': boolean }
+  ): InitResultPayload {
+    return {
+      status: flags['dry-run'] ? 'dry_run_success' : 'initialized',
+      config_path: configPath,
+      exit_code: 0,
+      config: validationResult.config,
+      warnings: validationResult.warnings || [],
+      manifest_schema_doc: 'docs/reference/run_directory_schema.md',
+      readiness_checklist: 'plan/readiness_checklist.md',
+      next_steps: [
+        'Review and edit: .codepipe/config.json',
+        'Enable integrations and set credentials (GITHUB_TOKEN, LINEAR_API_KEY, AGENT_ENDPOINT)',
+        'Validate configuration: codepipe init --validate-only',
+        'Check environment: codepipe doctor',
+        'Start a feature: codepipe start --prompt "your feature description"',
+      ],
+    };
+  }
+
+  /**
+   * Determine error exit code, finalize telemetry, and re-throw.
+   */
+  private async handleRunError(error: unknown, ctx: CommandTelemetryContext): Promise<never> {
+    const exitCode = this.determineErrorExitCode(error);
+    await this.finalizeTelemetry(exitCode, ctx, error);
+
+    if (error && typeof error === 'object' && 'oclif' in error) {
+      throw error as unknown as Error;
+    }
+
+    if (error instanceof Error) {
+      this.error(`Initialization failed: ${error.message}`, { exit: exitCode });
+    } else {
+      this.error('Initialization failed with an unknown error', { exit: exitCode });
+    }
+    // Safety: should never be reached if this.error() is typed `never`
+    throw new Error('handleRunError: unreachable');
+  }
+
+  /**
+   * Map error types to structured exit codes.
+   */
+  private determineErrorExitCode(error: unknown): number {
+    if (!(error instanceof Error)) {
+      return 1;
+    }
+    if (error.message.includes('Not a git repository')) {
+      return 20;
+    }
+    if (error.message.includes('permission denied') || error.message.includes('EACCES')) {
+      return 20;
+    }
+    return 1;
+  }
+
+  // ── Delegate methods ──────────────────────────────────────────────────
 
   /**
    * Handle --validate-only mode: validate existing config and exit.
@@ -299,14 +407,7 @@ export default class Init extends Command {
    */
   private renderInitResult(
     flags: { json: boolean; 'dry-run': boolean },
-    resultPayload: {
-      status: string;
-      config_path: string;
-      exit_code: number;
-      warnings: string[];
-      next_steps: string[];
-      config?: RepoConfig | undefined;
-    }
+    resultPayload: InitResultPayload
   ): void {
     if (flags.json) {
       this.log(JSON.stringify(resultPayload, null, 2));
