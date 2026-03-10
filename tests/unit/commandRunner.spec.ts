@@ -146,16 +146,16 @@ describe('parseCommandString', () => {
     );
   });
 
-  it('preserves comment-like tokens as literals', () => {
+  it('discards comment tokens (POSIX shell semantics)', () => {
     const [exe, args] = parseCommandString('echo foo #bar');
     expect(exe).toBe('echo');
-    expect(args).toEqual(['foo', '#bar']);
+    expect(args).toEqual(['foo']);
   });
 
-  it('merges space-separated comment token into single arg', () => {
+  it('discards space-separated comment token', () => {
     const [exe, args] = parseCommandString('echo foo # bar');
     expect(exe).toBe('echo');
-    expect(args).toEqual(['foo', '# bar']); // comment includes the leading space
+    expect(args).toEqual(['foo']);
   });
 
   // ── Glob patterns (regression test) ──────────────────────────────────────

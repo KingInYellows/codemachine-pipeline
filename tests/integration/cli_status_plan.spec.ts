@@ -10,7 +10,7 @@ import {
   updateManifest,
   markApprovalRequired,
 } from '../../src/persistence/runDirectoryManager';
-import { initializeQueue, appendToQueue } from '../../src/workflows/queueStore';
+import { initializeQueue, appendToQueue } from '../../src/workflows/queue/queueStore';
 import { createExecutionTask } from '../../src/core/models/ExecutionTask';
 import { generateExecutionPlan } from '../../src/workflows/taskPlanner';
 import { createCliLogger, LogLevel } from '../../src/telemetry/logger';

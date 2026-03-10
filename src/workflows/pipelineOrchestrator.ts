@@ -17,7 +17,7 @@ import { aggregateContext, type AggregatorConfig } from './contextAggregator';
 import { createResearchCoordinator, type UnknownDetectionOptions } from './researchCoordinator';
 import { draftPRD } from './prdAuthoringEngine';
 import { CLIExecutionEngine } from './cliExecutionEngine';
-import { loadQueue } from './queueStore';
+import { loadQueue } from './queue/queueStore.js';
 import { buildExecutionStrategies } from './executionStrategyBuilder.js';
 import {
   setCurrentStep,

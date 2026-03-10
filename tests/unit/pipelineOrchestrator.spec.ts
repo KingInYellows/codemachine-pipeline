@@ -16,7 +16,7 @@ vi.mock('../../src/workflows/prdAuthoringEngine', () => ({
   draftPRD: vi.fn(),
 }));
 
-vi.mock('../../src/workflows/queueStore', () => ({
+vi.mock('../../src/workflows/queue/queueStore.js', () => ({
   loadQueue: vi.fn(),
 }));
 
@@ -39,7 +39,7 @@ import { PipelineOrchestrator, PrerequisiteError } from '../../src/workflows/pip
 import { aggregateContext } from '../../src/workflows/contextAggregator';
 import { createResearchCoordinator } from '../../src/workflows/researchCoordinator';
 import { draftPRD } from '../../src/workflows/prdAuthoringEngine';
-import { loadQueue } from '../../src/workflows/queueStore';
+import { loadQueue } from '../../src/workflows/queue/queueStore.js';
 import { buildExecutionStrategies } from '../../src/workflows/executionStrategyBuilder.js';
 import { CLIExecutionEngine } from '../../src/workflows/cliExecutionEngine';
 import {

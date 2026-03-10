@@ -12,9 +12,9 @@ import {
   appendOperationsBatch,
   computeOperationChecksum,
   verifyOperationChecksum,
-} from '../../src/workflows/queueOperationsLog.js';
-import type { QueueOperation } from '../../src/workflows/queueTypes.js';
-import type { ExecutionTaskData } from '../../src/workflows/queueTypes.js';
+} from '../../src/workflows/queue/queueOperationsLog.js';
+import type { QueueOperation } from '../../src/workflows/queue/queueTypes.js';
+import type { ExecutionTaskData } from '../../src/workflows/queue/queueTypes.js';
 
 describe('queueOperationsLog', () => {
   let testDir: string;

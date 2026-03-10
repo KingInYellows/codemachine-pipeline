@@ -112,7 +112,7 @@ import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 import * as os from 'node:os';
 import { createRunDirectory } from '../../src/persistence/runDirectoryManager.js';
-import { initializeQueue } from '../../src/workflows/queueStore.js';
+import { initializeQueue } from '../../src/workflows/queue/queueStore.js';
 
 let workspaceDir: string;
 let runDir: string;

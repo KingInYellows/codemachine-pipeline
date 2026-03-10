@@ -22,9 +22,9 @@ import {
   updateTaskInQueue,
   getNextTask,
   invalidateV2Cache,
-} from '../../src/workflows/queueStore.js';
+} from '../../src/workflows/queue/queueStore.js';
 import { createRunDirectory } from '../../src/persistence/runDirectoryManager.js';
-import type { TaskPlan } from '../../src/workflows/queueStore.js';
+import type { TaskPlan } from '../../src/workflows/queue/queueStore.js';
 
 // ============================================================================
 // Performance Thresholds

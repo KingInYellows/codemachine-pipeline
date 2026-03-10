@@ -205,15 +205,25 @@ describe('autoFixEngine security - command execution', () => {
     });
 
     test('should treat backticks as literal text (safe with execFile)', async () => {
+      const mockLogger = {
+        warn: vi.fn(),
+        error: vi.fn(),
+        info: vi.fn(),
+        debug: vi.fn(),
+      };
+
       const result = await executeShellCommandForTesting('echo `whoami`', {
         cwd: testRunDir,
         env: process.env,
         timeout: 5000,
+        logger: mockLogger,
       });
 
       // Backticks are safe: execFile does not invoke a shell,
       // so command substitution cannot occur.
       expect(result.exitCode).toBe(0);
+      expect(mockLogger.warn).not.toHaveBeenCalled();
+      expect(result.stdout).toContain('`whoami`');
     });
 
     test('should prevent variable expansion via dollar sign', async () => {

@@ -8,14 +8,14 @@ import {
   maybeCompact,
   pruneCompletedTasks,
   compactWithState,
-} from '../../src/workflows/queueCompactionEngine.js';
-import { loadSnapshot } from '../../src/workflows/queueSnapshotManager.js';
+} from '../../src/workflows/queue/queueCompactionEngine.js';
+import { loadSnapshot } from '../../src/workflows/queue/queueSnapshotManager.js';
 import {
   appendOperation,
   initializeOperationsLog,
   readOperations,
-} from '../../src/workflows/queueOperationsLog.js';
-import type { ExecutionTaskData, QueueIndexState } from '../../src/workflows/queueTypes.js';
+} from '../../src/workflows/queue/queueOperationsLog.js';
+import type { ExecutionTaskData, QueueIndexState } from '../../src/workflows/queue/queueTypes.js';
 
 describe('queueCompactionEngine', () => {
   let testDir: string;

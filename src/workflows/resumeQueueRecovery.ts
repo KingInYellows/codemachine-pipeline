@@ -13,7 +13,7 @@ import {
   canRetry,
   areDependenciesCompleted,
 } from '../core/models/ExecutionTask';
-import { validateQueue, loadQueue } from './queueStore';
+import { validateQueue, loadQueue } from './queue/queueStore.js';
 import { RawSnapshotSchema } from './resumeSnapshotSchema';
 import { validateOrThrow } from '../validation/helpers.js';
 import type { ResumeAnalysis, ResumeOptions } from './runStateVerifier';

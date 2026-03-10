@@ -23,7 +23,7 @@ import {
   appendToQueue,
   createQueueSnapshot,
   updateTaskInQueue,
-} from '../../src/workflows/queueStore';
+} from '../../src/workflows/queue/queueStore';
 import { createExecutionTask } from '../../src/core/models/ExecutionTask';
 
 describe('ResumeCoordinator', () => {

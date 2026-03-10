@@ -9,7 +9,7 @@ import {
   ExecutionStrategyResult,
 } from '../../src/workflows/executionStrategy';
 import { createRunDirectory } from '../../src/persistence/runDirectoryManager';
-import { initializeQueue, appendToQueue, loadQueue } from '../../src/workflows/queueStore';
+import { initializeQueue, appendToQueue, loadQueue } from '../../src/workflows/queue/queueStore';
 import { createExecutionTask } from '../../src/core/models/ExecutionTask';
 import { RepoConfig } from '../../src/core/config/RepoConfig';
 import { CodeMachineStrategy } from '../../src/workflows/codeMachineStrategy';
