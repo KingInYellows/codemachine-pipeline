@@ -158,29 +158,9 @@ function restoreLiteralVariableReferences(
  * @param command - Command string to parse (e.g., "npm run lint -- --fix")
  * @returns Tuple of [executable, args[]]
  */
- * Quote the `#` if you need it as a separate literal token.
- *
- * @param command - Command string to parse (e.g., "npm run lint -- --fix")
- * @returns Tuple of [executable, args[]]
- */
 export function parseCommandString(command: string): [string, string[]] {
   const { placeholders, sanitizedCommand } = preserveLiteralVariableReferences(command);
   const parts = parse(sanitizedCommand).map((part) => {
-    if (typeof part === 'string') {
-      return restoreLiteralVariableReferences(part, placeholders);
-    }
-    // Allow glob patterns (e.g., *, ?, [...]) - execFile doesn't expand them
-    if (typeof part === 'object' && part !== null && 'op' in part && part.op === 'glob' && 'pattern' in part) {
-      return restoreLiteralVariableReferences(String(part.pattern), placeholders);
-    }
-    // Allow comment tokens (e.g., #...) - execFile treats them literally
-    if (typeof part === 'object' && part !== null && 'comment' in part) {
-      return restoreLiteralVariableReferences('#' + String(part.comment), placeholders);
-    }
-    // Reject actual shell operators (|, &&, ;, >, <, etc.)
-    throw new Error('Shell operators are not allowed in command strings');
-  });
-
   if (parts.length === 0) {
     throw new Error('Empty command string');
   }
