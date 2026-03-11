@@ -12,10 +12,7 @@
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import * as fs from 'node:fs/promises';
-import {
-  composeSpecification,
-  type SpecComposerConfig,
-} from '../../src/workflows/specComposer';
+import { composeSpecification, type SpecComposerConfig } from '../../src/workflows/specComposer';
 import {
   recordSpecApproval,
   loadSpecMetadata,
