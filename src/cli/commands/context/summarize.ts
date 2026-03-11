@@ -1,11 +1,8 @@
 import { Flags } from '@oclif/core';
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
-import {
-  getRunDirectoryPath,
-  getSubdirectoryPath,
-  withLock,
-} from '../../../persistence/runDirectoryManager';
+import { withLock } from '../../../persistence/lockManager';
+import { getRunDirectoryPath, getSubdirectoryPath } from '../../../persistence/runLifecycle';
 import { safeJsonParse } from '../../../utils/safeJson';
 import {
   resolveRunDirectorySettings,

@@ -8,7 +8,7 @@ import { z } from 'zod';
 import type { BranchProtectionReport } from '../branchProtectionReporter';
 import type { PRMetadata } from '../../core/models/index.js';
 import type { LoggerInterface } from '../../telemetry/logger';
-import type { RunManifest } from '../../persistence/runDirectoryManager';
+import type { RunManifest } from '../../persistence/manifestManager';
 import type { RepoConfig } from '../../core/config/RepoConfig';
 
 // Constants

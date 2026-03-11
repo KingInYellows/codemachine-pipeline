@@ -1,4 +1,4 @@
-export type { RunManifest } from '../../persistence/runDirectoryManager';
+export type { RunManifest } from '../../persistence/manifestManager';
 export type { ValidationMismatch } from '../../workflows/branchProtectionReporter';
 
 export const MANIFEST_FILE = 'manifest.json';
@@ -13,7 +13,7 @@ export type StatusFlags = {
 };
 
 export interface ManifestLoadResult {
-  manifest?: import('../../persistence/runDirectoryManager').RunManifest;
+  manifest?: import('../../persistence/manifestManager').RunManifest;
   manifestPath: string;
   error?: string;
 }
@@ -22,18 +22,18 @@ export interface StatusPayload {
   feature_id: string | null;
   title?: string;
   source?: string;
-  status: import('../../persistence/runDirectoryManager').RunManifest['status'] | 'unknown';
+  status: import('../../persistence/manifestManager').RunManifest['status'] | 'unknown';
   manifest_path: string;
   manifest_schema_doc: string;
   manifest_template: string;
   last_step: string | null;
   last_error:
-    | import('../../persistence/runDirectoryManager').RunManifest['execution']['last_error']
+    | import('../../persistence/manifestManager').RunManifest['execution']['last_error']
     | null;
-  queue: import('../../persistence/runDirectoryManager').RunManifest['queue'] | null;
-  approvals: import('../../persistence/runDirectoryManager').RunManifest['approvals'] | null;
-  telemetry: import('../../persistence/runDirectoryManager').RunManifest['telemetry'] | null;
-  timestamps: import('../../persistence/runDirectoryManager').RunManifest['timestamps'] | null;
+  queue: import('../../persistence/manifestManager').RunManifest['queue'] | null;
+  approvals: import('../../persistence/manifestManager').RunManifest['approvals'] | null;
+  telemetry: import('../../persistence/manifestManager').RunManifest['telemetry'] | null;
+  timestamps: import('../../persistence/manifestManager').RunManifest['timestamps'] | null;
   config_reference: string;
   config_errors: string[];
   config_warnings: string[];

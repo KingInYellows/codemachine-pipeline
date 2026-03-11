@@ -13,7 +13,8 @@ import {
   invalidateV2Cache,
   QueueIntegrityError,
 } from '../../src/workflows/queue/queueStore.js';
-import { createRunDirectory, writeManifest } from '../../src/persistence/runDirectoryManager.js';
+import { writeManifest } from '../../src/persistence/manifestManager.js';
+import { createRunDirectory } from '../../src/persistence/runLifecycle.js';
 import { type ExecutionTask } from '../../src/core/models/ExecutionTask.js';
 
 vi.mock('node:fs/promises', async () => {
@@ -568,7 +569,7 @@ describe('queueStore - verifyQueueIntegrity (CDMCH-69)', () => {
     // Create a snapshot then corrupt it
     await createQueueSnapshot(runDir);
 
-    const { readManifest } = await import('../../src/persistence/runDirectoryManager.js');
+    const { readManifest } = await import('../../src/persistence/manifestManager.js');
     const manifest = await readManifest(runDir);
     const queueDir = path.join(runDir, manifest.queue.queue_dir);
     const snapshotPath = path.join(queueDir, 'queue_snapshot.json');
@@ -629,7 +630,7 @@ describe('queueStore - verifyQueueIntegrity (CDMCH-69)', () => {
     await updateTaskInQueue(runDir, 'T1', { status: 'running' });
     await updateTaskInQueue(runDir, 'T1', { status: 'completed' });
 
-    const { readManifest } = await import('../../src/persistence/runDirectoryManager.js');
+    const { readManifest } = await import('../../src/persistence/manifestManager.js');
     const manifest = await readManifest(runDir);
     const queueDir = path.join(runDir, manifest.queue.queue_dir);
     const walPath = path.join(queueDir, 'queue_operations.log');
@@ -656,7 +657,7 @@ describe('queueStore - verifyQueueIntegrity (CDMCH-69)', () => {
 
     await createQueueSnapshot(runDir);
 
-    const { readManifest } = await import('../../src/persistence/runDirectoryManager.js');
+    const { readManifest } = await import('../../src/persistence/manifestManager.js');
     const manifest = await readManifest(runDir);
     const queueDir = path.join(runDir, manifest.queue.queue_dir);
     const snapshotPath = path.join(queueDir, 'queue_snapshot.json');
@@ -686,7 +687,7 @@ describe('queueStore - verifyQueueIntegrity (CDMCH-69)', () => {
 
     await createQueueSnapshot(runDir);
 
-    const { readManifest } = await import('../../src/persistence/runDirectoryManager.js');
+    const { readManifest } = await import('../../src/persistence/manifestManager.js');
     const manifest = await readManifest(runDir);
     const queueDir = path.join(runDir, manifest.queue.queue_dir);
     const snapshotPath = path.join(queueDir, 'queue_snapshot.json');
@@ -710,7 +711,7 @@ describe('queueStore - verifyQueueIntegrity (CDMCH-69)', () => {
     await updateTaskInQueue(runDir, 'T1', { status: 'running' });
     await updateTaskInQueue(runDir, 'T1', { status: 'completed' });
 
-    const { readManifest } = await import('../../src/persistence/runDirectoryManager.js');
+    const { readManifest } = await import('../../src/persistence/manifestManager.js');
     const manifest = await readManifest(runDir);
     const queueDir = path.join(runDir, manifest.queue.queue_dir);
     const walPath = path.join(queueDir, 'queue_operations.log');
@@ -741,7 +742,7 @@ describe('queueStore - verifyQueueIntegrity (CDMCH-69)', () => {
       ],
     });
 
-    const { readManifest } = await import('../../src/persistence/runDirectoryManager.js');
+    const { readManifest } = await import('../../src/persistence/manifestManager.js');
     const manifest = await readManifest(runDir);
     const queueDir = path.join(runDir, manifest.queue.queue_dir);
     const walPath = path.join(queueDir, 'queue_operations.log');
@@ -765,7 +766,7 @@ describe('queueStore - verifyQueueIntegrity (CDMCH-69)', () => {
       tasks: [{ id: 'T1', title: 'Task 1', task_type: 'code_generation' }],
     });
 
-    const { readManifest } = await import('../../src/persistence/runDirectoryManager.js');
+    const { readManifest } = await import('../../src/persistence/manifestManager.js');
     const manifest = await readManifest(runDir);
     const queueDir = path.join(runDir, manifest.queue.queue_dir);
     const walPath = path.join(queueDir, 'queue_operations.log');
@@ -794,7 +795,7 @@ describe('queueStore - verifyQueueIntegrity (CDMCH-69)', () => {
     });
 
     // Corrupt WAL checksum
-    const { readManifest } = await import('../../src/persistence/runDirectoryManager.js');
+    const { readManifest } = await import('../../src/persistence/manifestManager.js');
     const manifest = await readManifest(runDir);
     const queueDir = path.join(runDir, manifest.queue.queue_dir);
     const walPath = path.join(queueDir, 'queue_operations.log');
@@ -821,7 +822,7 @@ describe('queueStore - verifyQueueIntegrity (CDMCH-69)', () => {
       ],
     });
 
-    const { readManifest } = await import('../../src/persistence/runDirectoryManager.js');
+    const { readManifest } = await import('../../src/persistence/manifestManager.js');
     const manifest = await readManifest(runDir);
     const queueDir = path.join(runDir, manifest.queue.queue_dir);
     const walPath = path.join(queueDir, 'queue_operations.log');

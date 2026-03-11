@@ -1,6 +1,6 @@
 import { Flags } from '@oclif/core';
 import * as path from 'node:path';
-import { getRunDirectoryPath } from '../../persistence/runDirectoryManager';
+import { getRunDirectoryPath } from '../../persistence/runLifecycle';
 import { withSpan } from '../../telemetry/traces';
 import type { StructuredLogger } from '../../telemetry/logger';
 import type { TraceManager, ActiveSpan } from '../../telemetry/traces';

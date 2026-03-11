@@ -14,7 +14,8 @@ import { createCliLogger, LogLevel } from '../../telemetry/logger';
 import { createRunMetricsCollector, StandardMetrics } from '../../telemetry/metrics';
 import { createRunTraceManager, SpanStatusCode } from '../../telemetry/traces';
 import { createExecutionTelemetry } from '../../telemetry/executionTelemetry';
-import { createRunDirectory, setLastError } from '../../persistence/runDirectoryManager';
+import { setLastError } from '../../persistence/manifestManager';
+import { createRunDirectory } from '../../persistence/runLifecycle';
 import {
   resolveRunDirectorySettings,
   ensureTelemetryReferences,

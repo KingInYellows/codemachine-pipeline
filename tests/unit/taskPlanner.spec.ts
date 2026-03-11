@@ -29,8 +29,10 @@ import type { PlanArtifact } from '../../src/core/models/PlanArtifact';
 // ============================================================================
 
 vi.mock('node:fs/promises');
-vi.mock('../../src/persistence/runDirectoryManager', () => ({
+vi.mock('../../src/persistence/lockManager', () => ({
   withLock: vi.fn(async (_runDir: string, fn: () => Promise<unknown>) => await fn()),
+}));
+vi.mock('../../src/persistence/runLifecycle', () => ({
   getSubdirectoryPath: vi.fn((runDir: string, subdir: string) => `${runDir}/${subdir}`),
 }));
 vi.mock('../../src/persistence/hashManifest', () => ({

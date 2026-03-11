@@ -254,7 +254,7 @@ This ADR documents critical architectural decisions discovered during documentat
 
 **Sources**:
 
-- `src/persistence/runDirectoryManager.ts:282-481` - Complete locking implementation
+- `src/persistence/lockManager.ts` - Complete locking implementation (split from runDirectoryManager.ts in CDMCH-243)
 - `docs/reference/parallel-execution.md` - Parallel execution guide
 
 **Documentation Impact**: Must explain team collaboration is safe, but same feature requires serial access
@@ -769,7 +769,7 @@ All research findings stored in claude-flow memory system:
 | ----------------- | ------------------------------------------ | --------- |
 | Config loading    | src/core/config/RepoConfig.ts              | 1-805     |
 | Approval system   | src/cli/commands/approve.ts                | 1-521     |
-| Queue locking     | src/persistence/runDirectoryManager.ts     | 1-1112    |
+| Queue locking     | src/persistence/lockManager.ts             | 1-end     |
 | Binary resolution | src/adapters/codemachine/binaryResolver.ts | 1-125     |
 | Debug logging     | src/telemetry/logger.ts                    | 1-640     |
 

@@ -6,7 +6,7 @@
  * classification during execution resumption.
  */
 
-import type { RunManifest } from '../persistence/runDirectoryManager';
+import type { RunManifest } from '../persistence/manifestManager';
 import type { VerificationResult } from '../persistence/hashManifest';
 import type { QueueValidationResult } from './queue/queueStore.js';
 

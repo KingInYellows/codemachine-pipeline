@@ -20,7 +20,7 @@ import { createDefaultConfig, type RepoConfig } from '../../src/core/config/Repo
 import {
   createRunDirectory,
   type CreateRunDirectoryOptions,
-} from '../../src/persistence/runDirectoryManager';
+} from '../../src/persistence/runLifecycle';
 
 describe('ValidationRegistry', () => {
   let testRunDir: string;

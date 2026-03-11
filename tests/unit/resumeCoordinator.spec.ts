@@ -11,13 +11,12 @@ import {
   type QueueSnapshotMetadata,
 } from '../../src/workflows/resumeCoordinator';
 import {
-  createRunDirectory,
   setLastError,
   setLastStep,
   markApprovalRequired,
-  generateHashManifest,
   type RunManifest,
-} from '../../src/persistence/runDirectoryManager';
+} from '../../src/persistence/manifestManager';
+import { createRunDirectory, generateHashManifest } from '../../src/persistence/runLifecycle';
 import {
   initializeQueue,
   appendToQueue,

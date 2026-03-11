@@ -368,7 +368,7 @@ While the ledger itself doesn't use `withLock()` (to avoid blocking HTTP respons
 Using them keeps ad-hoc edits aligned with the schema and metadata conventions:
 
 ```typescript
-import { withLock } from './persistence/runDirectoryManager';
+import { withLock } from './persistence/lockManager';
 
 await withLock(runDir, async () => {
   // Safe to edit rate_limits.json here

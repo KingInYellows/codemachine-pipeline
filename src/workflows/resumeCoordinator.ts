@@ -4,12 +4,8 @@
  * Orchestrates deterministic resumption of failed or paused execution runs.
  */
 
-import {
-  readManifest,
-  getRunState,
-  withLock,
-  writeManifest,
-} from '../persistence/runDirectoryManager';
+import { withLock } from '../persistence/lockManager';
+import { readManifest, getRunState, writeManifest } from '../persistence/manifestManager';
 import type { ExecutionTelemetry } from '../telemetry/executionTelemetry';
 import {
   checkRunStatus,

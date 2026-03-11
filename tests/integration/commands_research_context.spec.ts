@@ -14,7 +14,7 @@ import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 import * as os from 'node:os';
 import { randomUUID } from 'node:crypto';
-import { createRunDirectory } from '../../src/persistence/runDirectoryManager.js';
+import { createRunDirectory } from '../../src/persistence/runLifecycle.js';
 import {
   createResearchCoordinator,
   type CreateResearchTaskOptions,

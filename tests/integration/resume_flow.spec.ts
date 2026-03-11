@@ -4,15 +4,14 @@ import * as path from 'node:path';
 import * as os from 'node:os';
 import { analyzeResumeState, prepareResume } from '../../src/workflows/resumeCoordinator';
 import {
-  createRunDirectory,
   setLastError,
   setLastStep,
   setCurrentStep,
   markApprovalRequired,
   markApprovalCompleted,
-  generateHashManifest,
   updateManifest,
-} from '../../src/persistence/runDirectoryManager';
+} from '../../src/persistence/manifestManager';
+import { createRunDirectory, generateHashManifest } from '../../src/persistence/runLifecycle';
 import {
   initializeQueue,
   appendToQueue,

@@ -16,7 +16,8 @@ import type { PRMetadata } from '../../core/models/index.js';
 import { PRMetadataSchema } from '../../core/models/prMetadata.js';
 import { validateOrThrow } from '../../validation/helpers.js';
 import type { LoggerInterface } from '../../telemetry/logger';
-import { readManifest, withLock, type RunManifest } from '../../persistence/runDirectoryManager';
+import { withLock } from '../../persistence/lockManager';
+import { readManifest, type RunManifest } from '../../persistence/manifestManager';
 import { computeContentHash } from '../approvalRegistry';
 import { getErrorMessage } from '../../utils/errors.js';
 

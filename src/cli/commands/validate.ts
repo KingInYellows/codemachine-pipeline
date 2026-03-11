@@ -1,5 +1,5 @@
 import { Flags } from '@oclif/core';
-import { getRunDirectoryPath } from '../../persistence/runDirectoryManager';
+import { getRunDirectoryPath } from '../../persistence/runLifecycle';
 import { createExecutionTelemetry } from '../../telemetry/executionTelemetry';
 import type { StructuredLogger } from '../../telemetry/logger';
 import {
