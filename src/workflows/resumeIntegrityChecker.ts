@@ -5,7 +5,7 @@
  * using hash manifests during execution resumption.
  */
 
-import { verifyRunDirectoryIntegrity } from '../persistence/runDirectoryManager';
+import { verifyRunDirectoryIntegrity } from '../persistence/runLifecycle';
 import type { VerificationResult } from '../persistence/hashManifest';
 import type { ResumeAnalysis, DiagnosticSeverity, ResumeOptions } from './runStateVerifier';
 

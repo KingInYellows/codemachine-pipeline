@@ -21,7 +21,7 @@ import {
   logDeploymentAction,
   type PRMetadata,
 } from '../../src/cli/pr/shared.js';
-import type { RunManifest } from '../../src/persistence/runDirectoryManager.js';
+import type { RunManifest } from '../../src/persistence/manifestManager.js';
 import type { RepoConfig } from '../../src/core/config/RepoConfig.js';
 
 // ---------------------------------------------------------------------------

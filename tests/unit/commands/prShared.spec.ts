@@ -22,7 +22,7 @@ import {
   type PRContext,
   type PRMetadata,
 } from '../../../src/cli/pr/shared';
-import type { RunManifest } from '../../../src/persistence/runDirectoryManager';
+import type { RunManifest } from '../../../src/persistence/manifestManager';
 import type { StructuredLogger } from '../../../src/telemetry/logger';
 
 // ============================================================================

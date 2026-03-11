@@ -3,11 +3,8 @@ import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 import * as os from 'node:os';
 import { randomUUID } from 'node:crypto';
-import {
-  createRunDirectory,
-  readManifest,
-  markApprovalRequired,
-} from '../../src/persistence/runDirectoryManager';
+import { readManifest, markApprovalRequired } from '../../src/persistence/manifestManager';
+import { createRunDirectory } from '../../src/persistence/runLifecycle';
 import {
   requestApproval,
   grantApproval,

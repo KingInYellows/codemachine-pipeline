@@ -1,6 +1,6 @@
 import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import { getRunDirectoryPath } from '../../../persistence/runDirectoryManager';
+import { getRunDirectoryPath } from '../../../persistence/runLifecycle';
 import { safeJsonParse } from '../../../utils/safeJson';
 import { parseContextDocument } from '../../../core/models/ContextDocument';
 import { truncateSummary } from '../renderers';

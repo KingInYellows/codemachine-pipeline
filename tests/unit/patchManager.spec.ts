@@ -32,7 +32,7 @@ import {
 import type { RepoConfig } from '../../src/core/config/RepoConfig';
 import type { StructuredLogger } from '../../src/telemetry/logger';
 import type { MetricsCollector } from '../../src/telemetry/metrics';
-import { updateManifest } from '../../src/persistence/runDirectoryManager';
+import { updateManifest } from '../../src/persistence/manifestManager';
 
 // ============================================================================
 // Mocks
@@ -73,9 +73,13 @@ vi.mock('node:child_process', () => ({
     return childProcessStub;
   }),
 }));
-vi.mock('../../src/persistence/runDirectoryManager', () => ({
+vi.mock('../../src/persistence/lockManager', () => ({
   withLock: vi.fn(async (_runDir: string, fn: () => Promise<unknown>) => await fn()),
+}));
+vi.mock('../../src/persistence/runLifecycle', () => ({
   getSubdirectoryPath: vi.fn((runDir: string, subdir: string) => `${runDir}/${subdir}`),
+}));
+vi.mock('../../src/persistence/manifestManager', () => ({
   updateManifest: vi.fn(),
 }));
 

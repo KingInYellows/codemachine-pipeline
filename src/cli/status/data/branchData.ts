@@ -1,4 +1,4 @@
-import { getRunDirectoryPath } from '../../../persistence/runDirectoryManager';
+import { getRunDirectoryPath } from '../../../persistence/runLifecycle';
 import { generateSummary as generateBranchProtectionSummary } from '../../../workflows/branchProtectionReporter';
 import { loadReport as loadBranchProtectionReport } from '../../../persistence/branchProtectionStore';
 import type { StatusBranchProtectionPayload } from '../types';

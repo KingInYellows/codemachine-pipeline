@@ -1,6 +1,6 @@
 import { Flags } from '@oclif/core';
 import * as path from 'node:path';
-import { getRunDirectoryPath } from '../../../persistence/runDirectoryManager';
+import { getRunDirectoryPath } from '../../../persistence/runLifecycle';
 import {
   resolveRunDirectorySettings,
   selectFeatureId,

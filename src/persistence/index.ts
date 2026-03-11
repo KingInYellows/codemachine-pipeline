@@ -1,15 +1,15 @@
-// Run directory manager exports
+// Lock management
 export {
-  getRunDirectoryPath,
-  getSubdirectoryPath,
   acquireLock,
   releaseLock,
   isLocked,
   withLock,
-  createRunDirectory,
-  ensureSubdirectories,
-  runDirectoryExists,
-  listRunDirectories,
+  STALE_LOCK_THRESHOLD_MS,
+  type LockOptions,
+} from './lockManager.js';
+
+// Manifest I/O and state tracking
+export {
   writeManifest,
   readManifest,
   updateManifest,
@@ -20,16 +20,25 @@ export {
   getRunState,
   markApprovalRequired,
   markApprovalCompleted,
+  type RunManifest,
+  type ManifestUpdate,
+} from './manifestManager.js';
+
+// Directory lifecycle, path resolution, hash manifest integration, cleanup hooks
+export {
+  getRunDirectoryPath,
+  getSubdirectoryPath,
+  createRunDirectory,
+  ensureSubdirectories,
+  runDirectoryExists,
+  listRunDirectories,
   generateHashManifest,
   verifyRunDirectoryIntegrity,
   registerCleanupHook,
   isEligibleForCleanup,
-  type RunManifest,
   type CreateRunDirectoryOptions,
-  type LockOptions,
-  type ManifestUpdate,
   type CleanupHook,
-} from './runDirectoryManager.js';
+} from './runLifecycle.js';
 
 // Research store exports
 export {

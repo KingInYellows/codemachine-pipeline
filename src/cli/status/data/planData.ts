@@ -1,5 +1,6 @@
 import { join } from 'node:path';
-import { getRunDirectoryPath, readManifest } from '../../../persistence/runDirectoryManager';
+import { readManifest } from '../../../persistence/manifestManager';
+import { getRunDirectoryPath } from '../../../persistence/runLifecycle';
 import { loadTraceSummary } from '../../../workflows/traceabilityMapper';
 import { loadPlanSummary, buildDagMetadata } from '../../../workflows/taskPlanner';
 import { withSpan } from '../../../telemetry/traces';

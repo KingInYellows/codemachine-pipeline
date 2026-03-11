@@ -604,7 +604,7 @@ describe('approvalRegistry - validateApprovalForTransition', () => {
   });
 
   it('should fail validation when no approval exists', async () => {
-    const { createRunDirectory } = await import('../../src/persistence/runDirectoryManager');
+    const { createRunDirectory } = await import('../../src/persistence/runLifecycle');
     const { validateApprovalForTransition } = await import('../../src/workflows/approvalRegistry');
 
     const runDir = await createRunDirectory(tempDir, 'FEAT-VAL', {

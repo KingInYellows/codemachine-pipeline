@@ -1,11 +1,7 @@
 import * as path from 'node:path';
 import * as fs from 'node:fs/promises';
-import {
-  getRunDirectoryPath,
-  listRunDirectories,
-  runDirectoryExists,
-  updateManifest,
-} from '../../persistence/runDirectoryManager';
+import { updateManifest } from '../../persistence/manifestManager';
+import { getRunDirectoryPath, listRunDirectories, runDirectoryExists } from '../../persistence/runLifecycle';
 import { loadRepoConfig, type RepoConfig } from '../../core/config/RepoConfig';
 import { CliError, CliErrorCode, ERROR_MESSAGES } from './cliErrors';
 

@@ -3,7 +3,8 @@ import * as path from 'node:path';
 import * as os from 'node:os';
 import type { StructuredLogger } from '../../telemetry/logger';
 import type { MetricsCollector } from '../../telemetry/metrics';
-import { getRunDirectoryPath, readManifest } from '../../persistence/runDirectoryManager';
+import { readManifest } from '../../persistence/manifestManager';
+import { getRunDirectoryPath } from '../../persistence/runLifecycle';
 import {
   grantApproval,
   denyApproval,

@@ -4,11 +4,8 @@
 
 import * as path from 'node:path';
 import * as fs from 'node:fs/promises';
-import {
-  getRunDirectoryPath,
-  readManifest,
-  type RunManifest,
-} from '../../persistence/runDirectoryManager';
+import { readManifest, type RunManifest } from '../../persistence/manifestManager';
+import { getRunDirectoryPath } from '../../persistence/runLifecycle';
 import { safeJsonParse } from '../../utils/safeJson';
 import { GitHubAdapter, type GitHubAdapterConfig } from '../../adapters/github/GitHubAdapter';
 import { createCliLogger, LogLevel, type StructuredLogger } from '../../telemetry/logger';

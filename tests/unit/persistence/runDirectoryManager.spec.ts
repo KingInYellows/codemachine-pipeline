@@ -1,30 +1,9 @@
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 import * as os from 'node:os';
-import {
-  createRunDirectory,
-  getRunDirectoryPath,
-  readManifest,
-  writeManifest,
-  updateManifest,
-  setLastStep,
-  setLastError,
-  clearLastError,
-  getRunState,
-  markApprovalRequired,
-  markApprovalCompleted,
-  acquireLock,
-  releaseLock,
-  isLocked,
-  withLock,
-  generateHashManifest,
-  verifyRunDirectoryIntegrity,
-  registerCleanupHook,
-  isEligibleForCleanup,
-  runDirectoryExists,
-  listRunDirectories,
-  type CreateRunDirectoryOptions,
-} from '../../../src/persistence/runDirectoryManager';
+import { acquireLock, releaseLock, isLocked, withLock } from '../../../src/persistence/lockManager';
+import { readManifest, writeManifest, updateManifest, setLastStep, setLastError, clearLastError, getRunState, markApprovalRequired, markApprovalCompleted } from '../../../src/persistence/manifestManager';
+import { createRunDirectory, getRunDirectoryPath, generateHashManifest, verifyRunDirectoryIntegrity, registerCleanupHook, isEligibleForCleanup, runDirectoryExists, listRunDirectories, type CreateRunDirectoryOptions } from '../../../src/persistence/runLifecycle';
 
 vi.mock('node:fs/promises', async () => {
   const actual = await vi.importActual<typeof import('node:fs/promises')>('node:fs/promises');
@@ -552,7 +531,7 @@ describe('Run Directory Manager', () => {
     it('should be 5 minutes (300000ms)', async () => {
       // Import and test the constant directly instead of source inspection
       const { STALE_LOCK_THRESHOLD_MS } =
-        await import('../../../src/persistence/runDirectoryManager.js');
+        await import('../../../src/persistence/lockManager.js');
       expect(STALE_LOCK_THRESHOLD_MS).toBe(300000);
     });
   });

@@ -14,7 +14,7 @@ import { validateOrThrow } from '../validation/helpers.js';
  * - Persists envelopes to run directory as rate_limits.json
  * - Supports reading current rate limit state for cooldown decisions
  * - Provides schema for ledger JSON with provider-specific entries
- * - Integrates with runDirectoryManager for atomic writes
+ * - Integrates with manifestManager for atomic writes
  *
  * Implements Rate Limit Discipline from the Rulebook.
  */
