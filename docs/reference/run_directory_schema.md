@@ -464,7 +464,7 @@ Dry-run invocation `bin/run status --json` references this schema and always pri
 
 ## API Reference
 
-See `src/persistence/runDirectoryManager.ts` for full API documentation.
+See `src/persistence/lockManager.ts`, `src/persistence/manifestManager.ts`, and `src/persistence/runLifecycle.ts` for full API documentation.
 
 **Key Functions:**
 

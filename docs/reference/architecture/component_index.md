@@ -361,7 +361,7 @@ erDiagram
 - Subdirectory specifications (artifacts, queue, logs, telemetry, approvals, sqlite, context)
 - State machine transitions
 - Cleanup and retention policies
-- API reference (runDirectoryManager.ts functions)
+- API reference (lockManager.ts, manifestManager.ts, runLifecycle.ts functions)
 
 **Related Diagrams:** `run_directory_schema.mmd`
 
