@@ -8,7 +8,7 @@ import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 import * as crypto from 'node:crypto';
 import { tmpdir } from 'node:os';
-import { exec, execFile } from 'node:child_process';
+import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import picomatch from 'picomatch';
 import { withLock, getSubdirectoryPath, updateManifest } from '../persistence';
@@ -19,7 +19,6 @@ import type { ExecutionTelemetry } from '../telemetry/executionTelemetry';
 import type { DiffStats } from '../telemetry/executionMetrics';
 import { getErrorMessage } from '../utils/errors.js';
 
-const execAsync = promisify(exec);
 const execFileAsync = promisify(execFile);
 
 type ExecCommandResult = { stdout?: string; stderr?: string } | string;
@@ -282,7 +281,7 @@ function summarizeLineChanges(patchContent: string): { insertions: number; delet
 export async function isWorkingTreeClean(workingDir: string): Promise<boolean> {
   try {
     const { stdout } = normalizeExecResult(
-      await execAsync('git status --porcelain', { cwd: workingDir })
+      await execFileAsync('git', ['status', '--porcelain'], { cwd: workingDir })
     );
     return stdout.trim().length === 0;
   } catch (error) {
@@ -458,7 +457,7 @@ export async function createRollbackSnapshot(
   // Capture current git state
   const gitRef = await getCurrentGitRef(config.workingDir);
   const { stdout: workingTreeStatus } = normalizeExecResult(
-    await execAsync('git status --porcelain', {
+    await execFileAsync('git', ['status', '--porcelain'], {
       cwd: config.workingDir,
     })
   );
