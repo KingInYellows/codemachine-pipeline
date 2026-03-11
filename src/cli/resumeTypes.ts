@@ -5,20 +5,31 @@
  * extracted helper modules (resumePayloadBuilder, resumeOutput).
  */
 
-import type { Interfaces } from '@oclif/core';
 import type { StructuredLogger } from '../telemetry/logger';
 import type { MetricsCollector } from '../telemetry/metrics';
 import type { TraceManager, ActiveSpan } from '../telemetry/traces';
 import type { createExecutionTelemetry } from '../telemetry/executionTelemetry';
 import type { TelemetryResources } from './utils/telemetryLifecycle';
-import type Resume from './commands/resume';
 
 /**
- * Derived from the oclif flag definitions in Resume.flags so there is a
- * single source of truth.  The `import type` is circular at the type level
- * only and is erased at compile time — no runtime cycle is created.
+ * Mirrors the resolved shape of `Resume.flags` from `commands/resume.ts`.
+ *
+ * Ideally this would be derived via `Interfaces.InferredFlags<typeof Resume.flags>`,
+ * but that creates a circular import (`resumeTypes → resume → resumeOutput → resumeTypes`)
+ * which `madge --circular` flags.  Keep this in sync when oclif flags change.
+ *
+ * @see commands/resume.ts — `static flags` for the canonical flag definitions.
  */
-export type ResumeFlags = Interfaces.InferredFlags<typeof Resume.flags>;
+export type ResumeFlags = {
+  feature?: string;
+  'dry-run': boolean;
+  force: boolean;
+  'skip-hash-verification': boolean;
+  'validate-queue': boolean;
+  json: boolean;
+  verbose: boolean;
+  'max-parallel'?: number;
+};
 
 export interface ResumeTelemetry {
   logger: StructuredLogger;
