@@ -3,11 +3,9 @@ import * as path from 'node:path';
 import {
   analyzeResumeState,
   prepareResume,
-  formatResumeAnalysis,
   type ResumeOptions,
 } from '../../workflows/resumeCoordinator';
 import { getRunDirectoryPath } from '../../persistence/runDirectoryManager';
-import type { QueueValidationResult } from '../../workflows/queue/queueStore.js';
 import { CLIExecutionEngine } from '../../workflows/cliExecutionEngine';
 import { buildExecutionStrategies } from '../../workflows/executionStrategyBuilder.js';
 import {
@@ -16,114 +14,21 @@ import {
   DEFAULT_EXECUTION_CONFIG,
 } from '../../core/config/RepoConfig';
 import { createExecutionTelemetry } from '../../telemetry/executionTelemetry';
-import type { StructuredLogger } from '../../telemetry/logger';
-import type { MetricsCollector } from '../../telemetry/metrics';
-import type { TraceManager, ActiveSpan } from '../../telemetry/traces';
+import { loadPlanSummary } from '../../workflows/taskPlanner';
 import {
   resolveRunDirectorySettings,
   selectFeatureId,
   requireFeatureId,
 } from '../utils/runDirectory';
-import { loadPlanSummary } from '../../workflows/taskPlanner';
-import { RateLimitReporter } from '../../telemetry/rateLimitReporter';
-import { loadReport as loadBranchProtectionReport } from '../../persistence/branchProtectionStore';
 import { setJsonOutputMode } from '../utils/cliErrors';
 import { TelemetryCommand } from '../telemetryCommand';
-import type { TelemetryResources } from '../utils/telemetryLifecycle';
-
-type ResumeFlags = {
-  feature?: string;
-  'dry-run': boolean;
-  force: boolean;
-  'skip-hash-verification': boolean;
-  'validate-queue': boolean;
-  json: boolean;
-  verbose: boolean;
-  'max-parallel'?: number;
-};
-
-interface ResumeTelemetry {
-  logger: StructuredLogger;
-  metrics: MetricsCollector;
-  traceManager: TraceManager;
-  commandSpan: ActiveSpan;
-  executionTelemetry: ReturnType<typeof createExecutionTelemetry>;
-  runDirPath: string;
-  resources: TelemetryResources;
-}
-
-interface ResumePayload {
-  feature_id: string;
-  can_resume: boolean;
-  status: string;
-  last_step?: string;
-  current_step?: string;
-  last_error?: {
-    step: string;
-    message: string;
-    timestamp: string;
-    recoverable: boolean;
-  } | null;
-  queue_state: {
-    pending: number;
-    completed: number;
-    failed: number;
-  };
-  execution?: {
-    total_tasks: number;
-    completed: number;
-    failed: number;
-    permanently_failed: number;
-    skipped: number;
-    duration_ms: number;
-  };
-  pending_approvals: string[];
-  integrity_check?: {
-    valid: boolean;
-    passed: number;
-    failed: number;
-    missing: number;
-  };
-  diagnostics: Array<{
-    severity: string;
-    message: string;
-    code?: string;
-  }>;
-  recommendations: string[];
-  queue_validation?: {
-    valid: boolean;
-    total_tasks: number;
-    corrupted_tasks: number;
-    errors: Array<{
-      taskId: string;
-      line: number;
-      message: string;
-    }>;
-  };
-  plan_summary?: {
-    total_tasks: number;
-    entry_tasks: number;
-    next_tasks: string[];
-  };
-  resume_instructions?: {
-    checkpoint?: string;
-    next_step?: string;
-    pending_approvals?: string[];
-  };
-  rate_limit_warnings?: Array<{
-    provider: string;
-    in_cooldown: boolean;
-    manual_ack_required: boolean;
-    reset_at: string;
-  }>;
-  integration_blockers?: {
-    github?: string[];
-    linear?: string[];
-  };
-  branch_protection_blockers?: string[];
-  dry_run: boolean;
-  playbook_reference: string;
-}
+import type { ResumeFlags, ResumeTelemetry, ResumePayload } from '../resumeTypes';
+import { buildResumePayload } from '../resumePayloadBuilder';
+import {
+  printResumeAnalysis,
+  printExecutionResults,
+  determineResumeExitCode,
+} from '../resumeOutput';
 
 /**
  * Resume command - Resume failed or paused feature pipeline execution
@@ -260,7 +165,7 @@ export default class Resume extends TelemetryCommand {
 
         // Check if resume is blocked
         if (!analysis.canResume) {
-          const exitCode = this.determineExitCode(analysis);
+          const exitCode = determineResumeExitCode(analysis);
           resumeTelemetry.logger.error('Resume blocked', {
             blockers: analysis.diagnostics
               .filter((d) => d.severity === 'blocker')
@@ -314,7 +219,7 @@ export default class Resume extends TelemetryCommand {
       });
     }
 
-    const payload = await this.buildResumePayload(
+    const payload = await buildResumePayload(
       analysis,
       queueValidation,
       planSummary,
@@ -325,7 +230,14 @@ export default class Resume extends TelemetryCommand {
     if (flags.json) {
       this.log(JSON.stringify(payload, null, 2));
     } else {
-      this.printHumanReadable(analysis, queueValidation, flags, payload);
+      printResumeAnalysis(
+        analysis,
+        queueValidation,
+        flags,
+        payload,
+        (msg) => this.log(msg),
+        (msg) => this.warn(msg)
+      );
     }
 
     return { analysis, payload };
@@ -419,324 +331,14 @@ export default class Resume extends TelemetryCommand {
     };
 
     if (!flags.json) {
-      this.log('');
-      this.log('✅ Resume execution successful');
-      this.log('');
-      this.log('Execution results:');
-      this.log(`  Total tasks: ${executionResults.totalTasks}`);
-      this.log(`  Completed: ${executionResults.completedTasks}`);
-      this.log(`  Failed: ${executionResults.failedTasks}`);
-      this.log(`  Permanently failed: ${executionResults.permanentlyFailedTasks}`);
-      this.log(`  Skipped: ${executionResults.skippedTasks}`);
-      this.log(`  Duration: ${(executionDuration / 1000).toFixed(2)}s`);
-      this.log('');
-      this.log('Next steps:');
-      this.log(`  • Monitor progress with: codepipe status --feature ${featureId}`);
-      this.log(`  • View logs in: ${path.join(runDirPath, 'logs', 'logs.ndjson')}`);
-      this.log('');
-
-      if (executionResults.failedTasks > 0) {
-        this.warn(
-          `Warning: ${executionResults.failedTasks} task(s) failed. Run 'codepipe resume' to retry.`
-        );
-      }
+      printExecutionResults(
+        featureId,
+        runDirPath,
+        executionResults,
+        executionDuration,
+        (msg) => this.log(msg),
+        (msg) => this.warn(msg)
+      );
     }
-  }
-
-  private async buildResumePayload(
-    analysis: Awaited<ReturnType<typeof analyzeResumeState>>,
-    queueValidation?: QueueValidationResult,
-    planSummary?: Awaited<ReturnType<typeof loadPlanSummary>>,
-    dryRun = false,
-    runDir?: string
-  ): Promise<ResumePayload> {
-    const payload: ResumePayload = {
-      feature_id: analysis.featureId,
-      can_resume: analysis.canResume,
-      status: analysis.status,
-      queue_state: analysis.queueState,
-      pending_approvals: analysis.pendingApprovals,
-      diagnostics: analysis.diagnostics.map((d) => {
-        const diag: { severity: string; message: string; code?: string } = {
-          severity: d.severity,
-          message: d.message,
-        };
-        if (d.code) {
-          diag.code = d.code;
-        }
-        return diag;
-      }),
-      recommendations: analysis.recommendations,
-      dry_run: dryRun,
-      playbook_reference: 'docs/playbooks/resume_playbook.md',
-      last_error: analysis.lastError ?? null,
-    };
-
-    if (analysis.lastStep) {
-      payload.last_step = analysis.lastStep;
-    }
-    if (analysis.currentStep) {
-      payload.current_step = analysis.currentStep;
-    }
-
-    if (analysis.integrityCheck) {
-      payload.integrity_check = {
-        valid: analysis.integrityCheck.valid,
-        passed: analysis.integrityCheck.passed.length,
-        failed: analysis.integrityCheck.failed.length,
-        missing: analysis.integrityCheck.missing.length,
-      };
-    }
-
-    if (queueValidation) {
-      payload.queue_validation = {
-        valid: queueValidation.valid,
-        total_tasks: queueValidation.totalTasks,
-        corrupted_tasks: queueValidation.corruptedTasks,
-        errors: queueValidation.errors,
-      };
-    }
-
-    if (planSummary) {
-      payload.plan_summary = {
-        total_tasks: planSummary.totalTasks,
-        entry_tasks: planSummary.entryTasks.length,
-        next_tasks: planSummary.queueState.ready.slice(0, 3),
-      };
-    }
-
-    // Build resume instructions
-    const resumeInstructions: ResumePayload['resume_instructions'] = {};
-
-    if (analysis.lastStep) {
-      resumeInstructions.checkpoint = analysis.lastStep;
-    }
-
-    if (analysis.currentStep) {
-      resumeInstructions.next_step = analysis.currentStep;
-    }
-
-    if (analysis.pendingApprovals.length > 0) {
-      resumeInstructions.pending_approvals = analysis.pendingApprovals;
-    }
-
-    if (Object.keys(resumeInstructions).length > 0) {
-      payload.resume_instructions = resumeInstructions;
-    }
-
-    // Load rate limit warnings and integration blockers
-    if (runDir) {
-      await this.attachRateLimitWarnings(payload, runDir);
-      await this.attachBranchProtectionBlockers(payload, runDir);
-    }
-
-    return payload;
-  }
-
-  private async attachRateLimitWarnings(payload: ResumePayload, runDir: string): Promise<void> {
-    try {
-      const rateLimitReport = await RateLimitReporter.generateReport(runDir);
-
-      const rateLimitWarnings: ResumePayload['rate_limit_warnings'] = [];
-      const integrationBlockers: ResumePayload['integration_blockers'] = {};
-
-      for (const [providerName, providerData] of Object.entries(rateLimitReport.providers)) {
-        if (providerData.inCooldown || providerData.manualAckRequired) {
-          rateLimitWarnings.push({
-            provider: providerName,
-            in_cooldown: providerData.inCooldown,
-            manual_ack_required: providerData.manualAckRequired,
-            reset_at: providerData.resetAt,
-          });
-
-          // Track integration-specific blockers for known providers
-          if (providerName === 'github' || providerName === 'linear') {
-            const key: 'github' | 'linear' = providerName;
-            if (!integrationBlockers[key]) {
-              integrationBlockers[key] = [];
-            }
-            if (providerData.inCooldown) {
-              integrationBlockers[key]?.push(`Rate limit cooldown until ${providerData.resetAt}`);
-            }
-            if (providerData.manualAckRequired) {
-              integrationBlockers[key]?.push(
-                `Manual acknowledgement required (${providerData.recentHitCount} consecutive hits)`
-              );
-            }
-          }
-        }
-      }
-
-      if (rateLimitWarnings.length > 0) {
-        payload.rate_limit_warnings = rateLimitWarnings;
-      }
-
-      if (Object.keys(integrationBlockers).length > 0) {
-        payload.integration_blockers = integrationBlockers;
-      }
-    } catch {
-      // Rate limit data unavailable, skip
-    }
-  }
-
-  private async attachBranchProtectionBlockers(
-    payload: ResumePayload,
-    runDir: string
-  ): Promise<void> {
-    try {
-      const report = await loadBranchProtectionReport(runDir);
-      if (report && report.blockers.length > 0) {
-        payload.branch_protection_blockers = [...report.blockers];
-      }
-    } catch {
-      // Branch protection artifact missing or invalid; skip without blocking resume output
-    }
-  }
-
-  private printHumanReadable(
-    analysis: Awaited<ReturnType<typeof analyzeResumeState>>,
-    queueValidation?: QueueValidationResult,
-    flags?: ResumeFlags,
-    payload?: ResumePayload
-  ): void {
-    this.log('');
-    this.log('═══════════════════════════════════════════════════════════');
-    this.log('  Resume Analysis');
-    this.log('═══════════════════════════════════════════════════════════');
-    this.log('');
-
-    // Use the formatted output from resumeCoordinator
-    this.log(formatResumeAnalysis(analysis));
-
-    // Resume instructions section
-    if (analysis.canResume && !flags?.['dry-run']) {
-      this.log('');
-      this.log('Resume Instructions:');
-      if (analysis.lastStep) {
-        this.log(`  Last checkpoint: ${analysis.lastStep}`);
-      }
-      if (analysis.currentStep) {
-        this.log(`  Next step: ${analysis.currentStep}`);
-      }
-      if (analysis.pendingApprovals.length > 0) {
-        this.log('  Pending approvals:');
-        analysis.pendingApprovals.forEach((gate) => {
-          this.log(`    • ${gate.toUpperCase()} - Run: codepipe approve ${gate}`);
-        });
-      }
-    }
-
-    // Queue validation results
-    if (queueValidation && flags?.verbose) {
-      this.log('');
-      this.log('Queue Validation:');
-      if (queueValidation.valid) {
-        this.log(`  ✓ Queue is valid (${queueValidation.totalTasks} tasks)`);
-      } else {
-        this.log(`  ✗ Queue validation failed`);
-        this.log(`    Total tasks: ${queueValidation.totalTasks}`);
-        this.log(`    Corrupted: ${queueValidation.corruptedTasks}`);
-        if (queueValidation.errors.length > 0) {
-          this.log('  Errors:');
-          for (const error of queueValidation.errors.slice(0, 5)) {
-            this.log(`    • Line ${error.line}: ${error.message}`);
-          }
-          if (queueValidation.errors.length > 5) {
-            this.log(`    ... and ${queueValidation.errors.length - 5} more`);
-          }
-        }
-      }
-    }
-
-    // Rate limit warnings
-    if (payload?.rate_limit_warnings && payload.rate_limit_warnings.length > 0) {
-      this.log('');
-      this.log('Rate Limit Warnings:');
-      for (const warning of payload.rate_limit_warnings) {
-        this.log(`  ${warning.provider}:`);
-        if (warning.in_cooldown) {
-          this.warn(`    ⚠ In cooldown until ${warning.reset_at}`);
-        }
-        if (warning.manual_ack_required) {
-          this.warn(`    ⚠ Manual acknowledgement required`);
-          this.log(`       Use: codepipe rate-limits clear ${warning.provider}`);
-        }
-      }
-    }
-
-    // Integration blockers
-    if (payload?.integration_blockers) {
-      const blockers = payload.integration_blockers;
-      if (
-        (blockers.github && blockers.github.length > 0) ||
-        (blockers.linear && blockers.linear.length > 0)
-      ) {
-        this.log('');
-        this.log('Integration Blockers:');
-
-        if (blockers.github && blockers.github.length > 0) {
-          this.log('  GitHub:');
-          blockers.github.forEach((blocker) => {
-            this.warn(`    ⚠ ${blocker}`);
-          });
-        }
-
-        if (blockers.linear && blockers.linear.length > 0) {
-          this.log('  Linear:');
-          blockers.linear.forEach((blocker) => {
-            this.warn(`    ⚠ ${blocker}`);
-          });
-        }
-      }
-    }
-
-    if (payload?.branch_protection_blockers && payload.branch_protection_blockers.length > 0) {
-      this.log('');
-      this.log('Branch Protection Blockers:');
-      payload.branch_protection_blockers.forEach((blocker) => {
-        this.warn(`  ⚠ ${blocker}`);
-      });
-    }
-
-    this.log('');
-    this.log('═══════════════════════════════════════════════════════════');
-
-    // Warnings for dangerous flags
-    if (flags?.force) {
-      this.log('');
-      this.warn('⚠️  WARNING: Force flag enabled - blockers overridden');
-      this.log('');
-    }
-
-    if (flags?.['skip-hash-verification']) {
-      this.log('');
-      this.warn('⚠️  WARNING: Hash verification skipped - integrity not verified');
-      this.log('');
-    }
-
-    if (flags?.['dry-run']) {
-      this.log('');
-      this.log('ℹ️  This was a dry run. No changes were made.');
-      this.log('   To execute resume, run without --dry-run flag.');
-      this.log('');
-    }
-  }
-
-  private determineExitCode(analysis: Awaited<ReturnType<typeof analyzeResumeState>>): number {
-    // Check for integrity failures
-    const hasIntegrityFailure = analysis.diagnostics.some(
-      (d) => d.code === 'INTEGRITY_HASH_MISMATCH' || d.code === 'INTEGRITY_MISSING_FILES'
-    );
-    if (hasIntegrityFailure) {
-      return 20;
-    }
-
-    // Check for queue validation failures
-    if (analysis.queueValidation && !analysis.queueValidation.valid) {
-      return 30;
-    }
-
-    // General blocker
-    return 10;
   }
 }
