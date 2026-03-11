@@ -6,8 +6,10 @@ export {
   loadPlanStatus,
 } from './planData';
 export { loadValidationStatus } from './validationData';
-export { loadBranchProtectionStatus, refreshBranchProtectionArtifact } from './branchData';
-export { loadIntegrationsStatus, loadRateLimitsStatus } from './integrationsData';
+export { loadBranchProtectionStatus } from './branchData';
+export { refreshBranchProtectionArtifact } from './branchRefreshData';
+export { loadIntegrationsStatus } from './integrationsData';
+export { loadRateLimitsStatus } from './rateLimitsData';
 export { loadPRMetadata } from './prMetadataData';
 export { loadResearchStatus } from './researchData';
 export {
