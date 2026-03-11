@@ -3,7 +3,14 @@ import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 import * as os from 'node:os';
 import { analyzeResumeState, prepareResume } from '../../src/workflows/resumeCoordinator';
-import { setLastError, setLastStep, setCurrentStep, markApprovalRequired, markApprovalCompleted, updateManifest } from '../../src/persistence/manifestManager';
+import {
+  setLastError,
+  setLastStep,
+  setCurrentStep,
+  markApprovalRequired,
+  markApprovalCompleted,
+  updateManifest,
+} from '../../src/persistence/manifestManager';
 import { createRunDirectory, generateHashManifest } from '../../src/persistence/runLifecycle';
 import {
   initializeQueue,

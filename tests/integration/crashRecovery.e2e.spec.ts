@@ -15,7 +15,12 @@ import * as path from 'node:path';
 import * as os from 'node:os';
 import { CLIExecutionEngine } from '../../src/workflows/cliExecutionEngine';
 import { CodeMachineStrategy } from '../../src/workflows/codeMachineStrategy';
-import { updateManifest, readManifest, setCurrentStep, setLastStep } from '../../src/persistence/manifestManager';
+import {
+  updateManifest,
+  readManifest,
+  setCurrentStep,
+  setLastStep,
+} from '../../src/persistence/manifestManager';
 import { createRunDirectory } from '../../src/persistence/runLifecycle';
 import {
   initializeQueue,

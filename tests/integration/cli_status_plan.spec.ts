@@ -3,7 +3,12 @@ import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 import * as os from 'node:os';
 import { spawnSync } from 'node:child_process';
-import { setLastStep, setCurrentStep, updateManifest, markApprovalRequired } from '../../src/persistence/manifestManager';
+import {
+  setLastStep,
+  setCurrentStep,
+  updateManifest,
+  markApprovalRequired,
+} from '../../src/persistence/manifestManager';
 import { createRunDirectory } from '../../src/persistence/runLifecycle';
 import { initializeQueue, appendToQueue } from '../../src/workflows/queue/queueStore';
 import { createExecutionTask } from '../../src/core/models/ExecutionTask';
