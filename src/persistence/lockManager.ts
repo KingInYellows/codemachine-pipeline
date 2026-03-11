@@ -332,7 +332,7 @@ export async function withLock<T>(
   const activeContext = lockContextStorage.getStore();
   const activeDepth = activeContext?.get(lockKey);
 
-  if (activeDepth) {
+  if (activeContext && activeDepth) {
     activeContext.set(lockKey, activeDepth + 1);
     try {
       return await fn();
