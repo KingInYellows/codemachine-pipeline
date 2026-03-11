@@ -1,8 +1,8 @@
 import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import { getRunDirectoryPath } from '../../../persistence/runDirectoryManager';
+import { getRunDirectoryPath } from '../../../persistence/runLifecycle';
 import { safeJsonParse } from '../../../utils/safeJson';
-import type { RunManifest } from '../../../persistence/runDirectoryManager';
+import type { RunManifest } from '../../../persistence/manifestManager';
 import { RateLimitReporter } from '../../../telemetry/rateLimitReporter';
 import type { RunDirectorySettings } from '../../utils/runDirectory';
 import type { StatusIntegrationsPayload } from '../types';

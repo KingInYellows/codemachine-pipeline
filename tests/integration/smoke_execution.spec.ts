@@ -3,14 +3,13 @@ import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 import * as os from 'node:os';
 import {
-  createRunDirectory,
   setLastStep,
   setCurrentStep,
   updateManifest,
-  generateHashManifest,
   markApprovalRequired,
   markApprovalCompleted,
-} from '../../src/persistence/runDirectoryManager';
+} from '../../src/persistence/manifestManager';
+import { createRunDirectory, generateHashManifest } from '../../src/persistence/runLifecycle';
 import {
   initializeQueue,
   appendToQueue,

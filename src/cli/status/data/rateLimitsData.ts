@@ -1,4 +1,4 @@
-import { getRunDirectoryPath } from '../../../persistence/runDirectoryManager';
+import { getRunDirectoryPath } from '../../../persistence/runLifecycle';
 import { RateLimitReporter } from '../../../telemetry/rateLimitReporter';
 import type { StatusRateLimitsPayload } from '../types';
 import type { DataLogger } from './types';

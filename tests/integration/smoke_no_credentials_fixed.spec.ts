@@ -18,12 +18,8 @@ import * as path from 'node:path';
 import * as os from 'node:os';
 import { validateRepoConfig, validateEnvironmentVariables } from '../../src/core/config/validator';
 import { createDefaultConfig } from '../../src/core/config/RepoConfig';
-import {
-  createRunDirectory,
-  setLastStep,
-  setCurrentStep,
-  updateManifest,
-} from '../../src/persistence/runDirectoryManager';
+import { setLastStep, setCurrentStep, updateManifest } from '../../src/persistence/manifestManager';
+import { createRunDirectory } from '../../src/persistence/runLifecycle';
 import {
   initializeQueue,
   appendToQueue,

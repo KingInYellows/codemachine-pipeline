@@ -14,11 +14,11 @@ import * as path from 'node:path';
 import * as os from 'node:os';
 import { randomUUID } from 'node:crypto';
 import {
-  createRunDirectory,
   readManifest,
   markApprovalRequired,
   writeManifest,
-} from '../../src/persistence/runDirectoryManager.js';
+} from '../../src/persistence/manifestManager.js';
+import { createRunDirectory } from '../../src/persistence/runLifecycle.js';
 import {
   requestApproval,
   grantApproval,

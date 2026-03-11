@@ -4,12 +4,12 @@ import * as path from 'node:path';
 import * as os from 'node:os';
 import { spawnSync } from 'node:child_process';
 import {
-  createRunDirectory,
   setLastStep,
   setCurrentStep,
   updateManifest,
   markApprovalRequired,
-} from '../../src/persistence/runDirectoryManager';
+} from '../../src/persistence/manifestManager';
+import { createRunDirectory } from '../../src/persistence/runLifecycle';
 import { initializeQueue, appendToQueue } from '../../src/workflows/queue/queueStore';
 import { createExecutionTask } from '../../src/core/models/ExecutionTask';
 import { generateExecutionPlan } from '../../src/workflows/taskPlanner';

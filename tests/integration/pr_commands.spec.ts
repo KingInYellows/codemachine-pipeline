@@ -24,7 +24,7 @@ import {
   PRExitCode,
   type PRMetadata,
 } from '../../src/cli/pr/shared';
-import type { RunManifest } from '../../src/persistence/runDirectoryManager';
+import type { RunManifest } from '../../src/persistence/manifestManager';
 
 const parseJson = <T>(value: string): T => JSON.parse(value) as unknown as T;
 

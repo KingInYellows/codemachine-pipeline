@@ -5,7 +5,7 @@ import {
   prepareResume,
   type ResumeOptions,
 } from '../../workflows/resumeCoordinator';
-import { getRunDirectoryPath } from '../../persistence/runDirectoryManager';
+import { getRunDirectoryPath } from '../../persistence/runLifecycle';
 import { CLIExecutionEngine } from '../../workflows/cliExecutionEngine';
 import { buildExecutionStrategies } from '../../workflows/executionStrategyBuilder.js';
 import {

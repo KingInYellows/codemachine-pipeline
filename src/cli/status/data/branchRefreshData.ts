@@ -1,4 +1,4 @@
-import { getRunDirectoryPath } from '../../../persistence/runDirectoryManager';
+import { getRunDirectoryPath } from '../../../persistence/runLifecycle';
 import {
   BranchProtectionAdapter,
   type BranchProtectionConfig,
@@ -14,7 +14,7 @@ import { withSpan } from '../../../telemetry/traces';
 import type { StructuredLogger } from '../../../telemetry/logger';
 import type { TraceManager, ActiveSpan } from '../../../telemetry/traces';
 import type { RunDirectorySettings } from '../../utils/runDirectory';
-import type { RunManifest } from '../../../persistence/runDirectoryManager';
+import type { RunManifest } from '../../../persistence/manifestManager';
 import { loadPRMetadata } from './prMetadataData';
 
 /** Validated context required to perform a branch protection refresh. */

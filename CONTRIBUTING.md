@@ -111,7 +111,7 @@ Integration tests live in `tests/integration/` and exercise CLI commands, workfl
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 import * as os from 'node:os';
-import { createRunDirectory } from '../../src/persistence/runDirectoryManager.js';
+import { createRunDirectory } from '../../src/persistence/runLifecycle.js';
 import { initializeQueue } from '../../src/workflows/queue/queueStore.js';
 
 let workspaceDir: string;
@@ -142,7 +142,7 @@ afterEach(async () => {
 
 - **Temp directories** -- always use `fs.mkdtemp()` in `beforeEach` to create an isolated workspace. Never write to the real project tree.
 - **Cleanup** -- always call `fs.rm(dir, { recursive: true, force: true })` in `afterEach`.
-- **Run directories** -- use `createRunDirectory()` from `src/persistence/runDirectoryManager` to scaffold the `.codepipe/runs/<feature>` structure.
+- **Run directories** -- use `createRunDirectory()` from `src/persistence/runLifecycle` to scaffold the `.codepipe/runs/<feature>` structure.
 - **Queue initialization** -- call `initializeQueue(runDir, featureId)` to set up the write-action queue.
 - **Import paths** -- use relative imports from `../../src/...` with `.js` extensions (TypeScript ESM resolution).
 - **Cache invalidation** -- when testing queue integrity across multiple scenarios in one test, call `invalidateV2Cache(runDir)` to reset the integrity verification cache.

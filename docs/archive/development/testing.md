@@ -38,7 +38,7 @@ Tests import from source using relative paths with `.js` extension (TypeScript r
 
 ```typescript
 import { loadQueue, initializeQueue } from '../../src/workflows/queueStore.js';
-import { createRunDirectory } from '../../src/persistence/runDirectoryManager.js';
+import { createRunDirectory } from '../../src/persistence/runLifecycle.js';
 ```
 
 ## Running Tests Locally
@@ -149,7 +149,8 @@ describe('FileBasedTest', () => {
 For tests requiring a full run directory structure:
 
 ```typescript
-import { createRunDirectory, writeManifest } from '../../src/persistence/runDirectoryManager.js';
+import { createRunDirectory } from '../../src/persistence/runLifecycle.js';
+import { writeManifest } from '../../src/persistence/manifestManager.js';
 
 describe('QueueTests', () => {
   let tempDir: string;

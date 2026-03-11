@@ -8,7 +8,7 @@ import {
   ExecutionContext,
   ExecutionStrategyResult,
 } from '../../src/workflows/executionStrategy';
-import { createRunDirectory } from '../../src/persistence/runDirectoryManager';
+import { createRunDirectory } from '../../src/persistence/runLifecycle';
 import { initializeQueue, appendToQueue, loadQueue } from '../../src/workflows/queue/queueStore';
 import { createExecutionTask } from '../../src/core/models/ExecutionTask';
 import { RepoConfig } from '../../src/core/config/RepoConfig';

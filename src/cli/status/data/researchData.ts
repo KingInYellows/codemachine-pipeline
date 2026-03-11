@@ -1,6 +1,6 @@
 import { access } from 'node:fs/promises';
 import { join } from 'node:path';
-import { getRunDirectoryPath } from '../../../persistence/runDirectoryManager';
+import { getRunDirectoryPath } from '../../../persistence/runLifecycle';
 import { createCoordinatorForRun } from '../../../workflows/researchCoordinator';
 import { isCachedResultFresh } from '../../../core/models/ResearchTask';
 import type { StructuredLogger } from '../../../telemetry/logger';
