@@ -9,7 +9,7 @@ import * as path from 'node:path';
 import { withLock, getSubdirectoryPath } from '../persistence';
 import { parseTraceLink, type TraceLink } from '../core/models/TraceLink';
 import { loadPRDMetadata } from './prdStore';
-import { loadSpecMetadata } from './specComposer';
+import { loadSpecMetadata } from './specStore';
 import type { StructuredLogger } from '../telemetry/logger';
 import type { MetricsCollector } from '../telemetry/metrics';
 import { computeFileHash } from '../persistence';

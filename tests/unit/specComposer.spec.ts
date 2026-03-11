@@ -14,13 +14,15 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import * as fs from 'node:fs/promises';
 import {
   composeSpecification,
+  type SpecComposerConfig,
+} from '../../src/workflows/specComposer';
+import {
   recordSpecApproval,
   loadSpecMetadata,
   isSpecApproved,
   getSpecApprovals,
-  type SpecComposerConfig,
   type RecordSpecApprovalOptions,
-} from '../../src/workflows/specComposer';
+} from '../../src/workflows/specStore';
 import { createFeature, type Feature } from '../../src/core/models/Feature';
 import type { ContextDocument } from '../../src/core/models/ContextDocument';
 import type { ResearchTask } from '../../src/core/models/ResearchTask';
