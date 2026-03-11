@@ -18,23 +18,6 @@ import {
   type ValidationAttempt,
 } from './validationStore.js';
 
-export type {
-  ValidationCommandType,
-  ValidationCommandConfig,
-} from '../core/validation/validationCommandConfig';
-
-// Re-export schemas, types, and store functions for consumers
-export {
-  ValidationRegistrySchema,
-  ValidationLedgerSchema,
-  ValidationAttemptSchema,
-  loadValidationRegistry,
-  type ValidationRegistry,
-  type ValidationLedger,
-  type ValidationAttempt,
-  type ValidationResult,
-} from './validationStore.js';
-
 /**
  * Validation Command Registry
  *

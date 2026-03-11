@@ -8,13 +8,15 @@ import {
   requireFeatureId,
 } from '../utils/runDirectory';
 import { loadRepoConfig } from '../../core/config/RepoConfig';
+import type {
+  ValidationCommandType,
+  ValidationLedger,
+  ValidationResult,
+} from '../../workflows/validationStore.js';
+import { loadValidationRegistry } from '../../workflows/validationStore.js';
 import {
   initializeValidationRegistry,
-  loadValidationRegistry,
   getValidationSummary,
-  type ValidationCommandType,
-  type ValidationLedger,
-  type ValidationResult,
 } from '../../workflows/validationRegistry';
 import {
   executeAllValidations,
