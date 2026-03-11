@@ -21,7 +21,7 @@ import {
   type PlanArtifact,
   type TaskNode,
 } from '../core/models/PlanArtifact';
-import { loadSpecMetadata } from './specComposer';
+import { loadSpecMetadata } from './specStore';
 import type { StructuredLogger } from '../telemetry/logger';
 import type { MetricsCollector } from '../telemetry/metrics';
 import { validateOrResult } from '../validation/helpers.js';

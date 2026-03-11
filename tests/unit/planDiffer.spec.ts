@@ -23,7 +23,7 @@ vi.mock('../../src/workflows/taskPlanner', () => ({
   loadPlanMetadata: vi.fn(),
 }));
 
-vi.mock('../../src/workflows/specComposer', () => ({
+vi.mock('../../src/workflows/specStore', () => ({
   loadSpecMetadata: vi.fn(),
 }));
 
@@ -32,7 +32,7 @@ vi.mock('../../src/utils/safeJson', () => ({
 }));
 
 import { loadPlanMetadata } from '../../src/workflows/taskPlanner';
-import { loadSpecMetadata } from '../../src/workflows/specComposer';
+import { loadSpecMetadata } from '../../src/workflows/specStore';
 import { safeJsonParse } from '../../src/utils/safeJson';
 
 const mockedLoadPlanMetadata = vi.mocked(loadPlanMetadata);
