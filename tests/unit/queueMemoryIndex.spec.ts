@@ -29,7 +29,10 @@ import type {
   QueueOperation,
   ExecutionTaskData,
 } from '../../src/workflows/queue/queueTypes.js';
-import { createEmptyIndexState, createEmptyQueueCounts } from '../../src/workflows/queue/queueTypes.js';
+import {
+  createEmptyIndexState,
+  createEmptyQueueCounts,
+} from '../../src/workflows/queue/queueTypes.js';
 import { saveSnapshot } from '../../src/workflows/queue/queueSnapshotManager.js';
 import {
   appendOperationsBatch,
