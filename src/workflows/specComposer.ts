@@ -38,16 +38,6 @@ import {
   generateSpecMarkdown,
 } from './specMarkdown';
 
-// Re-export types and functions from extracted modules for backward compatibility
-export type { SpecMetadata } from './specMetadata';
-export {
-  loadSpecMetadata,
-  isSpecApproved,
-  getSpecApprovals,
-  recordSpecApproval,
-  type RecordSpecApprovalOptions,
-} from './specStore';
-
 /**
  * Specification composer configuration
  */

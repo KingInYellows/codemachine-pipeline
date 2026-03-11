@@ -10,7 +10,7 @@ import {
   type RunDirectorySettings,
 } from '../utils/runDirectory';
 import { loadPlanSummary, buildDagMetadata, type PlanSummary } from '../../workflows/taskPlanner';
-import { loadSpecMetadata } from '../../workflows/specComposer';
+import { loadSpecMetadata } from '../../workflows/specStore';
 import { comparePlanDiff, type PlanDiff } from '../../workflows/planDiffer';
 import { setJsonOutputMode } from '../utils/cliErrors';
 import { TelemetryCommand } from '../telemetryCommand';

@@ -7,7 +7,7 @@
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 import { loadPlanMetadata } from './taskPlanner';
-import { loadSpecMetadata } from './specComposer';
+import { loadSpecMetadata } from './specStore';
 import { safeJsonParse } from '../utils/safeJson';
 
 /**
