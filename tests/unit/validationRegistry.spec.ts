@@ -17,7 +17,10 @@ import {
   summarizeError,
 } from '../../src/workflows/validationRegistry';
 import { createDefaultConfig, type RepoConfig } from '../../src/core/config/RepoConfig';
-import { createRunDirectory, type CreateRunDirectoryOptions } from '../../src/persistence/runLifecycle';
+import {
+  createRunDirectory,
+  type CreateRunDirectoryOptions,
+} from '../../src/persistence/runLifecycle';
 
 describe('ValidationRegistry', () => {
   let testRunDir: string;

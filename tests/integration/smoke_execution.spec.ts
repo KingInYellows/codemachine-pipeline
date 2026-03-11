@@ -2,7 +2,13 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 import * as os from 'node:os';
-import { setLastStep, setCurrentStep, updateManifest, markApprovalRequired, markApprovalCompleted } from '../../src/persistence/manifestManager';
+import {
+  setLastStep,
+  setCurrentStep,
+  updateManifest,
+  markApprovalRequired,
+  markApprovalCompleted,
+} from '../../src/persistence/manifestManager';
 import { createRunDirectory, generateHashManifest } from '../../src/persistence/runLifecycle';
 import {
   initializeQueue,

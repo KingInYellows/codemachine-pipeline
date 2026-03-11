@@ -10,7 +10,12 @@ import {
   getResumableTasks,
   type QueueSnapshotMetadata,
 } from '../../src/workflows/resumeCoordinator';
-import { setLastError, setLastStep, markApprovalRequired, type RunManifest } from '../../src/persistence/manifestManager';
+import {
+  setLastError,
+  setLastStep,
+  markApprovalRequired,
+  type RunManifest,
+} from '../../src/persistence/manifestManager';
 import { createRunDirectory, generateHashManifest } from '../../src/persistence/runLifecycle';
 import {
   initializeQueue,
