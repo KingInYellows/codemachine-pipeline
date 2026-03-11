@@ -314,6 +314,58 @@ describe('Run Directory Manager', () => {
       expect(await isLocked(runDir)).toBe(false);
     });
 
+    it('should allow reentrant withLock calls in the same async chain', async () => {
+      let nestedExecuted = false;
+
+      await withLock(runDir, async () => {
+        await withLock(runDir, async () => {
+          nestedExecuted = true;
+          expect(await isLocked(runDir)).toBe(true);
+        });
+
+        expect(await isLocked(runDir)).toBe(true);
+      });
+
+      expect(nestedExecuted).toBe(true);
+      expect(await isLocked(runDir)).toBe(false);
+    });
+
+    it('should serialize equivalent runDir strings within the same process', async () => {
+      const phases: string[] = [];
+
+      const first = withLock(runDir, async () => {
+        phases.push('first-start');
+        await new Promise((resolve) => setTimeout(resolve, 50));
+        phases.push('first-end');
+      });
+
+      const second = withLock(`${runDir}${path.sep}`, async () => {
+        phases.push('second-start');
+      });
+
+      await Promise.all([first, second]);
+
+      expect(phases).toEqual(['first-start', 'first-end', 'second-start']);
+    });
+
+    it('should apply timeout while waiting for the in-process queue', async () => {
+      const holder = withLock(
+        runDir,
+        async () => {
+          await new Promise((resolve) => setTimeout(resolve, 100));
+        },
+        { timeout: 500 }
+      );
+
+      await new Promise((resolve) => setTimeout(resolve, 10));
+
+      await expect(
+        withLock(path.join(runDir, '.'), async () => undefined, { timeout: 20 })
+      ).rejects.toThrow(/Failed to acquire lock/);
+
+      await holder;
+    });
+
     it('should release lock even if function throws', async () => {
       await expect(
         withLock(runDir, async () => {

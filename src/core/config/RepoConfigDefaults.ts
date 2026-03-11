@@ -10,8 +10,9 @@ import {
   type ValidationCommandConfig,
 } from '../validation/validationCommandConfig';
 import type { RepoConfig, ExecutionConfig } from './RepoConfigSchema';
+import { DEFAULT_GITHUB_API_VERSION } from './configConstants';
 
-export const DEFAULT_GITHUB_API_VERSION = '2022-11-28';
+export { DEFAULT_GITHUB_API_VERSION } from './configConstants';
 
 /**
  * Clone default validation commands to avoid shared mutable state
