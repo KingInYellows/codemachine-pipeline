@@ -11,9 +11,8 @@ import type {
   ValidationCommandConfig,
   ValidationCommandType,
 } from '../core/validation/validationCommandConfig';
+import type { ValidationAttempt, ValidationResult } from './validationStore.js';
 import {
-  type ValidationAttempt,
-  type ValidationResult,
   getValidationCommand,
   getAttemptCount,
   hasExceededRetryLimit,

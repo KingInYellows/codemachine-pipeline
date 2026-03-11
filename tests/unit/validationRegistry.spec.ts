@@ -2,9 +2,10 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 import * as os from 'node:os';
+import type { ValidationCommandType, ValidationAttempt } from '../../src/workflows/validationStore';
+import { loadValidationRegistry } from '../../src/workflows/validationStore';
 import {
   initializeValidationRegistry,
-  loadValidationRegistry,
   getValidationCommand,
   getRequiredCommands,
   recordValidationAttempt,
@@ -14,8 +15,6 @@ import {
   getValidationSummary,
   generateAttemptId,
   summarizeError,
-  type ValidationCommandType,
-  type ValidationAttempt,
 } from '../../src/workflows/validationRegistry';
 import { createDefaultConfig, type RepoConfig } from '../../src/core/config/RepoConfig';
 import {
