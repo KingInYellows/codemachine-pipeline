@@ -102,7 +102,7 @@ export async function buildResumePayload(
   return payload;
 }
 
-export async function attachRateLimitWarnings(
+async function attachRateLimitWarnings(
   payload: ResumePayload,
   runDir: string
 ): Promise<void> {
@@ -151,7 +151,7 @@ export async function attachRateLimitWarnings(
   }
 }
 
-export async function attachBranchProtectionBlockers(
+async function attachBranchProtectionBlockers(
   payload: ResumePayload,
   runDir: string
 ): Promise<void> {
