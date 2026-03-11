@@ -6,9 +6,7 @@ import {
   type ResumeOptions,
 } from '../../workflows/resumeCoordinator';
 import { getRunDirectoryPath } from '../../persistence/runLifecycle';
-import {
-  buildAndValidateExecutionEngine,
-} from '../../workflows/executionEngineFactory';
+import { buildAndValidateExecutionEngine } from '../../workflows/executionEngineFactory';
 import { loadRepoConfig } from '../../core/config/RepoConfig';
 import { createExecutionTelemetry } from '../../telemetry/executionTelemetry';
 import { loadPlanSummary } from '../../workflows/taskPlanner';
