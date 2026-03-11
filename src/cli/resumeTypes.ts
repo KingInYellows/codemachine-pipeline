@@ -5,22 +5,20 @@
  * extracted helper modules (resumePayloadBuilder, resumeOutput).
  */
 
+import type { Interfaces } from '@oclif/core';
 import type { StructuredLogger } from '../telemetry/logger';
 import type { MetricsCollector } from '../telemetry/metrics';
 import type { TraceManager, ActiveSpan } from '../telemetry/traces';
 import type { createExecutionTelemetry } from '../telemetry/executionTelemetry';
 import type { TelemetryResources } from './utils/telemetryLifecycle';
+import type Resume from './commands/resume';
 
-export type ResumeFlags = {
-  feature?: string;
-  'dry-run': boolean;
-  force: boolean;
-  'skip-hash-verification': boolean;
-  'validate-queue': boolean;
-  json: boolean;
-  verbose: boolean;
-  'max-parallel'?: number;
-};
+/**
+ * Derived from the oclif flag definitions in Resume.flags so there is a
+ * single source of truth.  The `import type` is circular at the type level
+ * only and is erased at compile time — no runtime cycle is created.
+ */
+export type ResumeFlags = Interfaces.InferredFlags<typeof Resume.flags>;
 
 export interface ResumeTelemetry {
   logger: StructuredLogger;
