@@ -1,83 +1,24 @@
 /**
  * Run State Verifier
  *
- * Extracted from resumeCoordinator.ts: shared types, per-check helper
- * functions for verifying run state, artifact integrity, and error
- * classification during execution resumption.
+ * Per-check helper functions for verifying run state, error classification,
+ * and recommendation generation during execution resumption.
+ *
+ * Shared types (ResumeAnalysis, DiagnosticSeverity, ResumeDiagnostic,
+ * ResumeOptions) live in resumeTypes.ts to avoid circular dependencies.
  */
 
 import type { RunManifest } from '../persistence/manifestManager';
-import type { VerificationResult } from '../persistence/hashManifest';
-import type { QueueValidationResult } from './queue/queueStore.js';
+import type {
+  ResumeAnalysis,
+  DiagnosticSeverity,
+  ResumeDiagnostic,
+  ResumeOptions,
+} from './resumeTypes';
 
-/**
- * Resume analysis result
- */
-export interface ResumeAnalysis {
-  /** Whether resume is safe to proceed */
-  canResume: boolean;
-  /** Feature ID being resumed */
-  featureId: string;
-  /** Current run status */
-  status: RunManifest['status'];
-  /** Last successfully completed step */
-  lastStep?: string;
-  /** Current step that was interrupted */
-  currentStep?: string;
-  /** Last error details if any */
-  lastError?: RunManifest['execution']['last_error'];
-  /** Pending approvals that block resume */
-  pendingApprovals: string[];
-  /** Queue state summary */
-  queueState: {
-    pending: number;
-    completed: number;
-    failed: number;
-  };
-  /** Result of queue validation (if performed) */
-  queueValidation?: QueueValidationResult;
-  /** Hash integrity check result */
-  integrityCheck?: VerificationResult;
-  /** Diagnostic messages for operator */
-  diagnostics: ResumeDiagnostic[];
-  /** Recommended actions for operator */
-  recommendations: string[];
-}
-
-/**
- * Diagnostic severity levels
- */
-export type DiagnosticSeverity = 'info' | 'warning' | 'error' | 'blocker';
-
-/**
- * Resume diagnostic entry
- */
-export interface ResumeDiagnostic {
-  severity: DiagnosticSeverity;
-  message: string;
-  /** Classification code for mapping to playbook */
-  code?: string;
-  /** Additional context data */
-  context?: {
-    step?: string;
-    timestamp?: string;
-    recoverable?: boolean;
-    errorCode?: string;
-    [key: string]: unknown;
-  };
-}
-
-/**
- * Resume options
- */
-export interface ResumeOptions {
-  /** Force resume even with integrity warnings (use with caution) */
-  force?: boolean;
-  /** Skip hash verification (dangerous, for debugging only) */
-  skipHashVerification?: boolean;
-  /** Validate queue files before resuming */
-  validateQueue?: boolean;
-}
+// Re-export types for backward compatibility — consumers that import from
+// runStateVerifier continue to work without changes.
+export type { ResumeAnalysis, DiagnosticSeverity, ResumeDiagnostic, ResumeOptions };
 
 /**
  * Check run status and add diagnostics
@@ -157,9 +98,6 @@ export function checkPendingApprovals(analysis: ResumeAnalysis, manifest: RunMan
     });
   }
 }
-
-// Re-export checkIntegrity from its new home for backward compatibility
-export { checkIntegrity, type VerificationResult } from './resumeIntegrityChecker';
 
 /**
  * Analyze last error details

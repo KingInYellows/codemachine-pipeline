@@ -8,7 +8,6 @@
 
 import { z } from 'zod';
 import { ValidationCommandConfigSchema } from '../validation/validationCommandConfig';
-import { DEFAULT_GITHUB_API_VERSION } from './RepoConfigDefaults';
 
 const ENV_VAR_NAME = /^[A-Z][A-Z0-9_]*$/;
 const ENV_VAR_MSG =
@@ -89,7 +88,7 @@ export const GitHubSchema = z.object({
   api_version: z
     .string()
     .regex(/^\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/, 'Must be a valid YYYY-MM-DD date')
-    .default(DEFAULT_GITHUB_API_VERSION),
+    .default('2022-11-28'),
   branch_protection: z
     .object({
       respect_required_reviews: z.boolean().default(true),

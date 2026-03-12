@@ -86,7 +86,12 @@ async function isLockStale(lockPath: string): Promise<boolean> {
   try {
     const lockData = await readLockFile(lockPath);
     if (!lockData) {
-      return true;
+      // Lock file was removed between the EEXIST check and here — not stale,
+      // just gone. Returning false causes the caller to sleep and retry
+      // tryWriteLockFile, which will succeed (or another call wins first).
+      // Returning true here would cause removeStaleLock to delete a valid lock
+      // acquired by a concurrent caller (TOCTOU race).
+      return false;
     }
     return isLockDataStale(lockData);
   } catch {

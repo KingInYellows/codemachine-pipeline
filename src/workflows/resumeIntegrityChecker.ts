@@ -7,7 +7,7 @@
 
 import { verifyRunDirectoryIntegrity } from '../persistence/runLifecycle';
 import type { VerificationResult } from '../persistence/hashManifest';
-import type { ResumeAnalysis, DiagnosticSeverity, ResumeOptions } from './runStateVerifier';
+import type { ResumeAnalysis, DiagnosticSeverity, ResumeOptions } from './resumeTypes';
 
 export type { VerificationResult };
 
