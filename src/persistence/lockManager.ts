@@ -19,6 +19,11 @@ interface LockFile {
   operation?: string;
 }
 
+type LockFileReadResult =
+  | { kind: 'valid'; lockData: LockFile }
+  | { kind: 'missing' }
+  | { kind: 'invalid' };
+
 /**
  * Lock acquisition options
  */
@@ -55,18 +60,24 @@ function isLockFilePayload(value: unknown): value is LockFile {
 }
 
 /**
- * Read and validate lock file contents. Returns the typed lock data or null
- * when the file is missing or has an unexpected format.
- * Re-throws errors that are not ENOENT (e.g. permission errors).
+ * Read and validate lock file contents.
+ * Missing files are reported separately from invalid/corrupt contents so
+ * stale-lock handling can distinguish TOCTOU gaps from corrupted lockfiles.
  */
-async function readLockFile(lockPath: string): Promise<LockFile | null> {
+async function readLockFile(lockPath: string): Promise<LockFileReadResult> {
   try {
     const content = await readFile(lockPath, 'utf-8');
     const parsed: unknown = JSON.parse(content);
-    return isLockFilePayload(parsed) ? parsed : null;
+    if (!isLockFilePayload(parsed)) {
+      return { kind: 'invalid' };
+    }
+    return { kind: 'valid', lockData: parsed };
   } catch (error) {
     if (isFileNotFound(error)) {
-      return null;
+      return { kind: 'missing' };
+    }
+    if (error instanceof SyntaxError) {
+      return { kind: 'invalid' };
     }
     throw error;
   }
@@ -84,8 +95,8 @@ function isLockDataStale(lockData: LockFile): boolean {
 
 async function isLockStale(lockPath: string): Promise<boolean> {
   try {
-    const lockData = await readLockFile(lockPath);
-    if (!lockData) {
+    const lockState = await readLockFile(lockPath);
+    if (lockState.kind === 'missing') {
       // Lock file was removed between the EEXIST check and here — not stale,
       // just gone. Returning false causes the caller to sleep and retry
       // tryWriteLockFile, which will succeed (or another call wins first).
@@ -93,7 +104,10 @@ async function isLockStale(lockPath: string): Promise<boolean> {
       // acquired by a concurrent caller (TOCTOU race).
       return false;
     }
-    return isLockDataStale(lockData);
+    if (lockState.kind === 'invalid') {
+      return true;
+    }
+    return isLockDataStale(lockState.lockData);
   } catch {
     // Unexpected error reading lock file — treat as stale so callers can recover
     return true;

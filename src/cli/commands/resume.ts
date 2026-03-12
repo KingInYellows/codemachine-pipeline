@@ -272,7 +272,7 @@ export default class Resume extends TelemetryCommand {
     const { engine: executionEngine, prereqResult } = await buildAndValidateExecutionEngine({
       runDir: runDirPath,
       repoConfig,
-      maxParallel: flags['max-parallel'] ?? repoConfig.execution?.max_parallel_tasks ?? 1,
+      maxParallel: flags['max-parallel'],
       logger,
       telemetry: executionTelemetry,
     });

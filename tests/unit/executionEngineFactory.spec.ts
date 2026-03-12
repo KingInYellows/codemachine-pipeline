@@ -30,6 +30,12 @@ const mockLogger: StructuredLogger = {
 
 const mockTelemetry = {} as ExecutionTelemetry;
 
+function mockEngineWith(validatePrereqs: ReturnType<typeof vi.fn>): void {
+  MockCLIExecutionEngine.mockImplementation(function MockEngine() {
+    return { validatePrerequisites: validatePrereqs } as unknown as CLIExecutionEngine;
+  } as unknown as typeof CLIExecutionEngine);
+}
+
 describe('buildAndValidateExecutionEngine', () => {
   let baseParams: BuildExecutionEngineParams;
 
@@ -47,16 +53,7 @@ describe('buildAndValidateExecutionEngine', () => {
     };
 
     mockBuildExecutionStrategies.mockResolvedValue([]);
-
-    MockCLIExecutionEngine.mockImplementation(function MockEngine() {
-      return {
-        validatePrerequisites: vi.fn().mockResolvedValue({
-          valid: true,
-          errors: [],
-          warnings: [],
-        }),
-      } as unknown as CLIExecutionEngine;
-    } as unknown as typeof CLIExecutionEngine);
+    mockEngineWith(vi.fn().mockResolvedValue({ valid: true, errors: [], warnings: [] }));
   });
 
   it('returns engine and prereqResult', async () => {
@@ -83,8 +80,10 @@ describe('buildAndValidateExecutionEngine', () => {
   });
 
   it('uses DEFAULT_EXECUTION_CONFIG when repoConfig.execution is undefined', async () => {
-    const { execution: _removed, ...configWithoutExecution } = baseParams.repoConfig;
-    baseParams.repoConfig = configWithoutExecution as typeof baseParams.repoConfig;
+    baseParams.repoConfig = {
+      ...baseParams.repoConfig,
+      execution: undefined,
+    };
 
     await buildAndValidateExecutionEngine(baseParams);
 
@@ -94,28 +93,47 @@ describe('buildAndValidateExecutionEngine', () => {
     );
   });
 
+  it('uses repoConfig execution max_parallel_tasks when maxParallel is omitted', async () => {
+    baseParams.repoConfig = {
+      ...baseParams.repoConfig,
+      execution: {
+        ...baseParams.repoConfig.execution,
+        max_parallel_tasks: 7,
+      },
+    };
+    baseParams.maxParallel = undefined;
+
+    await buildAndValidateExecutionEngine(baseParams);
+
+    expect(mockBuildExecutionStrategies).toHaveBeenCalledWith(
+      expect.objectContaining({ max_parallel_tasks: 7 }),
+      mockLogger
+    );
+  });
+
   it('passes dryRun to CLIExecutionEngine', async () => {
     await buildAndValidateExecutionEngine({ ...baseParams, dryRun: true });
 
-    expect(MockCLIExecutionEngine).toHaveBeenCalledWith(
-      expect.objectContaining({ dryRun: true })
-    );
+    expect(MockCLIExecutionEngine).toHaveBeenCalledWith(expect.objectContaining({ dryRun: true }));
   });
 
   it('defaults dryRun to false', async () => {
     await buildAndValidateExecutionEngine(baseParams);
 
-    expect(MockCLIExecutionEngine).toHaveBeenCalledWith(
-      expect.objectContaining({ dryRun: false })
-    );
+    expect(MockCLIExecutionEngine).toHaveBeenCalledWith(expect.objectContaining({ dryRun: false }));
   });
 
   it('calls validatePrerequisites on the constructed engine', async () => {
     const result = await buildAndValidateExecutionEngine(baseParams);
 
-    // Engine was constructed and validatePrerequisites was called
     expect(MockCLIExecutionEngine).toHaveBeenCalledTimes(1);
-    expect(result.engine.validatePrerequisites).toBeDefined();
+    expect(vi.mocked(result.engine.validatePrerequisites)).toHaveBeenCalledTimes(1);
+  });
+
+  it('propagates validatePrerequisites rejection', async () => {
+    mockEngineWith(vi.fn().mockRejectedValue(new Error('binary not found')));
+
+    await expect(buildAndValidateExecutionEngine(baseParams)).rejects.toThrow('binary not found');
   });
 
   it('propagates invalid prereqResult without transformation', async () => {
@@ -124,12 +142,7 @@ describe('buildAndValidateExecutionEngine', () => {
       errors: ['codemachine not found'],
       warnings: ['outdated version'],
     };
-
-    MockCLIExecutionEngine.mockImplementation(function MockEngine() {
-      return {
-        validatePrerequisites: vi.fn().mockResolvedValue(failedPrereq),
-      } as unknown as CLIExecutionEngine;
-    } as unknown as typeof CLIExecutionEngine);
+    mockEngineWith(vi.fn().mockResolvedValue(failedPrereq));
 
     const result = await buildAndValidateExecutionEngine(baseParams);
 

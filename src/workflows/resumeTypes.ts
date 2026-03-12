@@ -16,21 +16,49 @@ import type { QueueValidationResult } from './queue/queueStore.js';
 export type DiagnosticSeverity = 'info' | 'warning' | 'error' | 'blocker';
 
 /**
+ * Known diagnostic classification codes used by run state verifier,
+ * integrity checker, and queue recovery modules.
+ */
+export type DiagnosticCode =
+  | 'ALREADY_COMPLETED'
+  | 'NON_RECOVERABLE_ERROR'
+  | 'RECOVERABLE_ERROR'
+  | 'PAUSED'
+  | 'UNEXPECTED_INTERRUPT'
+  | 'NOT_STARTED'
+  | 'UNKNOWN_STATUS'
+  | 'APPROVALS_PENDING'
+  | 'QUEUE_COMPLETE'
+  | 'QUEUE_HAS_FAILURES'
+  | 'QUEUE_HAS_PENDING'
+  | 'QUEUE_DIR_MISSING'
+  | 'QUEUE_CORRUPTED'
+  | 'QUEUE_VALIDATED'
+  | 'QUEUE_VALIDATION_WARNINGS'
+  | 'INTEGRITY_HASH_MISMATCH'
+  | 'INTEGRITY_MISSING_FILES'
+  | 'INTEGRITY_OK'
+  | 'INTEGRITY_NO_MANIFEST'
+  | 'ERROR_RATE_LIMIT'
+  | 'ERROR_NETWORK'
+  | 'ERROR_VALIDATION'
+  | 'ERROR_PERMISSION'
+  | 'ERROR_CORRUPTION'
+  | 'ERROR_GIT'
+  | 'ERROR_AGENT'
+  | 'ERROR_UNKNOWN'
+  | (string & {}); // allow extension without losing autocomplete
+
+/**
  * Resume diagnostic entry
  */
 export interface ResumeDiagnostic {
   severity: DiagnosticSeverity;
   message: string;
   /** Classification code for mapping to playbook */
-  code?: string;
+  code?: DiagnosticCode | undefined;
   /** Additional context data */
-  context?: {
-    step?: string;
-    timestamp?: string;
-    recoverable?: boolean;
-    errorCode?: string;
-    [key: string]: unknown;
-  };
+  context?: Record<string, unknown> | undefined;
 }
 
 /**
@@ -38,11 +66,11 @@ export interface ResumeDiagnostic {
  */
 export interface ResumeOptions {
   /** Force resume even with integrity warnings (use with caution) */
-  force?: boolean;
+  force?: boolean | undefined;
   /** Skip hash verification (dangerous, for debugging only) */
-  skipHashVerification?: boolean;
+  skipHashVerification?: boolean | undefined;
   /** Validate queue files before resuming */
-  validateQueue?: boolean;
+  validateQueue?: boolean | undefined;
 }
 
 /**
@@ -56,11 +84,11 @@ export interface ResumeAnalysis {
   /** Current run status */
   status: RunManifest['status'];
   /** Last successfully completed step */
-  lastStep?: string;
+  lastStep?: string | undefined;
   /** Current step that was interrupted */
-  currentStep?: string;
+  currentStep?: string | undefined;
   /** Last error details if any */
-  lastError?: RunManifest['execution']['last_error'];
+  lastError?: RunManifest['execution']['last_error'] | undefined;
   /** Pending approvals that block resume */
   pendingApprovals: string[];
   /** Queue state summary */
@@ -70,9 +98,9 @@ export interface ResumeAnalysis {
     failed: number;
   };
   /** Result of queue validation (if performed) */
-  queueValidation?: QueueValidationResult;
+  queueValidation?: QueueValidationResult | undefined;
   /** Hash integrity check result */
-  integrityCheck?: VerificationResult;
+  integrityCheck?: VerificationResult | undefined;
   /** Diagnostic messages for operator */
   diagnostics: ResumeDiagnostic[];
   /** Recommended actions for operator */

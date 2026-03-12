@@ -15,7 +15,7 @@ import type { ExecutionTelemetry } from '../telemetry/executionTelemetry';
 export interface BuildExecutionEngineParams {
   runDir: string;
   repoConfig: RepoConfig;
-  maxParallel: number;
+  maxParallel?: number | undefined;
   logger: StructuredLogger;
   telemetry: ExecutionTelemetry;
   dryRun?: boolean | undefined;
@@ -32,9 +32,10 @@ export async function buildAndValidateExecutionEngine(
   const { runDir, repoConfig, maxParallel, logger, telemetry, dryRun = false } = params;
 
   const executionConfig = repoConfig.execution ?? DEFAULT_EXECUTION_CONFIG;
+  const resolvedMaxParallel = maxParallel ?? executionConfig.max_parallel_tasks;
   const mergedExecution = {
     ...executionConfig,
-    max_parallel_tasks: maxParallel,
+    max_parallel_tasks: resolvedMaxParallel,
   };
   const mergedConfig: RepoConfig = {
     ...repoConfig,
