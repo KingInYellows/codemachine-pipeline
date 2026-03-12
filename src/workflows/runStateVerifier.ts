@@ -9,16 +9,7 @@
  */
 
 import type { RunManifest } from '../persistence/manifestManager';
-import type {
-  ResumeAnalysis,
-  DiagnosticSeverity,
-  ResumeDiagnostic,
-  ResumeOptions,
-} from './resumeTypes';
-
-// Re-export types for backward compatibility — consumers that import from
-// runStateVerifier continue to work without changes.
-export type { ResumeAnalysis, DiagnosticSeverity, ResumeDiagnostic, ResumeOptions };
+import type { ResumeAnalysis, ResumeDiagnostic } from './resumeTypes';
 
 /**
  * Check run status and add diagnostics

@@ -16,7 +16,7 @@ import {
 import { validateQueue, loadQueue } from './queue/queueStore.js';
 import { RawSnapshotSchema } from './resumeSnapshotSchema';
 import { validateOrThrow } from '../validation/helpers.js';
-import type { ResumeAnalysis, ResumeOptions } from './runStateVerifier';
+import type { ResumeAnalysis, ResumeOptions } from './resumeTypes';
 
 export interface QueueSnapshotMetadata {
   /** Number of tasks captured in the snapshot */
