@@ -51,8 +51,9 @@ describe('buildAndValidateExecutionEngine', () => {
     MockCLIExecutionEngine.mockImplementation(function MockEngine() {
       return {
         validatePrerequisites: vi.fn().mockResolvedValue({
-          canProceed: true,
-          results: [],
+          valid: true,
+          errors: [],
+          warnings: [],
         }),
       } as unknown as CLIExecutionEngine;
     } as unknown as typeof CLIExecutionEngine);
@@ -63,7 +64,7 @@ describe('buildAndValidateExecutionEngine', () => {
 
     expect(result).toHaveProperty('engine');
     expect(result).toHaveProperty('prereqResult');
-    expect(result.prereqResult).toEqual({ canProceed: true, results: [] });
+    expect(result.prereqResult).toEqual({ valid: true, errors: [], warnings: [] });
   });
 
   it('does not expose mergedConfig in the result', async () => {
@@ -115,5 +116,32 @@ describe('buildAndValidateExecutionEngine', () => {
     // Engine was constructed and validatePrerequisites was called
     expect(MockCLIExecutionEngine).toHaveBeenCalledTimes(1);
     expect(result.engine.validatePrerequisites).toBeDefined();
+  });
+
+  it('propagates invalid prereqResult without transformation', async () => {
+    const failedPrereq = {
+      valid: false,
+      errors: ['codemachine not found'],
+      warnings: ['outdated version'],
+    };
+
+    MockCLIExecutionEngine.mockImplementation(function MockEngine() {
+      return {
+        validatePrerequisites: vi.fn().mockResolvedValue(failedPrereq),
+      } as unknown as CLIExecutionEngine;
+    } as unknown as typeof CLIExecutionEngine);
+
+    const result = await buildAndValidateExecutionEngine(baseParams);
+
+    expect(result.prereqResult).toEqual(failedPrereq);
+  });
+
+  it('propagates buildExecutionStrategies errors', async () => {
+    const strategyError = new Error('invalid strategy config');
+    mockBuildExecutionStrategies.mockRejectedValue(strategyError);
+
+    await expect(buildAndValidateExecutionEngine(baseParams)).rejects.toThrow(
+      'invalid strategy config'
+    );
   });
 });
