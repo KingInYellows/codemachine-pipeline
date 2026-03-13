@@ -15,6 +15,7 @@ coverage/
 
 # Environment variables
 .env*
+!.env.example
 
 # IDE
 .vscode/

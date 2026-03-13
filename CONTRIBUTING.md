@@ -9,8 +9,10 @@
 
 > **Note for external contributors:** The `codemachine` package is an optional
 > dependency. Features degrade gracefully without it — you do not need access
-> to it for development. CI will not auto-run on fork PRs; the repository owner
-> must approve workflow runs for outside collaborators.
+> to it for development. CI runs on self-hosted infrastructure with fork PR
+> guards in the workflow files. Additionally, the repository requires owner
+> approval before CI executes on fork PRs (configured via GitHub Actions
+> settings).
 
 ## Getting Started
 

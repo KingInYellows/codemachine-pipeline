@@ -23,7 +23,9 @@ permissions:
 jobs:
   link-check:
     name: Link Validation (Advisory)
-    if: github.repository == 'KingInYellows/codemachine-pipeline'
+    if: >-
+      github.repository == 'KingInYellows/codemachine-pipeline' &&
+      (github.event_name != 'pull_request' || !github.event.pull_request.head.repo.fork)
     runs-on: [self-hosted, linux]
     timeout-minutes: 15
     steps:
@@ -59,7 +61,9 @@ jobs:
 
   command-validation:
     name: CLI Command Table Validation
-    if: github.repository == 'KingInYellows/codemachine-pipeline'
+    if: >-
+      github.repository == 'KingInYellows/codemachine-pipeline' &&
+      (github.event_name != 'pull_request' || !github.event.pull_request.head.repo.fork)
     runs-on: [self-hosted, linux]
     timeout-minutes: 15
     steps:
@@ -81,7 +85,9 @@ jobs:
 
   factual-accuracy:
     name: Factual Accuracy Check
-    if: github.repository == 'KingInYellows/codemachine-pipeline'
+    if: >-
+      github.repository == 'KingInYellows/codemachine-pipeline' &&
+      (github.event_name != 'pull_request' || !github.event.pull_request.head.repo.fork)
     runs-on: [self-hosted, linux]
     timeout-minutes: 15
     steps:
@@ -111,7 +117,9 @@ jobs:
 
   security-scan:
     name: Security & Credential Safety
-    if: github.repository == 'KingInYellows/codemachine-pipeline'
+    if: >-
+      github.repository == 'KingInYellows/codemachine-pipeline' &&
+      (github.event_name != 'pull_request' || !github.event.pull_request.head.repo.fork)
     runs-on: [self-hosted, linux]
     timeout-minutes: 15
     steps:
@@ -122,7 +130,9 @@ jobs:
 
   code-examples:
     name: Code Example Testing
-    if: github.repository == 'KingInYellows/codemachine-pipeline'
+    if: >-
+      github.repository == 'KingInYellows/codemachine-pipeline' &&
+      (github.event_name != 'pull_request' || !github.event.pull_request.head.repo.fork)
     runs-on: [self-hosted, linux]
     timeout-minutes: 15
     steps:
@@ -139,7 +149,9 @@ jobs:
 
   spell-check:
     name: Spell Check
-    if: github.repository == 'KingInYellows/codemachine-pipeline'
+    if: >-
+      github.repository == 'KingInYellows/codemachine-pipeline' &&
+      (github.event_name != 'pull_request' || !github.event.pull_request.head.repo.fork)
     runs-on: [self-hosted, linux]
     timeout-minutes: 15
     steps:
@@ -193,7 +205,9 @@ jobs:
 
   structure-validation:
     name: Structure & Formatting
-    if: github.repository == 'KingInYellows/codemachine-pipeline'
+    if: >-
+      github.repository == 'KingInYellows/codemachine-pipeline' &&
+      (github.event_name != 'pull_request' || !github.event.pull_request.head.repo.fork)
     runs-on: [self-hosted, linux]
     timeout-minutes: 15
     steps:
@@ -232,7 +246,10 @@ jobs:
     runs-on: [self-hosted, linux]
     timeout-minutes: 15
     needs: [link-check, command-validation, factual-accuracy, security-scan, code-examples, spell-check, structure-validation]
-    if: github.repository == 'KingInYellows/codemachine-pipeline' && failure()
+    if: >-
+      github.repository == 'KingInYellows/codemachine-pipeline' &&
+      (github.event_name != 'pull_request' || !github.event.pull_request.head.repo.fork) &&
+      failure()
     steps:
       - name: Summary
         run: |

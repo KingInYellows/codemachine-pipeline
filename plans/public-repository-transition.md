@@ -109,15 +109,13 @@ immediately and scrub history before proceeding.
 
 Lock down self-hosted runner workflows so only the repo owner triggers execution.
 
-- [ ] 2.1: Add actor guard to CI jobs in `.github/workflows/ci.yml` (4 jobs: `optimize_ci`, `workflow_lint`, `test`, `docker`)
+- [x] 2.1: Add repository + fork guard to CI jobs in `.github/workflows/ci.yml` (4 jobs: `optimize_ci`, `workflow_lint`, `test`, `docker`)
   ```yaml
   if: >-
-    github.event_name == 'push' ||
-    (github.event_name == 'pull_request' && github.actor == 'KingInYellows') ||
-    (github.event_name == 'workflow_dispatch' && github.actor == 'KingInYellows') ||
-    github.event_name == 'schedule'
+    github.repository == 'KingInYellows/codemachine-pipeline' &&
+    (github.event_name != 'pull_request' || !github.event.pull_request.head.repo.fork)
   ```
-  Note: `workflow_dispatch` is restricted to users with write access by GitHub, but adding the actor check provides defense-in-depth if collaborators are added later.
+  Used repository guard + fork PR check instead of actor-based guard (see deepen-plan research below).
 
 <!-- deepen-plan: external -->
 > **Research:** Consider also adding `if: github.repository == 'KingInYellows/codemachine-pipeline'`
@@ -128,9 +126,9 @@ Lock down self-hosted runner workflows so only the repo owner triggers execution
 > guide because it cannot be bypassed by adding collaborators.
 <!-- /deepen-plan -->
 
-- [ ] 2.2: Add actor guard to `.github/workflows/publish.yml` (1 job: `publish`, triggers: `release`, `workflow_dispatch`)
+- [x] 2.2: Add repository guard to `.github/workflows/publish.yml` (1 job: `publish`, triggers: `release`, `workflow_dispatch` — no `pull_request` trigger so fork check not needed)
 
-- [ ] 2.3: Add actor guard to `.github/workflows/docs-validation.yml` (8 jobs, all self-hosted). Also add `timeout-minutes: 15` to all 8 jobs — they currently have no timeout, which is a resource exhaustion risk on self-hosted runners.
+- [x] 2.3: Add repository + fork guard to `.github/workflows/docs-validation.yml` (8 jobs, all self-hosted). Also added `timeout-minutes: 15` to all 8 jobs.
 
 <!-- deepen-plan: codebase -->
 > **Codebase:** Confirmed: `docs-validation.yml` has 8 jobs (link-check,
@@ -141,11 +139,11 @@ Lock down self-hosted runner workflows so only the repo owner triggers execution
 > Actions default is 360 minutes (6 hours) if unset.
 <!-- /deepen-plan -->
 
-- [ ] 2.4: Add actor guard to `.github/workflows/dependabot-auto-merge.yml` (1 job). Consider switching this to `ubuntu-latest` since it only makes GitHub API calls and does not need a self-hosted runner.
+- [x] 2.4: Add repository guard to `.github/workflows/dependabot-auto-merge.yml` (1 job). Switched to `ubuntu-latest` since it only makes GitHub API calls.
 
-- [ ] 2.5: `.github/workflows/security-scan.yml` — **no actor guard needed**. It only triggers on `schedule` and `workflow_dispatch` (no `pull_request`). Schedule always runs as the repo owner on the default branch. `workflow_dispatch` is restricted to write-access users.
+- [x] 2.5: `.github/workflows/security-scan.yml` — **no guard needed**. It only triggers on `schedule` and `workflow_dispatch` (no `pull_request`).
 
-- [ ] 2.6: Verify no workflows use `pull_request_target` trigger (confirmed: none do)
+- [x] 2.6: Verified no workflows use `pull_request_target` trigger (confirmed: none do)
 
 <!-- deepen-plan: external -->
 > **Research:** Also consider placing self-hosted runners in a **runner group**
@@ -156,13 +154,13 @@ Lock down self-hosted runner workflows so only the repo owner triggers execution
 > runner group > restrict to selected repositories.
 <!-- /deepen-plan -->
 
-- [ ] 2.7: Test by pushing a commit to a branch and confirming CI still runs for the owner
+- [ ] 2.7: Test by pushing a commit to a branch and confirming CI still runs for the owner (post-merge verification)
 
 **Gate:** All workflows updated, CI passes on an owner-triggered push.
 
 ### Phase 3: Public Repository Standard Files
 
-- [ ] 3.1: Create `SECURITY.md` at repo root
+- [x] 3.1: Create `SECURITY.md` at repo root
   - Supported versions (v1.x)
   - How to report vulnerabilities (GitHub Security Advisories preferred)
   - Expected response time (best-effort for a personal project)
@@ -194,7 +192,7 @@ Lock down self-hosted runner workflows so only the repo owner triggers execution
 > ```
 <!-- /deepen-plan -->
 
-- [ ] 3.2: Update `CONTRIBUTING.md`
+- [x] 3.2: Update `CONTRIBUTING.md`
   - Add note that external contributors should use standard `git` + `gh pr create` (Graphite is optional, owner's workflow)
   - Add note that CI will not auto-run on external PRs — owner must approve
   - Clarify that `codemachine` optional dependency degrades gracefully and is not required for development
@@ -214,7 +212,7 @@ Lock down self-hosted runner workflows so only the repo owner triggers execution
 
 - [ ] 3.4: Skip `CODE_OF_CONDUCT.md` for now — add later if community grows
 
-- [ ] 3.5: Add `"private": true` to `package.json` to prevent accidental `npm publish` to npmjs.com (publishing to GitHub Packages via the `publish.yml` workflow uses `--registry` explicitly, so this field won't interfere)
+- [x] 3.5: ~~Add `"private": true` to `package.json`~~ — **Skipped.** Research confirmed `"private": true` blocks ALL registries including GitHub Packages. The existing `publishConfig.registry` pointing to `npm.pkg.github.com` already locks the publish target.
 
 <!-- deepen-plan: external -->
 > **Research:** WARNING: `"private": true` in `package.json` blocks publishing
@@ -259,10 +257,7 @@ Order matters: configure protections before flipping visibility.
 
 - [ ] 5.1: Confirm repo is accessible at `https://github.com/KingInYellows/codemachine-pipeline` without authentication
 - [ ] 5.2: Confirm CI runs on a push to main (owner-triggered)
-- [ ] 5.3: Verify the "Require approval" setting is active via GitHub API:
-  ```bash
-  gh api repos/KingInYellows/codemachine-pipeline --jq '.visibility'
-  ```
+- [ ] 5.3: Verify the "Require approval for all outside collaborators" setting is enabled (manual UI check: Settings > Actions > General > Fork pull request workflows). The GitHub API does not expose this setting.
 - [ ] 5.4: Open a test PR from a secondary account or ask someone to fork — confirm CI does NOT auto-run for external actors
 - [ ] 5.5: Run `npm link` locally and verify `codepipe --version` works
 - [ ] 5.6: Verify Dependabot alerts and secret scanning are active in the Security tab
