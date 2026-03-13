@@ -356,20 +356,30 @@ describe('Run Directory Manager', () => {
     });
 
     it('should apply timeout while waiting for the in-process queue', async () => {
+      let releaseHolder!: () => void;
+      let markHolderEntered!: () => void;
+      const holderEntered = new Promise<void>((resolve) => {
+        markHolderEntered = resolve;
+      });
+
       const holder = withLock(
         runDir,
         async () => {
-          await new Promise((resolve) => setTimeout(resolve, 100));
+          markHolderEntered();
+          await new Promise<void>((resolve) => {
+            releaseHolder = resolve;
+          });
         },
         { timeout: 500 }
       );
 
-      await new Promise((resolve) => setTimeout(resolve, 10));
+      await holderEntered;
 
       await expect(
         withLock(path.join(runDir, '.'), async () => undefined, { timeout: 20 })
       ).rejects.toThrow(/Failed to acquire lock/);
 
+      releaseHolder();
       await holder;
     });
 

@@ -67,9 +67,17 @@ function getLockKey(runDir: string): string {
   return resolve(runDir);
 }
 
-function createLockTimeoutError(runDir: string, timeout: number): Error {
+function createInProcessQueueTimeoutError(runDir: string, timeout: number): Error {
   return new Error(
-    `Failed to acquire lock for ${runDir} within ${timeout}ms. Another process may be modifying this run directory.`
+    `Failed to acquire in-process lock turn for ${runDir} within ${timeout}ms. ` +
+      `Another concurrent operation in this process is holding the lock.`
+  );
+}
+
+function createFsLockTimeoutError(runDir: string, timeout: number): Error {
+  return new Error(
+    `Failed to acquire lock for ${runDir} within ${timeout}ms. ` +
+      `Another process may be modifying this run directory.`
   );
 }
 
@@ -81,12 +89,12 @@ async function waitForInProcessTurn(
 ): Promise<void> {
   const remaining = timeout - (Date.now() - startTime);
   if (remaining <= 0) {
-    throw createLockTimeoutError(runDir, timeout);
+    throw createInProcessQueueTimeoutError(runDir, timeout);
   }
 
   await new Promise<void>((resolveWait, rejectWait) => {
     const timeoutId = setTimeout(() => {
-      rejectWait(createLockTimeoutError(runDir, timeout));
+      rejectWait(createInProcessQueueTimeoutError(runDir, timeout));
     }, remaining);
 
     prev.then(
@@ -284,9 +292,7 @@ export async function acquireLock(runDir: string, options: LockOptions = {}): Pr
     await sleep(pollInterval);
   }
 
-  throw new Error(
-    `Failed to acquire lock for ${runDir} within ${timeout}ms. Another process may be modifying this run directory.`
-  );
+  throw createFsLockTimeoutError(runDir, timeout);
 }
 
 /**
@@ -367,7 +373,7 @@ export async function withLock<T>(
 
     const remainingTimeout = timeout - (Date.now() - startTime);
     if (remainingTimeout <= 0) {
-      throw createLockTimeoutError(runDir, timeout);
+      throw createInProcessQueueTimeoutError(runDir, timeout);
     }
 
     const lockContext = new Map(activeContext ?? []);
