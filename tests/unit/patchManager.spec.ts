@@ -12,7 +12,7 @@
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import * as fs from 'node:fs/promises';
-import { exec } from 'node:child_process';
+import { execFile } from 'node:child_process';
 import type { ChildProcess } from 'node:child_process';
 import { EventEmitter } from 'node:events';
 import type { Readable, Writable } from 'node:stream';
@@ -40,27 +40,6 @@ import { updateManifest } from '../../src/persistence/manifestManager';
 
 vi.mock('node:fs/promises');
 vi.mock('node:child_process', () => ({
-  exec: vi.fn(
-    (
-      command: string | Buffer,
-      optionsOrCallback?: ExecOptionsArg,
-      callbackMaybe?: ExecCallbackArg
-    ) => {
-      const callback = isExecCallback(optionsOrCallback)
-        ? optionsOrCallback
-        : isExecCallback(callbackMaybe)
-          ? callbackMaybe
-          : undefined;
-
-      if (!callback) {
-        throw new Error('exec callback missing');
-      }
-
-      const commandText = typeof command === 'string' ? command : command.toString('utf-8');
-      currentExecHandler(commandText, callback);
-      return childProcessStub;
-    }
-  ),
   execFile: vi.fn((...args: unknown[]) => {
     const callback = args.find((a) => typeof a === 'function') as ExecCallback | undefined;
     if (!callback) {
@@ -100,8 +79,6 @@ const rawMetrics = {
 const mockMetrics = rawMetrics as unknown as MetricsCollector;
 
 type ExecCallback = (error: Error | null, stdout: string, stderr: string) => void;
-type ExecOptionsArg = Parameters<typeof exec>[1];
-type ExecCallbackArg = Parameters<typeof exec>[2];
 type ChildProcessStdio = [
   Writable | null,
   Readable | null,
@@ -132,12 +109,6 @@ const childProcessStub: ChildProcess = Object.assign(new EventEmitter(), {
   unref: vi.fn(),
   ref: vi.fn(),
 });
-
-function isExecCallback(
-  value: ExecOptionsArg | ExecCallbackArg | undefined
-): value is ExecCallback {
-  return typeof value === 'function';
-}
 
 function respond(
   callback: ExecCallback,
@@ -487,6 +458,20 @@ describe('Patch Manager', () => {
 
       await expect(isWorkingTreeClean('/test/repo')).rejects.toThrow(
         'Failed to check git working tree status'
+      );
+    });
+
+    it('passes workingDir as cwd option, not interpolated into shell string', async () => {
+      const maliciousDir = '/tmp/repo; rm -rf /';
+      mockExecDefault();
+
+      await isWorkingTreeClean(maliciousDir);
+
+      expect(vi.mocked(execFile)).toHaveBeenCalledWith(
+        'git',
+        ['status', '--porcelain'],
+        expect.objectContaining({ cwd: maliciousDir }),
+        expect.any(Function)
       );
     });
   });

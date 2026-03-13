@@ -6,13 +6,8 @@ import {
   type ResumeOptions,
 } from '../../workflows/resumeCoordinator';
 import { getRunDirectoryPath } from '../../persistence/runLifecycle';
-import { CLIExecutionEngine } from '../../workflows/cliExecutionEngine';
-import { buildExecutionStrategies } from '../../workflows/executionStrategyBuilder.js';
-import {
-  loadRepoConfig,
-  type RepoConfig,
-  DEFAULT_EXECUTION_CONFIG,
-} from '../../core/config/RepoConfig';
+import { buildAndValidateExecutionEngine } from '../../workflows/executionEngineFactory';
+import { loadRepoConfig } from '../../core/config/RepoConfig';
 import { createExecutionTelemetry } from '../../telemetry/executionTelemetry';
 import { loadPlanSummary } from '../../workflows/taskPlanner';
 import {
@@ -189,6 +184,14 @@ export default class Resume extends TelemetryCommand {
     );
   }
 
+  private buildResumeOptions(flags: ResumeFlags): ResumeOptions {
+    return {
+      force: flags.force,
+      skipHashVerification: flags['skip-hash-verification'],
+      validateQueue: flags['validate-queue'],
+    };
+  }
+
   private async analyzeAndDisplayResumeState(
     _featureId: string,
     runDirPath: string,
@@ -198,11 +201,7 @@ export default class Resume extends TelemetryCommand {
     analysis: Awaited<ReturnType<typeof analyzeResumeState>>;
     payload: ResumePayload;
   }> {
-    const resumeOptions: ResumeOptions = {
-      force: flags.force,
-      skipHashVerification: flags['skip-hash-verification'],
-      validateQueue: flags['validate-queue'],
-    };
+    const resumeOptions = this.buildResumeOptions(flags);
 
     const analysis = await analyzeResumeState(
       runDirPath,
@@ -252,11 +251,7 @@ export default class Resume extends TelemetryCommand {
   ): Promise<void> {
     const { logger, executionTelemetry } = telemetry;
 
-    const resumeOptions: ResumeOptions = {
-      force: flags.force,
-      skipHashVerification: flags['skip-hash-verification'],
-      validateQueue: flags['validate-queue'],
-    };
+    const resumeOptions = this.buildResumeOptions(flags);
 
     logger.info('Preparing resume', { feature_id: featureId });
     await prepareResume(runDirPath, resumeOptions, executionTelemetry);
@@ -274,32 +269,14 @@ export default class Resume extends TelemetryCommand {
 
     logger.info('Starting task execution via CLIExecutionEngine', { feature_id: featureId });
 
-    const executionConfig = repoConfig.execution ?? DEFAULT_EXECUTION_CONFIG;
-    const mergedConfig: RepoConfig = {
-      ...repoConfig,
-      execution: {
-        ...executionConfig,
-        max_parallel_tasks: flags['max-parallel'] ?? executionConfig.max_parallel_tasks,
-      },
-    };
-
-    if (!mergedConfig.execution) {
-      throw new Error(
-        'Execution config is required. Ensure your .codepipe/config.json includes an "execution" section.'
-      );
-    }
-    const strategies = await buildExecutionStrategies(mergedConfig.execution, logger);
-
-    const executionEngine = new CLIExecutionEngine({
+    const { engine: executionEngine, prereqResult } = await buildAndValidateExecutionEngine({
       runDir: runDirPath,
-      config: mergedConfig,
-      strategies,
-      dryRun: false,
+      repoConfig,
+      maxParallel: flags['max-parallel'],
       logger,
       telemetry: executionTelemetry,
     });
 
-    const prereqResult = await executionEngine.validatePrerequisites();
     if (!prereqResult.valid) {
       throw new Error(`Execution prerequisites failed: ${prereqResult.errors.join(', ')}`);
     }
