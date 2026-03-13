@@ -28,6 +28,24 @@ Full documentation is in [`docs/README.md`](docs/README.md).
 
 ## Installation
 
+### From source (recommended)
+
+```bash
+git clone https://github.com/KingInYellows/codemachine-pipeline.git
+cd codemachine-pipeline
+npm install && npm run build && npm link
+
+# Verify
+codepipe --version
+```
+
+To update later, pull and rebuild:
+
+```bash
+cd codemachine-pipeline
+git pull && npm install && npm run build
+```
+
 ### From GitHub Packages
 
 ```bash
@@ -43,16 +61,6 @@ codepipe --version
 ```
 
 **Security Note:** Create a GitHub Personal Access Token with `read:packages` scope at https://github.com/settings/tokens. Store your PAT securely. Do NOT commit `.npmrc` files containing tokens.
-
-### From source
-
-```bash
-git clone https://github.com/KingInYellows/codemachine-pipeline.git
-cd codemachine-pipeline
-npm install
-npm run build
-npm link
-```
 
 ### Docker
 

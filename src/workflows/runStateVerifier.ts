@@ -8,8 +8,15 @@
  * ResumeOptions) live in resumeTypes.ts to avoid circular dependencies.
  */
 
+import type {
+  DiagnosticSeverity,
+  ResumeAnalysis,
+  ResumeDiagnostic,
+  ResumeOptions,
+} from './resumeTypes';
 import type { RunManifest } from '../persistence/manifestManager';
-import type { ResumeAnalysis, ResumeDiagnostic } from './resumeTypes';
+
+export type { ResumeAnalysis, DiagnosticSeverity, ResumeDiagnostic, ResumeOptions };
 
 /**
  * Check run status and add diagnostics
