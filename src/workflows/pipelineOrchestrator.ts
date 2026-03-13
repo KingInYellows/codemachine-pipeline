@@ -10,15 +10,13 @@ import type { StructuredLogger } from '../telemetry/logger';
 import type { MetricsCollector } from '../telemetry/metrics';
 import type { ExecutionTelemetry } from '../telemetry/executionTelemetry';
 import type { RepoConfig } from '../core/config/RepoConfig';
-import { DEFAULT_EXECUTION_CONFIG } from '../core/config/RepoConfig.js';
 import { createFeature } from '../core/models/Feature';
 import type { ResearchTask } from '../core/models/ResearchTask';
 import { aggregateContext, type AggregatorConfig } from './contextAggregator';
 import { createResearchCoordinator, type UnknownDetectionOptions } from './researchCoordinator';
 import { draftPRD } from './prdAuthoringEngine';
-import { CLIExecutionEngine } from './cliExecutionEngine';
 import { loadQueue } from './queue/queueStore.js';
-import { buildExecutionStrategies } from './executionStrategyBuilder.js';
+import { buildAndValidateExecutionEngine } from './executionEngineFactory';
 import {
   setCurrentStep,
   setLastStep,
@@ -348,28 +346,14 @@ export class PipelineOrchestrator {
       return { totalTasks: 0, completedTasks: 0, failedTasks: 0, permanentlyFailedTasks: 0 };
     }
 
-    const executionConfig = this.repoConfig.execution ?? DEFAULT_EXECUTION_CONFIG;
-    const effectiveExecutionConfig = {
-      ...executionConfig,
-      max_parallel_tasks: maxParallel,
-    };
-    const mergedConfig: RepoConfig = {
-      ...this.repoConfig,
-      execution: effectiveExecutionConfig,
-    };
-
-    const strategies = await buildExecutionStrategies(effectiveExecutionConfig, this.logger);
-
-    const executionEngine = new CLIExecutionEngine({
+    const { engine: executionEngine, prereqResult } = await buildAndValidateExecutionEngine({
       runDir: this.runDir,
-      config: mergedConfig,
-      strategies,
-      dryRun: false,
+      repoConfig: this.repoConfig,
+      maxParallel,
       logger: this.logger,
       telemetry: this.telemetry,
     });
 
-    const prereqResult = await executionEngine.validatePrerequisites();
     if (!prereqResult.valid) {
       throw new PrerequisiteError(prereqResult.errors);
     }

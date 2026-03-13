@@ -13,11 +13,13 @@ import {
   analyzeLastError,
   checkQueueState,
   generateRecommendations,
-  type ResumeAnalysis,
-  type DiagnosticSeverity,
-  type ResumeDiagnostic,
-  type ResumeOptions,
 } from './runStateVerifier';
+import type {
+  ResumeAnalysis,
+  DiagnosticSeverity,
+  ResumeDiagnostic,
+  ResumeOptions,
+} from './resumeTypes';
 import { checkIntegrity } from './resumeIntegrityChecker';
 import { checkQueueFiles } from './resumeQueueRecovery';
 
