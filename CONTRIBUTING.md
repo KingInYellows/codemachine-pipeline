@@ -5,7 +5,12 @@
 - **Node.js v24.0.0 or higher** (required -- see `engines` in package.json)
 - **npm 9+**
 - **Git**
-- **Graphite CLI** (`gt`) -- used for branch management and PR submission
+- **Graphite CLI** (`gt`) -- used for branch management and PR submission (optional for external contributors)
+
+> **Note for external contributors:** The `codemachine` package is an optional
+> dependency. Features degrade gracefully without it — you do not need access
+> to it for development. CI will not auto-run on fork PRs; the repository owner
+> must approve workflow runs for outside collaborators.
 
 ## Getting Started
 
@@ -75,6 +80,29 @@ gh pr ready $(gh pr list --head $(git branch --show-current) --json number -q '.
 ```
 
 Never push directly to `main` or create PRs with `gh pr create`. The main branch is protected and requires PRs submitted through Graphite.
+
+### External Contributors (Fork-based Workflow)
+
+If you don't have push access, use the standard GitHub fork workflow:
+
+```bash
+# 1. Fork the repository on GitHub
+# 2. Clone your fork
+git clone https://github.com/YOUR_USERNAME/codemachine-pipeline.git
+cd codemachine-pipeline
+
+# 3. Create a feature branch
+git checkout -b my-feature
+
+# 4. Make changes, then push to your fork
+git push origin my-feature
+
+# 5. Open a PR from your fork to the upstream repository via GitHub UI
+```
+
+CI runs on self-hosted infrastructure and requires owner approval before
+executing on fork PRs. Please be patient after submitting — the owner will
+review and approve the workflow run.
 
 ### Running Tests
 
@@ -228,7 +256,7 @@ Keep the subject line under 72 characters. Use the body for additional context w
 3. Run formatting and lint checks (`npm run format:check && npm run lint`).
 4. Submit via Graphite (`gt submit --no-interactive --publish`).
 5. Mark as ready for review if created as draft (`gh pr ready <PR-number>`).
-6. CI runs automatically on all PRs: unit + integration tests, security scans, Docker image builds, and code quality checks.
+6. CI runs automatically on owner PRs. For external contributors, CI requires owner approval before running (unit + integration tests, security scans, Docker image builds, and code quality checks).
 7. Address review feedback; the PR is merged through Graphite.
 
 ## Project Structure
