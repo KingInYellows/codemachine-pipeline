@@ -1,5 +1,6 @@
+import { AsyncLocalStorage } from 'node:async_hooks';
 import { access, readFile, unlink, writeFile } from 'node:fs/promises';
-import { join } from 'node:path';
+import { join, resolve } from 'node:path';
 import { hostname } from 'node:os';
 import { wrapError } from '../utils/errors.js';
 import { isProcessRunning } from '../utils/processExists.js';
@@ -42,6 +43,72 @@ const DEFAULT_POLL_INTERVAL = 100; // 100ms
 
 // Export for testing (CDMCH-71)
 export const STALE_LOCK_THRESHOLD_MS = 300000; // 5 minutes - sufficient for long operations while still recovering from crashes
+
+/**
+ * In-memory per-directory promise chain to serialize same-process callers.
+ *
+ * The filesystem lock (wx flag) handles cross-process exclusion, but under
+ * same-process Promise.all concurrency the unlink/writeFile race between
+ * release and the next acquire can lose updates. This map ensures callers
+ * targeting the same runDir execute sequentially within a single process.
+ */
+const inProcessQueue = new Map<string, Promise<void>>();
+const lockContextStorage = new AsyncLocalStorage<Map<string, number>>();
+
+/**
+ * Reset in-process queue state. For testing only.
+ * @internal
+ */
+export function _resetInProcessQueue(): void {
+  inProcessQueue.clear();
+}
+
+function getLockKey(runDir: string): string {
+  return resolve(runDir);
+}
+
+function createInProcessQueueTimeoutError(runDir: string, timeout: number): Error {
+  return new Error(
+    `Failed to acquire in-process lock turn for ${runDir} within ${timeout}ms. ` +
+      `Another concurrent operation in this process is holding the lock.`
+  );
+}
+
+function createFsLockTimeoutError(runDir: string, timeout: number): Error {
+  return new Error(
+    `Failed to acquire lock for ${runDir} within ${timeout}ms. ` +
+      `Another process may be modifying this run directory.`
+  );
+}
+
+async function waitForInProcessTurn(
+  prev: Promise<void>,
+  runDir: string,
+  timeout: number,
+  startTime: number
+): Promise<void> {
+  const remaining = timeout - (Date.now() - startTime);
+  if (remaining <= 0) {
+    throw createInProcessQueueTimeoutError(runDir, timeout);
+  }
+
+  await new Promise<void>((resolveWait, rejectWait) => {
+    const timeoutId = setTimeout(() => {
+      rejectWait(createInProcessQueueTimeoutError(runDir, timeout));
+    }, remaining);
+
+    prev.then(
+      () => {
+        clearTimeout(timeoutId);
+        resolveWait();
+      },
+      (error) => {
+        clearTimeout(timeoutId);
+        rejectWait(error instanceof Error ? error : new Error(String(error)));
+      }
+    );
+  });
+}
 
 /**
  * Type guard ensuring value matches LockFile shape
@@ -225,9 +292,7 @@ export async function acquireLock(runDir: string, options: LockOptions = {}): Pr
     await sleep(pollInterval);
   }
 
-  throw new Error(
-    `Failed to acquire lock for ${runDir} within ${timeout}ms. Another process may be modifying this run directory.`
-  );
+  throw createFsLockTimeoutError(runDir, timeout);
 }
 
 /**
@@ -277,11 +342,54 @@ export async function withLock<T>(
   fn: () => Promise<T>,
   options?: LockOptions
 ): Promise<T> {
-  await acquireLock(runDir, options);
+  const lockKey = getLockKey(runDir);
+  const activeContext = lockContextStorage.getStore();
+  const activeDepth = activeContext?.get(lockKey);
+
+  if (activeContext && activeDepth) {
+    activeContext.set(lockKey, activeDepth + 1);
+    try {
+      return await fn();
+    } finally {
+      activeContext.set(lockKey, activeDepth);
+    }
+  }
+
+  // Serialize same-process callers via promise chain before touching the
+  // filesystem lock, preventing the unlink/writeFile('wx') TOCTOU race.
+  const prev = inProcessQueue.get(lockKey) ?? Promise.resolve();
+  let resolveCurrent!: () => void;
+  const current = new Promise<void>((resolve) => {
+    resolveCurrent = resolve;
+  });
+  inProcessQueue.set(lockKey, current);
+
+  const timeout = options?.timeout ?? DEFAULT_LOCK_TIMEOUT;
+  const startTime = Date.now();
 
   try {
-    return await fn();
+    // Wait for the previous same-process caller to finish
+    await waitForInProcessTurn(prev, runDir, timeout, startTime);
+
+    const remainingTimeout = timeout - (Date.now() - startTime);
+    if (remainingTimeout <= 0) {
+      throw createInProcessQueueTimeoutError(runDir, timeout);
+    }
+
+    const lockContext = new Map(activeContext ?? []);
+    lockContext.set(lockKey, 1);
+
+    await acquireLock(runDir, { ...options, timeout: remainingTimeout });
+    try {
+      return await lockContextStorage.run(lockContext, fn);
+    } finally {
+      await releaseLock(runDir);
+    }
   } finally {
-    await releaseLock(runDir);
+    resolveCurrent();
+    // Clean up the map entry if we're the last in the chain
+    if (inProcessQueue.get(lockKey) === current) {
+      inProcessQueue.delete(lockKey);
+    }
   }
 }
