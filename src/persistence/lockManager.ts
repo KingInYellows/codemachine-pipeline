@@ -55,6 +55,14 @@ export const STALE_LOCK_THRESHOLD_MS = 300000; // 5 minutes - sufficient for lon
 const inProcessQueue = new Map<string, Promise<void>>();
 const lockContextStorage = new AsyncLocalStorage<Map<string, number>>();
 
+/**
+ * Reset in-process queue state. For testing only.
+ * @internal
+ */
+export function _resetInProcessQueue(): void {
+  inProcessQueue.clear();
+}
+
 function getLockKey(runDir: string): string {
   return resolve(runDir);
 }
@@ -337,11 +345,7 @@ export async function withLock<T>(
     try {
       return await fn();
     } finally {
-      if (activeDepth === 1) {
-        activeContext.delete(lockKey);
-      } else {
-        activeContext.set(lockKey, activeDepth);
-      }
+      activeContext.set(lockKey, activeDepth);
     }
   }
 
@@ -357,10 +361,10 @@ export async function withLock<T>(
   const timeout = options?.timeout ?? DEFAULT_LOCK_TIMEOUT;
   const startTime = Date.now();
 
-  // Wait for the previous same-process caller to finish
-  await waitForInProcessTurn(prev, runDir, timeout, startTime);
-
   try {
+    // Wait for the previous same-process caller to finish
+    await waitForInProcessTurn(prev, runDir, timeout, startTime);
+
     const remainingTimeout = timeout - (Date.now() - startTime);
     if (remainingTimeout <= 0) {
       throw createLockTimeoutError(runDir, timeout);

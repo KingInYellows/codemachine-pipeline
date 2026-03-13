@@ -1,7 +1,13 @@
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 import * as os from 'node:os';
-import { acquireLock, releaseLock, isLocked, withLock } from '../../../src/persistence/lockManager';
+import {
+  acquireLock,
+  releaseLock,
+  isLocked,
+  withLock,
+  _resetInProcessQueue,
+} from '../../../src/persistence/lockManager';
 import {
   readManifest,
   writeManifest,
@@ -55,6 +61,7 @@ describe('Run Directory Manager', () => {
   });
 
   afterEach(async () => {
+    _resetInProcessQueue();
     try {
       await fs.rm(testBaseDir, { recursive: true, force: true });
     } catch {
