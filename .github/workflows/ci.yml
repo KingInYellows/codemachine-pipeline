@@ -16,6 +16,9 @@ concurrency:
 
 jobs:
   optimize_ci:
+    if: >-
+      github.repository == 'KingInYellows/codemachine-pipeline' &&
+      (github.event_name != 'pull_request' || !github.event.pull_request.head.repo.fork)
     runs-on: [self-hosted, linux]
     timeout-minutes: 5
     env:
@@ -39,7 +42,10 @@ jobs:
   workflow_lint:
     name: Workflow Lint
     needs: optimize_ci
-    if: needs.optimize_ci.outputs.skip == 'false'
+    if: >-
+      github.repository == 'KingInYellows/codemachine-pipeline' &&
+      (github.event_name != 'pull_request' || !github.event.pull_request.head.repo.fork) &&
+      needs.optimize_ci.outputs.skip == 'false'
     runs-on: [self-hosted, linux]
     timeout-minutes: 10
     continue-on-error: true
@@ -73,7 +79,10 @@ jobs:
   test:
     name: Test and Lint
     needs: optimize_ci
-    if: needs.optimize_ci.outputs.skip == 'false'
+    if: >-
+      github.repository == 'KingInYellows/codemachine-pipeline' &&
+      (github.event_name != 'pull_request' || !github.event.pull_request.head.repo.fork) &&
+      needs.optimize_ci.outputs.skip == 'false'
     runs-on: [self-hosted, linux]
     timeout-minutes: 45
     env:
@@ -138,7 +147,10 @@ jobs:
   docker:
     name: Docker Build
     needs: optimize_ci
-    if: needs.optimize_ci.outputs.skip == 'false'
+    if: >-
+      github.repository == 'KingInYellows/codemachine-pipeline' &&
+      (github.event_name != 'pull_request' || !github.event.pull_request.head.repo.fork) &&
+      needs.optimize_ci.outputs.skip == 'false'
     runs-on: [self-hosted, linux]
     timeout-minutes: 30
     env:
