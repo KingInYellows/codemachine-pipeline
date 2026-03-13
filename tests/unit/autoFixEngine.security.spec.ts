@@ -211,7 +211,6 @@ describe('autoFixEngine security - command execution', () => {
         info: vi.fn(),
         debug: vi.fn(),
       };
-
       const result = await executeShellCommandForTesting('echo `whoami`', {
         cwd: testRunDir,
         env: process.env,
