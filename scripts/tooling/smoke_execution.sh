@@ -331,7 +331,7 @@ EXIT CODES:
   1   Smoke tests failed
   2   Setup/configuration error
 
-For more information, see: docs/ops/smoke_test_guide.md
+For more information, see: docs/reference/smoke_test_guide.md
 EOF
 }
 

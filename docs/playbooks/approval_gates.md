@@ -308,8 +308,7 @@ codepipe status --feature <feature-id>
 
 ## Related Documentation
 
-- [Approval Playbook](./approval_playbook.md) - Detailed workflows and examples
-- [ADR-5: Approval Workflow](../adr/005-approval-workflow.md) - Design decisions
+- [Approval Playbook](./approval_playbook.md) - Detailed workflows, design intent, and examples
 - [Init Playbook](./init_playbook.md) - Configuration setup
 
 ---

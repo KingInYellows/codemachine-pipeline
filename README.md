@@ -62,6 +62,8 @@ codepipe --version
 
 **Security Note:** Create a GitHub Personal Access Token with `read:packages` scope at https://github.com/settings/tokens. Store your PAT securely. Do NOT commit `.npmrc` files containing tokens.
 
+GitHub Packages currently requires authentication for package installation, even when the repository itself is public. If you want a zero-auth install path for external users, prefer the source install flow above.
+
 ### Docker
 
 ```bash
