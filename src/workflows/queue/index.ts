@@ -1,8 +1,8 @@
 /**
  * Queue subsystem public API barrel.
  *
- * All external consumers should import from this barrel (or from
- * src/workflows/queueStore.ts for backward compatibility).
+ * All external consumers should import from this barrel or from
+ * individual queue module files directly.
  */
 
 export {

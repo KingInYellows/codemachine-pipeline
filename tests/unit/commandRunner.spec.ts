@@ -146,6 +146,24 @@ describe('parseCommandString', () => {
     );
   });
 
+  it('rejects $() command substitution (security)', () => {
+    expect(() => parseCommandString('echo $(whoami)')).toThrow(
+      'Shell operators are not allowed in command strings'
+    );
+  });
+
+  it('rejects output redirect operator (security)', () => {
+    expect(() => parseCommandString('echo foo > /tmp/file')).toThrow(
+      'Shell operators are not allowed in command strings'
+    );
+  });
+
+  it('rejects input redirect operator (security)', () => {
+    expect(() => parseCommandString('cat < /etc/passwd')).toThrow(
+      'Shell operators are not allowed in command strings'
+    );
+  });
+
   it('discards comment tokens (POSIX shell semantics)', () => {
     const [exe, args] = parseCommandString('echo foo #bar');
     expect(exe).toBe('echo');
