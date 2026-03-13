@@ -812,6 +812,34 @@ describe('HttpClient', () => {
   });
 
   describe('HTTP Methods', () => {
+    it('should preserve base URL path prefixes for relative request paths', async () => {
+      const client = new HttpClient({
+        baseUrl: 'https://github.example.com/api/v3',
+        provider: Provider.CUSTOM,
+        logger: mockLogger,
+      });
+
+      const pool = mockAgent.get('https://github.example.com');
+
+      pool
+        .intercept({
+          path: '/api/v3/repos/test/repo',
+          method: 'GET',
+        })
+        .reply(
+          200,
+          { result: 'success' },
+          {
+            headers: { 'content-type': 'application/json' },
+          }
+        );
+
+      const response = await client.get('/repos/test/repo');
+
+      expect(response.status).toBe(200);
+      expect(response.data).toEqual({ result: 'success' });
+    });
+
     it('should support GET requests', async () => {
       const client = new HttpClient({
         baseUrl: 'https://api.test.com',

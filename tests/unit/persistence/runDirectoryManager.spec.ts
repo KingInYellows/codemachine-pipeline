@@ -377,7 +377,7 @@ describe('Run Directory Manager', () => {
 
       await expect(
         withLock(path.join(runDir, '.'), async () => undefined, { timeout: 20 })
-      ).rejects.toThrow(/Failed to acquire lock/);
+      ).rejects.toThrow(/Failed to acquire .*lock/);
 
       releaseHolder();
       await holder;

@@ -267,6 +267,53 @@ describe('loadRepoConfig', () => {
     expect(result.warnings?.some((w) => w.includes('GITHUB_TOKEN'))).toBe(true);
   });
 
+  it('should warn when a custom GitHub API base URL is configured', async () => {
+    const savedEnv = process.env.CODEPIPE_ALLOW_UNSAFE_GITHUB_API_BASE_URL;
+    delete process.env.CODEPIPE_ALLOW_UNSAFE_GITHUB_API_BASE_URL;
+    try {
+      const config = createDefaultConfig('https://github.com/org/repo.git');
+      config.github.enabled = true;
+      config.github.api_base_url = 'https://github.example.com/api/v3';
+      fs.writeFileSync(configPath, JSON.stringify(config, null, 2));
+
+      const result = await loadRepoConfig(configPath);
+      expect(result.success).toBe(true);
+      expect(result.warnings).toBeDefined();
+      expect(
+        result.warnings?.some((warning) =>
+          warning.includes('CODEPIPE_ALLOW_UNSAFE_GITHUB_API_BASE_URL')
+        )
+      ).toBe(true);
+    } finally {
+      if (savedEnv !== undefined) {
+        process.env.CODEPIPE_ALLOW_UNSAFE_GITHUB_API_BASE_URL = savedEnv;
+      }
+    }
+  });
+
+  it('should not warn about a custom GitHub API base URL when GitHub integration is disabled', async () => {
+    const savedEnv = process.env.CODEPIPE_ALLOW_UNSAFE_GITHUB_API_BASE_URL;
+    delete process.env.CODEPIPE_ALLOW_UNSAFE_GITHUB_API_BASE_URL;
+    try {
+      const config = createDefaultConfig('https://github.com/org/repo.git');
+      config.github.enabled = false;
+      config.github.api_base_url = 'https://github.example.com/api/v3';
+      fs.writeFileSync(configPath, JSON.stringify(config, null, 2));
+
+      const result = await loadRepoConfig(configPath);
+      expect(result.success).toBe(true);
+      expect(
+        result.warnings?.some((warning) =>
+          warning.includes('CODEPIPE_ALLOW_UNSAFE_GITHUB_API_BASE_URL')
+        ) ?? false
+      ).toBe(false);
+    } finally {
+      if (savedEnv !== undefined) {
+        process.env.CODEPIPE_ALLOW_UNSAFE_GITHUB_API_BASE_URL = savedEnv;
+      }
+    }
+  });
+
   it('should apply environment overrides', async () => {
     const originalEnv = process.env.CODEPIPE_RUNTIME_MAX_CONCURRENT_TASKS;
     process.env.CODEPIPE_RUNTIME_MAX_CONCURRENT_TASKS = '7';

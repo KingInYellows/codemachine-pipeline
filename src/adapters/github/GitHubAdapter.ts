@@ -19,6 +19,7 @@ import type { HttpClientConfig } from '../http/client';
 import { serializeError, createErrorNormalizer, AdapterError } from '../../utils/errors';
 import { ErrorType } from '../../core/sharedTypes';
 import { createLogger, LogLevel, type LoggerInterface } from '../../telemetry/logger';
+import { resolveGitHubApiBaseUrl } from '../../utils/githubApiUrl.js';
 import type {
   GitHubAdapterConfig,
   RepositoryInfo,
@@ -121,7 +122,17 @@ export class GitHubAdapter {
       config.logger ??
       createLogger({ component: 'github-adapter', minLevel: LogLevel.DEBUG, mirrorToStderr: true });
 
-    const baseUrl = config.baseUrl ?? 'https://api.github.com';
+    let baseUrl: string;
+    try {
+      baseUrl = resolveGitHubApiBaseUrl(config.baseUrl, {
+        tokenPresent: typeof config.token === 'string' && config.token.length > 0,
+      });
+    } catch (error) {
+      throw new GitHubAdapterError(
+        `Invalid GitHub API base URL: ${error instanceof Error ? error.message : String(error)}`,
+        ErrorType.PERMANENT
+      );
+    }
 
     const clientConfig: HttpClientConfig = {
       baseUrl,
