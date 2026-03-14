@@ -51,7 +51,7 @@
 
 ### Branch Strategy
 
-This project uses [Graphite](https://graphite.dev/) for stacked PRs. See [docs/archive/development/submission-workflow.md](docs/archive/development/submission-workflow.md) for the full workflow.
+Maintainers use [Graphite](https://graphite.dev/) for stacked PRs. External contributors can use the standard GitHub fork workflow without Graphite. See [docs/archive/development/submission-workflow.md](docs/archive/development/submission-workflow.md) for the maintainer-oriented stack workflow.
 
 **Key Graphite commands:**
 
@@ -64,15 +64,14 @@ This project uses [Graphite](https://graphite.dev/) for stacked PRs. See [docs/a
 | `gh pr ready <num>`                     | Mark a draft PR as ready          |
 | `gh pr view <num>`                      | View PR details                   |
 
-**Typical flow:**
+**Typical maintainer flow:**
 
 ```bash
-# 1. Create a Graphite branch from main
-gt create my-feature --message "Add widget support"
-
-# 2. Make changes, stage, and commit
+# 1. Make changes and stage them
 git add src/widgets/widget.ts tests/unit/widget.spec.ts
-git commit -m "feat: add widget support"
+
+# 2. Create a Graphite branch with the staged changes
+gt create my-feature --message "feat: add widget support"
 
 # 3. Submit through Graphite (never push directly to main)
 gt submit --no-interactive --publish
@@ -81,7 +80,7 @@ gt submit --no-interactive --publish
 gh pr ready $(gh pr list --head $(git branch --show-current) --json number -q '.[0].number')
 ```
 
-Never push directly to `main` or create PRs with `gh pr create`. The main branch is protected and requires PRs submitted through Graphite.
+Never push directly to `main`. Maintainers should not create PRs with `gh pr create`; use Graphite submission instead.
 
 ### External Contributors (Fork-based Workflow)
 
@@ -102,9 +101,9 @@ git push origin my-feature
 # 5. Open a PR from your fork to the upstream repository via GitHub UI
 ```
 
-CI runs on self-hosted infrastructure and requires owner approval before
-executing on fork PRs. Please be patient after submitting — the owner will
-review and approve the workflow run.
+CI runs on self-hosted infrastructure and may require maintainer approval
+before executing on fork PRs. Please be patient after submitting; the
+maintainer will review the PR and approve the workflow run when appropriate.
 
 ### Running Tests
 
@@ -223,10 +222,13 @@ npm run clean            # Remove dist/
 - **Unused exports:** `npm run exports:check` (ts-unused-exports).
 - **CLI reference:** Auto-generated from `oclif.manifest.json`. After adding or modifying commands, run `npm run docs:cli` and commit the updated `docs/reference/cli/cli-reference.md`. CI checks for drift via `npm run docs:cli:check`.
 
-Run both checks before submitting:
+Run these checks before submitting a PR:
 
 ```bash
 npm run format:check && npm run lint
+npm test
+npm run docs:links:check
+npm run build
 ```
 
 ### Commit Conventions
