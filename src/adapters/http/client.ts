@@ -60,7 +60,7 @@ type AttemptResult<T> =
   | { ok: false; error: HttpError; rateLimitEnvelope: RateLimitEnvelope | undefined };
 
 function isAbsoluteUrl(value: string): boolean {
-  return /^[a-zA-Z][a-zA-Z\d+.-]*:/.test(value);
+  return /^https?:\/\//i.test(value);
 }
 
 function buildRequestUrl(baseUrl: string, path: string): string {

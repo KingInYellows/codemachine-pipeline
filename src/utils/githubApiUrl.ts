@@ -2,10 +2,6 @@ export const DEFAULT_GITHUB_API_BASE_URL = 'https://api.github.com';
 export const ALLOW_UNSAFE_CUSTOM_GITHUB_API_BASE_URL_ENV =
   'CODEPIPE_ALLOW_UNSAFE_GITHUB_API_BASE_URL';
 
-interface ResolveGitHubApiBaseUrlOptions {
-  tokenPresent?: boolean;
-}
-
 function trimTrailingSlash(pathname: string): string {
   if (pathname === '/') {
     return '/';
@@ -33,10 +29,7 @@ export function hasCustomGitHubApiBaseUrl(baseUrl: string | undefined): boolean 
   }
 }
 
-export function resolveGitHubApiBaseUrl(
-  baseUrl: string | undefined,
-  _options: ResolveGitHubApiBaseUrlOptions = {}
-): string {
+export function resolveGitHubApiBaseUrl(baseUrl: string | undefined): string {
   const candidate = baseUrl ?? DEFAULT_GITHUB_API_BASE_URL;
   const parsed = new URL(candidate);
   const normalizedPath = trimTrailingSlash(parsed.pathname);

@@ -172,9 +172,7 @@ export class BranchProtectionAdapter {
 
     let baseUrl: string;
     try {
-      baseUrl = resolveGitHubApiBaseUrl(config.baseUrl, {
-        tokenPresent: typeof config.token === 'string' && config.token.length > 0,
-      });
+      baseUrl = resolveGitHubApiBaseUrl(config.baseUrl);
     } catch (error) {
       throw new BranchProtectionError(
         `Invalid GitHub API base URL: ${error instanceof Error ? error.message : String(error)}`,

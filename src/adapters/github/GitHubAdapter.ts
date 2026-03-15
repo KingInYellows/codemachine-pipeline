@@ -114,6 +114,7 @@ export class GitHubAdapter {
   private readonly repo: string;
   private readonly client: HttpClient;
   private readonly logger: LoggerInterface;
+  private readonly graphqlEndpoint: string;
 
   constructor(config: GitHubAdapterConfig) {
     this.owner = GitHubAdapter.validateName(config.owner, 'owner');
@@ -124,14 +125,22 @@ export class GitHubAdapter {
 
     let baseUrl: string;
     try {
-      baseUrl = resolveGitHubApiBaseUrl(config.baseUrl, {
-        tokenPresent: typeof config.token === 'string' && config.token.length > 0,
-      });
+      baseUrl = resolveGitHubApiBaseUrl(config.baseUrl);
     } catch (error) {
       throw new GitHubAdapterError(
         `Invalid GitHub API base URL: ${error instanceof Error ? error.message : String(error)}`,
         ErrorType.PERMANENT
       );
+    }
+
+    // For github.com: GraphQL is at /graphql
+    // For GHE: GraphQL is at /api/graphql (not under /api/v3/)
+    const parsedBaseUrl = new URL(baseUrl);
+    if (parsedBaseUrl.hostname === 'api.github.com') {
+      this.graphqlEndpoint = `${parsedBaseUrl.origin}/graphql`;
+    } else {
+      // For GHE, replace /api/v3 path with /api/graphql
+      this.graphqlEndpoint = `${parsedBaseUrl.origin}/api/graphql`;
     }
 
     const clientConfig: HttpClientConfig = {
@@ -157,10 +166,9 @@ export class GitHubAdapter {
       owner: this.owner,
       repo: this.repo,
       baseUrl,
+      graphqlEndpoint: this.graphqlEndpoint,
     });
   }
-
-  private static validateName(value: string, label: 'owner' | 'repo'): string {
     if (!value) {
       throw new GitHubAdapterError(
         `Invalid GitHub ${label}: "${value}" — cannot be empty`,
@@ -594,7 +602,7 @@ export class GitHubAdapter {
     pull_number: number
   ): Promise<void> {
     await this.client.post(
-      '/graphql',
+      this.graphqlEndpoint,
       { query, variables },
       { metadata: { operation, pull_number } }
     );
