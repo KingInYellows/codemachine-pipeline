@@ -181,7 +181,7 @@ export class GitHubAdapter {
     if (label === 'owner') {
       if (!GITHUB_OWNER_RE.test(value)) {
         throw new GitHubAdapterError(
-          `Invalid GitHub owner: "${value}" — must contain only alphanumeric characters or single hyphens`,
+          `Invalid GitHub owner: "${value}" — must contain only alphanumeric characters with single hyphens or underscores as separators`,
           ErrorType.PERMANENT
         );
       }
