@@ -263,7 +263,7 @@ MIT
 
 ## Contributing
 
-Contributions are welcome! See [CONTRIBUTING.md](CONTRIBUTING.md) for prerequisites, workflow, and coding guidelines.
+Contributions are welcome! See [CONTRIBUTING.md](CONTRIBUTING.md) for prerequisites, workflow, and coding guidelines. Please note that this project is released with a [Contributor Code of Conduct](CODE_OF_CONDUCT.md). By participating, you agree to abide by its terms.
 
 ## Support
 
