@@ -27,14 +27,14 @@ describe('resultNormalizer', () => {
     });
 
     it('redacts Anthropic API keys', () => {
-      const text = 'Using key [example-openai-key]';
+      const text = `Using key ${buildCredential('sk' + '-ant-', 'api03abcdef1234567890')}`;
       const redacted = redactCredentials(text);
       expect(redacted).toContain('[ANTHROPIC_KEY_REDACTED]');
       expect(redacted).not.toContain('sk-ant-');
     });
 
     it('redacts GitHub tokens', () => {
-      const text = 'Token: [example-github-token]';
+      const text = `Token: ${buildCredential('gh' + 'p_', 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx')}`;
       const redacted = redactCredentials(text);
       expect(redacted).toContain('[GITHUB_TOKEN_REDACTED]');
       expect(redacted).not.toContain('ghp_');
@@ -203,7 +203,7 @@ describe('resultNormalizer', () => {
         taskId: 'task-1',
         exitCode: 1,
         stdout: '',
-        stderr: 'Error with key [example-openai-key]',
+        stderr: `Error with key ${buildCredential('sk' + '-', 'secret1234567890abcdef')}`,
         durationMs: 500,
         timedOut: false,
         killed: false,
@@ -812,10 +812,10 @@ describe('resultNormalizer', () => {
   describe('edge cases', () => {
     it('should handle multiple credentials in one string', () => {
       const text = `
-        OpenAI: [example-openai-key]
-        Anthropic: [example-openai-key]
-        GitHub: [example-github-token]
-        JWT: [example-jwt]
+        OpenAI: ${buildCredential('sk' + '-', '1234567890abcdef123456')}
+        Anthropic: sk-ant-abc123defgh1234567890abcdef
+        GitHub: ${buildCredential('gh' + 'p_', 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx')}
+        JWT: ${Buffer.from(JSON.stringify({ alg: 'HS256', typ: 'JWT' })).toString('base64url')}.${Buffer.from(JSON.stringify({ sub: '1234' })).toString('base64url')}.${Buffer.from('abcdef').toString('base64url')}
       `;
       const redacted = redactCredentials(text);
       expect(redacted).toContain('[ANTHROPIC_KEY_REDACTED]');
