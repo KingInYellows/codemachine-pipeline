@@ -31,6 +31,7 @@ import {
   sleep,
 } from './commandRunner.js';
 import { filterEnvironment } from '../utils/envFilter.js';
+import { redactSecrets } from '../utils/redaction.js';
 
 // Re-export commandRunner constants and utilities so that downstream consumers
 // can import them from either module.
@@ -555,8 +556,8 @@ async function executeValidationCommand(
     stderr_path: stderrPath,
     error_summary: errorSummary,
     metadata: {
-      command: renderedCommand,
-      command_template: commandTemplate,
+      command: redactSecrets(renderedCommand),
+      command_template: redactSecrets(commandTemplate),
       cwd,
       timeout_ms: timeout,
     },

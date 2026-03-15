@@ -43,6 +43,7 @@ oclif.manifest.json
 .oclif/
 
 # CodeMachine Pipeline runtime
+.codepipe/config.json
 .codepipe/runs/
 .codepipe/logs/
 .codepipe/metrics/

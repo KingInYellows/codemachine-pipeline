@@ -60,7 +60,7 @@
     "smoke:help": "./bin/run.js --help",
     "smoke:init": "./bin/run.js init --help",
     "dev": "./bin/dev.js",
-    "validate:config": "node -e \"require('./dist/core/config/RepoConfig').loadRepoConfig('.codepipe/config.json')\"",
+    "validate:config": "node -e \"require('./dist/core/config/RepoConfig').loadRepoConfig('examples/sample_repo_config/config.json')\"",
     "prepack": "npm run clean && npm run build",
     "postpack": "npm run clean",
     "prepare": "npm run build"

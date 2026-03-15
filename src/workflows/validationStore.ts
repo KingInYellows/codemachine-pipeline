@@ -5,7 +5,7 @@
  * (commands registry and attempt ledger). Extracted from validationRegistry.ts.
  */
 
-import { mkdir, readFile, rename, unlink, writeFile } from 'node:fs/promises';
+import { chmod, mkdir, readFile, rename, unlink, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { randomBytes } from 'node:crypto';
 import { z } from 'zod';
@@ -82,6 +82,16 @@ export const VALIDATION_DIR_NAME = 'validation';
 export const REGISTRY_SCHEMA_VERSION = '1.0.0';
 export const LEDGER_SCHEMA_VERSION = '1.0.0';
 
+async function ensureOwnerOnlyDirectory(path: string): Promise<void> {
+  await mkdir(path, { recursive: true, mode: 0o700 });
+
+  try {
+    await chmod(path, 0o700);
+  } catch {
+    // Ignore chmod failures on platforms or filesystems that do not support POSIX modes.
+  }
+}
+
 function isErrnoError(error: unknown): error is NodeJS.ErrnoException {
   return typeof error === 'object' && error !== null && 'code' in error;
 }
@@ -120,8 +130,8 @@ export async function saveValidationRegistry(
   const tempPath = `${registryPath}.tmp.${randomBytes(8).toString('hex')}`;
 
   try {
-    await mkdir(validationDir, { recursive: true });
-    await writeFile(tempPath, JSON.stringify(registry, null, 2), 'utf-8');
+    await ensureOwnerOnlyDirectory(validationDir);
+    await writeFile(tempPath, JSON.stringify(registry, null, 2), { encoding: 'utf-8', mode: 0o600 });
     await rename(tempPath, registryPath);
   } catch (error) {
     try {
@@ -177,8 +187,8 @@ export async function saveValidationLedger(
   const tempPath = `${ledgerPath}.tmp.${randomBytes(8).toString('hex')}`;
 
   try {
-    await mkdir(validationDir, { recursive: true });
-    await writeFile(tempPath, JSON.stringify(ledger, null, 2), 'utf-8');
+    await ensureOwnerOnlyDirectory(validationDir);
+    await writeFile(tempPath, JSON.stringify(ledger, null, 2), { encoding: 'utf-8', mode: 0o600 });
     await rename(tempPath, ledgerPath);
   } catch (error) {
     try {

@@ -398,7 +398,9 @@ export default class PRCreate extends Command {
 
     lines.push('---');
     lines.push('');
-    lines.push('🤖 Generated with [CodeMachine Pipeline](https://github.com/codemachine/pipeline)');
+    lines.push(
+      '🤖 Generated with [CodeMachine Pipeline](https://github.com/KingInYellows/codemachine-pipeline)'
+    );
 
     return lines.join('\n');
   }
