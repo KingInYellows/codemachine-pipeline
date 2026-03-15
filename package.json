@@ -3,8 +3,7 @@
   "version": "1.0.0",
   "description": "Autonomous AI-powered feature development pipeline CLI",
   "publishConfig": {
-    "registry": "https://npm.pkg.github.com",
-    "access": "public"
+    "registry": "https://npm.pkg.github.com"
   },
   "author": "CodeMachine Team",
   "license": "MIT",

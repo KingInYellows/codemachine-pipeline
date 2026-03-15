@@ -169,6 +169,8 @@ export class GitHubAdapter {
       graphqlEndpoint: this.graphqlEndpoint,
     });
   }
+
+  private static validateName(value: string, label: 'owner' | 'repo'): string {
     if (!value) {
       throw new GitHubAdapterError(
         `Invalid GitHub ${label}: "${value}" — cannot be empty`,
