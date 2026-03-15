@@ -214,7 +214,16 @@ The project uses GitHub Actions for continuous integration:
 - **Building**: TypeScript compilation
 - **Docker**: Multi-stage build verification
 
-All checks run on Node v24.x.
+Primary CI runs on maintainer-controlled self-hosted Linux runners. Fork-based pull requests are welcome, but GitHub Actions may wait for maintainer approval before jobs execute. For the closest local parity before opening a PR, run:
+
+```bash
+npm run format:check && npm run lint
+npm test
+npm run docs:links:check
+npm run build
+```
+
+All checks target Node v24.x.
 
 ## Architecture
 
@@ -258,7 +267,7 @@ Contributions are welcome! See [CONTRIBUTING.md](CONTRIBUTING.md) for prerequisi
 
 ## Support
 
-For issues and questions:
-
-- GitHub Issues: https://github.com/KingInYellows/codemachine-pipeline/issues
-- Documentation: [docs/README.md](docs/README.md)
+- **Bug reports / feature requests**: Open an issue at https://github.com/KingInYellows/codemachine-pipeline/issues
+- **Security vulnerabilities**: Follow [SECURITY.md](SECURITY.md) and report privately through GitHub Security Advisories
+- **Contribution workflow**: See [CONTRIBUTING.md](CONTRIBUTING.md) for maintainer and fork-based workflows
+- **Documentation**: [docs/README.md](docs/README.md)
