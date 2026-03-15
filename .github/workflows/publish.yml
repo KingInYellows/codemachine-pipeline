@@ -13,7 +13,7 @@ jobs:
   publish:
     name: Publish Package
     if: github.repository == 'KingInYellows/codemachine-pipeline'
-    runs-on: [self-hosted, linux]
+    runs-on: ubuntu-latest
     timeout-minutes: 15
 
     steps:
