@@ -15,7 +15,7 @@ concurrency:
 jobs:
   security_scan:
     name: security/scan
-    runs-on: [self-hosted, linux]
+    runs-on: ubuntu-latest
     timeout-minutes: 20
     env:
       OCLIF_SKIP_MANIFEST: '1'
