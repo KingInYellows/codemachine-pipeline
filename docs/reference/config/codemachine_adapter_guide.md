@@ -5,6 +5,8 @@
 
 This document describes how the AI Feature Pipeline integrates with the CodeMachine CLI for task execution, including configuration, troubleshooting, and operational best practices.
 
+The pipeline does not bundle the CodeMachine CLI binary. Install it separately, make it available on `PATH`, or point `CODEMACHINE_BIN_PATH` at an existing installation.
+
 ## Overview
 
 The CodeMachine CLI adapter enables the pipeline to delegate task execution to the external `codemachine` CLI tool. This integration provides:
