@@ -54,6 +54,7 @@ This playbook provides comprehensive guidance for generating, maintaining, and v
 
 ### Functional Requirements
 
+<a id="fr-9-traceability"></a>
 **FR-9: Traceability**
 
 Every architectural artifact must map inputs to outputs:
@@ -62,6 +63,7 @@ Every architectural artifact must map inputs to outputs:
 2. **Spec Requirements** must link to **ExecutionTasks**
 3. **ExecutionTasks** must eventually link to **Code Diffs** (post-execution)
 
+<a id="fr-10-specification-authoring"></a>
 **FR-10: Specification Authoring**
 
 Specifications must maintain backward links to PRD goals and forward links to planned tasks to enable impact analysis when requirements change.
