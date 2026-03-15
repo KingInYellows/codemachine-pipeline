@@ -49,7 +49,7 @@ export async function checkCodeMachineCli(config?: any): Promise<DiagnosticCheck
       status: 'warn',
       message: 'CodeMachine CLI not found',
       remediation:
-        'Install codemachine: npm install codemachine@^0.8.0 (optional for execution engine)',
+        'Install CodeMachine CLI separately, for example `npm install -g codemachine@^0.8.0`, or set CODEMACHINE_BIN_PATH.',
       details: { error: resolution.error },
     };
   }
@@ -84,7 +84,7 @@ export async function checkCodeMachineCli(config?: any): Promise<DiagnosticCheck
           category: 'environment',
           status: 'warn',
           message: `CodeMachine CLI v${version} below minimum v${minVersion}`,
-          remediation: `Upgrade: npm install codemachine@^${minVersion}`,
+          remediation: `Upgrade the external CodeMachine CLI, for example \`npm install -g codemachine@^${minVersion}\`.`,
           details: {
             version,
             min_version: minVersion,

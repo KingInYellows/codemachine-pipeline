@@ -91,7 +91,7 @@ Three fields were added to `ExecutionConfigSchema`:
 
 **Negative:**
 
-- **New dependency.** `codemachine@^0.8.0` is added as an optional dependency (along with `semver` for version comparison). The codemachine package itself declares platform-specific optionalDependencies that install per-platform native binaries, increasing install size when present.
+- **External prerequisite.** CodeMachine CLI must be installed separately or exposed via `CODEMACHINE_BIN_PATH` / `PATH`. The pipeline no longer bundles `codemachine`, which avoids shipping large native binaries and inherited security noise in the published package.
 - **Two strategies.** During the migration period, both `codemachine` and `codemachine-cli` strategies exist. The old strategy should be deprecated and removed in a future cycle once the new adapter is proven stable.
 
 ## References

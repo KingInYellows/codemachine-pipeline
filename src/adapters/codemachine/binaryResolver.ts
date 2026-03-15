@@ -5,9 +5,10 @@ import { validateCliPath } from './types.js';
 /**
  * Platform-specific binary package mapping for CodeMachine-CLI.
  *
- * CodeMachine-CLI uses the esbuild/turbo optionalDependencies pattern:
- * a wrapper package with `#!/usr/bin/env bun` shebang that we bypass,
- * resolving the platform-specific compiled binary directly instead.
+ * CodeMachine-CLI publishes platform packages that follow the
+ * esbuild/turbo optionalDependencies pattern. When one of those
+ * packages is present in node_modules, we bypass the wrapper package's
+ * `#!/usr/bin/env bun` entrypoint and execute the compiled binary directly.
  */
 const PLATFORM_MAP: Record<string, { pkg: string; bin: string }> = {
   'linux-x64': { pkg: 'codemachine-linux-x64', bin: 'codemachine' },
@@ -71,7 +72,7 @@ async function resolveBinaryUncached(): Promise<BinaryResolutionResult> {
     return { resolved: false, error: `CODEMACHINE_BIN_PATH not executable: ${envPath}` };
   }
 
-  // 2. Resolve from optionalDependencies platform package
+  // 2. Resolve from platform package installed in node_modules
   const platformKey = `${process.platform}-${process.arch}`;
   const platformEntry = PLATFORM_MAP[platformKey];
 
@@ -103,7 +104,7 @@ async function resolveBinaryUncached(): Promise<BinaryResolutionResult> {
     resolved: false,
     error:
       `CodeMachine-CLI binary not found. Platform: ${platformKey}. ` +
-      'Install via npm (codemachine@^0.8.0) or set CODEMACHINE_BIN_PATH.',
+      'Install CodeMachine CLI separately (for example `npm install -g codemachine@^0.8.0`) or set CODEMACHINE_BIN_PATH.',
   };
 }
 

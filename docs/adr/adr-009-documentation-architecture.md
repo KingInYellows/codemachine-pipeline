@@ -64,8 +64,7 @@ This ADR documents critical architectural decisions discovered during documentat
    - Security: Path traversal protections applied
 
 2. **npm optionalDependency** (platform-specific packages)
-   - Project optional dependency: `codemachine` (wrapper package)
-   - `binaryResolver.ts` attempts to resolve platform packages from `node_modules` (typically transitive via `codemachine`):
+   - `binaryResolver.ts` attempts to resolve platform packages from `node_modules` when they are installed separately:
      - `codemachine-darwin-arm64`
      - `codemachine-darwin-x64`
      - `codemachine-linux-x64`

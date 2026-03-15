@@ -1,4 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { mkdirSync, rmSync, writeFileSync } from 'node:fs';
+import * as path from 'node:path';
 
 // Mock fs/promises with constants included
 vi.mock('node:fs/promises', async (importOriginal) => {
@@ -61,16 +63,22 @@ describe('binaryResolver', () => {
   describe('optionalDependencies resolution', () => {
     it('resolves platform binary when available', async () => {
       delete process.env.CODEMACHINE_BIN_PATH;
+      const packageDir = path.join(process.cwd(), 'node_modules', 'codemachine-linux-x64');
+      const packageJsonPath = path.join(packageDir, 'package.json');
 
-      // Let the real resolution run — in test env with codemachine installed,
-      // it should find the binary from node_modules
+      mkdirSync(packageDir, { recursive: true });
+      writeFileSync(packageJsonPath, JSON.stringify({ name: 'codemachine-linux-x64' }), 'utf8');
       vi.mocked(fs.access).mockResolvedValue(undefined);
 
-      const result = await resolveBinary();
+      try {
+        const result = await resolveBinary();
 
-      // Should resolve from optionalDep or PATH since codemachine is installed
-      expect(result.resolved).toBe(true);
-      expect(result.source).toBeDefined();
+        expect(result.resolved).toBe(true);
+        expect(result.source).toBe('optionalDep');
+        expect(result.binaryPath).toBe(path.join(packageDir, 'codemachine'));
+      } finally {
+        rmSync(packageDir, { recursive: true, force: true });
+      }
     });
   });
 

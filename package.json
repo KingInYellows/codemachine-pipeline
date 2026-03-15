@@ -79,9 +79,6 @@
     "undici": "^7.24.1",
     "zod": "^4.3.6"
   },
-  "optionalDependencies": {
-    "codemachine": "^0.8.0"
-  },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
     "@types/node": "^25.4.0",
@@ -103,8 +100,13 @@
     "vitest": "^4.0.15"
   },
   "overrides": {
-    "glob": "^10.5.0",
-    "test-exclude": "^7.0.1"
+    "test-exclude": "^7.0.1",
+    "filelist": {
+      "minimatch": "^5.1.8"
+    },
+    "module-lookup-amd": {
+      "glob": "^11.0.3"
+    }
   },
   "oclif": {
     "bin": "codepipe",
