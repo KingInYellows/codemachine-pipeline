@@ -19,7 +19,7 @@ jobs:
     if: >-
       github.repository == 'KingInYellows/codemachine-pipeline' &&
       (github.event_name != 'pull_request' || !github.event.pull_request.head.repo.fork)
-    runs-on: [self-hosted, linux]
+    runs-on: ubuntu-latest
     timeout-minutes: 5
     env:
       GRAPHITE_TOKEN: ${{ secrets.GRAPHITE_TOKEN }}
@@ -46,7 +46,7 @@ jobs:
       github.repository == 'KingInYellows/codemachine-pipeline' &&
       (github.event_name != 'pull_request' || !github.event.pull_request.head.repo.fork) &&
       needs.optimize_ci.outputs.skip == 'false'
-    runs-on: [self-hosted, linux]
+    runs-on: ubuntu-latest
     timeout-minutes: 10
     continue-on-error: true
     steps:
@@ -83,7 +83,7 @@ jobs:
       github.repository == 'KingInYellows/codemachine-pipeline' &&
       (github.event_name != 'pull_request' || !github.event.pull_request.head.repo.fork) &&
       needs.optimize_ci.outputs.skip == 'false'
-    runs-on: [self-hosted, linux]
+    runs-on: ubuntu-latest
     timeout-minutes: 45
     env:
       OCLIF_SKIP_MANIFEST: '1'
@@ -99,8 +99,6 @@ jobs:
 
       - name: Setup Node.js environment
         uses: ./.github/actions/setup-node
-        with:
-          prepare-npm-dirs: 'true'
 
       - name: Install dependencies
         run: npm ci --no-audit --no-fund
@@ -151,7 +149,7 @@ jobs:
       github.repository == 'KingInYellows/codemachine-pipeline' &&
       (github.event_name != 'pull_request' || !github.event.pull_request.head.repo.fork) &&
       needs.optimize_ci.outputs.skip == 'false'
-    runs-on: [self-hosted, linux]
+    runs-on: ubuntu-latest
     timeout-minutes: 30
     env:
       OCLIF_SKIP_MANIFEST: '1'

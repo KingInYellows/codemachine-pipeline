@@ -26,15 +26,13 @@ jobs:
     if: >-
       github.repository == 'KingInYellows/codemachine-pipeline' &&
       (github.event_name != 'pull_request' || !github.event.pull_request.head.repo.fork)
-    runs-on: [self-hosted, linux]
+    runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.2.2
 
       - name: Setup Node.js environment
         uses: ./.github/actions/setup-node
-        with:
-          prepare-npm-dirs: 'true'
 
       - name: Install markdown-link-check
         run: |
@@ -64,15 +62,13 @@ jobs:
     if: >-
       github.repository == 'KingInYellows/codemachine-pipeline' &&
       (github.event_name != 'pull_request' || !github.event.pull_request.head.repo.fork)
-    runs-on: [self-hosted, linux]
+    runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.2.2
 
       - name: Setup Node.js environment
         uses: ./.github/actions/setup-node
-        with:
-          prepare-npm-dirs: 'true'
 
       - name: Install dependencies
         run: npm ci --no-audit --no-fund
@@ -88,7 +84,7 @@ jobs:
     if: >-
       github.repository == 'KingInYellows/codemachine-pipeline' &&
       (github.event_name != 'pull_request' || !github.event.pull_request.head.repo.fork)
-    runs-on: [self-hosted, linux]
+    runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.2.2
@@ -120,7 +116,7 @@ jobs:
     if: >-
       github.repository == 'KingInYellows/codemachine-pipeline' &&
       (github.event_name != 'pull_request' || !github.event.pull_request.head.repo.fork)
-    runs-on: [self-hosted, linux]
+    runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.2.2
@@ -133,7 +129,7 @@ jobs:
     if: >-
       github.repository == 'KingInYellows/codemachine-pipeline' &&
       (github.event_name != 'pull_request' || !github.event.pull_request.head.repo.fork)
-    runs-on: [self-hosted, linux]
+    runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.2.2
@@ -152,7 +148,7 @@ jobs:
     if: >-
       github.repository == 'KingInYellows/codemachine-pipeline' &&
       (github.event_name != 'pull_request' || !github.event.pull_request.head.repo.fork)
-    runs-on: [self-hosted, linux]
+    runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.2.2
@@ -160,7 +156,6 @@ jobs:
       - name: Setup Node.js environment
         uses: ./.github/actions/setup-node
         with:
-          prepare-npm-dirs: 'true'
           cache: ''
           enable-preflight: 'false'
 
@@ -208,7 +203,7 @@ jobs:
     if: >-
       github.repository == 'KingInYellows/codemachine-pipeline' &&
       (github.event_name != 'pull_request' || !github.event.pull_request.head.repo.fork)
-    runs-on: [self-hosted, linux]
+    runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.2.2
@@ -243,7 +238,7 @@ jobs:
 
   summary:
     name: Documentation Quality Summary
-    runs-on: [self-hosted, linux]
+    runs-on: ubuntu-latest
     timeout-minutes: 15
     needs: [link-check, command-validation, factual-accuracy, security-scan, code-examples, spell-check, structure-validation]
     if: >-
