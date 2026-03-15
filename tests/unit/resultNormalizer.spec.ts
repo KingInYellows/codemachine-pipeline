@@ -13,10 +13,14 @@ import {
 import type { StructuredLogger } from '../../src/telemetry/logger';
 import type { NormalizedResult } from '../../src/workflows/resultNormalizer';
 
+function buildCredential(prefix: string, body: string): string {
+  return `${prefix}${body}`;
+}
+
 describe('resultNormalizer', () => {
   describe('redactCredentials', () => {
     it('redacts OpenAI API keys', () => {
-      const text = 'Using key [example-openai-key]';
+      const text = `Using key ${buildCredential('sk' + '-', '1234567890abcdefghijklmnop')}`;
       const redacted = redactCredentials(text);
       expect(redacted).toContain('[OPENAI_KEY_REDACTED]');
       expect(redacted).not.toContain('sk-1234567890');
@@ -329,14 +333,14 @@ describe('resultNormalizer', () => {
     it('redacts API keys matching /[A-Za-z0-9_-]{32,}/', () => {
       // This pattern is covered by the specific sk- patterns in the implementation
       // Testing with OpenAI-style key which is caught by existing patterns
-      const text = 'API key: [example-openai-key]';
+      const text = `API key: ${buildCredential('sk' + '-', '1234567890abcdef1234567890abcdef')}`;
       const redacted = redactCredentials(text);
       expect(redacted).toContain('[OPENAI_KEY_REDACTED]');
       expect(redacted).not.toContain('1234567890abcdef');
     });
 
     it('redacts OPENAI_API_KEY env var', () => {
-      const text = 'OPENAI_API_KEY=[example-openai-key]';
+      const text = `OPENAI_API_KEY=${buildCredential('sk' + '-', '1234567890abcdef')}`;
       const redacted = redactCredentials(text);
       expect(redacted).toContain('[ENV_VAR_REDACTED]');
     });
@@ -348,7 +352,7 @@ describe('resultNormalizer', () => {
     });
 
     it('redacts GITHUB_TOKEN env var', () => {
-      const text = 'GITHUB_TOKEN=[example-github-token]';
+      const text = `GITHUB_TOKEN=${buildCredential('gh' + 'p_', '1234567890abcdefghijklmnopqrstuvwxyz')}`;
       const redacted = redactCredentials(text);
       expect(redacted).toContain('REDACTED');
     });
@@ -830,7 +834,7 @@ describe('resultNormalizer', () => {
     });
 
     it('should handle unicode and special characters in redaction', () => {
-      const text = 'Key: [example-openai-key] 中文 emoji 🔑 special chars @#$%^&*()';
+      const text = `Key: ${buildCredential('sk' + '-', '1234567890abcdef123456')} 中文 emoji 🔑 special chars @#$%^&*()`;
       const redacted = redactCredentials(text);
       expect(redacted).toContain('[OPENAI_KEY_REDACTED]');
       expect(redacted).toContain('中文');

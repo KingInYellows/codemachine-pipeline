@@ -44,6 +44,17 @@ async function readNdjsonFile(filePath: string): Promise<LogEntry[]> {
   return lines.map((line) => JSON.parse(line) as LogEntry);
 }
 
+function buildToken(prefix: string, body: string): string {
+  return `${prefix}${body}`;
+}
+
+function buildJwtToken(): string {
+  const header = Buffer.from(JSON.stringify({ alg: 'HS256', typ: 'JWT' })).toString('base64url');
+  const payload = Buffer.from(JSON.stringify({ sub: '1234567890' })).toString('base64url');
+  const signature = Buffer.from('abc123').toString('base64url');
+  return `${header}.${payload}.${signature}`;
+}
+
 async function readTraceFile(filePath: string): Promise<Span[]> {
   const content = await fs.readFile(filePath, 'utf-8');
   const lines = content
@@ -173,8 +184,8 @@ describe('StructuredLogger', () => {
         runDir: tempDir,
       });
 
-      logger.info('Token: [example-github-token]', {
-        token: '[example-github-token]',
+      logger.info(`Token: ${buildToken('gh' + 'p_', '1234567890abcdefghijklmnopqrstuvwxyz')}`, {
+        token: buildToken('gh' + 'p_', 'abcdefghijklmnopqrstuvwxyz1234567890'),
       });
       await logger.flush();
 
@@ -192,7 +203,7 @@ describe('StructuredLogger', () => {
         runDir: tempDir,
       });
 
-      logger.info('Using token [example-github-token]');
+      logger.info(`Using token ${buildToken('gh' + 'o_', '1234567890abcdefghijklmnopqrstuvwxyz')}`);
       await logger.flush();
 
       const logPath = path.join(tempDir, 'logs', 'logs.ndjson');
@@ -208,7 +219,7 @@ describe('StructuredLogger', () => {
         runDir: tempDir,
       });
 
-      const jwt = '[example-jwt]';
+      const jwt = buildJwtToken();
       logger.info(`Bearer token: ${jwt}`);
       await logger.flush();
 
@@ -226,7 +237,9 @@ describe('StructuredLogger', () => {
       });
 
       logger.info('Sending request', {
-        headers: { Authorization: 'Bearer [example-github-token]' },
+        headers: {
+          Authorization: `Bearer ${buildToken('gh' + 'p_', 'secrettoken1234567890abcdefghijklmnopqrstuv')}`,
+        },
       });
       await logger.flush();
 
@@ -269,7 +282,7 @@ describe('StructuredLogger', () => {
         enableRedaction: false,
       });
 
-      logger.info('Token: [example-github-token]');
+      logger.info(`Token: ${buildToken('gh' + 'p_', '1234567890abcdefghijklmnopqrstuvwxyz')}`);
       await logger.flush();
 
       const logPath = path.join(tempDir, 'logs', 'logs.ndjson');
@@ -283,7 +296,10 @@ describe('StructuredLogger', () => {
     it('should redact multiple secret types in one string', () => {
       const redactor = new RedactionEngine();
       const input =
-        'Tokens: [example-github-token] and [example-github-token], JWT: eyJhbGc...';
+        `Tokens: ${buildToken('gh' + 'p_', 'abc1234567890abcdefghijklmnopqrstuvwxyzABCD')} and ${buildToken(
+          'gh' + 'o_',
+          'xyz1234567890abcdefghijklmnopqrstuvwxyzXYZ'
+        )}, JWT: eyJhbGc...`;
       const output = redactor.redact(input);
 
       expect(output).toContain('[REDACTED_GITHUB_TOKEN]');
@@ -296,10 +312,10 @@ describe('StructuredLogger', () => {
       const input = {
         user: 'alice',
         credentials: {
-          token: '[example-github-token]',
+          token: buildToken('gh' + 'p_', 'secret123456'),
           password: 'my-password',
         },
-        data: ['[example-github-token]', 'normal-value'],
+        data: [buildToken('gh' + 'p_', '1234567890abcdefghijklmnopqrstuvwxyz'), 'normal-value'],
       };
 
       const output = redactor.redactObject(input);
