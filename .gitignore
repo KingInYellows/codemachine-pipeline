@@ -54,10 +54,15 @@ ISSUE_RESOLUTION_PLAN.md
 .serena/
 .claude/
 .claude-flow/
+.debt/
 .mcp.json
 .deps/
+.gt-stack-plan.md
 CLAUDE.md
 tools/
+docs/audits/
+docs/brainstorms/
+docs/research/
 
 # Working notes
 thoughts/
