@@ -20,7 +20,7 @@ import type { RateLimitLedgerData } from '../../src/telemetry/rateLimitLedger';
 import type { BranchProtectionReport } from '../../src/workflows/branchProtectionReporter';
 
 const CLI_BIN_PATH = path.resolve(__dirname, '../../bin/run.js');
-const ROOT_CONFIG_PATH = path.resolve(__dirname, '../../.codepipe/config.json');
+const ROOT_CONFIG_PATH = path.resolve(__dirname, '../../examples/sample_repo_config/config.json');
 
 interface PlanCommandPayload {
   feature_id: string | null;

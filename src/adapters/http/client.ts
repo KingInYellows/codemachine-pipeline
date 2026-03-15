@@ -59,6 +59,20 @@ type AttemptResult<T> =
   | { ok: true; result: HttpResponse<T> }
   | { ok: false; error: HttpError; rateLimitEnvelope: RateLimitEnvelope | undefined };
 
+function isAbsoluteUrl(value: string): boolean {
+  return /^https?:\/\//i.test(value);
+}
+
+function buildRequestUrl(baseUrl: string, path: string): string {
+  if (isAbsoluteUrl(path)) {
+    return path;
+  }
+
+  const normalizedBaseUrl = baseUrl.endsWith('/') ? baseUrl : `${baseUrl}/`;
+  const normalizedPath = path.replace(/^\/+/, '');
+  return new URL(normalizedPath, normalizedBaseUrl).toString();
+}
+
 /**
  * Unified HTTP client with rate limiting, retries, and structured errors
  */
@@ -163,7 +177,7 @@ export class HttpClient {
     path: string,
     options: HttpRequestOptions = {}
   ): Promise<HttpResponse<T>> {
-    const url = new URL(path, this.config.baseUrl).toString();
+    const url = buildRequestUrl(this.config.baseUrl, path);
     const requestId = generateRequestId();
     const idempotencyKey = options.idempotent ? generateIdempotencyKey() : undefined;
     const headers = this.buildHeaders(requestId, idempotencyKey, options.headers);

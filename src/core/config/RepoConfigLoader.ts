@@ -20,6 +20,10 @@ import {
   type ValidationResult,
   type ConfigHistoryEntry,
 } from './RepoConfigSchema';
+import {
+  ALLOW_UNSAFE_CUSTOM_GITHUB_API_BASE_URL_ENV,
+  hasCustomGitHubApiBaseUrl,
+} from '../../utils/githubApiUrl.js';
 
 /**
  * Load and validate RepoConfig from file
@@ -115,6 +119,17 @@ export async function loadRepoConfig(configPath: string): Promise<ValidationResu
             `Set ${config.github.token_env_var} with scopes: ${config.github.required_scopes.join(', ')}`
         );
       }
+    }
+
+    if (
+      config.github.enabled &&
+      hasCustomGitHubApiBaseUrl(config.github.api_base_url) &&
+      process.env[ALLOW_UNSAFE_CUSTOM_GITHUB_API_BASE_URL_ENV] !== '1'
+    ) {
+      warnings.push(
+        `Custom github.api_base_url detected. Non-default GitHub API hosts require https and explicit opt-in; ` +
+          `set ${ALLOW_UNSAFE_CUSTOM_GITHUB_API_BASE_URL_ENV}=1 only for a trusted GitHub Enterprise deployment.`
+      );
     }
 
     if (config.linear.enabled) {

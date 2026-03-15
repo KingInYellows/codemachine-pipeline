@@ -777,6 +777,41 @@ describe('GitHubAdapter Integration Tests', () => {
           () => new GitHubAdapter({ owner: 'test-org', repo: '.github', token: 'tok' })
         ).not.toThrow();
       });
+
+      it('should reject a custom GitHub API base URL when credentials are present', () => {
+        expect(
+          () =>
+            new GitHubAdapter({
+              owner: 'test-org',
+              repo: 'test-repo',
+              token: 'tok',
+              baseUrl: 'https://github.example.com/api/v3',
+            })
+        ).toThrow(GitHubAdapterError);
+      });
+
+      it('should allow a custom GitHub API base URL when explicitly opted in', () => {
+        const original = process.env.CODEPIPE_ALLOW_UNSAFE_GITHUB_API_BASE_URL;
+        process.env.CODEPIPE_ALLOW_UNSAFE_GITHUB_API_BASE_URL = '1';
+
+        try {
+          expect(
+            () =>
+              new GitHubAdapter({
+                owner: 'test-org',
+                repo: 'test-repo',
+                token: 'tok',
+                baseUrl: 'https://github.example.com/api/v3',
+              })
+          ).not.toThrow();
+        } finally {
+          if (original === undefined) {
+            delete process.env.CODEPIPE_ALLOW_UNSAFE_GITHUB_API_BASE_URL;
+          } else {
+            process.env.CODEPIPE_ALLOW_UNSAFE_GITHUB_API_BASE_URL = original;
+          }
+        }
+      });
     });
 
     describe('pull_number validation', () => {

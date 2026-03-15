@@ -14,6 +14,7 @@ import { promisify } from 'node:util';
 import { parse } from 'shell-quote';
 import type { StructuredLogger } from '../telemetry/logger';
 import { getErrorMessage } from '../utils/errors.js';
+import { redactSecrets } from '../utils/redaction.js';
 
 const NULL_BYTE_CHARACTER = String.fromCharCode(0);
 
@@ -315,17 +316,24 @@ export async function saveCommandOutput(
   stderr: string
 ): Promise<{ stdoutPath: string; stderrPath: string }> {
   const outputDir = path.join(runDir, 'validation', 'outputs');
-  await fs.mkdir(outputDir, { recursive: true });
+  await fs.mkdir(outputDir, { recursive: true, mode: 0o700 });
+  try {
+    await fs.chmod(outputDir, 0o700);
+  } catch {
+    // Ignore chmod failures on platforms or filesystems that do not support POSIX modes.
+  }
 
   const stdoutPath = `validation/outputs/${commandType}_${attemptId}.stdout.txt`;
   const stderrPath = `validation/outputs/${commandType}_${attemptId}.stderr.txt`;
 
   const stdoutAbsPath = path.join(runDir, stdoutPath);
   const stderrAbsPath = path.join(runDir, stderrPath);
+  const redactedStdout = redactSecrets(stdout);
+  const redactedStderr = redactSecrets(stderr);
 
   await Promise.all([
-    fs.writeFile(stdoutAbsPath, stdout, 'utf-8'),
-    fs.writeFile(stderrAbsPath, stderr, 'utf-8'),
+    fs.writeFile(stdoutAbsPath, redactedStdout, { encoding: 'utf-8', mode: 0o600 }),
+    fs.writeFile(stderrAbsPath, redactedStderr, { encoding: 'utf-8', mode: 0o600 }),
   ]);
 
   return { stdoutPath, stderrPath };

@@ -10,8 +10,11 @@
  * - Edge cases, error conditions, and security (operator rejection)
  */
 
-import { describe, it, expect } from 'vitest';
-import { parseCommandString } from '../../src/workflows/commandRunner.js';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import * as fs from 'node:fs/promises';
+import * as os from 'node:os';
+import * as path from 'node:path';
+import { parseCommandString, saveCommandOutput } from '../../src/workflows/commandRunner.js';
 
 describe('parseCommandString', () => {
   // ── Basic command splitting ──────────────────────────────────────────────
@@ -226,5 +229,76 @@ describe('parseCommandString', () => {
     const [exe, args] = parseCommandString('npx tsc --noEmit');
     expect(exe).toBe('npx');
     expect(args).toEqual(['tsc', '--noEmit']);
+  });
+});
+
+describe('saveCommandOutput', () => {
+  const testRunDir = path.join(os.tmpdir(), `codepipe-command-runner-${process.pid}`);
+
+  beforeEach(async () => {
+    await fs.rm(testRunDir, { recursive: true, force: true });
+    await fs.mkdir(testRunDir, { recursive: true });
+  });
+
+  afterEach(async () => {
+    await fs.rm(testRunDir, { recursive: true, force: true });
+  });
+
+  it('redacts secrets before persisting stdout and stderr', async () => {
+    const { stdoutPath, stderrPath } = await saveCommandOutput(
+      testRunDir,
+      'lint',
+      'attempt-1',
+      'token=gho_abcdefghijklmnopqrstuvwxyz1234567890AB',
+      'Authorization: Bearer ghs_abcdefghijklmnopqrstuvwxyz1234567890AB'
+    );
+
+    const persistedStdout = await fs.readFile(path.join(testRunDir, stdoutPath), 'utf-8');
+    const persistedStderr = await fs.readFile(path.join(testRunDir, stderrPath), 'utf-8');
+
+    expect(persistedStdout).toContain('[GITHUB_TOKEN_REDACTED]');
+    expect(persistedStdout).not.toContain('gho_abcdefghijklmnopqrstuvwxyz1234567890AB');
+    expect(persistedStderr).toContain('Authorization: [REDACTED]');
+    expect(persistedStderr).not.toContain('ghs_abcdefghijklmnopqrstuvwxyz1234567890AB');
+  });
+
+  it('writes output files with owner-only permissions on POSIX platforms', async () => {
+    const { stdoutPath, stderrPath } = await saveCommandOutput(
+      testRunDir,
+      'test',
+      'attempt-2',
+      'ok',
+      'failed'
+    );
+
+    if (process.platform === 'win32') {
+      expect(stdoutPath).toContain('validation/outputs/');
+      expect(stderrPath).toContain('validation/outputs/');
+      return;
+    }
+
+    const stdoutStat = await fs.stat(path.join(testRunDir, stdoutPath));
+    const stderrStat = await fs.stat(path.join(testRunDir, stderrPath));
+
+    expect(stdoutStat.mode & 0o777).toBe(0o600);
+    expect(stderrStat.mode & 0o777).toBe(0o600);
+  });
+
+  it('tightens permissions on a pre-existing output directory on POSIX platforms', async () => {
+    const outputDir = path.join(testRunDir, 'validation', 'outputs');
+    await fs.mkdir(outputDir, { recursive: true });
+
+    if (process.platform !== 'win32') {
+      await fs.chmod(outputDir, 0o777);
+    }
+
+    await saveCommandOutput(testRunDir, 'build', 'attempt-3', 'ok', 'ok');
+
+    if (process.platform === 'win32') {
+      return;
+    }
+
+    const outputDirStat = await fs.stat(outputDir);
+    expect(outputDirStat.mode & 0o777).toBe(0o700);
   });
 });
