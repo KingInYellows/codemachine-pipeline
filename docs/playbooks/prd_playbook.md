@@ -420,8 +420,8 @@ cat .codepipe/<feature_id>/artifacts/prd_metadata.json | jq '.prdHash'
 ### Related Documentation
 
 - [PRD Template](../templates/prd_template.md)
-- [Approval Record Schema](../requirements/data_model_dictionary.md#approval-record)
-- [Traceability Map](../requirements/traceability_map.md)
+- [Approval Record Schema](../reference/data_model_dictionary.md#approvalrecord)
+- [Traceability Map](./traceability_playbook.md)
 - [Init Playbook](./init_playbook.md)
 
 ### Version History

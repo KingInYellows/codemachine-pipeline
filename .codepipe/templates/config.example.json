@@ -1,5 +1,5 @@
 {
-  "_comment": "Example RepoConfig for codemachine-pipeline CLI - See docs/requirements/RepoConfig_schema.md for full documentation",
+  "_comment": "Example RepoConfig for codemachine-pipeline CLI - See docs/reference/config/RepoConfig_schema.md for full documentation",
 
   "schema_version": "1.0.0",
 
@@ -178,10 +178,10 @@
       "max_lines_changed_per_pr": 5000
     },
     "compliance_tags": [
-      "SOC2",
-      "internal-tooling"
+      "regulated-change-control",
+      "human-review"
     ],
-    "governance_notes": "All PRs require approval per company policy. Auto-merge disabled for security. Branch protection enforced on main branch."
+    "governance_notes": "Tune approval requirements and merge controls to match your project's review, release, and branch protection policies."
   },
 
   "config_history": [
@@ -189,11 +189,11 @@
       "_comment": "Migration history for schema version tracking (ADR-2)",
       "timestamp": "2025-12-15T10:00:00.000Z",
       "schema_version": "1.0.0",
-      "changed_by": "alice@example.com",
-      "change_description": "Initial configuration with governance controls enabled",
+      "changed_by": "maintainer@example.com",
+      "change_description": "Initial example configuration with governance controls enabled",
       "migration_applied": false
     }
   ],
 
-  "_footer_comment": "For complete documentation, see docs/requirements/RepoConfig_schema.md"
+  "_footer_comment": "For complete documentation, see docs/reference/config/RepoConfig_schema.md"
 }

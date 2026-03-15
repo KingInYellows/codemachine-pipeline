@@ -195,7 +195,7 @@ All log output passes through ResultNormalizer which redacts:
 
 ### Execution Engine State Machine
 
-> Converted from [`docs/diagrams/execution_flow.puml`](../diagrams/execution_flow.puml).
+> Converted from [`docs/diagrams/execution_flow.puml`](../../diagrams/execution_flow.puml).
 
 ```mermaid
 stateDiagram-v2
@@ -247,7 +247,7 @@ stateDiagram-v2
 
 ### Deployment & Resume State Machine
 
-> Converted from [`docs/diagrams/deployment_resume_state.puml`](../diagrams/deployment_resume_state.puml).
+> Converted from [`docs/diagrams/deployment_resume_state.puml`](../../diagrams/deployment_resume_state.puml).
 
 ```mermaid
 stateDiagram-v2
@@ -299,7 +299,7 @@ stateDiagram-v2
 
 ### Specification Composer Flow
 
-> From [`docs/diagrams/spec_flow.mmd`](../diagrams/spec_flow.mmd).
+> From [`docs/diagrams/spec_flow.mmd`](../../diagrams/spec_flow.mmd).
 
 ```mermaid
 flowchart TD
@@ -344,7 +344,7 @@ plan.json → CLIExecutionEngine → Strategy → Runner → Subprocess
 
 ## Related Documentation
 
-- [Component Overview](../diagrams/component_overview.md) - System architecture
+- [Component Overview](../../diagrams/component_overview.md) - System architecture
 - [Run Directory Schema](../run_directory_schema.md) - State persistence
 - [CodeMachine Adapter Guide](../config/codemachine_adapter_guide.md) - Operational guide
 - [Agent Manifest Schema](../agent_manifest_schema.json) - Task definitions

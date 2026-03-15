@@ -252,7 +252,7 @@ Auto-merge is a powerful feature but carries risk. The pipeline supports disabli
 codepipe pr disable-auto-merge
 
 # Provide reason (logged to deployment.json)
-codepipe pr disable-auto-merge --reason "Manual merge required for SOC2 compliance"
+codepipe pr disable-auto-merge --reason "Manual merge required for final verification"
 
 # JSON output
 codepipe pr disable-auto-merge --json
@@ -272,7 +272,7 @@ codepipe pr disable-auto-merge --json
 PR #42
 URL: https://github.com/org/repo/pull/42
 Auto-merge: disabled
-Reason: Manual merge required for SOC2 compliance
+Reason: Manual merge required for final verification
 
 Auto-merge disabled successfully
 ```
@@ -538,9 +538,9 @@ All PR commands use standardized exit codes:
 ## Related Documentation
 
 - [PR Automation Sequence Diagram](../diagrams/pr_automation_sequence.mmd) - Visual workflow
-- [GitHub Endpoints Reference](./github_endpoints.md) - API specifications
+- [GitHub Branch Protection Reference](../reference/github_branch_protection.md) - GitHub API and branch protection details
 - [Approval Playbook](../playbooks/approval_playbook.md) - Governance workflow
-- [ADR-3: Integration Layer](../adr/003-integration-layer.md) - Design decisions
+- [GitHub Adapter Guide](../reference/config/github_adapter.md) - GitHub integration details
 
 ---
 
