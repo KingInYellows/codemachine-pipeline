@@ -51,7 +51,7 @@
 
 ### Branch Strategy
 
-This project uses [Graphite](https://graphite.dev/) for stacked PRs. See [docs/development/submission-workflow.md](development/submission-workflow.md) for the full workflow.
+This project uses [Graphite](https://graphite.dev/) for stacked PRs. See [docs/archive/development/submission-workflow.md](docs/archive/development/submission-workflow.md) for the full workflow.
 
 **Key Graphite commands:**
 
@@ -221,7 +221,7 @@ npm run clean            # Remove dist/
 - **Validation:** Runtime schemas use Zod (see ADR-7).
 - **Circular dependency detection:** `npm run deps:check` (madge). CI runs `npm run deps:check:ci` against a baseline.
 - **Unused exports:** `npm run exports:check` (ts-unused-exports).
-- **CLI reference:** Auto-generated from `oclif.manifest.json`. After adding or modifying commands, run `npm run docs:cli` and commit the updated `docs/ops/cli-reference.md`. CI checks for drift via `npm run docs:cli:check`.
+- **CLI reference:** Auto-generated from `oclif.manifest.json`. After adding or modifying commands, run `npm run docs:cli` and commit the updated `docs/reference/cli/cli-reference.md`. CI checks for drift via `npm run docs:cli:check`.
 
 Run both checks before submitting:
 

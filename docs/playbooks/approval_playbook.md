@@ -495,10 +495,8 @@ The `approve` command uses standardized exit codes:
 
 ## Related Documentation
 
-- [ADR-5: Approval Workflow](../adr/005-approval-workflow.md) - Governance design decisions
-- [Blueprint Rulebook](../architecture/01_Blueprint_Foundation.md) - Human-in-the-loop enforcement
-- [Approval Gates Reference](./approval_gates.md) - Detailed gate descriptions (if exists)
-- [Init Playbook](./init_playbook.md) - Configuration and setup
+- [Approval Gates](./approval_gates.md) - Gate definitions and operational guidance
+- [Init Playbook](./init_playbook.md) - Initialization and approval-related setup flow
 
 ---
 

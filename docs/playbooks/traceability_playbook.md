@@ -54,6 +54,7 @@ This playbook provides comprehensive guidance for generating, maintaining, and v
 
 ### Functional Requirements
 
+<a id="fr-9-traceability"></a>
 **FR-9: Traceability**
 
 Every architectural artifact must map inputs to outputs:
@@ -62,6 +63,7 @@ Every architectural artifact must map inputs to outputs:
 2. **Spec Requirements** must link to **ExecutionTasks**
 3. **ExecutionTasks** must eventually link to **Code Diffs** (post-execution)
 
+<a id="fr-10-specification-authoring"></a>
 **FR-10: Specification Authoring**
 
 Specifications must maintain backward links to PRD goals and forward links to planned tasks to enable impact analysis when requirements change.
@@ -129,7 +131,7 @@ All `trace.json` files follow the schema version `1.0.0` defined in the `TraceDo
 
 ### TraceLink Fields
 
-See [Data Model Dictionary](./data_model_dictionary.md#tracelink) for complete field definitions.
+See [Data Model Dictionary](../reference/data_model_dictionary.md#tracelink) for complete field definitions.
 
 **Key Fields:**
 
@@ -511,19 +513,19 @@ if (traceSummary) {
 
 ### Functional Requirements
 
-- **FR-9:** [Requirements Specification](./functional_requirements.md#fr-9-traceability)
-- **FR-10:** [Specification Authoring](./functional_requirements.md#fr-10-specification-authoring)
+- [FR-9](#fr-9-traceability): Traceability requirement defined in this playbook's "Functional Requirements" section
+- [FR-10](#fr-10-specification-authoring): Specification authoring requirement defined in this playbook's "Functional Requirements" section
 
 ### Architectural Decision Records
 
-- **ADR-2:** [State Persistence Policy](../architecture/01_Blueprint_Foundation.md#adr-2-state-persistence)
-- **ADR-5:** [Approval Workflow](../architecture/01_Blueprint_Foundation.md#adr-5-approval-workflow)
-- **ADR-7:** [Validation Policy](../architecture/01_Blueprint_Foundation.md#adr-7-validation-policy)
+- **ADR-2:** State persistence policy referenced by this playbook
+- **ADR-5:** Approval workflow referenced by this playbook
+- **ADR-7:** [Validation Policy](../adr/ADR-7-validation-policy.md)
 
 ### Data Models
 
-- **TraceLink Schema:** [Data Model Dictionary](./data_model_dictionary.md#tracelink)
-- **Feature Model:** [Data Model Dictionary](./data_model_dictionary.md#feature)
+- **TraceLink Schema:** [Data Model Dictionary](../reference/data_model_dictionary.md#tracelink)
+- **Feature Model:** [Data Model Dictionary](../reference/data_model_dictionary.md#feature)
 
 ### Workflow Modules
 

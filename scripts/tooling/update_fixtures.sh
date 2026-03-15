@@ -95,7 +95,7 @@ FIXTURE STRUCTURE:
       *.json              - GraphQL response fixtures
       manifest.json       - Fixture metadata with hashes
 
-For more information, see: docs/ops/integration_testing.md
+For more information, see: docs/reference/integration_testing.md
 EOF
 }
 
