@@ -383,6 +383,7 @@ describe('PR Commands Integration Tests', () => {
       const runDir = path.join(baseDir, TEST_FEATURE_ID);
       const deployment = JSON.parse(
         await fs.readFile(path.join(runDir, 'deployment.json'), 'utf-8')
+        // eslint-disable-next-line @typescript-eslint/no-restricted-types -- action metadata varies by type
       ) as { actions: Array<{ action: string; metadata: Record<string, unknown> }> };
 
       expect(deployment.actions.length).toBe(1);
@@ -403,6 +404,7 @@ describe('PR Commands Integration Tests', () => {
         true
       );
 
+      // eslint-disable-next-line @typescript-eslint/no-restricted-types -- JSON.parse result structure not pre-known
       const parsed = JSON.parse(output) as Record<string, unknown>;
       const keys = Object.keys(parsed);
       const sorted = [...keys].sort();

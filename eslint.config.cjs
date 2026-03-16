@@ -24,6 +24,8 @@ module.exports = [
       'examples/**/*.ts',
       'docs/research/**',
       'docs/brainstorms/**',
+      'src/**/*.test.ts',
+      'src/**/*.spec.ts',
     ],
   },
   js.configs.recommended,

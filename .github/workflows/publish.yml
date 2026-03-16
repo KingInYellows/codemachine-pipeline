@@ -9,12 +9,16 @@ permissions:
   contents: read
   packages: write
 
+concurrency:
+  group: publish
+  cancel-in-progress: false
+
 jobs:
   publish:
     name: Publish Package
     if: github.repository == 'KingInYellows/codemachine-pipeline'
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 30
 
     steps:
       - name: Checkout code
@@ -33,6 +37,27 @@ jobs:
         run: |
           PACKAGE_VERSION=$(node -p "require('./package.json').version")
           echo "Publishing version: $PACKAGE_VERSION"
+
+      - name: Check version not already published
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          set +e
+          VIEW_OUTPUT=$(npm view "@kinginyellows/codemachine-pipeline@${VERSION}" version 2>&1)
+          VIEW_STATUS=$?
+          set -e
+          if [ "$VIEW_STATUS" -eq 0 ]; then
+            echo "ERROR: Version ${VERSION} already published"
+            exit 1
+          fi
+          if printf '%s' "$VIEW_OUTPUT" | grep -q 'E404'; then
+            echo "Version ${VERSION} not yet published, proceeding"
+          else
+            printf '%s\n' "$VIEW_OUTPUT"
+            echo "ERROR: Unable to determine whether ${VERSION} is already published"
+            exit 1
+          fi
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Install dependencies
         run: npm ci --no-audit --no-fund
@@ -61,6 +86,16 @@ jobs:
 
       - name: Verify published package
         run: |
-          sleep 5
           PACKAGE_VERSION=$(node -p "require('./package.json').version")
-          npm view "@kinginyellows/codemachine-pipeline@${PACKAGE_VERSION}" version || echo "Package propagation pending"
+          for i in 1 2 3; do
+            sleep 10
+            if npm view "@kinginyellows/codemachine-pipeline@${PACKAGE_VERSION}" version 2>/dev/null; then
+              echo "Package ${PACKAGE_VERSION} verified on registry"
+              exit 0
+            fi
+            echo "Attempt $i: package not yet visible, retrying..."
+          done
+          echo "ERROR: Package not visible after 30s"
+          exit 1
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -102,8 +102,9 @@ function computeFixtureHash(fixture: HttpFixture): string {
   return crypto.createHash('sha256').update(normalized).digest('hex');
 }
 
+// eslint-disable-next-line @typescript-eslint/no-restricted-types -- generic type guard for object validation
 function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null;
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
 function isFixtureManifestEntry(value: unknown): value is FixtureManifestEntry {

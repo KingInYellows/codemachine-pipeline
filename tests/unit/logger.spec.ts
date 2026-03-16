@@ -295,11 +295,10 @@ describe('StructuredLogger', () => {
   describe('RedactionEngine', () => {
     it('should redact multiple secret types in one string', () => {
       const redactor = new RedactionEngine();
-      const input =
-        `Tokens: ${buildToken('gh' + 'p_', 'abc1234567890abcdefghijklmnopqrstuvwxyzABCD')} and ${buildToken(
-          'gh' + 'o_',
-          'xyz1234567890abcdefghijklmnopqrstuvwxyzXYZ'
-        )}, JWT: eyJhbGc...`;
+      const input = `Tokens: ${buildToken('gh' + 'p_', 'abc1234567890abcdefghijklmnopqrstuvwxyzABCD')} and ${buildToken(
+        'gh' + 'o_',
+        'xyz1234567890abcdefghijklmnopqrstuvwxyzXYZ'
+      )}, JWT: eyJhbGc...`;
       const output = redactor.redact(input);
 
       expect(output).toContain('[REDACTED_GITHUB_TOKEN]');

@@ -179,6 +179,7 @@ describe('CLI Status/Plan/Resume Surfaces', () => {
 
   it('plan --json surfaces DAG summary and detects spec diff changes', async () => {
     // Simulate spec metadata change after plan generation
+    // eslint-disable-next-line @typescript-eslint/no-restricted-types -- JSON.parse of config with unknown structure
     const currentSpecMetadata = JSON.parse(await fs.readFile(specMetadataPath, 'utf-8')) as Record<
       string,
       unknown
@@ -325,6 +326,7 @@ describe('CLI Status/Plan/Resume Surfaces', () => {
 
 async function copyRepoConfig(targetDir: string): Promise<void> {
   const configContent = await fs.readFile(ROOT_CONFIG_PATH, 'utf-8');
+  // eslint-disable-next-line @typescript-eslint/no-restricted-types -- JSON.parse of config with unknown structure
   const parsed = JSON.parse(configContent) as Record<string, unknown>;
   const serialized = JSON.stringify(parsed, null, 2);
   await fs.mkdir(targetDir, { recursive: true });
