@@ -131,7 +131,10 @@ export async function saveValidationRegistry(
 
   try {
     await ensureOwnerOnlyDirectory(validationDir);
-    await writeFile(tempPath, JSON.stringify(registry, null, 2), { encoding: 'utf-8', mode: 0o600 });
+    await writeFile(tempPath, JSON.stringify(registry, null, 2), {
+      encoding: 'utf-8',
+      mode: 0o600,
+    });
     await rename(tempPath, registryPath);
   } catch (error) {
     try {

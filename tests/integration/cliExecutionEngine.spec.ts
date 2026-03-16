@@ -82,6 +82,7 @@ describe('CLIExecutionEngine Integration', () => {
   let runDir: string;
   let featureId: string;
   let baseConfig: RepoConfig;
+  let configWithMissingCli: RepoConfig;
 
   beforeEach(async () => {
     featureId = `cli-exec-test-${Date.now()}`;
@@ -97,6 +98,19 @@ describe('CLIExecutionEngine Integration', () => {
     await fs.writeFile(path.join(pipelineDir, 'config.json'), configContent, 'utf-8');
 
     baseConfig = JSON.parse(configContent) as RepoConfig;
+
+    // Shared config with a non-existent CLI path for prerequisite validation tests
+    configWithMissingCli = {
+      ...baseConfig,
+      execution: {
+        ...(baseConfig.execution ?? {}),
+        codemachine_cli_path: '/nonexistent/codemachine-binary',
+        default_engine: 'claude',
+        task_timeout_ms: 30000,
+        max_retries: 3,
+        retry_backoff_ms: 1000,
+      },
+    };
 
     runDir = await createRunDirectory(runsDir, featureId, {
       repoUrl: 'https://github.com/test/cli-exec-repo.git',
@@ -152,7 +166,7 @@ describe('CLIExecutionEngine Integration', () => {
 
       const engine = new CLIExecutionEngine({
         runDir,
-        config: baseConfig,
+        config: configWithMissingCli,
         strategies: [cliStrategy],
       });
 
@@ -177,7 +191,7 @@ describe('CLIExecutionEngine Integration', () => {
 
       const engine = new CLIExecutionEngine({
         runDir,
-        config: baseConfig,
+        config: configWithMissingCli,
         strategies: [cliStrategy],
       });
 

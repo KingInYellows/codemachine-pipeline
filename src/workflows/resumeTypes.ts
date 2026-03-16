@@ -58,6 +58,7 @@ export interface ResumeDiagnostic {
   /** Classification code for mapping to playbook */
   code?: DiagnosticCode | undefined;
   /** Additional context data */
+  // eslint-disable-next-line @typescript-eslint/no-restricted-types -- diagnostic context varies by subsystem
   context?: Record<string, unknown> | undefined;
 }
 

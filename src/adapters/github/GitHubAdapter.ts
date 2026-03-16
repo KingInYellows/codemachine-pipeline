@@ -95,14 +95,17 @@ interface WithLoggingConfig<T> {
   /** Message logged at `error` level when the wrapped function rejects */
   errorMessage: string;
   /** Extra context merged into the error log entry */
+  // eslint-disable-next-line @typescript-eslint/no-restricted-types -- logging context varies per operation
   errorContext?: Record<string, unknown>;
   /** If provided, logged at `info` level *before* `fn()` executes */
   entryMessage?: string;
   /** Extra context merged into the entry log entry */
+  // eslint-disable-next-line @typescript-eslint/no-restricted-types -- logging context varies per operation
   entryContext?: Record<string, unknown>;
   /** If provided, logged at `info` level *after* `fn()` resolves */
   successMessage?: string;
   /** Derives extra context from the resolved value for the success log */
+  // eslint-disable-next-line @typescript-eslint/no-restricted-types -- logging context varies per operation
   successContext?: (result: T) => Record<string, unknown>;
 }
 

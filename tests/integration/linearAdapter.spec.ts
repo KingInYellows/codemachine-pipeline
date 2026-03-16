@@ -212,6 +212,7 @@ describe('LinearAdapter Integration Tests', () => {
       const [path, body, options] = mockHttpClient.post.mock.calls[0] as [
         string,
         { query: string; variables: { issueId: string } },
+        // eslint-disable-next-line @typescript-eslint/no-restricted-types -- HTTP metadata varies per request
         { metadata?: Record<string, unknown> },
       ];
       expect(path).toBe('/graphql');

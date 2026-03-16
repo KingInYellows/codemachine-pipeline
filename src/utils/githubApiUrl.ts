@@ -33,8 +33,7 @@ export function resolveGitHubApiBaseUrl(baseUrl: string | undefined): string {
   const candidate = baseUrl ?? DEFAULT_GITHUB_API_BASE_URL;
   const parsed = new URL(candidate);
   const normalizedPath = trimTrailingSlash(parsed.pathname);
-  const allowUnsafeCustomBaseUrl =
-    process.env[ALLOW_UNSAFE_CUSTOM_GITHUB_API_BASE_URL_ENV] === '1';
+  const allowUnsafeCustomBaseUrl = process.env[ALLOW_UNSAFE_CUSTOM_GITHUB_API_BASE_URL_ENV] === '1';
   const isDefaultGitHubApi =
     parsed.protocol === 'https:' &&
     parsed.hostname === 'api.github.com' &&
