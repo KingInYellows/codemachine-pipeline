@@ -37,8 +37,8 @@ else
 fi
 
 # --- Package availability ---
-log "Checking package availability..."
 if [[ -n "$VERSION" ]]; then
+  log "Checking package availability..."
   if npm view "${PACKAGE}@${VERSION}" version --registry=https://npm.pkg.github.com >/dev/null 2>&1; then
     pass "Package ${PACKAGE}@${VERSION} found on GitHub Packages"
   else
@@ -63,9 +63,10 @@ log "Running smoke tests..."
 
 INSTALLED_VER=$(codepipe --version 2>/dev/null || echo "")
 if [[ -n "$INSTALLED_VER" ]]; then
-  pass "codepipe --version: $INSTALLED_VER"
   if [[ -n "$VERSION" && "$INSTALLED_VER" != *"$VERSION"* ]]; then
     fail "Version mismatch: expected $VERSION, got $INSTALLED_VER"
+  else
+    pass "codepipe --version: $INSTALLED_VER"
   fi
 else
   fail "codepipe --version failed"
