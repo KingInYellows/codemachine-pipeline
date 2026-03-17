@@ -21,7 +21,7 @@ if [[ "$NODE_VER" == "none" ]]; then
   fail "Node.js not found"
   exit 1
 fi
-read -r -d . MAJOR _ <<< "${NODE_VER#v}"
+IFS='.' read -r MAJOR _ <<< "${NODE_VER#v}"
 if [[ "$MAJOR" -ge 24 ]]; then
   pass "Node.js $NODE_VER (>= 24)"
 else
