@@ -1,0 +1,27 @@
+name: Package Cleanup
+
+on:
+  schedule:
+    - cron: '0 6 * * 0' # Weekly on Sunday at 06:00 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: none
+  packages: write
+
+jobs:
+  cleanup:
+    name: Prune Old Package Versions
+    if: github.repository == 'KingInYellows/codemachine-pipeline'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Delete old package versions
+        uses: actions/delete-package-versions@e5bc658cc4c965c472efe991f8beea3981499c55 # v5.0.0
+        with:
+          package-name: '@kinginyellows/codemachine-pipeline'
+          package-type: npm
+          min-versions-to-keep: 2
+          delete-only-pre-release-versions: true
+          token: ${{ secrets.GITHUB_TOKEN }}
