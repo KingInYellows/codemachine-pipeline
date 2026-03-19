@@ -8,29 +8,31 @@ The parallel execution system enables concurrent task execution with dependency-
 
 ### Core Components
 
-**1. Worker Pool Manager**
+**1. Execution Dependency Resolver** (`executionDependencyResolver.ts`)
 
-- Tracks in-flight tasks via Map structure
-- Enforces concurrency limits (1-10 tasks)
-- Manages worker capacity and availability
+- Extracted from the execution engine (PR #632) for single-responsibility
+- Selects ready tasks using a single-pass bucket approach (O(n))
+- Priority order: running (resumed) > pending > retryable
+- Applies exponential backoff for retries (capped at 60 seconds)
 
-**2. Dependency Graph Analyzer**
+**2. CLI Execution Engine** (`cliExecutionEngine.ts`)
 
-- Detects task dependencies from execution plan
-- Ensures prerequisites complete before dependent tasks
-- Prevents circular dependencies
+- Orchestrates task dispatch with bounded parallelism via `max_parallel_tasks`
+- Delegates ready-task selection to the dependency resolver
+- Tracks in-flight tasks via `Map<string, Promise<TaskOutcome>>`
+- Handles dry-run mode, graceful stop, and telemetry recording
 
-**3. Task Scheduler**
+**3. Execution Lock Manager** (extracted to `persistence/` layer)
 
-- Selects ready tasks (dependencies met, resources available)
-- Dispatches tasks to available workers
-- Handles task completion and failure
+- File-based locking via `withLock()` for concurrent queue access
+- Prevents race conditions on shared queue state
+- Used by queue task manager for atomic updates
 
 **4. Coordination Layer**
 
-- Synchronizes queue updates across workers
-- Prevents race conditions on shared state
+- Synchronizes queue updates across workers via WAL-based queue
 - Maintains ACID guarantees for task transitions
+- Telemetry recording via `ExecutionTelemetryRecorder`
 
 ## Configuration
 
@@ -68,9 +70,21 @@ export CODEPIPE_EXECUTION_TIMEOUT_MS=300000
 
 > **Note:** The `CODEPIPE_MAX_PARALLEL_TASKS`, `CODEPIPE_TASK_TIMEOUT_MS`, and `CODEPIPE_ENABLE_PARALLEL_EXECUTION` names shown in earlier drafts of this guide are not implemented. Use `CODEPIPE_RUNTIME_MAX_CONCURRENT_TASKS` and `CODEPIPE_EXECUTION_TIMEOUT_MS` instead, or set the values in the `execution` section of `.codepipe/config.json`.
 
-### Runtime Override
+### CLI Flag Override
 
-Override parallelism at command execution:
+The `start` and `resume` commands accept a `--max-parallel` flag to override parallelism at invocation:
+
+```bash
+# Force sequential execution
+codepipe start --prompt "my feature" --max-parallel 1
+
+# Enable high parallelism
+codepipe resume --max-parallel 8
+```
+
+### Environment Variable Override
+
+Override parallelism via environment variable:
 
 ```bash
 # Force sequential execution
@@ -116,23 +130,29 @@ while (hasRemainingTasks()) {
 
 ### Dependency Resolution
 
-**Dependency Detection:**
+**Dependency Detection** (via `executionDependencyResolver.ts`):
+
+The resolver uses a single-pass bucket approach that selects up to `limit` ready
+tasks, excluding any tasks already in-flight. Priority order: running (resumed)
+> pending > retryable.
 
 ```typescript
-// Task A depends on Task B if:
-// 1. Task A explicitly lists Task B in dependencies array
-// 2. Task A modifies files produced by Task B
-// 3. Task A is sequenced after Task B in execution plan
+// From executionDependencyResolver.ts — getReadyTasks()
+// Single pass: bucket tasks by priority
+const running: ExecutionTask[] = [];
+const pending: ExecutionTask[] = [];
+const retryable: ExecutionTask[] = [];
 
-function areDependenciesCompleted(task: ExecutionTask): boolean {
-  for (const depId of task.dependencies) {
-    const depTask = queue.getTask(depId);
-    if (depTask.status !== 'completed') {
-      return false;
-    }
-  }
-  return true;
+for (const task of tasks.values()) {
+  if (inFlight.has(task.task_id)) continue;
+  if (!areDependenciesCompleted(task, tasks)) continue;
+
+  if (task.status === 'running') running.push(task);
+  else if (task.status === 'pending') pending.push(task);
+  else if (canRetry(task)) retryable.push(task);
 }
+
+return [...running, ...pending, ...retryable].slice(0, limit);
 ```
 
 **Dependency Chain Example:**
@@ -152,30 +172,31 @@ Execution with max_parallel_tasks=2:
   t=20s: test-004 (waiting for code-003)
 ```
 
-### Worker Pool Management
+### Task Dispatch and Capacity Management
 
-**Worker Lifecycle:**
+**Task Lifecycle:**
 
-1. **Idle**: Worker available, waiting for task assignment
-2. **Running**: Worker executing task, in-flight
-3. **Completing**: Task finished, cleanup in progress
-4. **Failed**: Task failed, retry or move to next task
+1. **Pending**: Task waiting for dependencies and capacity
+2. **Running**: Task dispatched and in-flight
+3. **Completed**: Task finished successfully, artifacts captured
+4. **Failed**: Task failed; re-enqueued as pending if retries remain, otherwise permanently failed
 
-**Capacity Management:**
+**Capacity Management** (via `CLIExecutionEngine.fillTaskBatch()`):
 
 ```typescript
 // Track in-flight tasks
-const inFlightTasks = new Map<string, Promise<RunnerResult>>();
+const inFlight = new Map<string, Promise<TaskOutcome>>();
 
-// Enforce concurrency limit
-if (inFlightTasks.size >= maxParallelTasks) {
-  // Wait for capacity
-  await Promise.race(inFlightTasks.values());
+// Fill batch up to available capacity
+const capacity = maxParallelTasks - inFlight.size;
+const readyTasks = await getReadyTasks(runDir, new Set(inFlight.keys()), capacity);
+for (const task of readyTasks) {
+  inFlight.set(task.task_id, runTask(task));
 }
 
-// Dispatch task to available worker
-const promise = executionStrategy.execute(context, task);
-inFlightTasks.set(task.task_id, promise);
+// Wait for at least one task to complete
+const completed = await Promise.race(inFlight.values());
+inFlight.delete(completed.taskId);
 ```
 
 ## Best Practices
@@ -529,8 +550,9 @@ codepipe resume --validate-queue --dry-run
 
 ### Implementation Files
 
-- **Execution Engine**: `src/workflows/cliExecutionEngine.ts:232-391`
-- **Queue Store**: `src/workflows/queueStore.ts`
+- **Dependency Resolver**: `src/workflows/executionDependencyResolver.ts` (ready-task selection, retry backoff)
+- **Execution Engine**: `src/workflows/cliExecutionEngine.ts` (task dispatch, bounded parallelism)
+- **Queue Store**: `src/workflows/queue/queueStore.ts`
 - **Execution Strategy**: `src/workflows/executionStrategy.ts`
 - **Task Model**: `src/core/models/ExecutionTask.ts`
 

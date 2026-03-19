@@ -5,10 +5,20 @@
 The `codepipe init` command initializes the codemachine-pipeline in a repository by:
 
 - Detecting the git repository root
-- Creating the `.codepipe/` directory structure
+- Creating the `.codepipe/` directory structure (`.codepipe/`, `runs/`, `logs/`, `artifacts/`)
 - Generating a schema-validated `config.json` with defaults
 - Validating credentials and environment setup
 - Recording initialization telemetry
+
+The `Init.run()` method was decomposed (CDMCH-160) into focused step-extraction
+methods: `resolveProjectPaths()`, `initializeTelemetry()`, `shouldAbortFromPrompt()`,
+`scaffoldConfiguration()`, `validateNewConfiguration()`, `renderValidationFailure()`,
+`buildResultPayload()`, and `renderInitResult()`. Each handles one concern and the
+top-level `run()` coordinates the flow.
+
+After initialization, feature execution is coordinated by `PipelineOrchestrator`
+(extracted via CDMCH-177), which sequences context aggregation, research detection,
+PRD authoring, and task execution as a four-stage pipeline.
 
 This playbook documents exact command usage, approval workflows, and operational considerations for CI/homelab operators.
 
@@ -503,10 +513,25 @@ fi
 
 ---
 
+## Pipeline Orchestrator (Post-Init)
+
+After `codepipe init` creates the `.codepipe/` scaffold, feature runs are coordinated
+by `PipelineOrchestrator` (`src/workflows/pipelineOrchestrator.ts`, extracted in CDMCH-177).
+The orchestrator sequences four stages:
+
+1. **Context Aggregation** (`context_aggregation`) - Collects relevant repository files within the token budget
+2. **Research Detection** (`research_detection`) - Identifies unknowns from the aggregated context
+3. **PRD Authoring** (`prd_authoring`) - Drafts a Product Requirements Document from context and research
+4. **Task Execution** (`task_execution`) - Executes queued tasks via `CLIExecutionEngine` (skipped if approval required or `--skip-execution` is set)
+
+The orchestrator accepts a `maxParallel` parameter (from `--max-parallel` CLI flag)
+which is forwarded to the execution engine for bounded parallelism.
+
 ## Related Documentation
 
 - [Run Directory Schema](../reference/run_directory_schema.md) - Run directory structure and manifests
 - [Doctor Reference](../reference/cli/doctor_reference.md) - Environment diagnostics command
+- [Parallel Execution](../reference/parallel-execution.md) - Bounded parallelism and dependency resolution
 
 ---
 
