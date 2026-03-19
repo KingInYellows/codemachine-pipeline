@@ -529,12 +529,18 @@ export class LinearAdapter {
             issues: {
               nodes: Array<
                 LinearIssue & {
-                  relations: {
-                    nodes: Array<{
-                      type: string;
-                      relatedIssue: { id: string; identifier: string };
-                    }>;
-                  };
+                  relations?:
+                    | {
+                        nodes?: Array<
+                          | {
+                              type?: string | null;
+                              relatedIssue?: { id: string; identifier: string } | null;
+                            }
+                          | null
+                        >
+                        | null;
+                      }
+                    | null;
                 }
               >;
             };
@@ -566,18 +572,30 @@ export class LinearAdapter {
           issue.labels = (issue.labels as { nodes: LinearIssue['labels'] }).nodes;
         }
 
-        // Transform relations from GraphQL nodes wrapper
-        if (issue.relations && 'nodes' in issue.relations) {
-          issue.relations = (
-            issue.relations as {
-              nodes: Array<{ type: string; relatedIssue: { id: string; identifier: string } }>;
-            }
-          ).nodes.map((r) => ({
-            type: r.type as 'blocks' | 'duplicate' | 'related',
+        const relationNodes =
+          issue.relations &&
+          typeof issue.relations === 'object' &&
+          'nodes' in issue.relations &&
+          Array.isArray(issue.relations.nodes)
+            ? issue.relations.nodes
+            : [];
+
+        issue.relations = relationNodes.flatMap((relation) => {
+          if (
+            !relation ||
+            typeof relation.type !== 'string' ||
+            !relation.relatedIssue?.id ||
+            !relation.relatedIssue.identifier
+          ) {
+            return [];
+          }
+
+          return [{
+            type: relation.type as 'blocks' | 'duplicate' | 'related',
             issue: { id: issue.id, identifier: issue.identifier },
-            relatedIssue: r.relatedIssue,
-          }));
-        }
+            relatedIssue: relation.relatedIssue,
+          }];
+        });
 
         return issue as LinearCycleIssue;
       });
@@ -617,6 +635,7 @@ export class LinearAdapter {
   async fetchActiveCycle(
     teamId: string
   ): Promise<{ id: string; name: string; number: number } | null> {
+    LinearAdapter.validateTeamId(teamId);
     try {
       const data = await this.executeGraphQL<{
         data: {
@@ -666,6 +685,28 @@ export class LinearAdapter {
         undefined,
         undefined,
         'validateCycleId'
+      );
+    }
+  }
+
+  private static validateTeamId(teamId: string): void {
+    if (!teamId || teamId.length > 100) {
+      throw new LinearAdapterError(
+        `Invalid Linear team ID: ${JSON.stringify(teamId)}`,
+        ErrorType.PERMANENT,
+        undefined,
+        undefined,
+        'validateTeamId'
+      );
+    }
+
+    if (!STRUCTURED_OPAQUE_ISSUE_ID_PATTERN.test(teamId)) {
+      throw new LinearAdapterError(
+        `Invalid Linear team ID: ${JSON.stringify(teamId)}. Team IDs must be UUIDs.`,
+        ErrorType.PERMANENT,
+        undefined,
+        undefined,
+        'validateTeamId'
       );
     }
   }

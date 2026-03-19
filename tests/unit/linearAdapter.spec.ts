@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach, type Mock } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { LinearAdapter, LinearAdapterError } from '../../src/adapters/linear/LinearAdapter';
 import type { LinearCycleIssue } from '../../src/adapters/linear/LinearAdapterTypes';
 
@@ -157,6 +157,38 @@ describe('LinearAdapter cycle methods', () => {
       expect(result.cycle.issues[1].relations).toEqual([]);
     });
 
+    it('handles malformed or missing relation nodes gracefully', async () => {
+      const issueNode = {
+        ...makeCycleIssueNode(),
+        relations: {
+          nodes: [
+            null,
+            { type: 'blocks', relatedIssue: null },
+            { type: null, relatedIssue: { id: 'issue-2', identifier: 'CDMCH-102' } },
+          ],
+        },
+      };
+
+      mockPost.mockResolvedValueOnce({
+        data: {
+          data: {
+            cycle: {
+              id: VALID_CYCLE_ID,
+              name: 'Sprint 16',
+              number: 16,
+              startsAt: '2026-04-01T00:00:00Z',
+              endsAt: '2026-04-14T00:00:00Z',
+              issues: { nodes: [issueNode] },
+            },
+          },
+        },
+      });
+
+      const result = await adapter.fetchCycleIssues(VALID_CYCLE_ID);
+
+      expect(result.cycle.issues[0].relations).toEqual([]);
+    });
+
     it('throws when cycle is not found', async () => {
       mockPost.mockResolvedValueOnce({
         data: { data: { cycle: null } },
@@ -259,6 +291,11 @@ describe('LinearAdapter cycle methods', () => {
       mockPost.mockRejectedValueOnce(new Error('Network failure'));
 
       await expect(adapter.fetchActiveCycle(VALID_TEAM_ID)).rejects.toThrow();
+    });
+
+    it('rejects invalid team ID format', async () => {
+      await expect(adapter.fetchActiveCycle('not-a-uuid')).rejects.toThrow(LinearAdapterError);
+      expect(mockPost).not.toHaveBeenCalled();
     });
   });
 
