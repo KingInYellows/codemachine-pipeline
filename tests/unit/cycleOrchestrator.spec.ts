@@ -211,6 +211,7 @@ describe('CycleOrchestrator', () => {
     expect(result.failed).toBe(1);
     expect(result.completed).toBe(0);
     expect(result.issues).toHaveLength(1);
+    expect(result.issues[0]?.runDir).toBe('/tmp/test-run/issues/CDMCH-101');
     expect(mockExecute).toHaveBeenCalledTimes(1);
   });
 
@@ -324,6 +325,23 @@ describe('CycleOrchestrator', () => {
     expect(result.completed + result.failed + result.skipped).toBe(result.totalIssues);
   });
 
+  it('does not process a negative maxIssues subset', async () => {
+    const config = makeConfig({ maxIssues: -1 });
+    const orchestrator = new CycleOrchestrator(config);
+
+    const result = await orchestrator.run([
+      makeIssue({ identifier: 'CDMCH-101' }),
+      makeIssue({ identifier: 'CDMCH-102' }),
+    ]);
+
+    expect(result.cycleIssueCount).toBe(2);
+    expect(result.totalIssues).toBe(0);
+    expect(result.completed).toBe(0);
+    expect(result.failed).toBe(0);
+    expect(result.skipped).toBe(0);
+    expect(mockExecute).not.toHaveBeenCalled();
+  });
+
   it('passes planOnly to PipelineOrchestrator', async () => {
     const config = makeConfig({ planOnly: true });
     const orchestrator = new CycleOrchestrator(config);
@@ -356,6 +374,7 @@ describe('CycleOrchestrator', () => {
     const result = await orchestrator.run([makeIssue()]);
 
     expect(result.issues[0].status).toBe('failed');
+    expect(result.issues[0].runDir).toBe('/tmp/test-run/issues/CDMCH-101');
     expect(result.issues[0].error).toBe('Something broke');
   });
 
