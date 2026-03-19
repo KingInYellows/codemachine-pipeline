@@ -33,6 +33,8 @@ import type {
   IssueSnapshot,
   UpdateIssueParams,
   PostCommentParams,
+  LinearCycleIssue,
+  CycleSnapshot,
 } from './LinearAdapterTypes.js';
 
 export type {
@@ -43,6 +45,8 @@ export type {
   IssueSnapshot,
   UpdateIssueParams,
   PostCommentParams,
+  LinearCycleIssue,
+  CycleSnapshot,
 } from './LinearAdapterTypes.js';
 
 /**
@@ -145,6 +149,77 @@ const POST_COMMENT_MUTATION = `
       success
       comment {
         id
+      }
+    }
+  }
+`;
+
+const CYCLE_ISSUES_QUERY = `
+  query GetCycleIssues($cycleId: String!) {
+    cycle(id: $cycleId) {
+      id
+      name
+      number
+      startsAt
+      endsAt
+      issues {
+        nodes {
+          id
+          identifier
+          title
+          description
+          state {
+            id
+            name
+            type
+          }
+          priority
+          labels {
+            nodes {
+              id
+              name
+              color
+            }
+          }
+          assignee {
+            id
+            name
+            email
+          }
+          team {
+            id
+            name
+            key
+          }
+          project {
+            id
+            name
+          }
+          createdAt
+          updatedAt
+          url
+          relations {
+            nodes {
+              type
+              relatedIssue {
+                id
+                identifier
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+`;
+
+const ACTIVE_CYCLE_QUERY = `
+  query GetActiveCycle($teamId: String!) {
+    team(id: $teamId) {
+      activeCycle {
+        id
+        name
+        number
       }
     }
   }
@@ -435,6 +510,164 @@ export class LinearAdapter {
     }
 
     this.logger.info('Comment posted successfully', { issueId: params.issueId });
+  }
+
+  /**
+   * Fetch all issues in a cycle with their relations
+   */
+  async fetchCycleIssues(cycleId: string): Promise<CycleSnapshot> {
+    LinearAdapter.validateCycleId(cycleId);
+    try {
+      const data = await this.executeGraphQL<{
+        data: {
+          cycle: {
+            id: string;
+            name: string;
+            number: number;
+            startsAt: string;
+            endsAt: string;
+            issues: {
+              nodes: Array<
+                LinearIssue & {
+                  relations: {
+                    nodes: Array<{
+                      type: string;
+                      relatedIssue: { id: string; identifier: string };
+                    }>;
+                  };
+                }
+              >;
+            };
+          } | null;
+        };
+      }>('fetchCycleIssues', CYCLE_ISSUES_QUERY, { cycleId }, { cycleId });
+
+      const cycle = data.data?.cycle;
+      if (!cycle) {
+        throw new LinearAdapterError(
+          `Cycle ${cycleId} not found`,
+          ErrorType.PERMANENT,
+          undefined,
+          undefined,
+          'fetchCycleIssues'
+        );
+      }
+
+      const issues: LinearCycleIssue[] = cycle.issues.nodes.map((node) => {
+        const issue = { ...node } as LinearCycleIssue & {
+          labels: LinearIssue['labels'] | { nodes: LinearIssue['labels'] };
+          relations:
+            | LinearCycleIssue['relations']
+            | { nodes: Array<{ type: string; relatedIssue: { id: string; identifier: string } }> };
+        };
+
+        // Transform labels from GraphQL nodes wrapper
+        if (issue.labels && 'nodes' in issue.labels) {
+          issue.labels = (issue.labels as { nodes: LinearIssue['labels'] }).nodes;
+        }
+
+        // Transform relations from GraphQL nodes wrapper
+        if (issue.relations && 'nodes' in issue.relations) {
+          issue.relations = (
+            issue.relations as {
+              nodes: Array<{ type: string; relatedIssue: { id: string; identifier: string } }>;
+            }
+          ).nodes.map((r) => ({
+            type: r.type as 'blocks' | 'duplicate' | 'related',
+            issue: { id: issue.id, identifier: issue.identifier },
+            relatedIssue: r.relatedIssue,
+          }));
+        }
+
+        return issue as LinearCycleIssue;
+      });
+
+      return {
+        cycle: {
+          id: cycle.id,
+          name: cycle.name,
+          number: cycle.number,
+          startsAt: cycle.startsAt,
+          endsAt: cycle.endsAt,
+          issues,
+        },
+        metadata: {
+          retrievedAt: new Date().toISOString(),
+          teamId: issues[0]?.team?.id ?? '',
+          issueCount: issues.length,
+        },
+      };
+    } catch (error) {
+      if (error instanceof LinearAdapterError) {
+        throw error;
+      }
+      this.logger.error('Failed to fetch cycle issues', {
+        cycleId,
+        error: serializeError(error),
+      });
+      throw this.normalizeError(error, 'fetchCycleIssues');
+    }
+  }
+
+  /**
+   * Fetch the active cycle for a team
+   *
+   * @returns Cycle metadata or null if no active cycle
+   */
+  async fetchActiveCycle(
+    teamId: string
+  ): Promise<{ id: string; name: string; number: number } | null> {
+    try {
+      const data = await this.executeGraphQL<{
+        data: {
+          team: {
+            activeCycle: { id: string; name: string; number: number } | null;
+          } | null;
+        };
+      }>('fetchActiveCycle', ACTIVE_CYCLE_QUERY, { teamId }, { teamId });
+
+      const activeCycle = data.data?.team?.activeCycle ?? null;
+
+      if (activeCycle) {
+        this.logger.info('Found active cycle', {
+          cycleId: activeCycle.id,
+          cycleName: activeCycle.name,
+          cycleNumber: activeCycle.number,
+        });
+      } else {
+        this.logger.info('No active cycle found', { teamId });
+      }
+
+      return activeCycle;
+    } catch (error) {
+      this.logger.error('Failed to fetch active cycle', {
+        teamId,
+        error: serializeError(error),
+      });
+      throw this.normalizeError(error, 'fetchActiveCycle');
+    }
+  }
+
+  private static validateCycleId(cycleId: string): void {
+    if (!cycleId || cycleId.length > 100) {
+      throw new LinearAdapterError(
+        `Invalid Linear cycle ID: ${JSON.stringify(cycleId)}`,
+        ErrorType.PERMANENT,
+        undefined,
+        undefined,
+        'validateCycleId'
+      );
+    }
+    // Cycle IDs in Linear are UUIDs only
+    if (!STRUCTURED_OPAQUE_ISSUE_ID_PATTERN.test(cycleId)) {
+      throw new LinearAdapterError(
+        `Invalid Linear cycle ID: ${JSON.stringify(cycleId)}. Cycle IDs must be UUIDs.`,
+        ErrorType.PERMANENT,
+        undefined,
+        undefined,
+        'validateCycleId'
+      );
+    }
   }
 
   private async loadCachedSnapshot(issueId: string): Promise<IssueSnapshot | null> {
