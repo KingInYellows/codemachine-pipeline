@@ -1,8 +1,8 @@
 # Execution Flow Architecture
 
-**Version:** 1.0.0
+**Version:** 1.1.0
 **Status:** Active
-**Last Updated:** 2026-01-03
+**Last Updated:** 2026-03-18
 
 ## Overview
 
@@ -24,6 +24,8 @@ The central orchestrator for task execution. Manages:
 
 ### Execution Strategy Pattern
 
+The engine uses a dual-strategy architecture. Strategies are registered in priority order by `executionStrategyBuilder.ts`; the first strategy whose `canHandle()` returns `true` wins.
+
 ```
 ┌─────────────────────────────────────────────────────────────────┐
 │                      CLIExecutionEngine                          │
@@ -33,33 +35,39 @@ The central orchestrator for task execution. Manages:
 │  └─────────────┘  └─────────────┘  └─────────────────────────┘  │
 └─────────────────────────────────────────────────────────────────┘
                             │
+                   (first match wins)
               ┌─────────────┼─────────────┐
               ▼             ▼             ▼
-    ┌─────────────┐  ┌─────────────┐  ┌─────────────┐
-    │ CodeMachine │  │   Native    │  │   Future    │
-    │  Strategy   │  │  Strategy   │  │  Strategies │
-    └─────────────┘  └─────────────┘  └─────────────┘
-              │
-              ▼
-    ┌─────────────────────────────────────────────┐
-    │            CodeMachineRunner                 │
-    │  ┌─────────┐  ┌─────────┐  ┌─────────────┐  │
-    │  │ CLI     │  │  Log    │  │  Result     │  │
-    │  │ Spawner │  │ Streamer│  │  Parser     │  │
-    │  └─────────┘  └─────────┘  └─────────────┘  │
-    └─────────────────────────────────────────────┘
+    ┌─────────────────┐  ┌─────────────┐  ┌─────────────┐
+    │ CodeMachine-CLI │  │ CodeMachine │  │   Native    │
+    │  Strategy       │  │  Strategy   │  │  Strategy   │
+    │  (preferred)    │  │  (fallback) │  │             │
+    └─────────────────┘  └─────────────┘  └─────────────┘
+              │                   │
+              ▼                   ▼
+    ┌─────────────────┐  ┌─────────────────────────────┐
+    │ CLIAdapter      │  │      CodeMachineRunner      │
+    │ ┌─────────────┐ │  │  ┌─────────┐  ┌──────────┐  │
+    │ │ Binary      │ │  │  │ CLI     │  │  Log     │  │
+    │ │ Resolver    │ │  │  │ Spawner │  │ Streamer │  │
+    │ │ (3-tier)    │ │  │  └─────────┘  └──────────┘  │
+    │ └─────────────┘ │  └─────────────────────────────┘
+    └─────────────────┘
 ```
 
 ### Component Responsibilities
 
-| Component           | Responsibility                                   |
-| ------------------- | ------------------------------------------------ |
-| CLIExecutionEngine  | Queue processing, retry orchestration, telemetry |
-| ExecutionStrategy   | Interface for pluggable execution backends       |
-| CodeMachineStrategy | CodeMachine CLI delegation                       |
-| CodeMachineRunner   | CLI subprocess management, log streaming         |
-| TaskMapper          | Task type to workflow mapping                    |
-| ResultNormalizer    | Exit code interpretation, credential redaction   |
+| Component               | Responsibility                                                                 |
+| ----------------------- | ------------------------------------------------------------------------------ |
+| CLIExecutionEngine      | Queue processing, retry orchestration, telemetry                               |
+| ExecutionStrategy       | Interface for pluggable execution backends                                     |
+| CodeMachineCLIStrategy  | Preferred strategy; uses adapter with binary resolver, stdin credentials       |
+| CodeMachineCLIAdapter   | Binary resolution, version enforcement, shell-free spawning, credential piping |
+| CodeMachineStrategy     | Legacy fallback strategy; direct CLI path spawning                             |
+| CodeMachineRunner       | Legacy CLI subprocess management, log streaming                                |
+| TaskMapper              | Task type to workflow mapping                                                  |
+| ResultNormalizer        | Exit code interpretation, credential redaction                                 |
+| StrategyBuilder         | Factory that registers strategies in priority order                            |
 
 ## Execution Flow
 
@@ -94,21 +102,23 @@ After successful task execution:
 
 ### CodeMachine CLI
 
-**Prerequisites:**
+The CodeMachine CLI adapter is the core execution engine. Binary resolution uses a three-tier fallback:
 
-- `codemachine` binary in PATH
-- Valid configuration at `.codemachine/config.json`
+1. `CODEMACHINE_BIN_PATH` environment variable
+2. Platform-specific npm optionalDependency (e.g., `codemachine-linux-x64`)
+3. PATH search
 
 **Validation:**
 
 ```bash
-codemachine --version
+codepipe doctor   # checks binary availability and version
 ```
 
 **Task Execution:**
 
 ```bash
-codemachine run --task <task_id> --workspace <path>
+codemachine run claude "<prompt>"   # via codemachine-cli strategy
+codemachine run --task <task_id> --workspace <path>   # via legacy strategy
 ```
 
 ### Telemetry
@@ -177,9 +187,10 @@ Verbosity is controlled via CLI flags (e.g. `--verbose`); there is no `CODEMACHI
 
 Before spawning CodeMachine CLI:
 
-- Reject paths with `..` traversal
-- Reject shell metacharacters (`;`, `|`, `&`, `$`, etc.)
-- Validate binary exists and is executable
+- Allowlist regex validation (`/^[a-zA-Z0-9_\-./]+$/`)
+- Shell-free spawning (`shell: false`) to prevent command injection
+- Binary existence and executability check
+- Credential delegation via stdin (not env vars or CLI args)
 
 ### Credential Redaction
 
@@ -351,6 +362,7 @@ plan.json → CLIExecutionEngine → Strategy → Runner → Subprocess
 
 ## Change Log
 
-| Version | Date       | Changes                                                      |
-| ------- | ---------- | ------------------------------------------------------------ |
-| 1.0.0   | 2026-01-03 | Initial execution flow documentation for CodeMachine adapter |
+| Version | Date       | Changes                                                                                  |
+| ------- | ---------- | ---------------------------------------------------------------------------------------- |
+| 1.1.0   | 2026-03-18 | Updated to reflect dual-strategy architecture (codemachine-cli preferred, legacy fallback)|
+| 1.0.0   | 2026-01-03 | Initial execution flow documentation for CodeMachine adapter                             |

@@ -11,13 +11,15 @@ import * as path from 'node:path';
 import { createExecutionTelemetry } from '../telemetry/executionTelemetry.js';
 import { createRunDirectory } from '../persistence/runLifecycle.js';
 import { PipelineOrchestrator } from './pipelineOrchestrator.js';
-import { formatLinearContext } from '../cli/startHelpers.js';
 import { serializeError } from '../utils/errors.js';
 import type { LinearCycleIssue } from '../adapters/linear/LinearAdapterTypes.js';
 import type { IssueSnapshot } from '../adapters/linear/LinearAdapterTypes.js';
 import type {
   CycleOrchestratorConfig,
   CycleIssueResult,
+  CycleIssueCompleted,
+  CycleIssueFailed,
+  CycleIssueSkipped,
   CycleResult,
 } from './cycleTypes.js';
 
@@ -81,12 +83,12 @@ export class CycleOrchestrator {
       // Check skip logic
       const skipCheck = shouldSkipIssue(issue);
       if (skipCheck.skip) {
-        const result: CycleIssueResult = {
+        const result: CycleIssueSkipped = {
           issueId: issue.id,
           identifier: issue.identifier,
           title: issue.title,
           status: 'skipped',
-          skipReason: skipCheck.reason,
+          skipReason: skipCheck.reason ?? 'Unknown reason',
           durationMs: 0,
         };
         results.push(result);
@@ -103,7 +105,7 @@ export class CycleOrchestrator {
       try {
         const runDir = await this.processIssue(issue, issuesDir);
 
-        const result: CycleIssueResult = {
+        const result: CycleIssueCompleted = {
           issueId: issue.id,
           identifier: issue.identifier,
           title: issue.title,
@@ -119,7 +121,7 @@ export class CycleOrchestrator {
           durationMs: result.durationMs,
         });
       } catch (error) {
-        const result: CycleIssueResult = {
+        const result: CycleIssueFailed = {
           issueId: issue.id,
           identifier: issue.identifier,
           title: issue.title,
@@ -159,9 +161,15 @@ export class CycleOrchestrator {
       durationMs,
     };
 
-    // Write report.json
-    const reportPath = path.join(this.config.cycleBaseDir, 'report.json');
-    await fs.writeFile(reportPath, JSON.stringify(cycleResult, null, 2), 'utf-8');
+    // Write report.json (best-effort — don't fail the whole cycle for a write error)
+    try {
+      const reportPath = path.join(this.config.cycleBaseDir, 'report.json');
+      await fs.writeFile(reportPath, JSON.stringify(cycleResult, null, 2), 'utf-8');
+    } catch (writeError) {
+      logger.warn('Failed to write cycle report', {
+        error: serializeError(writeError),
+      });
+    }
 
     logger.info('Cycle orchestrator finished', {
       cycleId: this.config.cycleId,
@@ -185,7 +193,7 @@ export class CycleOrchestrator {
       defaultBranch: repoConfig.project.default_branch,
     });
 
-    // Build a synthetic IssueSnapshot for formatLinearContext
+    // Build a synthetic IssueSnapshot for context formatting
     const snapshot: IssueSnapshot = {
       issue: {
         id: issue.id,
@@ -210,7 +218,7 @@ export class CycleOrchestrator {
       },
     };
 
-    const linearContextText = formatLinearContext(snapshot);
+    const linearContextText = this.config.formatContext(snapshot);
 
     // Create per-issue telemetry
     const executionTelemetry = createExecutionTelemetry({

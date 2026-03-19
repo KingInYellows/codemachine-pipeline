@@ -8,7 +8,7 @@
  */
 
 import type { CycleIssueResult, CycleResult } from '../workflows/cycleTypes.js';
-import type { CyclePayload } from './cycleTypes.js';
+import { getCyclePayloadCounts, type CyclePayload } from './cycleTypes.js';
 
 const CHECK = '\u2713';
 const CROSS = '\u2717';
@@ -63,7 +63,8 @@ export function renderDryRun(payload: CyclePayload, callbacks: OutputCallbacks):
 
   log('');
   log(`Cycle: ${payload.cycleName} (${payload.cycleId})`);
-  log(`Issues: ${payload.totalIssues} total | ${payload.processable} processable | ${payload.skipped} will skip`);
+  const counts = getCyclePayloadCounts(payload);
+  log(`Issues: ${counts.totalIssues} total | ${counts.processable} processable | ${counts.skipped} will skip`);
   log(line);
   log('');
   log('  #  Issue       Priority   State            Action');
@@ -111,12 +112,9 @@ export function renderDashboardUpdate(
   const duration = result.durationMs > 0 ? formatDuration(result.durationMs) : '-';
 
   if (process.stdout.isTTY) {
-    // TTY: single-line progress update
     const progress = `[${index + 1}/${total}]`;
-    const line = `  ${icon} ${progress} ${result.identifier.padEnd(12)} ${label.padEnd(8)} ${duration}`;
-    process.stdout.write(`${line}\n`);
+    log(`  ${icon} ${progress} ${result.identifier.padEnd(12)} ${label.padEnd(8)} ${duration}`);
   } else {
-    // Non-TTY: simple status line
     log(`  ${icon} ${result.identifier} ${label} ${duration}`);
   }
 }
