@@ -3,7 +3,9 @@
 Shared domain models, configuration, error types, and validation schemas.
 Provides the foundational type system used across all other modules.
 
-## Key Exports
+## Key Public Files
+
+This module has no barrel `index.ts`. Consumers import files by direct path.
 
 ### Shared Types (`sharedTypes.ts`)
 

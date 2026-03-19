@@ -44,7 +44,8 @@ export function hasCustomGitHubApiBaseUrl(baseUrl: string | undefined): boolean 
       normalizedPath === '/'
     );
   } catch {
-    return false;
+    // Treat invalid input as custom so callers can warn before adapter construction fails.
+    return true;
   }
 }
 
@@ -56,6 +57,7 @@ export function hasCustomGitHubApiBaseUrl(baseUrl: string | undefined): boolean 
  * 2. Rejects URLs with query strings or hash fragments
  * 3. For non-default hosts, requires CODEPIPE_ALLOW_UNSAFE_GITHUB_API_BASE_URL=1
  * 4. Enforces HTTPS for custom hosts
+ * 5. Allows only `/` or `/api/v3` paths so REST and GraphQL endpoints stay aligned
  *
  * @param baseUrl - GitHub API base URL, or undefined to use the default
  * @returns Normalized base URL string
@@ -95,6 +97,12 @@ export function resolveGitHubApiBaseUrl(baseUrl: string | undefined): string {
 
   if (parsed.protocol !== 'https:') {
     throw new Error('GitHub API base URL must use https for custom hosts');
+  }
+
+  if (normalizedPath !== '/' && normalizedPath !== '/api/v3') {
+    throw new Error(
+      'GitHub API base URL must use either the root path or /api/v3 for custom hosts'
+    );
   }
 
   return `${parsed.origin}${normalizedPath === '/' ? '/' : `${normalizedPath}/`}`;

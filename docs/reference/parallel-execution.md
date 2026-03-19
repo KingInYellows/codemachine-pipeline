@@ -133,8 +133,7 @@ while (hasRemainingTasks()) {
 **Dependency Detection** (via `executionDependencyResolver.ts`):
 
 The resolver uses a single-pass bucket approach that selects up to `limit` ready
-tasks, excluding any tasks already in-flight. Priority order: running (resumed)
-> pending > retryable.
+tasks, excluding any tasks already in-flight. Priority order: `running (resumed) > pending > retryable`.
 
 ```typescript
 // From executionDependencyResolver.ts — getReadyTasks()
@@ -525,7 +524,7 @@ if (inFlightTasks.size >= maxParallelTasks) {
 **Validation:**
 
 ```bash
-# Monitor in-flight tasks (should never exceed limit)
+# Monitor in-flight tasks (should never exceed configured capacity)
 watch -n 1 "codepipe status --json | jq '.in_progress_count'"
 ```
 

@@ -5,7 +5,7 @@
 The `codepipe init` command initializes the codemachine-pipeline in a repository by:
 
 - Detecting the git repository root
-- Creating the `.codepipe/` directory structure (`.codepipe/`, `runs/`, `logs/`, `artifacts/`)
+- Creating the `.codepipe/` directory structure (`.codepipe/`, `.codepipe/runs/`, `.codepipe/logs/`, `.codepipe/artifacts/`)
 - Generating a schema-validated `config.json` with defaults
 - Validating credentials and environment setup
 - Recording initialization telemetry
@@ -29,7 +29,7 @@ This playbook documents exact command usage, approval workflows, and operational
 Before running `codepipe init`, ensure:
 
 1. **Git Repository**: Current directory must be within a git repository
-2. **Node.js**: v24 LTS or higher (required)
+2. **Node.js**: v24 LTS or higher (required by `package.json` `engines.node`)
 3. **Filesystem Permissions**: Write access to create `.codepipe/` directory
 4. **Environment Variables** (optional but recommended):
    - `GITHUB_TOKEN` - GitHub Personal Access Token with `repo`, `workflow` scopes
