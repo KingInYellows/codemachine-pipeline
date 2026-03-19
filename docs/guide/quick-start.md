@@ -18,10 +18,14 @@ Before starting, ensure you have:
 
 ## Step 1: Install codepipe
 
-Install globally via npm:
+For a local checkout, install from source:
 
 ```bash
-npm install -g @kinginyellows/codemachine-pipeline
+git clone https://github.com/KingInYellows/codemachine-pipeline.git
+cd codemachine-pipeline
+npm ci
+npm run build
+npm link
 ```
 
 Verify the installation:
@@ -133,36 +137,19 @@ Review generated artifacts in `.codepipe/runs/<feature-id>/artifacts/`.
 
 ## Docker Alternative
 
-Run codepipe in a container without installing Node.js:
-
-```yaml
-# docker-compose.yml
-version: '3.8'
-services:
-  codepipe:
-    image: node:24-alpine
-    working_dir: /app
-    volumes:
-      - .:/app
-    command: >
-      sh -c "apk add --no-cache git &&
-             npm install -g @kinginyellows/codemachine-pipeline &&
-             codepipe init --yes &&
-             codepipe status"
-```
-
-Start with:
+Build and run the repository Dockerfile:
 
 ```bash
-docker compose run codepipe
+docker build -t codemachine-pipeline .
+docker run --rm -v "$(pwd):/workspace" -w /workspace codemachine-pipeline init --yes
 ```
 
 For interactive use:
 
 ```bash
-docker compose run codepipe sh
-# Inside container:
-codepipe start --prompt "Your feature description"
+docker run --rm -it --entrypoint sh -v "$(pwd):/workspace" -w /workspace codemachine-pipeline
+# Inside the container:
+node /app/bin/run.js start --prompt "Your feature description"
 ```
 
 ---

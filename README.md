@@ -30,6 +30,8 @@ Full documentation is in [`docs/README.md`](docs/README.md).
 
 ### From GitHub Packages
 
+Release builds are published through the repository's GitHub Packages workflow. If you do not have registry access yet, use the source install below.
+
 ```bash
 # Configure npm for GitHub Packages
 echo "@kinginyellows:registry=https://npm.pkg.github.com" >> ~/.npmrc
