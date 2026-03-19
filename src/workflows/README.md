@@ -49,7 +49,7 @@ Most internal modules are imported by direct path (not through the barrel).
 
 ### Queue
 
-- `queue/` — 8-file queue subsystem
+- `queue/` — 13-file queue subsystem
   - `queueStore.ts` — persistent queue storage
   - `queueTaskManager.ts` — task lifecycle management
   - `queueV2Api.ts` — V2 queue API
@@ -57,7 +57,12 @@ Most internal modules are imported by direct path (not through the barrel).
   - `queueOperationsLog.ts` — operation audit log
   - `queueSnapshotManager.ts` — queue state snapshots
   - `queueCompactionEngine.ts` — log compaction
+  - `queueCache.ts` — query result caching
+  - `queueLoader.ts` — queue initialization and loading
+  - `queueIntegrity.ts` — integrity verification
+  - `queueValidation.ts` — queue state validation
   - `queueTypes.ts` — queue type definitions
+  - `index.ts` — barrel re-exports
 
 ### Spec
 

@@ -49,6 +49,8 @@ Zod-validated domain model schemas, re-exported via 5 sub-barrels:
 
 ## Dependencies
 
-Imports from: `utils`, `validation`
+Imports from: `utils`
+
+Note: `core/validation/` is an internal subdirectory, not the top-level `src/validation/` module.
 
 Depended on by: `adapters`, `cli`, `persistence`, `telemetry`, `workflows`

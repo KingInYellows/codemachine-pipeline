@@ -31,10 +31,12 @@ Status dashboard rendering and data loading:
 
 - `types.ts` — `StatusPayload` and sub-payload interfaces (machine-readable API contract)
 - `renderers.ts` — human-readable status output formatting
-- `data/` — 10 data-loading functions that populate status payloads:
+- `data/` — data-loading functions that populate status payloads:
   - `planData.ts`, `branchData.ts`, `telemetryData.ts`, `validationData.ts`,
     `integrationsData.ts`, `rateLimitsData.ts`, `prMetadataData.ts`,
-    `researchData.ts`, `branchRefreshData.ts`, `types.ts`
+    `researchData.ts`, `branchRefreshData.ts`
+  - `types.ts` — shared types (`DataLogger` interface)
+  - `index.ts` — barrel re-exports
 
 ### PR (`pr/`)
 
