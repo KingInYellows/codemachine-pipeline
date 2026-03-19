@@ -155,14 +155,17 @@ const POST_COMMENT_MUTATION = `
 `;
 
 const CYCLE_ISSUES_QUERY = `
-  query GetCycleIssues($cycleId: String!) {
+  query GetCycleIssues($cycleId: String!, $after: String) {
     cycle(id: $cycleId) {
       id
       name
       number
       startsAt
       endsAt
-      issues {
+      team {
+        id
+      }
+      issues(first: 250, after: $after) {
         nodes {
           id
           identifier
@@ -208,6 +211,10 @@ const CYCLE_ISSUES_QUERY = `
             }
           }
         }
+        pageInfo {
+          hasNextPage
+          endCursor
+        }
       }
     }
   }
@@ -233,6 +240,39 @@ const RATE_LIMIT_WINDOW_MS = 60 * 60 * 1000; // 1 hour sliding window
 const SNAPSHOT_DIR = 'inputs';
 const LINEAR_ISSUE_IDENTIFIER_PATTERN = /^[A-Z][A-Z0-9]*-\d+$/;
 const STRUCTURED_OPAQUE_ISSUE_ID_PATTERN = /^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/;
+const CANONICAL_CYCLE_RELATION_TYPES = ['blocks', 'duplicate', 'related'] as const;
+type CanonicalCycleRelationType = (typeof CANONICAL_CYCLE_RELATION_TYPES)[number];
+type RawCycleRelationNode = {
+  type?: string | null;
+  relatedIssue?: { id: string; identifier: string } | null;
+};
+type RawLinearCycleIssue = LinearIssue & {
+  labels: LinearIssue['labels'] | { nodes: LinearIssue['labels'] };
+  relations?:
+    | {
+        nodes?: Array<RawCycleRelationNode | null> | null;
+      }
+    | null;
+};
+type CycleQueryResponse = {
+  data: {
+    cycle: {
+      id: string;
+      name: string;
+      number: number;
+      startsAt: string;
+      endsAt: string;
+      team: { id: string } | null;
+      issues: {
+        nodes: RawLinearCycleIssue[];
+        pageInfo?: {
+          hasNextPage?: boolean | null;
+          endCursor?: string | null;
+        } | null;
+      };
+    } | null;
+  };
+};
 
 /**
  * Linear adapter for issue operations via MCP
@@ -518,82 +558,68 @@ export class LinearAdapter {
   async fetchCycleIssues(cycleId: string): Promise<CycleSnapshot> {
     LinearAdapter.validateCycleId(cycleId);
     try {
-      const data = await this.executeGraphQL<{
-        data: {
-          cycle: {
+      let after: string | null = null;
+      let cycleSummary:
+        | {
             id: string;
             name: string;
             number: number;
             startsAt: string;
             endsAt: string;
-            issues: {
-              nodes: Array<
-                LinearIssue & {
-                  relations: {
-                    nodes: Array<{
-                      type: string;
-                      relatedIssue: { id: string; identifier: string };
-                    }>;
-                  };
-                }
-              >;
-            };
-          } | null;
-        };
-      }>('fetchCycleIssues', CYCLE_ISSUES_QUERY, { cycleId }, { cycleId });
+            teamId: string;
+          }
+        | null = null;
+      const issues: LinearCycleIssue[] = [];
 
-      const cycle = data.data?.cycle;
-      if (!cycle) {
-        throw new LinearAdapterError(
-          `Cycle ${cycleId} not found`,
-          ErrorType.PERMANENT,
-          undefined,
-          undefined,
-          'fetchCycleIssues'
+      do {
+        const data: CycleQueryResponse = await this.executeGraphQL<CycleQueryResponse>(
+          'fetchCycleIssues',
+          CYCLE_ISSUES_QUERY,
+          { cycleId, after },
+          { cycleId, ...(after !== null ? { after } : {}) }
         );
-      }
 
-      const issues: LinearCycleIssue[] = cycle.issues.nodes.map((node) => {
-        const issue = { ...node } as LinearCycleIssue & {
-          labels: LinearIssue['labels'] | { nodes: LinearIssue['labels'] };
-          relations:
-            | LinearCycleIssue['relations']
-            | { nodes: Array<{ type: string; relatedIssue: { id: string; identifier: string } }> };
-        };
-
-        // Transform labels from GraphQL nodes wrapper
-        if (issue.labels && 'nodes' in issue.labels) {
-          issue.labels = (issue.labels as { nodes: LinearIssue['labels'] }).nodes;
+        const cycle = data.data?.cycle;
+        if (!cycle) {
+          throw new LinearAdapterError(
+            `Cycle ${cycleId} not found`,
+            ErrorType.PERMANENT,
+            undefined,
+            undefined,
+            'fetchCycleIssues'
+          );
         }
 
-        // Transform relations from GraphQL nodes wrapper
-        if (issue.relations && 'nodes' in issue.relations) {
-          issue.relations = (
-            issue.relations as {
-              nodes: Array<{ type: string; relatedIssue: { id: string; identifier: string } }>;
-            }
-          ).nodes.map((r) => ({
-            type: r.type as 'blocks' | 'duplicate' | 'related',
-            issue: { id: issue.id, identifier: issue.identifier },
-            relatedIssue: r.relatedIssue,
-          }));
+        if (!cycleSummary) {
+          cycleSummary = {
+            id: cycle.id,
+            name: cycle.name,
+            number: cycle.number,
+            startsAt: cycle.startsAt,
+            endsAt: cycle.endsAt,
+            teamId: cycle.team?.id ?? '',
+          };
         }
 
-        return issue as LinearCycleIssue;
-      });
+        issues.push(...cycle.issues.nodes.map((node) => this.normalizeCycleIssue(node)));
+
+        const pageInfo = cycle.issues.pageInfo;
+        after =
+          pageInfo?.hasNextPage && typeof pageInfo.endCursor === 'string' ? pageInfo.endCursor : null;
+      } while (after !== null);
 
       return {
         cycle: {
-          id: cycle.id,
-          name: cycle.name,
-          number: cycle.number,
-          startsAt: cycle.startsAt,
-          endsAt: cycle.endsAt,
+          id: cycleSummary.id,
+          name: cycleSummary.name,
+          number: cycleSummary.number,
+          startsAt: cycleSummary.startsAt,
+          endsAt: cycleSummary.endsAt,
           issues,
         },
         metadata: {
-          retrievedAt: new Date().toISOString(),
-          teamId: issues[0]?.team?.id ?? '',
+          retrieved_at: new Date().toISOString(),
+          teamId: cycleSummary.teamId,
           issueCount: issues.length,
         },
       };
@@ -617,6 +643,7 @@ export class LinearAdapter {
   async fetchActiveCycle(
     teamId: string
   ): Promise<{ id: string; name: string; number: number } | null> {
+    LinearAdapter.validateTeamId(teamId);
     try {
       const data = await this.executeGraphQL<{
         data: {
@@ -626,7 +653,18 @@ export class LinearAdapter {
         };
       }>('fetchActiveCycle', ACTIVE_CYCLE_QUERY, { teamId }, { teamId });
 
-      const activeCycle = data.data?.team?.activeCycle ?? null;
+      const team = data.data?.team;
+      if (!team) {
+        throw new LinearAdapterError(
+          `Team ${teamId} not found`,
+          ErrorType.PERMANENT,
+          undefined,
+          undefined,
+          'fetchActiveCycle'
+        );
+      }
+
+      const activeCycle = team.activeCycle ?? null;
 
       if (activeCycle) {
         this.logger.info('Found active cycle', {
@@ -640,6 +678,9 @@ export class LinearAdapter {
 
       return activeCycle;
     } catch (error) {
+      if (error instanceof LinearAdapterError) {
+        throw error;
+      }
       this.logger.error('Failed to fetch active cycle', {
         teamId,
         error: serializeError(error),
@@ -668,6 +709,106 @@ export class LinearAdapter {
         'validateCycleId'
       );
     }
+  }
+
+  private static validateTeamId(teamId: string): void {
+    if (!teamId || teamId.length > 100) {
+      throw new LinearAdapterError(
+        `Invalid Linear team ID: ${JSON.stringify(teamId)}`,
+        ErrorType.PERMANENT,
+        undefined,
+        undefined,
+        'validateTeamId'
+      );
+    }
+
+    if (!STRUCTURED_OPAQUE_ISSUE_ID_PATTERN.test(teamId)) {
+      throw new LinearAdapterError(
+        `Invalid Linear team ID: ${JSON.stringify(teamId)}. Team IDs must be UUIDs.`,
+        ErrorType.PERMANENT,
+        undefined,
+        undefined,
+        'validateTeamId'
+      );
+    }
+  }
+
+  private normalizeCycleIssue(
+    node: RawLinearCycleIssue
+  ): LinearCycleIssue {
+    const relationNodes: Array<RawCycleRelationNode | null> =
+      node.relations &&
+      typeof node.relations === 'object' &&
+      'nodes' in node.relations &&
+      Array.isArray(node.relations.nodes)
+        ? node.relations.nodes
+        : new Array<RawCycleRelationNode | null>();
+    const labels =
+      node.labels && 'nodes' in node.labels ? node.labels.nodes : node.labels;
+
+    return {
+      ...node,
+      labels,
+      relations: relationNodes.flatMap((relation) =>
+        this.normalizeCycleRelation(
+          {
+            id: node.id,
+            identifier: node.identifier,
+          },
+          relation
+        )
+      ),
+    };
+  }
+
+  private normalizeCycleRelation(
+    issue: Pick<LinearCycleIssue, 'id' | 'identifier'>,
+    relation: RawCycleRelationNode | null
+  ): LinearCycleIssue['relations'] {
+    if (
+      !relation ||
+      typeof relation.type !== 'string' ||
+      !relation.relatedIssue?.id ||
+      !relation.relatedIssue.identifier
+    ) {
+      return [];
+    }
+
+    if (this.isCanonicalCycleRelationType(relation.type)) {
+      return [
+        {
+          type: relation.type,
+          issue: { id: issue.id, identifier: issue.identifier },
+          relatedIssue: relation.relatedIssue,
+        },
+      ];
+    }
+
+    if (relation.type === 'blocked_by') {
+      return [
+        {
+          type: 'blocks',
+          issue: relation.relatedIssue,
+          relatedIssue: { id: issue.id, identifier: issue.identifier },
+        },
+      ];
+    }
+
+    if (relation.type === 'duplicate_of') {
+      return [
+        {
+          type: 'duplicate',
+          issue: relation.relatedIssue,
+          relatedIssue: { id: issue.id, identifier: issue.identifier },
+        },
+      ];
+    }
+
+    return [];
+  }
+
+  private isCanonicalCycleRelationType(value: string): value is CanonicalCycleRelationType {
+    return (CANONICAL_CYCLE_RELATION_TYPES as readonly string[]).includes(value);
   }
 
   private async loadCachedSnapshot(issueId: string): Promise<IssueSnapshot | null> {
