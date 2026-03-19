@@ -22,7 +22,7 @@ import {
 } from './RepoConfigSchema';
 import {
   ALLOW_UNSAFE_CUSTOM_GITHUB_API_BASE_URL_ENV,
-  hasCustomGitHubApiBaseUrl,
+  classifyGitHubApiBaseUrl,
 } from '../../utils/githubApiUrl.js';
 
 /**
@@ -121,9 +121,16 @@ export async function loadRepoConfig(configPath: string): Promise<ValidationResu
       }
     }
 
-    if (
-      config.github.enabled &&
-      hasCustomGitHubApiBaseUrl(config.github.api_base_url) &&
+    const githubApiBaseUrlStatus = config.github.enabled
+      ? classifyGitHubApiBaseUrl(config.github.api_base_url)
+      : 'default';
+
+    if (githubApiBaseUrlStatus === 'invalid') {
+      warnings.push(
+        'github.api_base_url is not a valid URL. Fix the configured value before enabling a custom GitHub API endpoint.'
+      );
+    } else if (
+      githubApiBaseUrlStatus === 'custom' &&
       process.env[ALLOW_UNSAFE_CUSTOM_GITHUB_API_BASE_URL_ENV] !== '1'
     ) {
       warnings.push(

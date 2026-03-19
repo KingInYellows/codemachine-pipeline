@@ -24,7 +24,7 @@ From the barrel (`index.ts`):
 ### Agents
 
 - `AgentAdapter` / `createAgentAdapter` — LLM agent provider orchestration
-- `ManifestLoader` / `createManifestLoader` — agent manifest loading and validation
+- `ManifestLoader` / `createManifestLoader` — agent manifest loading and validation (factory wrappers; direct constructor use is equally valid)
 - Types: `AgentManifest`, `AgentSessionRequest`, `AgentSessionResponse`, `ProviderRequirements`, etc.
 
 ### HTTP

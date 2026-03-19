@@ -6,10 +6,10 @@ and GitHub API URL resolution.
 
 ## Key Exports
 
-The barrel (`index.ts`) exports only error utilities:
+The barrel (`index.ts`) exports error utilities and process helpers:
 
 - `classifyError` / `getErrorMessage` / `serializeError` / `wrapError` — error classification and serialization
-- `isProcessRunning` — process existence check
+- `isProcessRunning` / `ProcessStatus` — process existence helpers
 
 Most files are imported by direct path rather than through the barrel:
 

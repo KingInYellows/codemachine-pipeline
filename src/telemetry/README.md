@@ -14,6 +14,7 @@ From the barrel (`index.ts`):
 - `ExecutionTelemetry` / `createExecutionTelemetry` — execution-level telemetry aggregation
 - `createRateLimitLedger` — rate limit tracking ledger
 - `RateLimitReporter` — rate limit dashboard reporting
+- `ExecutionLogWriter` / `createExecutionLogWriter` — execution event log formatting (from `logWriters.ts`)
 
 ## Structure
 

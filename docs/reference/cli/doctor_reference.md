@@ -55,6 +55,7 @@ Environment Diagnostics Report
   ✓ Git Repository: Git repository detected at /path/to/repo
   ✓ Filesystem Permissions: Write permissions verified
   ✓ RepoConfig: Configuration valid
+  ✓ CodeMachine CLI (Execution): CodeMachine CLI v0.8.2 (npx)
   ✓ Agent Endpoint: Configured: https://agent.example.com
 
 ⚠ Warnings:

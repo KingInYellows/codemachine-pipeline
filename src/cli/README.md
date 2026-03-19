@@ -18,8 +18,11 @@ oclif command classes discovered by convention:
 - `start.ts` — execute the pipeline (exit codes: 0=success, 1=failed, 30=approval required)
 - `resume.ts` — resume an interrupted run
 - `approve.ts` — approve a pending gate
-- `status.ts` — show run status (supports `--json` for machine-readable output)
 - `doctor.ts` — diagnostic health checks
+- `health.ts` — health check command for automation and readiness probes
+- `plan.ts` — create or inspect persisted execution plans
+- `rate-limits.ts` — inspect and clear provider rate limit state
+- `validate.ts` — run repository validation commands
 - `pr/` — PR-related subcommands
 - `research/` — research subcommands
 - `context/` — context management subcommands

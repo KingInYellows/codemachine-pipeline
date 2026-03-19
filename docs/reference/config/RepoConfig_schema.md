@@ -1,7 +1,7 @@
 # RepoConfig Schema Documentation
 
-**Version:** 1.0.0
-**Last Updated:** 2025-12-15
+**Version:** 1.1.0
+**Last Updated:** 2026-03-18
 **Related ADRs:** ADR-2 (State Persistence), ADR-5 (Approval Workflow)
 
 ## Overview
@@ -25,7 +25,7 @@ The configuration file must be located at:
 
 ## Source Code Structure (CDMCH-213)
 
-The config implementation is split across three files:
+The config implementation is split across four files:
 
 - **`RepoConfigSchema.ts`** — All Zod schemas and inferred TypeScript types
 - **`RepoConfigLoader.ts`** — Runtime loading, environment variable overrides, validation error formatting, and config history management
@@ -87,7 +87,7 @@ GitHub integration configuration and credentials.
 | `api_base_url`      | `string`   | ✗        | `"https://api.github.com"` | GitHub API base URL (for Enterprise)     | -                       |
 | `required_scopes`   | `string[]` | ✗        | `["repo", "workflow"]`     | Required PAT scopes (enum: `repo`, `workflow`, `read:org`, `write:org`) | -                       |
 | `default_reviewers` | `string[]` | ✗        | `[]`                       | Default PR reviewers (GitHub usernames)  | -                       |
-| `api_version`       | `string`   | ✗        | From `configConstants`     | GitHub API version date (`YYYY-MM-DD`) for `X-GitHub-Api-Version` header | -                       |
+| `api_version`       | `string`   | ✗        | `"2022-11-28"`             | GitHub API version date (`YYYY-MM-DD`) for `X-GitHub-Api-Version` header | -                       |
 | `branch_protection` | `object`   | ✗        | See below                  | Branch protection settings awareness     | -                       |
 
 **branch_protection:**
@@ -391,4 +391,4 @@ See `.codepipe/templates/config.example.json` for a complete annotated example.
 | Version | Date       | Changes                                                                    |
 | ------- | ---------- | -------------------------------------------------------------------------- |
 | 1.0.0   | 2025-12-15 | Initial schema with governance and history tracking                       |
-| 1.1.0   | 2026-03-18 | Add github.api_version, execution CLI version/workflow/credential fields, loader extraction (CDMCH-213) |
+| 1.1.0   | 2026-03-18 | Add GitHub.api_version, execution CLI version/workflow/credential fields, loader extraction (CDMCH-213) |

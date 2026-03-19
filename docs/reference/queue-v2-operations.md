@@ -13,7 +13,7 @@ The V2 queue system is organized in `src/workflows/queue/` with 13 files
 
 | File | Purpose |
 | --- | --- |
-| `index.ts` | Public barrel -- all external consumers import from here |
+| `index.ts` | Public barrel for queue consumers that prefer a stable entry point |
 | `queueStore.ts` | Core store: init, append, snapshot, re-exports |
 | `queueTaskManager.ts` | Task lifecycle: getNext, update, filter by status |
 | `queueV2Api.ts` | High-level V2 API: counts, ready tasks, compaction, export |
@@ -270,7 +270,7 @@ unset CODEPIPE_QUEUE_USE_SNAPSHOTS
 ps aux | grep codepipe
 
 # Step 2: Force cache invalidation
-node -e "require('./src/workflows/queue/queueCache.js').invalidateV2Cache()"
+node -e "require('./src/workflows/queue/queueCache.js').invalidateV2Cache('.codepipe/runs/FEATURE-ID')"
 
 # Step 3: Reduce snapshot retention (env var not yet implemented — manual workaround)
 export CODEPIPE_QUEUE_SNAPSHOT_KEEP=1
@@ -411,5 +411,5 @@ All queue files are in `src/workflows/queue/`:
 ### Related Documentation
 
 - [Execution Telemetry](../playbooks/execution_telemetry.md) - Metrics and observability
-- [Resume Playbook](../playbooks/patch_playbook.md) - Recovery procedures
+- [Resume Playbook](../playbooks/resume_playbook.md) - Recovery procedures
 - [Integration Testing](./integration_testing.md) - Queue validation tests

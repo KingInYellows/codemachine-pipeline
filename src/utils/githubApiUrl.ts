@@ -24,27 +24,39 @@ function trimTrailingSlash(pathname: string): string {
 }
 
 /**
- * Check whether the given base URL differs from the default GitHub API URL.
+ * Classification of a configured GitHub API base URL.
+ *
+ * - `default`: the canonical `https://api.github.com/` endpoint
+ * - `custom`: a valid non-default host/path, typically GitHub Enterprise
+ * - `invalid`: malformed input that cannot be parsed as a URL
+ */
+export type GitHubApiBaseUrlStatus = 'default' | 'custom' | 'invalid';
+
+/**
+ * Classify a configured GitHub API base URL for early config warnings.
  *
  * @param baseUrl - GitHub API base URL to check
- * @returns true if the URL points to a non-default host (e.g., GitHub Enterprise)
+ * @returns `default` for the canonical GitHub host, `custom` for valid
+ * non-default hosts/paths, or `invalid` when the value cannot be parsed
  */
-export function hasCustomGitHubApiBaseUrl(baseUrl: string | undefined): boolean {
+export function classifyGitHubApiBaseUrl(baseUrl: string | undefined): GitHubApiBaseUrlStatus {
   if (!baseUrl) {
-    return false;
+    return 'default';
   }
 
   try {
     const parsed = new URL(baseUrl);
     const normalizedPath = trimTrailingSlash(parsed.pathname);
-    return !(
+    return (
       parsed.protocol === 'https:' &&
       parsed.hostname === 'api.github.com' &&
       parsed.port === '' &&
       normalizedPath === '/'
-    );
+    )
+      ? 'default'
+      : 'custom';
   } catch {
-    return false;
+    return 'invalid';
   }
 }
 
@@ -56,12 +68,15 @@ export function hasCustomGitHubApiBaseUrl(baseUrl: string | undefined): boolean 
  * 2. Rejects URLs with query strings or hash fragments
  * 3. For non-default hosts, requires CODEPIPE_ALLOW_UNSAFE_GITHUB_API_BASE_URL=1
  * 4. Enforces HTTPS for custom hosts
+ * 5. Allows only `/` or `/api/v3` paths so REST and GraphQL endpoints stay aligned
  *
  * @param baseUrl - GitHub API base URL, or undefined to use the default
  * @returns Normalized base URL string
  * @throws {Error} If the URL contains credentials, query strings, or fragments
  * @throws {Error} If a custom host is used without explicit opt-in
  * @throws {Error} If a custom host does not use HTTPS
+ * @throws {Error} If a custom host uses a path other than `/` or `/api/v3`
+ * @throws {TypeError} If the URL string is malformed and cannot be parsed
  */
 export function resolveGitHubApiBaseUrl(baseUrl: string | undefined): string {
   const candidate = baseUrl ?? DEFAULT_GITHUB_API_BASE_URL;
@@ -95,6 +110,12 @@ export function resolveGitHubApiBaseUrl(baseUrl: string | undefined): string {
 
   if (parsed.protocol !== 'https:') {
     throw new Error('GitHub API base URL must use https for custom hosts');
+  }
+
+  if (normalizedPath !== '/' && normalizedPath !== '/api/v3') {
+    throw new Error(
+      'GitHub API base URL must use either the root path or /api/v3 for custom hosts'
+    );
   }
 
   return `${parsed.origin}${normalizedPath === '/' ? '/' : `${normalizedPath}/`}`;

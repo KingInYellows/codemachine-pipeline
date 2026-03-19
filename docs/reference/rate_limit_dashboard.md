@@ -191,7 +191,7 @@ Metrics are collected via the static `RateLimitReporter.exportMetrics()` method 
 import { createRunMetricsCollector } from './telemetry/metrics';
 import { exportRateLimitMetrics } from './telemetry/rateLimitReporter';
 
-const metrics = createRunMetricsCollector(runDir, runId);
+const metrics = createRunMetricsCollector(runDir, featureId);
 await exportRateLimitMetrics(runDir, metrics);
 await metrics.flush(); // Writes to metrics/prometheus.txt
 ```

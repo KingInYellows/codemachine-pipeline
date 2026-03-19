@@ -1,7 +1,7 @@
 # GitHub Adapter
 
-**Version:** 1.0.0
-**Last Updated:** 2025-12-17
+**Version:** 1.1.0
+**Last Updated:** 2026-03-18
 
 This document describes the GitHub adapter implementation, which provides integration with GitHub's REST API for repository operations, pull request management, and deployment automation.
 

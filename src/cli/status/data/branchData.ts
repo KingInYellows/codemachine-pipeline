@@ -10,11 +10,12 @@ import type { DataLogger } from './types';
  *
  * Reads the persisted branch protection report, generates a summary
  * (blockers, review status, auto-merge), and attaches any validation
- * mismatch data. Returns undefined when no report exists or on ENOENT.
+ * mismatch data. Returns undefined when no report exists or when loading fails
+ * after logging any unexpected file error.
  *
  * @param baseDir - Project base directory.
  * @param featureId - Feature branch identifier.
- * @param logger - Optional logger for non-ENOENT errors.
+ * @param logger - Optional logger for unexpected file errors.
  */
 export async function loadBranchProtectionStatus(
   baseDir: string,

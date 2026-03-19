@@ -70,7 +70,9 @@ export async function attachSummarizationMetadata(
  * Enrich a context payload with cost telemetry from `telemetry/costs.json`.
  *
  * Reads aggregated token counts and USD cost, then merges them into
- * `payload.summarization`. Budget warnings are placed in
+ * `payload.summarization`. If `tokens_used` was previously populated from
+ * summarization metadata, the aggregated cost telemetry values replace it.
+ * Budget warnings are placed in
  * `payload.budget_warnings`. ENOENT is silently ignored.
  *
  * @param payload - Context payload to mutate in place.
@@ -139,7 +141,8 @@ export async function attachCostTelemetry(
  *
  * Reads `context/summary.json`, parses it as a ContextDocument, then enriches
  * the result with summarization metadata and cost telemetry. Returns undefined
- * when no context summary file exists.
+ * when no context summary file exists, or `{ error: string }` when the file
+ * cannot be read or parsed.
  *
  * @param baseDir - Project base directory.
  * @param featureId - Feature branch identifier.

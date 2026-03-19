@@ -21,7 +21,8 @@ The resume system is decomposed into four modules:
 
 The coordinator delegates to the integrity checker and state verifier before
 attempting any task re-execution. If queue operations were interrupted, the
-queue recovery module rebuilds the queue index from the operations log.
+queue recovery module restores queue state from the persisted queue artifacts
+and revalidates consistency before continuing.
 
 ### Key Principles
 

@@ -83,11 +83,12 @@ async function readPlanValidation(
  *
  * Reads `queue_validation.json` and `plan_validation.json` in parallel,
  * combines their pass/fail status and any integrity warnings. Returns
- * undefined when neither validation file exists.
+ * undefined when neither validation file produces a readable validation result,
+ * including missing, unreadable, or malformed files.
  *
  * @param baseDir - Project base directory.
  * @param featureId - Feature branch identifier.
- * @param logger - Optional logger for non-ENOENT errors.
+ * @param logger - Optional logger for unexpected validation file read errors.
  */
 export async function loadValidationStatus(
   baseDir: string,
