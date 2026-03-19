@@ -33,8 +33,6 @@ export enum CliErrorCode {
   DISK_FULL = 'DISK_FULL',
   NETWORK_ERROR = 'NETWORK_ERROR',
   LINEAR_API_FAILED = 'LINEAR_API_FAILED',
-  CYCLE_NOT_FOUND = 'CYCLE_NOT_FOUND',
-  CYCLE_FETCH_FAILED = 'CYCLE_FETCH_FAILED',
 }
 
 /** Map error codes to exit codes */
@@ -52,8 +50,6 @@ const EXIT_CODE_MAP: Record<CliErrorCode, number> = {
   [CliErrorCode.DISK_FULL]: 20,
   [CliErrorCode.NETWORK_ERROR]: 1,
   [CliErrorCode.LINEAR_API_FAILED]: 1,
-  [CliErrorCode.CYCLE_NOT_FOUND]: 10,
-  [CliErrorCode.CYCLE_FETCH_FAILED]: 1,
 };
 
 /** Map error codes to documentation anchors */
@@ -67,8 +63,6 @@ const DOCS_ANCHOR_MAP: Partial<Record<CliErrorCode, string>> = {
   [CliErrorCode.RUN_DIR_NOT_FOUND]: 'troubleshooting',
   [CliErrorCode.LINEAR_API_FAILED]: 'integrations',
   [CliErrorCode.NETWORK_ERROR]: 'troubleshooting',
-  [CliErrorCode.CYCLE_NOT_FOUND]: 'integrations',
-  [CliErrorCode.CYCLE_FETCH_FAILED]: 'integrations',
 };
 
 const DOCS_BASE_URL = 'https://github.com/KingInYellows/codemachine-pipeline#';

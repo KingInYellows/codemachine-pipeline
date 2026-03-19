@@ -1,9 +1,10 @@
-import { describe, it, expect, vi, beforeEach, type Mock } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { LinearAdapter, LinearAdapterError } from '../../src/adapters/linear/LinearAdapter';
-import type { LinearCycleIssue } from '../../src/adapters/linear/LinearAdapterTypes';
 
 // Mock the HttpClient module
-const mockPost = vi.fn();
+const { mockPost } = vi.hoisted(() => ({
+  mockPost: vi.fn(),
+}));
 vi.mock('../../src/adapters/http/client', () => ({
   HttpClient: class {
     post = mockPost;
@@ -41,10 +42,18 @@ function createAdapter(): LinearAdapter {
   });
 }
 
-// mockPost is hoisted above the vi.mock call
-
 const VALID_CYCLE_ID = 'a1b2c3d4-e5f6-7890-abcd-ef1234567890';
 const VALID_TEAM_ID = 'f1e2d3c4-b5a6-7890-abcd-ef1234567890';
+
+const DEFAULT_CYCLE_ISSUE_NODE = {
+  id: 'issue-1',
+  identifier: 'CDMCH-101',
+  title: 'Test Issue',
+  stateType: 'started',
+  stateName: 'In Progress',
+  priority: 2,
+  relations: [] as Array<{ type: string; relatedIssue: { id: string; identifier: string } }>,
+};
 
 function makeCycleIssueNode(overrides: Partial<{
   id: string;
@@ -55,25 +64,30 @@ function makeCycleIssueNode(overrides: Partial<{
   priority: number;
   relations: Array<{ type: string; relatedIssue: { id: string; identifier: string } }>;
 }> = {}) {
+  const issue = {
+    ...DEFAULT_CYCLE_ISSUE_NODE,
+    ...overrides,
+  };
+
   return {
-    id: overrides.id ?? 'issue-1',
-    identifier: overrides.identifier ?? 'CDMCH-101',
-    title: overrides.title ?? 'Test Issue',
+    id: issue.id,
+    identifier: issue.identifier,
+    title: issue.title,
     description: 'Test description',
     state: {
       id: 'state-1',
-      name: overrides.stateName ?? 'In Progress',
-      type: overrides.stateType ?? 'started',
+      name: issue.stateName,
+      type: issue.stateType,
     },
-    priority: overrides.priority ?? 2,
+    priority: issue.priority,
     labels: { nodes: [{ id: 'label-1', name: 'bug', color: '#ff0000' }] },
     assignee: { id: 'user-1', name: 'Test User', email: 'test@example.com' },
     team: { id: VALID_TEAM_ID, name: 'Engineering', key: 'CDMCH' },
     project: { id: 'project-1', name: 'Test Project' },
     createdAt: '2026-03-01T00:00:00Z',
     updatedAt: '2026-03-15T00:00:00Z',
-    url: `https://linear.app/test/issue/${overrides.identifier ?? 'CDMCH-101'}`,
-    relations: { nodes: overrides.relations ?? [] },
+    url: `https://linear.app/test/issue/${issue.identifier}`,
+    relations: { nodes: issue.relations },
   };
 }
 
@@ -127,7 +141,7 @@ describe('LinearAdapter cycle methods', () => {
       expect(issue.relations[0].relatedIssue.identifier).toBe('CDMCH-102');
 
       expect(result.metadata.issueCount).toBe(1);
-      expect(result.metadata.retrievedAt).toBeDefined();
+      expect(result.metadata.retrieved_at).toBeDefined();
     });
 
     it('handles cycle with multiple issues and no relations', async () => {
@@ -155,6 +169,38 @@ describe('LinearAdapter cycle methods', () => {
       expect(result.cycle.issues).toHaveLength(2);
       expect(result.cycle.issues[0].relations).toEqual([]);
       expect(result.cycle.issues[1].relations).toEqual([]);
+    });
+
+    it('handles malformed or missing relation nodes gracefully', async () => {
+      const issueNode = {
+        ...makeCycleIssueNode(),
+        relations: {
+          nodes: [
+            null,
+            { type: 'blocks', relatedIssue: null },
+            { type: null, relatedIssue: { id: 'issue-2', identifier: 'CDMCH-102' } },
+          ],
+        },
+      };
+
+      mockPost.mockResolvedValueOnce({
+        data: {
+          data: {
+            cycle: {
+              id: VALID_CYCLE_ID,
+              name: 'Sprint 16',
+              number: 16,
+              startsAt: '2026-04-01T00:00:00Z',
+              endsAt: '2026-04-14T00:00:00Z',
+              issues: { nodes: [issueNode] },
+            },
+          },
+        },
+      });
+
+      const result = await adapter.fetchCycleIssues(VALID_CYCLE_ID);
+
+      expect(result.cycle.issues[0].relations).toEqual([]);
     });
 
     it('throws when cycle is not found', async () => {
@@ -200,6 +246,102 @@ describe('LinearAdapter cycle methods', () => {
       expect(result.cycle.issues).toHaveLength(0);
       expect(result.metadata.issueCount).toBe(0);
       expect(result.metadata.teamId).toBe('');
+    });
+
+    it('normalizes inverse relation types into canonical forward relations', async () => {
+      const issueNode = makeCycleIssueNode({
+        relations: [
+          { type: 'blocked_by', relatedIssue: { id: 'issue-2', identifier: 'CDMCH-102' } },
+          { type: 'duplicate_of', relatedIssue: { id: 'issue-3', identifier: 'CDMCH-103' } },
+        ],
+      });
+
+      mockPost.mockResolvedValueOnce({
+        data: {
+          data: {
+            cycle: {
+              id: VALID_CYCLE_ID,
+              name: 'Sprint 17',
+              number: 17,
+              startsAt: '2026-04-15T00:00:00Z',
+              endsAt: '2026-04-29T00:00:00Z',
+              issues: {
+                nodes: [issueNode],
+                pageInfo: { hasNextPage: false, endCursor: null },
+              },
+            },
+          },
+        },
+      });
+
+      const result = await adapter.fetchCycleIssues(VALID_CYCLE_ID);
+
+      expect(result.cycle.issues[0].relations).toEqual([
+        {
+          type: 'blocks',
+          issue: { id: 'issue-2', identifier: 'CDMCH-102' },
+          relatedIssue: { id: 'issue-1', identifier: 'CDMCH-101' },
+        },
+        {
+          type: 'duplicate',
+          issue: { id: 'issue-3', identifier: 'CDMCH-103' },
+          relatedIssue: { id: 'issue-1', identifier: 'CDMCH-101' },
+        },
+      ]);
+    });
+
+    it('paginates cycle issues until all pages are collected', async () => {
+      mockPost
+        .mockResolvedValueOnce({
+          data: {
+            data: {
+              cycle: {
+                id: VALID_CYCLE_ID,
+                name: 'Sprint 18',
+                number: 18,
+                startsAt: '2026-04-15T00:00:00Z',
+                endsAt: '2026-04-29T00:00:00Z',
+                issues: {
+                  nodes: [makeCycleIssueNode({ id: 'issue-1', identifier: 'CDMCH-101' })],
+                  pageInfo: { hasNextPage: true, endCursor: 'cursor-1' },
+                },
+              },
+            },
+          },
+        })
+        .mockResolvedValueOnce({
+          data: {
+            data: {
+              cycle: {
+                id: VALID_CYCLE_ID,
+                name: 'Sprint 18',
+                number: 18,
+                startsAt: '2026-04-15T00:00:00Z',
+                endsAt: '2026-04-29T00:00:00Z',
+                issues: {
+                  nodes: [makeCycleIssueNode({ id: 'issue-2', identifier: 'CDMCH-102' })],
+                  pageInfo: { hasNextPage: false, endCursor: null },
+                },
+              },
+            },
+          },
+        });
+
+      const result = await adapter.fetchCycleIssues(VALID_CYCLE_ID);
+
+      expect(result.cycle.issues.map((issue) => issue.identifier)).toEqual([
+        'CDMCH-101',
+        'CDMCH-102',
+      ]);
+      expect(result.metadata.issueCount).toBe(2);
+      expect(mockPost).toHaveBeenCalledTimes(2);
+
+      const firstRequest = mockPost.mock.calls[0]?.[1] as { query: string; variables: { after?: string | null } };
+      const secondRequest = mockPost.mock.calls[1]?.[1] as { query: string; variables: { after?: string | null } };
+
+      expect(firstRequest.query).toContain('issues(first: 250, after: $after)');
+      expect(firstRequest.variables.after).toBeNull();
+      expect(secondRequest.variables.after).toBe('cursor-1');
     });
   });
 
@@ -259,6 +401,11 @@ describe('LinearAdapter cycle methods', () => {
       mockPost.mockRejectedValueOnce(new Error('Network failure'));
 
       await expect(adapter.fetchActiveCycle(VALID_TEAM_ID)).rejects.toThrow();
+    });
+
+    it('rejects invalid team ID format', async () => {
+      await expect(adapter.fetchActiveCycle('not-a-uuid')).rejects.toThrow(LinearAdapterError);
+      expect(mockPost).not.toHaveBeenCalled();
     });
   });
 
