@@ -169,6 +169,17 @@ async function loadLinearIntegration(
   }
 }
 
+/**
+ * Load GitHub and/or Linear integration status based on enabled adapters.
+ *
+ * Loads rate-limit data, PR metadata (GitHub), and issue status (Linear) in
+ * parallel when both adapters are enabled. Returns undefined when no
+ * integrations are configured.
+ *
+ * @param settings - Run directory settings including adapter configuration.
+ * @param featureId - Feature branch identifier.
+ * @param logger - Optional logger for load errors.
+ */
 export async function loadIntegrationsStatus(
   settings: RunDirectorySettings,
   featureId: string,

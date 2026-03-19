@@ -5,6 +5,17 @@ import type { StatusBranchProtectionPayload } from '../types';
 import { logIfUnexpectedFileError } from './types';
 import type { DataLogger } from './types';
 
+/**
+ * Load branch protection compliance status for a feature run.
+ *
+ * Reads the persisted branch protection report, generates a summary
+ * (blockers, review status, auto-merge), and attaches any validation
+ * mismatch data. Returns undefined when no report exists or on ENOENT.
+ *
+ * @param baseDir - Project base directory.
+ * @param featureId - Feature branch identifier.
+ * @param logger - Optional logger for non-ENOENT errors.
+ */
 export async function loadBranchProtectionStatus(
   baseDir: string,
   featureId: string,
