@@ -7,6 +7,7 @@
 import type { StructuredLogger } from '../telemetry/logger.js';
 import type { MetricsCollector } from '../telemetry/metrics.js';
 import type { RepoConfig } from '../core/config/RepoConfig.js';
+import type { IssueSnapshot } from '../adapters/linear/LinearAdapterTypes.js';
 
 export interface CycleOrchestratorConfig {
   repoRoot: string;
@@ -19,19 +20,34 @@ export interface CycleOrchestratorConfig {
   failFast: boolean;
   planOnly: boolean;
   maxIssues: number;
+  /** Format an IssueSnapshot into context text for the pipeline. Injected by CLI layer. */
+  formatContext: (snapshot: IssueSnapshot) => string;
   onIssueComplete?: (result: CycleIssueResult) => void;
 }
 
-export interface CycleIssueResult {
+interface CycleIssueResultBase {
   issueId: string;
   identifier: string;
   title: string;
-  status: 'completed' | 'failed' | 'skipped';
-  skipReason?: string | undefined;
-  runDir?: string | undefined;
   durationMs: number;
-  error?: string | undefined;
 }
+
+export interface CycleIssueCompleted extends CycleIssueResultBase {
+  status: 'completed';
+  runDir: string;
+}
+
+export interface CycleIssueFailed extends CycleIssueResultBase {
+  status: 'failed';
+  error: string;
+}
+
+export interface CycleIssueSkipped extends CycleIssueResultBase {
+  status: 'skipped';
+  skipReason: string;
+}
+
+export type CycleIssueResult = CycleIssueCompleted | CycleIssueFailed | CycleIssueSkipped;
 
 export interface CycleResult {
   cycleId: string;

@@ -162,7 +162,7 @@ const CYCLE_ISSUES_QUERY = `
       number
       startsAt
       endsAt
-      issues {
+      issues(first: 250) {
         nodes {
           id
           identifier
@@ -580,6 +580,8 @@ export class LinearAdapter {
             ? issue.relations.nodes
             : [];
 
+        const KNOWN_RELATION_TYPES = new Set(['blocks', 'duplicate', 'related']);
+
         issue.relations = relationNodes.flatMap((relation) => {
           if (
             !relation ||
@@ -587,6 +589,14 @@ export class LinearAdapter {
             !relation.relatedIssue?.id ||
             !relation.relatedIssue.identifier
           ) {
+            return [];
+          }
+
+          if (!KNOWN_RELATION_TYPES.has(relation.type)) {
+            this.logger.debug('Ignoring unknown relation type from API', {
+              type: relation.type,
+              issueId: issue.identifier,
+            });
             return [];
           }
 
@@ -699,6 +709,7 @@ export class LinearAdapter {
         'validateTeamId'
       );
     }
+
 
     if (!STRUCTURED_OPAQUE_ISSUE_ID_PATTERN.test(teamId)) {
       throw new LinearAdapterError(

@@ -51,14 +51,14 @@ Results are cached in-process with `clearBinaryCache()` available for testing.
 
 The telemetry name-check in `cliExecutionEngine.ts` was updated from a string comparison to a `Set` (`CODEMACHINE_STRATEGY_NAMES`) that includes both `codemachine` and `codemachine-cli`.
 
-### Workflow template mapping
+### Task-to-workflow mapping
 
-`WorkflowTemplateMapper` translates pipeline `ExecutionTask` types to CodeMachine coordination syntax:
+`TaskMapper` (`src/workflows/taskMapper.ts`) translates pipeline `ExecutionTask` types to CodeMachine workflows:
 
 - `code_generation` maps to the configured default engine (e.g., `claude`).
 - `testing` maps to `codex` with a testing-specific prompt prefix.
 - Other task types map to appropriate engine defaults.
-- Custom workflow templates (`.workflow.js` files) are resolved from a configurable directory with path traversal prevention.
+- Tasks marked as native-engine types (`testing`, `deployment`, `validation`, `patch_application`, `git_operation`) bypass CodeMachine entirely and are handled by the native strategy.
 
 ### Security hardening
 
@@ -99,10 +99,10 @@ Three fields were added to `ExecutionConfigSchema`:
 - Binary resolver: `src/adapters/codemachine/binaryResolver.ts`
 - Adapter: `src/adapters/codemachine/CodeMachineCLIAdapter.ts`
 - Strategy: `src/workflows/codeMachineCLIStrategy.ts`
-- Workflow template mapper: `src/workflows/workflowTemplateMapper.ts`
+- Task-to-workflow mapping: `src/workflows/taskMapper.ts`
 - Shared types: `src/workflows/codemachineTypes.ts`
 - Config schema: `src/core/config/RepoConfig.ts` (ExecutionConfigSchema)
 - Doctor command: `src/cli/commands/doctor.ts` (checkCodeMachineCli)
 - Telemetry fix: `src/workflows/cliExecutionEngine.ts` (CODEMACHINE_STRATEGY_NAMES)
 - Security fix: `src/workflows/codeMachineRunner.ts` (validateCliPath allowlist)
-- Tests: `tests/unit/binaryResolver.test.ts`, `tests/unit/codeMachineCLIAdapter.test.ts`, `tests/unit/codeMachineCLIStrategy.test.ts`, `tests/unit/workflowTemplateMapper.test.ts`
+- Tests: `tests/unit/binaryResolver.test.ts`, `tests/unit/codeMachineCLIAdapter.test.ts`, `tests/unit/codeMachineCLIStrategy.test.ts`

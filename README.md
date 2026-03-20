@@ -8,12 +8,12 @@ Autonomous AI-powered feature development pipeline CLI
 
 ## Features
 
+- **CodeMachine CLI Execution Engine**: Core execution engine with platform-aware binary resolution, dual-strategy fallback, credential delegation via stdin, and artifact capture (see [Execution Engine](#execution-engine) below)
 - **Autonomous Feature Development**: AI-driven end-to-end feature implementation
 - **Git-Native**: Designed for Git/GitHub-centric workflows
 - **Resumable Execution**: Idempotent pipeline steps with automatic state management
 - **Integration Ready**: Supports GitHub and Linear integrations
 - **Deterministic Builds**: Node v24 LTS, containerized execution
-- **CodeMachine CLI Adapter**: External execution engine integration with retry logic and artifact capture
 - **Production-Ready Runtime**: O(1) queue operations, parallel execution, telemetry, log rotation, and security hardening
 
 ## Documentation
@@ -233,15 +233,31 @@ See [Execution Flow](docs/reference/architecture/execution_flow.md) for details.
 
 ## Execution Engine
 
-The pipeline supports multiple AI execution engines via the CodeMachine CLI adapter.
+The CodeMachine CLI adapter is the core execution engine for the pipeline. It delegates task execution to the external `codemachine` binary using a dual-strategy architecture:
 
-| Engine   | Description                |
-| -------- | -------------------------- |
-| `claude` | Anthropic Claude (default) |
-| `codex`  | OpenAI Codex               |
-| `openai` | OpenAI                     |
+1. **`codemachine-cli` (preferred)** — Uses the platform-aware binary resolver with three-tier fallback (env override, npm optionalDependency, PATH search), semver version enforcement, shell-free spawning, and credential delegation via stdin.
+2. **`codemachine` (legacy fallback)** — Direct CLI path spawning with log streaming. Used automatically when the `codemachine-cli` binary is not available.
 
-For configuration and setup, see [CodeMachine Adapter Guide](docs/reference/config/codemachine_adapter_guide.md).
+Strategy selection is automatic: the engine tries `codemachine-cli` first and falls back to the legacy strategy if the binary is unavailable.
+
+### Supported Engines
+
+| Engine   | Description                | Status              |
+| -------- | -------------------------- | ------------------- |
+| `claude` | Anthropic Claude (default) | Recommended         |
+| `codex`  | OpenAI Codex               | Supported           |
+
+Set the engine in `.codepipe/config.json`:
+
+```json
+{
+  "execution": {
+    "default_engine": "claude"
+  }
+}
+```
+
+For full configuration, binary resolution, security details, and troubleshooting, see the [CodeMachine Adapter Guide](docs/reference/config/codemachine_adapter_guide.md) and [ADR-8](docs/adr/ADR-8-codemachine-cli-integration.md).
 
 ## Configuration
 

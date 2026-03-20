@@ -23,9 +23,7 @@ vi.mock('../../src/workflows/pipelineOrchestrator', () => ({
   PrerequisiteError: class extends Error {},
 }));
 
-vi.mock('../../src/cli/startHelpers', () => ({
-  formatLinearContext: vi.fn().mockReturnValue('# Linear Issue Context\n...'),
-}));
+// formatLinearContext is now injected via config.formatContext, no mock needed
 
 function makeIssue(overrides: Partial<{
   id: string;
@@ -89,6 +87,7 @@ function makeConfig(overrides: Partial<CycleOrchestratorConfig> = {}): CycleOrch
     failFast: false,
     planOnly: false,
     maxIssues: 30,
+    formatContext: vi.fn().mockReturnValue('# Linear Issue Context\n...'),
     ...overrides,
   };
 }
