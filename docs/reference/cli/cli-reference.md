@@ -5,13 +5,14 @@
 
 The `codepipe` CLI is the primary interface for managing feature development pipelines. This reference is auto-generated from the oclif command manifest.
 
-**Total commands:** 17
+**Total commands:** 18
 
 ## Table of Contents
 
 ### Core Commands
 
 - [`codepipe approve`](#codepipe-approve) — Approve or deny a feature pipeline gate
+- [`codepipe cycle`](#codepipe-cycle) — Run all issues in a Linear cycle through the pipeline
 - [`codepipe doctor`](#codepipe-doctor) — Run environment diagnostics and readiness checks
 - [`codepipe health`](#codepipe-health) — Quick runtime health check (config, disk, writable run dir)
 - [`codepipe init`](#codepipe-init) — Initialize codemachine-pipeline with schema-validated configuration
@@ -80,6 +81,40 @@ codepipe approve prd --approve --signer "user@example.com"
 codepipe approve spec --deny --signer "reviewer@example.com" --comment "Missing acceptance criteria"
 codepipe approve prd --approve --signer "user@example.com" --feature FEAT-abc123
 codepipe approve prd --approve --signer "user@example.com" --json
+```
+
+---
+
+#### codepipe cycle
+
+Run all issues in a Linear cycle through the pipeline
+
+##### Synopsis
+
+```bash
+codepipe cycle [FLAGS]
+```
+
+##### Options
+
+| Option         | Short | Type    | Description                                | Default |
+| -------------- | ----- | ------- | ------------------------------------------ | ------- |
+| `--cycle`      | `-c`  | string  | Linear cycle ID (defaults to active cycle) |         |
+| `--dry-run`    | `-d`  | boolean | Show ordered issue list without processing |         |
+| `--fail-fast`  |       | boolean | Stop on first issue failure                |         |
+| `--json`       |       | boolean | Output results in JSON format              |         |
+| `--max-issues` |       | string  | Maximum number of issues to process        | `30`    |
+| `--plan-only`  |       | boolean | Generate PRDs without task execution       |         |
+| `--verbose`    | `-v`  | boolean | Detailed per-issue output                  |         |
+
+##### Examples
+
+```bash
+codepipe cycle
+codepipe cycle --cycle abc123-def456
+codepipe cycle --dry-run
+codepipe cycle --plan-only
+codepipe cycle --fail-fast --json
 ```
 
 ---
