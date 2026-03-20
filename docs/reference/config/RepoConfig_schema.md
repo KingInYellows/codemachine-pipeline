@@ -1,7 +1,7 @@
 # RepoConfig Schema Documentation
 
-**Version:** 1.0.0
-**Last Updated:** 2025-12-15
+**Version:** 1.1.0
+**Last Updated:** 2026-03-18
 **Related ADRs:** ADR-2 (State Persistence), ADR-5 (Approval Workflow)
 
 ## Overview
@@ -22,6 +22,15 @@ The configuration file must be located at:
 ```
 .codepipe/config.json
 ```
+
+## Source Code Structure (CDMCH-213)
+
+The config implementation is split across four files:
+
+- **`RepoConfigSchema.ts`** — All Zod schemas and inferred TypeScript types
+- **`RepoConfigLoader.ts`** — Runtime loading, environment variable overrides, validation error formatting, and config history management
+- **`RepoConfigDefaults.ts`** — Default values and factory functions (`createDefaultConfig`, `DEFAULT_EXECUTION_CONFIG`)
+- **`RepoConfig.ts`** — Barrel re-export; existing consumers can continue to import from this single file
 
 ## Schema Structure
 
@@ -76,8 +85,9 @@ GitHub integration configuration and credentials.
 | `enabled`           | `boolean`  | ✓        | -                          | Enable GitHub integration                | -                       |
 | `token_env_var`     | `string`   | ✗        | `"GITHUB_TOKEN"`           | Environment variable name for GitHub PAT | `CODEPIPE_GITHUB_TOKEN` |
 | `api_base_url`      | `string`   | ✗        | `"https://api.github.com"` | GitHub API base URL (for Enterprise)     | -                       |
-| `required_scopes`   | `string[]` | ✗        | `["repo", "workflow"]`     | Required PAT scopes                      | -                       |
+| `required_scopes`   | `string[]` | ✗        | `["repo", "workflow"]`     | Required PAT scopes (enum: `repo`, `workflow`, `read:org`, `write:org`) | -                       |
 | `default_reviewers` | `string[]` | ✗        | `[]`                       | Default PR reviewers (GitHub usernames)  | -                       |
+| `api_version`       | `string`   | ✗        | `"2022-11-28"`             | GitHub API version date (`YYYY-MM-DD`) for `X-GitHub-Api-Version` header | -                       |
 | `branch_protection` | `object`   | ✗        | See below                  | Branch protection settings awareness     | -                       |
 
 **branch_protection:**
@@ -197,6 +207,9 @@ _(Optional)_ CodeMachine CLI integration and execution settings. The entire `exe
 | `log_rotation_mb`       | `integer`                         | ✗        | `100`           | Log file rotation threshold in MB (1-10240)       | -                                   |
 | `log_rotation_keep`     | `integer`                         | ✗        | `3`             | Number of rotated log files to keep (1-20)        | -                                   |
 | `log_rotation_compress` | `boolean`                         | ✗        | `false`         | Compress rotated log files                        | -                                   |
+| `codemachine_cli_version` | `string`                        | ✗        | -               | Minimum required CodeMachine-CLI version (semver) | -                                   |
+| `codemachine_workflow_dir` | `string`                       | ✗        | -               | Path to workflow template overrides directory     | -                                   |
+| `env_credential_keys` | `string[]`                          | ✗        | `[]`            | Env var names to pipe to CodeMachine-CLI via stdin | -                                  |
 
 **Example:**
 
@@ -319,7 +332,7 @@ The CLI supports environment variable overrides following the `CODEPIPE_<SECTION
 
 ## Validation
 
-The schema is validated using Zod with the following rules:
+The schema is validated using Zod in `RepoConfigLoader.loadRepoConfig()` with the following rules:
 
 1. **Required fields** must be present
 2. **Type checking** ensures correct data types
@@ -365,11 +378,17 @@ See `.codepipe/templates/config.example.json` for a complete annotated example.
 
 - **ADR-2:** State Persistence - Defines run directory structure and deterministic storage
 - **ADR-5:** Approval Workflow - Defines human-in-the-loop gates and accountability
+- **CDMCH-213:** RepoConfigLoader extraction
+- **Source — Schema:** `src/core/config/RepoConfigSchema.ts`
+- **Source — Loader:** `src/core/config/RepoConfigLoader.ts`
+- **Source — Defaults:** `src/core/config/RepoConfigDefaults.ts`
+- **Source — Barrel:** `src/core/config/RepoConfig.ts`
 - **Migration Checklist:** `docs/reference/config/config_migrations.md`
 - **Example Config:** `.codepipe/templates/config.example.json`
 
 ## Schema Version History
 
-| Version | Date       | Changes                                             |
-| ------- | ---------- | --------------------------------------------------- |
-| 1.0.0   | 2025-12-15 | Initial schema with governance and history tracking |
+| Version | Date       | Changes                                                                    |
+| ------- | ---------- | -------------------------------------------------------------------------- |
+| 1.0.0   | 2025-12-15 | Initial schema with governance and history tracking                       |
+| 1.1.0   | 2026-03-18 | Add GitHub.api_version, execution CLI version/workflow/credential fields, loader extraction (CDMCH-213) |

@@ -3,6 +3,17 @@ import { RateLimitReporter } from '../../../telemetry/rateLimitReporter';
 import type { StatusRateLimitsPayload } from '../types';
 import type { DataLogger } from './types';
 
+/**
+ * Load the API rate-limit ledger for all providers in a feature run.
+ *
+ * Generates a report via {@link RateLimitReporter}, maps each provider's
+ * state into the status payload format, and assembles cooldown/ack warnings.
+ * Returns undefined when no rate-limit data has been recorded yet.
+ *
+ * @param baseDir - Project base directory.
+ * @param featureId - Feature branch identifier.
+ * @param logger - Optional logger for non-ENOENT errors.
+ */
 export async function loadRateLimitsStatus(
   baseDir: string,
   featureId: string,

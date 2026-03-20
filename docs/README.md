@@ -65,6 +65,7 @@ Documented architectural decisions with context, rationale, and consequences.
 | [ADR-6: Linear Integration](adr/ADR-6-linear-integration.md)                   | Linear integration strategy and adapter design               |
 | [ADR-7: Validation Policy](adr/ADR-7-validation-policy.md)                     | Zod runtime validation policy and schema validation approach |
 | [ADR-8: CodeMachine CLI Integration](adr/ADR-8-codemachine-cli-integration.md) | CodeMachine CLI adapter design and binary resolution         |
+| [ADR-9: Documentation Architecture](adr/adr-009-documentation-architecture.md) | Documentation structure, conventions, and factual accuracy   |
 
 ---
 

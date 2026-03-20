@@ -1,7 +1,7 @@
 # Resume Playbook
 
-**Version:** 1.0.0
-**Last Updated:** 2025-01-XX
+**Version:** 1.1.0
+**Last Updated:** 2026-03-18
 **Owner:** Platform Engineering
 
 ---
@@ -9,6 +9,20 @@
 ## Overview
 
 This playbook provides comprehensive guidance for resuming failed or paused AI Feature Pipeline runs. It maps error classifications to recovery actions, explains the resume coordinator's diagnostic system, and documents manual intervention procedures.
+
+### Architecture (v1.1.0)
+
+The resume system is decomposed into four modules:
+
+- **`resumeCoordinator.ts`** — top-level coordinator that orchestrates the resume flow
+- **`runStateVerifier.ts`** — verifies run state consistency before resuming
+- **`resumeIntegrityChecker.ts`** — validates artifact integrity (manifests, hashes)
+- **`resumeQueueRecovery.ts`** — recovers queue state for interrupted queue operations
+
+The coordinator delegates to the integrity checker and state verifier before
+attempting any task re-execution. If queue operations were interrupted, the
+queue recovery module restores queue state from the persisted queue artifacts
+and revalidates consistency before continuing.
 
 ### Key Principles
 

@@ -7,6 +7,17 @@ import { truncateSummary } from '../renderers';
 import type { StatusContextPayload } from '../types';
 import type { DataLogger } from './types';
 
+/**
+ * Enrich a context payload with summarization metadata from `summarization.json`.
+ *
+ * Reads chunk generation counts, cache hits, and token usage from the
+ * context directory and merges them into the payload. ENOENT is silently
+ * ignored (the file may not exist yet).
+ *
+ * @param payload - Context payload to mutate in place.
+ * @param contextDir - Absolute path to the run's `context/` directory.
+ * @param logger - Optional logger for non-ENOENT read errors.
+ */
 export async function attachSummarizationMetadata(
   payload: StatusContextPayload,
   contextDir: string,
@@ -55,6 +66,17 @@ export async function attachSummarizationMetadata(
   }
 }
 
+/**
+ * Enrich a context payload with cost telemetry from `telemetry/costs.json`.
+ *
+ * Reads aggregated token counts and USD cost, then merges them into
+ * `payload.summarization`. Budget warnings are placed in
+ * `payload.budget_warnings`. ENOENT is silently ignored.
+ *
+ * @param payload - Context payload to mutate in place.
+ * @param runDir - Absolute path to the feature's run directory.
+ * @param logger - Optional logger for non-ENOENT read errors.
+ */
 export async function attachCostTelemetry(
   payload: StatusContextPayload,
   runDir: string,
@@ -112,6 +134,17 @@ export async function attachCostTelemetry(
   }
 }
 
+/**
+ * Load the full context-window status for a feature run.
+ *
+ * Reads `context/summary.json`, parses it as a ContextDocument, then enriches
+ * the result with summarization metadata and cost telemetry. Returns undefined
+ * when no context summary file exists.
+ *
+ * @param baseDir - Project base directory.
+ * @param featureId - Feature branch identifier.
+ * @param logger - Optional logger for non-ENOENT errors.
+ */
 export async function loadContextStatus(
   baseDir: string,
   featureId: string,

@@ -1,7 +1,7 @@
 # GitHub Adapter
 
-**Version:** 1.0.0
-**Last Updated:** 2025-12-17
+**Version:** 1.1.0
+**Last Updated:** 2026-03-18
 
 This document describes the GitHub adapter implementation, which provides integration with GitHub's REST API for repository operations, pull request management, and deployment automation.
 
@@ -137,6 +137,23 @@ The GitHub adapter integrates with the `HttpClient` rate limit tracking:
 - **Retry-After:** Respects `retry-after` header when present
 
 See `docs/reference/cli/rate_limit_reference.md` for detailed rate limit behavior.
+
+## Input Validation (CDMCH-174)
+
+The adapter validates path parameters at construction time and before API calls to prevent malformed inputs from reaching the GitHub API:
+
+### Owner / Repo Validation
+
+Both `owner` and `repo` are validated in the constructor:
+
+- **Owner** must match `^[a-zA-Z0-9]+(?:[-_][a-zA-Z0-9]+)*$` (alphanumerics with single hyphen or underscore separators).
+- **Repo** must match `^[a-zA-Z0-9._][a-zA-Z0-9._-]*$` (single safe path segment). Additionally, repos named `.`, `..`, or ending with `.` or `.git` are rejected.
+
+Invalid values throw a `GitHubAdapterError` with `ErrorType.PERMANENT`.
+
+### Pull Request Number Validation
+
+All methods accepting `pull_number` validate it is a positive integer before making API calls. Invalid values throw a `GitHubAdapterError` with `ErrorType.PERMANENT`.
 
 ## Operations
 
@@ -369,6 +386,22 @@ await adapter.enableAutoMerge(42, 'SQUASH');
 
 **GitHub Endpoint:** `POST /graphql` (mutation: `enablePullRequestAutoMerge`)
 
+#### Disable Auto-Merge
+
+Disables auto-merge for a pull request using GraphQL mutation.
+
+```typescript
+await adapter.disableAutoMerge(42);
+```
+
+**Parameters:**
+
+- `pull_number` - PR number (required, must be a positive integer)
+
+**Note:** This uses the GraphQL API wrapped in REST-like envelope metadata for consistent logging.
+
+**GitHub Endpoint:** `POST /graphql` (mutation: `disablePullRequestAutoMerge`)
+
 ### Workflow Operations
 
 #### Trigger Workflow Dispatch
@@ -401,7 +434,7 @@ await adapter.triggerWorkflow({
 
 ## Error Handling
 
-The adapter classifies errors into three taxonomies:
+The adapter classifies errors into three taxonomies. `GitHubAdapterError` extends `AdapterError` (from `utils/errors`) and errors are normalized through `createErrorNormalizer()`.
 
 ### Transient Errors (Retryable)
 
@@ -495,6 +528,7 @@ const adapter = new GitHubAdapter({
   repo: 'my-repo',
   token: process.env.GITHUB_TOKEN!,
   baseUrl: 'https://github.company.com/api/v3', // GitHub Enterprise
+  apiVersion: '2022-11-28', // X-GitHub-Api-Version header (default from configConstants)
   runDir: '.codepipe/runs/feature-123', // Rate limit ledger
   logger: customLogger, // Custom logger
   timeout: 60000, // 60 second timeout
@@ -512,6 +546,7 @@ The GitHub adapter integrates with `RepoConfig` for centralized configuration:
     "enabled": true,
     "token_env_var": "GITHUB_TOKEN",
     "api_base_url": "https://api.github.com",
+    "api_version": "2022-11-28",
     "required_scopes": ["repo", "workflow"],
     "default_reviewers": ["tech-lead", "security-team"],
     "branch_protection": {
@@ -525,9 +560,9 @@ The GitHub adapter integrates with `RepoConfig` for centralized configuration:
 **Loading from Config:**
 
 ```typescript
-import { loadRepoConfig } from './core/config/RepoConfig';
+import { loadRepoConfig } from './core/config/RepoConfig'; // re-exports from RepoConfigLoader
 
-const config = loadRepoConfig('.codepipe/config.json');
+const config = await loadRepoConfig('.codepipe/config.json');
 if (!config.success) {
   throw new Error('Invalid config');
 }
@@ -763,6 +798,7 @@ console.log('Merge blocked:', reasons);
 
 ## Changelog
 
-| Version | Date       | Changes                                                           |
-| ------- | ---------- | ----------------------------------------------------------------- |
-| 1.0.0   | 2025-12-17 | Initial GitHub adapter implementation with full REST API coverage |
+| Version | Date       | Changes                                                                             |
+| ------- | ---------- | ----------------------------------------------------------------------------------- |
+| 1.0.0   | 2025-12-17 | Initial GitHub adapter implementation with full REST API coverage                   |
+| 1.1.0   | 2026-03-18 | Add input validation (CDMCH-174), disableAutoMerge, apiVersion config, type extraction |

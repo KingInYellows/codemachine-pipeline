@@ -4,11 +4,14 @@
 
 The `codepipe doctor` command runs comprehensive environment diagnostics to verify that your system meets all prerequisites for codemachine-pipeline operations. It validates:
 
-- Runtime environment (Node.js, git, npm, Docker)
+- Runtime environment (Node.js, git, npm, Docker, CodeMachine CLI)
 - Repository setup and permissions
 - Network connectivity
 - Configuration validity
-- Credential availability
+- Credential availability (GITHUB_TOKEN, LINEAR_API_KEY, Agent Endpoint)
+
+The Doctor command extends `TelemetryCommand` for automatic telemetry lifecycle
+management (logger, metrics, traces) via `runWithTelemetry()`.
 
 This reference documents all diagnostic checks, exit codes, and remediation procedures.
 
@@ -67,8 +70,8 @@ Environment Diagnostics Report
     → Set LINEAR_API_KEY with a valid Linear API key
 
 Summary:
-  Total checks: 11
-  Passed: 7
+  Total checks: 12
+  Passed: 8
   Warnings: 2
   Failed: 2
 
@@ -116,8 +119,8 @@ codepipe doctor --json
     }
   ],
   "summary": {
-    "total": 11,
-    "passed": 7,
+    "total": 12,
+    "passed": 8,
     "warnings": 2,
     "failed": 2
   },
@@ -154,15 +157,19 @@ Verbose mode includes:
 
 - Node.js v24.x (LTS) or higher
 
+**Warn Criteria:**
+
+- Node.js v20.x (acceptable but v24 recommended)
+
 **Fail Criteria:**
 
-- Node.js < v24.0.0
+- Node.js < v20.0.0
 - Node.js not installed
 
 **Remediation:**
 
 ```bash
-# Install Node.js v24 LTS
+# Install Node.js v24 LTS (recommended)
 # macOS (homebrew)
 brew install node@24
 
@@ -178,7 +185,7 @@ nvm use 24
 node --version
 ```
 
-**Exit Code Impact:** Failure → 20 (Environment Issue)
+**Exit Code Impact:** Failure → 20 (Environment Issue); Warning if v20.x
 
 ---
 
@@ -507,7 +514,39 @@ codepipe doctor
 
 ---
 
-### 11. Agent Endpoint
+### 11. CodeMachine CLI (Execution)
+
+**Check:** Verifies that the external CodeMachine CLI binary is available and optionally meets a minimum version requirement.
+
+**Pass Criteria:**
+
+- Binary found (via `CODEMACHINE_BIN_PATH`, npx, or global install) and `--version` succeeds
+- Version satisfies `execution.codemachine_cli_version` from config (if set)
+
+**Warn Criteria:**
+
+- Binary not found (optional dependency)
+- Binary found but `--version` fails
+- Version below configured minimum
+
+**Remediation:**
+
+```bash
+# Install CodeMachine CLI globally
+npm install -g codemachine@^0.8.0
+
+# Or set the binary path explicitly
+export CODEMACHINE_BIN_PATH=/path/to/codemachine
+
+# Verify
+codemachine --version
+```
+
+**Exit Code Impact:** Warning only (CodeMachine CLI is optional; the pipeline can use the built-in codemachine-cli strategy)
+
+---
+
+### 12. Agent Endpoint
 
 **Check:** Verifies agent service endpoint is configured.
 
@@ -624,10 +663,12 @@ codepipe doctor
 
 ```
 ❌ Node.js Version: Node.js v18.12.0 is below minimum required version
-  → Install Node.js v24 LTS or higher from https://nodejs.org/
+  → Install Node.js v20 or v24 LTS from https://nodejs.org/
 ```
 
 **Exit Code:** 20
+
+Note: Node.js v20 produces a warning (not a failure) recommending upgrade to v24.
 
 **Resolution:**
 

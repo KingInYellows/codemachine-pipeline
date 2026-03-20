@@ -88,7 +88,6 @@ Provider: github
   Remaining: 4850
   Reset: 2025-12-17T15:00:00.000Z (27m 49s)
   Cooldown: Inactive
-  Recent hits: 0
 
 Provider: linear
   Remaining: 8
@@ -96,12 +95,13 @@ Provider: linear
   ⚠ Cooldown: Active until 2025-12-17T14:45:00.000Z (12m 49s)
   ⚠ Manual Acknowledgement Required: 3 consecutive rate limit hits
      Action: Review rate limit strategy and clear cooldown manually when ready
-  Recent hits: 3
 
 Warnings:
   • One or more providers are in cooldown. Consider throttling requests or waiting for reset.
   • One or more providers require manual acknowledgement due to repeated rate limit hits.
     Review your rate limit strategy and use `codepipe rate-limits clear <provider>` when ready.
+
+Note: Use `--verbose` to display recent hit counts, last error details, and last updated timestamps per provider.
 ```
 
 #### JSON Output Schema
@@ -179,7 +179,7 @@ These metrics are emitted by the HTTP client and complement rate limit reporting
 
 ### Metric Collection
 
-Metrics are collected via the `RateLimitReporter.exportMetrics()` method, typically invoked by:
+Metrics are collected via the static `RateLimitReporter.exportMetrics()` method (also exported as `exportRateLimitMetrics()`), typically invoked by:
 
 1. **CLI commands** (`codepipe rate-limits`, `codepipe status`)
 2. **Workflow orchestrator** (periodic snapshots during execution)
@@ -191,7 +191,8 @@ Metrics are collected via the `RateLimitReporter.exportMetrics()` method, typica
 import { createRunMetricsCollector } from './telemetry/metrics';
 import { exportRateLimitMetrics } from './telemetry/rateLimitReporter';
 
-const metrics = createRunMetricsCollector(runDir, featureId);
+const runId = featureId;
+const metrics = createRunMetricsCollector(runDir, runId);
 await exportRateLimitMetrics(runDir, metrics);
 await metrics.flush(); // Writes to metrics/prometheus.txt
 ```
@@ -500,7 +501,7 @@ Warnings:
 
 **Implementation Notes:**
 
-- Status command reads `rate_limits.json` via `generateRateLimitReport()`
+- Status command reads `rate_limits.json` via `RateLimitReporter.generateReport()` (also exported as `generateRateLimitReport()`)
 - Displays condensed summary in human mode, full details in `--verbose`
 - JSON mode includes `rate_limits` field with structured data
 

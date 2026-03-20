@@ -6,56 +6,68 @@ Queue V2 delivers O(1) task operations (previously O(n²)) with 150x-12,500x sea
 
 ## Architecture
 
-The V2 queue system implements a 7-layer architecture for high-performance task management:
+The V2 queue system is organized in `src/workflows/queue/` with 13 files
+(consolidated from a flat layout; backward-compat shims removed in PR #790):
 
-### Layer 1: WAL (Write-Ahead Log)
+### File Layout
 
-- **Purpose**: O(1) append-only operations for task state changes
-- **Implementation**: `queueOperationsLog.ts` - JSONL format for durability
-- **Behavior**: Every task update appends a new operation record
-- **Performance**: Constant time regardless of queue size
+| File | Purpose |
+| --- | --- |
+| `index.ts` | Public barrel for queue consumers that prefer a stable entry point |
+| `queueStore.ts` | Core store: init, append, snapshot, re-exports |
+| `queueTaskManager.ts` | Task lifecycle: getNext, update, filter by status |
+| `queueV2Api.ts` | High-level V2 API: counts, ready tasks, compaction, export |
+| `queueMemoryIndex.ts` | O(1) in-memory HashMap index, dependency-aware ready-task selection |
+| `queueOperationsLog.ts` | WAL (Write-Ahead Log): JSONL append, batch append, replay |
+| `queueSnapshotManager.ts` | Atomic snapshot save/load with SHA-256 checksums |
+| `queueCompactionEngine.ts` | Threshold-based WAL compaction into snapshots |
+| `queueTypes.ts` | Type definitions, Zod schemas, type guards |
+| `queueCache.ts` | V2 index cache management, dependency graph builders, type converters |
+| `queueLoader.ts` | `loadQueue()` / `loadQueueV2()` with integrity verification on cold load |
+| `queueIntegrity.ts` | Integrity verification: snapshot checksums, WAL checksums, sequence continuity |
+| `queueValidation.ts` | JSONL parsing validation and manifest checksum consistency |
 
-### Layer 2: In-Memory Index
+### Layer Model
 
-- **Purpose**: O(1) task lookups by ID
-- **Implementation**: `queueMemoryIndex.ts` - HashMap-based index
-- **Behavior**: Maintains task state, dependency graph, and status counts
-- **Performance**: Instant task retrieval without file I/O
+**Layer 1: WAL (Write-Ahead Log)**
 
-### Layer 3: Snapshot Manager
+- **Implementation**: `queueOperationsLog.ts`
+- O(1) append-only operations for task state changes (JSONL format)
 
-- **Purpose**: Periodic snapshots for fast recovery
-- **Implementation**: Embedded in `queueStore.ts`
-- **Behavior**: Creates checkpoint files to avoid full WAL replay
-- **Performance**: Sub-second recovery for large queues
+**Layer 2: In-Memory Index**
 
-### Layer 4: Compaction Engine
+- **Implementation**: `queueMemoryIndex.ts`
+- O(1) task lookups by ID via HashMap, maintains status counts and dependency graph
 
-- **Purpose**: Threshold-based compaction to manage disk usage
+**Layer 3: Snapshot Manager**
+
+- **Implementation**: `queueSnapshotManager.ts` (extracted from `queueStore.ts`)
+- Atomic write-temp-rename pattern with SHA-256 checksums for fast recovery
+
+**Layer 4: Compaction Engine**
+
 - **Implementation**: `queueCompactionEngine.ts`
-- **Behavior**: Consolidates WAL operations when thresholds are exceeded
-- **Performance**: Automatic cleanup with minimal performance impact
+- Threshold-based compaction to manage disk usage
 
-### Layer 5: Unified API
+**Layer 5: Task Manager**
 
-- **Purpose**: Provides a stable, high-level API for all queue interactions.
-- **Implementation**: `queueStore.ts` - Public API functions
-- **Behavior**: Abstracts the underlying WAL and snapshot mechanism from the caller.
-- **Performance**: Zero overhead operation routing
+- **Implementation**: `queueTaskManager.ts`
+- Task lifecycle: retrieval, filtering, atomic status updates via WAL
 
-### Layer 6: Type System
+**Layer 6: Cache and Loader**
 
-- **Purpose**: Comprehensive Zod validation
-- **Implementation**: `queueTypes.ts` - Type definitions and schemas
-- **Behavior**: Runtime validation of all queue operations
-- **Performance**: Fast validation with schema caching
+- **Implementation**: `queueCache.ts`, `queueLoader.ts`
+- Process-local index cache with lazy hydration; integrity check on cold load
 
-### Layer 7: Performance Monitoring
+**Layer 7: Unified API**
 
-- **Purpose**: Regression detection and benchmarking
-- **Implementation**: `tests/performance/queueStore.perf.spec.ts`
-- **Behavior**: Continuous validation of O(1) guarantees
-- **Performance**: Benchmarks validate <100ms for 1000 tasks
+- **Implementation**: `queueStore.ts` (core), `queueV2Api.ts` (direct V2 access), `index.ts` (barrel)
+- Stable public API abstracting WAL/snapshot internals
+
+**Layer 8: Type System and Validation**
+
+- **Implementation**: `queueTypes.ts`, `queueIntegrity.ts`, `queueValidation.ts`
+- Zod schemas, type guards, runtime validation, integrity verification
 
 ## Configuration
 
@@ -64,11 +76,11 @@ Queue V2 is configured via environment variables and runtime settings:
 ### Compaction Thresholds
 
 ```typescript
-// Default thresholds (can be overridden)
+// Default thresholds (from queueTypes.ts createDefaultCompactionConfig)
 const COMPACTION_THRESHOLDS = {
-  maxOperations: 10000, // Trigger compaction after 10k operations
-  maxBytes: 10485760, // Trigger compaction after 10MB
-  minIntervalMs: 60000, // Minimum 60s between compactions
+  maxUpdates: 1000, // Trigger compaction after 1,000 WAL entries
+  maxBytes: 5242880, // Trigger compaction after 5MB
+  pruneCompleted: false, // Do not prune completed tasks by default
 };
 ```
 
@@ -258,7 +270,7 @@ unset CODEPIPE_QUEUE_USE_SNAPSHOTS
 ps aux | grep codepipe
 
 # Step 2: Force cache invalidation
-node -e "require('./src/workflows/queueStore.js').invalidateV2Cache()"
+node -e "require('./src/workflows/queue/queueCache.js').invalidateV2Cache('.codepipe/runs/FEATURE-ID')"
 
 # Step 3: Reduce snapshot retention (env var not yet implemented — manual workaround)
 export CODEPIPE_QUEUE_SNAPSHOT_KEEP=1
@@ -368,11 +380,21 @@ export CODEPIPE_QUEUE_SNAPSHOT_KEEP=1
 
 ### Implementation Files
 
-- **Core Queue**: `src/workflows/queueStore.ts` (1,690 lines)
-- **WAL Operations**: `src/workflows/queueOperationsLog.ts`
-- **Memory Index**: `src/workflows/queueMemoryIndex.ts`
-- **Compaction**: `src/workflows/queueCompactionEngine.ts`
-- **Type Definitions**: `src/workflows/queueTypes.ts`
+All queue files are in `src/workflows/queue/`:
+
+- **Barrel**: `index.ts` (public API surface)
+- **Core Store**: `queueStore.ts` (init, append, snapshot, re-exports)
+- **Task Manager**: `queueTaskManager.ts` (getNext, update, filter)
+- **V2 API**: `queueV2Api.ts` (counts, ready tasks, compaction, export)
+- **Memory Index**: `queueMemoryIndex.ts` (O(1) lookups, dependency resolution)
+- **WAL Operations**: `queueOperationsLog.ts` (append, batch, replay)
+- **Snapshot Manager**: `queueSnapshotManager.ts` (atomic save/load, checksums)
+- **Compaction**: `queueCompactionEngine.ts` (threshold-based compaction)
+- **Types**: `queueTypes.ts` (interfaces, Zod schemas, type guards)
+- **Cache**: `queueCache.ts` (V2 index cache, dependency graph, converters)
+- **Loader**: `queueLoader.ts` (loadQueue with integrity verification)
+- **Integrity**: `queueIntegrity.ts` (snapshot/WAL checksum, sequence validation)
+- **Validation**: `queueValidation.ts` (JSONL parsing, manifest checksums)
 
 ### Test Files
 
@@ -389,5 +411,5 @@ export CODEPIPE_QUEUE_SNAPSHOT_KEEP=1
 ### Related Documentation
 
 - [Execution Telemetry](../playbooks/execution_telemetry.md) - Metrics and observability
-- [Resume Playbook](../playbooks/patch_playbook.md) - Recovery procedures
+- [Resume Playbook](../playbooks/resume_playbook.md) - Recovery procedures
 - [Integration Testing](./integration_testing.md) - Queue validation tests
