@@ -119,6 +119,84 @@ export const IssueSnapshotSchema = z.object({
 });
 
 /**
+ * Linear issue relation (blocks / duplicate / related)
+ *
+ * Relations are directional: when A blocks B, a relation exists with
+ * type: "blocks", issue: A, relatedIssue: B. Raw Linear API relation types
+ * such as `blocked_by` and `duplicate_of` are normalized into this canonical
+ * forward representation before validation.
+ */
+export interface LinearIssueRelation {
+  type: 'blocks' | 'duplicate' | 'related';
+  issue: { id: string; identifier: string };
+  relatedIssue: { id: string; identifier: string };
+}
+
+export const LinearIssueRelationSchema = z.object({
+  type: z.enum(['blocks', 'duplicate', 'related']),
+  issue: z.object({ id: z.string(), identifier: z.string() }),
+  relatedIssue: z.object({ id: z.string(), identifier: z.string() }),
+});
+
+/**
+ * Linear issue with relations — used in cycle queries
+ */
+export interface LinearCycleIssue extends LinearIssue {
+  relations: LinearIssueRelation[];
+}
+
+export const LinearCycleIssueSchema = IssueSnapshotSchema.shape.issue.extend({
+  relations: z.array(LinearIssueRelationSchema),
+});
+
+/**
+ * Linear cycle metadata
+ */
+export interface LinearCycle {
+  id: string;
+  name: string;
+  number: number;
+  startsAt: string;
+  endsAt: string;
+  issues: LinearCycleIssue[];
+}
+
+export const LinearCycleSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  number: z.number(),
+  startsAt: z.string().datetime(),
+  endsAt: z.string().datetime(),
+  issues: z.array(LinearCycleIssueSchema),
+});
+
+/**
+ * Cycle snapshot with metadata
+ */
+export interface CycleSnapshot {
+  cycle: LinearCycle;
+  metadata: {
+    retrieved_at: string;
+    teamId: string;
+    issueCount: number;
+  };
+}
+
+export const CycleSnapshotSchema = z
+  .object({
+    cycle: LinearCycleSchema,
+    metadata: z.object({
+      retrieved_at: z.string().datetime(),
+      teamId: z.string(),
+      issueCount: z.number(),
+    }),
+  })
+  .refine((snapshot) => snapshot.metadata.issueCount === snapshot.cycle.issues.length, {
+    message: 'issueCount does not match number of cycle.issues',
+    path: ['metadata', 'issueCount'],
+  });
+
+/**
  * Update issue parameters
  */
 export interface UpdateIssueParams {

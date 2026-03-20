@@ -46,6 +46,16 @@ export type {
   UpdateIssueParams,
   PostCommentParams,
   SnapshotMetadata,
+  LinearIssueRelation,
+  LinearCycleIssue,
+  LinearCycle,
+  CycleSnapshot,
+} from './linear/LinearAdapterTypes.js';
+export {
+  LinearIssueRelationSchema,
+  LinearCycleIssueSchema,
+  LinearCycleSchema,
+  CycleSnapshotSchema,
 } from './linear/LinearAdapterTypes.js';
 
 // Agent exports
