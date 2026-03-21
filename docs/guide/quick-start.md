@@ -141,7 +141,7 @@ Build and run the repository Dockerfile:
 
 ```bash
 docker build -t codemachine-pipeline .
-docker run --rm -v "$(pwd):/workspace" -w /workspace codemachine-pipeline init --yes
+docker run --rm -v "$(pwd):/workspace" -w /workspace --entrypoint node codemachine-pipeline /app/bin/run.js init --yes
 ```
 
 For interactive use:

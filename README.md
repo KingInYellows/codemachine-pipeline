@@ -48,7 +48,7 @@ git pull && npm install && npm run build
 
 ### From GitHub Packages
 
-Release builds are published through the repository's GitHub Packages workflow. If you do not have registry access yet, use the source install below.
+Release builds are published through the repository's GitHub Packages workflow. If you do not have registry access yet, use the source install above.
 
 ```bash
 # Configure npm for GitHub Packages
@@ -70,7 +70,7 @@ GitHub Packages currently requires authentication for package installation, even
 
 ```bash
 docker build -t codemachine-pipeline .
-docker run --rm -v $(pwd):/workspace -w /workspace codemachine-pipeline init
+docker run --rm -v "$(pwd):/workspace" -w /workspace --entrypoint node codemachine-pipeline /app/bin/run.js init
 ```
 
 See the [Dockerfile](Dockerfile) for build details (multi-stage, Node v24 Alpine).
