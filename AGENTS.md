@@ -32,6 +32,7 @@ npm run exports:check
 npm run docs:cli
 npm run docs:cli:check
 npm run docs:validate
+npm run docs:links:check
 ```
 
 ## CLI Commands
