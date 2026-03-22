@@ -18,10 +18,14 @@ Before starting, ensure you have:
 
 ## Step 1: Install codepipe
 
-Install globally via npm:
+For a local checkout, install from source:
 
 ```bash
-npm install -g @kinginyellows/codemachine-pipeline
+git clone https://github.com/KingInYellows/codemachine-pipeline.git
+cd codemachine-pipeline
+npm ci
+npm run build
+npm link
 ```
 
 Verify the installation:
@@ -133,36 +137,26 @@ Review generated artifacts in `.codepipe/runs/<feature-id>/artifacts/`.
 
 ## Docker Alternative
 
-Run codepipe in a container without installing Node.js:
+Build and run the repository Dockerfile:
 
-```yaml
-# docker-compose.yml
-version: '3.8'
-services:
-  codepipe:
-    image: node:24-alpine
-    working_dir: /app
-    volumes:
-      - .:/app
-    command: >
-      sh -c "apk add --no-cache git &&
-             npm install -g @kinginyellows/codemachine-pipeline &&
-             codepipe init --yes &&
-             codepipe status"
-```
-
-Start with:
+> Prerequisites: enable Docker BuildKit (for example,
+> `DOCKER_BUILDKIT=1 docker build ...`) and ensure the repository root contains
+> a `.npmrc` with valid registry credentials for the Dockerfile `npm ci` steps.
 
 ```bash
-docker compose run codepipe
+docker build -t codemachine-pipeline .
+docker run --rm -v "$(pwd):/workspace" -w /workspace --entrypoint node codemachine-pipeline /app/bin/run.js init --yes
 ```
+
+On Linux hosts where the bind mount is not writable by container UID `1001`,
+add `--user "$(id -u):$(id -g)"` to the `docker run` command.
 
 For interactive use:
 
 ```bash
-docker compose run codepipe sh
-# Inside container:
-codepipe start --prompt "Your feature description"
+docker run --rm -it --entrypoint sh -v "$(pwd):/workspace" -w /workspace codemachine-pipeline
+# Inside the container:
+node /app/bin/run.js start --prompt "Your feature description"
 ```
 
 ---
