@@ -32,6 +32,7 @@ npm run exports:check
 npm run docs:cli
 npm run docs:cli:check
 npm run docs:validate
+npm run docs:links:check
 ```
 
 ## CLI Commands
@@ -70,11 +71,10 @@ Current command surface includes:
 - Preferred flow:
 
 ```bash
-gt create <branch-name> --message "Brief description"
 git add <files>
-git commit -m "type: short description"
+gt create <branch-name> --message "type: short description"
 gt submit --no-interactive --publish
-gh pr ready <pr-number>
+gh pr ready $(gh pr list --head $(git branch --show-current) --json number -q '.[0].number')
 ```
 
 See [`docs/archive/development/submission-workflow.md`](docs/archive/development/submission-workflow.md) for the longer workflow reference.

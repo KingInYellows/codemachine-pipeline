@@ -30,10 +30,14 @@ Full documentation is in [`docs/README.md`](docs/README.md).
 
 ### From source (recommended)
 
+If your environment requires GitHub Packages authentication for `@kinginyellows`
+scoped packages, configure `~/.npmrc` with the appropriate registry and token
+before running the install commands below.
+
 ```bash
 git clone https://github.com/KingInYellows/codemachine-pipeline.git
 cd codemachine-pipeline
-npm install && npm run build && npm link
+npm ci && npm run build && npm link
 
 # Verify
 codepipe --version
@@ -43,7 +47,7 @@ To update later, pull and rebuild:
 
 ```bash
 cd codemachine-pipeline
-git pull && npm install && npm run build
+git pull && npm ci && npm run build
 ```
 
 ### From GitHub Packages

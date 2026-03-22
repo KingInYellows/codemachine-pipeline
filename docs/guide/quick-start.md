@@ -20,6 +20,10 @@ Before starting, ensure you have:
 
 For a local checkout, install from source:
 
+> If your environment requires GitHub Packages authentication for
+> `@kinginyellows` scoped packages, configure npm auth in `~/.npmrc` before
+> running `npm ci`.
+
 ```bash
 git clone https://github.com/KingInYellows/codemachine-pipeline.git
 cd codemachine-pipeline
@@ -139,10 +143,19 @@ Review generated artifacts in `.codepipe/runs/<feature-id>/artifacts/`.
 
 Build and run the repository Dockerfile:
 
+> Prerequisites: enable Docker BuildKit (for example,
+> `DOCKER_BUILDKIT=1 docker build ...`) and ensure the repository root contains
+> a `.npmrc` with the registry configuration needed by the Dockerfile `npm ci`
+> steps. Add auth credentials there only if your environment needs access to
+> the optional `@kinginyellows` scoped packages during the build.
+
 ```bash
 docker build -t codemachine-pipeline .
 docker run --rm -v "$(pwd):/workspace" -w /workspace --entrypoint node codemachine-pipeline /app/bin/run.js init --yes
 ```
+
+On Linux hosts where the bind mount is not writable by container UID `1001`,
+add `--user "$(id -u):$(id -g)"` to the `docker run` command.
 
 For interactive use:
 
