@@ -70,12 +70,12 @@
     "/oclif.manifest.json"
   ],
   "dependencies": {
-    "@oclif/core": "^4.9.0",
-    "@oclif/plugin-help": "^6.2.38",
+    "@oclif/core": "^4.10.2",
+    "@oclif/plugin-help": "^6.2.40",
     "picomatch": "^4.0.3",
     "semver": "^7.7.4",
     "shell-quote": "^1.8.3",
-    "undici": "^7.24.4",
+    "undici": "^7.24.5",
     "zod": "^4.3.6"
   },
   "devDependencies": {
@@ -88,7 +88,7 @@
     "@typescript-eslint/parser": "^8.57.1",
     "@vitest/ui": "^4.1.0",
     "cross-env": "^10.1.0",
-    "eslint": "^10.0.3",
+    "eslint": "^10.1.0",
     "eslint-config-prettier": "^10.1.8",
     "madge": "^8.0.0",
     "markdown-link-check": "^3.13.6",
