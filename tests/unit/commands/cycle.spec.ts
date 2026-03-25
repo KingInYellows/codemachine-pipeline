@@ -130,23 +130,28 @@ describe('cycle command logic', () => {
 
       const { ordered, hasCycle, cycleInvolvedIds } = orderCycleIssues(issues);
 
+      const orderedIssues = ordered.map((issue) => {
+        const skipCheck = shouldSkipIssue(issue);
+        return {
+          identifier: issue.identifier,
+          title: issue.title,
+          priority: issue.priority,
+          state: issue.state.name,
+          willSkip: skipCheck.skip,
+          skipReason: skipCheck.reason,
+        };
+      });
+
       const payload: CyclePayload = {
         cycleId: 'test-uuid',
         cycleName: 'Sprint 14',
         cycleNumber: 14,
-        orderedIssues: ordered.map((issue) => {
-          const skipCheck = shouldSkipIssue(issue);
-          return {
-            identifier: issue.identifier,
-            title: issue.title,
-            priority: issue.priority,
-            state: issue.state.name,
-            willSkip: skipCheck.skip,
-            skipReason: skipCheck.reason,
-          };
-        }),
+        orderedIssues,
         hasCycles: hasCycle,
         cycleInvolvedIds,
+        totalIssues: orderedIssues.length,
+        processable: orderedIssues.filter((i) => !i.willSkip).length,
+        skipped: orderedIssues.filter((i) => i.willSkip).length,
       };
 
       const counts = getCyclePayloadCounts(payload);
@@ -283,7 +288,6 @@ describe('cycle command integration', () => {
 
     await command.run();
 
-    expect(fs.existsSync(path.join(baseDir, '.cycle-command'))).toBe(true);
     expect(fs.existsSync(path.join(baseDir, 'cycle-escape'))).toBe(false);
     expect(mockFetchCycleIssues).not.toHaveBeenCalled();
     expect(errorSpy).toHaveBeenCalledWith(

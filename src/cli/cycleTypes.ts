@@ -32,3 +32,14 @@ export interface CyclePayload {
   hasCycles: boolean;
   cycleInvolvedIds: string[];
 }
+
+export function getCyclePayloadCounts(payload: CyclePayload): {
+  totalIssues: number;
+  processable: number;
+  skipped: number;
+} {
+  const total = payload.orderedIssues.length;
+  const skipped = payload.orderedIssues.filter((i) => i.willSkip).length;
+  return { totalIssues: total, processable: total - skipped, skipped };
+}
+
