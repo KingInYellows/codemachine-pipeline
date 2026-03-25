@@ -597,7 +597,10 @@ export class LinearAdapter {
             number: cycle.number,
             startsAt: cycle.startsAt,
             endsAt: cycle.endsAt,
-            teamId: cycle.team?.id ?? '',
+            teamId: cycle.team?.id ?? (() => {
+              this.logger.warn('Cycle has no team association', { cycleId: cycle.id });
+              return '';
+            })(),
           };
         }
 
