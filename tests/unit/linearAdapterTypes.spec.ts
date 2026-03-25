@@ -59,7 +59,10 @@ describe('CycleSnapshotSchema', () => {
   });
 
   it('accepts non-ISO retrieved_at values to match IssueSnapshotSchema', () => {
-    const result = CycleSnapshotSchema.safeParse(baseSnapshot);
+    const result = CycleSnapshotSchema.safeParse({
+      ...baseSnapshot,
+      metadata: { ...baseSnapshot.metadata, retrieved_at: 'not-a-datetime' },
+    });
     expect(result.success).toBe(true);
   });
 
