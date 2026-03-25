@@ -121,6 +121,27 @@ describe('orderCycleIssues', () => {
     expect(ids[2]).toBe('ENG-B');
   });
 
+  it('does not mark downstream issues as cycle-involved', () => {
+    // A ↔ B (cycle), B → C (downstream of cycle)
+    const issues = [
+      makeIssue('ENG-A', 3, [blocksRelation('ENG-A', 'ENG-B')]),
+      makeIssue('ENG-B', 2, [
+        blocksRelation('ENG-B', 'ENG-A'),
+        blocksRelation('ENG-B', 'ENG-C'),
+      ]),
+      makeIssue('ENG-C', 4, []),
+    ];
+
+    const result = orderCycleIssues(issues);
+    expect(result.hasCycle).toBe(true);
+    expect(result.cycleInvolvedIds).toEqual(['ENG-A', 'ENG-B']);
+    expect(result.ordered.map((issue) => issue.identifier)).toEqual([
+      'ENG-A',
+      'ENG-B',
+      'ENG-C',
+    ]);
+  });
+
   it('ignores duplicate and related relations (only uses blocks)', () => {
     const issues = [
       makeIssue('ENG-1', 2, [
