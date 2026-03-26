@@ -3,7 +3,7 @@
 ## Prerequisites
 
 - **Node.js v24.0.0 or higher** (required -- see `engines` in package.json)
-- **npm 9+**
+- **npm** (bundled with supported Node.js releases)
 - **Git**
 - **Graphite CLI** (`gt`) -- used for branch management and PR submission (optional for external contributors)
 

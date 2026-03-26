@@ -46,7 +46,7 @@ RUN addgroup -g 1001 -S codepipe && \
 USER codepipe
 
 # Set entrypoint
-ENTRYPOINT ["node", "./bin/run.js"]
+ENTRYPOINT ["node", "/app/bin/run.js"]
 
 # Default to help command
 CMD ["--help"]
