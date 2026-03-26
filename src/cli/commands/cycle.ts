@@ -123,50 +123,49 @@ export default class Cycle extends TelemetryCommand {
       return;
     }
 
+    const teamId = config.linear?.team_id;
     let cycleId = typedFlags.cycle;
-    if (!cycleId) {
-      const teamId = config.linear.team_id;
-      if (!teamId) {
-        const error = new CliError(
-          'No --cycle flag provided and no team_id configured. Set linear.team_id in .codepipe/config.json or pass --cycle.',
-          CliErrorCode.CONFIG_INVALID
-        );
-        if (typedFlags.json) {
-          this.log(JSON.stringify(formatErrorJson(error), null, 2));
-          process.exit(error.exitCode);
-          return;
-        }
-        Errors.error(error.message, { exit: false, code: error.code });
+
+    // Validate we have either a cycle ID or team ID before proceeding
+    if (!cycleId && !teamId) {
+      const error = new CliError(
+        'No --cycle flag provided and no team_id configured. Set linear.team_id in .codepipe/config.json or pass --cycle.',
+        CliErrorCode.CONFIG_INVALID
+      );
+      if (typedFlags.json) {
+        this.log(JSON.stringify(formatErrorJson(error), null, 2));
         process.exit(error.exitCode);
         return;
       }
-      const adapter = new LinearAdapter({ apiKey });
-      const active = await adapter.fetchActiveCycle(teamId);
-      if (!active) {
-        const error = new CliError(
-          'No active cycle found for the configured team.',
-          CliErrorCode.CONFIG_INVALID
-        );
-        if (typedFlags.json) {
-          this.log(JSON.stringify(formatErrorJson(error), null, 2));
-          process.exit(error.exitCode);
-          return;
-        }
-        Errors.error(error.message, { exit: false, code: error.code });
-        process.exit(error.exitCode);
-        return;
-      }
-      cycleId = active.id;
+      Errors.error(error.message, { exit: false, code: error.code });
+      process.exit(error.exitCode);
+      return;
     }
 
+    // Create marker directory for cycle command
+    await fs.mkdir(path.join(settings.baseDir, '.cycle-command'), { recursive: true });
+
     await this.runWithTelemetry(
-      { jsonMode: typedFlags.json, verbose: typedFlags.verbose },
-      async (ctx) => {
+      { 
+        jsonMode: typedFlags.json, 
+        verbose: typedFlags.verbose,
+        runDirPath: settings.baseDir,
+      },
         const logger = ctx.logger;
         const metrics = ctx.metrics;
 
-        // Create marker directory
-        await fs.mkdir(path.join(settings.baseDir, '.cycle-command'), { recursive: true });
+        // Resolve cycle ID inside telemetry context to catch API errors properly
+        if (!cycleId) {
+          const adapter = new LinearAdapter({ apiKey: apiKey! });
+          const active = await adapter.fetchActiveCycle(teamId!);
+          if (!active) {
+            throw new CliError(
+              'No active cycle found for the configured team.',
+              CliErrorCode.LINEAR_API_FAILED
+            );
+          }
+          cycleId = active.id;
+        }
 
         // Validate cycle ID for path traversal
         if (containsPathTraversal(cycleId!)) {
@@ -264,12 +263,12 @@ export default class Cycle extends TelemetryCommand {
           maxIssues: typedFlags['max-issues'],
           onIssueComplete: (result) => {
             if (!typedFlags.json) {
+              // Use consistent basis for both index and total (all capped issues)
+              const index = capped.findIndex((i) => i.identifier === result.identifier);
               renderDashboardUpdate(
                 result,
-                capped.indexOf(
-                  capped.find((i) => i.identifier === result.identifier)!
-                ),
-                processableIssues.length,
+                index,
+                capped.length,
                 Date.now() - ctx.startTime,
                 callbacks
               );
