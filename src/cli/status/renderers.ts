@@ -1,10 +1,33 @@
+/**
+ * Human-readable renderers for the status dashboard.
+ *
+ * Converts a {@link StatusPayload} into formatted terminal output, section by
+ * section. Used by `codepipe status` when `--json` is not set.
+ *
+ * @module
+ */
+
 import type { StatusPayload, StatusFlags, StatusBranchProtectionPayload } from './types';
 
+/** Callbacks for emitting output lines and warnings. */
 export interface RenderCallbacks {
+  /** Write an informational line to stdout. */
   log: (msg: string) => void;
+  /** Write a warning line to stderr or a highlighted stream. */
   warn: (msg: string) => void;
 }
 
+/**
+ * Render the full status dashboard as human-readable terminal output.
+ *
+ * Iterates through every section (header, queue, approvals, context, plan,
+ * validation, traceability, branch protection, rate limits, integrations,
+ * research, footer) and writes formatted lines via the provided callbacks.
+ *
+ * @param payload - Fully assembled status data.
+ * @param flags - CLI flags controlling verbosity and cost display.
+ * @param callbacks - Output callbacks for log and warn lines.
+ */
 export function renderHumanReadable(
   payload: StatusPayload,
   flags: StatusFlags,
@@ -451,6 +474,13 @@ function renderBranchProtection(
   }
 }
 
+/**
+ * Truncate a summary string, appending an ellipsis if it exceeds the limit.
+ *
+ * @param summary - The full summary text.
+ * @param maxLength - Maximum character length (default 240).
+ * @returns The original string if within the limit, or a truncated version.
+ */
 export function truncateSummary(summary: string, maxLength = 240): string {
   if (summary.length <= maxLength) {
     return summary;

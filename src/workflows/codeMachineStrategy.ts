@@ -1,3 +1,11 @@
+/**
+ * CodeMachine Strategy (Legacy)
+ *
+ * Legacy execution strategy that delegates task execution to the CodeMachine
+ * binary. This is the fallback strategy — prefer CodeMachineCLIStrategy for
+ * new deployments. Handles tasks whose task_type is not marked as native-only.
+ */
+
 import * as path from 'node:path';
 import type { ExecutionTask } from '../core/models/ExecutionTask.js';
 import type { ExecutionConfig } from '../core/config/RepoConfig.js';
@@ -16,11 +24,18 @@ import { normalizeResult } from './resultNormalizer.js';
 import { buildStrategyResult } from './strategyHelpers.js';
 import type { StructuredLogger } from '../telemetry/logger.js';
 
+/** Configuration options for the CodeMachine strategy */
 export interface CodeMachineStrategyOptions {
+  /** Execution configuration from RepoConfig */
   config: ExecutionConfig;
+  /** Optional structured logger */
   logger?: StructuredLogger;
 }
 
+/**
+ * Legacy execution strategy using the CodeMachine binary.
+ * Delegates to `runCodeMachine()` for task execution and normalizes results.
+ */
 export class CodeMachineStrategy implements ExecutionStrategy {
   readonly name = 'codemachine';
 
@@ -90,6 +105,7 @@ export class CodeMachineStrategy implements ExecutionStrategy {
   }
 }
 
+/** Factory function to create a CodeMachineStrategy instance */
 export function createCodeMachineStrategy(
   options: CodeMachineStrategyOptions
 ): CodeMachineStrategy {

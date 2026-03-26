@@ -33,6 +33,7 @@ import { PipelineOrchestrator, PrerequisiteError } from '../../workflows/pipelin
 import { emitStartSummary, outputDryRunPlan, type StartResultPayload } from '../startOutput.js';
 import type { RepoConfig } from '../../core/config/RepoConfig';
 
+/** Input shape for computing the start command exit code */
 type StartExitCodeInput = {
   approvalRequired: boolean;
   execution?:
@@ -43,6 +44,17 @@ type StartExitCodeInput = {
     | undefined;
 };
 
+/**
+ * Compute the exit code for the start command.
+ *
+ * Exit code semantics:
+ * - 0: all tasks completed successfully
+ * - 1: one or more tasks failed
+ * - 30: approval gate requires human intervention (non-standard)
+ *
+ * @param result - Execution result with approval and failure state
+ * @returns Numeric exit code
+ */
 export function getStartExitCode(result: StartExitCodeInput): number {
   if (result.approvalRequired) {
     return 30;

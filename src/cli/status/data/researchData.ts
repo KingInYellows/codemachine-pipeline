@@ -19,6 +19,20 @@ function isStructuredLogger(logger: DataLogger | undefined): logger is Structure
   );
 }
 
+/**
+ * Load research task tracking status for a feature run.
+ *
+ * Checks for a `research/` directory, instantiates a research coordinator,
+ * and collects diagnostics (task counts by state) plus stale-task detection.
+ * Returns undefined when the research directory does not exist. Falls back
+ * to a zero-count payload with a warning when telemetry dependencies
+ * (StructuredLogger, MetricsCollector) are unavailable.
+ *
+ * @param baseDir - Project base directory.
+ * @param featureId - Feature branch identifier.
+ * @param logger - Optional logger; must be a full StructuredLogger for coordinator use.
+ * @param metrics - Optional metrics collector for the research coordinator.
+ */
 export async function loadResearchStatus(
   baseDir: string,
   featureId: string,

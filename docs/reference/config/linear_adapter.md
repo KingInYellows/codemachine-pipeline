@@ -8,7 +8,8 @@ The Linear Adapter provides integration with Linear's issue tracking system via 
 
 ### Core Components
 
-- **LinearAdapter**: Main adapter class implementing Linear GraphQL API integration
+- **LinearAdapter** (`LinearAdapter.ts`): Main adapter class implementing Linear GraphQL API integration
+- **LinearAdapterTypes** (`LinearAdapterTypes.ts`): Extracted type definitions and Zod schemas (CDMCH-203) — includes `LinearAdapterConfig`, `LinearIssue`, `LinearComment`, `SnapshotMetadata`, `IssueSnapshot`, `IssueSnapshotSchema`, `UpdateIssueParams`, and `PostCommentParams`
 - **HttpClient**: Shared HTTP client with rate-limit tracking and retry logic
 - **RateLimitLedger**: Persistence layer for rate limit envelope tracking
 - **Snapshot Cache**: File-based caching system with TTL support
@@ -89,6 +90,8 @@ Snapshots are stored in the run directory:
 - **Validation**: Age checked on every cache read
 
 ### Snapshot Structure
+
+Validated at load time using `IssueSnapshotSchema` (Zod schema defined in `LinearAdapterTypes.ts`).
 
 ```typescript
 {
@@ -178,8 +181,10 @@ Mutating operations (updates, comment posting) are gated behind `enablePreviewFe
 ```typescript
 const adapter = new LinearAdapter({
   apiKey: process.env.LINEAR_API_KEY!,
+  organization: 'acme-corp', // Optional workspace slug
   enablePreviewFeatures: true, // Opt-in required
   runDir: '.codepipe/runs/FEAT-123',
+  maxRetries: 3, // Optional, defaults to 3
 });
 ```
 
@@ -201,6 +206,20 @@ throw new LinearAdapterError(
   'updateIssue'
 );
 ```
+
+## Issue ID Validation (CDMCH-161)
+
+All public methods (`fetchIssueSnapshot`, `fetchIssue`, `fetchComments`, `updateIssue`, `postComment`) validate the `issueId` parameter via a shared private static `validateIssueId()` method before making any API calls. This fail-fast approach ensures malformed identifiers never reach the Linear API.
+
+**Accepted formats:**
+
+- **Linear identifier**: `^[A-Z][A-Z0-9]*-\d+$` (e.g., `ENG-123`, `PROJ-42`)
+- **UUID**: `^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$` (Linear's internal opaque IDs)
+
+**Constraints:**
+
+- Must be non-empty and at most 100 characters
+- Values not matching either format throw `LinearAdapterError` with `ErrorType.PERMANENT`
 
 ## GraphQL Operations
 
@@ -301,6 +320,8 @@ mutation PostComment($issueId: String!, $body: String!) {
 ```
 
 ## Error Taxonomy
+
+`LinearAdapterError` extends `AdapterError` (from `utils/errors`) and errors are normalized through `createErrorNormalizer()`.
 
 ### Transient Errors
 
@@ -410,6 +431,9 @@ Mock `HttpClient` methods to simulate:
 ### Test Fixtures
 
 ```typescript
+// Types are defined in LinearAdapterTypes.ts and re-exported from LinearAdapter.ts
+import type { LinearIssue } from './LinearAdapterTypes';
+
 const MOCK_LINEAR_ISSUE: LinearIssue = {
   id: 'linear-uuid-1234',
   identifier: 'ENG-123',
@@ -501,9 +525,11 @@ With 1,500 req/hour limit:
 - **IR-8 to IR-11**: Integration requirements for Linear adapter
 - **Section 3.4**: HTTP Clients & Adapter Responsibilities (Operational Architecture)
 - **Section 3.17.2**: Linear Outage Handling Scenario
+- **CDMCH-161**: Issue ID validation across all public methods
+- **CDMCH-203**: Type extraction to `LinearAdapterTypes.ts`
 
 ---
 
-**Document Version**: 1.0
-**Last Updated**: 2024-01-15
+**Document Version**: 1.1
+**Last Updated**: 2026-03-18
 **Authors**: CodeMachine Pipeline Team

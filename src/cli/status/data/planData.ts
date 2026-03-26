@@ -14,6 +14,13 @@ import {
 import { logIfUnexpectedFileError } from './types';
 import type { DataLogger } from './types';
 
+/**
+ * Read and parse the run manifest for a feature from disk.
+ *
+ * @param baseDir - Project base directory containing `.codepipe/`.
+ * @param featureId - Feature branch identifier.
+ * @returns The parsed manifest and its path, or an error message on failure.
+ */
 export async function loadManifestSnapshot(
   baseDir: string,
   featureId: string
@@ -32,6 +39,18 @@ export async function loadManifestSnapshot(
   }
 }
 
+/**
+ * Load the run manifest, optionally recording a trace span.
+ *
+ * When both a trace manager and parent span are provided, the manifest load is
+ * wrapped in a `status.load_manifest` span with feature and error attributes.
+ * Otherwise falls back to {@link loadManifestSnapshot}.
+ *
+ * @param traceManager - Optional OpenTelemetry-compatible trace manager.
+ * @param parentSpan - Optional parent span for context propagation.
+ * @param baseDir - Project base directory.
+ * @param featureId - Feature branch identifier.
+ */
 export function loadManifestWithTracing(
   traceManager: TraceManager | undefined,
   parentSpan: ActiveSpan | undefined,
@@ -59,6 +78,16 @@ export function loadManifestWithTracing(
   return loadManifestSnapshot(baseDir, featureId);
 }
 
+/**
+ * Load traceability link coverage for a feature run.
+ *
+ * Returns undefined if no trace summary exists or if an unexpected error
+ * occurs (ENOENT is silently ignored).
+ *
+ * @param baseDir - Project base directory.
+ * @param featureId - Feature branch identifier.
+ * @param logger - Optional logger for non-ENOENT errors.
+ */
 export async function loadTraceabilityStatus(
   baseDir: string,
   featureId: string,
@@ -91,6 +120,16 @@ export async function loadTraceabilityStatus(
   }
 }
 
+/**
+ * Load the execution plan summary and DAG metadata for a feature run.
+ *
+ * Returns a payload with `plan_exists: false` when no plan file is found or
+ * when an unexpected read error occurs.
+ *
+ * @param baseDir - Project base directory.
+ * @param featureId - Feature branch identifier.
+ * @param logger - Optional logger for non-ENOENT errors.
+ */
 export async function loadPlanStatus(
   baseDir: string,
   featureId: string,
