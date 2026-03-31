@@ -146,18 +146,25 @@ export default class Cycle extends TelemetryCommand {
     await fs.mkdir(path.join(settings.baseDir, '.cycle-command'), { recursive: true });
 
     await this.runWithTelemetry(
-      { 
-        jsonMode: typedFlags.json, 
+      {
+        jsonMode: typedFlags.json,
         verbose: typedFlags.verbose,
         runDirPath: settings.baseDir,
       },
+      async (ctx) => {
         const logger = ctx.logger;
         const metrics = ctx.metrics;
 
         // Resolve cycle ID inside telemetry context to catch API errors properly
         if (!cycleId) {
-          const adapter = new LinearAdapter({ apiKey: apiKey! });
-          const active = await adapter.fetchActiveCycle(teamId!);
+          if (!teamId) {
+            throw new CliError(
+              'No --cycle flag provided and no team_id configured. Set linear.team_id in .codepipe/config.json or pass --cycle.',
+              CliErrorCode.CONFIG_INVALID
+            );
+          }
+          const adapter = new LinearAdapter({ apiKey });
+          const active = await adapter.fetchActiveCycle(teamId);
           if (!active) {
             throw new CliError(
               'No active cycle found for the configured team.',
@@ -168,7 +175,7 @@ export default class Cycle extends TelemetryCommand {
         }
 
         // Validate cycle ID for path traversal
-        if (containsPathTraversal(cycleId!)) {
+        if (containsPathTraversal(cycleId)) {
           throw new CliError(
             'Cycle ID must not contain path traversal or path separator characters.',
             CliErrorCode.CONFIG_INVALID
@@ -176,17 +183,17 @@ export default class Cycle extends TelemetryCommand {
         }
 
         // Sanitize and create cycle directory
-        const sanitized = sanitizeCycleId(cycleId!);
+        const sanitized = sanitizeCycleId(cycleId);
         const cycleDir = path.join(settings.baseDir, `cycle-${sanitized}`);
         await fs.mkdir(cycleDir, { recursive: true });
 
         // Fetch cycle issues
         const adapter = new LinearAdapter({
-          apiKey: apiKey!,
+          apiKey,
           runDir: cycleDir,
           ...(logger ? { logger } : {}),
         });
-        const snapshot = await adapter.fetchCycleIssues(cycleId!);
+        const snapshot = await adapter.fetchCycleIssues(cycleId);
         const cycle = snapshot.cycle;
 
         logger?.info('Cycle fetched', {
