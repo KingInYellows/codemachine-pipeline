@@ -18,9 +18,14 @@ npm run build
 
 The build generates `dist/` and refreshes `oclif.manifest.json` in `postbuild`.
 
+For Codex App worktrees, use `npm run worktree:setup` instead of the commands above. It handles dependency installation and building automatically, and also configures a fresh worktree without reading or printing secrets by linking `.env`, `.npmrc`, and local certificate directories from a secure local asset store when available, or by generating non-secret defaults when those files are absent. Pass `--skip-install` or `--skip-build` to skip those steps if you have already run them.
+
+When shared `node_modules` are available, the setup script links them only when a `.node-version` or `.nvmrc` marker is present next to that shared dependency tree and the recorded Node major version is compatible. If the marker is missing or the shared dependency tree was prepared for a different Node major, the script falls back to a clean `npm ci --ignore-scripts` when a lockfile is present, then runs the explicit build step unless `--skip-build` is set.
+
 ## Common Commands
 
 ```bash
+npm run worktree:setup
 npm run build
 npm test
 npm run lint
@@ -33,6 +38,14 @@ npm run docs:cli
 npm run docs:cli:check
 npm run docs:validate
 npm run docs:links:check
+```
+
+Cross-platform worktree setup entrypoints:
+
+```bash
+npm run worktree:setup
+./scripts/setup-worktree.sh
+pwsh -File .\\scripts\\setup-worktree.ps1
 ```
 
 ## CLI Commands
@@ -85,6 +98,15 @@ See [`docs/archive/development/submission-workflow.md`](docs/archive/development
 - Smoke checks are available through `npm run smoke`.
 - Integration tests use temporary on-disk workspaces; do not point tests at the real project tree.
 - Build before relying on generated CLI artifacts or manifest-driven docs checks.
+
+## Codex App Actions
+
+- `Env Doctor`: `./bin/dev.js doctor --verbose`
+- `Build`: `npm run build`
+- `Test`: `npm test`
+- `Run dev server`: `npm run dev -- --help`
+
+This repository is a CLI, not a long-running web service. Use the dev entrypoint for the "Run dev server" action and replace `--help` with the command you want to exercise while iterating.
 
 ## Documentation Guidance
 
