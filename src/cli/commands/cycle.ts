@@ -15,16 +15,8 @@ import {
 } from '../cycleOutput';
 import { type CycleFlags, type CyclePayload } from '../cycleTypes';
 import { findGitRoot } from '../startHelpers';
-import {
-  resolveRunDirectorySettings,
-  requireConfig,
-} from '../utils/runDirectory';
-import {
-  CliError,
-  CliErrorCode,
-  formatErrorJson,
-  setJsonOutputMode,
-} from '../utils/cliErrors';
+import { resolveRunDirectorySettings, requireConfig } from '../utils/runDirectory';
+import { CliError, CliErrorCode, formatErrorJson, setJsonOutputMode } from '../utils/cliErrors';
 
 function containsPathTraversal(value: string): boolean {
   return value.includes('..') || value.includes('/') || value.includes('\\');
@@ -157,12 +149,6 @@ export default class Cycle extends TelemetryCommand {
 
         // Resolve cycle ID inside telemetry context to catch API errors properly
         if (!cycleId) {
-          if (!teamId) {
-            throw new CliError(
-              'No --cycle flag provided and no team_id configured. Set linear.team_id in .codepipe/config.json or pass --cycle.',
-              CliErrorCode.CONFIG_INVALID
-            );
-          }
           const adapter = new LinearAdapter({ apiKey });
           const active = await adapter.fetchActiveCycle(teamId);
           if (!active) {
@@ -184,6 +170,12 @@ export default class Cycle extends TelemetryCommand {
 
         // Sanitize and create cycle directory
         const sanitized = sanitizeCycleId(cycleId);
+        if (!sanitized) {
+          throw new CliError(
+            'Cycle ID contains no filesystem-safe characters after sanitizeCycleId processing.',
+            CliErrorCode.CONFIG_INVALID
+          );
+        }
         const cycleDir = path.join(settings.baseDir, `cycle-${sanitized}`);
         await fs.mkdir(cycleDir, { recursive: true });
 

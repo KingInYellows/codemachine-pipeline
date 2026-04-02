@@ -103,7 +103,7 @@ codepipe cycle [FLAGS]
 | `--dry-run`    |       | boolean | Preview issue order without processing                      |         |
 | `--fail-fast`  |       | boolean | Stop on first issue failure                                 |         |
 | `--json`       |       | boolean | Output results in JSON format                               |         |
-| `--max-issues` |       | string  | Maximum number of issues to process                         | `30`    |
+| `--max-issues` |       | integer | Maximum number of issues to process                         | `30`    |
 | `--plan-only`  |       | boolean | Generate plans but skip execution                           |         |
 | `--verbose`    | `-v`  | boolean | Show detailed output                                        |         |
 

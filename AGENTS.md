@@ -49,6 +49,7 @@ Current command surface includes:
 - `start`
 - `status`
 - `doctor`
+- `cycle`
 - `health`
 - `approve`
 - `plan`
