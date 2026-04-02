@@ -47,12 +47,10 @@ export function classifyGitHubApiBaseUrl(baseUrl: string | undefined): GitHubApi
   try {
     const parsed = new URL(baseUrl);
     const normalizedPath = trimTrailingSlash(parsed.pathname);
-    return (
-      parsed.protocol === 'https:' &&
+    return parsed.protocol === 'https:' &&
       parsed.hostname === 'api.github.com' &&
       parsed.port === '' &&
       normalizedPath === '/'
-    )
       ? 'default'
       : 'custom';
   } catch {

@@ -49,7 +49,9 @@ describe('cycleOutput', () => {
 
     renderDryRun(payload, { log, warn });
 
-    expect(log).toHaveBeenCalledWith(expect.stringContaining('Issues: 2 total | 1 processable | 1 will skip'));
+    expect(log).toHaveBeenCalledWith(
+      expect.stringContaining('Issues: 2 total | 1 processable | 1 will skip')
+    );
     expect(log).toHaveBeenCalledWith(expect.stringContaining('Medium'));
     expect(log).toHaveBeenCalledWith(expect.stringContaining('Urgent'));
     expect(log).toHaveBeenCalledWith(expect.stringContaining('skip'));
