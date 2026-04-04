@@ -151,6 +151,7 @@ export default class Cycle extends TelemetryCommand {
         verbose: typedFlags.verbose,
         runDirPath: settings.baseDir,
       },
+      async (ctx) => {
         const logger = ctx.logger;
         const metrics = ctx.metrics;
 
