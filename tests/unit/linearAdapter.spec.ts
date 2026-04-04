@@ -55,15 +55,17 @@ const DEFAULT_CYCLE_ISSUE_NODE = {
   relations: [] as Array<{ type: string; relatedIssue: { id: string; identifier: string } }>,
 };
 
-function makeCycleIssueNode(overrides: Partial<{
-  id: string;
-  identifier: string;
-  title: string;
-  stateType: string;
-  stateName: string;
-  priority: number;
-  relations: Array<{ type: string; relatedIssue: { id: string; identifier: string } }>;
-}> = {}) {
+function makeCycleIssueNode(
+  overrides: Partial<{
+    id: string;
+    identifier: string;
+    title: string;
+    stateType: string;
+    stateName: string;
+    priority: number;
+    relations: Array<{ type: string; relatedIssue: { id: string; identifier: string } }>;
+  }> = {}
+) {
   const issue = {
     ...DEFAULT_CYCLE_ISSUE_NODE,
     ...overrides,
@@ -102,9 +104,7 @@ describe('LinearAdapter cycle methods', () => {
   describe('fetchCycleIssues', () => {
     it('fetches cycle issues and transforms GraphQL response', async () => {
       const issueNode = makeCycleIssueNode({
-        relations: [
-          { type: 'blocks', relatedIssue: { id: 'issue-2', identifier: 'CDMCH-102' } },
-        ],
+        relations: [{ type: 'blocks', relatedIssue: { id: 'issue-2', identifier: 'CDMCH-102' } }],
       });
 
       mockPost.mockResolvedValueOnce({
@@ -211,15 +211,11 @@ describe('LinearAdapter cycle methods', () => {
         data: { data: { cycle: null } },
       });
 
-      await expect(adapter.fetchCycleIssues(VALID_CYCLE_ID)).rejects.toThrow(
-        /not found/
-      );
+      await expect(adapter.fetchCycleIssues(VALID_CYCLE_ID)).rejects.toThrow(/not found/);
     });
 
     it('rejects invalid cycle ID format', async () => {
-      await expect(adapter.fetchCycleIssues('not-a-uuid')).rejects.toThrow(
-        LinearAdapterError
-      );
+      await expect(adapter.fetchCycleIssues('not-a-uuid')).rejects.toThrow(LinearAdapterError);
       await expect(adapter.fetchCycleIssues('CDMCH-123')).rejects.toThrow(
         /Cycle IDs must be UUIDs/
       );
@@ -343,8 +339,14 @@ describe('LinearAdapter cycle methods', () => {
       expect(result.metadata.issueCount).toBe(2);
       expect(mockPost).toHaveBeenCalledTimes(2);
 
-      const firstRequest = mockPost.mock.calls[0]?.[1] as { query: string; variables: { after?: string | null } };
-      const secondRequest = mockPost.mock.calls[1]?.[1] as { query: string; variables: { after?: string | null } };
+      const firstRequest = mockPost.mock.calls[0]?.[1] as {
+        query: string;
+        variables: { after?: string | null };
+      };
+      const secondRequest = mockPost.mock.calls[1]?.[1] as {
+        query: string;
+        variables: { after?: string | null };
+      };
 
       expect(firstRequest.query).toContain('issues(first: 250, after: $after)');
       expect(firstRequest.variables.after).toBeNull();
@@ -401,7 +403,9 @@ describe('LinearAdapter cycle methods', () => {
       });
 
       await expect(adapter.fetchActiveCycle(VALID_TEAM_ID)).rejects.toThrow(/not found/);
-      expect((adapter as { logger: { error: ReturnType<typeof vi.fn> } }).logger.error).not.toHaveBeenCalled();
+      expect(
+        (adapter as { logger: { error: ReturnType<typeof vi.fn> } }).logger.error
+      ).not.toHaveBeenCalled();
     });
 
     it('propagates API errors', async () => {
@@ -423,9 +427,7 @@ describe('LinearAdapter cycle methods', () => {
       });
 
       // Should not throw on validation; the "not found" error comes after
-      await expect(adapter.fetchCycleIssues(VALID_CYCLE_ID)).rejects.toThrow(
-        /not found/
-      );
+      await expect(adapter.fetchCycleIssues(VALID_CYCLE_ID)).rejects.toThrow(/not found/);
     });
 
     it('rejects Linear issue identifier format', async () => {
@@ -435,9 +437,7 @@ describe('LinearAdapter cycle methods', () => {
     });
 
     it('rejects arbitrary strings', async () => {
-      await expect(adapter.fetchCycleIssues('hello world')).rejects.toThrow(
-        LinearAdapterError
-      );
+      await expect(adapter.fetchCycleIssues('hello world')).rejects.toThrow(LinearAdapterError);
     });
   });
 });

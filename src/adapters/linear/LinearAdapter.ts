@@ -248,11 +248,9 @@ type RawCycleRelationNode = {
 };
 type RawLinearCycleIssue = LinearIssue & {
   labels: LinearIssue['labels'] | { nodes: LinearIssue['labels'] };
-  relations?:
-    | {
-        nodes?: Array<RawCycleRelationNode | null> | null;
-      }
-    | null;
+  relations?: {
+    nodes?: Array<RawCycleRelationNode | null> | null;
+  } | null;
 };
 type CycleQueryResponse = {
   data: {
@@ -559,16 +557,14 @@ export class LinearAdapter {
     LinearAdapter.validateCycleId(cycleId);
     try {
       let after: string | null = null;
-      let cycleSummary:
-        | {
-            id: string;
-            name: string;
-            number: number;
-            startsAt: string;
-            endsAt: string;
-            teamId: string;
-          }
-        | null = null;
+      let cycleSummary: {
+        id: string;
+        name: string;
+        number: number;
+        startsAt: string;
+        endsAt: string;
+        teamId: string;
+      } | null = null;
       const issues: LinearCycleIssue[] = [];
 
       do {
@@ -597,10 +593,12 @@ export class LinearAdapter {
             number: cycle.number,
             startsAt: cycle.startsAt,
             endsAt: cycle.endsAt,
-            teamId: cycle.team?.id ?? (() => {
-              this.logger.warn('Cycle has no team association', { cycleId: cycle.id });
-              return '';
-            })(),
+            teamId:
+              cycle.team?.id ??
+              (() => {
+                this.logger.warn('Cycle has no team association', { cycleId: cycle.id });
+                return '';
+              })(),
           };
         }
 
@@ -608,7 +606,9 @@ export class LinearAdapter {
 
         const pageInfo = cycle.issues.pageInfo;
         after =
-          pageInfo?.hasNextPage && typeof pageInfo.endCursor === 'string' ? pageInfo.endCursor : null;
+          pageInfo?.hasNextPage && typeof pageInfo.endCursor === 'string'
+            ? pageInfo.endCursor
+            : null;
       } while (after !== null);
 
       return {
@@ -736,9 +736,7 @@ export class LinearAdapter {
     }
   }
 
-  private normalizeCycleIssue(
-    node: RawLinearCycleIssue
-  ): LinearCycleIssue {
+  private normalizeCycleIssue(node: RawLinearCycleIssue): LinearCycleIssue {
     const relationNodes: Array<RawCycleRelationNode | null> =
       node.relations &&
       typeof node.relations === 'object' &&
@@ -746,8 +744,7 @@ export class LinearAdapter {
       Array.isArray(node.relations.nodes)
         ? node.relations.nodes
         : new Array<RawCycleRelationNode | null>();
-    const labels =
-      node.labels && 'nodes' in node.labels ? node.labels.nodes : node.labels;
+    const labels = node.labels && 'nodes' in node.labels ? node.labels.nodes : node.labels;
 
     return {
       ...node,

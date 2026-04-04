@@ -7,7 +7,139 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-(Empty - all changes included in v1.0.0)
+## [1.1.0] - 2026-04-04
+
+### Added
+
+#### Cycle Command — Batch Linear Sprint Processing
+- `codepipe cycle` CLI command for batch processing all issues in a Linear cycle (#873)
+- CycleOrchestrator for sequential issue processing with skip logic (Done/Canceled/In Review auto-skipped) (#871)
+- Topological sort via Kahn's algorithm with Tarjan's SCC cycle detection for dependency-safe ordering (#870)
+- `fetchCycleIssues` with cursor-based pagination (250/page) and relation normalization (#869)
+- `fetchActiveCycle` for automatic active cycle resolution per team (#869)
+- Linear cycle and relation types: `LinearCycleIssue`, `LinearIssueRelation`, `LinearCycle`, `CycleSnapshot` (#868)
+- Cycle dashboard with live progress updates, dry-run preview, and JSON output (#872)
+- Per-issue run directory isolation and `report.json` audit trail (#871)
+
+#### Public Repository Preparation
+- CODE_OF_CONDUCT.md — Contributor Covenant v2.1 (#851)
+- Pull request template with summary, test plan, and checklist (#851)
+- Bug report and feature request issue templates (#840)
+- SECURITY.md with vulnerability disclosure policy (#826)
+- CONTRIBUTING.md updates with external contributor fork workflow (#840)
+- Per-module READMEs for all 8 `src/` directories (#867)
+
+#### CI & Infrastructure
+- Post-release install verification script `scripts/tooling/verify_install.sh` (#862)
+- Package version pruning workflow — weekly cleanup retaining 2 most recent pre-releases (#861)
+- Composite Node.js setup action for CI workflow DRY (#784, CDMCH-123)
+
+### Changed
+
+#### Architecture Refactoring (40+ module splits)
+- Decomposed `Resume.run()` god function into focused modules (CDMCH-253, #821)
+- Decomposed `Init.run()` god function into focused private methods (CDMCH-160, #671)
+- Extracted `PipelineOrchestrator` from `start.ts` (CDMCH-177, #776)
+- Split `taskPlanner` into `plannerDAG` + `plannerPersistence` (CDMCH-210, #670)
+- Split `RepoConfig` into schema, defaults, and loader modules (CDMCH-213, #668, #626)
+- Split `contextSummarizer` into budget, store, orchestration, and types (#634)
+- Split `cliExecutionEngine` into dependency resolver, telemetry recorder, artifact capture (#632)
+- Split `contextAggregator` into file discovery and document builder (#633)
+- Split `resumeCoordinator` into `runStateVerifier` + `resumeQueueRecovery` (#628)
+- Split `writeActionQueue` into store and rate-limiter modules (#629)
+- Split `validationRegistry` into store and orchestration layers (#630)
+- Split `RunDirectoryManager` into focused modules (#625)
+- Split `cli/status/data.ts` into domain modules (#631)
+- Extracted `branchComplianceChecker` from `branchProtection` adapter (#636)
+- Split `prdAuthoringEngine` into `prdStore` and authoring algorithm (#635)
+- Extracted command utilities from `autoFixEngine` into `commandRunner` (CDMCH-211, #669)
+- Extracted `RepoConfigLoader` from `RepoConfig` (CDMCH-213, #668)
+- Extracted `LinearAdapterTypes` from `LinearAdapter` (CDMCH-203, #765)
+- Extracted `resumeIntegrityChecker` from `runStateVerifier` (#667)
+- Consolidated spec generators/rendering into `specComposer` (#598, #600)
+
+#### Barrel Export & Import Cleanup
+- Removed `runDirectoryManager` barrel, updated all imports (CDMCH-243, #822)
+- Removed barrel re-exports from `validationRegistry` (CDMCH-252, #818)
+- Replaced models barrel with sub-barrel re-exports (CDMCH-216, #677)
+- Removed `specComposer` backward-compat re-exports (CDMCH-249, #819)
+- Redirected workflow imports to persistence barrel index (#603)
+
+#### Layer Boundary Enforcement
+- Fixed 6 architecture layer violations (findings 125-126, 135-139, #623)
+- Extracted shared types to break circular dependencies (findings 121-122, #622)
+- Fixed persistence → workflow layer inversion (findings 138, 143, #662)
+
+#### CI Migration
+- Migrated all workflows to GitHub-hosted runners (#855)
+- Added repository guards and fork checks for public repo security (#826)
+- Added `timeout-minutes` to all CI jobs (#826)
+
+#### Code Quality
+- Removed redundant comments from Zod schemas and workflow headers (CDMCH-179, CDMCH-187, #773)
+- Removed tautological JSDoc and enum member comments (#595, #596)
+- Removed AI-pattern noise across codebase (findings 191-209, #639, #661)
+- Deduplicated CLI command boilerplate across 17 findings (#637)
+- Replaced ternary chains with `statusDelta` helper (CDMCH-201, #738)
+- Replaced `generateRecommendations` if-else chain with Map lookup (CDMCH-185, #768)
+- Introduced `withLogging<T>()` wrapper to eliminate try/catch boilerplate (CDMCH-202, #772)
+- Extracted shared `mapExitToStatus()` and `buildStrategyResult()` helpers (CDMCH-190, #770)
+- Removed non-null assertions (#619)
+- Simplified boolean returns (#620)
+- Replaced `any` type assertions with `unknown` (#618)
+- Removed queue backward-compat shims (CDMCH-188, #790)
+- Declarative env checks and flattened PRCreate try-catch (CDMCH-148, CDMCH-149, #676)
+- Added injectable factory params to decouple CLI adapter creation (#602)
+- Extracted `fillTaskBatch` and `recordTaskOutcome` from execute loop (#601)
+
+#### Documentation
+- README expansion with CI/CD section and restructured support info (#840)
+- Private maintainer artifact removal (#837)
+- Public-facing reference cleanup (#838)
+- AGENTS.md alignment (#874)
+
+### Fixed
+
+#### Security Improvements
+- Replaced custom `parseCommandString` with `shell-quote` for POSIX-compliant command parsing (CDMCH-199, #785, #787)
+- Added Zod schema validation at all JSON deserialization boundaries — `PRMetadataSchema`, `CostTrackerStateSchema`, `RateLimitLedgerDataSchema`, `ApprovalsFileSchema`, and 5 more (findings 104, 108-114, #617)
+- Hardened input validation: `os.mkdtemp` private directories, branch name allowlist, symlink cycle detection, spec.json Zod validation (findings 105-107, 115-120, #621)
+- Consolidated secret redaction into `RedactionEngine` (CDMCH-168, #675)
+- URL-encoded path parameters in GitHub adapter to prevent injection (#587)
+- Filtered environment variables via allowlist in `autoFixEngine` (#587)
+- Replaced shell exec template literals with `execFileAsync` in `branchManager` and `patchManager` (#616)
+- Added `issueId` validation to all LinearAdapter public methods (CDMCH-161, #740)
+- Capped `retryAfterSeconds` from external API at 300s maximum (CDMCH-196, #739)
+- Added env var name validation and template substitution hardening (CDMCH-214, CDMCH-215, #673)
+- Made GitHub API version configurable (CDMCH-209, #674)
+- Added Zod schema validation for HTTP response parsing (#621)
+
+#### Bug Fixes
+- Flaky concurrent access test: added in-memory promise chain to serialize same-process callers in lockManager with AsyncLocalStorage reentrancy (CDMCH-232, #797)
+- Circular dependencies: extracted `DEFAULT_GITHUB_API_VERSION` to `configConstants`, resume types to `core/models/resumeTypes` (CDMCH-233, #797)
+- Redaction test fixtures: replaced non-matching placeholders with realistic `ghp_`/`ghs_` tokens (#857)
+- Integration test fixture metadata and telemetry expectations (#614, #672)
+- Removed unsupported `access:public` from `publishConfig` (#856)
+- CI drift loop from auto-formatter conflict in CLI reference generator
+- Resolved CI failures for v1.1.0 publish (CDMCH-231, #859)
+- Removed bundled dependency vulnerabilities (#853)
+- Sanitized secret-scanner false positives
+- Restored redaction fixtures after history rewrite
+- Fixed broken documentation paths and updated tests (#486)
+- ESLint `Record<string, unknown>` disable patterns (CDMCH-122, #763)
+- Batch tech debt fixes for cycle 8 sprint (CDMCH-119, CDMCH-118, CDMCH-135, CDMCH-126, #762)
+- Reduced cyclomatic complexity in god functions (findings 148-173, #638, #663)
+- High-priority security and architecture debt (8 fixes, #587)
+
+### Dependencies
+
+- Bumped `undici` 7.22.0 → 7.24.1 (#827)
+- Bumped `hono` 4.11.9 → 4.12.7 (#828)
+- Bumped `rollup` 4.56.0 → 4.59.0 (#831)
+- Bumped `express-rate-limit` 8.2.1 → 8.3.1 (#830)
+- Bumped `flatted` 3.3.3 → 3.4.1 (#833)
+- Bumped `basic-ftp` 5.1.0 → 5.2.0 (#829)
+- 8 additional minor/patch dependency updates (#864)
 
 ## [1.0.0] - 2026-02-14
 
