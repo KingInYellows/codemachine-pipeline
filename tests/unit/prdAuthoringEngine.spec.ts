@@ -136,7 +136,7 @@ function createMockResearchTask(overrides?: Partial<ResearchTask>): ResearchTask
     created_at: '2025-01-15T10:00:00Z',
     updated_at: '2025-01-15T10:30:00Z',
     ...overrides,
-  } as ResearchTask;
+  };
 }
 
 function createMockRepoConfig(): RepoConfig {
@@ -626,7 +626,7 @@ describe('PRD Authoring Engine', () => {
     });
 
     it('should truncate context citations to top 10 files and show overflow message', async () => {
-      const files: Record<string, unknown> = {};
+      const files: { [key: string]: unknown } = {};
       for (let i = 0; i < 15; i++) {
         files[`src/file${i}.ts`] = {
           path: `src/file${i}.ts`,

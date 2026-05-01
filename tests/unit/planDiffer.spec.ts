@@ -44,7 +44,7 @@ const mockedSafeJsonParse = vi.mocked(safeJsonParse);
 // Helpers
 // ============================================================================
 
-function createPlanMetadata(overrides: Record<string, unknown> = {}) {
+function createPlanMetadata(overrides: { [key: string]: unknown } = {}) {
   return {
     schema_version: '1.0.0',
     feature_id: 'feat-001',
@@ -58,7 +58,7 @@ function createPlanMetadata(overrides: Record<string, unknown> = {}) {
   };
 }
 
-function createSpecMetadata(overrides: Record<string, unknown> = {}) {
+function createSpecMetadata(overrides: { [key: string]: unknown } = {}) {
   return {
     featureId: 'feat-001',
     specId: 'SPEC-001',
@@ -88,8 +88,8 @@ describe('comparePlanDiff', () => {
     const planMeta = createPlanMetadata({ spec_hash: 'matching-hash', plan_hash: 'plan-checksum' });
     const specMeta = createSpecMetadata({ specHash: 'matching-hash' });
 
-    mockedLoadPlanMetadata.mockResolvedValue(planMeta as never);
-    mockedLoadSpecMetadata.mockResolvedValue(specMeta as never);
+    mockedLoadPlanMetadata.mockResolvedValue(planMeta);
+    mockedLoadSpecMetadata.mockResolvedValue(specMeta);
     mockedReadFile.mockResolvedValue(JSON.stringify({ checksum: 'plan-checksum' }));
     mockedSafeJsonParse.mockReturnValue({ checksum: 'plan-checksum' });
 
@@ -107,8 +107,8 @@ describe('comparePlanDiff', () => {
     const planMeta = createPlanMetadata({ spec_hash: 'old-hash', plan_hash: 'plan-checksum' });
     const specMeta = createSpecMetadata({ specHash: 'new-hash' });
 
-    mockedLoadPlanMetadata.mockResolvedValue(planMeta as never);
-    mockedLoadSpecMetadata.mockResolvedValue(specMeta as never);
+    mockedLoadPlanMetadata.mockResolvedValue(planMeta);
+    mockedLoadSpecMetadata.mockResolvedValue(specMeta);
     mockedReadFile.mockResolvedValue(JSON.stringify({ checksum: 'plan-checksum' }));
     mockedSafeJsonParse.mockReturnValue({ checksum: 'plan-checksum' });
 
@@ -136,7 +136,7 @@ describe('comparePlanDiff', () => {
 
   it('handles missing spec metadata', async () => {
     const planMeta = createPlanMetadata();
-    mockedLoadPlanMetadata.mockResolvedValue(planMeta as never);
+    mockedLoadPlanMetadata.mockResolvedValue(planMeta);
     mockedLoadSpecMetadata.mockResolvedValue(null);
 
     const result = await comparePlanDiff(runDir);
@@ -151,8 +151,8 @@ describe('comparePlanDiff', () => {
     const planMeta = createPlanMetadata({ spec_hash: 'same-hash', plan_hash: 'expected-checksum' });
     const specMeta = createSpecMetadata({ specHash: 'same-hash' });
 
-    mockedLoadPlanMetadata.mockResolvedValue(planMeta as never);
-    mockedLoadSpecMetadata.mockResolvedValue(specMeta as never);
+    mockedLoadPlanMetadata.mockResolvedValue(planMeta);
+    mockedLoadSpecMetadata.mockResolvedValue(specMeta);
     mockedReadFile.mockResolvedValue(JSON.stringify({ checksum: 'different-checksum' }));
     mockedSafeJsonParse.mockReturnValue({ checksum: 'different-checksum' });
 
@@ -169,8 +169,8 @@ describe('comparePlanDiff', () => {
     const planMeta = createPlanMetadata({ spec_hash: 'same-hash' });
     const specMeta = createSpecMetadata({ specHash: 'same-hash' });
 
-    mockedLoadPlanMetadata.mockResolvedValue(planMeta as never);
-    mockedLoadSpecMetadata.mockResolvedValue(specMeta as never);
+    mockedLoadPlanMetadata.mockResolvedValue(planMeta);
+    mockedLoadSpecMetadata.mockResolvedValue(specMeta);
     mockedReadFile.mockRejectedValue(new Error('ENOENT: no such file'));
 
     const result = await comparePlanDiff(runDir);
@@ -184,8 +184,8 @@ describe('comparePlanDiff', () => {
     const planMeta = createPlanMetadata({ spec_hash: 'same-hash' });
     const specMeta = createSpecMetadata({ specHash: 'same-hash' });
 
-    mockedLoadPlanMetadata.mockResolvedValue(planMeta as never);
-    mockedLoadSpecMetadata.mockResolvedValue(specMeta as never);
+    mockedLoadPlanMetadata.mockResolvedValue(planMeta);
+    mockedLoadSpecMetadata.mockResolvedValue(specMeta);
     mockedReadFile.mockResolvedValue('not valid json');
     mockedSafeJsonParse.mockReturnValue(undefined);
 
@@ -199,8 +199,8 @@ describe('comparePlanDiff', () => {
     const planMeta = createPlanMetadata({ spec_hash: 'old-hash', plan_hash: 'plan-checksum' });
     const specMeta = createSpecMetadata({ specHash: 'new-hash' });
 
-    mockedLoadPlanMetadata.mockResolvedValue(planMeta as never);
-    mockedLoadSpecMetadata.mockResolvedValue(specMeta as never);
+    mockedLoadPlanMetadata.mockResolvedValue(planMeta);
+    mockedLoadSpecMetadata.mockResolvedValue(specMeta);
     mockedReadFile.mockResolvedValue(JSON.stringify({ checksum: 'plan-checksum' }));
     mockedSafeJsonParse.mockReturnValue({ checksum: 'plan-checksum' });
 
@@ -245,8 +245,8 @@ describe('comparePlanDiff', () => {
     const planMeta = createPlanMetadata({ spec_hash: 'old-hash', plan_hash: 'expected-checksum' });
     const specMeta = createSpecMetadata({ specHash: 'new-hash' });
 
-    mockedLoadPlanMetadata.mockResolvedValue(planMeta as never);
-    mockedLoadSpecMetadata.mockResolvedValue(specMeta as never);
+    mockedLoadPlanMetadata.mockResolvedValue(planMeta);
+    mockedLoadSpecMetadata.mockResolvedValue(specMeta);
     mockedReadFile.mockResolvedValue(JSON.stringify({ checksum: 'wrong-checksum' }));
     mockedSafeJsonParse.mockReturnValue({ checksum: 'wrong-checksum' });
 
@@ -267,8 +267,8 @@ describe('comparePlanDiff', () => {
     const planMeta = createPlanMetadata({ spec_hash: 'same-hash', plan_hash: 'plan-checksum' });
     const specMeta = createSpecMetadata({ specHash: 'same-hash' });
 
-    mockedLoadPlanMetadata.mockResolvedValue(planMeta as never);
-    mockedLoadSpecMetadata.mockResolvedValue(specMeta as never);
+    mockedLoadPlanMetadata.mockResolvedValue(planMeta);
+    mockedLoadSpecMetadata.mockResolvedValue(specMeta);
     mockedReadFile.mockResolvedValue(JSON.stringify({ checksum: 'plan-checksum' }));
     mockedSafeJsonParse.mockReturnValue({ checksum: 'plan-checksum' });
 

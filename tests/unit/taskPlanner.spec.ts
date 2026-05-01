@@ -216,7 +216,7 @@ describe('Task Planner', () => {
         (call) => call[0] === 'Starting execution plan generation'
       );
       expect(startLog).toBeDefined();
-      const startContext = (startLog?.[1] ?? {}) as Record<string, unknown>;
+      const startContext = (startLog?.[1] ?? {}) as { [key: string]: unknown };
       expect(startContext).toMatchObject({ featureId: 'feat-123' });
 
       expect(rawMetrics.increment).toHaveBeenCalledWith(
@@ -524,7 +524,7 @@ describe('Task Planner', () => {
         (call) => call[0] === 'Computed execution order'
       );
       expect(orderLog).toBeDefined();
-      const orderContext = (orderLog?.[1] ?? {}) as Record<string, unknown>;
+      const orderContext = (orderLog?.[1] ?? {}) as { [key: string]: unknown };
       expect(typeof orderContext.maxDepth).toBe('number');
       expect(typeof orderContext.parallelPaths).toBe('number');
     });
@@ -686,7 +686,7 @@ describe('Task Planner', () => {
         (call) => call[0] === 'plan.json already exists, loading existing plan'
       );
       expect(reuseLog).toBeDefined();
-      const reuseContext = (reuseLog?.[1] ?? {}) as Record<string, unknown>;
+      const reuseContext = (reuseLog?.[1] ?? {}) as { [key: string]: unknown };
       const planPath = typeof reuseContext.planPath === 'string' ? reuseContext.planPath : '';
       expect(planPath).toContain('plan.json');
     });

@@ -116,7 +116,7 @@ export function parseExecutionTask(json: unknown):
   if (result.success) {
     return {
       success: true,
-      data: result.data as ExecutionTask,
+      data: result.data,
     };
   }
 

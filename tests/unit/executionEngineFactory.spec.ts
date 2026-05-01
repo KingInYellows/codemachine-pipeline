@@ -33,7 +33,7 @@ const mockTelemetry = {} as ExecutionTelemetry;
 function mockEngineWith(validatePrereqs: ReturnType<typeof vi.fn>): void {
   MockCLIExecutionEngine.mockImplementation(function MockEngine() {
     return { validatePrerequisites: validatePrereqs } as unknown as CLIExecutionEngine;
-  } as unknown as typeof CLIExecutionEngine);
+  });
 }
 
 describe('buildAndValidateExecutionEngine', () => {

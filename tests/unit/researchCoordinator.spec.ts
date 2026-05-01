@@ -110,7 +110,7 @@ function createTestContextDocument(featureId: string, relativePaths: string[]): 
       source: 'manual',
       captured_at: now,
     },
-  } as ContextDocument;
+  };
 }
 
 interface TaskLogEvent {
@@ -123,7 +123,7 @@ function isTaskLogEvent(value: unknown): value is TaskLogEvent {
     return false;
   }
 
-  const candidate = value as Record<string, unknown>;
+  const candidate = value as { [key: string]: unknown };
   return typeof candidate.event_type === 'string' && typeof candidate.task_id === 'string';
 }
 
@@ -149,7 +149,7 @@ function parsePersistedTask(content: string): PersistedTaskRecord {
   if (!parsed || typeof parsed !== 'object') {
     throw new Error('Invalid task file');
   }
-  const record = parsed as Record<string, unknown>;
+  const record = parsed as { [key: string]: unknown };
   if (typeof record.task_id !== 'string' || typeof record.title !== 'string') {
     throw new Error('Invalid task record');
   }

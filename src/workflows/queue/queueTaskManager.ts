@@ -150,7 +150,7 @@ export async function updateTaskInQueue(
       const patch: Partial<ExecutionTaskData> = {
         ...updates,
         updated_at: new Date().toISOString(),
-      } as Partial<ExecutionTaskData>;
+      };
 
       // Append update operation to WAL
       const op: Omit<QueueOperation, 'seq' | 'checksum'> = {
@@ -245,7 +245,7 @@ export async function updateTaskInQueueV2(
       const patch: Partial<ExecutionTaskData> = {
         ...updates,
         updated_at: new Date().toISOString(),
-      } as Partial<ExecutionTaskData>;
+      };
 
       // Append update operation to WAL
       const op: Omit<QueueOperation, 'seq' | 'checksum'> = {

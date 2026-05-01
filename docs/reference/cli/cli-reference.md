@@ -5,13 +5,14 @@
 
 The `codepipe` CLI is the primary interface for managing feature development pipelines. This reference is auto-generated from the oclif command manifest.
 
-**Total commands:** 17
+**Total commands:** 18
 
 ## Table of Contents
 
 ### Core Commands
 
 - [`codepipe approve`](#codepipe-approve) — Approve or deny a feature pipeline gate
+- [`codepipe cycle`](#codepipe-cycle) — Run all issues in a Linear cycle through the pipeline
 - [`codepipe doctor`](#codepipe-doctor) — Run environment diagnostics and readiness checks
 - [`codepipe health`](#codepipe-health) — Quick runtime health check (config, disk, writable run dir)
 - [`codepipe init`](#codepipe-init) — Initialize codemachine-pipeline with schema-validated configuration
@@ -80,6 +81,39 @@ codepipe approve prd --approve --signer "user@example.com"
 codepipe approve spec --deny --signer "reviewer@example.com" --comment "Missing acceptance criteria"
 codepipe approve prd --approve --signer "user@example.com" --feature FEAT-abc123
 codepipe approve prd --approve --signer "user@example.com" --json
+```
+
+---
+
+#### codepipe cycle
+
+Run all issues in a Linear cycle through the pipeline
+
+##### Synopsis
+
+```bash
+codepipe cycle [FLAGS]
+```
+
+##### Options
+
+| Option         | Short | Type    | Description                                                 | Default |
+| -------------- | ----- | ------- | ----------------------------------------------------------- | ------- |
+| `--cycle`      | `-c`  | string  | Cycle ID (defaults to active cycle for the configured team) |         |
+| `--dry-run`    |       | boolean | Preview issue order without processing                      |         |
+| `--fail-fast`  |       | boolean | Stop on first issue failure                                 |         |
+| `--json`       |       | boolean | Output results in JSON format                               |         |
+| `--max-issues` |       | integer | Maximum number of issues to process                         | `30`    |
+| `--plan-only`  |       | boolean | Generate plans but skip execution                           |         |
+| `--verbose`    | `-v`  | boolean | Show detailed output                                        |         |
+
+##### Examples
+
+```bash
+codepipe cycle --cycle CYCLE-ID
+codepipe cycle --dry-run
+codepipe cycle --max-issues 10 --fail-fast
+codepipe cycle --json
 ```
 
 ---
@@ -249,7 +283,7 @@ codepipe resume [FLAGS]
 | `--feature`                | `-f`  | string  | Feature ID to resume (defaults to current/latest)              |         |
 | `--force`                  |       | boolean | Override blockers (integrity warnings) - use with caution      |         |
 | `--json`                   |       | boolean | Output results in JSON format                                  |         |
-| `--max-parallel`           |       | string  | Maximum parallel tasks during execution (1-10)                 | `1`     |
+| `--max-parallel`           |       | integer | Maximum parallel tasks during execution (1-10)                 | `1`     |
 | `--skip-hash-verification` |       | boolean | Skip artifact integrity checks (dangerous, for debugging only) |         |
 | `--validate-queue`         |       | boolean | Validate queue files before resuming                           |         |
 | `--verbose`                | `-v`  | boolean | Show detailed diagnostics                                      |         |
@@ -283,7 +317,7 @@ codepipe start [FLAGS]
 | `--dry-run`        |       | boolean | Simulate execution without making changes          |         |
 | `--json`           |       | boolean | Output results in JSON format                      |         |
 | `--linear`         | `-l`  | string  | Linear issue ID to import as feature specification |         |
-| `--max-parallel`   |       | string  | Maximum parallel tasks during execution (1-10)     | `1`     |
+| `--max-parallel`   |       | integer | Maximum parallel tasks during execution (1-10)     | `1`     |
 | `--prompt`         | `-p`  | string  | Feature description prompt                         |         |
 | `--skip-execution` |       | boolean | Skip task execution phase (stop after PRD)         |         |
 | `--spec`           | `-s`  | string  | Path to existing specification file                |         |

@@ -155,7 +155,10 @@ describe('queueStore - initializeQueueFromPlan', () => {
       await initializeQueueFromPlan(runDir, plan);
 
       const tasks = await loadQueue(runDir);
-      const task = tasks.get('TASK-FULL') as ExecutionTask;
+      const task = tasks.get('TASK-FULL');
+      if (!task) {
+        throw new Error('Expected TASK-FULL to be loaded');
+      }
 
       expect(task.task_id).toBe('TASK-FULL');
       expect(task.title).toBe('Full Task');
@@ -552,7 +555,7 @@ describe('queueStore - verifyQueueIntegrity (CDMCH-69)', () => {
         { id: 'T1', title: 'Task 1', task_type: 'code_generation' },
         { id: 'T2', title: 'Task 2', task_type: 'code_generation' },
       ],
-    } as TaskPlan);
+    });
 
     const result = await verifyQueueIntegrity(runDir);
     expect(result.valid).toBe(true);
@@ -564,7 +567,7 @@ describe('queueStore - verifyQueueIntegrity (CDMCH-69)', () => {
     await initializeQueueFromPlan(runDir, {
       feature_id: 'FEATURE-INTEGRITY',
       tasks: [{ id: 'T1', title: 'Task 1', task_type: 'code_generation' }],
-    } as TaskPlan);
+    });
 
     // Create a snapshot then corrupt it
     await createQueueSnapshot(runDir);
@@ -598,7 +601,7 @@ describe('queueStore - verifyQueueIntegrity (CDMCH-69)', () => {
         { id: 'T2', title: 'Task 2', task_type: 'code_generation' },
         { id: 'T3', title: 'Task 3', task_type: 'code_generation' },
       ],
-    } as TaskPlan);
+    });
 
     const result = await verifyQueueIntegrity(runDir);
     expect(result.walEntriesChecked).toBeGreaterThanOrEqual(3);
@@ -608,7 +611,7 @@ describe('queueStore - verifyQueueIntegrity (CDMCH-69)', () => {
     await initializeQueueFromPlan(runDir, {
       feature_id: 'FEATURE-INTEGRITY',
       tasks: [{ id: 'T1', title: 'Task 1', task_type: 'code_generation' }],
-    } as TaskPlan);
+    });
 
     const result = await verifyQueueIntegrity(runDir);
     expect(result.snapshotValid).toBeNull();
@@ -653,7 +656,7 @@ describe('queueStore - verifyQueueIntegrity (CDMCH-69)', () => {
     await initializeQueueFromPlan(runDir, {
       feature_id: 'FEATURE-INTEGRITY',
       tasks: [{ id: 'T1', title: 'Task 1', task_type: 'code_generation' }],
-    } as TaskPlan);
+    });
 
     await createQueueSnapshot(runDir);
 
@@ -683,7 +686,7 @@ describe('queueStore - verifyQueueIntegrity (CDMCH-69)', () => {
     await initializeQueueFromPlan(runDir, {
       feature_id: 'FEATURE-INTEGRITY',
       tasks: [{ id: 'T1', title: 'Task 1', task_type: 'code_generation' }],
-    } as TaskPlan);
+    });
 
     await createQueueSnapshot(runDir);
 

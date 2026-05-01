@@ -148,7 +148,7 @@ export async function saveSnapshot(
   // Convert ExecutionTask to ExecutionTaskData (remove readonly)
   const taskData: Record<string, ExecutionTaskData> = {};
   for (const [taskId, task] of Object.entries(tasks)) {
-    taskData[taskId] = { ...task } as ExecutionTaskData;
+    taskData[taskId] = { ...task };
   }
 
   // Build snapshot

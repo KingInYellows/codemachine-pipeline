@@ -745,7 +745,7 @@ describe('HttpClient', () => {
       await client.get('/test?access_token=secret123');
 
       // Verify URL was sanitized in logs
-      const debugCalls = getMockCalls<[string, Record<string, unknown>]>(mockLogger.debug);
+      const debugCalls = getMockCalls<[string, { [key: string]: unknown }]>(mockLogger.debug);
       const requestLog = debugCalls.find(([message]) => message === 'HTTP request');
       expect(requestLog).toBeDefined();
 
@@ -789,7 +789,7 @@ describe('HttpClient', () => {
 
       await client.get('/test?page_token=cursor123&access_token=secret123');
 
-      const debugCalls = getMockCalls<[string, Record<string, unknown>]>(mockLogger.debug);
+      const debugCalls = getMockCalls<[string, { [key: string]: unknown }]>(mockLogger.debug);
       const requestLog = debugCalls.find(([message]) => message === 'HTTP request');
       expect(requestLog).toBeDefined();
 
@@ -966,7 +966,7 @@ describe('HttpClient', () => {
   });
 });
 
-function isRecord(value: unknown): value is Record<string, unknown> {
+function isRecord(value: unknown): value is { [key: string]: unknown } {
   return typeof value === 'object' && value !== null;
 }
 

@@ -146,7 +146,7 @@ describe('ExecutionTask model', () => {
         retry_count: 1,
         max_retries: 3,
         ...overrides,
-      } as ExecutionTask;
+      };
     }
 
     it('should return true when failed, under max retries, and recoverable', () => {

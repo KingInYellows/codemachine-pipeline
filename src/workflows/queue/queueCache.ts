@@ -142,10 +142,10 @@ export function buildDependencyGraph(state: QueueIndexState): Record<string, str
 
 /** Convert ExecutionTaskData to ExecutionTask (readonly). */
 export function toExecutionTask(data: ExecutionTaskData): ExecutionTask {
-  return data as ExecutionTask;
+  return data;
 }
 
 /** Convert ExecutionTask to ExecutionTaskData (mutable). */
 export function toExecutionTaskData(task: ExecutionTask): ExecutionTaskData {
-  return { ...task } as ExecutionTaskData;
+  return { ...task };
 }

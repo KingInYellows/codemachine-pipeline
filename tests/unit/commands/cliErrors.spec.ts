@@ -71,7 +71,7 @@ describe('formatErrorMessage', () => {
   });
 
   it('should return Unknown error for circular references', () => {
-    const obj: Record<string, unknown> = {};
+    const obj: { [key: string]: unknown } = {};
     obj.self = obj;
     expect(formatErrorMessage(obj)).toBe('Unknown error');
   });

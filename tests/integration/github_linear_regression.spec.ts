@@ -79,11 +79,9 @@ type LinearAdapterContract = {
   updateIssue(input: { issueId: string; title?: string }): Promise<void>;
 };
 
-const stringMatcher = (value: string): string =>
-  expect.stringContaining(value) as unknown as string;
+const stringMatcher = (value: string) => expect.stringContaining(value);
 
-const objectMatcher = <T extends object>(value: T): T =>
-  expect.objectContaining(value) as unknown as T;
+const objectMatcher = <T extends object>(value: T) => expect.objectContaining(value);
 
 /**
  * Load a fixture file and compute its hash
@@ -102,8 +100,7 @@ function computeFixtureHash(fixture: HttpFixture): string {
   return crypto.createHash('sha256').update(normalized).digest('hex');
 }
 
-// eslint-disable-next-line @typescript-eslint/no-restricted-types -- generic type guard for object validation
-function isRecord(value: unknown): value is Record<string, unknown> {
+function isRecord(value: unknown): value is { [key: string]: unknown } {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
@@ -237,7 +234,7 @@ describe('GitHub Adapter Regression Tests', () => {
       runDir,
       logger: mockLogger,
     });
-    adapterContract = adapter as unknown as GitHubAdapterContract;
+    adapterContract = adapter;
 
     vi.clearAllMocks();
   });
@@ -441,7 +438,7 @@ describe('Linear Adapter Regression Tests', () => {
       runDir,
       logger: mockLogger,
     });
-    adapterContract = adapter as unknown as LinearAdapterContract;
+    adapterContract = adapter;
 
     vi.clearAllMocks();
   });

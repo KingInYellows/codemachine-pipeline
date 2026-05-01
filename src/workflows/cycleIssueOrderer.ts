@@ -36,15 +36,11 @@ interface ComponentLevelEntry {
   priority: number;
 }
 
-function sortByPriorityDescending(
-  issues: LinearCycleIssue[]
-): LinearCycleIssue[] {
+function sortByPriorityDescending(issues: LinearCycleIssue[]): LinearCycleIssue[] {
   return [...issues].sort((a, b) => b.priority - a.priority);
 }
 
-function createIssueMap(
-  issues: LinearCycleIssue[]
-): Map<string, LinearCycleIssue> {
+function createIssueMap(issues: LinearCycleIssue[]): Map<string, LinearCycleIssue> {
   const issueMap = new Map<string, LinearCycleIssue>();
   for (const issue of issues) {
     issueMap.set(issue.identifier, issue);
@@ -91,9 +87,7 @@ function getZeroInDegreeIssues(
   issues: LinearCycleIssue[],
   inDegree: Map<string, number>
 ): LinearCycleIssue[] {
-  return sortByPriorityDescending(
-    issues.filter((issue) => inDegree.get(issue.identifier) === 0)
-  );
+  return sortByPriorityDescending(issues.filter((issue) => inDegree.get(issue.identifier) === 0));
 }
 
 function processCurrentLevel(
@@ -146,13 +140,8 @@ function performKahnTraversal(
   return { ordered, visited };
 }
 
-function getRemainingIds(
-  issues: LinearCycleIssue[],
-  visited: Set<string>
-): string[] {
-  return issues
-    .map((issue) => issue.identifier)
-    .filter((issueId) => !visited.has(issueId));
+function getRemainingIds(issues: LinearCycleIssue[], visited: Set<string>): string[] {
+  return issues.map((issue) => issue.identifier).filter((issueId) => !visited.has(issueId));
 }
 
 function buildRemainingAdjacency(
@@ -196,18 +185,12 @@ function findStronglyConnectedComponents(
     for (const neighborId of adjacency.get(nodeId) ?? new Set<string>()) {
       if (!indices.has(neighborId)) {
         visit(neighborId);
-        lowLinks.set(
-          nodeId,
-          Math.min(lowLinks.get(nodeId)!, lowLinks.get(neighborId)!)
-        );
+        lowLinks.set(nodeId, Math.min(lowLinks.get(nodeId)!, lowLinks.get(neighborId)!));
         continue;
       }
 
       if (onStack.has(neighborId)) {
-        lowLinks.set(
-          nodeId,
-          Math.min(lowLinks.get(nodeId)!, indices.get(neighborId)!)
-        );
+        lowLinks.set(nodeId, Math.min(lowLinks.get(nodeId)!, indices.get(neighborId)!));
       }
     }
 
@@ -236,10 +219,7 @@ function findStronglyConnectedComponents(
   return components;
 }
 
-function isCycleComponent(
-  nodeIds: string[],
-  adjacency: Map<string, Set<string>>
-): boolean {
+function isCycleComponent(nodeIds: string[], adjacency: Map<string, Set<string>>): boolean {
   return (
     nodeIds.length > 1 ||
     (nodeIds.length === 1 && adjacency.get(nodeIds[0])?.has(nodeIds[0]) === true)
@@ -250,12 +230,10 @@ function createComponents(
   remainingIds: string[],
   remainingAdjacency: Map<string, Set<string>>
 ): Component[] {
-  return findStronglyConnectedComponents(remainingIds, remainingAdjacency).map(
-    (nodeIds) => ({
-      nodeIds,
-      isCycle: isCycleComponent(nodeIds, remainingAdjacency),
-    })
-  );
+  return findStronglyConnectedComponents(remainingIds, remainingAdjacency).map((nodeIds) => ({
+    nodeIds,
+    isCycle: isCycleComponent(nodeIds, remainingAdjacency),
+  }));
 }
 
 function createComponentGraph(
@@ -300,9 +278,7 @@ function getComponentPriority(
   component: Component,
   issueMap: Map<string, LinearCycleIssue>
 ): number {
-  return Math.max(
-    ...component.nodeIds.map((nodeId) => issueMap.get(nodeId)!.priority)
-  );
+  return Math.max(...component.nodeIds.map((nodeId) => issueMap.get(nodeId)!.priority));
 }
 
 function getReadyComponents(
@@ -373,9 +349,7 @@ function orderRemainingComponents(
 
     for (const { index } of currentLevel) {
       appendComponent(components[index], issueMap, ordered, cycleInvolvedIds);
-      nextLevel.push(
-        ...unlockNeighborComponents(index, components, componentGraph, issueMap)
-      );
+      nextLevel.push(...unlockNeighborComponents(index, components, componentGraph, issueMap));
     }
 
     currentLevel = nextLevel.sort((a, b) => b.priority - a.priority);
@@ -401,18 +375,10 @@ export function orderCycleIssues(issues: LinearCycleIssue[]): OrderingResult {
   const graph = createGraph(issues);
   const { ordered, visited } = performKahnTraversal(issues, graph);
   const remainingIds = getRemainingIds(issues, visited);
-  const remainingAdjacency = buildRemainingAdjacency(
-    remainingIds,
-    graph.adjacency,
-    visited
-  );
+  const remainingAdjacency = buildRemainingAdjacency(remainingIds, graph.adjacency, visited);
   const components = createComponents(remainingIds, remainingAdjacency);
   const componentGraph = createComponentGraph(components, remainingAdjacency);
-  const remaining = orderRemainingComponents(
-    components,
-    componentGraph,
-    graph.issueMap
-  );
+  const remaining = orderRemainingComponents(components, componentGraph, graph.issueMap);
 
   return {
     ordered: [...ordered, ...remaining.ordered],

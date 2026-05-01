@@ -153,7 +153,7 @@ describe('parseAgentManifest', () => {
   describe('invalid manifests', () => {
     it('should reject manifest without rateLimits', () => {
       const manifest = { ...createValidManifest() };
-      delete (manifest as Record<string, unknown>).rateLimits;
+      delete (manifest as Partial<AgentManifest>).rateLimits;
 
       const result = parseAgentManifest(manifest);
       expect(result.success).toBe(false);
@@ -163,7 +163,7 @@ describe('parseAgentManifest', () => {
 
     it('should reject manifest without costConfig', () => {
       const manifest = { ...createValidManifest() };
-      delete (manifest as Record<string, unknown>).costConfig;
+      delete (manifest as Partial<AgentManifest>).costConfig;
 
       const result = parseAgentManifest(manifest);
       expect(result.success).toBe(false);

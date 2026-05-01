@@ -14,11 +14,7 @@ import { PipelineOrchestrator } from './pipelineOrchestrator.js';
 import { formatLinearContext } from '../cli/startHelpers.js';
 import { serializeError } from '../utils/errors.js';
 import type { IssueSnapshot, LinearCycleIssue } from '../adapters/linear/LinearAdapterTypes.js';
-import type {
-  CycleOrchestratorConfig,
-  CycleIssueResult,
-  CycleResult,
-} from './cycleTypes.js';
+import type { CycleOrchestratorConfig, CycleIssueResult, CycleResult } from './cycleTypes.js';
 
 /**
  * Check if an issue should be skipped based on its workflow state.
@@ -211,7 +207,10 @@ export class CycleOrchestrator {
     return cycleResult;
   }
 
-  private async createIssueRunDirectory(issue: LinearCycleIssue, issuesDir: string): Promise<string> {
+  private async createIssueRunDirectory(
+    issue: LinearCycleIssue,
+    issuesDir: string
+  ): Promise<string> {
     const { repoConfig } = this.config;
 
     return createRunDirectory(issuesDir, issue.identifier, {

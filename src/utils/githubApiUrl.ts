@@ -47,14 +47,22 @@ export function classifyGitHubApiBaseUrl(baseUrl: string | undefined): GitHubApi
   try {
     const parsed = new URL(baseUrl);
     const normalizedPath = trimTrailingSlash(parsed.pathname);
-    return (
-      parsed.protocol === 'https:' &&
-      parsed.hostname === 'api.github.com' &&
-      parsed.port === '' &&
-      normalizedPath === '/'
-    )
-      ? 'default'
-      : 'custom';
+    const isDefaultGitHubApi =
+      parsed.protocol === 'https:' && parsed.hostname === 'api.github.com' && parsed.port === '';
+
+    if (parsed.username || parsed.password || parsed.search || parsed.hash) {
+      return 'invalid';
+    }
+
+    if (normalizedPath !== '/' && normalizedPath !== '/api/v3') {
+      return 'invalid';
+    }
+
+    if (!isDefaultGitHubApi && parsed.protocol !== 'https:') {
+      return 'invalid';
+    }
+
+    return isDefaultGitHubApi ? 'default' : 'custom';
   } catch {
     return 'invalid';
   }
@@ -84,10 +92,7 @@ export function resolveGitHubApiBaseUrl(baseUrl: string | undefined): string {
   const normalizedPath = trimTrailingSlash(parsed.pathname);
   const allowUnsafeCustomBaseUrl = process.env[ALLOW_UNSAFE_CUSTOM_GITHUB_API_BASE_URL_ENV] === '1';
   const isDefaultGitHubApi =
-    parsed.protocol === 'https:' &&
-    parsed.hostname === 'api.github.com' &&
-    parsed.port === '' &&
-    normalizedPath === '/';
+    parsed.protocol === 'https:' && parsed.hostname === 'api.github.com' && parsed.port === '';
 
   if (parsed.username || parsed.password) {
     throw new Error('GitHub API base URL must not include embedded credentials');
@@ -98,7 +103,13 @@ export function resolveGitHubApiBaseUrl(baseUrl: string | undefined): string {
   }
 
   if (isDefaultGitHubApi) {
-    return DEFAULT_GITHUB_API_BASE_URL;
+    if (normalizedPath !== '/' && normalizedPath !== '/api/v3') {
+      throw new Error('GitHub API base URL must use either the root path or /api/v3');
+    }
+
+    return normalizedPath === '/'
+      ? DEFAULT_GITHUB_API_BASE_URL
+      : `${DEFAULT_GITHUB_API_BASE_URL}/api/v3/`;
   }
 
   if (!allowUnsafeCustomBaseUrl) {

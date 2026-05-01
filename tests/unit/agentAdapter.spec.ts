@@ -224,7 +224,7 @@ function isAgentError(error: unknown): error is AgentError {
     return false;
   }
 
-  const candidate = error as Record<string, unknown>;
+  const candidate = error as { [key: string]: unknown };
   return (
     typeof candidate.category === 'string' &&
     typeof candidate.message === 'string' &&

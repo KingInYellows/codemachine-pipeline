@@ -32,7 +32,8 @@
     "lint:fix": "eslint . --ext .ts --fix",
     "format": "prettier --write \"src/**/*.ts\" \"tests/**/*.ts\"",
     "format:check": "prettier --check \"src/**/*.ts\" \"tests/**/*.ts\"",
-    "exports:check": "ts-unused-exports tsconfig.json",
+    "exports:check": "node scripts/tooling/check_unused_exports.js",
+    "exports:baseline": "node scripts/tooling/check_unused_exports.js --update-baseline",
     "deps:check": "madge --circular --extensions ts src",
     "deps:baseline": "node -e \"require('node:fs').mkdirSync('.deps', { recursive: true })\" && madge --circular --extensions ts src --json > .deps/cycles-baseline.json || true",
     "deps:check:ci": "node scripts/tooling/check_circular_deps.js",
@@ -75,7 +76,7 @@
     "picomatch": "^4.0.3",
     "semver": "^7.7.4",
     "shell-quote": "^1.8.3",
-    "undici": "^7.24.4",
+    "undici": "^7.25.0",
     "zod": "^4.3.6"
   },
   "devDependencies": {
@@ -95,7 +96,7 @@
     "prettier": "^3.8.1",
     "ts-node": "^10.9.2",
     "ts-unused-exports": "^11.0.1",
-    "typescript": "^5.7.2",
+    "typescript": "^5.9.3",
     "vitest": "^4.1.0"
   },
   "overrides": {

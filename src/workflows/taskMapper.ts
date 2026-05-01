@@ -309,7 +309,7 @@ export function createStatusCommand(args: string[] = []): CommandStructure {
     executable: 'codemachine',
     command: 'status',
     args,
-  } as CommandStructure;
+  };
 }
 
 /**
@@ -576,12 +576,30 @@ function sanitizeFilePath(filePath: string, workingDir: string): string | null {
   if (filePath.includes('..')) return null;
   if (filePath.includes('\0')) return null;
 
+  const base = path.resolve(workingDir);
   const resolved = path.resolve(workingDir, filePath);
-  if (!resolved.startsWith(path.resolve(workingDir))) {
+  const relative = path.relative(base, resolved);
+  if (relative.startsWith('..') || path.isAbsolute(relative)) {
     return null;
   }
 
   return filePath;
+}
+
+function shellEscape(value: string): string {
+  if (/^[A-Za-z0-9_./:=@%+-]+$/.test(value)) {
+    return value;
+  }
+
+  return `'${value.replace(/'/g, `'\\''`)}'`;
+}
+
+function buildEscapedCommand(
+  task: ExecutionTask,
+  options: { engine: ExecutionEngineType; workingDir: string }
+): string {
+  const cmd = mapTaskToCommand(task, options);
+  return cmd.args.map(shellEscape).join(' ');
 }
 
 export function buildSequentialScript(
@@ -591,10 +609,7 @@ export function buildSequentialScript(
     workingDir: string;
   }
 ): string {
-  const scripts = tasks.map((task) => {
-    const cmd = mapTaskToCommand(task, options);
-    return cmd.args[1];
-  });
+  const scripts = tasks.map((task) => buildEscapedCommand(task, options));
 
   return scripts.join(' && ');
 }
@@ -606,10 +621,7 @@ export function buildParallelScript(
     workingDir: string;
   }
 ): string {
-  const scripts = tasks.map((task) => {
-    const cmd = mapTaskToCommand(task, options);
-    return cmd.args[1];
-  });
+  const scripts = tasks.map((task) => buildEscapedCommand(task, options));
 
   return scripts.join(' & ');
 }

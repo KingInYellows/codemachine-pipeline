@@ -382,11 +382,15 @@ export async function executeShellCommand(
   }
 ): Promise<{ exitCode: number; stdout: string; stderr: string; durationMs: number }> {
   const startTime = Date.now();
+  const redactedCommand = redactSecrets(command);
+  const envForChild: Record<string, string> = Object.fromEntries(
+    Object.entries(options.env).filter((entry): entry is [string, string] => entry[1] !== undefined)
+  );
 
   // Security check: Detect shell metacharacters
   if (SHELL_METACHARACTERS.test(command)) {
     options.logger?.warn('Command contains shell metacharacters - potential security risk', {
-      command,
+      command: redactedCommand,
       metacharacters_detected: true,
     });
   }
@@ -414,7 +418,7 @@ export async function executeShellCommand(
     // Execute command without shell (security: no shell interpretation)
     const { stdout, stderr } = await execFileAsync(executable, args, {
       cwd: options.cwd,
-      env: options.env as Record<string, string>,
+      env: envForChild,
       timeout: options.timeout,
       maxBuffer: 10 * 1024 * 1024, // 10MB buffer
       // CRITICAL: shell is NOT set (defaults to false), preventing command injection
@@ -434,7 +438,7 @@ export async function executeShellCommand(
     // Handle timeout (signal: 'SIGTERM')
     if (error && typeof error === 'object' && 'killed' in error && error.killed) {
       options.logger?.warn('Command timed out', {
-        command,
+        command: redactedCommand,
         timeout_ms: options.timeout,
         duration_ms: durationMs,
       });
@@ -464,7 +468,7 @@ export async function executeShellCommand(
     // Handle other errors
     const errorMessage = getErrorMessage(error);
     options.logger?.error('Command execution error', {
-      command,
+      command: redactedCommand,
       error: errorMessage,
     });
 

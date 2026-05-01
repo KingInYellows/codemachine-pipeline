@@ -84,7 +84,8 @@ function renderFlagsTable(flags) {
   for (const flag of entries) {
     const name = `\`--${flag.name}\``;
     const short = flag.char ? `\`-${flag.char}\`` : '';
-    const type = flag.type === 'boolean' ? 'boolean' : 'string';
+    const type =
+      flag.type === 'boolean' ? 'boolean' : Number.isInteger(flag.default) ? 'integer' : 'string';
     const desc = escapeTableCell(flag.description || '_No description_');
     const def = flag.default !== undefined ? `\`${escapeTableCell(flag.default)}\`` : '';
     const required = flag.required ? ' **(required)**' : '';
