@@ -48,6 +48,7 @@ oclif.manifest.json
 .codepipe/logs/
 .codepipe/metrics/
 .codepipe/telemetry/
+.codex-cloud/
 ISSUE_RESOLUTION_PLAN.md
 
 # Development artifacts (AI tooling, IDE plugins)

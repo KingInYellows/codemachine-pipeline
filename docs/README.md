@@ -152,11 +152,12 @@ Runbooks and operational procedures for pipeline administration and troubleshoot
 
 Guides for managing runtime components including queues, logging, and parallel execution.
 
-| Document                                                | Description                                                             |
-| ------------------------------------------------------- | ----------------------------------------------------------------------- |
-| [Queue V2 Operations](reference/queue-v2-operations.md) | Queue V2 architecture (WAL, HNSW indexing), monitoring, and maintenance |
-| [Log Rotation](playbooks/log-rotation.md)               | Log management, rotation policies, and retention                        |
-| [Parallel Execution](reference/parallel-execution.md)   | Concurrent task execution and resource management                       |
+| Document                                                        | Description                                                             |
+| --------------------------------------------------------------- | ----------------------------------------------------------------------- |
+| [Queue V2 Operations](reference/queue-v2-operations.md)         | Queue V2 architecture (WAL, HNSW indexing), monitoring, and maintenance |
+| [Log Rotation](playbooks/log-rotation.md)                       | Log management, rotation policies, and retention                        |
+| [Parallel Execution](reference/parallel-execution.md)           | Concurrent task execution and resource management                       |
+| [Codex Cloud Environment](reference/codex_cloud_environment.md) | Setup/maintenance model for online setup and offline agent phases       |
 
 ---
 
