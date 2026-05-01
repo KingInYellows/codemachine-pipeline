@@ -28,6 +28,7 @@
     "postbuild": "node scripts/tooling/oclif_manifest.js",
     "prebuild": "npm run clean",
     "clean": "node -e \"require('node:fs').rmSync('dist', { recursive: true, force: true })\"",
+    "worktree:setup": "node scripts/setup-worktree.js",
     "lint": "eslint . --ext .ts",
     "lint:fix": "eslint . --ext .ts --fix",
     "format": "prettier --write \"src/**/*.ts\" \"tests/**/*.ts\"",
