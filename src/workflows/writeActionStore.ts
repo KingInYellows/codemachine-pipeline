@@ -183,7 +183,7 @@ export class WriteActionStore {
         WriteActionQueueManifestSchema,
         JSON.parse(content),
         'write action queue manifest'
-      ) as WriteActionQueueManifest;
+      );
     } catch (error) {
       if (isFileNotFound(error)) {
         return {

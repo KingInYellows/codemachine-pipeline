@@ -46,9 +46,16 @@ npm ci
 npm run security:glob-guard
 npm run lint
 npm run format:check
+npm run exports:check
+npm run deps:check
 npm test
 npm run build
 ```
+
+`npm run exports:check` uses `config/unused-exports-baseline.json` to distinguish
+known dynamic/public API exports from newly introduced unused exports. Refresh the
+baseline with `npm run exports:baseline` only after reviewing why each added entry
+is intentional.
 
 Smoke tests (non-blocking in CI):
 

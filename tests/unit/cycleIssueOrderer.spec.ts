@@ -1,6 +1,9 @@
 import { describe, it, expect } from 'vitest';
 import { orderCycleIssues } from '../../src/workflows/cycleIssueOrderer';
-import type { LinearCycleIssue, LinearIssueRelation } from '../../src/adapters/linear/LinearAdapterTypes';
+import type {
+  LinearCycleIssue,
+  LinearIssueRelation,
+} from '../../src/adapters/linear/LinearAdapterTypes';
 
 function makeIssue(
   identifier: string,
@@ -25,10 +28,7 @@ function makeIssue(
   };
 }
 
-function blocksRelation(
-  blockerIdentifier: string,
-  blockedIdentifier: string
-): LinearIssueRelation {
+function blocksRelation(blockerIdentifier: string, blockedIdentifier: string): LinearIssueRelation {
   return {
     type: 'blocks',
     issue: { id: `id-${blockerIdentifier}`, identifier: blockerIdentifier },
@@ -79,10 +79,7 @@ describe('orderCycleIssues', () => {
     // A → B → D
     // A → C → D
     const issues = [
-      makeIssue('ENG-A', 1, [
-        blocksRelation('ENG-A', 'ENG-B'),
-        blocksRelation('ENG-A', 'ENG-C'),
-      ]),
+      makeIssue('ENG-A', 1, [blocksRelation('ENG-A', 'ENG-B'), blocksRelation('ENG-A', 'ENG-C')]),
       makeIssue('ENG-B', 3, [blocksRelation('ENG-B', 'ENG-D')]),
       makeIssue('ENG-C', 2, [blocksRelation('ENG-C', 'ENG-D')]),
       makeIssue('ENG-D', 4, []),
@@ -125,28 +122,29 @@ describe('orderCycleIssues', () => {
     // A ↔ B (cycle), B → C (downstream of cycle)
     const issues = [
       makeIssue('ENG-A', 3, [blocksRelation('ENG-A', 'ENG-B')]),
-      makeIssue('ENG-B', 2, [
-        blocksRelation('ENG-B', 'ENG-A'),
-        blocksRelation('ENG-B', 'ENG-C'),
-      ]),
+      makeIssue('ENG-B', 2, [blocksRelation('ENG-B', 'ENG-A'), blocksRelation('ENG-B', 'ENG-C')]),
       makeIssue('ENG-C', 4, []),
     ];
 
     const result = orderCycleIssues(issues);
     expect(result.hasCycle).toBe(true);
     expect(result.cycleInvolvedIds).toEqual(['ENG-A', 'ENG-B']);
-    expect(result.ordered.map((issue) => issue.identifier)).toEqual([
-      'ENG-A',
-      'ENG-B',
-      'ENG-C',
-    ]);
+    expect(result.ordered.map((issue) => issue.identifier)).toEqual(['ENG-A', 'ENG-B', 'ENG-C']);
   });
 
   it('ignores duplicate and related relations (only uses blocks)', () => {
     const issues = [
       makeIssue('ENG-1', 2, [
-        { type: 'duplicate', issue: { id: 'id-ENG-1', identifier: 'ENG-1' }, relatedIssue: { id: 'id-ENG-2', identifier: 'ENG-2' } },
-        { type: 'related', issue: { id: 'id-ENG-1', identifier: 'ENG-1' }, relatedIssue: { id: 'id-ENG-3', identifier: 'ENG-3' } },
+        {
+          type: 'duplicate',
+          issue: { id: 'id-ENG-1', identifier: 'ENG-1' },
+          relatedIssue: { id: 'id-ENG-2', identifier: 'ENG-2' },
+        },
+        {
+          type: 'related',
+          issue: { id: 'id-ENG-1', identifier: 'ENG-1' },
+          relatedIssue: { id: 'id-ENG-3', identifier: 'ENG-3' },
+        },
       ]),
       makeIssue('ENG-2', 4),
       makeIssue('ENG-3', 1),
@@ -194,11 +192,7 @@ describe('orderCycleIssues', () => {
   });
 
   it('preserves stable ordering for same-priority issues', () => {
-    const issues = [
-      makeIssue('ENG-1', 2),
-      makeIssue('ENG-2', 2),
-      makeIssue('ENG-3', 2),
-    ];
+    const issues = [makeIssue('ENG-1', 2), makeIssue('ENG-2', 2), makeIssue('ENG-3', 2)];
 
     const result = orderCycleIssues(issues);
     // All same priority — Array.sort is stable in V8, so input order preserved

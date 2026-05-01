@@ -219,7 +219,7 @@ npm run clean            # Remove dist/
   - The `no-useless-assignment` rule prohibits initializing variables that are immediately overwritten.
 - **Validation:** Runtime schemas use Zod (see ADR-7).
 - **Circular dependency detection:** `npm run deps:check` (madge). CI runs `npm run deps:check:ci` against a baseline.
-- **Unused exports:** `npm run exports:check` (ts-unused-exports).
+- **Unused exports:** `npm run exports:check` wraps `ts-unused-exports` with a reviewed baseline in `config/unused-exports-baseline.json`. The raw checker cannot infer dynamic oclif commands or package barrel exports, so the gate fails only when new unused exports appear outside the baseline. After deliberately removing or approving entries, refresh the baseline with `npm run exports:baseline` and review the diff.
 - **CLI reference:** Auto-generated from `oclif.manifest.json`. After adding or modifying commands, run `npm run docs:cli` and commit the updated `docs/reference/cli/cli-reference.md`. CI checks for drift via `npm run docs:cli:check`.
 
 Run these checks before submitting a PR:
@@ -227,6 +227,7 @@ Run these checks before submitting a PR:
 ```bash
 npm run format:check && npm run lint
 npm test
+npm run exports:check && npm run deps:check
 npm run docs:links:check
 npm run build
 ```

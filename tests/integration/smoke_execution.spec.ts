@@ -704,12 +704,13 @@ async function executeValidationCommands(validationDir: string): Promise<{
 }
 
 type ValidationCommandsSchema = { commands: Array<{ type: string }> };
+type JsonObject = { [key: string]: unknown };
 
 function isValidationCommandSchema(value: unknown): value is ValidationCommandsSchema {
   if (
     typeof value !== 'object' ||
     value === null ||
-    !Array.isArray((value as Record<string, unknown>).commands)
+    !Array.isArray((value as JsonObject).commands)
   ) {
     return false;
   }

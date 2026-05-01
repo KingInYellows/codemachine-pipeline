@@ -4,6 +4,8 @@ import * as path from 'node:path';
 import { afterEach, vi } from 'vitest';
 import { acquireLock, isLocked, releaseLock } from '../../../src/persistence/lockManager';
 
+vi.unmock('node:fs/promises');
+
 describe('lockManager', () => {
   let tempDir: string;
   let runDir: string;
@@ -20,7 +22,7 @@ describe('lockManager', () => {
 
   afterEach(() => {
     vi.resetModules();
-    vi.unmock('node:fs/promises');
+    vi.doUnmock('node:fs/promises');
   });
 
   it('replaces a stale lock before acquiring a new lock', async () => {

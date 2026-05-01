@@ -134,14 +134,7 @@ describe('queueSnapshotManager', () => {
       const tasks = { 'task-1': createTaskData('task-1') };
       const counts = createCounts({ total: 1, pending: 1 });
 
-      await saveSnapshot(
-        testDir,
-        'feature-123',
-        tasks as Record<string, ExecutionTask>,
-        counts,
-        10,
-        {}
-      );
+      await saveSnapshot(testDir, 'feature-123', tasks, counts, 10, {});
 
       const result = await loadSnapshot(testDir);
 

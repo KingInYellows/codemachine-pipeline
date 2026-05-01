@@ -63,8 +63,8 @@ export function serializeError(error: unknown): SerializedError {
         requestId: error.requestId,
         type: error.type,
         retryable: error.retryable,
-        headers: error.headers ? (toJson.headers as Record<string, string>) : undefined,
-        responseBody: error.responseBody ? (toJson.responseBody as string) : undefined,
+        headers: error.headers ? toJson.headers : undefined,
+        responseBody: error.responseBody ? toJson.responseBody : undefined,
         cause: error.cause ? serializeError(error.cause) : undefined,
       };
     } catch {

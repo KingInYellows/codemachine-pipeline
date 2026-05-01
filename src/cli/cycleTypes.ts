@@ -42,4 +42,3 @@ export function getCyclePayloadCounts(payload: CyclePayload): {
   const skipped = payload.orderedIssues.filter((i) => i.willSkip).length;
   return { totalIssues: total, processable: total - skipped, skipped };
 }
-

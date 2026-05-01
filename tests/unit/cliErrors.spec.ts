@@ -83,7 +83,7 @@ describe('formatErrorMessage', () => {
   });
 
   it('should return "Unknown error" for unstringifiable values', () => {
-    const circular: Record<string, unknown> = {};
+    const circular: { [key: string]: unknown } = {};
     circular.self = circular;
     expect(formatErrorMessage(circular)).toBe('Unknown error');
   });

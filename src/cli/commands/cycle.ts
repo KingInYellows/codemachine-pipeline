@@ -15,16 +15,8 @@ import {
 } from '../cycleOutput';
 import { type CycleFlags, type CyclePayload } from '../cycleTypes';
 import { findGitRoot } from '../startHelpers';
-import {
-  resolveRunDirectorySettings,
-  requireConfig,
-} from '../utils/runDirectory';
-import {
-  CliError,
-  CliErrorCode,
-  formatErrorJson,
-  setJsonOutputMode,
-} from '../utils/cliErrors';
+import { resolveRunDirectorySettings, requireConfig } from '../utils/runDirectory';
+import { CliError, CliErrorCode, formatErrorJson, setJsonOutputMode } from '../utils/cliErrors';
 
 function containsPathTraversal(value: string): boolean {
   return value.includes('..') || value.includes('/') || value.includes('\\');
@@ -146,8 +138,8 @@ export default class Cycle extends TelemetryCommand {
     await fs.mkdir(path.join(settings.baseDir, '.cycle-command'), { recursive: true });
 
     await this.runWithTelemetry(
-      { 
-        jsonMode: typedFlags.json, 
+      {
+        jsonMode: typedFlags.json,
         verbose: typedFlags.verbose,
         runDirPath: settings.baseDir,
       },
@@ -157,7 +149,7 @@ export default class Cycle extends TelemetryCommand {
 
         // Resolve cycle ID inside telemetry context to catch API errors properly
         if (!cycleId) {
-          const adapter = new LinearAdapter({ apiKey: apiKey! });
+          const adapter = new LinearAdapter({ apiKey: apiKey });
           const active = await adapter.fetchActiveCycle(teamId!);
           if (!active) {
             throw new CliError(
@@ -169,7 +161,7 @@ export default class Cycle extends TelemetryCommand {
         }
 
         // Validate cycle ID for path traversal
-        if (containsPathTraversal(cycleId!)) {
+        if (containsPathTraversal(cycleId)) {
           throw new CliError(
             'Cycle ID must not contain path traversal or path separator characters.',
             CliErrorCode.CONFIG_INVALID
@@ -177,17 +169,17 @@ export default class Cycle extends TelemetryCommand {
         }
 
         // Sanitize and create cycle directory
-        const sanitized = sanitizeCycleId(cycleId!);
+        const sanitized = sanitizeCycleId(cycleId);
         const cycleDir = path.join(settings.baseDir, `cycle-${sanitized}`);
         await fs.mkdir(cycleDir, { recursive: true });
 
         // Fetch cycle issues
         const adapter = new LinearAdapter({
-          apiKey: apiKey!,
+          apiKey: apiKey,
           runDir: cycleDir,
           ...(logger ? { logger } : {}),
         });
-        const snapshot = await adapter.fetchCycleIssues(cycleId!);
+        const snapshot = await adapter.fetchCycleIssues(cycleId);
         const cycle = snapshot.cycle;
 
         logger?.info('Cycle fetched', {

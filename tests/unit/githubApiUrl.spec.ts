@@ -19,6 +19,9 @@ describe('githubApiUrl', () => {
   it('classifies malformed URLs separately from custom enterprise URLs', () => {
     expect(classifyGitHubApiBaseUrl('not a url')).toBe('invalid');
     expect(classifyGitHubApiBaseUrl('https://github.example.com/api/v3')).toBe('custom');
+    expect(classifyGitHubApiBaseUrl('http://github.example.com/api/v3')).toBe('invalid');
+    expect(classifyGitHubApiBaseUrl('https://api.github.com/custom')).toBe('invalid');
+    expect(classifyGitHubApiBaseUrl('https://user:token@api.github.com')).toBe('invalid');
   });
 
   it('rejects custom GitHub API base URLs without explicit opt-in', () => {
@@ -55,6 +58,9 @@ describe('githubApiUrl', () => {
     expect(resolveGitHubApiBaseUrl(undefined)).toBe(DEFAULT_GITHUB_API_BASE_URL);
     expect(resolveGitHubApiBaseUrl(`${DEFAULT_GITHUB_API_BASE_URL}/`)).toBe(
       DEFAULT_GITHUB_API_BASE_URL
+    );
+    expect(resolveGitHubApiBaseUrl(`${DEFAULT_GITHUB_API_BASE_URL}/api/v3`)).toBe(
+      `${DEFAULT_GITHUB_API_BASE_URL}/api/v3/`
     );
   });
 });

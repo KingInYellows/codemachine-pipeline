@@ -18,9 +18,11 @@ vi.mock('../../src/telemetry/executionTelemetry.js', () => ({
 }));
 
 vi.mock('../../src/persistence/runLifecycle.js', () => ({
-  createRunDirectory: vi.fn().mockImplementation(async (_issuesDir: string, identifier: string) =>
-    `/tmp/test-run/issues/${identifier}`
-  ),
+  createRunDirectory: vi
+    .fn()
+    .mockImplementation(
+      async (_issuesDir: string, identifier: string) => `/tmp/test-run/issues/${identifier}`
+    ),
 }));
 
 const mockExecute = vi.fn();
@@ -35,14 +37,16 @@ vi.mock('../../src/cli/startHelpers.js', () => ({
   formatLinearContext: vi.fn().mockReturnValue('# Linear Issue Context\n...'),
 }));
 
-function makeIssue(overrides: Partial<{
-  id: string;
-  identifier: string;
-  title: string;
-  stateType: string;
-  stateName: string;
-  priority: number;
-}> = {}): LinearCycleIssue {
+function makeIssue(
+  overrides: Partial<{
+    id: string;
+    identifier: string;
+    title: string;
+    stateType: string;
+    stateName: string;
+    priority: number;
+  }> = {}
+): LinearCycleIssue {
   return {
     id: overrides.id ?? 'issue-1',
     identifier: overrides.identifier ?? 'CDMCH-101',
@@ -165,10 +169,7 @@ describe('CycleOrchestrator', () => {
   it('processes all issues sequentially', async () => {
     const config = makeConfig();
     const orchestrator = new CycleOrchestrator(config);
-    const issues = [
-      makeIssue({ identifier: 'CDMCH-101' }),
-      makeIssue({ identifier: 'CDMCH-102' }),
-    ];
+    const issues = [makeIssue({ identifier: 'CDMCH-101' }), makeIssue({ identifier: 'CDMCH-102' })];
 
     const result = await orchestrator.run(issues);
 
@@ -201,10 +202,7 @@ describe('CycleOrchestrator', () => {
 
     mockExecute.mockRejectedValueOnce(new Error('Pipeline failed'));
 
-    const issues = [
-      makeIssue({ identifier: 'CDMCH-101' }),
-      makeIssue({ identifier: 'CDMCH-102' }),
-    ];
+    const issues = [makeIssue({ identifier: 'CDMCH-101' }), makeIssue({ identifier: 'CDMCH-102' })];
 
     const result = await orchestrator.run(issues);
 
@@ -219,19 +217,14 @@ describe('CycleOrchestrator', () => {
     const config = makeConfig({ failFast: false });
     const orchestrator = new CycleOrchestrator(config);
 
-    mockExecute
-      .mockRejectedValueOnce(new Error('Pipeline failed'))
-      .mockResolvedValueOnce({
-        context: { files: 5, totalTokens: 1000, warnings: [] },
-        research: { tasksDetected: 0, pending: 0 },
-        prd: { path: 'prd.md', hash: 'abc', diagnostics: { incompleteSections: [], warnings: [] } },
-        approvalRequired: false,
-      });
+    mockExecute.mockRejectedValueOnce(new Error('Pipeline failed')).mockResolvedValueOnce({
+      context: { files: 5, totalTokens: 1000, warnings: [] },
+      research: { tasksDetected: 0, pending: 0 },
+      prd: { path: 'prd.md', hash: 'abc', diagnostics: { incompleteSections: [], warnings: [] } },
+      approvalRequired: false,
+    });
 
-    const issues = [
-      makeIssue({ identifier: 'CDMCH-101' }),
-      makeIssue({ identifier: 'CDMCH-102' }),
-    ];
+    const issues = [makeIssue({ identifier: 'CDMCH-101' }), makeIssue({ identifier: 'CDMCH-102' })];
 
     const result = await orchestrator.run(issues);
 
@@ -270,10 +263,7 @@ describe('CycleOrchestrator', () => {
     const config = makeConfig({ onIssueComplete });
     const orchestrator = new CycleOrchestrator(config);
 
-    const issues = [
-      makeIssue({ identifier: 'CDMCH-101' }),
-      makeIssue({ identifier: 'CDMCH-102' }),
-    ];
+    const issues = [makeIssue({ identifier: 'CDMCH-101' }), makeIssue({ identifier: 'CDMCH-102' })];
 
     const result = await orchestrator.run(issues);
 
@@ -348,9 +338,7 @@ describe('CycleOrchestrator', () => {
 
     await orchestrator.run([makeIssue()]);
 
-    expect(mockExecute).toHaveBeenCalledWith(
-      expect.objectContaining({ skipExecution: true })
-    );
+    expect(mockExecute).toHaveBeenCalledWith(expect.objectContaining({ skipExecution: true }));
   });
 
   it('handles empty issue list', async () => {

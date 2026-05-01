@@ -46,10 +46,15 @@ const executeShellCommandForTesting = async (
   try {
     const [executable, args] = parseCommandString(command);
     const execFileAsync = promisify(execFile);
+    const sanitizedEnv: Record<string, string> = Object.fromEntries(
+      Object.entries(options.env).filter(
+        (entry): entry is [string, string] => entry[1] !== undefined
+      )
+    );
 
     const { stdout, stderr } = await execFileAsync(executable, args, {
       cwd: options.cwd,
-      env: options.env as Record<string, string>,
+      env: sanitizedEnv,
       timeout: options.timeout,
       maxBuffer: 10 * 1024 * 1024,
     });

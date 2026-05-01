@@ -138,6 +138,7 @@ codepipe start --spec ./specs/new-feature.md
 | `codepipe doctor`            | Run environment diagnostics and readiness checks                   |
 | `codepipe health`            | Quick runtime health check                                         |
 | `codepipe approve <gate>`    | Approve or deny pipeline gates (prd, spec, plan, code, pr, deploy) |
+| `codepipe cycle`             | Plan and execute a Linear cycle                                    |
 | `codepipe plan`              | Display execution plan DAG and dependency graph                    |
 | `codepipe resume`            | Resume a failed or paused pipeline execution                       |
 | `codepipe validate`          | Run validation commands (lint, test, typecheck, build)             |
@@ -170,6 +171,8 @@ npm run lint          # ESLint
 npm run lint:fix      # ESLint with auto-fix
 npm run format        # Prettier
 npm run format:check  # Prettier check
+npm run exports:check # Guard against new unused public exports
+npm run deps:check    # Detect circular dependencies
 ```
 
 ### Local Development

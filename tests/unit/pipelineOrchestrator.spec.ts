@@ -176,7 +176,7 @@ describe('PipelineOrchestrator', () => {
           permanentlyFailedTasks: 0,
         }),
       } as never;
-    } as never);
+    });
   });
 
   it('completes PRD stages without executing tasks when skipExecution is true', async () => {
@@ -216,7 +216,7 @@ describe('PipelineOrchestrator', () => {
             completed_steps: 0,
           },
           status: 'initializing',
-        } as never) as ManifestUpdateSnapshot
+        }) as ManifestUpdateSnapshot
       );
     });
 
@@ -253,7 +253,7 @@ describe('PipelineOrchestrator', () => {
         }),
         execute,
       } as never;
-    } as never);
+    });
 
     const result = await orchestrator.execute({
       promptText: 'Run tasks',
@@ -291,7 +291,7 @@ describe('PipelineOrchestrator', () => {
         }),
         execute,
       } as never;
-    } as never);
+    });
 
     const result = await orchestrator.execute({
       promptText: 'Run tasks',
@@ -323,7 +323,7 @@ describe('PipelineOrchestrator', () => {
         validatePrerequisites,
         execute,
       } as never;
-    } as never);
+    });
 
     await expect(
       orchestrator.execute({

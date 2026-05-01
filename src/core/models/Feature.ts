@@ -131,7 +131,7 @@ export function parseFeature(json: unknown):
   if (result.success) {
     return {
       success: true,
-      data: result.data as Feature,
+      data: result.data,
     };
   }
 

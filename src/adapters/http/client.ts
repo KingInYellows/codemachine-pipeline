@@ -1,4 +1,4 @@
-import type { RequestInit, Response, HeadersInit } from 'undici-types';
+import type { RequestInit, Response } from 'undici-types';
 import { RateLimitLedger, type RateLimitEnvelope } from '../../telemetry/rateLimitLedger';
 import type { RateLimitRecorder } from './httpTypes.js';
 export type { RateLimitRecorder } from './httpTypes.js';
@@ -189,7 +189,7 @@ export class HttpClient {
 
     const baseFetchOptions: Omit<RequestInit, 'signal'> = {
       method,
-      headers: headers as HeadersInit,
+      headers: headers,
     };
     if (options.body) {
       baseFetchOptions.body = options.body;

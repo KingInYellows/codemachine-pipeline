@@ -1,0 +1,1061 @@
+{
+  "description": "Reviewed unused export baseline. The exports:check script fails only when ts-unused-exports reports entries outside this list.",
+  "generatedBy": "npm run exports:baseline",
+  "entries": {
+    "src/adapters/agents/AgentAdapter.ts": [
+      "AgentErrorSchema",
+      "CONTEXT_REQUIREMENTS",
+      "ExecutionContextSchema",
+      "MAX_RETRY_WAIT_SECONDS",
+      "SessionTelemetrySchema"
+    ],
+    "src/adapters/http/client.ts": [
+      "extractHeaders",
+      "generateIdempotencyKey",
+      "generateRequestId",
+      "RateLimitRecorder",
+      "sanitizeHeaders",
+      "sanitizeUrl",
+      "sleep",
+      "truncate"
+    ],
+    "src/adapters/index.ts": [
+      "AgentAdapter",
+      "AgentAdapterConfig",
+      "AgentAdapterError",
+      "AgentError",
+      "AgentErrorCategory",
+      "AgentManifest",
+      "AgentSessionRequest",
+      "AgentSessionResponse",
+      "AvailabilityResult",
+      "BinaryResolutionResult",
+      "BranchProtectionAdapter",
+      "BranchProtectionCompliance",
+      "BranchProtectionConfig",
+      "BranchProtectionError",
+      "BranchProtectionRestrictions",
+      "BranchProtectionRules",
+      "CheckRun",
+      "clearBinaryCache",
+      "CODEMACHINE_STRATEGY_NAMES",
+      "CodeMachineCLIAdapter",
+      "CodeMachineCLIAdapterOptions",
+      "CodeMachineEngineType",
+      "CodeMachineExecutionResult",
+      "CommitStatus",
+      "computeManifestHash",
+      "ContextCapabilityRequirements",
+      "CostConfig",
+      "createAgentAdapter",
+      "CreateBranchParams",
+      "createGitHubAdapter",
+      "createManifestLoader",
+      "CreatePullRequestParams",
+      "CycleSnapshot",
+      "CycleSnapshotSchema",
+      "Endpoint",
+      "ErrorTaxonomy",
+      "ErrorType",
+      "ExecutionContext",
+      "ExecutionContextConfig",
+      "ExecutionContextOverrides",
+      "Features",
+      "GitHubAdapter",
+      "GitHubAdapterConfig",
+      "GitHubAdapterError",
+      "GitReference",
+      "HttpClient",
+      "HttpClientConfig",
+      "HttpError",
+      "HttpRequestOptions",
+      "HttpResponse",
+      "IssueSnapshot",
+      "LinearAdapter",
+      "LinearAdapterConfig",
+      "LinearAdapterError",
+      "LinearComment",
+      "LinearCycle",
+      "LinearCycleIssue",
+      "LinearCycleIssueSchema",
+      "LinearCycleSchema",
+      "LinearIssue",
+      "LinearIssueRelation",
+      "LinearIssueRelationSchema",
+      "loadManifestFromFile",
+      "loadManifestLoaderFromRepo",
+      "ManifestLoader",
+      "ManifestValidationResult",
+      "mapTaskTypeToContext",
+      "matchesRequirements",
+      "MergePullRequestParams",
+      "MergeResult",
+      "ModelCostConfig",
+      "parseAgentManifest",
+      "PostCommentParams",
+      "Provider",
+      "ProviderInvoker",
+      "ProviderRequirements",
+      "PullRequest",
+      "PullRequestReview",
+      "rankByPrice",
+      "RateLimits",
+      "RepositoryInfo",
+      "RequestReviewersParams",
+      "RequiredPullRequestReviews",
+      "RequiredStatusChecks",
+      "resolveBinary",
+      "RetryPolicy",
+      "SessionTelemetry",
+      "SnapshotMetadata",
+      "StatusCheck",
+      "Tools",
+      "UpdateIssueParams",
+      "WorkflowDispatchParams"
+    ],
+    "src/adapters/linear/LinearAdapter.ts": [
+      "CycleSnapshot",
+      "IssueSnapshot",
+      "LinearAdapterConfig",
+      "LinearComment",
+      "LinearCycleIssue",
+      "LinearIssue",
+      "PostCommentParams",
+      "SnapshotMetadata",
+      "UpdateIssueParams"
+    ],
+    "src/cli/commands/approve.ts": [
+      "default"
+    ],
+    "src/cli/commands/context/summarize.ts": [
+      "default"
+    ],
+    "src/cli/commands/cycle.ts": [
+      "default"
+    ],
+    "src/cli/commands/doctor.ts": [
+      "default"
+    ],
+    "src/cli/commands/health.ts": [
+      "default"
+    ],
+    "src/cli/commands/init.ts": [
+      "default"
+    ],
+    "src/cli/commands/plan.ts": [
+      "default"
+    ],
+    "src/cli/commands/pr/create.ts": [
+      "default"
+    ],
+    "src/cli/commands/pr/disable-auto-merge.ts": [
+      "default"
+    ],
+    "src/cli/commands/pr/reviewers.ts": [
+      "default"
+    ],
+    "src/cli/commands/pr/status.ts": [
+      "default"
+    ],
+    "src/cli/commands/rate-limits.ts": [
+      "default"
+    ],
+    "src/cli/commands/research/create.ts": [
+      "default"
+    ],
+    "src/cli/commands/research/list.ts": [
+      "default"
+    ],
+    "src/cli/commands/resume.ts": [
+      "default"
+    ],
+    "src/cli/commands/start.ts": [
+      "default",
+      "getStartExitCode"
+    ],
+    "src/cli/commands/status/index.ts": [
+      "default",
+      "ManifestLoadResult",
+      "RunManifest",
+      "StatusBranchProtectionPayload",
+      "StatusContextPayload",
+      "StatusFlags",
+      "StatusIntegrationsPayload",
+      "StatusPayload",
+      "StatusPlanPayload",
+      "StatusRateLimitsPayload",
+      "StatusResearchPayload",
+      "StatusTraceabilityPayload",
+      "StatusValidationPayload",
+      "ValidationMismatch"
+    ],
+    "src/cli/commands/validate.ts": [
+      "default"
+    ],
+    "src/cli/cycleOutput.ts": [
+      "OutputCallbacks"
+    ],
+    "src/cli/cycleTypes.ts": [
+      "getCyclePayloadCounts"
+    ],
+    "src/cli/diagnostics.ts": [
+      "DiagnosticCheck"
+    ],
+    "src/cli/pr/shared.ts": [
+      "PRContext"
+    ],
+    "src/cli/startHelpers.ts": [
+      "prdApprovalRequired"
+    ],
+    "src/cli/status/data/index.ts": [
+      "attachCostTelemetry",
+      "attachSummarizationMetadata",
+      "DataLogger",
+      "loadManifestSnapshot",
+      "loadPRMetadata"
+    ],
+    "src/cli/status/renderers.ts": [
+      "RenderCallbacks"
+    ],
+    "src/cli/telemetryCommand.ts": [
+      "TelemetryCommandOptions",
+      "TelemetryContext",
+      "TelemetryResult"
+    ],
+    "src/cli/utils/cliErrors.ts": [
+      "CliErrorJsonPayload",
+      "CliErrorOptions",
+      "getDocsUrl"
+    ],
+    "src/cli/utils/runDirectory.ts": [
+      "DEFAULT_RUNS_DIR",
+      "findMostRecentRun"
+    ],
+    "src/cli/utils/writeActionQueueReporter.ts": [
+      "formatQueueStatusAsJSON",
+      "formatQueueStatusForCLI",
+      "formatWriteActionQueueCLIOutput",
+      "formatWriteActionQueueJSON",
+      "generateWriteActionQueueReport",
+      "getWriteActionQueueStatus",
+      "WriteActionQueueCLIOutputOptions",
+      "WriteActionQueueJsonPayload",
+      "WriteActionQueueReport"
+    ],
+    "src/core/config/RepoConfig.ts": [
+      "addConfigHistoryEntry",
+      "applyEnvironmentOverrides",
+      "ConfigHistoryEntry",
+      "ConfigHistoryEntrySchema",
+      "Constraints",
+      "ConstraintsSchema",
+      "ExecutionConfigSchema",
+      "FeatureFlags",
+      "FeatureFlagsSchema",
+      "GitHub",
+      "GitHubSchema",
+      "Governance",
+      "GovernanceSchema",
+      "Linear",
+      "LinearSchema",
+      "Project",
+      "ProjectSchema",
+      "Runtime",
+      "RuntimeSchema",
+      "Safety",
+      "SafetySchema",
+      "ValidationSettings",
+      "ValidationSettingsSchema"
+    ],
+    "src/core/config/RepoConfigDefaults.ts": [
+      "DEFAULT_GITHUB_API_VERSION"
+    ],
+    "src/core/config/validator.ts": [
+      "checkSchemaCompatibility",
+      "ExtendedValidationResult",
+      "formatExtendedValidationResult",
+      "formatValidationErrors",
+      "loadRepoConfig",
+      "RepoConfigSchema",
+      "validateEnvironmentVariables",
+      "validateRepoConfig",
+      "ValidatorOptions"
+    ],
+    "src/core/errors.ts": [
+      "ErrorType"
+    ],
+    "src/core/models/AgentProviderCapability.ts": [
+      "serializeAgentProviderCapability"
+    ],
+    "src/core/models/ArtifactBundle.ts": [
+      "serializeArtifactBundle"
+    ],
+    "src/core/models/index.ts": [
+      "addArtifact",
+      "addChangeLogEntry",
+      "AgentProviderCapability",
+      "AgentProviderCapabilitySchema",
+      "allReviewsApproved",
+      "allStatusChecksPassed",
+      "ApprovalGateType",
+      "ApprovalGateTypeSchema",
+      "ApprovalRecord",
+      "ApprovalRecordSchema",
+      "Approvals",
+      "ApprovalVerdict",
+      "ApprovalVerdictSchema",
+      "areDependenciesCompleted",
+      "ArtifactBundle",
+      "ArtifactBundleSchema",
+      "ArtifactRecord",
+      "ArtifactReferences",
+      "ArtifactType",
+      "ArtifactTypeSchema",
+      "BranchProtectionReport",
+      "BranchProtectionReportSchema",
+      "canRetry",
+      "ChangeLogEntry",
+      "ContextDocument",
+      "ContextDocumentSchema",
+      "ContextFileRecord",
+      "ContextSummary",
+      "CostTracking",
+      "createApprovalRecord",
+      "createContextDocument",
+      "createDeploymentRecord",
+      "createExecutionTask",
+      "createFeature",
+      "createPlanArtifact",
+      "createRateLimitEnvelope",
+      "createResearchTask",
+      "createRunArtifact",
+      "createSpecification",
+      "DAGMetadata",
+      "DeploymentRecord",
+      "DeploymentRecordSchema",
+      "DeploymentStatus",
+      "DeploymentStatusSchema",
+      "ExecutionTask",
+      "ExecutionTaskSchema",
+      "ExecutionTaskStatus",
+      "ExecutionTaskStatusSchema",
+      "ExecutionTaskType",
+      "ExecutionTaskTypeSchema",
+      "ExecutionTracking",
+      "Feature",
+      "FeatureSchema",
+      "FeatureStatus",
+      "FeatureStatusSchema",
+      "formatExecutionTaskValidationErrors",
+      "formatFeatureValidationErrors",
+      "formatPlanArtifactValidationErrors",
+      "formatResearchTaskValidationErrors",
+      "formatRunArtifactValidationErrors",
+      "formatSpecificationValidationErrors",
+      "FreshnessRequirement",
+      "generateCacheKey",
+      "getArtifactsByType",
+      "getDependentTasks",
+      "getEntryTasks",
+      "getPendingReviewers",
+      "getTaskDuration",
+      "getTimeUntilReset",
+      "getTotalArtifactSize",
+      "IntegrationCredential",
+      "IntegrationCredentialSchema",
+      "isCachedResultFresh",
+      "isFullyApproved",
+      "isRateLimited",
+      "isReadyToMerge",
+      "LastError",
+      "NotificationEvent",
+      "NotificationEventSchema",
+      "parseAgentProviderCapability",
+      "parseApprovalRecord",
+      "parseArtifactBundle",
+      "parseContextDocument",
+      "parseDeploymentRecord",
+      "parseExecutionTask",
+      "parseFeature",
+      "parseIntegrationCredential",
+      "parseNotificationEvent",
+      "parsePlanArtifact",
+      "parseRateLimitEnvelope",
+      "parseResearchTask",
+      "parseRunArtifact",
+      "parseSpecification",
+      "parseTraceLink",
+      "PlanArtifact",
+      "PlanArtifactSchema",
+      "ProvenanceData",
+      "RateLimitBudget",
+      "RateLimitEnvelope",
+      "RateLimitEnvelopeSchema",
+      "RateLimitReferences",
+      "removeArtifact",
+      "RepoMetadata",
+      "ResearchResult",
+      "ResearchSource",
+      "ResearchStatus",
+      "ResearchStatusSchema",
+      "ResearchTask",
+      "ResearchTaskSchema",
+      "ReviewerInfo",
+      "ReviewRecord",
+      "RiskAssessment",
+      "RolloutPlan",
+      "RunArtifact",
+      "RunArtifactSchema",
+      "serializeApprovalRecord",
+      "serializeContextDocument",
+      "serializeDeploymentRecord",
+      "serializeExecutionTask",
+      "serializeFeature",
+      "serializePlanArtifact",
+      "serializeRateLimitEnvelope",
+      "serializeResearchTask",
+      "serializeRunArtifact",
+      "serializeSpecification",
+      "Specification",
+      "SpecificationSchema",
+      "SpecificationStatus",
+      "SpecificationStatusSchema",
+      "StatusCheck",
+      "TaskDependency",
+      "TaskError",
+      "TaskNode",
+      "TelemetryReferences",
+      "TestPlanItem",
+      "Timestamps",
+      "TraceLink",
+      "TraceLinkSchema",
+      "validateDAG"
+    ],
+    "src/core/models/IntegrationCredential.ts": [
+      "serializeIntegrationCredential"
+    ],
+    "src/core/models/modelParser.ts": [
+      "ModelParseFailure",
+      "ModelParseResult",
+      "ModelParseSuccess"
+    ],
+    "src/core/models/NotificationEvent.ts": [
+      "serializeNotificationEvent"
+    ],
+    "src/core/models/TraceLink.ts": [
+      "serializeTraceLink"
+    ],
+    "src/core/sharedTypes.ts": [
+      "CommonLogContext",
+      "isSerializedError"
+    ],
+    "src/core/validation/validationCommandConfig.ts": [
+      "ValidationCommandTypeSchema",
+      "ValidationTemplateContext"
+    ],
+    "src/index.ts": [
+      "run"
+    ],
+    "src/persistence/index.ts": [
+      "acquireLock",
+      "appendTaskLog",
+      "CleanupHook",
+      "clearLastError",
+      "createFileHashRecord",
+      "createHashManifest",
+      "createRunDirectory",
+      "CreateRunDirectoryOptions",
+      "ensureResearchDirectories",
+      "ensureSubdirectories",
+      "FileHashRecord",
+      "FileHashResult",
+      "filterManifest",
+      "findCachedTask",
+      "generateHashManifest",
+      "getManifestFilePaths",
+      "getManifestTotalSize",
+      "getResearchDirectory",
+      "getRunDirectoryPath",
+      "getRunState",
+      "getTaskFilePath",
+      "getTasksDirectory",
+      "getTasksLogPath",
+      "HashManifestResult",
+      "isCachedTaskFresh",
+      "isEligibleForCleanup",
+      "isLocked",
+      "listRunDirectories",
+      "listTaskIds",
+      "loadTask",
+      "LockOptions",
+      "ManifestUpdate",
+      "markApprovalCompleted",
+      "markApprovalRequired",
+      "registerCleanupHook",
+      "releaseLock",
+      "removeFromHashManifest",
+      "runDirectoryExists",
+      "RunManifest",
+      "saveTask",
+      "setCurrentStep",
+      "setLastError",
+      "setLastStep",
+      "STALE_LOCK_THRESHOLD_MS",
+      "updateHashManifest",
+      "VerificationResult",
+      "verifyFileHash",
+      "verifyHashManifest",
+      "verifyRunDirectoryIntegrity"
+    ],
+    "src/persistence/lockManager.ts": [
+      "_resetInProcessQueue"
+    ],
+    "src/persistence/manifestManager.ts": [
+      "RunManifestSchema"
+    ],
+    "src/telemetry/executionMetrics.ts": [
+      "ExecutionMetrics",
+      "ExecutionMetricsOptions"
+    ],
+    "src/telemetry/executionTelemetry.ts": [
+      "ExecutionTelemetryOptions"
+    ],
+    "src/telemetry/index.ts": [
+      "ActiveSpan",
+      "BudgetConfig",
+      "BudgetWarning",
+      "CostEntry",
+      "CostTracker",
+      "CostTrackerState",
+      "createCliLogger",
+      "createConsoleLogger",
+      "createExecutionMetrics",
+      "createExecutionTelemetry",
+      "createHttpLogger",
+      "createLogger",
+      "createQueueLogger",
+      "createRateLimitLedger",
+      "createRunMetricsCollector",
+      "createRunTraceManager",
+      "createTraceManager",
+      "ExecutionTelemetry",
+      "Labels",
+      "loadOrCreateCostTracker",
+      "LogEntry",
+      "LoggerInterface",
+      "LoggerOptions",
+      "LogLevel",
+      "MetricSample",
+      "MetricsCollector",
+      "MetricsCollectorOptions",
+      "MetricType",
+      "ProviderCostConfig",
+      "ProviderCostSummary",
+      "RateLimitReporter",
+      "Span",
+      "SpanEvent",
+      "SpanKind",
+      "SpanStatusCode",
+      "StandardMetrics",
+      "StructuredLogger",
+      "TraceContext",
+      "TraceManager",
+      "TraceManagerOptions",
+      "withSpan",
+      "withSpanSync"
+    ],
+    "src/telemetry/logger.ts": [
+      "RedactionReport"
+    ],
+    "src/telemetry/logWriters.ts": [
+      "DiffContext",
+      "ExecutionLogWriterOptions",
+      "TaskContext",
+      "ValidationContext"
+    ],
+    "src/telemetry/metrics.ts": [
+      "HistogramBucket",
+      "HistogramData"
+    ],
+    "src/telemetry/rateLimitLedger.ts": [
+      "RateLimitLedgerData",
+      "writeRateLimitLedger"
+    ],
+    "src/telemetry/rateLimitReporter.ts": [
+      "ProviderRateLimitReport",
+      "RateLimitCLIOutputOptions"
+    ],
+    "src/utils/githubApiUrl.ts": [
+      "DEFAULT_GITHUB_API_BASE_URL",
+      "GitHubApiBaseUrlStatus"
+    ],
+    "src/utils/index.ts": [
+      "classifyError",
+      "getErrorMessage",
+      "isProcessRunning",
+      "ProcessStatus",
+      "serializeError",
+      "wrapError"
+    ],
+    "src/utils/processRunner.ts": [
+      "DEFAULT_MAX_BUFFER_SIZE",
+      "ProcessRunOptions",
+      "ProcessRunResult"
+    ],
+    "src/utils/redaction.ts": [
+      "CREDENTIAL_PATTERNS"
+    ],
+    "src/utils/safeJson.ts": [
+      "isJsonParseError",
+      "SafeJsonFileResult",
+      "safeJsonParseValidated",
+      "safeJsonParseWithResult",
+      "safeJsonReadFile",
+      "SafeJsonResult"
+    ],
+    "src/validation/errors.ts": [
+      "ValidationIssue"
+    ],
+    "src/validation/helpers.ts": [
+      "ValidationFailure",
+      "ValidationResult",
+      "ValidationSuccess"
+    ],
+    "src/workflows/approvalRegistry.ts": [
+      "ApprovalsFile",
+      "ApprovalValidationResult",
+      "requestApproval",
+      "RequestApprovalOptions",
+      "validateApprovalForTransition"
+    ],
+    "src/workflows/autoFixEngine.ts": [
+      "applyCommandTemplate",
+      "buildCommandTemplateContext",
+      "BUILTIN_TEMPLATE_CONTEXT_KEYS",
+      "DANGEROUS_PATH_METACHARACTERS",
+      "resolveRepoRoot",
+      "resolveWorkingDirectory",
+      "saveCommandOutput",
+      "SHELL_METACHARACTERS",
+      "sleep",
+      "TEMPLATE_VALUE_METACHARACTERS"
+    ],
+    "src/workflows/branchComplianceChecker.ts": [
+      "BranchProtectionDataSource"
+    ],
+    "src/workflows/branchManager.ts": [
+      "BranchConfig",
+      "branchExists",
+      "BranchMetadata",
+      "BranchSyncStatus",
+      "createBranch",
+      "CreateBranchOptions",
+      "CreateBranchResult",
+      "createSafeCommit",
+      "generateBranchName",
+      "getAheadBehindCounts",
+      "getBranchSyncStatus",
+      "getCommitSha",
+      "getCurrentBranch",
+      "getRemoteUrl",
+      "getTrackingBranch",
+      "isProtectedBranch",
+      "loadBranchMetadata",
+      "pushBranch",
+      "PushBranchResult",
+      "saveBranchMetadata",
+      "updateBranchMetadata",
+      "validateBranchName"
+    ],
+    "src/workflows/branchProtectionReporter.ts": [
+      "BranchProtectionReportSchema",
+      "BranchProtectionSummary",
+      "canProceedWithDeployment",
+      "formatBlockers",
+      "formatSummary",
+      "getRecommendedAction"
+    ],
+    "src/workflows/cliExecutionEngine.ts": [
+      "ExecutionEngineOptions",
+      "ExecutionResult"
+    ],
+    "src/workflows/codeMachineRunner.ts": [
+      "EXIT_CODES",
+      "ExitCode",
+      "isRecoverable",
+      "isSuccess",
+      "validateCliPath"
+    ],
+    "src/workflows/codeMachineStrategy.ts": [
+      "CodeMachineStrategy",
+      "CodeMachineStrategyOptions"
+    ],
+    "src/workflows/commandRunner.ts": [
+      "escapeForCharacterClass",
+      "parseCommandString"
+    ],
+    "src/workflows/contextAggregator.ts": [
+      "AggregationResult",
+      "getGitMetadata",
+      "GitMetadata",
+      "resolveAggregatorConfig"
+    ],
+    "src/workflows/contextRanking.ts": [
+      "calculateCompositeScore",
+      "getExclusionSummary",
+      "scoreByFileType",
+      "scoreByGitRecency",
+      "scoreByPathDepth",
+      "scoreBySize"
+    ],
+    "src/workflows/contextSummarizer.ts": [
+      "BatchSummarizationResult",
+      "chunkFile",
+      "ChunkMetadata",
+      "FileChunk",
+      "generateChunkId",
+      "summarizeMultiple",
+      "SummaryResponse"
+    ],
+    "src/workflows/cycleIssueOrderer.ts": [
+      "OrderingResult"
+    ],
+    "src/workflows/deployment/execution.ts": [
+      "buildMetadata"
+    ],
+    "src/workflows/deployment/index.ts": [
+      "ApprovalState",
+      "assessMergeReadiness",
+      "Blocker",
+      "DEPLOYMENT_SCHEMA_VERSION",
+      "DeploymentConfig",
+      "DeploymentContext",
+      "DeploymentHistory",
+      "DeploymentHistorySchema",
+      "DeploymentOptions",
+      "DeploymentOutcome",
+      "DeploymentOutcomeSchema",
+      "DeploymentStrategy",
+      "loadDeploymentContext",
+      "MergeReadiness",
+      "persistDeploymentOutcome",
+      "selectDeploymentStrategy",
+      "triggerDeployment",
+      "TriggerDeploymentInput",
+      "WorkflowDispatchConfig"
+    ],
+    "src/workflows/executionArtifactCapture.ts": [
+      "isPathContained"
+    ],
+    "src/workflows/executionEngineFactory.ts": [
+      "BuildExecutionEngineParams",
+      "ExecutionEngineBundle"
+    ],
+    "src/workflows/index.ts": [
+      "CODEMACHINE_STRATEGY_NAMES",
+      "CodeMachineCLIStrategy",
+      "CodeMachineCLIStrategyOptions",
+      "CodeMachineEngineType",
+      "CodeMachineEngineTypeSchema",
+      "CodeMachineExecutionResult",
+      "createCodeMachineCLIStrategy",
+      "ExecutionContext",
+      "ExecutionStrategy",
+      "ExecutionStrategyResult"
+    ],
+    "src/workflows/patchManager.ts": [
+      "applyPatch",
+      "applyPatchWithStateManagement",
+      "ConstraintViolation",
+      "createRollbackSnapshot",
+      "DryRunResult",
+      "extractAffectedFiles",
+      "generateDiffSummary",
+      "getCurrentGitRef",
+      "isWorkingTreeClean",
+      "Patch",
+      "PatchApplicationResult",
+      "PatchConfig",
+      "validateFileConstraints",
+      "validatePatchDryRun"
+    ],
+    "src/workflows/pipelineOrchestrator.ts": [
+      "PipelineInput",
+      "PipelineOrchestratorConfig",
+      "PipelineResult"
+    ],
+    "src/workflows/plannerDAG.ts": [
+      "PlanArtifactReadSchema"
+    ],
+    "src/workflows/plannerPersistence.ts": [
+      "PlanMetadataSchema"
+    ],
+    "src/workflows/prdAuthoringEngine.ts": [
+      "getPRDApprovals",
+      "isPRDApproved",
+      "loadPRDMetadata",
+      "PRDAuthoringConfig",
+      "PRDAuthoringResult",
+      "PRDMetadata",
+      "PRDSection",
+      "PRDSectionType",
+      "RecordApprovalOptions",
+      "recordPRDApproval"
+    ],
+    "src/workflows/queue/index.ts": [
+      "appendToQueue",
+      "buildDependencyGraph",
+      "createQueueSnapshot",
+      "exportV2State",
+      "forceCompactV2",
+      "getFailedTasks",
+      "getNextTask",
+      "getPendingTasks",
+      "getQueueCountsV2",
+      "getQueueIntegrityMode",
+      "getReadyTasksV2",
+      "getTaskById",
+      "getV2IndexCache",
+      "getV2IndexState",
+      "initializeQueue",
+      "initializeQueueFromPlan",
+      "invalidateQueueRunState",
+      "invalidateV2Cache",
+      "loadQueue",
+      "loadQueueSnapshot",
+      "loadQueueV2",
+      "PlanTask",
+      "QueueIntegrityError",
+      "QueueIntegrityErrorKind",
+      "QueueIntegrityMode",
+      "QueueIntegrityResult",
+      "QueueManifest",
+      "QueueOperationResult",
+      "QueueSnapshot",
+      "QueueValidationResult",
+      "TaskPlan",
+      "toExecutionTask",
+      "toExecutionTaskData",
+      "updateTaskInQueue",
+      "updateTaskInQueueV2",
+      "validateQueue",
+      "verifyQueueIntegrity"
+    ],
+    "src/workflows/queue/queueCache.ts": [
+      "V2IndexCache"
+    ],
+    "src/workflows/queue/queueCompactionEngine.ts": [
+      "maybeCompact",
+      "pruneCompletedTasks"
+    ],
+    "src/workflows/queue/queueMemoryIndex.ts": [
+      "applyOperation",
+      "clearIndex",
+      "getNextReadyTask",
+      "getOperationsSinceSnapshot",
+      "getTasksByStatus",
+      "isDirty",
+      "markDirty",
+      "recalculateCounts",
+      "removeTask",
+      "repairCounts",
+      "validateCounts"
+    ],
+    "src/workflows/queue/queueOperationsLog.ts": [
+      "appendOperationLocked",
+      "appendOperationsBatchLocked",
+      "computeOperationChecksum",
+      "getLastSequence",
+      "initializeOperationsLog",
+      "ReadOperationsResult",
+      "truncateOperationsLog",
+      "truncateOperationsLogLocked",
+      "verifyOperationChecksum"
+    ],
+    "src/workflows/queue/queueSnapshotManager.ts": [
+      "computeSnapshotChecksum",
+      "deleteSnapshot",
+      "saveSnapshotLocked",
+      "snapshotExists",
+      "verifySnapshotChecksum"
+    ],
+    "src/workflows/queue/queueStore.ts": [
+      "buildDependencyGraph",
+      "exportV2State",
+      "forceCompactV2",
+      "getFailedTasks",
+      "getNextTask",
+      "getPendingTasks",
+      "getQueueCountsV2",
+      "getQueueIntegrityMode",
+      "getReadyTasksV2",
+      "getTaskById",
+      "getV2IndexCache",
+      "getV2IndexState",
+      "invalidateV2Cache",
+      "QueueIntegrityResult",
+      "toExecutionTask",
+      "toExecutionTaskData",
+      "updateTaskInQueueV2",
+      "verifyQueueIntegrity"
+    ],
+    "src/workflows/queue/queueTypes.ts": [
+      "QueueOperationType"
+    ],
+    "src/workflows/researchCoordinator.ts": [
+      "CompleteTaskResult",
+      "initializeResearchDirectory",
+      "ManualUnknownInput",
+      "QueueTaskResult",
+      "ResearchCoordinator",
+      "ResearchCoordinatorConfig"
+    ],
+    "src/workflows/researchDetection.ts": [
+      "buildDetectionTitle",
+      "DEFAULT_MAX_UNKNOWN_PER_FILE",
+      "DETECTION_PATTERNS",
+      "DetectionPattern",
+      "isLikelyTextFile",
+      "isManualUnknownObject",
+      "isResearchSource",
+      "normalizeUnknownSnippet",
+      "readContextFile",
+      "resolveRepoPath",
+      "TEXT_FILE_EXTENSIONS",
+      "truncateSnippet",
+      "UnknownOriginType"
+    ],
+    "src/workflows/resultNormalizer.ts": [
+      "categorizeError",
+      "createResultSummary",
+      "ErrorCategory",
+      "extractSummary",
+      "formatErrorMessage",
+      "isRecoverableError",
+      "isValidArtifactPath",
+      "redactCredentials"
+    ],
+    "src/workflows/resumeCoordinator.ts": [
+      "checkIntegrity",
+      "DiagnosticSeverity",
+      "getResumableTasks",
+      "QueueSnapshotMetadata",
+      "ResumeAnalysis",
+      "ResumeDiagnostic",
+      "validateQueueSnapshot",
+      "VerificationResult"
+    ],
+    "src/workflows/resumeTypes.ts": [
+      "DiagnosticCode"
+    ],
+    "src/workflows/runStateVerifier.ts": [
+      "classifyErrorMessage",
+      "DiagnosticSeverity",
+      "ResumeAnalysis",
+      "ResumeDiagnostic",
+      "ResumeOptions"
+    ],
+    "src/workflows/specComposer.ts": [
+      "composeSpecification",
+      "SpecComposerConfig",
+      "SpecComposerResult"
+    ],
+    "src/workflows/specParsing.ts": [
+      "PRDSections"
+    ],
+    "src/workflows/specStore.ts": [
+      "getSpecApprovals",
+      "isSpecApproved",
+      "recordSpecApproval",
+      "RecordSpecApprovalOptions"
+    ],
+    "src/workflows/strategyHelpers.ts": [
+      "BuildStrategyResultOverrides",
+      "mapExitToStatus"
+    ],
+    "src/workflows/summaryOrchestration.ts": [
+      "ChunkProcessResult"
+    ],
+    "src/workflows/taskMapper.ts": [
+      "ALLOWED_COMMANDS",
+      "ALLOWED_SUBCOMMANDS",
+      "AllowedCommand",
+      "AllowedSubcommand",
+      "assertEngineSupported",
+      "buildCommandArgs",
+      "BuildCommandArgsOptions",
+      "buildParallelScript",
+      "buildSequentialScript",
+      "CodeMachineCommand",
+      "CommandStructure",
+      "createStatusCommand",
+      "createStepCommand",
+      "getCommandStructure",
+      "getSupportedEngines",
+      "isEngineSupported",
+      "isValidCommand",
+      "isValidSubcommand",
+      "mapResultToTaskUpdate",
+      "mapTaskToCommand",
+      "TaskExecutionResult",
+      "validateCommandStructure",
+      "WorkflowMapping"
+    ],
+    "src/workflows/taskPlanner.ts": [
+      "collectMissingDepBlockers",
+      "computePlanChecksum",
+      "generateExecutionPlan",
+      "loadExistingPlanIfPresent",
+      "loadTraceabilityTaskIds",
+      "parsePlanArtifactForRead",
+      "persistPlan",
+      "PlanMetadata",
+      "TaskPlannerConfig",
+      "TaskPlannerResult"
+    ],
+    "src/workflows/taskPlannerGraph.ts": [
+      "buildTaskTypeBreakdown",
+      "PlanDiagnostics"
+    ],
+    "src/workflows/traceabilityMapper.ts": [
+      "generateTraceMap",
+      "TraceMapperConfig",
+      "TraceMapperResult",
+      "TraceSummary"
+    ],
+    "src/workflows/validationRegistry.ts": [
+      "getValidationAttempts"
+    ],
+    "src/workflows/validationStore.ts": [
+      "LEDGER_FILE_NAME",
+      "LEDGER_SCHEMA_VERSION",
+      "REGISTRY_FILE_NAME",
+      "VALIDATION_DIR_NAME",
+      "ValidationAttemptSchema",
+      "ValidationCommandConfig",
+      "ValidationLedgerSchema",
+      "ValidationRegistrySchema"
+    ],
+    "src/workflows/writeActionQueue.ts": [
+      "ActionExecutor",
+      "createWriteActionQueue",
+      "WriteAction",
+      "WriteActionOperationResult",
+      "WriteActionPayload",
+      "WriteActionQueue",
+      "WriteActionQueueConfig",
+      "WriteActionStatus",
+      "WriteActionType"
+    ],
+    "src/workflows/writeActionRateLimiter.ts": [
+      "CooldownStatus"
+    ],
+    "src/workflows/writeActionStore.ts": [
+      "MANIFEST_FILE",
+      "QUEUE_FILE",
+      "QUEUE_SUBDIR",
+      "SCHEMA_VERSION",
+      "WriteActionStoreConfig"
+    ]
+  }
+}

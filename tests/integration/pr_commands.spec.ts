@@ -26,7 +26,8 @@ import {
 } from '../../src/cli/pr/shared';
 import type { RunManifest } from '../../src/persistence/manifestManager';
 
-const parseJson = <T>(value: string): T => JSON.parse(value) as unknown as T;
+const parseJson = <T>(value: string): T => JSON.parse(value);
+type JsonObject = { [key: string]: unknown };
 
 // Test fixtures
 let TEST_RUN_DIR: string;
@@ -259,7 +260,7 @@ describe('PR Commands Integration Tests', () => {
       };
 
       const output = renderPROutput(data, true);
-      const parsed = parseJson<Record<string, unknown>>(output);
+      const parsed = parseJson<JsonObject>(output);
 
       // Verify stable ordering (alphabetical by key)
       const keys = Object.keys(parsed);
@@ -460,7 +461,7 @@ describe('PR Commands Integration Tests', () => {
       };
 
       const output = renderPROutput(data, true);
-      const parsed = parseJson<{ nested: Record<string, unknown> }>(output);
+      const parsed = parseJson<{ nested: JsonObject }>(output);
 
       const nestedKeys = Object.keys(parsed.nested);
       expect(nestedKeys).toEqual(['a', 'm', 'z']);

@@ -28,6 +28,9 @@ import type { RateLimitLedger } from '../../src/telemetry/rateLimitLedger';
 
 // Mock HTTP client responses
 type MockFunction = ReturnType<typeof vi.fn>;
+type MockMetadata = { [key: string]: unknown };
+type MockVariables = { [key: string]: unknown };
+
 interface MockHttpClient {
   get: MockFunction;
   post: MockFunction;
@@ -212,8 +215,7 @@ describe('LinearAdapter Integration Tests', () => {
       const [path, body, options] = mockHttpClient.post.mock.calls[0] as [
         string,
         { query: string; variables: { issueId: string } },
-        // eslint-disable-next-line @typescript-eslint/no-restricted-types -- HTTP metadata varies per request
-        { metadata?: Record<string, unknown> },
+        { metadata?: MockMetadata },
       ];
       expect(path).toBe('/graphql');
       expect(body.query).toContain('query GetIssue');
@@ -239,7 +241,7 @@ describe('LinearAdapter Integration Tests', () => {
       const [, commentsBody, commentsOptions] = mockHttpClient.post.mock.calls[0] as [
         string,
         { query: string; variables: { issueId: string } },
-        { metadata?: Record<string, unknown> },
+        { metadata?: MockMetadata },
       ];
       expect(commentsBody.query).toContain('query GetComments');
       expect(commentsBody.variables).toEqual({ issueId: MOCK_LINEAR_ISSUE.id });
@@ -706,8 +708,8 @@ describe('LinearAdapter Integration Tests', () => {
       expect(mockHttpClient.post).toHaveBeenCalled();
       const [updatePath, updateBody, updateOptions] = mockHttpClient.post.mock.calls[0] as [
         string,
-        { query: string; variables: Record<string, unknown> },
-        { metadata?: Record<string, unknown> },
+        { query: string; variables: MockVariables },
+        { metadata?: MockMetadata },
       ];
       expect(updatePath).toBe('/graphql');
       expect(updateBody.query).toContain('mutation UpdateIssue');
@@ -742,8 +744,8 @@ describe('LinearAdapter Integration Tests', () => {
       expect(mockHttpClient.post).toHaveBeenCalled();
       const [commentPath, commentBody, commentOptions] = mockHttpClient.post.mock.calls[0] as [
         string,
-        { query: string; variables: Record<string, unknown> },
-        { metadata?: Record<string, unknown> },
+        { query: string; variables: MockVariables },
+        { metadata?: MockMetadata },
       ];
       expect(commentPath).toBe('/graphql');
       expect(commentBody.query).toContain('mutation PostComment');

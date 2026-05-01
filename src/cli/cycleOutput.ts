@@ -30,17 +30,23 @@ function formatDuration(ms: number): string {
 
 function statusIcon(status: CycleIssueResult['status']): string {
   switch (status) {
-    case 'completed': return CHECK;
-    case 'failed': return CROSS;
-    case 'skipped': return DASH;
+    case 'completed':
+      return CHECK;
+    case 'failed':
+      return CROSS;
+    case 'skipped':
+      return DASH;
   }
 }
 
 function statusLabel(status: CycleIssueResult['status']): string {
   switch (status) {
-    case 'completed': return 'done';
-    case 'failed': return 'FAILED';
-    case 'skipped': return 'skipped';
+    case 'completed':
+      return 'done';
+    case 'failed':
+      return 'FAILED';
+    case 'skipped':
+      return 'skipped';
   }
 }
 
@@ -53,7 +59,9 @@ export function renderDryRun(payload: CyclePayload, callbacks: OutputCallbacks):
 
   log('');
   log(`Cycle: ${payload.cycleName} (${payload.cycleId})`);
-  log(`Issues: ${payload.totalIssues} total | ${payload.processable} processable | ${payload.skipped} will skip`);
+  log(
+    `Issues: ${payload.totalIssues} total | ${payload.processable} processable | ${payload.skipped} will skip`
+  );
   log(line);
   log('');
   log('  #  Issue       Priority   State            Action');

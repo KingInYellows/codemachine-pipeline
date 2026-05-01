@@ -24,11 +24,7 @@ import {
   type DeploymentHistory,
   type MergeReadiness,
 } from '../../src/workflows/deploymentTrigger';
-import type {
-  GitHubAdapter,
-  PullRequest,
-  MergeResult,
-} from '../../src/adapters/github/GitHubAdapter';
+import type { GitHubAdapter } from '../../src/adapters/github/GitHubAdapter';
 import type { BranchProtectionReport } from '../../src/workflows/branchProtectionReporter';
 import type { PRMetadata } from '../../src/cli/pr/shared';
 import type { RepoConfig } from '../../src/core/config/RepoConfig';
@@ -415,7 +411,7 @@ describe('Deployment Trigger Module', () => {
         mergeable_state: 'clean',
         head: { ref: 'feature-auth-123', sha: 'abc123def456' },
         base: { ref: 'main', sha: 'xyz789abc123' },
-      } as PullRequest);
+      });
 
       // Execute
       const readiness = await assessMergeReadiness(context, mockGitHubAdapter);
@@ -456,7 +452,7 @@ describe('Deployment Trigger Module', () => {
         mergeable_state: 'blocked',
         head: { ref: 'feature-auth-123', sha: 'abc123def456' },
         base: { ref: 'main', sha: 'xyz789abc123' },
-      } as PullRequest);
+      });
 
       // Execute
       const readiness = await assessMergeReadiness(context, mockGitHubAdapter);
@@ -499,7 +495,7 @@ describe('Deployment Trigger Module', () => {
         mergeable_state: 'blocked',
         head: { ref: 'feature-auth-123', sha: 'abc123def456' },
         base: { ref: 'main', sha: 'xyz789abc123' },
-      } as PullRequest);
+      });
 
       // Execute
       const readiness = await assessMergeReadiness(context, mockGitHubAdapter);
@@ -541,7 +537,7 @@ describe('Deployment Trigger Module', () => {
         mergeable_state: 'behind',
         head: { ref: 'feature-auth-123', sha: 'abc123def456' },
         base: { ref: 'main', sha: 'xyz789abc123' },
-      } as PullRequest);
+      });
 
       // Execute
       const readiness = await assessMergeReadiness(context, mockGitHubAdapter);
@@ -580,7 +576,7 @@ describe('Deployment Trigger Module', () => {
         mergeable_state: 'clean',
         head: { ref: 'feature-auth-123', sha: 'abc123def456' },
         base: { ref: 'main', sha: 'xyz789abc123' },
-      } as PullRequest);
+      });
 
       // Execute
       const readiness = await assessMergeReadiness(context, mockGitHubAdapter);
@@ -606,7 +602,7 @@ describe('Deployment Trigger Module', () => {
         mergeable_state: 'dirty',
         head: { ref: 'feature-auth-123', sha: 'abc123def456' },
         base: { ref: 'main', sha: 'xyz789abc123' },
-      } as PullRequest);
+      });
 
       // Execute
       const readiness = await assessMergeReadiness(context, mockGitHubAdapter);
@@ -630,7 +626,7 @@ describe('Deployment Trigger Module', () => {
         mergeable_state: 'clean',
         head: { ref: 'feature-auth-123', sha: 'abc123def456' },
         base: { ref: 'main', sha: 'xyz789abc123' },
-      } as PullRequest);
+      });
 
       // Execute
       const readiness = await assessMergeReadiness(context, mockGitHubAdapter);
@@ -654,7 +650,7 @@ describe('Deployment Trigger Module', () => {
         mergeable_state: 'clean',
         head: { ref: 'feature-auth-123', sha: 'abc123def456' },
         base: { ref: 'main', sha: 'xyz789abc123' },
-      } as PullRequest);
+      });
 
       // Execute
       const readiness = await assessMergeReadiness(context, mockGitHubAdapter);
@@ -836,7 +832,7 @@ describe('Deployment Trigger Module', () => {
         mergeable_state: 'clean',
         head: { ref: 'feature-auth-123', sha: 'abc123def456' },
         base: { ref: 'main', sha: 'xyz789abc123' },
-      } as PullRequest);
+      });
 
       (mockGitHubAdapter.enableAutoMerge as Mock).mockResolvedValue(undefined);
 
@@ -885,13 +881,13 @@ describe('Deployment Trigger Module', () => {
         mergeable_state: 'clean',
         head: { ref: 'feature-auth-123', sha: 'abc123def456' },
         base: { ref: 'main', sha: 'xyz789abc123' },
-      } as PullRequest);
+      });
 
       (mockGitHubAdapter.mergePullRequest as Mock).mockResolvedValue({
         merged: true,
         sha: 'merge123sha456',
         message: 'Merge successful',
-      } as MergeResult);
+      });
 
       // Execute
       const outcome = await triggerDeployment(
@@ -933,7 +929,7 @@ describe('Deployment Trigger Module', () => {
         mergeable_state: 'clean',
         head: { ref: 'feature-auth-123', sha: 'abc123def456' },
         base: { ref: 'main', sha: 'xyz789abc123' },
-      } as PullRequest);
+      });
 
       (mockGitHubAdapter.triggerWorkflow as Mock).mockResolvedValue(undefined);
 
@@ -990,7 +986,7 @@ describe('Deployment Trigger Module', () => {
         mergeable_state: 'blocked',
         head: { ref: 'feature-auth-123', sha: 'abc123def456' },
         base: { ref: 'main', sha: 'xyz789abc123' },
-      } as PullRequest);
+      });
 
       // Execute
       const outcome = await triggerDeployment(
@@ -1034,7 +1030,7 @@ describe('Deployment Trigger Module', () => {
         mergeable_state: 'clean',
         head: { ref: 'feature-auth-123', sha: 'abc123def456' },
         base: { ref: 'main', sha: 'xyz789abc123' },
-      } as PullRequest);
+      });
 
       const outcome = await triggerDeployment(
         { runDirectory, featureId: 'feature-auth-123', config: mockConfig, logger: mockLogger },
@@ -1068,7 +1064,7 @@ describe('Deployment Trigger Module', () => {
         mergeable_state: 'clean',
         head: { ref: 'feature-auth-123', sha: 'abc123def456' },
         base: { ref: 'main', sha: 'xyz789abc123' },
-      } as PullRequest);
+      });
 
       // Execute
       const outcome = await triggerDeployment(
@@ -1114,7 +1110,7 @@ describe('Deployment Trigger Module', () => {
         mergeable_state: 'blocked',
         head: { ref: 'feature-auth-123', sha: 'abc123def456' },
         base: { ref: 'main', sha: 'xyz789abc123' },
-      } as PullRequest);
+      });
 
       // First attempt - should be blocked
       const outcome1 = await triggerDeployment(
@@ -1145,7 +1141,7 @@ describe('Deployment Trigger Module', () => {
         mergeable_state: 'clean',
         head: { ref: 'feature-auth-123', sha: 'abc123def456' },
         base: { ref: 'main', sha: 'xyz789abc123' },
-      } as PullRequest);
+      });
 
       (mockGitHubAdapter.enableAutoMerge as Mock).mockResolvedValue(undefined);
 

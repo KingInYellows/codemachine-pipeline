@@ -454,7 +454,7 @@ describe('ResumeCoordinator', () => {
         'utf-8'
       );
       const snapshotData = JSON.parse(snapshotRaw) as {
-        tasks: Record<string, unknown>;
+        tasks: { [key: string]: unknown };
         checksum: string;
         timestamp: string;
         schemaVersion?: string;

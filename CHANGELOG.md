@@ -7,7 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-(Empty - all changes included in v1.0.0)
+### Changed
+
+- Added a reviewed unused-export baseline gate so `npm run exports:check` fails on new unused exports while tolerating documented oclif dynamic command exports and package API barrels.
+- Refreshed dependency locks while retaining major dependency versions that still have toolchain compatibility blockers.
+- Regenerated the CLI reference and updated hand-written command documentation for `codepipe cycle`.
+
+### Fixed
+
+- Removed remaining `Record<string, unknown>` lint warnings from tests.
+- Cleared npm audit findings and refreshed release-health documentation for the next shippable build.
 
 ## [1.0.0] - 2026-02-14
 
