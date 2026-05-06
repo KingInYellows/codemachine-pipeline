@@ -41,6 +41,16 @@ describe('init command', () => {
       expect(fs.existsSync(path.join(pipelineDir, 'artifacts'))).toBe(true);
       expect(fs.existsSync(configPath)).toBe(true);
     });
+
+    test('creates private pipeline directories and config file', () => {
+      execSync(`node ${binPath} init`, { cwd: testDir, stdio: 'pipe' });
+
+      expect(fs.statSync(pipelineDir).mode & 0o777).toBe(0o700);
+      expect(fs.statSync(path.join(pipelineDir, 'runs')).mode & 0o777).toBe(0o700);
+      expect(fs.statSync(path.join(pipelineDir, 'logs')).mode & 0o777).toBe(0o700);
+      expect(fs.statSync(path.join(pipelineDir, 'artifacts')).mode & 0o777).toBe(0o700);
+      expect(fs.statSync(configPath).mode & 0o777).toBe(0o600);
+    });
   });
 
   describe('config.json schema validation', () => {

@@ -57,6 +57,9 @@ interface ProjectPaths {
   logsDir: string;
 }
 
+const PRIVATE_DIRECTORY_MODE = 0o700;
+const PRIVATE_FILE_MODE = 0o600;
+
 interface InitResultPayload {
   status: string;
   config_path: string;
@@ -200,9 +203,8 @@ export default class Init extends Command {
       return;
     }
 
-    if (!fs.existsSync(paths.logsDir)) {
-      fs.mkdirSync(paths.logsDir, { recursive: true });
-    }
+    this.ensurePrivateDirectory(paths.pipelineDir);
+    this.ensurePrivateDirectory(paths.logsDir);
 
     const logger = createCliLogger('init', 'bootstrap', paths.logsDir, {
       minLevel: LogLevel.INFO,
@@ -645,13 +647,24 @@ export default class Init extends Command {
     ];
 
     for (const dir of directories) {
-      if (!fs.existsSync(dir)) {
-        fs.mkdirSync(dir, { recursive: true });
-        if (!silent) {
-          this.log(`✓ Created directory: ${dir}`);
-        }
+      const existed = fs.existsSync(dir);
+      this.ensurePrivateDirectory(dir);
+      if (!existed && !silent) {
+        this.log(`✓ Created directory: ${dir}`);
       }
     }
+  }
+
+  /**
+   * Ensure pipeline-owned directories are private to the current user.
+   *
+   * Passing a mode to mkdir only affects newly created directories, so chmod is
+   * applied afterward to tighten permissions for directories that already exist
+   * or were partially created by recursive mkdir.
+   */
+  private ensurePrivateDirectory(dir: string): void {
+    fs.mkdirSync(dir, { recursive: true, mode: PRIVATE_DIRECTORY_MODE });
+    fs.chmodSync(dir, PRIVATE_DIRECTORY_MODE);
   }
 
   /**
@@ -671,8 +684,13 @@ export default class Init extends Command {
       throw new Error('Configuration file already exists. Use --force to overwrite.');
     }
 
-    // Write with pretty formatting
-    fs.writeFileSync(configPath, JSON.stringify(config, null, 2), 'utf-8');
+    // Write with pretty formatting and restrict permissions because this file
+    // references credential environment variables and may later hold local secrets.
+    fs.writeFileSync(configPath, JSON.stringify(config, null, 2), {
+      encoding: 'utf-8',
+      mode: PRIVATE_FILE_MODE,
+    });
+    fs.chmodSync(configPath, PRIVATE_FILE_MODE);
     if (!silent) {
       this.log(`✓ Created configuration file: ${configPath}`);
     }
