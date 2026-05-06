@@ -3,6 +3,7 @@ import * as path from 'node:path';
 import * as crypto from 'node:crypto';
 import type { LogContext } from '../core/sharedTypes';
 import { createLogger, LogLevel, type LoggerInterface } from './logger';
+import { RedactionEngine, REDACTED } from '../utils/redaction.js';
 import { getErrorMessage } from '../utils/errors.js';
 
 /**
@@ -142,6 +143,48 @@ function generateSpanId(): string {
   return crypto.randomBytes(8).toString('hex');
 }
 
+function redactTraceString(redactor: RedactionEngine, value: string): string {
+  return redactor.redact(value);
+}
+
+function redactTraceAttribute(
+  redactor: RedactionEngine,
+  key: string,
+  value: string | number | boolean
+): string | number | boolean {
+  if (RedactionEngine.isSensitiveFieldName(key)) {
+    return REDACTED;
+  }
+
+  return typeof value === 'string' ? redactTraceString(redactor, value) : value;
+}
+
+function redactTraceAttributes(
+  redactor: RedactionEngine,
+  attributes: Record<string, string | number | boolean>
+): Record<string, string | number | boolean> {
+  return Object.fromEntries(
+    Object.entries(attributes).map(([key, value]) => [
+      key,
+      redactTraceAttribute(redactor, key, value),
+    ])
+  );
+}
+
+function redactTraceStatus(
+  redactor: RedactionEngine,
+  status: { code: SpanStatusCode; message?: string }
+): { code: SpanStatusCode; message?: string } {
+  if (!status.message) {
+    return status;
+  }
+
+  return {
+    ...status,
+    message: redactTraceString(redactor, status.message),
+  };
+}
+
 /**
  * Active span implementation with fluent API
  */
@@ -152,6 +195,7 @@ class ActiveSpanImpl implements ActiveSpan {
   private readonly kind: SpanKind;
   private readonly attributes: Record<string, string | number | boolean>;
   private readonly events: SpanEvent[] = [];
+  private readonly redactor: RedactionEngine;
   private endTime?: number;
   private status: { code: SpanStatusCode; message?: string } = { code: SpanStatusCode.UNSET };
   private readonly onEnd: (span: Span) => void;
@@ -161,18 +205,20 @@ class ActiveSpanImpl implements ActiveSpan {
     context: TraceContext,
     kind: SpanKind,
     defaultAttributes: Record<string, string | number | boolean>,
-    onEnd: (span: Span) => void
+    onEnd: (span: Span) => void,
+    redactor = new RedactionEngine(true)
   ) {
     this.name = name;
     this.context = context;
     this.kind = kind;
-    this.attributes = { ...defaultAttributes };
+    this.redactor = redactor;
+    this.attributes = redactTraceAttributes(this.redactor, defaultAttributes);
     this.startTime = Date.now();
     this.onEnd = onEnd;
   }
 
   setAttribute(key: string, value: string | number | boolean): void {
-    this.attributes[key] = value;
+    this.attributes[key] = redactTraceAttribute(this.redactor, key, value);
   }
 
   addEvent(name: string, attributes?: Record<string, string | number | boolean>): void {
@@ -180,7 +226,7 @@ class ActiveSpanImpl implements ActiveSpan {
       name,
       timestamp: Date.now(),
     };
-    if (attributes) event.attributes = attributes;
+    if (attributes) event.attributes = redactTraceAttributes(this.redactor, attributes);
     this.events.push(event);
   }
 
@@ -190,7 +236,7 @@ class ActiveSpanImpl implements ActiveSpan {
     }
 
     this.endTime = Date.now();
-    this.status = status ?? { code: SpanStatusCode.OK };
+    this.status = redactTraceStatus(this.redactor, status ?? { code: SpanStatusCode.OK });
 
     // Build span record
     const span: Span = {
@@ -221,6 +267,7 @@ class ActiveSpanImpl implements ActiveSpan {
 export class TraceManager {
   private readonly options: Required<Omit<TraceManagerOptions, 'logger'>>;
   private readonly logger: LoggerInterface;
+  private readonly redactor = new RedactionEngine(true);
   private readonly tracesFilePath?: string;
   private readonly spans: Span[] = [];
   private writeQueue: Promise<void> = Promise.resolve();
@@ -307,9 +354,16 @@ export class TraceManager {
       ...attributes,
     };
 
-    return new ActiveSpanImpl(name, context, kind, mergedAttributes, (span) => {
-      this.recordSpan(span);
-    });
+    return new ActiveSpanImpl(
+      name,
+      context,
+      kind,
+      mergedAttributes,
+      (span) => {
+        this.recordSpan(span);
+      },
+      this.redactor
+    );
   }
 
   /**

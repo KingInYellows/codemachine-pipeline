@@ -6,6 +6,9 @@ import {
   TraceManager,
   createTraceManager,
   createRunTraceManager,
+  withSpan,
+  withSpanSync,
+  SpanStatusCode,
 } from '../../src/telemetry/traces';
 import type { LoggerInterface } from '../../src/telemetry/logger';
 import type { LogContext } from '../../src/core/sharedTypes';
@@ -24,6 +27,19 @@ async function cleanupTempDir(dir: string): Promise<void> {
   } catch {
     // Ignore cleanup errors
   }
+}
+
+async function readTraceFile(filePath: string): Promise<unknown[]> {
+  const content = await fs.readFile(filePath, 'utf-8');
+  return content
+    .trim()
+    .split('\n')
+    .filter((line) => line)
+    .map((line) => JSON.parse(line) as unknown);
+}
+
+function buildToken(prefix: string, body: string): string {
+  return `${prefix}${body}`;
 }
 
 function createMockLogger(): LoggerInterface & {
@@ -208,5 +224,90 @@ describe('createRunTraceManager', () => {
     const tm = createRunTraceManager(tempDir, 'test-run-id', mockLogger);
 
     expect(tm).toBeInstanceOf(TraceManager);
+  });
+});
+
+describe('TraceManager Redaction', () => {
+  let tempDir: string;
+
+  beforeEach(async () => {
+    tempDir = await createTempDir();
+  });
+
+  afterEach(async () => {
+    await cleanupTempDir(tempDir);
+  });
+
+  it('redacts secrets from async span error attributes and status messages before persistence', async () => {
+    const traceManager = createRunTraceManager(tempDir);
+    const token = buildToken('ghp_', 'a'.repeat(36));
+    const apiKey = buildToken('api', 'b'.repeat(30));
+    const message = `Request failed: Authorization: Bearer ${token} url=https://example.test?api_key=${apiKey}`;
+
+    await expect(
+      withSpan(traceManager, 'failing_operation', async () => {
+        throw new Error(message);
+      })
+    ).rejects.toThrow(message);
+
+    await traceManager.flush();
+
+    const tracesPath = path.join(tempDir, 'telemetry', 'traces.json');
+    const traceContent = await fs.readFile(tracesPath, 'utf-8');
+    expect(traceContent).not.toContain(token);
+    expect(traceContent).not.toContain(apiKey);
+
+    const [span] = (await readTraceFile(tracesPath)) as Array<{
+      status: { code: SpanStatusCode; message: string };
+      attributes: Record<string, string | number | boolean>;
+    }>;
+    expect(span.status.code).toBe(SpanStatusCode.ERROR);
+    expect(span.status.message).toContain('[REDACTED_GITHUB_TOKEN]');
+    expect(span.status.message).toContain('api_key=[REDACTED]');
+    expect(span.attributes['error.message']).toContain('[REDACTED_GITHUB_TOKEN]');
+    expect(span.attributes['error.stack']).not.toContain(token);
+  });
+
+  it('redacts sensitive span attributes and event attributes', async () => {
+    const traceManager = createRunTraceManager(tempDir, undefined, undefined);
+    const span = traceManager.startSpan('span_with_sensitive_attributes', undefined, {
+      Authorization: 'Bearer token-value-that-is-long-enough',
+      endpoint: 'https://example.test?token=shhh1234567890',
+    });
+    span.addEvent('http_retry', { api_key: 'test-api-key', detail: 'safe detail' });
+    span.end({ code: SpanStatusCode.ERROR, message: 'failed with password=super-secret' });
+
+    await traceManager.flush();
+
+    const tracesPath = path.join(tempDir, 'telemetry', 'traces.json');
+    const [recordedSpan] = (await readTraceFile(tracesPath)) as Array<{
+      status: { message: string };
+      attributes: Record<string, string | number | boolean>;
+      events: Array<{ attributes?: Record<string, string | number | boolean> }>;
+    }>;
+
+    expect(recordedSpan.attributes.Authorization).toBe('[REDACTED]');
+    expect(recordedSpan.attributes.endpoint).toContain('token=[REDACTED]');
+    expect(recordedSpan.events[0].attributes?.api_key).toBe('[REDACTED]');
+    expect(recordedSpan.events[0].attributes?.detail).toBe('safe detail');
+    expect(recordedSpan.status.message).toBe('failed with password=[REDACTED]');
+  });
+
+  it('redacts secrets from sync span error attributes and status messages', () => {
+    const traceManager = createRunTraceManager(tempDir);
+    const token = buildToken('ghp_', 'c'.repeat(36));
+
+    expect(() =>
+      withSpanSync(traceManager, 'sync_failure', () => {
+        throw new Error(`sync failure token=${token}`);
+      })
+    ).toThrow(`sync failure token=${token}`);
+
+    const [span] = traceManager.getSpans() as Array<{
+      status: { message: string };
+      attributes: Record<string, string | number | boolean>;
+    }>;
+    expect(span.status.message).toBe('sync failure token=[REDACTED_GITHUB_TOKEN]');
+    expect(span.attributes['error.message']).toBe('sync failure token=[REDACTED_GITHUB_TOKEN]');
   });
 });
