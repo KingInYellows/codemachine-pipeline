@@ -84,6 +84,8 @@ interface TraceDiagnostics {
   gaps: TraceGap[];
 }
 
+const MAX_GENERATED_TRACE_LINKS = 10_000;
+
 /**
  * Trace document structure persisted to trace.json
  */
@@ -230,6 +232,27 @@ async function extractExecutionTasks(runDir: string): Promise<{
   }
 
   return { tasks };
+}
+
+function calculateTraceLinkCount(leftCount: number, rightCount: number): number {
+  return leftCount * rightCount;
+}
+
+function assertTraceLinkBudget(
+  prdGoalCount: number,
+  specRequirementCount: number,
+  executionTaskCount: number
+): void {
+  const prdToSpecCount = calculateTraceLinkCount(prdGoalCount, specRequirementCount);
+  const specToTaskCount = calculateTraceLinkCount(specRequirementCount, executionTaskCount);
+  const totalLinks = prdToSpecCount + specToTaskCount;
+
+  if (totalLinks > MAX_GENERATED_TRACE_LINKS) {
+    throw new Error(
+      `Trace map generation would create ${totalLinks.toLocaleString('en-US')} links, exceeding the safety limit of ${MAX_GENERATED_TRACE_LINKS.toLocaleString('en-US')}. ` +
+        `Reduce PRD goals (${prdGoalCount}), spec requirements (${specRequirementCount}), or execution tasks (${executionTaskCount}) before regenerating traceability.`
+    );
+  }
 }
 
 /**
@@ -450,6 +473,8 @@ export async function generateTraceMap(
     specRequirements: specRequirements.length,
     executionTasks: executionTasks.length,
   });
+
+  assertTraceLinkBudget(prdGoals.length, specRequirements.length, executionTasks.length);
 
   const prdToSpecLinks = generatePRDToSpecLinks(
     config.featureId,
