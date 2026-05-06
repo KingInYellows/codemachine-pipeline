@@ -124,6 +124,9 @@ export default class Init extends Command {
 
     try {
       const paths = this.resolveProjectPaths();
+      if (!flags['dry-run']) {
+        this.assertPipelinePathsSafe(paths);
+      }
       this.initializeTelemetry(paths, flags, ctx);
 
       if (flags['validate-only']) {
@@ -645,12 +648,48 @@ export default class Init extends Command {
     ];
 
     for (const dir of directories) {
+      this.assertSafeExistingPath(dir, 'directory');
       if (!fs.existsSync(dir)) {
         fs.mkdirSync(dir, { recursive: true });
         if (!silent) {
           this.log(`✓ Created directory: ${dir}`);
         }
       }
+    }
+  }
+
+  /**
+   * Reject pre-existing symlinks or unexpected file types before writing init artifacts.
+   */
+  private assertPipelinePathsSafe(paths: ProjectPaths): void {
+    this.assertSafeExistingPath(paths.pipelineDir, 'directory');
+    this.assertSafeExistingPath(path.join(paths.pipelineDir, 'runs'), 'directory');
+    this.assertSafeExistingPath(paths.logsDir, 'directory');
+    this.assertSafeExistingPath(path.join(paths.pipelineDir, 'artifacts'), 'directory');
+    this.assertSafeExistingPath(paths.configPath, 'file');
+  }
+
+  private assertSafeExistingPath(targetPath: string, expectedType: 'directory' | 'file'): void {
+    let stats: fs.Stats;
+    try {
+      stats = fs.lstatSync(targetPath);
+    } catch (error) {
+      if (error && typeof error === 'object' && 'code' in error && error.code === 'ENOENT') {
+        return;
+      }
+      throw error;
+    }
+
+    if (stats.isSymbolicLink()) {
+      throw new Error(
+        `Refusing to initialize through symbolic link at ${targetPath}. ` +
+          'Remove the symlink and use a regular .codepipe path inside the repository.'
+      );
+    }
+
+    const hasExpectedType = expectedType === 'directory' ? stats.isDirectory() : stats.isFile();
+    if (!hasExpectedType) {
+      throw new Error(`Expected ${targetPath} to be a ${expectedType}.`);
     }
   }
 
@@ -667,6 +706,7 @@ export default class Init extends Command {
     force: boolean,
     silent = false
   ): void {
+    this.assertSafeExistingPath(configPath, 'file');
     if (fs.existsSync(configPath) && !force) {
       throw new Error('Configuration file already exists. Use --force to overwrite.');
     }
