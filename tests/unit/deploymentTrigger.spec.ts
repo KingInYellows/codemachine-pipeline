@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeAll } from 'vitest';
 import {
+  assessMergeReadiness,
   selectDeploymentStrategy,
   DeploymentStrategy,
   type DeploymentContext,
@@ -9,6 +10,7 @@ import {
 } from '../../src/workflows/deployment/trigger';
 import type { StructuredLogger } from '../../src/telemetry/logger';
 import type { BranchProtectionReport } from '../../src/workflows/branchProtectionReporter';
+import type { GitHubAdapter, PullRequest } from '../../src/adapters/github/GitHubAdapter';
 
 // Create a mock logger that does nothing
 function createMockLogger(): StructuredLogger {
@@ -48,8 +50,14 @@ function createDeploymentContext(
             ...overrides.branchProtection,
           } as BranchProtectionReport),
     logger: createMockLogger(),
-    pr: { url: 'https://github.com/test/repo/pull/1' } as DeploymentContext['pr'],
-    approvals: { approvalsHash: 'abc123' } as DeploymentContext['approvals'],
+    pr: { pr_number: 1, url: 'https://github.com/test/repo/pull/1' } as DeploymentContext['pr'],
+    approvals: {
+      approvalsHash: 'abc123',
+      pending: [],
+      completed: [],
+      deployApprovalRequired: false,
+      deployApprovalGranted: true,
+    } as DeploymentContext['approvals'],
     branchProtectionHash: 'def456',
     runDir: '/tmp/test-run',
     featureId: 'test-feature',
@@ -261,6 +269,45 @@ describe('deploymentTrigger', () => {
   // ==========================================================================
   // Coverage gap-fill: exported function signatures (CDMCH-87)
   // ==========================================================================
+
+  describe('assessMergeReadiness', () => {
+    function createGitHubAdapter(mergeableState: string | null): GitHubAdapter {
+      return {
+        getPullRequest: vi.fn().mockResolvedValue({
+          number: 1,
+          state: 'open',
+          draft: false,
+          mergeable: true,
+          mergeable_state: mergeableState,
+          head: { ref: 'feature', sha: 'abc123' },
+          base: { ref: 'main', sha: 'def456' },
+        } as PullRequest),
+      } as unknown as GitHubAdapter;
+    }
+
+    it('should allow clean PRs when branch protection report is unavailable', async () => {
+      const context = createDeploymentContext({ branchProtection: null });
+
+      const readiness = await assessMergeReadiness(context, createGitHubAdapter('clean'));
+
+      expect(readiness.eligible).toBe(true);
+      expect(readiness.blockers).toHaveLength(0);
+    });
+
+    it('should block unsafe mergeable_state values when branch protection report is unavailable', async () => {
+      const context = createDeploymentContext({ branchProtection: null });
+
+      const readiness = await assessMergeReadiness(context, createGitHubAdapter('unstable'));
+
+      expect(readiness.eligible).toBe(false);
+      expect(readiness.blockers).toHaveLength(1);
+      expect(readiness.blockers[0]).toMatchObject({
+        type: 'protection',
+        metadata: { mergeable_state: 'unstable' },
+      });
+      expect(readiness.blockers[0].message).toContain('unstable');
+    });
+  });
 
   describe('deployment function exports', () => {
     let mod: typeof import('../../src/workflows/deployment/trigger');
