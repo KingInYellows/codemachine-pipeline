@@ -484,6 +484,57 @@ describe('traceabilityMapper', () => {
       expect(result.statistics.duplicatesPrevented).toBe(1);
     });
 
+    it('should reject trace maps that exceed the generated link safety limit', async () => {
+      // Arrange
+      const config: TraceMapperConfig = {
+        runDir: '/run/feat-123',
+        featureId: 'feat-123',
+        force: false,
+      };
+
+      const prdMetadata = createMockPRDMetadata();
+      const specMetadata = createMockSpecMetadata();
+      const prdMarkdown = `## Goals\n\n${Array.from({ length: 101 }, (_, index) => `- Goal ${index + 1}`).join('\n')}`;
+      const specJson = {
+        ...createMockSpecJson(),
+        test_plan: Array.from({ length: 100 }, (_, index) => ({
+          test_id: `T-UNIT-${(index + 1).toString().padStart(3, '0')}`,
+          description: `Requirement ${index + 1}`,
+          test_type: 'unit',
+          acceptance_criteria: [],
+        })),
+      };
+
+      vi.mocked(fs.access).mockRejectedValue(new Error('ENOENT'));
+      vi.mocked(fs.readFile).mockImplementation(async (filePath: string) => {
+        await Promise.resolve();
+        if (filePath.includes('prd_metadata.json')) {
+          return JSON.stringify(prdMetadata);
+        }
+        if (filePath.includes('spec_metadata.json')) {
+          return JSON.stringify(specMetadata);
+        }
+        if (filePath.includes('prd.md')) {
+          return prdMarkdown;
+        }
+        if (filePath.includes('spec.json')) {
+          return JSON.stringify(specJson);
+        }
+        if (filePath.includes('plan.json')) {
+          throw new Error('ENOENT');
+        }
+        throw new Error(`Unexpected file read: ${filePath}`);
+      });
+
+      vi.mocked(fs.writeFile).mockResolvedValue(undefined);
+
+      // Act & Assert
+      await expect(generateTraceMap(config, mockLogger, mockMetrics)).rejects.toThrow(
+        'Trace map generation would create 10,100 links, exceeding the safety limit of 10,000'
+      );
+      expect(fs.writeFile).not.toHaveBeenCalled();
+    });
+
     it('should detect gaps when PRD has no goals', async () => {
       // Arrange
       const config: TraceMapperConfig = {
