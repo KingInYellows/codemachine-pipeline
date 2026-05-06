@@ -121,7 +121,15 @@ validate_fixture() {
 
   # Check required fields
   local status
-  status=$(python3 -c "import json; data=json.load(open('$file')); print(data.get('status', ''))")
+  status=$(python3 - "$file" <<'PY'
+import json
+import sys
+
+with open(sys.argv[1]) as f:
+    data = json.load(f)
+print(data.get('status', ''))
+PY
+)
 
   if [[ -z "$status" ]]; then
     log_error "Missing 'status' field in $file"
@@ -129,7 +137,15 @@ validate_fixture() {
   fi
 
   local headers
-  headers=$(python3 -c "import json; data=json.load(open('$file')); print('headers' in data)")
+  headers=$(python3 - "$file" <<'PY'
+import json
+import sys
+
+with open(sys.argv[1]) as f:
+    data = json.load(f)
+print('headers' in data)
+PY
+)
 
   if [[ "$headers" != "True" ]]; then
     log_error "Missing 'headers' field in $file"
@@ -164,19 +180,25 @@ update_manifest() {
   local temp_manifest="${provider_dir}/manifest.tmp.json"
 
   # Read existing manifest
-  python3 << EOF
+  MANIFEST_PATH="$manifest" \
+    FIXTURES_PROVIDER_DIR="$provider_dir" \
+    TEMP_MANIFEST_PATH="$temp_manifest" \
+    FIXTURE_TIMESTAMP="$timestamp" \
+    SOURCE_BRANCH="$branch" \
+    python3 <<'PY'
 import json
 import os
 
-manifest_path = '${manifest}'
-fixtures_dir = '${provider_dir}'
+manifest_path = os.environ['MANIFEST_PATH']
+fixtures_dir = os.environ['FIXTURES_PROVIDER_DIR']
+temp_manifest = os.environ['TEMP_MANIFEST_PATH']
 
 with open(manifest_path, 'r') as f:
     manifest = json.load(f)
 
 # Update metadata
-manifest['updated'] = '${timestamp}'
-manifest['source_branch'] = '${branch}'
+manifest['updated'] = os.environ['FIXTURE_TIMESTAMP']
+manifest['source_branch'] = os.environ['SOURCE_BRANCH']
 
 # Update fixture hashes
 for fixture_entry in manifest.get('fixtures', []):
@@ -193,10 +215,10 @@ for fixture_entry in manifest.get('fixtures', []):
         print(f"Warning: Fixture file not found: {fixture_file}", file=__import__('sys').stderr)
 
 # Write updated manifest
-with open('${temp_manifest}', 'w') as f:
+with open(temp_manifest, 'w') as f:
     json.dump(manifest, f, indent=2)
     f.write('\n')
-EOF
+PY
 
   if [[ $? -ne 0 ]]; then
     log_error "Failed to update manifest for $provider"
