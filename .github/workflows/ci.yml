@@ -69,7 +69,13 @@ jobs:
           esac
           archive="actionlint_${ACTIONLINT_VERSION}_${os}_${arch}.tar.gz"
           url="https://github.com/rhysd/actionlint/releases/download/v${ACTIONLINT_VERSION}/${archive}"
+          case "$os/$arch" in
+            linux/amd64) checksum="023070a287cd8cccd71515fedc843f1985bf96c436b7effaecce67290e7e0757" ;;
+            linux/arm64) checksum="401942f9c24ed71e4fe71b76c7d638f66d8633575c4016efd2977ce7c28317d0" ;;
+            *) echo "Unsupported platform: $os/$arch" >&2; exit 1 ;;
+          esac
           curl -fsSL "$url" -o actionlint.tar.gz
+          printf '%s  %s\n' "$checksum" actionlint.tar.gz | sha256sum -c -
           tar -xzf actionlint.tar.gz actionlint
           chmod +x actionlint
 
