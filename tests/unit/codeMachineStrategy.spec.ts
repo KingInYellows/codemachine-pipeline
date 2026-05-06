@@ -1,4 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import * as fs from 'node:fs/promises';
+import * as os from 'node:os';
+import * as path from 'node:path';
 import type { ExecutionTask } from '../../src/core/models/ExecutionTask';
 import type { ExecutionConfig } from '../../src/core/config/RepoConfig';
 import type { ExecutionContext } from '../../src/workflows/executionStrategy';
@@ -373,6 +376,81 @@ describe('CodeMachineStrategy', () => {
           specPath: expect.stringContaining('specs/custom.md'),
         })
       );
+    });
+
+    it('rejects traversal spec_path values before invoking CodeMachine', async () => {
+      const task = createMockTask({
+        config: { spec_path: '../secret.md' },
+      });
+      const context = createMockContext();
+
+      mockMapTaskToWorkflow.mockReturnValue({
+        workflow: 'codemachine start',
+        command: 'start',
+        useNativeEngine: false,
+      });
+
+      const strategy = new CodeMachineStrategy({ config });
+      const result = await strategy.execute(task, context);
+
+      expect(result.success).toBe(false);
+      expect(result.recoverable).toBe(false);
+      expect(result.errorMessage).toContain('Invalid spec_path');
+      expect(mockRunCodeMachine).not.toHaveBeenCalled();
+    });
+
+    it('rejects absolute spec_path values outside the workspace before invoking CodeMachine', async () => {
+      const task = createMockTask({
+        config: { spec_path: '/etc/passwd' },
+      });
+      const context = createMockContext();
+
+      mockMapTaskToWorkflow.mockReturnValue({
+        workflow: 'codemachine start',
+        command: 'start',
+        useNativeEngine: false,
+      });
+
+      const strategy = new CodeMachineStrategy({ config });
+      const result = await strategy.execute(task, context);
+
+      expect(result.success).toBe(false);
+      expect(result.recoverable).toBe(false);
+      expect(result.errorMessage).toContain('Invalid spec_path');
+      expect(mockRunCodeMachine).not.toHaveBeenCalled();
+    });
+
+    it('rejects spec_path symlinks that resolve outside the workspace', async () => {
+      const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'codemachine-strategy-'));
+      const workspaceDir = path.join(tempDir, 'workspace');
+      const secretPath = path.join(tempDir, 'secret.md');
+      const symlinkPath = path.join(workspaceDir, 'linked-secret.md');
+      await fs.mkdir(workspaceDir, { recursive: true });
+      await fs.writeFile(secretPath, 'secret', 'utf-8');
+      await fs.symlink(secretPath, symlinkPath);
+
+      try {
+        const task = createMockTask({
+          config: { spec_path: 'linked-secret.md' },
+        });
+        const context = createMockContext({ workspaceDir });
+
+        mockMapTaskToWorkflow.mockReturnValue({
+          workflow: 'codemachine start',
+          command: 'start',
+          useNativeEngine: false,
+        });
+
+        const strategy = new CodeMachineStrategy({ config });
+        const result = await strategy.execute(task, context);
+
+        expect(result.success).toBe(false);
+        expect(result.recoverable).toBe(false);
+        expect(result.errorMessage).toContain('resolves outside');
+        expect(mockRunCodeMachine).not.toHaveBeenCalled();
+      } finally {
+        await fs.rm(tempDir, { recursive: true, force: true });
+      }
     });
 
     it('generates default spec path when task config has no spec_path', async () => {

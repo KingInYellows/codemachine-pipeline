@@ -7,6 +7,7 @@
  */
 
 import * as path from 'node:path';
+import { realpath } from 'node:fs/promises';
 import type { ExecutionTask } from '../core/models/ExecutionTask.js';
 import type { ExecutionConfig } from '../core/config/RepoConfig.js';
 import type {
@@ -22,6 +23,7 @@ import {
 import { mapTaskToWorkflow, shouldUseNativeEngine } from './taskMapper.js';
 import { normalizeResult } from './resultNormalizer.js';
 import { buildStrategyResult } from './strategyHelpers.js';
+import { isPathContained, validateTaskId } from './executionArtifactCapture.js';
 import type { StructuredLogger } from '../telemetry/logger.js';
 
 /** Configuration options for the CodeMachine strategy */
@@ -61,13 +63,28 @@ export class CodeMachineStrategy implements ExecutionStrategy {
       command: mapping.command,
     });
 
-    const specPath = this.buildSpecPath(task, context);
+    const specPath = await this.buildSpecPath(task, context);
+    if (!specPath.valid) {
+      this.logger?.warn('Rejected unsafe CodeMachine spec path', {
+        taskId: task.task_id,
+        error: specPath.errorMessage,
+      });
+      return {
+        success: false,
+        status: 'failed',
+        summary: specPath.errorMessage,
+        errorMessage: specPath.errorMessage,
+        recoverable: false,
+        durationMs: 0,
+        artifacts: [],
+      };
+    }
 
     const runnerOptions: RunnerOptions = {
       taskId: task.task_id,
       prompt: task.title,
       workspaceDir: context.workspaceDir,
-      specPath,
+      specPath: specPath.path,
       timeoutMs: context.timeoutMs,
     };
 
@@ -95,13 +112,50 @@ export class CodeMachineStrategy implements ExecutionStrategy {
     };
   }
 
-  private buildSpecPath(task: ExecutionTask, context: ExecutionContext): string {
+  private async buildSpecPath(
+    task: ExecutionTask,
+    context: ExecutionContext
+  ): Promise<{ valid: true; path: string } | { valid: false; errorMessage: string }> {
     const taskConfig = task.config;
     if (taskConfig && typeof taskConfig['spec_path'] === 'string') {
-      return path.resolve(context.workspaceDir, taskConfig['spec_path']);
+      const candidatePath = path.resolve(context.workspaceDir, taskConfig['spec_path']);
+      const workspaceDir = path.resolve(context.workspaceDir);
+
+      if (!isPathContained(workspaceDir, candidatePath)) {
+        return {
+          valid: false,
+          errorMessage: 'Invalid spec_path: path must stay within the workspace directory',
+        };
+      }
+
+      const realCandidatePath = await resolveRealPathSafe(candidatePath);
+      const realWorkspaceDir = await resolveRealPathSafe(workspaceDir);
+      if (!isPathContained(realWorkspaceDir, realCandidatePath)) {
+        return {
+          valid: false,
+          errorMessage: 'Invalid spec_path: path resolves outside the workspace directory',
+        };
+      }
+
+      return { valid: true, path: candidatePath };
     }
 
-    return path.join(context.runDir, 'specs', `${task.task_id}.md`);
+    if (!validateTaskId(task.task_id)) {
+      return {
+        valid: false,
+        errorMessage: 'Invalid task ID format',
+      };
+    }
+
+    return { valid: true, path: path.join(context.runDir, 'specs', `${task.task_id}.md`) };
+  }
+}
+
+async function resolveRealPathSafe(candidatePath: string): Promise<string> {
+  try {
+    return await realpath(candidatePath);
+  } catch {
+    return path.resolve(candidatePath);
   }
 }
 

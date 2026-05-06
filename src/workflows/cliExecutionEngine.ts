@@ -16,7 +16,7 @@ import { getErrorMessage } from '../utils/errors.js';
 import { DEFAULT_EXECUTION_CONFIG } from '../core/config/RepoConfig.js';
 import { getReadyTasks, applyRetryBackoff } from './executionDependencyResolver.js';
 import { ExecutionTelemetryRecorder } from './executionTelemetryRecorder.js';
-import { validateTaskId, captureArtifacts } from './executionArtifactCapture.js';
+import { validateTaskId, captureArtifacts, isPathContained } from './executionArtifactCapture.js';
 
 /**
  * Configuration options for constructing a {@link CLIExecutionEngine}.
@@ -318,14 +318,33 @@ export class CLIExecutionEngine {
     }
 
     const executionConfig = this.config.execution ?? DEFAULT_EXECUTION_CONFIG;
+    const logsDir = path.join(this.runDir, 'logs');
+    const logPath = path.join(logsDir, `${task.task_id}.log`);
+    if (!isPathContained(logsDir, logPath)) {
+      this.logger?.warn('Task log path escapes logs directory, rejecting task', {
+        taskId: task.task_id,
+        logPath,
+      });
+      await updateTaskInQueue(this.runDir, task.task_id, {
+        status: 'failed',
+        retry_count: task.retry_count + 1,
+        last_error: {
+          message: 'Invalid task log path',
+          timestamp: new Date().toISOString(),
+          recoverable: false,
+        },
+      });
+      return { success: false, permanentlyFailed: true };
+    }
+
     const context: ExecutionContext = {
       runDir: this.runDir,
       workspaceDir: executionConfig.workspace_dir || this.runDir,
-      logPath: path.join(this.runDir, 'logs', `${task.task_id}.log`),
+      logPath,
       timeoutMs: executionConfig.task_timeout_ms,
     };
 
-    await fs.mkdir(path.dirname(context.logPath), { recursive: true });
+    await fs.mkdir(logsDir, { recursive: true });
 
     const strategyResult = await strategy.execute(task, context);
     const durationMs = strategyResult.durationMs ?? Date.now() - startTime;
