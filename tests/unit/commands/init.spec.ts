@@ -41,6 +41,38 @@ describe('init command', () => {
       expect(fs.existsSync(path.join(pipelineDir, 'artifacts'))).toBe(true);
       expect(fs.existsSync(configPath)).toBe(true);
     });
+
+    test('rejects symlinked .codepipe directory without writing through it', () => {
+      const outsideTarget = path.join(__dirname, '../../../.test-temp-init-symlink-target');
+      if (fs.existsSync(outsideTarget)) {
+        fs.rmSync(outsideTarget, { recursive: true, force: true });
+      }
+      fs.mkdirSync(outsideTarget, { recursive: true });
+      fs.symlinkSync(outsideTarget, pipelineDir, 'dir');
+
+      try {
+        try {
+          execSync(`node ${binPath} init --yes`, {
+            cwd: testDir,
+            encoding: 'utf-8',
+            stdio: 'pipe',
+          });
+          expect.fail('init should reject symlinked .codepipe directories');
+        } catch (error: unknown) {
+          expect(error).toBeDefined();
+          if (error && typeof error === 'object' && 'stderr' in error) {
+            expect(String(error.stderr)).toContain('symbolic link');
+          }
+        }
+
+        expect(fs.existsSync(path.join(outsideTarget, 'config.json'))).toBe(false);
+        expect(fs.existsSync(path.join(outsideTarget, 'logs'))).toBe(false);
+        expect(fs.existsSync(path.join(outsideTarget, 'runs'))).toBe(false);
+        expect(fs.existsSync(path.join(outsideTarget, 'artifacts'))).toBe(false);
+      } finally {
+        fs.rmSync(outsideTarget, { recursive: true, force: true });
+      }
+    });
   });
 
   describe('config.json schema validation', () => {
