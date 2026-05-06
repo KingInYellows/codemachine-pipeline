@@ -373,14 +373,21 @@ export async function assessMergeReadiness(
       });
     }
   } else {
-    // No branch protection report - use basic GitHub mergeable_state
+    // No branch protection report - conservatively allow only known ready states. Other
+    // GitHub mergeable_state values can represent failing checks, pending reviews, stale
+    // branches, or a still-computing mergeability result.
     logger.debug('No branch protection report - using basic GitHub mergeable_state');
 
-    if (freshPR.mergeable_state === 'blocked') {
+    const readyMergeableStates = new Set(['clean', 'has_hooks']);
+    if (!freshPR.mergeable_state || !readyMergeableStates.has(freshPR.mergeable_state)) {
+      const stateDescription = freshPR.mergeable_state ?? 'unknown';
       blockers.push({
         type: 'protection',
-        message: 'PR is blocked by branch protection rules',
-        recommended_action: 'Run "codepipe status" to check specific protection requirements',
+        message: `PR mergeable_state is ${stateDescription}; deployment requires a clean mergeable state when the branch protection report is unavailable`,
+        recommended_action: 'Run "codepipe status" to refresh branch protection requirements',
+        metadata: {
+          mergeable_state: freshPR.mergeable_state,
+        },
       });
     }
   }
