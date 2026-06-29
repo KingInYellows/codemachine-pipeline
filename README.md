@@ -1,5 +1,7 @@
 # codemachine-pipeline
 
+<!-- Declarative environment verification -->
+
 Autonomous AI-powered feature development pipeline CLI
 
 ## Overview
