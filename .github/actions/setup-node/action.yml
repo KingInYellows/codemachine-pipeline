@@ -1,5 +1,5 @@
 name: 'Setup Node.js Environment'
-description: 'Shared CI setup: npm cache directories, Node.js installation, and runner preflight checks'
+description: 'Shared CI setup: Node.js installation and runner preflight checks'
 
 inputs:
   node-version:
@@ -17,22 +17,10 @@ inputs:
   enable-preflight:
     description: 'Run Node.js version preflight check'
     default: 'true'
-  prepare-npm-dirs:
-    description: 'Prepare npm cache directories for self-hosted runners'
-    default: 'false'
 
 runs:
   using: 'composite'
   steps:
-    - name: Prepare npm directories
-      if: inputs.prepare-npm-dirs == 'true'
-      shell: bash
-      run: |
-        set -euo pipefail
-        echo "HOME=$RUNNER_TEMP/codemachine-home" >> "$GITHUB_ENV"
-        echo "NPM_CONFIG_CACHE=$RUNNER_TEMP/codemachine-npm-cache" >> "$GITHUB_ENV"
-        mkdir -p "$RUNNER_TEMP/codemachine-home" "$RUNNER_TEMP/codemachine-npm-cache"
-
     - name: Setup Node.js
       uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.1.0
       with:
