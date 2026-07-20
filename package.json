@@ -74,7 +74,7 @@
     "@oclif/plugin-help": "^6.2.38",
     "picomatch": "^4.0.3",
     "semver": "^7.7.4",
-    "shell-quote": "^1.8.3",
+    "shell-quote": "^1.9.0",
     "undici": "^7.24.4",
     "zod": "^4.3.6"
   },
